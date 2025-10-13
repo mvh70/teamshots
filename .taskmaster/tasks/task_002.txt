@@ -1,0 +1,11 @@
+# Task ID: 2
+# Title: Week 1 Days 3-4: Authentication, Database Setup, and i18n
+# Status: pending
+# Dependencies: 1
+# Priority: medium
+# Description: Implement Auth.js (NextAuth.js) with email/password authentication, set up PostgreSQL database with Prisma ORM, create database schema (User, Generation, Transaction models), and implement next-intl for bilingual support (EN/ES) with language auto-detection and switcher.
+# Details:
+Includes: Auth.js configuration, email verification flow, PostgreSQL on Hetzner VPS via Coolify, Prisma schema definition, next-intl setup with EN/ES translations, language detection middleware, language switcher component.
+
+# Test Strategy:
+

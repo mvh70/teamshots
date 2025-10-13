@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - for authentication and account management
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  name                String?
+  image               String?   // OAuth profile picture
+  password            String?   // Hashed password for email/password auth
+  emailVerified       DateTime?
+  locale              String    @default("en") // 'en' | 'es'
+  
+  // Credits & Subscription
+  credits             Int       @default(0)
+  subscriptionTier    String?   // 'starter' | 'pro' | null
+  subscriptionPeriod  String?   // 'monthly' | 'annual' | null
+  subscriptionStatus  String?   // 'active' | 'cancelled' | null
+  stripeCustomerId    String?   @unique
+  stripeSubscriptionId String?  @unique
+  
+  // Relations
+  generations         Generation[]
+  transactions        Transaction[]
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([email])
+}
+
+// Generation model - tracks photo generation requests
+model Generation {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Input
+  uploadedPhotoUrl    String
+  stylePreset         String
+  backgroundOption    String
+  customPrompt        String?
+  
+  // Output
+  variations          String[]  // Array of URLs to generated photos
+  creditsUsed         Int
+  actualCost          Float     // USD cost from provider (e.g., 0.10)
+  provider            String    @default("gemini")
+  
+  // Status
+  status              String    @default("processing") // 'processing' | 'completed' | 'failed'
+  errorMessage        String?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Transaction model - tracks all credit/payment movements
+model Transaction {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type                String    // 'try_once' | 'subscription' | 'top_up' | 'generation'
+  amount              Float     // USD amount (negative for usage, positive for purchases)
+  creditsDelta        Int       // Credits added (positive) or used (negative)
+  
+  // Payment info
+  stripePaymentId     String?
+  stripeInvoiceId     String?
+  
+  description         String?
+  
+  createdAt           DateTime  @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// WaitlistSignup model - for pre-launch email collection
+model WaitlistSignup {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  notified            Boolean   @default(false)
+  source              String?   // Where they signed up from
+  
+  createdAt           DateTime  @default(now())
+
+  @@index([email])
+  @@index([notified])
+}
+

@@ -1,0 +1,221 @@
+# Business Model
+
+## Pricing Model
+**Credit-based system with subscriptions + top-ups**
+
+No free tier. All features require credits.
+
+## Pricing Structure
+
+### Credits System
+- **1 generation = 4 credits** (produces 4 photo variations)
+- **Credits roll over** month-to-month (never expire)
+- **Display format:** "100 credits (25 generations)" - emphasize credits for psychological impact
+
+### Try Once (One-time Purchase)
+```
+Price: $5
+Credits: 4 (1 generation)
+Purpose: Low-friction proof of concept
+```
+
+### Starter Subscription
+```
+Monthly: $24/month â†’ 100 credits/month (25 generations)
+Annual: $245/year â†’ 100 credits/month (Save $43/year, 15% discount)
+
+Top-ups: $0.90 per 4 credits (minimum 20 credits)
+```
+
+### Pro Subscription  
+```
+Monthly: $59/month â†’ 280 credits/month (70 generations)
+Annual: $600/year â†’ 280 credits/month (Save $108/year, 15% discount)
+
+Top-ups: $0.60 per 4 credits (minimum 20 credits)
+Pro users get 33% cheaper top-ups than Starter
+```
+
+## Pricing Psychology
+
+**Why Credits (not just "generations"):**
+- Larger numbers feel more valuable (100 > 25)
+- Gamification effect increases engagement  
+- Creates psychological distance from money (like casino chips)
+- Users less likely to cancel with accumulated credits (sunk cost)
+
+**Why Rollover:**
+- Reduces anxiety ("use it or lose it")
+- Increases perceived value
+- Reduces churn (users stay even in low-usage months)
+- Builds loyalty (accumulated credits = switching cost)
+
+**Why Annual Discount:**
+- 15% = industry standard, feels meaningful
+- Upfront cash improves business cash flow
+- Higher commitment = better retention
+- Display as dollar savings: "Save $108/year" (not "15% off")
+
+**Top-up Strategy:**
+- Tier-based pricing encourages upgrades
+- Minimum purchase (20 credits) prevents micro-transactions
+- Pro discount (33% off) rewards commitment
+
+## Revenue Streams
+
+### Primary
+1. **Subscriptions** - Recurring monthly/annual revenue
+2. **Top-ups** - Additional revenue when users exceed base credits
+3. **Try Once** - Acquisition funnel entry point
+
+### Future (Post-MVP)
+- Team/company plans
+- Enterprise pricing
+- API access for developers
+
+## Unit Economics
+
+**Using direct Gemini API (not Replicate) = 30-50% cost savings**
+
+### Per Generation Costs & Margins
+
+| Item | Cost | Revenue | Margin |
+|------|------|---------|--------|
+| Gemini API (4 variations) | $0.10 | - | - |
+| Infrastructure (monthly/user) | ~$0.50 | - | - |
+| **Try Once** | $0.10 | $5.00 | 98% |
+| **Starter base** | $0.10 | $0.96/gen | 90% |
+| **Starter top-up** | $0.10 | $0.90/4cr | 89% |
+| **Pro base** | $0.10 | $0.84/gen | 88% |
+| **Pro top-up** | $0.10 | $0.60/4cr | 83% |
+
+### Monthly User Economics (Starter)
+
+Assumptions:
+- User on Starter monthly: $24/month
+- Uses all 100 credits (25 generations)
+- Buys 1 top-up (20 credits, 5 generations): $4.50
+
+```
+Monthly Revenue:        $28.50
+Gemini API costs:       $3.00 (30 generations Ã— $0.10)
+Infrastructure costs:   $0.50
+Total costs:            $3.50
+Gross Margin:           88%
+```
+
+### Monthly User Economics (Pro)
+
+Assumptions:
+- User on Pro monthly: $59/month
+- Uses all 280 credits (70 generations)
+- Buys 1 top-up (40 credits, 10 generations): $6.00
+
+```
+Monthly Revenue:        $65.00
+Gemini API costs:       $8.00 (80 generations Ã— $0.10)
+Infrastructure costs:   $0.50
+Total costs:            $8.50
+Gross Margin:           87%
+```
+
+**All scenarios maintain 85%+ gross margins.**
+
+## Conversion Funnel Strategy
+
+```
+Try Once ($5) 
+    â†“ 
+User sees quality, wants more
+    â†“
+"Subscribe to Starter - Save 81%"
+$24/mo seems reasonable vs. $5 per generation
+    â†“
+Heavy users exceed 100 credits
+    â†“
+Top-ups at $0.90 feel expensive
+    â†“
+"Upgrade to Pro - Get 180 more credits + 33% off top-ups"
+    â†“
+Pro subscription ($59/mo)
+```
+
+## Pricing Configuration
+
+All pricing stored in `config/pricing.ts`:
+
+```typescript
+export const PRICING_CONFIG = {
+  credits: {
+    perGeneration: 4,
+    rollover: true,
+    rolloverLimit: null, // unlimited
+  },
+  
+  tryOnce: {
+    price: 5.00,
+    credits: 4,
+  },
+  
+  starter: {
+    monthly: {
+      price: 24.00,
+      includedCredits: 100,
+    },
+    annual: {
+      price: 245.00,
+      includedCredits: 100, // per month
+    },
+    topUp: {
+      pricePerPackage: 0.90,
+      creditsPerPackage: 4,
+      minimumPurchase: 20,
+    },
+  },
+  
+  pro: {
+    monthly: {
+      price: 59.00,
+      includedCredits: 280,
+    },
+    annual: {
+      price: 600.00,
+      includedCredits: 280, // per month
+    },
+    topUp: {
+      pricePerPackage: 0.60,
+      creditsPerPackage: 4,
+      minimumPurchase: 20,
+    },
+  },
+  
+  costs: {
+    geminiApiPerGeneration: 0.10,
+  },
+}
+```
+
+## Competitive Positioning
+
+**vs. Traditional Photography:**
+- 100x faster (60 seconds vs. weeks)
+- 20x cheaper ($0.96/generation vs. $50-200/person)
+- 100% remote
+
+**vs. Competitor AI Tools:**
+- Lower entry ($5 vs. $29)
+- Subscription model = better for regular users
+- Credits never expire (unique advantage)
+
+**vs. DIY Photoshop:**
+- No skills required
+- Instant results
+- Consistent quality
+
+## Open Questions
+
+- [ ] Validate Gemini API actual costs per generation
+- [ ] Test conversion rate from Try Once â†’ Starter
+- [ ] Monitor average top-up frequency
+- [ ] Test annual vs. monthly uptake
+- [ ] Optimal credit rollover cap (if any)

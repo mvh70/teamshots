@@ -1,0 +1,59 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Coolify
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Trigger Coolify Deployment
+        run: |
+          echo "Deployment is handled automatically by Coolify webhook"
+          echo "This workflow is for documentation and can trigger manual deployments if needed"
+      
+      # Optional: Add deployment notification
+      - name: Notify Deployment Started
+        if: success()
+        run: |
+          echo "Deployment to production started"
+          # Add Slack/Discord notification here if needed
+      
+      # Optional: Run tests before deployment
+      # - name: Run Tests
+      #   run: |
+      #     npm ci
+      #     npm run test
+
+  # Optional: Database migrations job
+  # Run this manually when needed or as a separate workflow
+  # migrations:
+  #   name: Run Database Migrations
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'workflow_dispatch'
+  #   
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #     
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '18'
+  #     
+  #     - name: Install dependencies
+  #       run: npm ci
+  #     
+  #     - name: Run migrations
+  #       env:
+  #         DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  #       run: npx prisma migrate deploy
+

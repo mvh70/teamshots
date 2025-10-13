@@ -1,0 +1,11 @@
+# Task ID: 4
+# Title: Week 2 Days 8-10: S3 Storage, Upload, and Gemini Integration
+# Status: pending
+# Dependencies: 3
+# Priority: medium
+# Description: Set up Hetzner S3 for photo storage, create photo upload interface with drag-drop and file picker, implement face validation, integrate Google Gemini API (Gemini 2.5 Flash) with provider abstraction layer, implement generation flow that creates 3-4 variations, and add error handling with retry logic.
+# Details:
+Includes: Hetzner S3 configuration, upload UI component, face detection validation, Gemini API integration with abstraction interface, generation endpoint, retry logic with exponential backoff, 30-day retention policy, cost tracking per generation.
+
+# Test Strategy:
+

@@ -1,0 +1,311 @@
+# User Flows
+
+## Phased Launch
+
+### Phase 1: Waitlist (Days 1-2)
+```
+User visits www.teamshots.vip
+â†“
+See value prop + "Coming Soon"
+â†“
+Enter email to join waitlist
+â†“
+Confirmation: "Thanks! We'll notify you when we launch"
+â†“
+Receive email: "You're on the waitlist"
+```
+
+### Phase 2: Full Product (Days 3-14)
+All flows below become active.
+
+---
+
+## 1. First-Time User Journey (Post-Waitlist Launch)
+
+### Step 1: Landing Page (www.teamshots.vip)
+```
+User visits site
+â†“
+Auto-detect browser language (EN or ES)
+- If browser = Spanish â†’ Show Spanish
+- Otherwise â†’ Show English
+â†“
+See value prop: "Professional team photos in 60 seconds"
+â†“
+Language switcher in header (if user wants to change)
+â†“
+CTA: "Get Started" or "See How It Works"
+```
+
+### Step 2: Sign Up (redirects to app.teamshots.vip)
+```
+Click "Get Started"
+â†“
+Redirect to app.teamshots.vip/auth/signin
+â†“
+Sign up with email/password
+- Enter email
+- Create password
+- Confirm password
+â†“
+Language preference auto-set from current selection
+â†“
+Email verification required
+- Receive verification email
+- Click verification link
+â†“
+Redirect to onboarding
+```
+
+**Note:** OAuth (Google, GitHub) will be added post-MVP for faster authentication.
+
+### Step 3: Onboarding
+```
+Welcome screen
+- Brief explanation (3 slides or 30s video)
+- "Try with sample photo" option
+
+â†“
+Guided first generation
+- Tooltip: "Upload any photo"
+- Tooltip: "Choose a style"
+- Tooltip: "This will use 3-4 credits"
+
+â†“
+First successful generation
+â†“
+Celebration moment: "Great! Your first professional photo"
+â†“
+"Add payment method to continue"
+```
+
+### Step 4: Payment Setup
+```
+Add payment method (Stripe)
+â†“
+Choose plan or buy credits
+â†“
+Redirect to dashboard
+```
+
+## 2. Core Generation Flow
+
+### Happy Path
+```
+Dashboard
+â†“
+"Generate New Photo" button
+â†“
+Upload photo
+- Drag-drop or file picker
+- Show preview
+- Validate (face detection)
+â†“
+Customize
+- Select style preset (5 options with examples)
+- Choose background (upload/generate/preset)
+- Optional: Add logo, adjust clothing
+- Show cost: "Uses 4 credits (1 generation)"
+â†“
+Click "Generate"
+â†“
+Processing screen (up to 60s)
+- Progress bar
+- "Generating your professional photos..."
+â†“
+Review variations (3-4 images)
+- Side-by-side view
+- Click for large preview
+â†“
+Actions:
+- "Download" â†’ Get high-res file
+- "Regenerate" â†’ Adjust settings, uses 4 more credits
+- "Cancel" â†’ Return to dashboard
+```
+
+### Error States
+```
+Insufficient credits
+â†“
+"You need 4 credits for this generation."
+- Show current balance
+- "Buy more credits" or "Subscribe" button
+â†“
+Redirect to purchase page
+
+OR
+
+Generation failed
+â†“
+"Something went wrong. Your 4 credits have been refunded." (translated)
+â†“
+"Try again" button
+
+OR
+
+Upload validation failed
+â†“
+"Please upload a clear photo with a visible face" (translated)
+â†“
+Return to upload
+```
+
+## 3. Returning User Flow
+
+```
+Login
+â†“
+Dashboard
+- Credit balance: "87 credits (21 generations)"
+- "Generate New Photo" CTA
+- Gallery of previous generations
+- Subscription status (if subscribed)
+â†“
+Generate new photo (same as core flow)
+OR
+View history
+OR
+Manage account/subscription
+OR
+Buy more credits
+```
+
+## 4. Credit Purchase Flows
+
+### Try Once Purchase
+```
+User needs to try the service
+â†“
+Click "Try for $5"
+â†“
+Stripe checkout
+â†“
+Payment confirmation
+â†“
+4 credits added to account
+â†“
+Email receipt
+â†“
+Redirect to generation flow
+```
+
+### Subscription Purchase
+```
+User wants ongoing access
+â†“
+View pricing page
+- Starter: $24/mo (100 credits) or $245/year
+- Pro: $59/mo (280 credits) or $600/year
+â†“
+Select tier and period (monthly/annual)
+â†“
+Stripe checkout
+â†“
+Subscription confirmed
+â†“
+Credits added monthly
+â†“
+Email confirmation
+â†“
+Dashboard
+```
+
+### Top-up Purchase
+```
+User runs low on credits
+â†“
+"Buy More Credits" or prompted during generation
+â†“
+Select amount (minimum 20 credits)
+- Starter users: $0.90 per 4 credits
+- Pro users: $0.60 per 4 credits
+â†“
+Stripe checkout
+â†“
+Credits added immediately
+â†“
+Return to generation flow or dashboard
+```
+
+## 5. Subscription Management Flow
+
+```
+Dashboard â†’ "Manage Subscription"
+â†“
+View current plan
+- Credits included
+- Next billing date
+- Usage this month
+â†“
+Actions:
+- Upgrade plan
+- Downgrade plan
+- Cancel subscription
+- Update payment method
+â†“
+Confirmation
+â†“
+Email notification
+```
+
+## 6. Admin Flows (If Needed)
+
+### User Management
+```
+Admin dashboard
+â†“
+View all users
+- Search/filter
+- See credit balance, usage
+â†“
+Actions:
+- Grant bonus credits
+- View user's generations
+- Suspend account (if needed)
+```
+
+## Key Screens Required
+
+**Note:** All screens must support EN/ES with next-intl
+
+1. **Landing Page** - Marketing, value prop
+2. **Sign Up/Login** - Auth.js integration (email/password + OAuth)
+3. **Onboarding** - Welcome flow
+4. **Dashboard** - Credit balance, CTA, history
+5. **Upload** - Photo upload interface
+6. **Customize** - Style/background selection
+7. **Processing** - Loading state
+8. **Review** - View variations
+9. **Payment** - Add payment method
+10. **Purchase** - Buy credits
+11. **Settings** - Account, billing, subscription, language preference
+12. **History** - Past generations
+
+## Navigation
+
+### Marketing Site (www.teamshots.vip)
+```
+Header: Logo | Features | Pricing | Language (EN/ES) | Login | Sign Up
+```
+
+### Application (app.teamshots.vip - logged in only)
+```
+Header: Logo | Dashboard | History | 87 credits (21 gen) | Language (EN/ES) | Profile
+```
+
+## Decision Points
+
+### When to Show Credit Cost?
+**Always visible:**
+- During customization: "Uses 4 credits (1 generation)"
+- Before generation: Confirm button shows "Generate (4 credits)"
+- If insufficient: Block action, show "Get X more credits"
+
+### When to Block Generation?
+- No credits remaining
+- Insufficient credits for requested generation (need 4)
+
+### When to Show Upsell?
+- After Try Once: "Subscribe to keep creating"
+- Low credits (<8): "Running low - buy more or subscribe"
+- Starter user buying top-ups frequently: "Upgrade to Pro for cheaper top-ups"

@@ -1,0 +1,11 @@
+# Task ID: 6
+# Title: Week 2 Day 13: Onboarding, Polish, and Email Templates
+# Status: pending
+# Dependencies: 5
+# Priority: medium
+# Description: Create welcome onboarding flow (3 slides or 30s video), add sample photos for testing, implement guided first generation with tooltips, create all email templates (welcome, verification, receipts, notifications), and set up transactional email service.
+# Details:
+Includes: Onboarding component with slides/video, sample photo assets, tooltip system, email templates in EN/ES, transactional email provider setup (Resend/SendGrid/Postmark), email sending utilities, UI polish and refinements.
+
+# Test Strategy:
+

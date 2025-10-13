@@ -1,0 +1,321 @@
+# PRD: AI Team Photo Generator - TeamShots
+
+## Project Overview
+Upload any photo → Get professional team photos in 60 seconds using AI.
+Target launch: 2 weeks to beta (14 days)
+
+## Problem & Solution
+Companies waste time and money coordinating photoshoots for team pages. Remote teams can't gather physically. New hires delay website updates.
+Solution: AI-powered professional headshot generation in under 60 seconds.
+
+## Goals
+- Launch functional MVP in 2 weeks (14 days)
+- Validate market demand and pricing
+- Maintain clean, reusable codebase for future projects (boilerplate-ready)
+
+## Target Users
+- Individual employees needing professional headshots
+- Remote teams without access to photographers
+- Startups with frequent new hires
+- HR/Marketing uploading on behalf of teams
+
+## Timeline: Phased Launch (2 Weeks)
+
+### Week 1: Foundation + Waitlist
+Days 1-2: Infrastructure, landing page, waitlist signup → LAUNCH WAITLIST
+- Domain setup: www.teamshots.vip (marketing) + app.teamshots.vip (app)
+- Landing page with value proposition
+- Pricing page preview
+- Waitlist email signup
+- Email notification: "Thanks for joining!"
+
+Days 3-4: Auth, database, app shell, i18n
+- Auth.js (NextAuth.js) with email/password authentication
+- PostgreSQL database setup (Hetzner VPS via Coolify)
+- Database schema: User, Generation, Transaction models
+- next-intl setup for EN/ES bilingual support
+- Language auto-detection and switcher
+
+Days 5-7: Stripe, credit system, purchase flows
+- Stripe integration for payments
+- Credit-based system implementation
+- Try Once purchase ($5 for 4 credits)
+- Subscription tiers: Starter ($24/mo or $245/yr) & Pro ($59/mo or $600/yr)
+- Top-up functionality (tier-specific pricing)
+- Credits roll over, never expire
+- Transaction tracking
+
+### Week 2: Core Feature + Launch
+Days 8-10: S3, upload, Gemini integration, generation flow
+- Hetzner S3 setup for photo storage
+- Photo upload interface (drag-drop, file picker)
+- Face validation
+- Google Gemini API integration (Gemini 2.5 Flash)
+- Provider abstraction layer for future flexibility
+- Generation flow (3-4 variations per generation)
+- Error handling & retry logic
+
+Days 11-12: Review UI, download, history, credit deduction
+- Review screen for generated variations
+- Download functionality (1024x1024px)
+- Generation history page
+- Credit deduction on generation
+- Credit refund on failure
+- Dashboard with credit balance
+
+Day 13: Polish, onboarding, emails
+- Welcome onboarding flow (3 slides or 30s video)
+- Sample photos for testing
+- Guided first generation
+- Email templates (welcome, verification, receipts, notifications)
+- Transactional email setup (Resend/SendGrid/Postmark)
+
+Day 14: BETA LAUNCH to waitlist users
+- Final testing and bug fixes
+- Deploy to production (Hetzner + Coolify)
+- Email waitlist users
+- Monitor performance and errors
+
+Public launch: After 1 week of beta feedback
+
+## MVP Features
+
+### 1. Photo Upload & Generation
+- Single person per photo
+- Face validation required
+- JPG/PNG support
+- Drag-drop or file picker
+- Generates 3-4 variations (uses 3-4 credits)
+- Processing time: up to 60 seconds
+- Output: 1024x1024px images
+
+### 2. Style Selection (5 Presets)
+1. Corporate Professional
+2. Casual Modern
+3. Creative Agency
+4. Tech Startup
+5. Executive Formal
+
+### 3. Background Options
+- Upload custom background
+- Generate from text prompt
+- 5 standard presets (office, neutral, gradient, branded, outdoor)
+
+### 4. Branding (Optional)
+- Add company logo to clothing/background
+- Adjust clothing style (formal, business casual, casual)
+
+### 5. Account & Billing
+- Email/password authentication (OAuth post-MVP)
+- Email verification required
+- Credit balance display (shows credits + generation equivalent)
+- Try Once purchase (one-time, no subscription): $5 for 4 credits
+- Subscription plans:
+  - Starter: $24/mo (100 credits) or $245/year
+  - Pro: $59/mo (280 credits) or $600/year
+- Credit top-ups (tier-specific pricing):
+  - Starter: $0.90 per 4 credits
+  - Pro: $0.60 per 4 credits
+- Credits roll over month-to-month, never expire
+- Download history
+- Language preference (EN/ES)
+
+### 6. Internationalization
+- Languages: English & Spanish
+- Auto-detection: Browser language on first visit
+- Manual switching: Header dropdown
+- Persistence: Language saved with user account
+- Scope: All UI, emails, error messages, notifications
+- Currency/Dates: Localized formatting (USD for EN, EUR/MXN for ES)
+
+### 7. Onboarding
+- Welcome flow (3 slides or 30s video)
+- Sample photos to test with
+- Guided first generation
+- Tooltips on style selection
+
+## Tech Stack
+
+### Frontend
+- Next.js 15+ (React framework, SSR)
+- TypeScript (full type safety)
+- Tailwind CSS (styling)
+- next-intl (internationalization EN/ES)
+
+### Backend
+- Next.js API Routes (REST endpoints)
+- Hosting: Hetzner VPS with Coolify Cloud
+- Runtime: Node.js containers (Docker)
+
+### Authentication
+- Auth.js (NextAuth.js)
+- Email/password (OAuth post-MVP)
+- JWT-based sessions
+
+### Database
+- PostgreSQL (Hetzner VPS via Coolify)
+- Prisma ORM for type-safe database access
+
+### AI Processing
+- Google Gemini API (Gemini 2.5 Flash - "Nano Banana")
+- Direct API access (no intermediary for cost efficiency)
+- Provider abstraction for easy model switching
+- Endpoint: https://ai.google.dev/gemini-api/docs/image-generation
+
+### Storage
+- Hetzner S3 (uploaded & generated photos)
+- Retention: 30 days default
+
+### Payments
+- Stripe (subscriptions + credit purchases)
+- Webhook handling for real-time payment events
+
+### Email
+- Transactional: TBD (Resend, SendGrid, or Postmark)
+- Templates: Welcome, verification, order confirmation, payment failure
+
+### Monitoring
+- Error tracking: TBD (Sentry or similar)
+- Analytics: TBD (PostHog, Mixpanel, or simple)
+
+## Data Models
+
+### User
+- id, email, name, image (OAuth profile pic)
+- locale: 'en' | 'es'
+- credits: number
+- subscription_tier: 'starter' | 'pro' | null
+- subscription_period: 'monthly' | 'annual' | null
+- subscription_status: 'active' | 'cancelled' | null
+- created_at, updated_at
+
+### Generation
+- id, user_id
+- uploaded_photo_url: string
+- style_preset: string
+- background_option: string
+- variations: string[] (URLs)
+- credits_used: number
+- actual_cost: number (USD cost from provider)
+- provider: 'gemini'
+- status: 'processing' | 'completed' | 'failed'
+- created_at
+
+### Transaction
+- id, user_id
+- type: 'try_once' | 'subscription' | 'top_up' | 'generation'
+- amount: number (USD)
+- credits_delta: number (positive for purchases, negative for usage)
+- stripe_payment_id?: string
+- created_at
+
+## API Endpoints
+
+### Core
+- POST /api/upload - Upload photo
+- POST /api/generate - Generate variations
+- GET /api/download/:id - Download photo
+- GET /api/health - Health check
+
+### Account
+- GET /api/user/profile - User info
+- GET /api/user/credits - Credit balance
+- GET /api/user/history - Generation history
+
+### Billing
+- POST /api/stripe/checkout - Create checkout session
+- POST /api/stripe/webhook - Handle payment events
+- POST /api/credits/purchase - Buy credits
+
+## Key User Flows
+
+### First-Time User
+1. Visit www.teamshots.vip → Auto-detect language (EN/ES)
+2. Sign up with email/password → Email verification
+3. Onboarding (welcome flow, sample photos)
+4. First generation (guided)
+5. Add payment method
+6. Choose plan or buy credits
+
+### Core Generation Flow
+1. Dashboard → "Generate New Photo"
+2. Upload photo (drag-drop, validation)
+3. Customize (style, background, branding)
+4. See cost: "Uses 4 credits (1 generation)"
+5. Generate → Processing (up to 60s)
+6. Review variations (3-4 images)
+7. Download or regenerate
+
+### Credit Purchase
+- Try Once: $5 for 4 credits (one-time)
+- Subscription: Starter or Pro (monthly/annual)
+- Top-up: Buy more credits (minimum 20)
+
+## Architecture Principles
+
+### Configuration-Driven
+- All business logic in config/ files (pricing, features, styles)
+- No hard-coded values in components
+- Environment variables for external services
+- Easy to swap values without code changes
+
+### Separation of Concerns
+- /lib - Business logic, utilities, external integrations
+- /components - Reusable UI components (no business logic)
+- /app - Routes and page compositions
+- /config - All configuration (pricing, features)
+
+### Type Safety
+- Full TypeScript coverage
+- Shared types in /types or /lib/types
+- Prisma for type-safe database access
+- Zod for runtime validation
+
+### Provider Abstraction
+- ImageGenerator interface for easy provider switching
+- Direct Gemini integration initially
+- Can swap to other providers in 5 minutes
+
+### Code Organization
+- No business logic in components
+- Generic functions in /lib (not project-specific)
+- Abstract external services
+- Clear naming conventions
+- Self-documenting code
+
+## Out of Scope (MVP)
+- OAuth providers (add after beta)
+- Native Spanish translation (improve after beta)
+- Professional branding assets
+- Team composite photos (MVP2+)
+- Batch processing
+- Company accounts
+- Integrations
+- Free tier
+
+## Success Metrics
+- Primary: Revenue (MRR + credits)
+- Secondary: Photos generated per user, subscription conversion rate
+
+## Open Questions
+- Final pricing tiers and credit costs
+- Gemini API rate limits/pricing
+- Launch channels
+- Legal: Copyright terms for AI-generated photos
+
+## Performance Requirements
+- Page load: < 2s
+- Generation: < 60s
+- API response: < 200ms
+
+## Security
+- SSL/TLS encryption
+- Input validation
+- Secure payment processing
+
+## Deployment
+- Hetzner VPS (CPX31 - 4 vCPU, 8GB RAM) - ~€15/month
+- Coolify Cloud for deployment management
+- Docker containers
+- Zero-downtime deployments
+- Environments: Development (local), Staging, Production

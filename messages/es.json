@@ -1,0 +1,294 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "pricing": "Precios",
+    "joinWaitlist": "Únete a la Lista"
+  },
+  "hero": {
+    "title": "Deja de Gastar $2,000+ en",
+    "titleHighlight": "Sesiones de Fotos",
+    "subtitle": "Obtén retratos profesionales con IA para todo tu equipo en 60 segundos. Sin fotógrafo. Sin coordinación. Sin complicaciones.",
+    "joinWaitlist": "Obtener Acceso Temprano",
+    "viewPricing": "Ver Precios",
+    "urgency": "Acceso Beta Limitado",
+    "guarantee": "Garantía de devolución de 30 días"
+  },
+  "features": {
+    "title": "¿Por qué TeamShots?",
+    "fast": {
+      "title": "Haz que Tu Equipo Vuelva al Trabajo",
+      "description": "Evita las sesiones fotográficas de 2 horas y las poses incómodas. Obtén retratos profesionales en 60 segundos para que tu equipo se enfoque en lo importante."
+    },
+    "costEffective": {
+      "title": "Ahorra $2,000+ vs Fotografía Tradicional",
+      "description": "Un fotógrafo profesional cobra $2,500+ por fotos de equipo. TeamShots entrega la misma calidad por menos de $30. Eso es un ahorro del 98%."
+    },
+    "remote": {
+      "title": "Deja de Intentar Reunir a Todos en un Lugar",
+      "description": "Tu equipo está distribuido en 5 zonas horarias. No hay problema. Todos suben su foto individualmente. Listo en minutos, no semanas."
+    }
+  },
+  "gallery": {
+    "title": "Ve la Magia en Acción",
+    "subtitle": "Transformaciones reales de usuarios reales. Sube cualquier foto y observa cómo la IA crea retratos profesionales en segundos.",
+    "viewComparison": "Ver Comparación",
+    "comparisonView": "Comparación Antes y Después",
+    "tryWithSample": "Probar con Foto de Muestra",
+    "before": "Antes",
+    "after": "Después",
+    "dragToCompare": "Arrastra para comparar",
+    "generatedIn": "Generado en 45 segundos",
+    "noWatermarks": "Sin marcas de agua",
+    "highResolution": "Alta resolución",
+    "commercialUse": "Uso comercial"
+  },
+  "trust": {
+    "title": "Confiado y Seguro",
+    "subtitle": "Tus datos y fotos están protegidos con seguridad de nivel empresarial",
+    "badges": {
+      "security": {
+        "title": "Seguridad de Nivel Bancario",
+        "description": "El cifrado de nivel empresarial protege tus datos y fotos. Nunca almacenamos ni compartimos sin permiso."
+      },
+      "ai": {
+        "title": "Impulsado por Google Gemini AI",
+        "description": "Resultados profesionales utilizando la última tecnología de IA de Google. Confiado por miles de equipos en todo el mundo."
+      }
+    }
+  },
+  "socialProof": {
+    "testimonialsTitle": "Lo Que Dicen Nuestros Usuarios Tempranos",
+    "userCount": "personas ya se unieron",
+    "trustMessage": "Únete a cientos de equipos transformando sus fotos profesionales con IA",
+    "beta": {
+      "name": "Usuario Beta",
+      "role": "Probador Temprano",
+      "company": "Próximamente",
+      "message": "¡Únete a nuestro programa beta para aparecer aquí y ayudar a dar forma al futuro de TeamShots!"
+    }
+  },
+  "howItWorks": {
+    "title": "Cómo Funciona",
+    "subtitle": "Obtén retratos profesionales en solo 3 pasos simples",
+    "totalTime": "Tiempo total:",
+    "totalTimeValue": "60 segundos",
+    "steps": {
+      "1": {
+        "title": "Subir Foto",
+        "description": "Sube cualquier foto tuya - incluso una selfie casual funciona perfectamente",
+        "duration": "10 segundos"
+      },
+      "2": {
+        "title": "Magia de IA",
+        "description": "Nuestra IA analiza tu foto y genera 3-4 variaciones profesionales",
+        "duration": "45 segundos"
+      },
+      "3": {
+        "title": "Obtener Resultados",
+        "description": "Descarga tus retratos profesionales en alta resolución",
+        "duration": "5 segundos"
+      }
+    }
+  },
+  "faq": {
+    "title": "Preguntas Frecuentes",
+    "subtitle": "Todo lo que necesitas saber sobre TeamShots",
+    "searchPlaceholder": "Buscar preguntas...",
+    "category": {
+      "all": "Todas",
+      "technical": "Técnico",
+      "pricing": "Precios",
+      "privacy": "Privacidad",
+      "usage": "Uso"
+    },
+    "noResults": "No se encontraron preguntas que coincidan con tu búsqueda.",
+    "stillHaveQuestions": "¿Aún tienes preguntas?",
+    "contactSupport": "Contactar Soporte",
+    "items": {
+      "1": {
+        "question": "¿Cómo funciona la generación de fotos con IA?",
+        "answer": "Nuestra IA analiza tu foto cargada utilizando algoritmos avanzados de reconocimiento facial y transferencia de estilo. Crea retratos profesionales aplicando estilos de fotografía corporativa mientras mantiene tus características faciales únicas e identidad."
+      },
+      "2": {
+        "question": "¿Qué tipos de fotos funcionan mejor?",
+        "answer": "¡Cualquier foto clara de tu rostro funciona! Selfies, fotos casuales, o incluso fotos grupales donde seas claramente visible. La IA funciona mejor con buena iluminación y una vista clara de tu rostro, pero es sorprendentemente buena manejando varias calidades de fotos."
+      },
+      "3": {
+        "question": "¿Cuánto cuesta?",
+        "answer": "Ofrecemos precios flexibles comenzando en $5 por una prueba única (4 créditos), o suscripciones mensuales desde $29/mes por 100 créditos. Los créditos nunca expiran, para que puedas usarlos cuando necesites fotos profesionales."
+      },
+      "4": {
+        "question": "¿Mis datos son seguros y privados?",
+        "answer": "Absolutamente. Utilizamos encriptación de nivel empresarial y nunca almacenamos tus fotos permanentemente. Tus fotos cargadas se procesan y luego se eliminan automáticamente dentro de 30 días. Nunca compartimos tus datos con terceros."
+      },
+      "5": {
+        "question": "¿Qué pasa si no estoy satisfecho con los resultados?",
+        "answer": "Ofrecemos una garantía de devolución de dinero de 30 días. Si no estás contento con tus fotos profesionales, reembolsaremos tu compra, sin preguntas. Confiamos en la calidad de nuestra IA, pero queremos que estés completamente satisfecho."
+      },
+      "6": {
+        "question": "¿Puedo usar estas fotos para mi LinkedIn, sitio web, etc.?",
+        "answer": "¡Sí! Todas las fotos generadas son tuyas para usar en cualquier propósito profesional - LinkedIn, sitios web de empresas, tarjetas de presentación, presentaciones y más. Recibes archivos de alta resolución (1024x1024px) perfectos para cualquier uso profesional."
+      },
+      "7": {
+        "question": "¿Cuántas fotos obtengo por generación?",
+        "answer": "Cada generación produce 3-4 variaciones profesionales diferentes de tu foto. Puedes descargarlas todas y elegir tus favoritas. Esto te da opciones para diferentes contextos o preferencias."
+      },
+      "8": {
+        "question": "¿Soportan fotos de equipo o solo retratos individuales?",
+        "answer": "Actualmente, nos enfocamos en retratos profesionales individuales. Cada persona necesita subir su propia foto para obtener los mejores resultados. Estamos trabajando en capacidades de fotos de equipo para futuras actualizaciones."
+      }
+    }
+  },
+  "pricingPreview": {
+    "title": "Precios Simples y Transparentes",
+    "subtitle": "Sin tarifas ocultas, sin compromisos mensuales. Paga solo por lo que uses.",
+    "mostPopular": "Más Popular",
+    "questions": "¿Tienes preguntas sobre precios?",
+    "viewFullPricing": "Ver Detalles Completos de Precios",
+    "poweredBy": "Impulsado por Google Gemini AI",
+    "plans": {
+      "tryOnce": {
+        "name": "Prueba Una Vez",
+        "price": "$5",
+        "period": "único",
+        "credits": "4 créditos",
+        "description": "Perfecto para probar el servicio",
+        "features": {
+          "0": "1 generación de foto (4 variaciones)",
+          "1": "Descargas de alta resolución 1024x1024px",
+          "2": "Retención de foto por 30 días",
+          "3": "Soporte por correo electrónico"
+        },
+        "cta": "Únete a la Lista"
+      },
+      "starter": {
+        "name": "Inicial",
+        "price": "$29",
+        "period": "por mes",
+        "credits": "100 créditos/mes",
+        "description": "Para individuos y equipos pequeños",
+        "features": {
+          "0": "25 generaciones de fotos por mes",
+          "1": "Descargas de alta resolución 1024x1024px",
+          "2": "Retención de foto por 30 días",
+          "3": "Los créditos se acumulan, nunca expiran",
+          "4": "Recarga a $0.90 por 4 créditos",
+          "5": "Soporte prioritario por correo electrónico"
+        },
+        "cta": "Únete a la Lista",
+        "savings": "Ahorra $43/año"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$59",
+        "period": "por mes",
+        "credits": "280 créditos/mes",
+        "description": "Para equipos en crecimiento y agencias",
+        "features": {
+          "0": "70 generaciones de fotos por mes",
+          "1": "Descargas de alta resolución 1024x1024px",
+          "2": "Retención de foto por 30 días",
+          "3": "Los créditos se acumulan, nunca expiran",
+          "4": "Recarga a $0.60 por 4 créditos",
+          "5": "Soporte prioritario con gerente de cuenta dedicado"
+        },
+        "cta": "Únete a la Lista",
+        "savings": "Ahorra $108/año"
+      }
+    }
+  },
+  "waitlist": {
+    "title": "Únete a la Lista de Espera",
+    "subtitle": "Únete a más de 247 equipos que ya están transformando sus fotos profesionales con IA",
+    "emailPlaceholder": "Ingresa tu correo de trabajo",
+    "submit": "Obtener Acceso Temprano",
+    "submitting": "Enviando...",
+    "success": "¡Gracias por unirte! Revisa tu correo para la confirmación.",
+    "error": "Algo salió mal. Por favor intenta de nuevo.",
+    "invalidEmail": "Por favor ingresa un correo electrónico válido",
+    "limitedSpots": "Acceso Beta Limitado - ¡Solo quedan 100 espacios!",
+    "benefit1": "Resultados en 60 Segundos",
+    "benefit2": "Ahorra $2,000+",
+    "benefit3": "100% Seguro",
+    "guarantee": "Garantía de devolución de 30 días",
+    "secure": "Encriptado SSL y seguro",
+    "noSpam": "Sin spam, nunca"
+  },
+  "footer": {
+    "tagline": "Fotos profesionales de equipo en 60 segundos",
+    "copyright": "© 2025 TeamShots. Todos los derechos reservados."
+  },
+  "metadata": {
+    "title": "TeamShots - Fotos Profesionales de Equipo en 60 Segundos",
+    "description": "Sube cualquier foto y obtén retratos profesionales con IA para tu equipo. Sin necesidad de fotógrafo."
+  },
+  "pricing": {
+    "title": "Precios Simples y Transparentes",
+    "subtitle": "Elige el plan que mejor se adapte a ti. Todos los planes incluyen créditos que se acumulan y nunca expiran.",
+    "mostPopular": "Más Popular",
+    "creditsPerMonth": "créditos",
+    "generations": "generaciones",
+    "year": "año",
+    "save": "Ahorra",
+    "plans": {
+      "tryOnce": {
+        "name": "Prueba Una Vez",
+        "period": "único pago",
+        "description": "Perfecto para probar el servicio",
+        "features": [
+          "1 generación de foto (4 variaciones)",
+          "Descargas en alta resolución 1024x1024px",
+          "Fotos retenidas por 30 días desde la generación",
+          "Soporte por correo electrónico"
+        ],
+        "cta": "Únete a la Lista"
+      },
+      "starter": {
+        "name": "Inicial",
+        "period": "por mes",
+        "description": "Para individuos y equipos pequeños",
+        "features": [
+          "Generaciones de fotos por mes según créditos",
+          "Descargas en alta resolución 1024x1024px",
+          "Fotos retenidas mientras esté activo + 30 días después",
+          "Los créditos se acumulan y nunca expiran",
+          "Recarga de créditos disponible",
+          "Soporte prioritario por correo"
+        ],
+        "cta": "Únete a la Lista"
+      },
+      "pro": {
+        "name": "Pro",
+        "period": "por mes",
+        "description": "Para equipos en crecimiento y agencias",
+        "features": [
+          "Generaciones de fotos por mes según créditos",
+          "Descargas en alta resolución 1024x1024px",
+          "Fotos retenidas mientras esté activo + 30 días después",
+          "Los créditos se acumulan y nunca expiran",
+          "Créditos de recarga con descuento",
+          "Soporte prioritario con gerente de cuenta dedicado"
+        ],
+        "cta": "Únete a la Lista"
+      }
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "questions": {
+        "howCreditsWork": {
+          "question": "¿Cómo funcionan los créditos?",
+          "answer": "Cada generación de foto usa 4 créditos y produce 3-4 variaciones de alta calidad. Los créditos se acumulan mes a mes y nunca expiran."
+        },
+        "topUp": {
+          "question": "¿Puedo recargar créditos?",
+          "answer": "¡Sí! Los suscriptores pueden comprar créditos adicionales en cualquier momento. Los precios varían según el nivel."
+        },
+        "satisfaction": {
+          "question": "¿Qué pasa si no estoy satisfecho?",
+          "answer": "Ofrecemos una garantía de devolución de dinero de 30 días. Si no estás contento con el servicio, te reembolsaremos tu pago de suscripción, sin preguntas."
+        }
+      }
+    }
+  }
+}
+

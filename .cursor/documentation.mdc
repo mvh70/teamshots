@@ -1,0 +1,293 @@
+---
+description: Guidelines for maintaining comprehensive, up-to-date documentation for TeamShots AI Team Photo Generator. Apply these rules when adding new features, researching solutions, or updating project documentation to ensure consistency and avoid information duplication.
+globs: docs/**/*.md, README.md, **/README.md, .taskmaster/docs/**/*.md
+alwaysApply: true
+---
+
+# TeamShots Documentation Maintenance Guidelines
+
+## Core Principles
+
+- **Preserve Existing Content**: Never overwrite or delete existing documentation without explicit permission and clear justification
+- **Single Source of Truth**: Keep all information in exactly one place to prevent outdated documentation and errors
+- **Continuous Improvement**: Add new information, clarify existing content, and improve organization without removing valuable context
+- **Structured Updates**: Follow established patterns for versioning, organization, and cross-referencing
+
+## Objective Documentation Guidelines
+
+### Focus on Requirements, Not Implementation History
+- **Describe what should be done**, not what has been done
+- **Document requirements and specifications** objectively
+- **Avoid implementation-specific language** that ties documentation to current code
+- **Write for future understanding**, not historical record
+
+### ✅ Good: Objective Feature Description
+```markdown
+## Photo Generation System
+
+**Requirements**:
+- Upload single person photos with face validation
+- Generate 3-4 professional variations per upload using AI
+- Support 5 style presets (Corporate Professional, Casual Modern, Creative Agency, Tech Startup, Executive Formal)
+- Process generations within 60 seconds
+- Support custom backgrounds via upload or text prompt
+- Track generation cost and credit usage
+
+**Technical Requirements**:
+- Direct Gemini API integration for image generation
+- S3-compatible storage for uploaded and generated photos
+- 30-day retention for uploaded photos
+- Download in 1024x1024px resolution
+```
+
+### ❌ Bad: Implementation History
+```markdown
+## Photo Generation System
+
+**What We Built**:
+- We integrated Gemini API for photo generation
+- We added S3 upload functionality last week
+- We're currently working on the style presets
+- We created the upload UI component
+- We added progress tracking to the generation flow
+```
+
+### ✅ Good: Technical Specification
+```markdown
+## Credit System Architecture
+
+**System Requirements**:
+- Track user credit balances with real-time updates
+- 1 generation = 4 credits (produces 4 photo variations)
+- Credits roll over month-to-month and never expire
+- Support multiple purchase methods: Try Once ($5), Subscriptions (Starter/Pro), Top-ups
+- Deduct credits upon successful generation
+- Refund credits on generation failure
+
+**Data Model Requirements**:
+- User credits field with current balance
+- Transaction ledger for all credit changes (purchases, usage, refunds)
+- Generation records with credits used and actual API cost
+- Stripe payment integration for purchases
+```
+
+### ❌ Bad: Development Log
+```markdown
+## Credit System Architecture
+
+**Implementation Details**:
+- We created a credits field in the User table
+- We integrated Stripe for payments
+- We built transaction tracking in the database
+- We added cost tracking to the Gemini API calls
+- We're working on the credit purchase UI
+```
+
+### Guidelines for Objective Documentation
+
+1. **Use Present Tense**: Describe how the system works, not how it was built
+2. **Focus on Behavior**: Document what the system does, not how it does it
+3. **Specify Requirements**: State what is needed, not what was implemented
+4. **Avoid Time References**: Don't mention when things were done or are being done
+5. **Describe Capabilities**: Focus on what the system can do, not what was coded
+
+### When to Document Implementation Details
+- **Architecture decisions** that affect future development
+- **Design patterns** that should be followed consistently
+- **Integration requirements** that other developers need to understand
+- **Configuration details** that are essential for system operation
+- **Security considerations** that must be maintained
+
+## Documentation Hierarchy
+
+### 1. Product Requirements Document (PRD)
+**Location**: `docs/teamshots_prd.md`
+**Purpose**: Business requirements, target users, MVP scope, and timeline
+**When to Update**:
+- New business requirements or user stories
+- Changes to core product philosophy or target users
+- Major feature additions or scope modifications
+- Timeline or launch strategy changes
+
+### 2. Features Documentation
+**Location**: `docs/features.md`
+**Purpose**: Core feature specifications, non-functional requirements, and MVP scope
+**When to Update**:
+- New feature specifications
+- Style presets or generation options
+- Performance requirements
+- Storage or retention policies
+- Internationalization scope
+
+### 3. Infrastructure Documentation
+**Location**: `docs/infra.md`
+**Purpose**: Tech stack, architecture, deployment, and configuration management
+**When to Update**:
+- Tech stack changes
+- API endpoint modifications
+- Database schema changes
+- Deployment or hosting changes
+- Environment variable updates
+- AI provider or model changes
+
+### 4. User Flow Documentation
+**Location**: `docs/user_flows`
+**Purpose**: User journeys, screen flows, and interaction patterns
+**When to Update**:
+- New user journeys or workflows
+- Navigation changes
+- Error state handling
+- Purchase or subscription flow changes
+
+### 5. Business Model Documentation
+**Location**: `docs/business_model`
+**Purpose**: Pricing structure, revenue streams, and unit economics
+**When to Update**:
+- Pricing changes
+- New subscription tiers
+- Credit system modifications
+- Top-up pricing adjustments
+- Cost tracking requirements
+
+### 6. Value Proposition Documentation
+**Location**: `docs/value_proposition.md`
+**Purpose**: Target audience, problem statement, and competitive positioning
+**When to Update**:
+- Target user segments change
+- Competitive landscape shifts
+- Value proposition refinements
+
+### 7. Getting Started Guide
+**Location**: `docs/getting_started.md`
+**Purpose**: Setup instructions, implementation order, and development workflows
+**When to Update**:
+- Setup requirements change
+- New dependencies added
+- Deployment process changes
+- Development workflow improvements
+
+### 8. README Files
+**Purpose**: Project overview, quick setup, and essential information
+**Locations**: Root `README.md`, component `README.md` files
+**When to Update**:
+- Project overview changes
+- Quick start instructions
+- Component-specific usage
+
+## Update Workflow
+
+### 1. Identify the Right Location
+Before adding any information, determine the single most appropriate location:
+
+- **Business Requirements & MVP Scope** → `docs/teamshots_prd.md`
+- **Feature Specifications** → `docs/features.md`
+- **Tech Stack & Architecture** → `docs/infra.md`
+- **User Journeys & Flows** → `docs/user_flows`
+- **Pricing & Revenue** → `docs/business_model`
+- **Value Proposition & Positioning** → `docs/value_proposition.md`
+- **Setup & Development Instructions** → `docs/getting_started.md`
+- **Quick Reference** → Root `README.md`
+
+### 2. Preserve Existing Content
+When updating documentation:
+
+- **Add, Don't Replace**: Append new information to existing sections
+- **Improve, Don't Delete**: Enhance existing content with additional context
+- **Reorganize Carefully**: If restructuring is needed, preserve all content and explain the reorganization
+- **Version Control**: Use clear versioning for major changes
+
+### 3. Cross-Reference Appropriately
+- Use internal links to reference related information
+- Avoid duplicating information across files
+- Create clear navigation between related sections
+
+## Content Addition Guidelines
+
+### For New Features
+1. **PRD Update** (`docs/teamshots_prd.md`): Add business requirements, update MVP scope
+2. **Features Doc Update** (`docs/features.md`): Add feature specifications, update style presets or generation options
+3. **User Flows Update** (`docs/user_flows`): Document new user journeys
+4. **Infrastructure Update** (`docs/infra.md`): Document new API endpoints, environment variables
+5. **README Update**: Update setup instructions if new dependencies are required
+
+### For AI/Generation Changes
+1. **AI Provider Changes**: Update `docs/infra.md` AI Integration Architecture section
+2. **Style Presets**: Update `docs/features.md` style selection section
+3. **Generation Parameters**: Update `docs/infra.md` API endpoints and data models
+4. **Cost Tracking**: Update `docs/business_model` unit economics section
+
+### For Pricing Changes
+1. **Pricing Updates**: Update `docs/business_model` pricing structure section
+2. **Credit System Changes**: Update both `docs/business_model` and `docs/features.md`
+3. **Configuration**: Update `docs/infra.md` pricing configuration section
+4. **User Flows**: Update `docs/user_flows` purchase flow sections
+
+### For Technical Changes
+1. **Tech Stack Changes**: Update `docs/infra.md` tech stack section
+2. **Database Schema**: Update `docs/infra.md` data models section
+3. **Deployment Changes**: Update `docs/infra.md` deployment section
+4. **Environment Variables**: Update `docs/infra.md` environment variables section
+5. **Development Workflow**: Update `docs/getting_started.md`
+
+## Quality Standards
+
+### Content Requirements
+- **Clear and Concise**: Write for the intended audience
+- **Actionable**: Provide specific, implementable information
+- **Complete**: Include all necessary context and examples
+- **Accurate**: Verify all information before adding
+
+### Organization Requirements
+- **Logical Structure**: Use clear headings and consistent formatting
+- **Progressive Disclosure**: Start with overview, then add details
+- **Cross-References**: Link related information appropriately
+- **Version Tracking**: Maintain clear version history
+
+### Maintenance Requirements
+- **Regular Reviews**: Periodically review for accuracy and completeness
+- **Update Triggers**: Update documentation when code changes
+- **Validation**: Ensure documentation matches actual implementation
+- **Cleanup**: Remove outdated information only with permission
+
+## Permission Requirements
+
+### When Deletion Requires Permission
+- Removing any existing content without replacement
+- Restructuring major sections
+- Changing established patterns or conventions
+- Deprecating documented features
+
+### Permission Process
+1. **Explain the Need**: Clearly state why deletion is necessary
+2. **Propose Alternative**: Suggest where the information should go instead
+3. **Get Approval**: Wait for explicit permission before proceeding
+4. **Document Changes**: Record what was removed and why
+
+## Version Control
+
+### Documentation Versioning
+- **PRD** (`teamshots_prd.md`): Update version header for major scope or timeline changes
+- **Features** (`features.md`): Document feature additions and modifications with dates
+- **Infrastructure** (`infra.md`): Track tech stack changes and API endpoint modifications
+- **Business Model** (`business_model`): Version pricing changes and track when implemented
+- **User Flows** (`user_flows`): Update for significant flow changes or new user journeys
+
+### Change Tracking
+- Document major changes with clear descriptions
+- Include rationale for significant modifications (especially pricing, tech stack, scope)
+- Track breaking changes (API changes, schema migrations, pricing updates)
+- Use git commits to maintain detailed history
+
+## Review Checklist
+
+Before finalizing any documentation update:
+
+- [ ] Information is in the most appropriate location
+- [ ] No duplicate information exists elsewhere
+- [ ] Existing content is preserved and enhanced
+- [ ] Cross-references are accurate and helpful
+- [ ] Version numbers are updated if needed
+- [ ] Content is clear and actionable
+- [ ] Examples and code snippets are accurate
+- [ ] Links and references are working
+- [ ] Formatting is consistent with existing style 

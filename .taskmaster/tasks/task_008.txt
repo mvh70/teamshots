@@ -1,0 +1,11 @@
+# Task ID: 8
+# Title: Style Presets Configuration
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Create configuration file for 5 style presets: Corporate Professional, Casual Modern, Creative Agency, Tech Startup, and Executive Formal. Include prompts and example images for each style.
+# Details:
+Configuration-driven approach in config/styles.ts with prompt templates, example images, and style-specific parameters for Gemini API.
+
+# Test Strategy:
+

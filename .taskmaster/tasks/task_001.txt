@@ -1,0 +1,11 @@
+# Task ID: 1
+# Title: Week 1 Days 1-2: Infrastructure and Waitlist Landing Page
+# Status: pending
+# Dependencies: None
+# Priority: medium
+# Description: Set up domain structure (www.teamshots.vip and app.teamshots.vip), create landing page with value proposition, pricing preview page, and waitlist email signup functionality. Deploy and launch waitlist phase.
+# Details:
+Includes: Domain setup, Next.js project structure, landing page with bilingual support (EN/ES), pricing page preview, waitlist signup form, email confirmation system, basic email templates, Hetzner VPS + Coolify setup for deployment.
+
+# Test Strategy:
+

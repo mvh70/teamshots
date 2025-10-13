@@ -1,0 +1,11 @@
+# Task ID: 3
+# Title: Week 1 Days 5-7: Stripe Integration and Credit System
+# Status: pending
+# Dependencies: 2
+# Priority: medium
+# Description: Implement Stripe for payment processing, create credit-based system with Try Once purchase ($5 for 4 credits), subscription tiers (Starter and Pro with monthly/annual options), credit top-up functionality, and transaction tracking. Credits roll over and never expire.
+# Details:
+Includes: Stripe checkout integration, webhook handling, pricing config file, credit management system, subscription tier implementation, top-up purchase flows, transaction logging, credit balance tracking, Stripe Price IDs configuration.
+
+# Test Strategy:
+

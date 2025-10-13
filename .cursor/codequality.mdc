@@ -1,0 +1,194 @@
+---
+description: Code Quality Guidelines
+globs: **/*.py, app/**/*.py, api/**/*.py, **/*.tsx, **/*.ts, src/**/*.ts, src/**/*.tsx
+---
+# Code Quality Guidelines
+
+## Verify Information
+Always verify information before presenting it. Do not make assumptions or speculate without clear evidence.
+
+## File-by-File Changes
+Make changes file by file and give me a chance to spot mistakes.
+
+## No Apologies
+Never use apologies.
+
+## No Understanding Feedback
+Avoid giving feedback about understanding in comments or documentation.
+
+## No Whitespace Suggestions
+Don't suggest whitespace changes.
+
+## No Summaries
+Don't summarize changes made.
+
+## No Inventions
+Don't invent changes other than what's explicitly requested.
+
+## No Unnecessary Confirmations
+Don't ask for confirmation of information already provided in the context.
+
+## Preserve Existing Code
+Don't remove unrelated code or functionalities. Pay attention to preserving existing structures.
+
+## Single Chunk Edits
+Provide all edits in a single chunk instead of multiple-step instructions or explanations for the same file.
+
+## No Implementation Checks
+Don't ask the user to verify implementations that are visible in the provided context.
+
+## No Unnecessary Updates
+Don't suggest updates or changes to files when there are no actual modifications needed.
+
+## Provide Real File Links
+Always provide links to the real files, not x.md.
+
+## No Current Implementation
+Don't show or discuss the current implementation unless specifically requested.
+
+## TypeScript Type Safety - Comprehensive Guidelines
+
+### Core Principle: Eliminate `any` Types
+"Generate TypeScript code with strict typing. Never use 'any' type. 
+If you're unsure of a type, use 'unknown' and add proper type guards, 
+or create specific interfaces for the data structures."
+
+### Preferred Alternatives to `any`:
+- **Known types**: Use specific interfaces or type definitions
+- **Unknown types**: Use `unknown` with proper type guards
+- **Generic objects**: Use `Record<string, unknown>` for dynamic objects
+- **Union types**: Use specific literal string unions for enums
+- **Function types**: Use proper function signatures with `Parameters<>` utility
+
+### Specific Patterns for Common `any` Scenarios:
+
+#### 1. **API Response Objects**
+```typescript
+// ❌ Bad
+const response: any = await fetch('/api/data');
+
+// ✅ Good
+const response: Record<string, unknown> = await fetch('/api/data');
+// Or create specific interface
+interface ApiResponse {
+  data: unknown;
+  status: string;
+}
+```
+
+#### 2. **Event Handlers and Callbacks**
+```typescript
+// ❌ Bad
+const handler = (event: any) => { /* ... */ };
+
+// ✅ Good
+const handler = (event: unknown) => { /* ... */ };
+// Or specific event type
+const handler = (event: React.MouseEvent<HTMLButtonElement>) => { /* ... */ };
+```
+
+#### 3. **Database/ORM Operations**
+```typescript
+// ❌ Bad
+const data: any = await prisma.user.create({ data: userData });
+
+// ✅ Good
+const data = await prisma.user.create({ 
+  data: userData as Parameters<typeof prisma.user.create>[0]['data'] 
+});
+```
+
+#### 4. **Enum Type Casting**
+```typescript
+// ❌ Bad
+status: task.status as any,
+
+// ✅ Good
+status: task.status as unknown as "pending" | "in_progress" | "completed" | "failed",
+```
+
+#### 5. **Component Props and Templates**
+```typescript
+// ❌ Bad
+const Component: React.FC<any> = (props) => { /* ... */ };
+
+// ✅ Good - Use double type assertion for complex template compatibility
+const Component = Template as unknown as React.ComponentType<Record<string, unknown>>;
+```
+
+#### 6. **Test Mocking**
+```typescript
+// ❌ Bad
+const mockPrisma: any = { /* ... */ };
+
+// ✅ Good - Use eslint-disable for complex mock structures
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockPrisma: any = { /* ... */ };
+```
+
+#### 7. **Webhook and External API Data**
+```typescript
+// ❌ Bad
+const eventData: any = event.data.object;
+
+// ✅ Good
+const eventData = event.data.object as Record<string, unknown>;
+// Then extract specific properties with type assertions
+const id = eventData.id as string;
+const metadata = eventData.metadata as Record<string, unknown>;
+```
+
+#### 8. **Error Handling**
+```typescript
+// ❌ Bad
+catch (error: any) { /* ... */ }
+
+// ✅ Good
+catch (error: unknown) {
+  if (error instanceof Error) {
+    // Handle Error instance
+  }
+  // Handle other cases
+}
+```
+
+### Type Assertion Patterns:
+
+#### **Single Type Assertion** (when types are compatible)
+```typescript
+const value = data as string;
+```
+
+#### **Double Type Assertion** (for complex type conversions)
+```typescript
+const component = Template as unknown as React.ComponentType<Props>;
+```
+
+#### **Specific Property Access** (for dynamic objects)
+```typescript
+const country = (request as { geo?: { country?: string } }).geo?.country;
+const ip = (request as { ip?: string }).ip;
+```
+
+### When to Use `eslint-disable`:
+- **Test files**: Complex mock structures that require `any` for flexibility
+- **Third-party integrations**: When external APIs don't provide proper types
+- **Legacy code migration**: Temporary measure during refactoring
+
+### Systematic Approach to Fixing `any` Warnings:
+1. **Identify the context** (API, database, component, etc.)
+2. **Choose the appropriate pattern** from the above examples
+3. **Apply the fix** with proper type assertions
+4. **Test the build** to ensure no new errors
+5. **Iterate** if linter errors appear, trying more specific types
+
+### Requirements:
+- TypeScript strict mode compliance
+- Include proper error handling with typed catch blocks
+- Use type assertions only when necessary with proper guards
+- Maintain existing functionality while improving type safety
+- Document complex type conversions with explanatory comments
+#Requirements:
+- TypeScript strict mode compliance
+- Include proper error handling with typed catch blocks
+- Use type assertions only when necessary with proper guards

@@ -1,0 +1,11 @@
+# Task ID: 7
+# Title: Week 2 Day 14: Beta Launch - Testing, Deployment, and Monitoring
+# Status: pending
+# Dependencies: 6
+# Priority: medium
+# Description: Final testing and bug fixes, deploy to production on Hetzner via Coolify, set up monitoring and error tracking, send launch emails to waitlist users, and monitor performance and errors during beta launch.
+# Details:
+Includes: End-to-end testing, bug fixes, production deployment via Coolify, monitoring setup (Sentry or similar), analytics setup, health check endpoint, email waitlist users, documentation of launch issues, performance monitoring.
+
+# Test Strategy:
+

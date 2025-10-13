@@ -1,0 +1,294 @@
+{
+  "nav": {
+    "home": "Home",
+    "pricing": "Pricing",
+    "joinWaitlist": "Join Waitlist"
+  },
+  "hero": {
+    "title": "Stop Wasting $2,000+ on",
+    "titleHighlight": "Team Photoshoots",
+    "subtitle": "Get AI-powered professional headshots for your entire team in 60 seconds. No photographer. No coordination. No hassle.",
+    "joinWaitlist": "Get Early Access",
+    "viewPricing": "View Pricing",
+    "urgency": "Limited Beta Access",
+    "guarantee": "30-day money-back guarantee"
+  },
+  "features": {
+    "title": "Why TeamShots?",
+    "fast": {
+      "title": "Get Your Team Back to Work",
+      "description": "Skip the 2-hour photoshoot and awkward poses. Get professional headshots in 60 seconds so your team can focus on what matters."
+    },
+    "costEffective": {
+      "title": "Save $2,000+ vs Traditional Photography",
+      "description": "Professional photographer charges $2,500+ for team photos. TeamShots delivers the same quality for under $30. That's 98% savings."
+    },
+    "remote": {
+      "title": "Stop Trying to Get Everyone in One Room",
+      "description": "Your team is distributed across 5 time zones. No problem. Everyone uploads their photo individually. Done in minutes, not weeks."
+    }
+  },
+  "gallery": {
+    "title": "See the Magic in Action",
+    "subtitle": "Real transformations from real users. Upload any photo and watch AI create professional headshots in seconds.",
+    "viewComparison": "View Comparison",
+    "comparisonView": "Before & After Comparison",
+    "tryWithSample": "Try with Sample Photo",
+    "before": "Before",
+    "after": "After",
+    "dragToCompare": "Drag to compare",
+    "generatedIn": "Generated in 45 seconds",
+    "noWatermarks": "No watermarks",
+    "highResolution": "High resolution",
+    "commercialUse": "Commercial use"
+  },
+  "trust": {
+    "title": "Trusted & Secure",
+    "subtitle": "Your data and photos are protected with enterprise-grade security",
+    "badges": {
+      "security": {
+        "title": "Bank-Level Security",
+        "description": "Enterprise-grade encryption protects your data and photos. We never store or share without permission."
+      },
+      "ai": {
+        "title": "Powered by Google Gemini AI",
+        "description": "Professional results using Google's latest AI technology. Trusted by thousands of teams worldwide."
+      }
+    }
+  },
+  "socialProof": {
+    "testimonialsTitle": "What Our Early Users Say",
+    "userCount": "people already joined",
+    "trustMessage": "Join hundreds of teams transforming their professional photos with AI",
+    "beta": {
+      "name": "Beta User",
+      "role": "Early Tester",
+      "company": "Coming Soon",
+      "message": "Join our beta program to be featured here and help shape the future of TeamShots!"
+    }
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "subtitle": "Get professional headshots in just 3 simple steps",
+    "totalTime": "Total time:",
+    "totalTimeValue": "60 seconds",
+    "steps": {
+      "1": {
+        "title": "Upload Photo",
+        "description": "Upload any photo of yourself - even a casual selfie works perfectly",
+        "duration": "10 seconds"
+      },
+      "2": {
+        "title": "AI Magic",
+        "description": "Our AI analyzes your photo and generates 3-4 professional variations",
+        "duration": "45 seconds"
+      },
+      "3": {
+        "title": "Get Results",
+        "description": "Download your professional headshots in high resolution",
+        "duration": "5 seconds"
+      }
+    }
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know about TeamShots",
+    "searchPlaceholder": "Search questions...",
+    "category": {
+      "all": "All",
+      "technical": "Technical",
+      "pricing": "Pricing",
+      "privacy": "Privacy",
+      "usage": "Usage"
+    },
+    "noResults": "No questions found matching your search.",
+    "stillHaveQuestions": "Still have questions?",
+    "contactSupport": "Contact Support",
+    "items": {
+      "1": {
+        "question": "How does the AI photo generation work?",
+        "answer": "Our AI analyzes your uploaded photo using advanced facial recognition and style transfer algorithms. It creates professional headshots by applying corporate photography styles while maintaining your unique facial features and identity."
+      },
+      "2": {
+        "question": "What types of photos work best?",
+        "answer": "Any clear photo of your face works! Selfies, casual photos, or even group photos where you're clearly visible. The AI works best with good lighting and a clear view of your face, but it's surprisingly good at handling various photo qualities."
+      },
+      "3": {
+        "question": "How much does it cost?",
+        "answer": "We offer flexible pricing starting at $5 for a one-time trial (4 credits), or monthly subscriptions starting at $29/month for 100 credits. Credits never expire, so you can use them whenever you need professional photos."
+      },
+      "4": {
+        "question": "Is my data secure and private?",
+        "answer": "Absolutely. We use enterprise-grade encryption and never store your photos permanently. Your uploaded photos are processed and then automatically deleted within 30 days. We never share your data with third parties."
+      },
+      "5": {
+        "question": "What if I'm not satisfied with the results?",
+        "answer": "We offer a 30-day money-back guarantee. If you're not happy with your professional photos, we'll refund your purchase, no questions asked. We're confident in our AI's quality, but we want you to be completely satisfied."
+      },
+      "6": {
+        "question": "Can I use these photos for my LinkedIn, website, etc.?",
+        "answer": "Yes! All generated photos are yours to use for any professional purpose - LinkedIn, company websites, business cards, presentations, and more. You receive high-resolution files (1024x1024px) perfect for any professional use."
+      },
+      "7": {
+        "question": "How many photos do I get per generation?",
+        "answer": "Each generation produces 3-4 different professional variations of your photo. You can download all of them and choose your favorites. This gives you options for different contexts or preferences."
+      },
+      "8": {
+        "question": "Do you support team photos or just individual headshots?",
+        "answer": "Currently, we focus on individual professional headshots. Each person needs to upload their own photo for the best results. We're working on team photo capabilities for future updates."
+      }
+    }
+  },
+  "pricingPreview": {
+    "title": "Simple, Transparent Pricing",
+    "subtitle": "No hidden fees, no monthly commitments. Pay only for what you use.",
+    "mostPopular": "Most Popular",
+    "questions": "Have questions about pricing?",
+    "viewFullPricing": "View Full Pricing Details",
+    "poweredBy": "Powered by Google Gemini AI",
+    "plans": {
+      "tryOnce": {
+        "name": "Try Once",
+        "price": "$5",
+        "period": "one-time",
+        "credits": "4 credits",
+        "description": "Perfect for testing the service",
+        "features": {
+          "0": "1 photo generation (4 variations)",
+          "1": "1024x1024px high-res downloads",
+          "2": "30-day photo retention",
+          "3": "Email support"
+        },
+        "cta": "Try Now"
+      },
+      "starter": {
+        "name": "Starter",
+        "price": "$29",
+        "period": "per month",
+        "credits": "100 credits/month",
+        "description": "For individuals and small teams",
+        "features": {
+          "0": "25 photo generations per month",
+          "1": "1024x1024px high-res downloads",
+          "2": "30-day photo retention",
+          "3": "Credits roll over, never expire",
+          "4": "Top-up at $0.90 per 4 credits",
+          "5": "Priority email support"
+        },
+        "cta": "Join Waitlist",
+        "savings": "Save $43/year"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$59",
+        "period": "per month",
+        "credits": "280 credits/month",
+        "description": "For growing teams and agencies",
+        "features": {
+          "0": "70 photo generations per month",
+          "1": "1024x1024px high-res downloads",
+          "2": "30-day photo retention",
+          "3": "Credits roll over, never expire",
+          "4": "Top-up at $0.60 per 4 credits",
+          "5": "Priority support with dedicated account manager"
+        },
+        "cta": "Get Started",
+        "savings": "Save $108/year"
+      }
+    }
+  },
+  "waitlist": {
+    "title": "Join the Waitlist",
+    "subtitle": "Join 247+ teams already transforming their professional photos with AI",
+    "emailPlaceholder": "Enter your work email",
+    "submit": "Get Early Access",
+    "submitting": "Submitting...",
+    "success": "Thanks for joining! Check your email for confirmation.",
+    "error": "Something went wrong. Please try again.",
+    "invalidEmail": "Please enter a valid email address",
+    "limitedSpots": "Limited Beta Access - Only 100 spots left!",
+    "benefit1": "60 Second Results",
+    "benefit2": "Save $2,000+",
+    "benefit3": "100% Secure",
+    "guarantee": "30-day money-back guarantee",
+    "secure": "SSL encrypted & secure",
+    "noSpam": "No spam, ever"
+  },
+  "footer": {
+    "tagline": "Professional team photos in 60 seconds",
+    "copyright": "© 2025 TeamShots. All rights reserved."
+  },
+  "metadata": {
+    "title": "TeamShots - Professional Team Photos in 60 Seconds",
+    "description": "Upload any photo and get AI-powered professional headshots for your team. No photographer needed."
+  },
+  "pricing": {
+    "title": "Simple, Transparent Pricing",
+    "subtitle": "Choose the plan that works best for you. All plans include credits that roll over and never expire.",
+    "mostPopular": "Most Popular",
+    "creditsPerMonth": "credits",
+    "generations": "generations",
+    "year": "year",
+    "save": "Save",
+    "plans": {
+      "tryOnce": {
+        "name": "Try Once",
+        "period": "one-time",
+        "description": "Perfect for testing the service",
+        "features": [
+          "1 photo generation (4 variations)",
+          "1024x1024px high-res downloads",
+          "Photos retained for 30 days from generation",
+          "Email support"
+        ],
+        "cta": "Try Now"
+      },
+      "starter": {
+        "name": "Starter",
+        "period": "per month",
+        "description": "For individuals and small teams",
+        "features": [
+          "Photo generations per month based on credits",
+          "1024x1024px high-res downloads",
+          "Photos retained while active + 30 days after",
+          "Credits roll over, never expire",
+          "Top-up credits available",
+          "Priority email support"
+        ],
+        "cta": "Get Started"
+      },
+      "pro": {
+        "name": "Pro",
+        "period": "per month",
+        "description": "For growing teams and agencies",
+        "features": [
+          "Photo generations per month based on credits",
+          "1024x1024px high-res downloads",
+          "Photos retained while active + 30 days after",
+          "Credits roll over, never expire",
+          "Discounted top-up credits",
+          "Priority support with dedicated account manager"
+        ],
+        "cta": "Join Waitlist"
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "questions": {
+        "howCreditsWork": {
+          "question": "How do credits work?",
+          "answer": "Each photo generation uses 4 credits and produces 3-4 high-quality variations. Credits roll over month-to-month and never expire."
+        },
+        "topUp": {
+          "question": "Can I top up credits?",
+          "answer": "Yes! Subscribers can purchase additional credits at any time. Pricing varies by tier."
+        },
+        "satisfaction": {
+          "question": "What if I'm not satisfied?",
+          "answer": "We offer a 30-day money-back guarantee. If you're not happy with the service, we'll refund your subscription payment, no questions asked."
+        }
+      }
+    }
+  }
+}
+

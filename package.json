@@ -1,0 +1,46 @@
+{
+  "name": "teamshots",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed"
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.11.0",
+    "@google/generative-ai": "^0.24.1",
+    "@prisma/client": "^6.17.0",
+    "@react-email/components": "^0.5.6",
+    "bcryptjs": "^3.0.2",
+    "next": "15.5.4",
+    "next-auth": "^4.24.11",
+    "next-intl": "^4.3.12",
+    "prisma": "^6.17.0",
+    "react": "^19.2.0",
+    "react-compare-image": "^3.5.10",
+    "react-dom": "^19.2.0",
+    "react-email": "^4.3.0",
+    "resend": "^6.1.2",
+    "stripe": "^19.1.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4.1.14",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
