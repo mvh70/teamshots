@@ -97,7 +97,7 @@ export default function WaitlistWelcomeEmail({
           {/* Logo */}
           <Section style={logoSection}>
             <Img
-              src={`${baseUrl}/branding/logo-dark.svg`}
+              src={`${baseUrl}/branding/logo-dark.png`}
               width="180"
               height="40"
               alt="TeamShots"

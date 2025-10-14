@@ -47,12 +47,6 @@ export default function LandingPage() {
             >
               {t('joinWaitlist')}
             </a>
-            <Link
-              href="/pricing"
-              className="rounded-lg border-2 border-brand-primary/30 text-brand-primary px-8 py-4 font-semibold text-[18px] hover:bg-brand-primary-light hover:border-brand-primary/40 transition-all duration-300"
-            >
-              {t('viewPricing')}
-            </Link>
           </div>
 
           {/* Guarantee */}

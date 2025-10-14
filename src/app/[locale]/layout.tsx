@@ -36,7 +36,10 @@ export default async function LocaleLayout({ children, params }: Props) {
           <header className="border-b bg-white">
             <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-brand-primary">{BRAND_CONFIG.name}</span>
+                <Link href="/" className="flex items-center" aria-label={BRAND_CONFIG.name}>
+                  {/* Light background header uses the light logo variant */}
+                  <img src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} className="h-8 w-auto" />
+                </Link>
               </div>
               <div className="flex items-center gap-6">
                 <Link href="/" className="text-gray-700 hover:text-gray-900">
@@ -59,7 +62,10 @@ export default async function LocaleLayout({ children, params }: Props) {
           <footer className="bg-gray-900 text-gray-300 py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center">
-                <p className="text-2xl font-bold text-white mb-4">{BRAND_CONFIG.name}</p>
+                <div className="mb-4 flex justify-center">
+                  {/* Dark background footer uses the dark logo variant */}
+                  <img src={BRAND_CONFIG.logo.dark} alt={BRAND_CONFIG.name} className="h-10 w-auto" />
+                </div>
                 <p className="text-gray-400 mb-6">
                   {tFooter('tagline')}
                 </p>

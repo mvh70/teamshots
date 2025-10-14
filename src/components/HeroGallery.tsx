@@ -12,12 +12,11 @@ interface SamplePhoto {
   alt: string;
 }
 
-// Featured hero example - using Unsplash placeholders
-// TODO: Replace with your best AI transformation example
+// Featured hero example - using local transformation images
 const HERO_PHOTO: SamplePhoto = {
   id: 'hero-1',
-  before: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=800&fit=crop&auto=format',
-  after: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&h=800&fit=crop&auto=format',
+  before: '/samples/before-hero.jpg',
+  after: '/samples/after-hero.png',
   alt: 'Professional headshot transformation - AI powered'
 };
 
