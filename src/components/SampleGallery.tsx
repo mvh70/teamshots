@@ -17,18 +17,17 @@ interface SamplePhoto {
   };
 }
 
-// Sample data - using Unsplash placeholders until real images are added
-// TODO: Replace with actual before/after AI transformations
+// Sample data - using local transformation images
 const SAMPLE_PHOTOS: SamplePhoto[] = [
   {
     id: '1',
-    before: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop&auto=format',
-    after: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&h=600&fit=crop&auto=format',
+    before: '/samples/before-1.jpg',
+    after: '/samples/after-1.png',
     alt: 'Professional headshot transformation example 1',
     attribution: {
-      name: 'Michael Chen',
-      role: 'Software Engineer',
-      company: 'Tech Startup'
+      name: 'Matthieu van Haperen',
+      role: 'Entrepreneur',
+      company: 'Carpe Diem Ventures'
     }
   },
   {
@@ -110,7 +109,7 @@ export default function SampleGallery() {
             {SAMPLE_PHOTOS.map((photo) => (
               <div
                 key={photo.id}
-                className="gallery-image opacity-0 transform translate-y-8 transition-all duration-700 ease-out"
+                className="gallery-image"
               >
                 <div 
                   className="relative bg-gray-100 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"

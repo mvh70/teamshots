@@ -25,7 +25,7 @@ export default function HeroGallery() {
   const [isInteracting, setIsInteracting] = useState(false);
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-xl mx-auto">
       {/* Interactive Before/After Slider */}
       <div 
         className="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-100"
