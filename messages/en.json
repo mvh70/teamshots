@@ -5,27 +5,27 @@
     "joinWaitlist": "Join Waitlist"
   },
   "hero": {
-    "title": "Stop Wasting $2,000+ on",
-    "titleHighlight": "Team Photoshoots",
-    "subtitle": "Get AI-powered professional headshots for your entire team in 60 seconds. No photographer. No coordination. No hassle.",
-    "joinWaitlist": "Get Early Access",
+    "title": "Professional team photos in 60 seconds",
+    "titleHighlight": "without a photoshoot",
+    "subtitle": "Turn team selfies into consistent, on‑brand headshots. No photographer. No scheduling. New hires included.",
+    "joinWaitlist": "Join Waitlist",
     "viewPricing": "View Pricing",
     "urgency": "Limited Beta Access",
     "guarantee": "30-day money-back guarantee"
   },
   "features": {
-    "title": "Why TeamShots?",
+    "title": "Solve the team photo headache",
     "fast": {
-      "title": "Get Your Team Back to Work",
-      "description": "Skip the 2-hour photoshoot and awkward poses. Get professional headshots in 60 seconds so your team can focus on what matters."
+      "title": "60 seconds, not 6 weeks",
+      "description": "Skip studio coordination. Each person uploads once and gets results instantly. Your site and press kit stay up to date."
     },
     "costEffective": {
-      "title": "Save $2,000+ vs Traditional Photography",
-      "description": "Professional photographer charges $2,500+ for team photos. TeamShots delivers the same quality for under $30. That's 98% savings."
+      "title": "Ditch the $2,000+ photoshoot",
+      "description": "Replace $50–$200 per person sessions with on‑demand AI. Pay only when you need new or updated photos."
     },
     "remote": {
-      "title": "Stop Trying to Get Everyone in One Room",
-      "description": "Your team is distributed across 5 time zones. No problem. Everyone uploads their photo individually. Done in minutes, not weeks."
+      "title": "Distributed by default",
+      "description": "Perfect for remote teams. One spec, consistent results. New hires generate on day one—no reshoot."
     }
   },
   "gallery": {
@@ -69,24 +69,41 @@
   },
   "howItWorks": {
     "title": "How It Works",
-    "subtitle": "Get professional headshots in just 3 simple steps",
+    "subtitle": "Five simple steps. About a minute. No photoshoot.",
     "totalTime": "Total time:",
     "totalTimeValue": "60 seconds",
+    "cta": "Join Waitlist",
+    "guarantee": "30-day money-back guarantee",
     "steps": {
       "1": {
-        "title": "Upload Photo",
-        "description": "Upload any photo of yourself - even a casual selfie works perfectly",
-        "duration": "10 seconds"
+        "title": "Pick your perfect backdrop",
+        "description": "One click to choose from professional scenes, or upload your office background.",
+        "duration": "5s",
+        "effort": "Just click"
       },
       "2": {
-        "title": "AI Magic",
-        "description": "Our AI analyzes your photo and generates 3-4 professional variations",
-        "duration": "45 seconds"
+        "title": "Brand it (optional)",
+        "description": "Add your logo subtly to backgrounds or clothing—completely optional.",
+        "duration": "5s",
+        "effort": "Drag & drop"
       },
       "3": {
-        "title": "Get Results",
-        "description": "Download your professional headshots in high resolution",
-        "duration": "5 seconds"
+        "title": "Choose your vibe",
+        "description": "Formal boardroom or casual startup? See instant previews as you choose.",
+        "duration": "10s",
+        "effort": "Preview & pick"
+      },
+      "4": {
+        "title": "Team uploads once",
+        "description": "Everyone uploads from anywhere, anytime. No scheduling, no coordination headaches.",
+        "duration": "30s",
+        "effort": "Upload & done"
+      },
+      "5": {
+        "title": "Download & celebrate",
+        "description": "Professional, consistent headshots appear instantly. Ready for LinkedIn, website, anywhere.",
+        "duration": "10s",
+        "effort": "Pure magic"
       }
     }
   },
@@ -104,40 +121,40 @@
     "noResults": "No questions found matching your search.",
     "stillHaveQuestions": "Still have questions?",
     "contactSupport": "Contact Support",
-    "items": {
-      "1": {
-        "question": "How does the AI photo generation work?",
-        "answer": "Our AI analyzes your uploaded photo using advanced facial recognition and style transfer algorithms. It creates professional headshots by applying corporate photography styles while maintaining your unique facial features and identity."
-      },
-      "2": {
-        "question": "What types of photos work best?",
-        "answer": "Any clear photo of your face works! Selfies, casual photos, or even group photos where you're clearly visible. The AI works best with good lighting and a clear view of your face, but it's surprisingly good at handling various photo qualities."
-      },
-      "3": {
-        "question": "How much does it cost?",
-        "answer": "We offer flexible pricing starting at $5 for a one-time trial (4 credits), or monthly subscriptions starting at $29/month for 100 credits. Credits never expire, so you can use them whenever you need professional photos."
-      },
-      "4": {
-        "question": "Is my data secure and private?",
-        "answer": "Absolutely. We use enterprise-grade encryption and never store your photos permanently. Your uploaded photos are processed and then automatically deleted within 30 days. We never share your data with third parties."
-      },
-      "5": {
-        "question": "What if I'm not satisfied with the results?",
-        "answer": "We offer a 30-day money-back guarantee. If you're not happy with your professional photos, we'll refund your purchase, no questions asked. We're confident in our AI's quality, but we want you to be completely satisfied."
-      },
-      "6": {
-        "question": "Can I use these photos for my LinkedIn, website, etc.?",
-        "answer": "Yes! All generated photos are yours to use for any professional purpose - LinkedIn, company websites, business cards, presentations, and more. You receive high-resolution files (1024x1024px) perfect for any professional use."
-      },
-      "7": {
-        "question": "How many photos do I get per generation?",
-        "answer": "Each generation produces 3-4 different professional variations of your photo. You can download all of them and choose your favorites. This gives you options for different contexts or preferences."
-      },
-      "8": {
-        "question": "Do you support team photos or just individual headshots?",
-        "answer": "Currently, we focus on individual professional headshots. Each person needs to upload their own photo for the best results. We're working on team photo capabilities for future updates."
+      "items": {
+        "1": {
+          "question": "Is my data secure and private?",
+          "answer": "Absolutely. We use enterprise-grade encryption and never store your photos permanently. Your uploaded photos are processed and then automatically deleted within 30 days. We never share your data with third parties."
+        },
+        "2": {
+          "question": "How much does it cost?",
+          "answer": "We offer flexible pricing starting at $5 for a one-time trial (4 credits), or monthly subscriptions starting at $29/month for 100 credits. Credits never expire, so you can use them whenever you need professional photos."
+        },
+        "3": {
+          "question": "What if I'm not satisfied with the results?",
+          "answer": "We offer a 30-day money-back guarantee. If you're not happy with your professional photos, we'll refund your purchase, no questions asked. We're confident in our AI's quality, but we want you to be completely satisfied."
+        },
+        "4": {
+          "question": "What types of photos work best?",
+          "answer": "Any clear photo of your face works! Selfies, casual photos, or even group photos where you're clearly visible. The AI works best with good lighting and a clear view of your face, but it's surprisingly good at handling various photo qualities."
+        },
+        "5": {
+          "question": "Can I use these photos for my LinkedIn, website, etc.?",
+          "answer": "Yes! All generated photos are yours to use for any professional purpose - LinkedIn, company websites, business cards, presentations, and more. You receive high-resolution files (1024x1024px) perfect for any professional use."
+        },
+        "6": {
+          "question": "How does the AI photo generation work?",
+          "answer": "Our AI analyzes your uploaded photo using advanced facial recognition and style transfer algorithms. It creates professional headshots by applying corporate photography styles while maintaining your unique facial features and identity."
+        },
+        "7": {
+          "question": "How many photos do I get per generation?",
+          "answer": "Each generation produces 3-4 different professional variations of your photo. You can download all of them and choose your favorites. This gives you options for different contexts or preferences."
+        },
+        "8": {
+          "question": "Do you support team photos or just individual headshots?",
+          "answer": "Currently, we focus on individual professional headshots. Each person needs to upload their own photo for the best results. We're working on team photo capabilities for future updates."
+        }
       }
-    }
   },
   "pricingPreview": {
     "title": "Simple, Transparent Pricing",
@@ -159,7 +176,7 @@
           "2": "30-day photo retention",
           "3": "Email support"
         },
-        "cta": "Try Now"
+        "cta": "Join Waitlist"
       },
       "starter": {
         "name": "Starter",
@@ -192,7 +209,7 @@
           "4": "Top-up at $0.60 per 4 credits",
           "5": "Priority support with dedicated account manager"
         },
-        "cta": "Get Started",
+        "cta": "Join Waitlist",
         "savings": "Save $108/year"
       }
     }
@@ -201,7 +218,7 @@
     "title": "Join the Waitlist",
     "subtitle": "Join 247+ teams already transforming their professional photos with AI",
     "emailPlaceholder": "Enter your work email",
-    "submit": "Get Early Access",
+    "submit": "Join Waitlist",
     "submitting": "Submitting...",
     "success": "Thanks for joining! Check your email for confirmation.",
     "error": "Something went wrong. Please try again.",
@@ -219,8 +236,8 @@
     "copyright": "© 2025 TeamShots. All rights reserved."
   },
   "metadata": {
-    "title": "TeamShots - Professional Team Photos in 60 Seconds",
-    "description": "Upload any photo and get AI-powered professional headshots for your team. No photographer needed."
+    "title": "TeamShots — Professional, consistent team photos in 60 seconds",
+    "description": "Turn team selfies into on-brand headshots without a photoshoot. Fast, consistent, and remote-first."
   },
   "pricing": {
     "title": "Simple, Transparent Pricing",
@@ -241,7 +258,7 @@
           "Photos retained for 30 days from generation",
           "Email support"
         ],
-        "cta": "Try Now"
+        "cta": "Join Waitlist"
       },
       "starter": {
         "name": "Starter",
@@ -255,7 +272,7 @@
           "Top-up credits available",
           "Priority email support"
         ],
-        "cta": "Get Started"
+        "cta": "Join Waitlist"
       },
       "pro": {
         "name": "Pro",

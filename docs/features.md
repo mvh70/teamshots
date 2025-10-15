@@ -15,6 +15,13 @@ All features below
 
 ## Core Features
 
+### How it works (5 steps)
+1. Define background scene (or upload)
+2. Upload logo (optional)
+3. Choose style (formal/casual) or upload reference
+4. Team uploads selfies
+5. Results: consistent, on‑brand headshots
+
 ### 1. Photo Upload
 - Single person per photo
 - Face clearly visible (validation)

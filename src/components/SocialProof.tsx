@@ -27,18 +27,9 @@ export default function SocialProof() {
       rating: 5
     }
   ];
-  // Start with realistic beta number - will update with real data
-  const [userCount, setUserCount] = useState(247);
+  // Static, credible beta number - more trustworthy than constantly changing
+  const userCount = 247;
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
-
-  // Slow growth animation for realism
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setUserCount(prev => prev + Math.floor(Math.random() * 2));
-    }, 10000); // Every 10 seconds instead of 5
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Rotate testimonials
   useEffect(() => {

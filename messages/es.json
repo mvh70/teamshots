@@ -5,27 +5,27 @@
     "joinWaitlist": "Únete a la Lista"
   },
   "hero": {
-    "title": "Deja de Gastar $2,000+ en",
-    "titleHighlight": "Sesiones de Fotos",
-    "subtitle": "Obtén retratos profesionales con IA para todo tu equipo en 60 segundos. Sin fotógrafo. Sin coordinación. Sin complicaciones.",
-    "joinWaitlist": "Obtener Acceso Temprano",
+    "title": "Fotos profesionales de equipo en 60 segundos",
+    "titleHighlight": "sin sesión de fotos",
+    "subtitle": "Convierte selfies del equipo en retratos coherentes con tu marca. Sin fotógrafo. Sin coordinación. Incluye nuevas incorporaciones.",
+    "joinWaitlist": "Únete a la Lista",
     "viewPricing": "Ver Precios",
     "urgency": "Acceso Beta Limitado",
     "guarantee": "Garantía de devolución de 30 días"
   },
   "features": {
-    "title": "¿Por qué TeamShots?",
+    "title": "Elimina el dolor de las fotos de equipo",
     "fast": {
-      "title": "Haz que Tu Equipo Vuelva al Trabajo",
-      "description": "Evita las sesiones fotográficas de 2 horas y las poses incómodas. Obtén retratos profesionales en 60 segundos para que tu equipo se enfoque en lo importante."
+      "title": "60 segundos, no 6 semanas",
+      "description": "Sin coordinar estudio. Cada persona sube una vez y obtiene resultados al instante. Tu web y press kit se mantienen al día."
     },
     "costEffective": {
-      "title": "Ahorra $2,000+ vs Fotografía Tradicional",
-      "description": "Un fotógrafo profesional cobra $2,500+ por fotos de equipo. TeamShots entrega la misma calidad por menos de $30. Eso es un ahorro del 98%."
+      "title": "Olvida la sesión de $2,000+",
+      "description": "Sustituye sesiones de $50–$200 por persona por IA bajo demanda. Paga solo cuando necesites fotos nuevas o actualizadas."
     },
     "remote": {
-      "title": "Deja de Intentar Reunir a Todos en un Lugar",
-      "description": "Tu equipo está distribuido en 5 zonas horarias. No hay problema. Todos suben su foto individualmente. Listo en minutos, no semanas."
+      "title": "Distribuido por defecto",
+      "description": "Perfecto para equipos remotos. Una especificación, resultados consistentes. Las nuevas incorporaciones generan el día uno—sin re‑sesión."
     }
   },
   "gallery": {
@@ -69,24 +69,41 @@
   },
   "howItWorks": {
     "title": "Cómo Funciona",
-    "subtitle": "Obtén retratos profesionales en solo 3 pasos simples",
+    "subtitle": "Cinco pasos sencillos. Un minuto aprox. Sin sesión de fotos.",
     "totalTime": "Tiempo total:",
     "totalTimeValue": "60 segundos",
+    "cta": "Unirse a Lista de Espera",
+    "guarantee": "Garantía de devolución de 30 días",
     "steps": {
       "1": {
-        "title": "Subir Foto",
-        "description": "Sube cualquier foto tuya - incluso una selfie casual funciona perfectamente",
-        "duration": "10 segundos"
+        "title": "Elige tu fondo perfecto",
+        "description": "Un clic para elegir entre escenas profesionales, o sube el fondo de tu oficina.",
+        "duration": "5s",
+        "effort": "Solo hacer clic"
       },
       "2": {
-        "title": "Magia de IA",
-        "description": "Nuestra IA analiza tu foto y genera 3-4 variaciones profesionales",
-        "duration": "45 segundos"
+        "title": "Añade tu marca (opcional)",
+        "description": "Agrega tu logo sutilmente a fondos o ropa—completamente opcional.",
+        "duration": "5s",
+        "effort": "Arrastra y suelta"
       },
       "3": {
-        "title": "Obtener Resultados",
-        "description": "Descarga tus retratos profesionales en alta resolución",
-        "duration": "5 segundos"
+        "title": "Elige tu estilo",
+        "description": "¿Sala de juntas formal o startup casual? Ve vistas previas instantáneas mientras eliges.",
+        "duration": "10s",
+        "effort": "Vista previa y elige"
+      },
+      "4": {
+        "title": "El equipo sube una vez",
+        "description": "Todos suben desde cualquier lugar, en cualquier momento. Sin programación, sin dolores de cabeza de coordinación.",
+        "duration": "30s",
+        "effort": "Sube y listo"
+      },
+      "5": {
+        "title": "Descarga y celebra",
+        "description": "Fotos profesionales y consistentes aparecen instantáneamente. Listas para LinkedIn, sitio web, donde sea.",
+        "duration": "10s",
+        "effort": "Pura magia"
       }
     }
   },
@@ -106,28 +123,28 @@
     "contactSupport": "Contactar Soporte",
     "items": {
       "1": {
-        "question": "¿Cómo funciona la generación de fotos con IA?",
-        "answer": "Nuestra IA analiza tu foto cargada utilizando algoritmos avanzados de reconocimiento facial y transferencia de estilo. Crea retratos profesionales aplicando estilos de fotografía corporativa mientras mantiene tus características faciales únicas e identidad."
-      },
-      "2": {
-        "question": "¿Qué tipos de fotos funcionan mejor?",
-        "answer": "¡Cualquier foto clara de tu rostro funciona! Selfies, fotos casuales, o incluso fotos grupales donde seas claramente visible. La IA funciona mejor con buena iluminación y una vista clara de tu rostro, pero es sorprendentemente buena manejando varias calidades de fotos."
-      },
-      "3": {
-        "question": "¿Cuánto cuesta?",
-        "answer": "Ofrecemos precios flexibles comenzando en $5 por una prueba única (4 créditos), o suscripciones mensuales desde $29/mes por 100 créditos. Los créditos nunca expiran, para que puedas usarlos cuando necesites fotos profesionales."
-      },
-      "4": {
         "question": "¿Mis datos son seguros y privados?",
         "answer": "Absolutamente. Utilizamos encriptación de nivel empresarial y nunca almacenamos tus fotos permanentemente. Tus fotos cargadas se procesan y luego se eliminan automáticamente dentro de 30 días. Nunca compartimos tus datos con terceros."
       },
-      "5": {
+      "2": {
+        "question": "¿Cuánto cuesta?",
+        "answer": "Ofrecemos precios flexibles comenzando en $5 por una prueba única (4 créditos), o suscripciones mensuales desde $29/mes por 100 créditos. Los créditos nunca expiran, para que puedas usarlos cuando necesites fotos profesionales."
+      },
+      "3": {
         "question": "¿Qué pasa si no estoy satisfecho con los resultados?",
         "answer": "Ofrecemos una garantía de devolución de dinero de 30 días. Si no estás contento con tus fotos profesionales, reembolsaremos tu compra, sin preguntas. Confiamos en la calidad de nuestra IA, pero queremos que estés completamente satisfecho."
       },
-      "6": {
+      "4": {
+        "question": "¿Qué tipos de fotos funcionan mejor?",
+        "answer": "¡Cualquier foto clara de tu rostro funciona! Selfies, fotos casuales, o incluso fotos grupales donde seas claramente visible. La IA funciona mejor con buena iluminación y una vista clara de tu rostro, pero es sorprendentemente buena manejando varias calidades de fotos."
+      },
+      "5": {
         "question": "¿Puedo usar estas fotos para mi LinkedIn, sitio web, etc.?",
         "answer": "¡Sí! Todas las fotos generadas son tuyas para usar en cualquier propósito profesional - LinkedIn, sitios web de empresas, tarjetas de presentación, presentaciones y más. Recibes archivos de alta resolución (1024x1024px) perfectos para cualquier uso profesional."
+      },
+      "6": {
+        "question": "¿Cómo funciona la generación de fotos con IA?",
+        "answer": "Nuestra IA analiza tu foto cargada utilizando algoritmos avanzados de reconocimiento facial y transferencia de estilo. Crea retratos profesionales aplicando estilos de fotografía corporativa mientras mantiene tus características faciales únicas e identidad."
       },
       "7": {
         "question": "¿Cuántas fotos obtengo por generación?",
@@ -201,7 +218,7 @@
     "title": "Únete a la Lista de Espera",
     "subtitle": "Únete a más de 247 equipos que ya están transformando sus fotos profesionales con IA",
     "emailPlaceholder": "Ingresa tu correo de trabajo",
-    "submit": "Obtener Acceso Temprano",
+    "submit": "Únete a la Lista",
     "submitting": "Enviando...",
     "success": "¡Gracias por unirte! Revisa tu correo para la confirmación.",
     "error": "Algo salió mal. Por favor intenta de nuevo.",
@@ -219,8 +236,8 @@
     "copyright": "© 2025 TeamShots. Todos los derechos reservados."
   },
   "metadata": {
-    "title": "TeamShots - Fotos Profesionales de Equipo en 60 Segundos",
-    "description": "Sube cualquier foto y obtén retratos profesionales con IA para tu equipo. Sin necesidad de fotógrafo."
+    "title": "TeamShots — Fotos profesionales y consistentes de equipo en 60 segundos",
+    "description": "Convierte selfies del equipo en retratos alineados con tu marca sin sesión de fotos. Rápido, consistente y remoto por diseño."
   },
   "pricing": {
     "title": "Precios Simples y Transparentes",

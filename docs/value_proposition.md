@@ -1,36 +1,31 @@
 # Value Proposition
 
-## For Whom
-Individuals and companies needing professional team photos
+# TeamShots Value Proposition
 
-## Problem They Have
-- Traditional photoshoots cost $500-2000+ and take weeks to coordinate
-- Remote teams can't gather physically
-- New hires create 2-4 week delays for website updates
-- Inconsistent photo styles across team pages
+## The pain we remove
+- Organizing team photos is slow, expensive, and painful (scheduling, studio, retakes)
+- New hires break visual consistency and force repeat shoots
+- Distributed teams can’t get in one room, delaying website and press updates
 
-## Our Solution
-AI transforms any casual photo into professional team photos in under 60 seconds
+## What we do
+Turn any team selfie into consistent, on-brand headshots in under 60 seconds — no photographer, no coordination.
 
-## Why Us vs. Alternatives
+## Why it matters (for buyers)
+- Faster go‑live: keep your site, press kit, and org pages always up to date
+- Lower cost: replace $50–$200 per person shoots with on‑demand AI
+- Brand consistency: one look across the whole team, including new joiners
 
-### vs. Traditional Photography
-- **10x faster:** 60 seconds vs. weeks
-- **20x cheaper:** $X/photo vs. $50-200/person
-- **100% remote:** No coordination needed
+## What makes us different
+- Designed for teams: one spec, everyone matches automatically
+- On‑brand: choose background, attire, and optional logo placement
+- 100% remote: each person uploads once; results are instant
 
-### vs. LinkedIn/Existing Photos
-- **Consistent styling:** All team members match
-- **Professional quality:** Better than amateur photos
-- **Customizable:** Add branding, change backgrounds
+## How it works (5 steps)
+1. Define the background scene (or upload your own)
+2. Upload your logo (optional)
+3. Choose the style (formal/casual) or upload a reference
+4. Your team uploads their selfies
+5. Results: consistent, on‑brand photos ready to download
 
-### vs. DIY Photoshop
-- **No skills required:** Anyone can do it
-- **Instant:** No 2-hour editing sessions
-- **Better results:** AI trained on professional photos
-
-## Key Benefits
-1. **Speed:** Upload â†’ Professional photo in 60 seconds
-2. **Cost:** Fraction of traditional photoshoot costs
-3. **Consistency:** Unified look across entire team
-4. **Convenience:** Works with any photo, anywhere
+## One‑line summary (use in marketing)
+“Professional, consistent team photos in 60 seconds — without a photoshoot.”
