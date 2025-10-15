@@ -2,11 +2,13 @@
 
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { useState } from 'react';
 
 interface PricingPlan {
   id: string;
   name: string;
   price: string;
+  yearlyPrice?: string;
   period: string;
   credits: string;
   description: string;
@@ -14,12 +16,56 @@ interface PricingPlan {
   cta: string;
   popular?: boolean;
   savings?: string;
+  yearlySavings?: string;
 }
 
 export default function PricingPreview() {
   const t = useTranslations('pricingPreview');
+  const [isYearly, setIsYearly] = useState(false);
 
   const PRICING_PLANS: PricingPlan[] = [
+    // Reversed order: Pro → Starter → Try Once
+    {
+      id: 'pro',
+      name: t('plans.pro.name'),
+      price: t('plans.pro.price'),
+      yearlyPrice: '$600',
+      period: t('plans.pro.period'),
+      credits: t('plans.pro.credits'),
+      description: t('plans.pro.description'),
+      features: [
+        t('plans.pro.features.0'),
+        t('plans.pro.features.1'),
+        t('plans.pro.features.2'),
+        t('plans.pro.features.3'),
+        t('plans.pro.features.4'),
+        t('plans.pro.features.5')
+      ],
+      cta: t('plans.pro.cta'),
+      savings: t('plans.pro.savings'),
+      yearlySavings: 'Save $108/year'
+    },
+    {
+      id: 'starter',
+      name: t('plans.starter.name'),
+      price: t('plans.starter.price'),
+      yearlyPrice: '$245',
+      period: t('plans.starter.period'),
+      credits: t('plans.starter.credits'),
+      description: t('plans.starter.description'),
+      features: [
+        t('plans.starter.features.0'),
+        t('plans.starter.features.1'),
+        t('plans.starter.features.2'),
+        t('plans.starter.features.3'),
+        t('plans.starter.features.4'),
+        t('plans.starter.features.5')
+      ],
+      cta: t('plans.starter.cta'),
+      popular: true,
+      savings: t('plans.starter.savings'),
+      yearlySavings: 'Save $43/year'
+    },
     {
       id: 'tryOnce',
       name: t('plans.tryOnce.name'),
@@ -34,43 +80,6 @@ export default function PricingPreview() {
         t('plans.tryOnce.features.3')
       ],
       cta: t('plans.tryOnce.cta')
-    },
-    {
-      id: 'starter',
-      name: t('plans.starter.name'),
-      price: t('plans.starter.price'),
-      period: t('plans.starter.period'),
-      credits: t('plans.starter.credits'),
-      description: t('plans.starter.description'),
-      features: [
-        t('plans.starter.features.0'),
-        t('plans.starter.features.1'),
-        t('plans.starter.features.2'),
-        t('plans.starter.features.3'),
-        t('plans.starter.features.4'),
-        t('plans.starter.features.5')
-      ],
-      cta: t('plans.starter.cta'),
-      popular: true,
-      savings: t('plans.starter.savings')
-    },
-    {
-      id: 'pro',
-      name: t('plans.pro.name'),
-      price: t('plans.pro.price'),
-      period: t('plans.pro.period'),
-      credits: t('plans.pro.credits'),
-      description: t('plans.pro.description'),
-      features: [
-        t('plans.pro.features.0'),
-        t('plans.pro.features.1'),
-        t('plans.pro.features.2'),
-        t('plans.pro.features.3'),
-        t('plans.pro.features.4'),
-        t('plans.pro.features.5')
-      ],
-      cta: t('plans.pro.cta'),
-      savings: t('plans.pro.savings')
     }
   ];
 
@@ -85,12 +94,33 @@ export default function PricingPreview() {
             {t('subtitle')}
           </p>
           
-          {/* Technology Badge */}
-          <div className="inline-flex items-center bg-brand-primary-light text-brand-primary px-4 py-2 rounded-full text-sm font-medium">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            {t('poweredBy')}
+          {/* Monthly/Yearly Toggle */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="bg-gray-100 p-1 rounded-lg inline-flex">
+              <button
+                onClick={() => setIsYearly(false)}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  !isYearly
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setIsYearly(true)}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  isYearly
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Yearly
+                <span className="ml-2 bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-semibold">
+                  Save up to $108
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -103,10 +133,15 @@ export default function PricingPreview() {
                 ? 'ring-3 ring-brand-cta-ring border-2 border-brand-cta-ring transform scale-105 shadow-brand-cta-shadow' 
                 : 'ring-2 ring-brand-premium-ring border-2 border-brand-premium-ring';
             
+            // Dynamic pricing based on toggle
+            const displayPrice = isYearly && plan.yearlyPrice ? plan.yearlyPrice : plan.price;
+            const displayPeriod = isYearly && plan.yearlyPrice ? 'per year' : plan.period;
+            const displaySavings = isYearly && plan.yearlySavings ? plan.yearlySavings : null;
+            
             return (
               <div
                 key={plan.id}
-                className={`relative bg-white rounded-2xl shadow-lg p-6 ${borderColor} transition-all duration-300 hover:shadow-xl`}
+                className={`relative bg-white rounded-2xl shadow-lg p-6 ${borderColor} transition-all duration-300 hover:shadow-xl flex flex-col h-full`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
@@ -116,58 +151,55 @@ export default function PricingPreview() {
                   </div>
                 )}
               
-
-              <div className="text-center mb-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  {plan.name}
-                </h3>
-                <div className="mb-2">
-                  <span className="text-4xl font-bold text-gray-900">
-                    {plan.price}
-                  </span>
-                  <span className="text-gray-600 ml-1">
-                    /{plan.period}
-                  </span>
-                </div>
-                <p className="text-sm text-brand-primary font-medium mb-1">
-                  {plan.credits}
-                </p>
-                <p className="text-gray-600 text-sm">
-                  {plan.description}
-                </p>
-                {plan.savings && (
-                  <div className="mt-2">
-                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                      {plan.savings}
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    {plan.name}
+                  </h3>
+                  <div className="mb-2">
+                    <span className="text-4xl font-bold text-gray-900">
+                      {displayPrice}
                     </span>
+                    <span className="text-gray-600 ml-1">
+                      /{displayPeriod}
+                    </span>
+                    {displaySavings && (
+                      <div className="text-sm text-green-600 font-medium mt-1">
+                        {displaySavings}
+                      </div>
+                    )}
                   </div>
-                )}
+                  <p className="text-sm text-brand-primary font-medium mb-1">
+                    {plan.credits}
+                  </p>
+                  <p className="text-gray-600 text-sm">
+                    {plan.description}
+                  </p>
+                </div>
+
+                <ul className="space-y-3 mb-8 flex-grow">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      <svg className="w-5 h-5 text-green-500 mr-3 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-gray-700 text-[16px] leading-relaxed">
+                        {feature}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link
+                  href="/#waitlist"
+                  className={`block w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300 text-center mt-auto ${
+                    plan.popular
+                      ? 'bg-brand-cta text-white hover:bg-brand-cta-hover shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  }`}
+                >
+                  {plan.cta}
+                </Link>
               </div>
-
-              <ul className="space-y-3 mb-8">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-start">
-                    <svg className="w-5 h-5 text-green-500 mr-3 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-gray-700 text-[16px] leading-relaxed">
-                      {feature}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                href="/#waitlist"
-                className={`block w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300 text-center ${
-                  plan.popular
-                    ? 'bg-brand-cta text-white hover:bg-brand-cta-hover shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                }`}
-              >
-                {plan.cta}
-              </Link>
-            </div>
             );
           })}
         </div>
