@@ -20,18 +20,7 @@ interface SamplePhoto {
 // Sample data - using local transformation images
 const SAMPLE_PHOTOS: SamplePhoto[] = [
   {
-    id: '1',
-    before: '/samples/before-1.jpg',
-    after: '/samples/after-1.png',
-    alt: 'Professional headshot transformation example 1',
-    attribution: {
-      name: 'Matthieu van Haperen',
-      role: 'Entrepreneur',
-      company: 'Carpe Diem Ventures'
-    }
-  },
-  {
-    id: '2', 
+    id: '1', 
     before: '/samples/before-2.png',
     after: '/samples/after-2.png',
     alt: 'Professional headshot transformation example 2',
@@ -39,6 +28,17 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
       name: 'Sarah Johnson',
       role: 'Marketing',
       company: 'Digital Agency'
+    }
+  },
+  {
+    id: '2',
+    before: '/samples/before-1.jpg',
+    after: '/samples/after-1.png',
+    alt: 'Professional headshot transformation example 1',
+    attribution: {
+      name: 'Matthieu van Haperen',
+      role: 'Entrepreneur',
+      company: 'Carpe Diem Ventures'
     }
   },
   {
