@@ -32,19 +32,19 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
   },
   {
     id: '2', 
-    before: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=600&fit=crop&auto=format',
-    after: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=600&fit=crop&auto=format',
+    before: '/samples/before-2.png',
+    after: '/samples/after-2.png',
     alt: 'Professional headshot transformation example 2',
     attribution: {
       name: 'Sarah Johnson',
-      role: 'Marketing Director',
+      role: 'Marketing',
       company: 'Digital Agency'
     }
   },
   {
     id: '3',
-    before: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=600&h=600&fit=crop&auto=format',
-    after: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&h=600&fit=crop&auto=format',
+    before: '/samples/before-3.png',
+    after: '/samples/after-3.png',
     alt: 'Professional headshot transformation example 3',
     attribution: {
       name: 'David Rodriguez',
