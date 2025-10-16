@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { sendWaitlistWelcomeEmail } from '@/lib/email';
+import { ok, badRequest, unauthorized, internal } from '@/lib/api-response';
 
 const emailSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email({ message: 'Invalid email address' }),
   locale: z.enum(['en', 'es']).optional().default('en'),
 });
 
@@ -21,13 +23,7 @@ export async function POST(request: Request) {
     });
     
     if (existingSignup) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: "You're already on the waitlist! We'll notify you when we launch." 
-        },
-        { status: 200 }
-      );
+      return NextResponse.json(ok(undefined, 'ALREADY_SUBSCRIBED', 'waitlist.alreadySubscribed'), { status: 200 });
     }
     
     // Add to waitlist database
@@ -51,39 +47,35 @@ export async function POST(request: Request) {
     
     console.log(`New waitlist signup: ${email} (locale: ${locale})`);
     
-    return NextResponse.json({
-      success: true,
-      message: "Thanks for joining! Check your email for confirmation.",
-    });
+    return NextResponse.json(ok(undefined, 'WAITLIST_OK', 'waitlist.success'));
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, message: error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json(badRequest('INVALID_INPUT', 'errors.invalidInput', error.issues[0].message), { status: 400 });
     }
     
     console.error('Waitlist signup error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Something went wrong. Please try again.' },
-      { status: 500 }
-    );
+    return NextResponse.json(internal('Something went wrong. Please try again.', 'errors.internal'), { status: 500 });
   }
 }
 
 // GET endpoint to view waitlist (admin only - add auth later)
 export async function GET() {
+  const session = await auth();
+  if (!session?.user || session.user.role !== 'admin') {
+    return NextResponse.json(unauthorized('errors.unauthorized', 'Unauthorized'), { status: 401 });
+  }
+
   const signups = await prisma.waitlistSignup.findMany({
     orderBy: { createdAt: 'desc' },
   });
   
-  return NextResponse.json({
+  return NextResponse.json(ok({
     total: signups.length,
-    signups: signups.map((s) => ({
+    signups: signups.map((s: { email: string; createdAt: Date; notified: boolean }) => ({
       email: s.email,
       timestamp: s.createdAt,
       notified: s.notified,
     })),
-  });
+  }));
 }
 

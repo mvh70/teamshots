@@ -10,8 +10,6 @@ import {
   DocumentTextIcon,
   ChartBarIcon,
   CogIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   PlusIcon
 } from '@heroicons/react/24/outline'
 import Image from 'next/image'
@@ -27,13 +25,27 @@ import {
 
 interface SidebarProps {
   collapsed: boolean
-  onToggle: () => void
+  pinned: boolean
+  onPinToggle: () => void
 }
 
-export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export default function Sidebar({ collapsed, pinned, onPinToggle }: SidebarProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const t = useTranslations('app.sidebar')
+
+  // Custom pushpin icons (outline and solid) to represent pin/unpin
+  const PushPinOutlineIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <path d="M9.5 3.75l5 5m-7 2.5l7-7c.293-.293.768-.293 1.06 0l.94.94c.293.293.293.768 0 1.06l-2.12 2.12c-.3.3-.3.79 0 1.09l1.03 1.03c.47.47.14 1.27-.52 1.33l-3.69.34c-.21.02-.4.11-.55.26l-3.66 3.66c-.25.25-.65.25-.9 0l-.71-.71c-.25-.25-.25-.65 0-.9l3.66-3.66c.15-.15.24-.34.26-.55l.34-3.69c.06-.66.86-.99 1.33-.52l1.03 1.03c.3.3.79.3 1.09 0l2.12-2.12c.293-.293.293-.768 0-1.06l-.94-.94a.75.75 0 00-1.06 0l-7 7c-.2.2-.47.3-.75.27l-1.7-.16m6.33 8.88l4.24 4.24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+
+  const PushPinSolidIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <path d="M14.44 2.94l6.62 6.62c.59.59.17 1.6-.66 1.67l-4.28.4-6.08 6.08 1.06 1.06-1.41 1.41-3.89-3.89 1.41-1.41 1.06 1.06 6.08-6.08.4-4.28c.07-.83 1.08-1.25 1.67-.66z"/>
+    </svg>
+  )
 
   const navigation = [
     {
@@ -80,31 +92,37 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   return (
     <div className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300 ${
-      collapsed ? 'w-16' : 'w-64'
+      collapsed ? 'w-20' : 'w-64'
     }`}>
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           {!collapsed && (
             <div className="flex items-center space-x-2">
-              <img src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} className="h-7 w-auto" />
+              <Image src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} width={112} height={28} className="h-7 w-auto" />
             </div>
           )}
           {collapsed && (
             <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto">
-              <img src={BRAND_CONFIG.logo.icon} alt={BRAND_CONFIG.name} className="h-8 w-8" />
+              <Image src={BRAND_CONFIG.logo.icon} alt={BRAND_CONFIG.name} width={32} height={32} className="h-8 w-8" />
             </div>
           )}
-          <button
-            onClick={onToggle}
-            className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
-          >
-            {collapsed ? (
-              <ChevronRightIcon className="h-5 w-5 text-gray-500" />
-            ) : (
-              <ChevronLeftIcon className="h-5 w-5 text-gray-500" />
-            )}
-          </button>
+          <div className="relative group">
+            <button
+              onClick={onPinToggle}
+              aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+              className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+            >
+              {pinned ? (
+                <PushPinSolidIcon className="h-8 w-8 text-gray-500" />
+              ) : (
+                <PushPinOutlineIcon className="h-8 w-8 text-gray-500" />
+              )}
+            </button>
+            <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+            </span>
+          </div>
         </div>
 
         {/* Primary Action Button */}
@@ -115,7 +133,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               collapsed ? 'px-2' : ''
             }`}
           >
-            <PlusIcon className="h-5 w-5" />
+            <PlusIcon className="h-8 w-8" />
             {!collapsed && <span>{t('primary.generate')}</span>}
           </Link>
         </div>
@@ -134,7 +152,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                 } ${collapsed ? 'justify-center' : ''}`}
               >
-                <Icon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+                <Icon className={`h-8 w-8 ${collapsed ? '' : 'mr-3'}`} />
                 {!collapsed && (
                   <>
                     <span>{item.name}</span>
@@ -179,7 +197,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               collapsed ? 'justify-center' : ''
             }`}
           >
-            <CogIcon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+            <CogIcon className={`h-8 w-8 ${collapsed ? '' : 'mr-3'}`} />
             {!collapsed && <span>{t('nav.settings')}</span>}
           </Link>
         </div>

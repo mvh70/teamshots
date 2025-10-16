@@ -15,9 +15,9 @@ export default function SignInPage() {
   const t = useTranslations('auth.signin')
   const track = (event: string, props?: Record<string, unknown>) => {
     try {
-      // @ts-ignore
+      // @ts-expect-error analytics may be injected at runtime
       if (typeof window !== 'undefined' && window?.analytics?.track) {
-        // @ts-ignore
+        // @ts-expect-error analytics may be injected at runtime
         window.analytics.track(event, props)
       } else {
         console.log(`[analytics] ${event}`, props || {})
@@ -52,7 +52,7 @@ export default function SignInPage() {
           track('signin_magiclink_error', { reason: result.error })
         } else {
           // Redirect to verification page
-          router.push('/auth/verify-request')
+          router.push(`/auth/verify-request?email=${encodeURIComponent(email)}`)
           track('signin_magiclink_sent', { email })
         }
       } else {
