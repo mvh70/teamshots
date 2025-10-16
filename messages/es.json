@@ -306,6 +306,133 @@
         }
       }
     }
+  },
+  "auth": {
+    "signin": {
+      "title": "Inicia sesión en tu cuenta",
+      "welcomeBack": "Bienvenido de nuevo",
+      "welcomeSubtitle": "Inicia sesión para seguir generando fotos profesionales del equipo.",
+      "benefit1": "Retratos consistentes y rápidos para todo tu equipo",
+      "benefit2": "Sin sesión de fotos — ideal para trabajo remoto",
+      "benefit3": "Fondos y estilos alineados con tu marca",
+      "emailLabel": "Correo electrónico",
+      "emailPlaceholder": "Correo electrónico",
+      "passwordLabel": "Contraseña",
+      "passwordPlaceholder": "Contraseña",
+      "useMagicLink": "Usar enlace mágico en lugar de contraseña",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "signingIn": "Iniciando sesión...",
+      "submit": "Iniciar sesión",
+      "noAccount": "¿No tienes cuenta? Regístrate",
+      "Invalid credentials": "Credenciales inválidas",
+      "Failed to send magic link": "No se pudo enviar el enlace mágico",
+      "An error occurred": "Ocurrió un error"
+    },
+    "signup": {
+      "title": "Crea tu cuenta",
+      "welcome": "Crea tu cuenta",
+      "welcomeSubtitle": "Únete en segundos. Sin sesión de fotos ni complicaciones.",
+      "benefit1": "Genera retratos profesionales en 60 segundos",
+      "benefit2": "Los créditos nunca expiran; úsalos cuando los necesites",
+      "benefit3": "Perfecto para equipos remotos y nuevas contrataciones",
+      "stepOf": "Paso {step} de 2",
+      "emailLabel": "Correo electrónico",
+      "passwordLabel": "Contraseña",
+      "confirmPasswordLabel": "Confirmar contraseña",
+      "sending": "Enviando...",
+      "sendCode": "Enviar código de verificación",
+      "verificationCodeLabel": "Código de verificación",
+      "enterCodeFor": "Ingresa el código de 6 dígitos enviado a {email}",
+      "verifying": "Verificando...",
+      "verifyCode": "Verificar código",
+      "firstNameLabel": "Nombre",
+      "creating": "Creando cuenta...",
+      "completeRegistration": "Completar registro",
+      "haveAccount": "¿Ya tienes cuenta? Inicia sesión",
+      "resendCode": "Reenviar código",
+      "resendIn": "Reenviar en {seconds}s",
+      "otpHelp": "El código expira en 10 min",
+      "newCodeSent": "Código inválido/expirado. Se envió un nuevo código.",
+      "accountExists": "La cuenta ya existe. Intenta iniciar sesión.",
+      "Failed to send OTP": "No se pudo enviar el código",
+      "Invalid OTP": "Código inválido",
+      "Registration failed": "El registro falló",
+      "An error occurred": "Ocurrió un error"
+    },
+    "verify": {
+      "title": "Revisa tu correo",
+      "subtitle": "Te hemos enviado un enlace mágico para finalizar el inicio de sesión.",
+      "yourEmail": "tu correo electrónico",
+      "sentTo": "Hemos enviado un enlace mágico a {email}",
+      "instructions": "Haz clic en el enlace del correo para iniciar sesión. El enlace expira en 24 horas.",
+      "cantFindTitle": "¿No encuentras el correo?",
+      "tipSpam": "Revisa tu carpeta de spam o no deseado",
+      "tipCorrect": "Asegúrate de haber ingresado el correo correctamente",
+      "tipDelay": "El correo puede tardar unos minutos en llegar",
+      "backToSignIn": "Volver a iniciar sesión",
+      "loading": "Cargando…"
+    }
+  },
+  "app": {
+    "header": {
+      "title": "Panel",
+      "subtitle": "¡Bienvenido de nuevo! Esto es lo que sucede con tu equipo.",
+      "notificationsCount": "{count}"
+    },
+    "sidebar": {
+      "brand": "TeamShots",
+      "nav": {
+        "dashboard": "Panel",
+        "team": "Equipo",
+        "generations": "Generaciones",
+        "templates": "Plantillas",
+        "analytics": "Analítica",
+        "settings": "Ajustes"
+      },
+      "primary": {
+        "generate": "Generar Fotos"
+      },
+      "credits": {
+        "label": "Créditos",
+        "monthlyReset": "Reinicio Mensual",
+        "progress": "{used}/{total}"
+      },
+      "profile": {
+        "pro": "PRO",
+        "signOut": "Cerrar sesión"
+      }
+    },
+    "dashboard": {
+      "welcome": {
+        "title": "¡Bienvenido de nuevo, {name}! 👋",
+        "subtitle": "Tu equipo ha generado 48 fotos profesionales este mes. ¡Sigue así!"
+      },
+      "stats": {
+        "teamMembers": "Miembros del Equipo",
+        "photosGenerated": "Fotos Generadas",
+        "activeTemplates": "Plantillas Activas",
+        "creditsUsed": "Créditos Usados"
+      },
+      "recentActivity": {
+        "title": "Actividad Reciente",
+        "sent": "Enviado {when}",
+        "status": {
+          "pending": "Pendiente",
+          "completed": "Completado"
+        }
+      },
+      "pendingInvites": {
+        "title": "Invitaciones de Equipo Pendientes",
+        "invite": "Invitar Miembro del Equipo",
+        "resend": "Reenviar"
+      },
+      "quickActions": {
+        "title": "Acciones Rápidas",
+        "generate": "Generar Fotos",
+        "createTemplate": "Crear Plantilla",
+        "manageTeam": "Gestionar Equipo"
+      }
+    }
   }
 }
 

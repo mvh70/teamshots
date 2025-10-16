@@ -1,20 +1,18 @@
-import { BRAND_CONFIG } from '@/config/brand';
+'use client'
 
-export default function AppHome() {
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+
+export default function AppRoutesPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    router.push('/app-routes/dashboard')
+  }, [router])
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Welcome to {BRAND_CONFIG.name}
-        </h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Your dashboard will be here soon!
-        </p>
-        <div className="text-sm text-gray-500">
-          This is app.{BRAND_CONFIG.domain}
-        </div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500"></div>
     </div>
-  );
+  )
 }
-

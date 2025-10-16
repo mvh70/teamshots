@@ -1,6 +1,5 @@
 import { useTranslations } from 'next-intl';
 import { routing } from '@/i18n/routing';
-import Link from 'next/link';
 import WaitlistForm from './components/WaitlistForm';
 import SampleGallery from '@/components/SampleGallery';
 import HeroGallery from '@/components/HeroGallery';

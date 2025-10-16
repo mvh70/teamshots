@@ -65,3 +65,91 @@ export async function sendWaitlistLaunchEmail({
   return { success: false, error: 'Not implemented' };
 }
 
+interface SendOTPEmailParams {
+  email: string;
+  code: string;
+  locale?: 'en' | 'es';
+}
+
+/**
+ * Send OTP verification email
+ */
+export async function sendOTPEmail({
+  email,
+  code,
+  locale = 'en',
+}: SendOTPEmailParams) {
+  try {
+    const subject = locale === 'es' 
+      ? "Código de verificación TeamShots"
+      : "TeamShots Verification Code";
+
+    const text = locale === 'es'
+      ? `Tu código de verificación es: ${code}\n\nEste código expira en 5 minutos.`
+      : `Your verification code is: ${code}\n\nThis code expires in 5 minutes.`;
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      replyTo: REPLY_TO_EMAIL,
+      subject,
+      text,
+    });
+
+    if (error) {
+      console.error('Error sending OTP email:', error);
+      return { success: false, error };
+    }
+
+    console.log('OTP email sent successfully:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Failed to send OTP email:', error);
+    return { success: false, error };
+  }
+}
+
+interface SendMagicLinkEmailParams {
+  email: string;
+  magicLink: string;
+  locale?: 'en' | 'es';
+}
+
+/**
+ * Send magic link email
+ */
+export async function sendMagicLinkEmail({
+  email,
+  magicLink,
+  locale = 'en',
+}: SendMagicLinkEmailParams) {
+  try {
+    const subject = locale === 'es' 
+      ? "Enlace mágico TeamShots"
+      : "TeamShots Magic Link";
+
+    const text = locale === 'es'
+      ? `Haz clic en el siguiente enlace para iniciar sesión:\n\n${magicLink}\n\nEste enlace expira en 24 horas.`
+      : `Click the following link to sign in:\n\n${magicLink}\n\nThis link expires in 24 hours.`;
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      replyTo: REPLY_TO_EMAIL,
+      subject,
+      text,
+    });
+
+    if (error) {
+      console.error('Error sending magic link email:', error);
+      return { success: false, error };
+    }
+
+    console.log('Magic link email sent successfully:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Failed to send magic link email:', error);
+    return { success: false, error };
+  }
+}
+

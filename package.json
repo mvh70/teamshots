@@ -16,11 +16,12 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.0",
     "@google/generative-ai": "^0.24.1",
+    "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.17.0",
     "@react-email/components": "^0.5.6",
     "bcryptjs": "^3.0.2",
     "next": "15.5.4",
-    "next-auth": "^4.24.11",
+    "next-auth": "^5.0.0-beta.29",
     "next-intl": "^4.3.12",
     "prisma": "^6.17.0",
     "react": "^19.2.0",
@@ -33,14 +34,15 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4.1.14",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "19.2.2",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.20",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
-    "tailwindcss": "^4",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
     "typescript": "^5"
   }
 }

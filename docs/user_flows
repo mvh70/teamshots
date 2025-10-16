@@ -47,14 +47,22 @@ Sign up with email/password
 - Enter email
 - Create password
 - Confirm password
-â†“
+â†"
+OTP sent to email â†' user enters OTP
+â†"
+After verification:
+- Firstname
+- Personal or Company? (radio buttons)
+- If Company:
+  - Company website URL
+  - Domain verification check (email domain vs company domain)
+  - If mismatch: Request company email â†' OTP verification
+â†"
 Language preference auto-set from current selection
-â†“
-Email verification required
-- Receive verification email
-- Click verification link
-â†“
+â†"
 Redirect to onboarding
+â†"
+Background: If company, scrape company team page â†' extract names/photos
 ```
 
 **Note:** OAuth (Google, GitHub) will be added post-MVP for faster authentication.
@@ -150,11 +158,35 @@ Upload validation failed
 Return to upload
 ```
 
-## 3. Returning User Flow
+## 3. Login Flow
+
+```
+Email + password OR magic link option
+â†"
+If magic link: Send link â†' click â†' auto-login
+â†"
+Redirect to dashboard
+```
+
+## 4. Team Photo Workflow (Company Admin)
+
+```
+1. Company admin defines context (background, logo, style)
+2. Admin enters team member emails (pre-filled from scraped data)
+3. System sends invite links to team members
+4. Team members (no login required):
+   - Click link â†' upload selfie
+   - See generated result
+   - Accept or regenerate (max 3 times)
+5. On accept: Photo emailed to admin + saved to DB
+6. Admin dashboard shows team progress
+```
+
+## 5. Returning User Flow
 
 ```
 Login
-â†“
+â†"
 Dashboard
 - Credit balance: "87 credits (21 generations)"
 - "Generate New Photo" CTA

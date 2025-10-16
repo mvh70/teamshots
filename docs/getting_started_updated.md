@@ -20,6 +20,7 @@ This guide walks you through building and deploying the AI Team Photo Generator 
 6. Auth.js setup (start with email/password, OAuth if time allows)
 7. Database schema + Prisma
 8. App shell (app.teamshots.vip/dashboard) with "Coming soon"
+   - Public, pretty paths (e.g., `/dashboard`) are mapped to internal app routes (`/app-routes/dashboard`) via Next.js rewrites. Users see only the pretty URL.
 9. next-intl configuration (EN/ES)
 
 **Days 5-7: Payments**

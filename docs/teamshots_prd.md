@@ -22,16 +22,22 @@ Upload any photo â†’ Get professional team photos in 60 seconds using AI.
 **In:**
 - **Waitlist phase:** Landing + pricing pages with email signup (teamshots.vip purchased)
 - Individual photo upload & generation (3-4 variations)
+- Company accounts with team management
+- Team member invitation system (email-based, guest uploads)
+- Context templates (reusable background/style/logo settings)
+- Automated team scraping from company website
 - 5 style presets + custom backgrounds
 - Credit-based pricing: Try Once + 2 subscription tiers with top-ups
 - Credits roll over, never expire
 - **Photo retention policy:**
   - Try Once: 30 days from generation
   - Subscriptions: Active period + 30 days after expiration
-- Email/password authentication only (OAuth in post-MVP)
+- Email/password authentication with OTP verification and magic links
+- Company domain verification
 - Bilingual support (EN/ES) with next-intl (machine translation for beta)
 - Basic onboarding
 - Payment integration (Stripe)
+- S3 storage for images
 - Placeholder branding (logo/assets post-MVP)
 
 **Out (MVP/Post-Launch):**
@@ -42,7 +48,6 @@ Upload any photo â†’ Get professional team photos in 60 seconds using AI.
 **Out (MVP2+):**
 - Team composite photos (multiple people)
 - Batch processing
-- Company accounts
 - Integrations
 - Free tier
 - Additional languages
@@ -52,7 +57,7 @@ Upload any photo â†’ Get professional team photos in 60 seconds using AI.
 - **Secondary:** Photos generated per user, subscription conversion rate
 
 ## Timeline
-**Target: 2 weeks to launch**
+**Target: 4-6 weeks to launch**
 
 ### Phased Launch Strategy
 

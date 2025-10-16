@@ -53,8 +53,12 @@ All features below
 - Regenerate option (consumes more credits)
 
 ### 6. Account & Billing
-- Email/password authentication (OAuth post-MVP)
-- Email verification required
+- Email/password authentication with OTP verification and magic links (OAuth post-MVP)
+- Company accounts with team management
+- Team member invitation system (email-based, guest uploads)
+- Context templates (reusable settings)
+- Automated team scraping from company website
+- Company domain verification
 - Credit balance display (shows credits + generation equivalent)
 - Try Once purchase (one-time, no subscription)
 - Subscription plans (monthly/annual)
@@ -62,6 +66,11 @@ All features below
 - Credits roll over month-to-month
 - Download history
 - Language preference (EN/ES)
+
+#### Authentication UX (clarifications)
+- OTP resend is throttled server-side (30s per email) and shows a visible cooldown + success message when a new code is sent
+- Magic-link verify screen displays the destination email when available (e.g., `?email=`)
+- Lightweight client events are emitted for signin success/error and magic-link send/error (can be wired to analytics later)
 
 ### 7. Internationalization
 - **Languages:** English & Spanish
@@ -102,10 +111,9 @@ All features below
 - **User-downloaded:** History available until account deletion
 
 ## Out of Scope (MVP)
-- Team composite photos â†’ MVP2
+- Team composite photos â†' MVP2
 - Batch processing
 - Video/animated photos
 - Post-download editing
 - Integrations (website builders, HR systems)
-- Company/team accounts
 - Free tier or trial

@@ -86,23 +86,23 @@
       {
         "id": 2,
         "title": "Week 1 Days 3-4: Authentication, Database Setup, and i18n",
-        "description": "Implement Auth.js (NextAuth.js) with email/password authentication, set up PostgreSQL database with Prisma ORM, create database schema (User, Generation, Transaction models), and implement next-intl for bilingual support (EN/ES) with language auto-detection and switcher.",
-        "details": "Includes: Auth.js configuration, email verification flow, PostgreSQL on Hetzner VPS via Coolify, Prisma schema definition, next-intl setup with EN/ES translations, language detection middleware, language switcher component.",
-        "testStrategy": "",
+        "description": "Implement Auth.js (NextAuth.js) with team-focused authentication, set up PostgreSQL database with Prisma ORM, create B2B-oriented database schema (User/Person/Company/Context/Generation models), and implement next-intl for bilingual support (EN/ES) with language auto-detection and switcher.",
         "status": "in-progress",
         "dependencies": [
           1
         ],
         "priority": "medium",
+        "details": "Includes: Auth.js configuration with OTP verification, magic links, and company domain verification; PostgreSQL on Hetzner VPS via Coolify; Prisma schema definition for team-first architecture; team management features including scraping, invites, and guest uploads; context templates and admin dashboard; individual user mode as fallback; next-intl setup with EN/ES translations, language detection middleware, language switcher component. Timeline extended to 4-6 weeks due to increased complexity.",
+        "testStrategy": "Test team onboarding flows, company domain verification, user role management, context template creation, and admin dashboard functionality. Verify all authentication methods (OTP, magic links) work correctly. Ensure individual user mode functions properly as a fallback. Test language switching and detection across all new team-oriented interfaces.",
         "subtasks": [
           {
             "id": 1,
-            "title": "Configure Auth.js with Email/Password Authentication",
-            "description": "Implement Auth.js (NextAuth.js) with email/password authentication and email verification flow.",
+            "title": "Configure Auth.js with Team-Focused Authentication",
+            "description": "Implement Auth.js (NextAuth.js) with OTP verification, magic links, and company domain verification for team-based authentication.",
             "dependencies": [],
-            "details": "Set up Auth.js configuration in the Next.js project, implement email/password provider, create sign-up and login pages, configure email verification flow with verification tokens, and implement password reset functionality. Include proper error handling and security measures.",
-            "status": "pending",
-            "testStrategy": "Test user registration, login, logout, email verification, and password reset flows. Verify error handling for invalid credentials and security against common authentication vulnerabilities."
+            "details": "Set up Auth.js configuration in the Next.js project, implement OTP verification system, create magic link authentication flow, develop company domain verification process, build sign-up and login pages for both team and individual modes, and implement session management with role-based access control. Include proper error handling and security measures for enterprise-grade authentication.\n<info added on 2025-10-15T20:15:21.877Z>\nCompleted core authentication infrastructure:\n\n✅ NextAuth.js configuration with Prisma adapter\n✅ OTP verification system (generate, store, verify, cleanup)\n✅ Company domain verification system\n✅ Magic link authentication via email\n✅ Extended email library with OTP and magic link support\n✅ API endpoints: /api/auth/otp/send, /api/auth/otp/verify, /api/auth/register\n✅ Authentication pages: /auth/signin, /auth/signup, /auth/verify-request\n✅ Registration flow with 3-step process (email/password → OTP → user details)\n✅ Company vs individual user type selection\n✅ Company domain verification during registration\n✅ Landing page remains clean without login/signin buttons (as requested)\n\nNext steps: Test the authentication flow and create dashboard pages for logged-in users.\n</info added on 2025-10-15T20:15:21.877Z>\n<info added on 2025-10-15T20:28:43.051Z>\n✅ Authentication system fully tested and working!\n\nStarted development of admin dashboard with modern sidebar navigation:\n\n- Implemented clean left sidebar with navigation icons\n- Applied TeamShots orange brand accent color throughout the interface\n- Created main content area with responsive layout for dashboard data\n- Added user profile section at bottom of sidebar with user avatar and name\n- Implemented PRO badge display for subscription status indication\n- Built navigation sections for:\n  • Team management\n  • Context templates management\n  • Generation history\n  • Credit usage tracking and statistics\n\nDashboard follows modern design principles with clear visual hierarchy, consistent spacing, and intuitive navigation patterns. The sidebar can be collapsed for more screen space when needed.\n</info added on 2025-10-15T20:28:43.051Z>\n<info added on 2025-10-15T21:06:00.787Z>\nAuthentication system implementation completed:\n\n✅ Core NextAuth.js configuration with:\n- Email/password authentication with OTP verification\n- Magic link authentication  \n- Company domain verification logic\n- JWT session strategy with custom callbacks\n- Prisma adapter integration\n\n✅ API endpoints created:\n- /api/auth/otp/send - OTP email sending\n- /api/auth/otp/verify - OTP verification\n- /api/auth/register - User registration with company verification\n\n✅ Authentication pages implemented:\n- /auth/signin - Login page with email/password and magic link\n- /auth/signup - Multi-step registration with OTP verification\n- /auth/verify-request - Magic link verification page\n\n✅ Supporting libraries and utilities:\n- OTP generation, storage, and verification system\n- Company domain verification logic\n- Email templates for OTP and magic links\n- Extended NextAuth types for role and locale\n\n✅ Admin dashboard foundation:\n- Modern sidebar navigation with company branding\n- Header with user profile and notifications\n- Dashboard page with overview cards\n- Responsive layout with proper routing\n\nCurrent status: Core authentication system is fully functional. Ready for testing and integration with team management features.\n</info added on 2025-10-15T21:06:00.787Z>",
+            "status": "done",
+            "testStrategy": "Test team member registration, company domain verification, OTP verification, magic link authentication, login/logout flows, and role-based access control. Verify error handling for invalid credentials and security against common authentication vulnerabilities. Test fallback to individual user mode."
           },
           {
             "id": 2,
@@ -110,19 +110,19 @@
             "description": "Configure PostgreSQL database on Hetzner VPS via Coolify and set up Prisma ORM integration with the Next.js application.",
             "dependencies": [],
             "details": "Install and configure PostgreSQL on Hetzner VPS using Coolify, set up database credentials and connection, install Prisma dependencies, create initial Prisma configuration, and establish connection between the application and database. Include database migration setup and environment variable configuration.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Test database connection, verify proper configuration of environment variables, and ensure Prisma client can successfully connect to the PostgreSQL instance."
           },
           {
             "id": 3,
-            "title": "Create Database Schema with Prisma",
-            "description": "Define and implement database schema for User, Generation, and Transaction models using Prisma ORM.",
+            "title": "Create B2B Database Schema with Prisma",
+            "description": "Define and implement team-focused database schema for User/Person/Company/Context/Generation models using Prisma ORM.",
             "dependencies": [
               2
             ],
-            "details": "Create Prisma schema definitions for User model (including authentication fields), Generation model (for tracking image generations), and Transaction model (for credit management). Define relationships between models, add necessary indexes, and implement initial migrations. Include validation rules and default values where appropriate.",
-            "status": "pending",
-            "testStrategy": "Validate schema through migrations, test model relationships, and verify constraints work as expected. Create test data to ensure models capture all required information."
+            "details": "Create Prisma schema definitions for: User model (authentication and system identity), Person model (individual profile data), Company model (team organization data), Context model (for generation templates and settings), and Generation model (for tracking image generations). Define relationships between models including company-user associations, context ownership, and generation history. Add necessary indexes, and implement initial migrations. Include validation rules, role-based permissions, and default values where appropriate.",
+            "status": "done",
+            "testStrategy": "Validate schema through migrations, test model relationships, and verify constraints work as expected. Create test data to ensure models capture all required team-oriented information. Test company-user relationships, context template permissions, and generation history tracking."
           },
           {
             "id": 4,
@@ -143,6 +143,43 @@
             "details": "Develop middleware for detecting user's preferred language based on browser settings, implement language persistence using cookies or local storage, create a language switcher component with flags or language names, integrate the switcher in the application layout, and ensure language changes are applied immediately without page refresh when possible.",
             "status": "pending",
             "testStrategy": "Test language detection accuracy with different browser settings, verify language persistence across sessions, and ensure the language switcher correctly toggles between languages with proper UI updates."
+          },
+          {
+            "id": 6,
+            "title": "Implement Team Management Features",
+            "description": "Develop team management functionality including company domain scraping, team invitations, and guest upload capabilities.",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Create API endpoints and UI for company domain scraping to auto-populate potential team members, implement team invitation system with email notifications, develop role-based permissions for team members (admin, member, guest), build guest upload functionality for non-team members to contribute content, and create team management dashboard for admins to manage members and permissions.",
+            "status": "pending",
+            "testStrategy": "Test company domain scraping accuracy, verify invitation emails are sent correctly, test role-based permissions for different user types, ensure guest uploads work properly, and validate team management dashboard functionality for adding/removing members and changing permissions."
+          },
+          {
+            "id": 7,
+            "title": "Create Context Templates and Admin Dashboard",
+            "description": "Develop context template system for teams and build admin dashboard for template and team management.",
+            "dependencies": [
+              3,
+              6
+            ],
+            "details": "Design and implement context template data structure, create template creation and editing UI, develop template sharing and permissions system within teams, build admin dashboard for managing templates and team settings, implement template versioning, and create template preview functionality. Ensure templates can be applied to new generations and shared across team members.\n<info added on 2025-10-15T21:06:21.564Z>\n## Admin Dashboard Implementation Progress\n\nAdmin dashboard foundation implemented:\n\n✅ Modern sidebar navigation:\n- Clean left sidebar with navigation icons\n- TeamShots orange brand accent color throughout\n- Collapsible sidebar for more screen space\n- User profile section at bottom with avatar and PRO badge\n\n✅ Header component:\n- User profile dropdown with notifications\n- Company branding and navigation\n\n✅ Dashboard page:\n- Overview cards for key metrics\n- Responsive layout with proper routing\n- Modern design with clear visual hierarchy\n\n✅ App routes structure:\n- /app-routes/dashboard - Main dashboard\n- /app-routes layout with sidebar and header\n- Proper routing and navigation\n\nCurrent status: Basic dashboard structure is complete. Ready for integration with actual data and team management features.\n</info added on 2025-10-15T21:06:21.564Z>",
+            "status": "pending",
+            "testStrategy": "Test template creation, editing, and sharing functionality, verify template permissions work correctly within teams, validate admin dashboard controls for template and team management, test template versioning, and ensure templates can be properly applied to new generations."
+          },
+          {
+            "id": 8,
+            "title": "Implement Individual User Mode as Fallback",
+            "description": "Create individual user mode as a fallback option for users without team access.",
+            "dependencies": [
+              1,
+              3,
+              7
+            ],
+            "details": "Develop conditional UI and authentication flows that detect whether a user is part of a team, implement individual user profile and settings, create personal context templates for individual users, build personal generation history view, and ensure seamless transition between team and individual modes when user context changes.",
+            "status": "pending",
+            "testStrategy": "Test detection of user team status, verify individual user profile and settings functionality, validate personal context templates work correctly, ensure personal generation history displays properly, and test transitions between team and individual modes."
           }
         ]
       },
@@ -779,7 +816,7 @@
     "metadata": {
       "created": "2025-10-09T14:46:51.162Z",
       "description": "Default tasks context",
-      "updated": "2025-10-13T15:19:56.456Z"
+      "updated": "2025-10-15T21:06:08.699Z"
     }
   }
 }

@@ -2,6 +2,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing, Link } from '@/i18n/routing';
+import Image from 'next/image';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { BRAND_CONFIG } from '@/config/brand';
 import './globals.css';
@@ -38,7 +39,13 @@ export default async function LocaleLayout({ children, params }: Props) {
               <div className="flex items-center gap-2">
                 <Link href="/" className="flex items-center" aria-label={BRAND_CONFIG.name}>
                   {/* Light background header uses the light logo variant */}
-                  <img src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} className="h-8 w-auto" />
+                  <Image 
+                    src={BRAND_CONFIG.logo.light} 
+                    alt={BRAND_CONFIG.name} 
+                    width={120} 
+                    height={32} 
+                    className="h-8 w-auto" 
+                  />
                 </Link>
               </div>
               <div className="flex items-center gap-6">
@@ -64,7 +71,13 @@ export default async function LocaleLayout({ children, params }: Props) {
               <div className="text-center">
                 <div className="mb-4 flex justify-center">
                   {/* Dark background footer uses the dark logo variant */}
-                  <img src={BRAND_CONFIG.logo.dark} alt={BRAND_CONFIG.name} className="h-10 w-auto" />
+                  <Image 
+                    src={BRAND_CONFIG.logo.dark} 
+                    alt={BRAND_CONFIG.name} 
+                    width={150} 
+                    height={40} 
+                    className="h-10 w-auto" 
+                  />
                 </div>
                 <p className="text-gray-400 mb-6">
                   {tFooter('tagline')}

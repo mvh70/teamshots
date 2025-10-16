@@ -307,5 +307,138 @@
       }
     }
   }
+  ,
+  "auth": {
+    "signin": {
+      "title": "Sign in to your account",
+      "welcomeBack": "Welcome back",
+      "welcomeSubtitle": "Sign in to continue generating professional team photos.",
+      "benefit1": "Fast, consistent headshots for your whole team",
+      "benefit2": "No photoshoot needed — remote-friendly",
+      "benefit3": "Brand-aligned backgrounds and styles",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "Email address",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "useMagicLink": "Use magic link instead of password",
+      "forgotPassword": "Forgot password?",
+      "signingIn": "Signing in...",
+      "submit": "Sign in",
+      "noAccount": "Don't have an account? Sign up",
+      "Invalid credentials": "Invalid credentials",
+      "Failed to send magic link": "Failed to send magic link",
+      "An error occurred": "An error occurred"
+    },
+    "signup": {
+      "title": "Create your account",
+      "welcome": "Create your account",
+      "welcomeSubtitle": "Join in seconds. No photoshoot, no hassle.",
+      "benefit1": "Generate professional headshots in 60 seconds",
+      "benefit2": "Credits never expire; use them when you need",
+      "benefit3": "Perfect for remote teams and new hires",
+      "stepOf": "Step {step} of 2",
+      "emailLabel": "Email address",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm Password",
+      "sending": "Sending...",
+      "sendCode": "Send Verification Code",
+      "verificationCodeLabel": "Verification Code",
+      "enterCodeFor": "Enter the 6-digit code sent to {email}",
+      "verifying": "Verifying...",
+      "verifyCode": "Verify Code",
+      "firstNameLabel": "First Name",
+      "accountTypeLabel": "Account Type",
+      "personalUse": "Personal use",
+      "companyUse": "Company use",
+      "companyWebsiteLabel": "Company Website",
+      "creating": "Creating Account...",
+      "completeRegistration": "Complete Registration",
+      "haveAccount": "Already have an account? Sign in",
+      "resendCode": "Resend code",
+      "resendIn": "Resend in {seconds}s",
+      "otpHelp": "Code expires in 10 min",
+      "newCodeSent": "Invalid/expired code. A new verification code was sent.",
+      "accountExists": "Account already exists. Try signing in instead.",
+      "Failed to send OTP": "Failed to send OTP",
+      "Invalid OTP": "Invalid OTP",
+      "Registration failed": "Registration failed",
+      "An error occurred": "An error occurred"
+    },
+    "verify": {
+      "title": "Check your email",
+      "subtitle": "We've sent you a magic link to finish signing in.",
+      "yourEmail": "your email address",
+      "sentTo": "We've sent a magic link to {email}",
+      "instructions": "Click the link in the email to sign in. The link will expire in 24 hours.",
+      "cantFindTitle": "Can't find the email?",
+      "tipSpam": "Check your spam or junk folder",
+      "tipCorrect": "Make sure you entered the correct email address",
+      "tipDelay": "The email might take a few minutes to arrive",
+      "backToSignIn": "Back to sign in",
+      "loading": "Loading…"
+    }
+  }
+  ,
+  "app": {
+    "header": {
+      "title": "Dashboard",
+      "subtitle": "Welcome back! Here's what's happening with your team.",
+      "notificationsCount": "{count}"
+    },
+    "sidebar": {
+      "brand": "TeamShots",
+      "nav": {
+        "dashboard": "Dashboard",
+        "team": "Team",
+        "generations": "Generations",
+        "templates": "Templates",
+        "analytics": "Analytics",
+        "settings": "Settings"
+      },
+      "primary": {
+        "generate": "Generate Photos"
+      },
+      "credits": {
+        "label": "Credits",
+        "monthlyReset": "Monthly Reset",
+        "progress": "{used}/{total}"
+      },
+      "profile": {
+        "pro": "PRO",
+        "signOut": "Sign out"
+      }
+    },
+    "dashboard": {
+      "welcome": {
+        "title": "Welcome back, {name}! 👋",
+        "subtitle": "Your team has generated 48 professional photos this month. Keep up the great work!"
+      },
+      "stats": {
+        "teamMembers": "Team Members",
+        "photosGenerated": "Photos Generated",
+        "activeTemplates": "Active Templates",
+        "creditsUsed": "Credits Used"
+      },
+      "recentActivity": {
+        "title": "Recent Activity",
+        "sent": "Sent {when}",
+        "status": {
+          "pending": "Pending",
+          "completed": "Completed"
+        }
+      },
+      "pendingInvites": {
+        "title": "Pending Team Invites",
+        "invite": "Invite Team Member",
+        "resend": "Resend"
+      },
+      "quickActions": {
+        "title": "Quick Actions",
+        "generate": "Generate Photos",
+        "createTemplate": "Create Template",
+        "manageTeam": "Manage Team"
+      }
+    }
+  }
 }
 
