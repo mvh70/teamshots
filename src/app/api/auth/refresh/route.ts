@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateRefreshToken, createRefreshToken, revokeRefreshToken } from '@/lib/refresh-token'
 import { sign } from 'jsonwebtoken'
 
+// Force this route to be dynamic (skip static generation)
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   const { refreshToken } = await request.json()
   
