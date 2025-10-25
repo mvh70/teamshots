@@ -2,14 +2,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendOTPVerificationEmail } from '@/lib/otp'
 import { prisma } from '@/lib/prisma'
 import { badRequest, internal, ok } from '@/lib/api-response'
+import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit'
+import { RATE_LIMITS } from '@/config/rate-limit-config'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const identifier = getRateLimitIdentifier(request, 'otp')
+    const rateLimit = await checkRateLimit(identifier, RATE_LIMITS.otp.limit, RATE_LIMITS.otp.window)
+
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many OTP requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000)) }}
+      )
+    }
     const { email, locale } = await request.json()
 
     if (!email) {
       return NextResponse.json(badRequest('INVALID_INPUT', 'errors.invalidInput', 'Email is required'), { status: 400 })
     }
+
+    // SECURITY: Always return success to prevent user enumeration
+    // If user exists, we'll handle it during registration, not here
 
     // Simple server-side throttle: one code per 30 seconds per email
     const last = await prisma.oTP.findFirst({

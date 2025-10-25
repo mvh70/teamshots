@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,223 +7,219 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User - App account (admin, regular user)
 model User {
-  id                  String    @id @default(cuid())
-  email               String    @unique
-  password            String?   // Hashed, nullable for OAuth/magic links
-  emailVerified       DateTime?
-  role                String    @default("user") // 'user' | 'admin'
-  locale              String    @default("en")
-  
-  // Relations
-  person              Person?   // One-to-one: User can be a Person
-  companies           Company[] @relation("CompanyAdmin") // Companies they admin
-  
-  // Auth tables (NextAuth)
-  accounts            Account[]
-  sessions            Session[]
-  
-  // Credits & Subscription (for individual users)
-  credits             Int       @default(0)
-  subscriptionTier    String?   // 'starter' | 'pro' | null
-  subscriptionStatus  String?   // 'active' | 'cancelled' | null
-  stripeCustomerId    String?   @unique
-  stripeSubscriptionId String?  @unique
-  
-  // Individual user transactions
-  transactions        Transaction[]
-  
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  
+  id                   String              @id @default(cuid())
+  email                String              @unique
+  password             String?
+  emailVerified        DateTime?
+  locale               String              @default("en")
+  subscriptionTier     String?
+  subscriptionStatus   String?
+  stripeCustomerId     String?             @unique
+  stripeSubscriptionId String?             @unique
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  role                 String              @default("user")
+  metadata             Json                @default("{}")
+  isAdmin              Boolean             @default(false)
+  accounts             Account[]
+  companies            Company[]           @relation("CompanyAdmin")
+  creditTransactions   CreditTransaction[]
+  person               Person?
+  refreshTokens        RefreshToken[]
+  sessions             Session[]
+  convertedFromInvite  TeamInvite?
+  transactions         Transaction[]
+
   @@index([email])
 }
 
-// Person - Individual with photos (can exist without User)
 model Person {
-  id                  String    @id @default(cuid())
-  firstName           String
-  lastName            String?
-  email               String?   // Optional: for invite tracking
-  
-  // User link (optional - only if person has app account)
-  userId              String?   @unique
-  user                User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Company link (optional - only if part of team)
-  companyId           String?
-  company             Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  
-  // Photo generations (one person can have multiple generations)
-  generations         Generation[]
-  
-  // Invite tracking (for team members)
-  inviteToken         String?   @unique
-  invitedAt           DateTime?
-  inviteAcceptedAt    DateTime?
-  
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  
+  id                 String              @id @default(cuid())
+  firstName          String
+  lastName           String?
+  email              String?
+  userId             String?             @unique
+  companyId          String?
+  inviteToken        String?             @unique
+  invitedAt          DateTime?
+  inviteAcceptedAt   DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  creditTransactions CreditTransaction[]
+  generations        Generation[]
+  company            Company?            @relation(fields: [companyId], references: [id])
+  user               User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  selfies            Selfie[]
+
   @@index([email])
   @@index([companyId])
   @@index([inviteToken])
   @@index([userId])
 }
 
-// Company - Organization managing team photos
 model Company {
-  id                  String    @id @default(cuid())
-  name                String
-  website             String?
-  domain              String?   // Verified email domain
-  
-  // Admin
-  adminId             String
-  admin               User      @relation("CompanyAdmin", fields: [adminId], references: [id], onDelete: Cascade)
-  
-  // Team members
-  teamMembers         Person[]
-  
-  // Saved contexts (templates)
-  contexts            Context[]
-  
-  // Subscription (B2B pricing)
-  subscriptionTier    String?   // 'starter' | 'pro' | null
-  subscriptionStatus  String?   // 'active' | 'cancelled' | null
-  stripeCustomerId    String?   @unique
-  stripeSubscriptionId String?  @unique
-  
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  
+  id                   String              @id @default(cuid())
+  name                 String
+  website              String?
+  domain               String?
+  adminId              String
+  subscriptionTier     String?
+  subscriptionStatus   String?
+  stripeCustomerId     String?             @unique
+  stripeSubscriptionId String?             @unique
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  activeContextId      String?             @unique
+  activeContext        Context?            @relation("ActiveContext", fields: [activeContextId], references: [id])
+  admin                User                @relation("CompanyAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  contexts             Context[]
+  creditTransactions   CreditTransaction[]
+  teamMembers          Person[]
+  teamInvites          TeamInvite[]
+
   @@index([adminId])
   @@index([domain])
 }
 
-// Context - Reusable photo generation settings
 model Context {
-  id                  String    @id @default(cuid())
-  name                String    // User-defined name
-  
-  // Owner (either company or individual user)
-  companyId           String?
-  company             Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  
-  userId              String?   // For individual users
-  
-  // Settings
-  backgroundUrl       String?
-  backgroundPrompt    String?
-  logoUrl             String?
-  stylePreset         String
-  customPrompt        String?
-  
-  // Generations using this context
-  generations         Generation[]
-  
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  
+  id               String       @id @default(cuid())
+  name             String
+  companyId        String?
+  userId           String?
+  backgroundUrl    String?
+  backgroundPrompt String?
+  logoUrl          String?
+  stylePreset      String       @default("corporate")
+  customPrompt     String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  settings         Json         @default("{}")
+  activeForCompany Company?     @relation("ActiveContext")
+  company          Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  generations      Generation[]
+  teamInvites      TeamInvite[]
+
   @@index([companyId])
   @@index([userId])
 }
 
-// Generation - Photo generation record
 model Generation {
-  id                  String    @id @default(cuid())
-  
-  // Person who this generation is for
-  personId            String
-  person              Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
-  
-  // Context used for generation
-  contextId           String?
-  context             Context?  @relation(fields: [contextId], references: [id], onDelete: SetNull)
-  
-  // Input - S3 storage reference
-  uploadedPhotoKey    String    // S3 key for original uploaded photo (e.g., "uploads/user123/photo.jpg")
-  
-  // Output - S3 storage references
-  generatedPhotoKeys  String[]  // Array of S3 keys for generated variations (3-4 images)
-  acceptedPhotoKey    String?   // S3 key for the accepted variation
-  
-  // Status tracking
-  status              String    @default("processing") // 'processing' | 'completed' | 'failed' | 'accepted'
-  regenerationCount   Int       @default(0) // Track how many times regenerated
-  errorMessage        String?
-  
-  // Cost tracking
-  creditsUsed         Int       @default(4) // Usually 4 credits per generation
-  actualCost          Float?    // USD cost from provider (e.g., 0.10)
-  provider            String    @default("gemini")
-  
-  // Timestamps
-  createdAt           DateTime  @default(now())
-  completedAt         DateTime?
-  acceptedAt          DateTime?
-  updatedAt           DateTime  @updatedAt
-  
+  id                     String    @id @default(cuid())
+  creditsUsed            Int       @default(4)
+  actualCost             Float?
+  provider               String    @default("gemini")
+  status                 String    @default("processing")
+  errorMessage           String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  acceptedAt             DateTime?
+  acceptedPhotoKey       String?
+  completedAt            DateTime?
+  contextId              String?
+  generatedPhotoKeys     String[]
+  personId               String
+  uploadedPhotoKey       String
+  adminApproved          Boolean   @default(false)
+  moderationDate         DateTime?
+  moderationPassed       Boolean   @default(false)
+  moderationScore        Float?
+  userApproved           Boolean   @default(false)
+  creditSource           String    @default("individual")
+  deleted                Boolean   @default(false)
+  deletedAt              DateTime?
+  generationType         String    @default("personal")
+  isPublic               Boolean   @default(false)
+  maxRegenerations       Int       @default(2)
+  remainingRegenerations Int       @default(2)
+  generationGroupId      String?   // Same UUID for all generations in a group
+  isOriginal             Boolean   @default(true)  // true for original, false for regenerations
+  groupIndex             Int?      // 0, 1, 2, 3... within the group
+  selfieId               String?
+  context                Context?  @relation(fields: [contextId], references: [id])
+  person                 Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  selfie                 Selfie?   @relation(fields: [selfieId], references: [id])
+
   @@index([personId])
   @@index([contextId])
+  @@index([selfieId])
+  @@index([generationType])
   @@index([status])
   @@index([createdAt])
+  @@index([isPublic])
+  @@index([personId, createdAt])
 }
 
-// Transaction - Credit/payment tracking
+model Selfie {
+  id                 String       @id @default(cuid())
+  personId           String
+  key                String
+  validated          Boolean      @default(false)
+  usedInGenerationId String?
+  createdAt          DateTime     @default(now())
+  fitnessApproved    Boolean      @default(false)
+  moderationDate     DateTime?
+  moderationPassed   Boolean      @default(false)
+  moderationScore    Float?
+  userApproved       Boolean      @default(false)
+  isPublic           Boolean      @default(false)
+  processedKey       String?
+  uploadedByUser     String?
+  uploadedViaToken   String?
+  generations        Generation[]
+  person             Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@index([uploadedViaToken])
+  @@index([createdAt])
+  @@index([isPublic])
+  @@index([personId, createdAt])
+}
+
 model Transaction {
-  id                  String    @id @default(cuid())
-  userId              String
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type                String    // 'try_once' | 'subscription' | 'top_up' | 'generation'
-  amount              Float     // USD amount (negative for usage, positive for purchases)
-  creditsDelta        Int       // Credits added (positive) or used (negative)
-  
-  // Payment info
-  stripePaymentId     String?
-  stripeInvoiceId     String?
-  
-  description         String?
-  
-  createdAt           DateTime  @default(now())
-  
+  id              String   @id @default(cuid())
+  userId          String
+  type            String
+  amount          Float
+  creditsDelta    Int
+  stripePaymentId String?
+  stripeInvoiceId String?
+  description     String?
+  createdAt       DateTime @default(now())
+  creditSource    String?
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([type])
   @@index([createdAt])
 }
 
-// WaitlistSignup - Pre-launch email collection
 model WaitlistSignup {
-  id                  String    @id @default(cuid())
-  email               String    @unique
-  notified            Boolean   @default(false)
-  source              String?
-  
-  createdAt           DateTime  @default(now())
-  
+  id        String   @id @default(cuid())
+  email     String   @unique
+  notified  Boolean  @default(false)
+  source    String?
+  createdAt DateTime @default(now())
+
   @@index([email])
   @@index([notified])
 }
 
-// NextAuth tables
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?
-  access_token       String?
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?
-  session_state      String?
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
   @@index([userId])
 }
@@ -237,7 +230,7 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
 }
 
@@ -245,21 +238,120 @@ model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
-  
+
   @@unique([identifier, token])
 }
 
-// OTP - For email verification during registration
 model OTP {
-  id         String   @id @default(cuid())
-  email      String
-  code       String   // 6-digit code
-  expires    DateTime
-  verified   Boolean  @default(false)
-  
-  createdAt  DateTime @default(now())
-  
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expires   DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
   @@index([email])
   @@index([code])
   @@index([expires])
+}
+
+model CreditTransaction {
+  id                   String              @id @default(cuid())
+  companyId            String?
+  personId             String?
+  userId               String?
+  credits              Int
+  type                 String
+  description          String?
+  relatedTransactionId String?
+  teamInviteId         String?
+  
+  // Financial tracking
+  amount               Float?              // Amount paid in dollars
+  currency             String?             @default("USD")
+  stripePaymentId      String?             // Stripe payment intent ID
+  stripeInvoiceId      String?             // Stripe invoice ID
+  stripeSubscriptionId String?             // Stripe subscription ID
+  
+  // Business intelligence
+  planTier             String?             // 'individual', 'pro', 'try_once'
+  planPeriod           String?             // 'monthly', 'annual', 'one_time'
+  
+  // Metadata
+  metadata             Json                @default("{}")
+  createdAt            DateTime            @default(now())
+  
+  company              Company?            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  person               Person?             @relation(fields: [personId], references: [id], onDelete: Cascade)
+  relatedTransaction   CreditTransaction?  @relation("TransferPair", fields: [relatedTransactionId], references: [id])
+  reverseTransactions  CreditTransaction[] @relation("TransferPair")
+  teamInvite           TeamInvite?         @relation(fields: [teamInviteId], references: [id])
+  user                 User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([personId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([stripePaymentId])
+  @@index([stripeSubscriptionId])
+  @@index([planTier])
+}
+
+model TeamInvite {
+  id                 String              @id @default(cuid())
+  email              String
+  companyId          String
+  token              String              @unique
+  expiresAt          DateTime
+  usedAt             DateTime?
+  creditsAllocated   Int                 @default(5)
+  convertedUserId    String?             @unique
+  contextId          String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  creditTransactions CreditTransaction[]
+  company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  context            Context?            @relation(fields: [contextId], references: [id])
+  convertedUser      User?               @relation(fields: [convertedUserId], references: [id])
+
+  @@index([email])
+  @@index([token])
+  @@index([expiresAt])
+  @@index([companyId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model SecurityLog {
+  id        String   @id @default(cuid())
+  type      String
+  userId    String?
+  email     String?
+  ipAddress String?
+  userAgent String?
+  success   Boolean?
+  action    String?
+  resource  String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([ipAddress])
 }

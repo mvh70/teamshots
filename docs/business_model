@@ -1,9 +1,20 @@
 # Business Model
 
 ## Pricing Model
-**Credit-based system with subscriptions + top-ups**
+**Dual Credit-based system with subscriptions + top-ups**
 
 No free tier. All features require credits.
+
+**Credit Types:**
+- **Company Credits**: Allocated by company admins for team photo generations
+- **Individual Credits**: User-owned credits for personal photo generations
+- **Usage Rules**: Company credits can only be used for company generations, individual credits for personal use
+
+**Credit Management:**
+- **Transaction-Based System**: All credit movements tracked in `CreditTransaction` table
+- **Full Audit Trail**: Every allocation, transfer, and usage recorded with timestamps
+- **Real-time Balances**: Credit balances calculated from transaction history
+- **Team Invite Integration**: Credits automatically allocated when team members accept invites
 
 ## Pricing Structure
 

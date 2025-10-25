@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {useTranslations} from 'next-intl'
 import { signIn, getSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
 import AuthCard from '@/components/auth/AuthCard'
@@ -13,6 +13,7 @@ import FocusTrap from '@/components/auth/FocusTrap'
 
 export default function SignInPage() {
   const t = useTranslations('auth.signin')
+  const searchParams = useSearchParams()
   const track = (event: string, props?: Record<string, unknown>) => {
     try {
       // @ts-expect-error analytics may be injected at runtime
@@ -28,6 +29,15 @@ export default function SignInPage() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Pre-fill email from URL parameter
+  useEffect(() => {
+    const emailParam = searchParams.get('email')
+    if (emailParam) {
+      setEmail(emailParam)
+      setError('auth.signup.accountExists')
+    }
+  }, [searchParams])
   const [useMagicLink, setUseMagicLink] = useState(false)
 
   const router = useRouter()
@@ -69,10 +79,10 @@ export default function SignInPage() {
         } else {
           // Check user role and redirect accordingly
           const session = await getSession()
-          if (session?.user?.role === 'admin') {
-            router.push('/dashboard')
+          if (session?.user?.isAdmin) {
+            router.push('/app/dashboard')
           } else {
-            router.push('/dashboard')
+            router.push('/app/dashboard')
           }
           track('signin_success')
         }

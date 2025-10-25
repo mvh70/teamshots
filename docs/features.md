@@ -2,25 +2,30 @@
 
 ## Phased Launch
 
-### Phase 1: Waitlist (Days 1-2)
+### Phase 1: Waitlist
 - Landing page (www.teamshots.vip)
 - Pricing page (show future pricing)
 - Waitlist signup form with email collection
 - Email notification: "Thanks for joining!"
 
-### Phase 2: Full MVP (Days 3-14)
+### Phase 2: Full MVP
 All features below
 
 ---
 
 ## Core Features
 
-### How it works (5 steps)
-1. Define background scene (or upload)
-2. Upload logo (optional)
-3. Choose style (formal/casual) or upload reference
-4. Team uploads selfies
-5. Results: consistent, on‑brand headshots
+*See [Role System Implementation](ROLE_SYSTEM_IMPLEMENTATION.md) for detailed role definitions and permissions.*
+
+### How it works (8 steps)
+1. Company admin creates company context (background, logo, style, expression)
+2. Company admin invites team members with 24hr tokens + credit allocation
+3. Team members upload selfies (no signup required)
+4. Team members choose: Personal use OR Company use
+5. System generates photos with selected context
+6. Team members review & approve/regenerate
+7. Company admin views approved photos only
+8. Company admin can regenerate all photos with new contexts
 
 ### 1. Photo Upload
 - Single person per photo
@@ -29,48 +34,112 @@ All features below
 - Drag-drop or file picker
 
 ### 2. Style Selection
-**5 Presets:**
-1. Corporate Professional
-2. Casual Modern  
-3. Creative Agency
-4. Tech Startup
-5. Executive Formal
+**6 Customizable Categories:**
+1. **Background**: Office, neutral, gradient, custom upload
+2. **Branding**: Logo placement (background, clothing, elements)
+3. **Style**: 6 presets (Corporate, Casual, Creative, Tech, Executive, Artistic)
+4. **Clothing**: Style, accessories, colors
+5. **Expression**: Professional, friendly, confident
+6. **Lighting**: Natural, studio, dramatic
 
-### 3. Background Options
-- Upload custom background
-- Generate from text prompt
-- 5 standard presets (office, neutral, gradient, branded, outdoor)
+**Admin Control**: Each category can be set as predefined (admin-controlled) or user choice
 
-### 4. Branding (Optional)
-- Add company logo to clothing/background
-- Adjust clothing style (formal, business casual, casual)
+
+### 3. Generation Type Selection
+- **Personal Use**: Individual credits, full style control, private photos
+- **Company Use**: Company credits, preset styles, admin visible
+- Same uploaded photo can be used for both types
+- Clear credit cost display (4 credits per generation)
+
+### 4. Photo Style Management
+**Company Users:**
+- Company admins create reusable contexts (background, logo, style, expression)
+- Required before inviting team members
+- Multiple contexts per company (e.g., "Executive", "Casual Friday")
+- Regenerate all team photos with new context
+
+**Individual Users:**
+- Create personal photo styles with 6 customizable categories
+- Set default style for all generations
+- No team management required
 
 ### 5. Generation & Review
-- Generates 3-4 variations (3-4 credits)
+- Generates 3-4 photo variations
 - Up to 60 second processing
-- Preview all variations
+- Preview generated photos and logo placement options
 - Download selected image (1024x1024px)
-- Regenerate option (consumes more credits)
+- Regenerate with style changes (costs 1 credit)
+- Company admin can bulk regenerate all photos with new context
 
 ### 6. Account & Billing
-- Email/password authentication with OTP verification and magic links (OAuth post-MVP)
+- Email/password authentication with OTP verification and magic links
 - Company accounts with team management
-- Team member invitation system (email-based, guest uploads)
+- Team member token-based invites (24hr expiration, no signup required)
 - Context templates (reusable settings)
 - Automated team scraping from company website
 - Company domain verification
-- Credit balance display (shows credits + generation equivalent)
-- Try Once purchase (one-time, no subscription)
+- Credit balance display (individual + company credits)
+- Try Once purchase option
 - Subscription plans (monthly/annual)
-- Credit top-ups (tier-specific pricing)
+- Subscription management:
+  - Upgrade plan (Try Once → Individual, Try Once → Pro, Individual → Pro)
+  - Downgrade plan (Pro → Individual, effective at end of billing period)
+  - Cancel subscription (immediate effect)
+- Credit top-ups
 - Credits roll over month-to-month
 - Download history
 - Language preference (EN/ES)
 
-#### Authentication UX (clarifications)
-- OTP resend is throttled server-side (30s per email) and shows a visible cooldown + success message when a new code is sent
-- Magic-link verify screen displays the destination email when available (e.g., `?email=`)
-- Lightweight client events are emitted for signin success/error and magic-link send/error (can be wired to analytics later)
+*See [Business Model](business_model) for detailed pricing structure including specific costs, credit packages, and subscription tiers.*  
+*See [User Flows](user_flows) for authentication sign-up process and [Getting Started](getting_started_updated.md) for technical implementation details.*
+
+### 6.5 Enhanced Team Member Credit System
+- **Transaction-Based Credits**: All credit movements tracked in dedicated `CreditTransaction` table
+- **Credit Types**: Company credits (admin-allocated) and individual credits (user-owned)
+- **Full Audit Trail**: Every credit allocation, transfer, and usage is recorded with timestamps
+- **Team Invites**: Credits automatically allocated when team members accept invites
+- **Transfer System**: Company admins can transfer credits between company pool and team members
+- **Real-time Balances**: Credit balances calculated from transaction history for accuracy
+- **Admin Dashboard**: Credit management with bulk allocation and individual adjustments
+
+*See [Business Model](business_model) for detailed credit system specifications including default allocations, usage rules, and prioritization logic.*
+
+### 6.6 Photo Consent & Approval Workflow
+- Consent required before selfie upload
+- Consent covers all Teamshots processing and service improvements
+- Team member must approve generated photo before database save
+- Original selfie retained if photo rejected
+- Generated photo deleted if rejected
+- Audit log records rejection events for credit accounting
+
+### 6.7 Content Moderation System
+- **LLM-Based Validation**: Automated filtering for nudity and obscenity
+- **Approval Flags**: userApproved and fitnessApproved for selfies, userApproved and adminApproved for generations
+- **Company Admin Approval**: Required for all public-facing company photo generations
+- **User Feedback**: Clear error messages for rejected uploads with guidance
+- **Audit Trail**: Moderation scores and results stored without inappropriate content
+- **Performance**: Moderation integrated into upload flow with proper error handling
+
+### 6.8 Logo Placement System
+- Automated background removal from uploaded logos
+- System generates multiple placement variations:
+  - Background watermark (behind subject)
+  - Clothing/apparel overlay
+  - Physical item in scene (cup, desk item)
+- Company admin or team member selects preferred variation
+
+### 6.9 Company Admin Controls
+- View approved team photos only
+- Bulk regeneration with new contexts (uses company credit pool)
+- Manual credit adjustment per team member
+- View team progress and approval status
+- **Team Member Management**:
+  - Promote/demote team members to/from admin roles
+  - Remove team members from company (with safety checks)
+  - Resend expired team invitations
+  - Revoke pending team invitations
+- **Role-Based Access Control**: Admin-only features properly protected
+
 
 ### 7. Internationalization
 - **Languages:** English & Spanish

@@ -1,0 +1,158 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+import type { GenerationListItem } from '../components/GenerationCard'
+
+export function useGenerations(
+  currentUserId?: string,
+  isCompanyAdmin?: boolean,
+  currentUserName?: string,
+  scope: 'personal' | 'team' = 'personal',
+  teamView?: 'mine' | 'team',
+  selectedUserId: string = 'all'
+) {
+  // Mock data; replace with real fetch later
+  const [generated, setGenerated] = useState<GenerationListItem[]>([])
+  const [pagination, setPagination] = useState<{
+    page: number
+    limit: number
+    totalCount: number
+    totalPages: number
+    hasNextPage: boolean
+    hasPrevPage: boolean
+  } | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  // Mock company users (current + teammate). Replace with real company members later
+  const [companyUsers, setCompanyUsers] = useState<{id:string; name:string}[]>([
+    { id: currentUserId || 'u_current', name: currentUserName || 'Me' }
+  ])
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/company/members')
+        if (res.ok) {
+          const data = await res.json()
+          if (Array.isArray(data.users)) setCompanyUsers(data.users)
+        }
+      } catch {}
+    }
+    if (isCompanyAdmin) load()
+  }, [isCompanyAdmin])
+
+  // Determine effective scope and teamView
+  const effectiveScope = scope
+  const effectiveTeamView = teamView || 'mine'
+
+  // Load from API
+  const loadGenerations = useCallback(async (page: number = 1, append: boolean = false) => {
+    setLoading(true)
+    try {
+      const url = new URL('/api/generations/list', window.location.origin)
+      url.searchParams.set('page', page.toString())
+      url.searchParams.set('limit', '50') // Increase limit to 50
+      url.searchParams.set('scope', effectiveScope)
+      
+      if (effectiveScope === 'team') {
+        if (effectiveTeamView) {
+          url.searchParams.set('teamView', effectiveTeamView)
+        }
+        if (isCompanyAdmin && selectedUserId && selectedUserId !== 'all') {
+          url.searchParams.set('userId', selectedUserId)
+        }
+      }
+      
+      const res = await fetch(url.toString())
+      if (res.ok) {
+        const data = await res.json()
+        // New API returns { generations, pagination }
+        if (Array.isArray(data.generations)) {
+          const mapped = data.generations.map((g: Record<string, unknown>) => ({
+            id: g.id,
+            uploadedKey: g.uploadedKey,
+            acceptedKey: g.acceptedKey,
+            selfieKey: g.selfieKey,
+            generatedKey: g.generatedKey,
+            status: g.status,
+            createdAt: g.createdAt,
+            contextName: (g.context as Record<string, unknown>)?.name as string,
+            contextId: (g.context as Record<string, unknown>)?.id as string,
+            costCredits: g.creditsUsed ?? 0,
+            isOwnGeneration: g.isOwnGeneration,
+            generationType: g.generationType,
+            adminApproved: g.adminApproved,
+            maxRegenerations: g.maxRegenerations,
+            remainingRegenerations: g.remainingRegenerations,
+            isOriginal: g.isOriginal,
+          })) as GenerationListItem[]
+          
+          if (append) {
+            setGenerated(prev => [...prev, ...mapped])
+          } else {
+            setGenerated(mapped)
+          }
+          
+          if (data.pagination) {
+            setPagination(data.pagination)
+          }
+        } else if (Array.isArray(data.items)) {
+          // Backward compatibility
+          if (append) {
+            setGenerated(prev => [...prev, ...data.items])
+          } else {
+            setGenerated(data.items)
+          }
+        }
+      }
+    } catch {}
+    setLoading(false)
+  }, [effectiveScope, effectiveTeamView, isCompanyAdmin, selectedUserId])
+
+  useEffect(() => {
+    loadGenerations(1, false)
+  }, [effectiveScope, effectiveTeamView, selectedUserId, loadGenerations])
+
+  // Poll for updates every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Only poll if we're not currently loading and not on a paginated view
+      if (!loading && (!pagination || pagination.page === 1)) {
+        loadGenerations(1, false)
+      }
+    }, 5000) // Poll every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [loading, pagination, loadGenerations])
+
+  const loadMore = () => {
+    if (pagination?.hasNextPage && !loading) {
+      loadGenerations((pagination.page || 1) + 1, true)
+    }
+  }
+
+  return { generated, companyUsers, pagination, loading, loadMore }
+}
+
+export function useGenerationFilters() {
+  const [timeframe, setTimeframe] = useState<'all'|'7d'|'30d'>('all')
+  const [context, setContext] = useState<string>('all')
+  const [userFilter, setUserFilter] = useState<string>('me')
+  const [selectedUserId, setSelectedUserId] = useState<string>('all')
+
+  const filterGenerated = (items: GenerationListItem[]) => {
+    const now = Date.now()
+    const inTimeframe = (date: string) => {
+      if (timeframe === 'all') return true
+      const diff = now - new Date(date).getTime()
+      return timeframe === '7d' ? diff <= 7*86400000 : diff <= 30*86400000
+    }
+    return items.filter(i =>
+      inTimeframe(i.createdAt) &&
+      (context === 'all' || (i.contextName || 'Freestyle') === context)
+    )
+  }
+
+  return { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated }
+}
+
+

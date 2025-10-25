@@ -1,0 +1,243 @@
+'use client'
+
+import { useSearchParams, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
+import { PRICING_CONFIG } from '@/config/pricing'
+
+const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
+const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
+const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
+
+interface PersonData {
+  id: string
+  firstName: string
+  lastName?: string
+  email: string
+  companyId: string
+  creditsAllocated: number
+}
+
+export default function UploadPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const personId = searchParams.get('personId')
+  const token = searchParams.get('token')
+
+  const [personData, setPersonData] = useState<PersonData | null>(null)
+  const [key, setKey] = useState<string>('')
+  const [isApproved, setIsApproved] = useState<boolean>(false)
+  const [generationType, setGenerationType] = useState<'personal' | 'company' | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (personId && token) {
+      // In a real app, you'd fetch person data from the API
+      // For now, we'll use the data from the invite acceptance
+      setPersonData({
+        id: personId,
+        firstName: 'Team Member', // This would come from the API
+        email: 'team@company.com',
+        companyId: 'company-id',
+        creditsAllocated: 5
+      })
+      setLoading(false)
+    } else {
+      setError('Invalid access')
+      setLoading(false)
+    }
+  }, [personId, token])
+
+  const onPhotoUploaded = ({ key }: { key: string; url?: string }) => {
+    setKey(key)
+  }
+
+  const onApprove = () => {
+    setIsApproved(true)
+  }
+
+  const onReject = async () => {
+    await deleteSelfie()
+  }
+
+  const onRetake = async () => {
+    await deleteSelfie()
+  }
+
+  const onCancel = async () => {
+    await deleteSelfie()
+  }
+
+  const deleteSelfie = async () => {
+    if (!key) return
+    
+    try {
+      const response = await fetch(`/api/uploads/delete?key=${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+      })
+      
+      if (response.ok) {
+        setKey('')
+        setIsApproved(false)
+      } else {
+        console.error('Failed to delete selfie')
+        // You might want to show a toast notification here
+      }
+    } catch (error) {
+      console.error('Error deleting selfie:', error)
+      // You might want to show a toast notification here
+    }
+  }
+
+  const onTypeSelected = (type: 'personal' | 'company') => {
+    setGenerationType(type)
+  }
+
+  const onProceed = () => {
+    // TODO: call generation API with { key, generationType, personId, token }
+    console.log('Proceed to generate with', { key, generationType, personId, token })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !personData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="text-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h1 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h1>
+            <p className="text-sm text-gray-600 mb-4">{error || 'Invalid access'}</p>
+            <button
+              onClick={() => router.push('/')}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
+            >
+              Go to Homepage
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Mock user credits for team member
+  const userCredits = {
+    individual: 0, // Team members start with no individual credits
+    company: personData.creditsAllocated
+  }
+
+  const hasCompanyAccess = true // Team members always have company access
+  const companyName = 'Your Company' // This would come from the API
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Welcome, {personData.firstName}!
+          </h1>
+          <p className="text-gray-600">
+            Upload your photo to generate professional headshots
+          </p>
+        </div>
+
+        <div className="space-y-6">
+          {!key ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Upload Your Photo</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Upload a clear photo of yourself to get started.
+              </p>
+              <div className="max-w-md mx-auto">
+                <PhotoUpload onUploaded={onPhotoUploaded} />
+              </div>
+            </div>
+          ) : !isApproved ? (
+        <SelfieApproval
+          uploadedPhotoKey={key}
+          onApprove={onApprove}
+          onReject={onReject}
+          onRetake={onRetake}
+          onCancel={onCancel}
+        />
+          ) : !generationType ? (
+            <GenerationTypeSelector
+              uploadedPhotoKey={key}
+              onTypeSelected={onTypeSelected}
+              userCredits={userCredits}
+              hasCompanyAccess={hasCompanyAccess}
+              companyName={companyName}
+            />
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Ready to Generate
+              </h2>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Photo uploaded</p>
+                    <p className="text-xs text-gray-500 font-mono">{key}</p>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">Generation Details</h3>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Type:</strong> {generationType === 'personal' ? 'Personal Use' : 'Company Use'}</p>
+                    <p><strong>Credits:</strong> {PRICING_CONFIG.credits.perGeneration} credits</p>
+                    <p><strong>Remaining:</strong> {userCredits[generationType === 'personal' ? 'individual' : 'company']} credits</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onProceed}
+                  className="w-full py-2 px-4 bg-brand-primary text-white rounded-md hover:bg-brand-primary-hover text-sm font-medium"
+                >
+                  Generate Professional Photo ({PRICING_CONFIG.credits.perGeneration} credits)
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sign up CTA for personal use */}
+        {generationType === 'company' && (
+          <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Want to create personal photos too?
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Sign up for a personal account to generate photos with full creative control.
+            </p>
+            <button
+              onClick={() => router.push('/auth/signup')}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium"
+            >
+              Sign Up for Personal Use
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

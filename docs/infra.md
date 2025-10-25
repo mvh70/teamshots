@@ -13,6 +13,24 @@
 - Account management
 - All authenticated features
 
+## Internationalization Architecture
+
+### Locale Support
+- **Languages**: English (en), Spanish (es)
+- **Default**: English
+- **Detection**: URL → Session → Browser preference
+
+### URL Routing
+- **Marketing**: `www.teamshots.vip` (EN) / `www.teamshots.vip/es` (ES)
+- **App**: `app.teamshots.vip` (EN) / `app.teamshots.vip/es` (ES)
+- **Internal**: `/app-routes/` with locale prefixes
+
+### Technical Implementation
+- **Library**: next-intl
+- **Middleware**: Automatic locale detection and routing
+- **Navigation**: Locale-aware Link and useRouter hooks
+- **Translations**: JSON files in `/messages/` directory
+
 ## Tech Stack
 
 ### Frontend
@@ -42,9 +60,72 @@
 - **Endpoint**: https://ai.google.dev/gemini-api/docs/image-generation
 - **Provider Abstraction**: Interface-based design for easy model switching if needed
 
+### Background Processing
+- **Technology**: Python 3.9+ with rembg library
+- **Purpose**: Remove backgrounds from uploaded selfies for better AI generation
+- **Integration**: Node.js worker calls Python script via child_process
+- **Architecture**: User uploads selfie → S3 storage → Python rembg processing → Processed selfie cached in S3 → AI generation uses processed version
+- **Dependencies**: Python 3.9+, rembg>=2.0.50, Pillow>=9.0.0, numpy>=1.21.0, onnxruntime
+- **Model**: u2net_human_seg (optimized for human subjects with good quality/size balance)
+
 ### Storage
 - **Hetzner S3**: Photo storage (uploaded & generated)
 - **Retention**: 30 days default
+
+#### Hetzner S3 CORS (Browser uploads)
+
+Single source of truth to enable browser uploads to Hetzner S3.
+
+Problem: AWS CLI sometimes fails to set CORS on Hetzner's S3 API.
+Solution: Use boto3 (Python) instead.
+
+Steps (run once per bucket):
+
+1) Install boto3
+```
+pip3 install boto3
+```
+
+2) Create `set_cors.py`
+```python
+import boto3
+from botocore.client import Config
+
+s3 = boto3.client(
+    's3',
+    endpoint_url='https://nbg1.your-objectstorage.com',  # Hetzner compat endpoint (include https)
+    aws_access_key_id='YOUR_ACCESS_KEY',
+    aws_secret_access_key='YOUR_SECRET_KEY',
+    config=Config(signature_version='s3v4'),
+    region_name='us-east-1'
+)
+
+cors_configuration = {
+    'CORSRules': [{
+        'AllowedOrigins': [
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            'https://app.teamshots.vip',
+            'https://www.teamshots.vip'
+        ],
+        'AllowedMethods': ['GET', 'PUT', 'HEAD'],
+        'AllowedHeaders': ['*'],
+        'MaxAgeSeconds': 300
+    }]}
+
+s3.put_bucket_cors(Bucket='teamshots', CORSConfiguration=cors_configuration)
+print('CORS configuration set successfully!')
+```
+
+3) Run
+```
+python3 set_cors.py
+```
+
+Notes
+- Use the Hetzner "compat" endpoint (not website URL) and include `https://`.
+- Hetzner S3 may not accept `ExposeHeaders` or `OPTIONS` in CORS; the config above is the minimal working set for signed PUT uploads.
+- After applying, wait ~1–2 minutes before testing uploads.
 
 ### Payments
 - **Stripe**: Subscriptions + credit purchases
@@ -61,25 +142,25 @@
 ## Architecture
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚         User Browser (Next.js)          â”‚
-â”‚  Upload â†’ Customize â†’ Review â†’ Download â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                 â”‚
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚    API Routes (Hetzner + Coolify)       â”‚
-â”‚  /api/upload, /api/generate, /api/download â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-         â”‚                   â”‚
-    â”Œâ”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”      â”Œâ”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”
-    â”‚ Database â”‚      â”‚ Gemini API  â”‚
-    â”‚(Hetzner) â”‚      â”‚ (Generation)â”‚
-    â””â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”˜      â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-         â”‚
-    â”Œâ”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”
-    â”‚ Hetzner  â”‚
-    â”‚ S3       â”‚
-    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────────┐
+│         User Browser (Next.js)          │
+│  Upload → Customize → Review → Download │
+└─────────────────────────────────┬───────────┘
+                 │
+┌─────────────────────────────────▼─────────────┐
+│    API Routes (Hetzner + Coolify)       │
+│  /api/upload, /api/generate, /api/download │
+└─────────────────────────────┬─────────────┬───┘
+         │                   │
+    ┌────▼───┐      ┌────────▼────────┐
+    │ Database │      │ Gemini API  │
+    │(Hetzner) │      │ (Generation)│
+    └────────┬─┘      └───────────────┘
+         │
+    ┌────▼───┐
+    │ Hetzner  │
+    │ S3       │
+    └──────────┘
 ```
 
 ## AI Integration Architecture
@@ -199,11 +280,19 @@ await prisma.generation.create({
 
 ## API Endpoints
 
-### Core
-- `POST /api/upload` - Upload photo
-- `POST /api/generate` - Generate variations
-- `GET /api/download/:id` - Download photo
+### Core (Current)
+- `POST /api/uploads/proxy` - Server-side proxy upload to Hetzner S3 (validated, 10MB max)
+- `POST /api/uploads/create` - Persist a `Selfie` record after successful upload
+- `GET /api/uploads/list` - List current user's selfies
+- `GET /api/files/get?key=<s3-key>` - Signed GET URL for displaying an S3 image
+- `GET /api/files/download?key=<s3-key>` - Signed GET URL intended for downloads
+- `GET /api/generations/list` - List generations (scope=user or company, supports filters)
+- `GET /api/company/members` - List company members (admin only)
 - `GET /api/health` - Health check for monitoring
+
+### Core (Planned)
+- `POST /api/generate` - Create a Generation from a selfie + settings (Gemini)
+- `GET /api/generations/:id` - Generation detail
 
 ### Account
 - `GET /api/user/profile` - User info
@@ -269,66 +358,7 @@ await prisma.generation.create({
 
 ## Configuration Management
 
-### Brand Configuration
-All brand values in `src/config/brand.ts`:
-- Brand name, tagline, domain
-- Contact emails
-- Color palette
-- Logo paths
-- SEO defaults
-
-### Pricing Configuration
-All pricing in `src/config/pricing.ts`:
-- Try Once pricing
-- Subscription tiers (monthly/annual)
-- Included credits per tier
-- Top-up prices per tier
-- Stripe Price IDs
-
-See Business Model doc for actual pricing values.
-
-Brand colors defined as CSS variables in `src/app/[locale]/globals.css` and made available to Tailwind. Components use theme colors (e.g., `bg-brand-primary`) instead of hard-coded values.
-
-## Code Organization Principles
-
-**Goal:** Maintain clean, reusable codebase for future projects (boilerplate-ready)
-
-### Configuration-Driven
-- All business logic in `config/` files (pricing, features, styles)
-- No hard-coded values in components
-- Environment variables for all external services
-- Easy to swap values without touching code
-
-### Separation of Concerns
-```
-/lib          - Business logic, utilities, external integrations
-/components   - Reusable UI components (no business logic)
-/app          - Routes and page compositions
-/config       - All configuration (pricing, features, etc.)
-```
-
-### Type Safety
-- Full TypeScript coverage
-- Shared types in `/types` or `/lib/types`
-- Prisma for type-safe database access
-- Zod for runtime validation
-
-### Reusable Utilities
-- Generic functions in `/lib` (not project-specific)
-- Abstract external services (easy to swap providers)
-- Example: Image generator interface allows switching from Gemini to other providers
-
-### No Business Logic in Components
-- Components receive props, render UI
-- Business logic in custom hooks or `/lib` functions
-- API calls in route handlers or dedicated services
-
-### Clear Naming
-- Descriptive file and function names
-- Consistent naming patterns
-- Self-documenting code over comments
-
-## Environment Variables
+### Specific Environment Variables
 
 ```bash
 # Database
@@ -350,6 +380,7 @@ HETZNER_S3_ENDPOINT=
 HETZNER_S3_ACCESS_KEY=
 HETZNER_S3_SECRET_KEY=
 HETZNER_S3_BUCKET=
+HETZNER_S3_REGION=
 
 # Payments
 STRIPE_SECRET_KEY=
@@ -367,43 +398,4 @@ EMAIL_FROM_ADDRESS=
 # - COOLIFY_DEPLOYMENT_UUID
 ```
 
-## Deployment
-
-### Hosting
-- **Hetzner VPS**: Application hosting (CPX31 or CCX23 recommended)
-- **Coolify Cloud**: Deployment management & orchestration
-- **Database**: PostgreSQL on same Hetzner VPS or separate instance
-- **Storage**: Hetzner Object Storage (S3-compatible)
-
-### Coolify Setup
-- Connect GitHub repository
-- Set environment variables in Coolify dashboard
-- Configure custom domain with SSL (auto-provisioned by Coolify)
-- Automatic Docker container builds from Next.js
-- Zero-downtime deployments
-
-### Infrastructure Requirements
-**Hetzner VPS Recommendation:**
-- **Production**: CPX31 (4 vCPU, 8GB RAM) - ~â‚¬15/month
-- **Staging**: CPX11 (2 vCPU, 2GB RAM) - ~â‚¬5/month
-- **Object Storage**: Pay-as-you-go (~â‚¬0.01/GB/month)
-- **Bandwidth**: Included (20TB for CPX31)
-
-Total estimated cost: ~â‚¬25-30/month for production + staging
-
-### Docker Configuration
-- `Dockerfile` in project root for Next.js app
-- Coolify auto-detects and builds from Dockerfile
-- Multi-stage build for optimized image size
-- Health check endpoint: `/api/health`
-
-### CI/CD
-- Push to `main` â†’ Coolify auto-deploy to production
-- Push to `develop` â†’ Coolify auto-deploy to staging
-- Docker containers managed by Coolify
-- Automatic health checks and rollbacks
-
-### Environments
-- **Development**: Local (Docker Compose recommended)
-- **Staging**: staging.domain.com (Hetzner)
-- **Production**: domain.com (Hetzner)
+*For deployment steps, see [DEPLOYMENT.md](DEPLOYMENT.md).*

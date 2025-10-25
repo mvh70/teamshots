@@ -43,7 +43,7 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
   },
   {
     id: '3',
-    before: '/samples/before-3.png',
+    before: '/samples/before-3.jpg',
     after: '/samples/after-3.png',
     alt: 'Professional headshot transformation example 3',
     attribution: {

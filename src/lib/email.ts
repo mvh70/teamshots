@@ -1,6 +1,8 @@
 import { Resend } from 'resend';
 import WaitlistWelcomeEmail from '@/emails/WaitlistWelcome';
+import TeamInviteEmail from '@/emails/TeamInvite';
 import { BRAND_CONFIG } from '@/config/brand';
+import { getEmailTranslation } from '@/lib/translations';
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -22,9 +24,7 @@ export async function sendWaitlistWelcomeEmail({
   locale = 'en',
 }: SendWaitlistWelcomeEmailParams) {
   try {
-    const subject = locale === 'es' 
-      ? "¡Bienvenido a TeamShots! 🎉"
-      : "Welcome to TeamShots! 🎉";
+    const subject = getEmailTranslation('waitlistWelcome.subject', locale);
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -149,6 +149,53 @@ export async function sendMagicLinkEmail({
     return { success: true, data };
   } catch (error) {
     console.error('Failed to send magic link email:', error);
+    return { success: false, error };
+  }
+}
+
+interface SendTeamInviteEmailParams {
+  email: string;
+  companyName: string;
+  inviteLink: string;
+  creditsAllocated: number;
+  locale?: 'en' | 'es';
+}
+
+/**
+ * Send team invitation email
+ */
+export async function sendTeamInviteEmail({
+  email,
+  companyName,
+  inviteLink,
+  creditsAllocated,
+  locale = 'en',
+}: SendTeamInviteEmailParams) {
+  try {
+    const subject = getEmailTranslation('teamInvite.subject', locale, { companyName });
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      replyTo: REPLY_TO_EMAIL,
+      subject,
+      react: TeamInviteEmail({ 
+        companyName, 
+        inviteLink, 
+        creditsAllocated, 
+        locale 
+      }),
+    });
+
+    if (error) {
+      console.error('Error sending team invite email:', error);
+      return { success: false, error };
+    }
+
+    console.log('Team invite email sent successfully:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Failed to send team invite email:', error);
     return { success: false, error };
   }
 }

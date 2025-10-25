@@ -1,55 +1,54 @@
 # Getting Started Guide
 
 ## Overview
-This guide walks you through building and deploying the AI Team Photo Generator in 2 weeks using a phased approach.
-
-**Timeline:** 2 weeks to beta launch
+This guide walks you through building and deploying the AI Team Photo Generator using a phased approach.
 
 ## Implementation Order
 
-### Week 1: Foundation + Waitlist
+### Phase 1: Foundation + Waitlist
 
-**Days 1-2: Waitlist Launch**
+**Waitlist Launch**
 1. Hetzner + Coolify setup
 2. Landing page + pricing page (www.teamshots.vip)
 3. Waitlist signup form
 4. Basic Resend email ("Thanks for joining!")
 5. **→ LAUNCH WAITLIST PUBLICLY**
 
-**Days 3-4: Auth & Foundation**
+**Auth & Foundation**
 6. Auth.js setup (start with email/password, OAuth if time allows)
 7. Database schema + Prisma
 8. App shell (app.teamshots.vip/dashboard) with "Coming soon"
    - Public, pretty paths (e.g., `/dashboard`) are mapped to internal app routes (`/app-routes/dashboard`) via Next.js rewrites. Users see only the pretty URL.
 9. next-intl configuration (EN/ES)
 
-**Days 5-7: Payments**
+**Payments**
 10. Stripe integration
 11. Credit system implementation
 12. Purchase flows (Try Once, subscriptions, top-ups)
 13. Credit balance display
 
-### Week 2: Core Feature + Launch
+### Phase 2: Core Feature + Launch
 
-**Days 8-10: Generation Feature**
+**Generation Feature**
 14. Hetzner S3 setup
 15. Photo upload UI + S3 integration
 16. Style/background customization UI
+16.5. Background removal system (Python rembg integration)
 17. Gemini API integration
 18. Generation workflow (process, display variations)
 
-**Days 11-12: Polish**
+**Polish**
 19. Review/download UI
 20. Credit deduction logic
 21. Generation history view
 22. Error handling
 
-**Day 13: Final Polish**
+**Final Polish**
 23. Onboarding flow
 24. Email notifications (generation complete, receipts)
 25. Settings page
 
-**Day 14: Beta Launch**
+**Beta Launch**
 26. Invite waitlist users
 27. **→ BETA LAUNCH**
 
@@ -258,7 +257,7 @@ model User {
   image         String?
   password      String?   // Only for credentials provider
   locale        String    @default("en") // 'en' or 'es'
-  credits       Int       @default(0)
+  credits       Int       @default(0) // Legacy field - will be deprecated
   subscriptionTier   String?  // 'starter' | 'pro'
   subscriptionPeriod String?  // 'monthly' | 'annual'
   subscriptionStatus String?  // 'active' | 'cancelled'
@@ -269,6 +268,9 @@ model User {
   sessions      Session[]
   generations   Generation[]
   transactions  Transaction[]
+  creditTransactions CreditTransaction[]
+  person        Person?
+  companies     Company[] @relation("CompanyAdmin")
 }
 
 model VerificationToken {
@@ -662,6 +664,21 @@ When ready to add OAuth:
 5. Test OAuth flow
 
 For now, email/password is sufficient for 2-week launch.
+
+### Authentication UX Requirements
+
+**OTP Resend Throttling:**
+- Server-side throttling: 30 seconds per email
+- Show visible cooldown timer + success message when new code is sent
+
+**Magic Link Verification:**
+- Verify screen displays destination email when available (e.g., `?email=`)
+- Clear user feedback for verification status
+
+**Client Events:**
+- Emit lightweight events for signin success/error
+- Emit events for magic-link send/error
+- Events can be wired to analytics later
 
 ---
 
@@ -1430,55 +1447,3 @@ Once basic setup works:
 6. **Add email notifications**
 7. **Test end-to-end**
 8. **Beta launch**
-
----
-
-## Useful Commands
-
-```bash
-# Development
-npm run dev              # Start dev server
-npm run build           # Build for production
-npm start               # Start production server
-
-# Database
-npx prisma studio       # Visual database browser
-npx prisma migrate dev  # Create migration
-npx prisma generate     # Generate Prisma Client
-
-# Docker
-docker build -t app .   # Build image
-docker run -p 3000:3000 app  # Run container
-
-# Git
-git status              # Check changes
-git add .               # Stage changes
-git commit -m "msg"     # Commit
-git push                # Push to GitHub
-```
-
----
-
-## Getting Help
-
-- **Coolify Docs:** https://coolify.io/docs
-- **Next.js Docs:** https://nextjs.org/docs
-- **Prisma Docs:** https://www.prisma.io/docs
-- **Gemini API Docs:** https://ai.google.dev/docs
-
-**Stuck?** Most issues are solved by:
-1. Checking logs (Coolify dashboard)
-2. Verifying environment variables
-3. Googling the error message
-
----
-
-## You're Ready! 🚀
-
-You now have everything to start building. Start with:
-1. Get local dev working
-2. Deploy "Hello World" to Hetzner via Coolify
-3. Build features one at a time
-4. Push code → Auto-deploy → Test → Repeat
-
-Good luck!

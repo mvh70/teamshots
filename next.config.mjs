@@ -7,23 +7,38 @@ const nextConfig = {
   transpilePackages: ['next-intl'],
   output: 'standalone', // Enable for Docker deployment
   images: {
+    unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'ui-avatars.com' },
       { protocol: 'https', hostname: 'avatars.githubusercontent.com' }
     ]
   },
-  async rewrites() {
+  async headers() {
     return [
-      { source: '/dashboard', destination: '/app-routes/dashboard' },
-      { source: '/team', destination: '/app-routes/team' },
-      { source: '/generations', destination: '/app-routes/generations' },
-      { source: '/templates', destination: '/app-routes/templates' },
-      { source: '/analytics', destination: '/app-routes/analytics' },
-      { source: '/generate', destination: '/app-routes/generate' },
-      { source: '/settings', destination: '/app-routes/settings' }
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(self)'
+          },
+          // Safari-specific headers to handle protocol issues
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
+          }
+        ]
+      }
     ]
-  }
+  },
 };
 
 export default withNextIntl(nextConfig);
-

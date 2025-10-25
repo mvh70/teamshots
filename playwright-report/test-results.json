@@ -1,0 +1,566 @@
+{
+  "config": {
+    "configFile": "/Users/matthieuvanhaperen/projects/teamshots/playwright.config.ts",
+    "rootDir": "/Users/matthieuvanhaperen/projects/teamshots/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": "/Users/matthieuvanhaperen/projects/teamshots/tests/global-setup.ts",
+    "globalTeardown": "/Users/matthieuvanhaperen/projects/teamshots/tests/global-teardown.ts",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-report/test-results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "playwright-report/junit.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/matthieuvanhaperen/projects/teamshots/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/matthieuvanhaperen/projects/teamshots/tests/e2e",
+        "testIgnore": [
+          "/(selfie-flow|i18n-mobile)\\.spec\\.ts/"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthieuvanhaperen/projects/teamshots/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium-sequential",
+        "name": "chromium-sequential",
+        "testDir": "/Users/matthieuvanhaperen/projects/teamshots/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/(selfie-flow|i18n-mobile|complete-real-test)\\.spec\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthieuvanhaperen/projects/teamshots/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/Users/matthieuvanhaperen/projects/teamshots/tests/e2e",
+        "testIgnore": [
+          "/(selfie-flow|i18n-mobile)\\.spec\\.ts/"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthieuvanhaperen/projects/teamshots/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/Users/matthieuvanhaperen/projects/teamshots/tests/e2e",
+        "testIgnore": [
+          "/(selfie-flow|i18n-mobile)\\.spec\\.ts/"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthieuvanhaperen/projects/teamshots/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "/Users/matthieuvanhaperen/projects/teamshots/tests/e2e",
+        "testIgnore": [
+          "/(selfie-flow|i18n-mobile)\\.spec\\.ts/"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/matthieuvanhaperen/projects/teamshots/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "/Users/matthieuvanhaperen/projects/teamshots/tests/e2e",
+        "testIgnore": [
+          "/(selfie-flow|i18n-mobile)\\.spec\\.ts/"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 6,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "photo-style-flow/complete-real-test.spec.ts",
+      "file": "photo-style-flow/complete-real-test.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Complete Real Database Test",
+          "file": "photo-style-flow/complete-real-test.spec.ts",
+          "line": 5,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Create style with real database user and API calls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-sequential",
+                  "projectName": "chromium-sequential",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 13568,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✅ Created test user: completetest@example.com\n"
+                        },
+                        {
+                          "text": "✅ Cancel button test completed\n"
+                        },
+                        {
+                          "text": "Found 6 toggle buttons\n"
+                        },
+                        {
+                          "text": "Button 0: \"User Choice\"\n"
+                        },
+                        {
+                          "text": "Button 0 after click: \"Predefined\"\n"
+                        },
+                        {
+                          "text": "Button 1: \"User Choice\"\n"
+                        },
+                        {
+                          "text": "Button 1 after click: \"Predefined\"\n"
+                        },
+                        {
+                          "text": "Button 2: \"Predefined\"\n"
+                        },
+                        {
+                          "text": "Button 2 after click: \"User Choice\"\n"
+                        },
+                        {
+                          "text": "Button 3: \"Predefined\"\n"
+                        },
+                        {
+                          "text": "Button 3 after click: \"User Choice\"\n"
+                        },
+                        {
+                          "text": "Button 4: \"User Choice\"\n"
+                        },
+                        {
+                          "text": "Button 4 after click: \"Predefined\"\n"
+                        },
+                        {
+                          "text": "Button 5: \"User Choice\"\n"
+                        },
+                        {
+                          "text": "Button 5 after click: \"Predefined\"\n"
+                        },
+                        {
+                          "text": "Create Style button enabled: true\n"
+                        },
+                        {
+                          "text": "Created style \"Real Database Style 1761319061774\" visible on contexts page: true\n"
+                        },
+                        {
+                          "text": "✅ Style \"Real Database Style 1761319061774\" confirmed in database with ID: cmh4zw7030061dqiny0wxufmr\n"
+                        },
+                        {
+                          "text": "Testing delete functionality...\n"
+                        },
+                        {
+                          "text": "✅ Delete button found, testing deletion...\n"
+                        },
+                        {
+                          "text": "Browser dialog detected: Are you sure you want to delete this photo style?\n"
+                        },
+                        {
+                          "text": "Accepting confirmation dialog...\n"
+                        },
+                        {
+                          "text": "Checking page content after deletion attempt...\n"
+                        },
+                        {
+                          "text": "Page contains style name: \u001b[33mfalse\u001b[39m\n"
+                        },
+                        {
+                          "text": "Style still visible: false\n"
+                        },
+                        {
+                          "text": "✅ Style \"Real Database Style 1761319061774\" no longer visible on page after deletion\n"
+                        },
+                        {
+                          "text": "✅ Style \"Real Database Style 1761319061774\" confirmed deleted from database\n"
+                        },
+                        {
+                          "text": "✅ Complete real database test successful\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-24T15:17:34.141Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c56bedc76c3f8995900f-06aac252e9d7c140b4c8",
+              "file": "photo-style-flow/complete-real-test.spec.ts",
+              "line": 54,
+              "column": 7
+            },
+            {
+              "title": "Test individual background and photo style options",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-sequential",
+                  "projectName": "chromium-sequential",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2857,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✅ Individual options test completed\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-24T15:17:47.964Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c56bedc76c3f8995900f-6ef3a80d1e172af96522",
+              "file": "photo-style-flow/complete-real-test.spec.ts",
+              "line": 233,
+              "column": 7
+            },
+            {
+              "title": "Test form validation with empty fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-sequential",
+                  "projectName": "chromium-sequential",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2300,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✅ Form validation working - Create button disabled with empty fields\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-24T15:17:50.825Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c56bedc76c3f8995900f-567095829d368a68c2a6",
+              "file": "photo-style-flow/complete-real-test.spec.ts",
+              "line": 273,
+              "column": 7
+            },
+            {
+              "title": "Debug page structure and elements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-sequential",
+                  "projectName": "chromium-sequential",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2308,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Found section headings: \u001b[33m11\u001b[39m\n"
+                        },
+                        {
+                          "text": "Section 0: \"Available Credits\"\n"
+                        },
+                        {
+                          "text": "Section 1: \"Background\"\n"
+                        },
+                        {
+                          "text": "Section 2: \"Background\"\n"
+                        },
+                        {
+                          "text": "Section 3: \"Branding\"\n"
+                        },
+                        {
+                          "text": "Section 4: \"Branding\"\n"
+                        },
+                        {
+                          "text": "Section 5: \"Photo Style\"\n"
+                        },
+                        {
+                          "text": "Section 6: \"User Style Settings\"\n"
+                        },
+                        {
+                          "text": "Section 7: \"Clothing\"\n"
+                        },
+                        {
+                          "text": "Section 8: \"Clothing Style\"\n"
+                        },
+                        {
+                          "text": "Section 9: \"Expression\"\n"
+                        },
+                        {
+                          "text": "Section 10: \"Lighting\"\n"
+                        },
+                        {
+                          "text": "Found buttons: \u001b[33m21\u001b[39m\n"
+                        },
+                        {
+                          "text": "Button 0: \"\" - enabled: true - classes: \"p-1.5 rounded-md hover:bg-gray-100 transition-colors\"\n"
+                        },
+                        {
+                          "text": "Button 1: \"\" - enabled: true - classes: \"p-2 rounded-md hover:bg-gray-100 transition-colors lg:hidden\"\n"
+                        },
+                        {
+                          "text": "Button 2: \"3\" - enabled: true - classes: \"p-2 rounded-md hover:bg-gray-100 transition-colors relative\"\n"
+                        },
+                        {
+                          "text": "Button 3: \"\" - enabled: true - classes: \"p-2 text-gray-400 hover:text-gray-600\"\n"
+                        },
+                        {
+                          "text": "Button 4: \"User Choice\" - enabled: true - classes: \"flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors\"\n"
+                        },
+                        {
+                          "text": "Button 5: \"Office Environment\" - enabled: true - classes: \"w-full flex items-center gap-3 p-3 rounded-lg border transition-colors border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 cursor-pointer\"\n"
+                        },
+                        {
+                          "text": "Button 6: \"Neutral Background\" - enabled: true - classes: \"w-full flex items-center gap-3 p-3 rounded-lg border transition-colors border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 cursor-pointer\"\n"
+                        },
+                        {
+                          "text": "Button 7: \"Gradient Background\" - enabled: true - classes: \"w-full flex items-center gap-3 p-3 rounded-lg border transition-colors border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 cursor-pointer\"\n"
+                        },
+                        {
+                          "text": "Button 8: \"Custom Upload\" - enabled: true - classes: \"w-full flex items-center gap-3 p-3 rounded-lg border transition-colors border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 cursor-pointer\"\n"
+                        },
+                        {
+                          "text": "Button 9: \"User Choice\" - enabled: true - classes: \"flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors\"\n"
+                        },
+                        {
+                          "text": "✅ Debug information logged\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-24T15:17:53.128Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c56bedc76c3f8995900f-8883c796818f0fa53c83",
+              "file": "photo-style-flow/complete-real-test.spec.ts",
+              "line": 299,
+              "column": 7
+            },
+            {
+              "title": "Contexts page basic functionality",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-sequential",
+                  "projectName": "chromium-sequential",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2315,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✅ Contexts page basic functionality test completed\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-24T15:17:55.440Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c56bedc76c3f8995900f-1b22de878a1ff9701c4d",
+              "file": "photo-style-flow/complete-real-test.spec.ts",
+              "line": 339,
+              "column": 7
+            },
+            {
+              "title": "Contexts page responsive design",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-sequential",
+                  "projectName": "chromium-sequential",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2354,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✅ Contexts page responsive design test completed\n"
+                        },
+                        {
+                          "text": "✅ Cleaned up test user: completetest@example.com\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-24T15:17:57.759Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c56bedc76c3f8995900f-bc5c0b0352d5fc72d431",
+              "file": "photo-style-flow/complete-real-test.spec.ts",
+              "line": 367,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-10-24T15:17:31.126Z",
+    "duration": 30258.13,
+    "expected": 6,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

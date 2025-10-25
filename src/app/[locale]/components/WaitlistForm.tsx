@@ -64,7 +64,7 @@ export default function WaitlistForm() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t('emailPlaceholder')}
               required
-              className="flex-1 px-6 py-5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent text-lg bg-white shadow-sm"
+              className="flex-1 px-6 py-5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent text-lg bg-white shadow-sm text-gray-900"
               disabled={status === 'loading'}
             />
             <button
@@ -72,7 +72,7 @@ export default function WaitlistForm() {
               disabled={status === 'loading'}
               className="px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all duration-300 disabled:bg-gray-400 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-lg min-w-[200px]"
             >
-              {status === 'loading' ? t('submitting') : t('submit')}
+              {status === 'loading' ? t('submitting') : t('submitFirstPerson')}
             </button>
           </div>
 
@@ -121,6 +121,13 @@ export default function WaitlistForm() {
             </div>
           </div>
         )}
+
+        <div className="mt-6 flex justify-center">
+          <div className="inline-flex items-center bg-brand-primary-light text-brand-primary px-4 py-2 rounded-full">
+            <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+            {t('joinedBadge')}
+          </div>
+        </div>
       </div>
     </section>
   );

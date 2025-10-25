@@ -90,23 +90,16 @@ export default function SignUpPage() {
         if (signInResult?.error) {
           router.push('/auth/signin')
         } else {
-          router.push('/dashboard')
+          router.push('/app/dashboard')
         }
       } else {
         if (registerData.error === 'Invalid or expired OTP') {
           await handleSendOTP()
           setError('auth.signup.newCodeSent')
         } else if (registerData.error === 'User already exists') {
-          const signInResult = await signIn('credentials', {
-            email: formData.email,
-            password: formData.password,
-            redirect: false,
-          })
-            if (signInResult?.error) {
-            setError('auth.signup.accountExists')
-          } else {
-              router.push('/dashboard')
-          }
+          // SECURITY: Don't attempt sign-in with entered password
+          // Just redirect to signin page to prevent password verification leaks
+          router.push('/auth/signin?email=' + encodeURIComponent(formData.email))
         } else {
           setError(registerData.error || 'Registration failed')
         }
@@ -233,9 +226,6 @@ export default function SignUpPage() {
                 <span className="text-gray-500">{t('otpHelp')}</span>
               </div>
               {error === 'auth.signup.newCodeSent' && (
-                <div className="text-green-600 text-sm text-center">{t('newCodeSent')}</div>
-              )}
-              {resendCooldown === 30 && (
                 <div className="text-green-600 text-sm text-center">{t('newCodeSent')}</div>
               )}
               <AuthButton

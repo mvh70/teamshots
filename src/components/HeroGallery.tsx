@@ -15,7 +15,7 @@ interface SamplePhoto {
 // Featured hero example - using local transformation images
 const HERO_PHOTO: SamplePhoto = {
   id: 'hero-1',
-  before: '/samples/before-hero.jpg',
+  before: '/samples/before-hero.png',
   after: '/samples/after-hero.png',
   alt: 'Professional headshot transformation - AI powered'
 };

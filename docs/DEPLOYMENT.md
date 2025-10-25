@@ -22,11 +22,12 @@ This guide covers deploying TeamShots to a Hetzner VPS using Coolify Cloud (mana
 5. [Coolify Cloud Setup](#coolify-cloud-setup)
 6. [Database Setup](#database-setup)
 7. [Application Deployment](#application-deployment)
-8. [Environment Variables](#environment-variables)
-9. [SSL Configuration](#ssl-configuration)
-10. [CI/CD Setup](#cicd-setup)
-11. [Monitoring & Maintenance](#monitoring--maintenance)
-12. [Troubleshooting](#troubleshooting)
+8. [Internationalization (i18n) Configuration](#internationalization-i18n-configuration)
+9. [Environment Variables](#environment-variables)
+10. [SSL Configuration](#ssl-configuration)
+11. [CI/CD Setup](#cicd-setup)
+12. [Monitoring & Maintenance](#monitoring--maintenance)
+13. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -543,6 +544,30 @@ Make sure your Hetzner server firewall allows:
 - [ ] Server status shows "Connected" in Coolify Cloud
 - [ ] Email notifications configured (optional)
 
+### 4. Python Dependencies for Background Processing
+
+TeamShots uses Python with rembg for high-quality background removal from selfies.
+
+**Install Python 3.9+ and dependencies:**
+```bash
+# Install Python 3.9+ (if not already installed)
+apt update && apt install python3 python3-pip -y
+
+# Install rembg and dependencies
+pip3 install rembg>=2.0.50 Pillow>=9.0.0 numpy>=1.21.0 onnxruntime click filetype watchdog
+```
+
+**Verify installation:**
+```bash
+python3 -c "import rembg; print('rembg installed successfully')"
+```
+
+**Checklist:**
+- [ ] Python 3.9+ installed
+- [ ] rembg library installed
+- [ ] All dependencies verified
+- [ ] Background removal script tested
+
 ---
 
 ## Database Setup
@@ -656,6 +681,65 @@ The health check endpoint already exists at `src/app/api/health/route.ts` - it v
 - [ ] Domains configured: www.teamshots.vip, app.teamshots.vip
 - [ ] Auto-deploy enabled
 - [ ] Health check path: `/api/health`, Port: 3000
+
+---
+
+## Internationalization (i18n) Configuration
+
+### URL Structure
+
+TeamShots supports both English and Spanish with the following URL patterns:
+
+**English (Default):**
+- Marketing: `https://www.teamshots.vip`
+- App: `https://app.teamshots.vip` (redirects to `/en/app-routes/`)
+
+**Spanish:**
+- Marketing: `https://www.teamshots.vip/es`
+- App: `https://app.teamshots.vip/es` (redirects to `/es/app-routes/`)
+
+### Locale Detection
+
+The app automatically detects user language preference:
+1. **URL-based**: `/es/app-routes/dashboard` → Spanish
+2. **Session-based**: User's saved locale preference
+3. **Browser-based**: Accept-Language header fallback
+
+### App Routes Internationalization
+
+The `app.teamshots.vip` subdomain routes to the internationalized app-routes:
+
+- `app.teamshots.vip/dashboard` → `/en/app-routes/dashboard`
+- `app.teamshots.vip/es/dashboard` → `/es/app-routes/dashboard`
+- `app.teamshots.vip/team` → `/en/app-routes/team`
+- `app.teamshots.vip/es/team` → `/es/app-routes/team`
+
+### Environment Variables for i18n
+
+No additional environment variables needed - the i18n configuration is built into the Next.js application.
+
+### Testing Internationalization
+
+After deployment, test both languages:
+
+```bash
+# Test English
+curl -I https://app.teamshots.vip/dashboard
+
+# Test Spanish  
+curl -I https://app.teamshots.vip/es/dashboard
+
+# Test locale detection
+curl -H "Accept-Language: es" https://app.teamshots.vip/dashboard
+```
+
+### Troubleshooting i18n Issues
+
+**Common Issues:**
+1. **Wrong locale in URL**: Check middleware configuration
+2. **Missing translations**: Verify `messages/en.json` and `messages/es.json`
+3. **Navigation not locale-aware**: Ensure using `@/i18n/routing` hooks
+4. **Subdomain not working**: Check DNS and Coolify domain configuration
 
 ---
 
@@ -1147,16 +1231,4 @@ apt update && apt upgrade -y
 - ✅ **Built-in monitoring** - Comprehensive metrics, logs, and alerts out of the box
 - ✅ **Zero downtime** - Automatic rolling deployments with health checks
 - ✅ **Easy rollbacks** - One-click rollback to any previous deployment
-- ✅ **Team collaboration** - Easy to add team members and manage permissions
-- ✅ **SSL automation** - Automatic certificate provisioning and renewal
-- ✅ **GitHub integration** - Seamless CI/CD with webhook automation
-
-**vs. Self-Hosted Coolify:**
-- Self-hosted requires managing Coolify updates and security
-- Coolify Cloud dashboard is faster (no latency to your server)
-- Better suited for teams and production environments
-
----
-
-**Deployment Status**: ✅ Ready to deploy with Coolify Cloud!
 

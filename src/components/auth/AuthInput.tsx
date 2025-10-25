@@ -37,7 +37,7 @@ export default function AuthInput({ label, hint, id, className = '', strengthMet
         <input
           id={id}
           type={isPassword && show ? 'text' : type}
-          className={`block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary sm:text-sm ${className}`}
+          className={`block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary sm:text-sm text-gray-900 ${className}`}
           {...props}
         />
         {isPassword && (

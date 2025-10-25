@@ -1,0 +1,91 @@
+<testsuites id="" name="" tests="6" failures="0" skipped="0" errors="0" time="30.25813">
+<testsuite name="photo-style-flow/complete-real-test.spec.ts" timestamp="2025-10-24T15:17:33.872Z" hostname="chromium-sequential" tests="6" failures="0" skipped="0" time="25.702" errors="0">
+<testcase name="Complete Real Database Test › Create style with real database user and API calls" classname="photo-style-flow/complete-real-test.spec.ts" time="13.568">
+<system-out>
+<![CDATA[✅ Created test user: completetest@example.com
+✅ Cancel button test completed
+Found 6 toggle buttons
+Button 0: "User Choice"
+Button 0 after click: "Predefined"
+Button 1: "User Choice"
+Button 1 after click: "Predefined"
+Button 2: "Predefined"
+Button 2 after click: "User Choice"
+Button 3: "Predefined"
+Button 3 after click: "User Choice"
+Button 4: "User Choice"
+Button 4 after click: "Predefined"
+Button 5: "User Choice"
+Button 5 after click: "Predefined"
+Create Style button enabled: true
+Created style "Real Database Style 1761319061774" visible on contexts page: true
+✅ Style "Real Database Style 1761319061774" confirmed in database with ID: cmh4zw7030061dqiny0wxufmr
+Testing delete functionality...
+✅ Delete button found, testing deletion...
+Browser dialog detected: Are you sure you want to delete this photo style?
+Accepting confirmation dialog...
+Checking page content after deletion attempt...
+Page contains style name: [33mfalse[39m
+Style still visible: false
+✅ Style "Real Database Style 1761319061774" no longer visible on page after deletion
+✅ Style "Real Database Style 1761319061774" confirmed deleted from database
+✅ Complete real database test successful
+]]>
+</system-out>
+</testcase>
+<testcase name="Complete Real Database Test › Test individual background and photo style options" classname="photo-style-flow/complete-real-test.spec.ts" time="2.857">
+<system-out>
+<![CDATA[✅ Individual options test completed
+]]>
+</system-out>
+</testcase>
+<testcase name="Complete Real Database Test › Test form validation with empty fields" classname="photo-style-flow/complete-real-test.spec.ts" time="2.3">
+<system-out>
+<![CDATA[✅ Form validation working - Create button disabled with empty fields
+]]>
+</system-out>
+</testcase>
+<testcase name="Complete Real Database Test › Debug page structure and elements" classname="photo-style-flow/complete-real-test.spec.ts" time="2.308">
+<system-out>
+<![CDATA[Found section headings: [33m11[39m
+Section 0: "Available Credits"
+Section 1: "Background"
+Section 2: "Background"
+Section 3: "Branding"
+Section 4: "Branding"
+Section 5: "Photo Style"
+Section 6: "User Style Settings"
+Section 7: "Clothing"
+Section 8: "Clothing Style"
+Section 9: "Expression"
+Section 10: "Lighting"
+Found buttons: [33m21[39m
+Button 0: "" - enabled: true - classes: "p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+Button 1: "" - enabled: true - classes: "p-2 rounded-md hover:bg-gray-100 transition-colors lg:hidden"
+Button 2: "3" - enabled: true - classes: "p-2 rounded-md hover:bg-gray-100 transition-colors relative"
+Button 3: "" - enabled: true - classes: "p-2 text-gray-400 hover:text-gray-600"
+Button 4: "User Choice" - enabled: true - classes: "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+Button 5: "Office Environment" - enabled: true - classes: "w-full flex items-center gap-3 p-3 rounded-lg border transition-colors border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 cursor-pointer"
+Button 6: "Neutral Background" - enabled: true - classes: "w-full flex items-center gap-3 p-3 rounded-lg border transition-colors border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 cursor-pointer"
+Button 7: "Gradient Background" - enabled: true - classes: "w-full flex items-center gap-3 p-3 rounded-lg border transition-colors border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 cursor-pointer"
+Button 8: "Custom Upload" - enabled: true - classes: "w-full flex items-center gap-3 p-3 rounded-lg border transition-colors border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 cursor-pointer"
+Button 9: "User Choice" - enabled: true - classes: "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+✅ Debug information logged
+]]>
+</system-out>
+</testcase>
+<testcase name="Complete Real Database Test › Contexts page basic functionality" classname="photo-style-flow/complete-real-test.spec.ts" time="2.315">
+<system-out>
+<![CDATA[✅ Contexts page basic functionality test completed
+]]>
+</system-out>
+</testcase>
+<testcase name="Complete Real Database Test › Contexts page responsive design" classname="photo-style-flow/complete-real-test.spec.ts" time="2.354">
+<system-out>
+<![CDATA[✅ Contexts page responsive design test completed
+✅ Cleaned up test user: completetest@example.com
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

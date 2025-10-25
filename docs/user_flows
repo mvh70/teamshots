@@ -2,7 +2,7 @@
 
 ## Phased Launch
 
-### Phase 1: Waitlist (Days 1-2)
+### Phase 1: Waitlist
 ```
 User visits www.teamshots.vip
 â†“
@@ -15,7 +15,7 @@ Confirmation: "Thanks! We'll notify you when we launch"
 Receive email: "You're on the waitlist"
 ```
 
-### Phase 2: Full Product (Days 3-14)
+### Phase 2: Full Product
 All flows below become active.
 
 ---
@@ -40,9 +40,9 @@ CTA: "Get Started" or "See How It Works"
 ### Step 2: Sign Up (redirects to app.teamshots.vip)
 ```
 Click "Get Started"
-â†“
+â†"
 Redirect to app.teamshots.vip/auth/signin
-â†“
+â†"
 Sign up with email/password
 - Enter email
 - Create password
@@ -63,6 +63,25 @@ Language preference auto-set from current selection
 Redirect to onboarding
 â†"
 Background: If company, scrape company team page â†' extract names/photos
+```
+
+### Team Invite Flow
+```
+Admin creates company context (background, logo, style)
+â†"
+Admin invites team member with email + credit allocation
+â†"
+System sends email with 24hr invite link
+â†"
+Team member clicks link (no signup required)
+â†"
+Team member enters first/last name
+â†"
+System creates Person record + CreditTransaction (allocates credits)
+â†"
+Team member can immediately upload selfie and generate photos
+â†"
+If team member signs up later, User account links to existing Person
 ```
 
 **Note:** OAuth (Google, GitHub) will be added post-MVP for faster authentication.
@@ -101,34 +120,38 @@ Redirect to dashboard
 ### Happy Path
 ```
 Dashboard
-â†“
+â†"
 "Generate New Photo" button
-â†“
+â†"
 Upload photo
 - Drag-drop or file picker
 - Show preview
 - Validate (face detection)
-â†“
-Customize
-- Select style preset (5 options with examples)
-- Choose background (upload/generate/preset)
-- Optional: Add logo, adjust clothing
+â†"
+GENERATION TYPE SELECTION
+"How would you like to use this photo?"
+- Personal Use: Individual credits, full control, private
+- Company Use: Company credits, preset styles, admin visible
+â†"
+Customize (based on selection)
+- Personal: Select style preset, background, logo options
+- Company: Use company context (background, logo, style preset)
 - Show cost: "Uses 4 credits (1 generation)"
-â†“
+â†"
 Click "Generate"
-â†“
+â†"
 Processing screen (up to 60s)
 - Progress bar
 - "Generating your professional photos..."
-â†“
+â†"
 Review variations (3-4 images)
 - Side-by-side view
 - Click for large preview
-â†“
+â†"
 Actions:
-- "Download" â†’ Get high-res file
-- "Regenerate" â†’ Adjust settings, uses 4 more credits
-- "Cancel" â†’ Return to dashboard
+- "Download" â†' Get high-res file
+- "Regenerate" â†' Adjust settings, uses 4 more credits
+- "Cancel" â†' Return to dashboard
 ```
 
 ### Error States
@@ -168,19 +191,84 @@ If magic link: Send link â†' click â†' auto-login
 Redirect to dashboard
 ```
 
-## 4. Team Photo Workflow (Company Admin)
+## 4a. Team Member Invite & Upload Flow (Token-Based)
 
 ```
-1. Company admin defines context (background, logo, style)
-2. Admin enters team member emails (pre-filled from scraped data)
-3. System sends invite links to team members
-4. Team members (no login required):
-   - Click link â†' upload selfie
-   - See generated result
-   - Accept or regenerate (max 3 times)
-5. On accept: Photo emailed to admin + saved to DB
-6. Admin dashboard shows team progress
+Admin sends invite link with 24hr token + credit allocation
+â†'
+Team member clicks link (no signup required)
+â†'
+Token validation (if expired: send new token to email)
+â†'
+Upload selfie
+- Face validation
+- Image quality check
+â†'
+GENERATION TYPE SELECTION
+"How would you like to use this photo?"
+- Personal Use: Individual credits, full control, private
+- Company Use: Company credits, preset styles, admin visible
+â†'
+Processing with selected context
+- Personal: Full style control
+- Company: Background, logo, clothing, expression (set by admin)
+â†'
+APPROVAL SCREEN
+"Review your generated photo"
+- Show generated photo
+- Show logo placement variations (if company)
+- Display remaining credits (both individual & company)
+â†'
+Actions:
+- "Approve & Save" â†' Photo saved to database
+- "Regenerate" â†' Costs 1 credit from selected source
+- "Sign up for personal use" â†' CTA to create account
+â†'
+If rejected: Original selfie kept, generated photo deleted
 ```
+
+## 4b. Company Admin Setup & Management Flow
+
+```
+Admin logs in â†' Dashboard
+â†'
+"Create Team Photo Project" CTA
+â†'
+STEP 1: Context Setup (Required before inviting)
+- Upload custom background image OR select preset
+- Upload logo (system auto-removes background)
+- Set clothing style: Formal / Casual / Swag
+- Set expression: Happy / Serious / Funny / Powerpose
+- Preview combinations
+â†'
+STEP 2: Team Invitations
+- Import from scraped company data OR manually enter emails
+- Set credit allocation per member (default: 5 credits)
+- Send invites with 24hr tokens
+â†'
+ADMIN DASHBOARD
+- View team progress (uploaded/pending/approved)
+- Adjust individual credits
+- View approved photos only
+- "Regenerate All with New Context" (uses company credit pool)
+- Create additional contexts for different styles
+```
+
+## 4. Team Photo Workflow
+
+See ## 4a and ## 4b for detailed team workflows.
+
+### Token-Based Team Invites
+- 24hr expiration with automatic renewal
+- No signup required for team members
+- CTAs to sign up for personal use during/after generation
+- Same uploaded photo can be used for both personal and company generations
+
+### Generation Type Selection
+- **Personal Use**: Individual credits, full style control, private photos
+- **Company Use**: Company credits, preset styles, admin visible
+- Clear credit cost display (4 credits per generation)
+- Both credit types shown in sidebar and decision screen
 
 ## 5. Returning User Flow
 
@@ -207,55 +295,51 @@ Buy more credits
 ### Try Once Purchase
 ```
 User needs to try the service
-â†“
-Click "Try for $5"
-â†“
+â†"
+Click "Try Once" (see Business Model for pricing)
+â†"
 Stripe checkout
-â†“
+â†"
 Payment confirmation
-â†“
-4 credits added to account
-â†“
+â†"
+Credits added to account
+â†"
 Email receipt
-â†“
+â†"
 Redirect to generation flow
 ```
 
 ### Subscription Purchase
 ```
 User wants ongoing access
-â†“
-View pricing page
-- Starter: $24/mo (100 credits) or $245/year
-- Pro: $59/mo (280 credits) or $600/year
-â†“
+â†"
+View pricing page (see Business Model for detailed pricing tiers)
+â†"
 Select tier and period (monthly/annual)
-â†“
+â†"
 Stripe checkout
-â†“
+â†"
 Subscription confirmed
-â†“
+â†"
 Credits added monthly
-â†“
+â†"
 Email confirmation
-â†“
+â†"
 Dashboard
 ```
 
 ### Top-up Purchase
 ```
 User runs low on credits
-â†“
+â†"
 "Buy More Credits" or prompted during generation
-â†“
-Select amount (minimum 20 credits)
-- Starter users: $0.90 per 4 credits
-- Pro users: $0.60 per 4 credits
-â†“
+â†"
+Select amount (see Business Model for pricing tiers and minimums)
+â†"
 Stripe checkout
-â†“
+â†"
 Credits added immediately
-â†“
+â†"
 Return to generation flow or dashboard
 ```
 

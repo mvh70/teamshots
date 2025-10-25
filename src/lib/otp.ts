@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma"
+import { randomBytes } from 'crypto'
 
-// Generate a 6-digit OTP
+// Generate a 6-digit OTP using cryptographically secure random
 export function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  // Generate 3 random bytes and convert to a number between 0-16777215
+  const randomNumber = randomBytes(3).readUIntBE(0, 3)
+  // Take modulo 1000000 to get 6 digits, pad with zeros
+  return (randomNumber % 1000000).toString().padStart(6, '0')
 }
 
 // Store OTP in database

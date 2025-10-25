@@ -60,4 +60,9 @@ node_modules/
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
+
+# Playwright auth state
+playwright/.auth/ 
+
+certificates

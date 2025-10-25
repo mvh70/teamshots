@@ -1,6 +1,7 @@
 import { useTranslations } from 'next-intl';
 import { routing } from '@/i18n/routing';
 import WaitlistForm from './components/WaitlistForm';
+import InlineWaitlist from './components/InlineWaitlist';
 import SampleGallery from '@/components/SampleGallery';
 import HeroGallery from '@/components/HeroGallery';
 import TrustIndicators from '@/components/TrustIndicators';
@@ -16,6 +17,7 @@ export function generateStaticParams() {
 export default function LandingPage() {
   const t = useTranslations('hero');
   const tFeatures = useTranslations('features');
+  const tw = useTranslations('waitlist');
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-brand-primary-light via-white to-gray-50">
@@ -39,22 +41,23 @@ export default function LandingPage() {
             {t('subtitle')}
           </p>
           
-          <div className="flex gap-4 justify-center mb-6">
-            <a
-              href="#waitlist"
-              className="rounded-lg bg-brand-cta text-white px-8 py-4 font-semibold text-[18px] hover:bg-brand-cta-hover transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              {t('joinWaitlist')}
-            </a>
+          <div className="mb-4">
+            <InlineWaitlist />
           </div>
 
-          {/* Guarantee */}
-          <p className="text-base text-gray-600 flex items-center justify-center">
-            <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {t('guarantee')}
-          </p>
+          <div className="flex flex-col items-center gap-2 text-sm text-gray-600 mb-6">
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <span className="flex items-center"><svg className="w-4 h-4 mr-1 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4"/></svg>{tw('guarantee')}</span>
+              <span className="flex items-center"><svg className="w-4 h-4 mr-1 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6"/></svg>{tw('secure')}</span>
+              <span className="flex items-center"><svg className="w-4 h-4 mr-1 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01"/></svg>{tw('noSpam')}</span>
+            </div>
+            <div className="inline-flex items-center bg-brand-primary-light text-brand-primary px-3 py-1.5 rounded-full">
+              <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+              {tw('joinedBadge')}
+            </div>
+          </div>
+
+          {/* Removed redundant guarantee paragraph under hero; trust cluster below covers it */}
         </div>
 
         {/* Hero Gallery - Interactive Before/After Demo */}
