@@ -27,8 +27,19 @@ export async function checkRateLimit(
 }
 
 export function getRateLimitIdentifier(request: NextRequest, scope: string): string {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-             request.headers.get('x-real-ip') || 
-             'unknown'
-  return `${scope}:${ip}`
+  try {
+    // request.headers might be undefined during build-time static analysis
+    const headers = request?.headers
+    if (!headers) {
+      return `${scope}:build-time`
+    }
+    
+    const ip = headers.get('x-forwarded-for')?.split(',')[0] || 
+               headers.get('x-real-ip') || 
+               'unknown'
+    return `${scope}:${ip}`
+  } catch {
+    // If anything fails (e.g., during build-time analysis), return a safe fallback
+    return `${scope}:unknown`
+  }
 }
