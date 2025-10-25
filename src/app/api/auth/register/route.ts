@@ -12,17 +12,27 @@ export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
-    // Lazy import rate limiting to avoid build-time analysis
+    // Guard against build-time execution
+    if (!request || typeof request.json !== 'function') {
+      return NextResponse.json(
+        { error: 'Invalid request' },
+        { status: 400 }
+      )
+    }
+
+    const body = await request.json()
+
+    // Rate limiting - only after we have the request body
     const { checkRateLimit, getRateLimitIdentifier } = await import('@/lib/rate-limit')
     
-    // Rate limiting - wrap in try-catch to handle build-time issues
     let identifier = 'register:unknown'
     try {
       identifier = getRateLimitIdentifier(request, 'register')
-    } catch {
-      // During build time, use safe fallback
-      identifier = 'register:build-time'
+    } catch (error) {
+      // If rate limit identifier fails, use email from body as fallback
+      identifier = `register:${body.email || 'unknown'}`
     }
+    
     const rateLimit = await checkRateLimit(identifier, RATE_LIMITS.register.limit, RATE_LIMITS.register.window)
 
     if (!rateLimit.success) {
@@ -31,8 +41,6 @@ export async function POST(request: NextRequest) {
         { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000)) }}
       )
     }
-
-    const body = await request.json()
 
     // Validate with Zod (re-enabled with basic requirements)
     const validationResult = registrationSchema.safeParse(body)
