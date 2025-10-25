@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     let identifier = 'register:unknown'
     try {
       identifier = getRateLimitIdentifier(request, 'register')
-    } catch (error) {
+    } catch {
       // If rate limit identifier fails, use email from body as fallback
       identifier = `register:${body.email || 'unknown'}`
     }
