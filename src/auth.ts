@@ -6,11 +6,16 @@ const { handlers: { GET, POST }, auth: originalAuth } = NextAuth(authOptions)
 
 // Custom auth function that checks for E2E headers
 export async function auth() {
-  const headersList = await headers()
-  const e2eUserId = headersList.get('x-e2e-user-id')
-  
-  if (e2eUserId) {
-    // Return mock session for E2E tests
+  try {
+    const headersList = await headers()
+    if (!headersList) {
+      return originalAuth()
+    }
+    
+    const e2eUserId = headersList.get('x-e2e-user-id')
+    
+    if (e2eUserId) {
+      // Return mock session for E2E tests
       return {
         user: {
           id: e2eUserId,
@@ -22,6 +27,14 @@ export async function auth() {
         },
         expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       }
+    }
+  } catch (error) {
+    // headers() is not available in static contexts (e.g., during build)
+    // Fall back to original auth
+    if (error instanceof Error && error.message.includes('Dynamic server use')) {
+      return originalAuth()
+    }
+    throw error
   }
   
   return originalAuth()
