@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Rate limiting - lazy load config and skip if any issues
-    if (request?.headers?.get) {
+    if (request?.headers) {
       try {
         const [
           { checkRateLimit, getRateLimitIdentifier },
