@@ -9,11 +9,18 @@ import { registrationSchema } from '@/lib/validation'
 
 // Force this route to be dynamic (skip static generation)
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const identifier = getRateLimitIdentifier(request, 'register')
+    // Rate limiting - wrap in try-catch to handle build-time issues
+    let identifier = 'register:unknown'
+    try {
+      identifier = getRateLimitIdentifier(request, 'register')
+    } catch {
+      // During build time, use safe fallback
+      identifier = 'register:build-time'
+    }
     const rateLimit = await checkRateLimit(identifier, RATE_LIMITS.register.limit, RATE_LIMITS.register.window)
 
     if (!rateLimit.success) {
