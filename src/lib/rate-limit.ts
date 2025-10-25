@@ -82,13 +82,13 @@ export function getRateLimitIdentifier(request: NextRequest | unknown, scope: st
     }
     
     // Check if headers has a get method and it's callable
-    if (!('get' in headers) || typeof (headers as any).get !== 'function') {
+    if (!('get' in headers) || typeof (headers as { get?: (key: string) => string | null | undefined }).get !== 'function') {
       return `${scope}:unknown`
     }
     
     // Try to get IP from headers with additional safety
     try {
-      const getMethod = (headers as any).get
+      const getMethod = (headers as { get: (key: string) => string | null | undefined }).get
       const forwardedFor = getMethod('x-forwarded-for')
       const realIp = getMethod('x-real-ip')
       
