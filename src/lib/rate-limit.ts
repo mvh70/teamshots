@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server'
 
 // Lazy import Redis to avoid build-time issues
-let redis: any = null
+let redis: unknown = null
 
-async function getRedis() {
+async function getRedis(): Promise<unknown> {
   if (!redis) {
     try {
       const { redis: redisInstance } = await import('@/queue')
@@ -33,18 +33,27 @@ export async function checkRateLimit(
   const windowStart = now - windowSeconds * 1000
   
   try {
+    // Type assertion for Redis instance - we know it has these methods
+    const redis = redisInstance as {
+      zremrangebyscore: (key: string, min: number, max: number) => Promise<number>
+      zcard: (key: string) => Promise<number>
+      zrange: (key: string, start: number, stop: number, withScores: string) => Promise<string[]>
+      zadd: (key: string, score: number, member: string) => Promise<number>
+      expire: (key: string, seconds: number) => Promise<number>
+    }
+    
     // Use Redis sorted set for sliding window
-    await redisInstance.zremrangebyscore(key, 0, windowStart)
-    const count = await redisInstance.zcard(key)
+    await redis.zremrangebyscore(key, 0, windowStart)
+    const count = await redis.zcard(key)
     
     if (count >= limit) {
-      const oldestEntry = await redisInstance.zrange(key, 0, 0, 'WITHSCORES')
+      const oldestEntry = await redis.zrange(key, 0, 0, 'WITHSCORES')
       const resetTime = oldestEntry[1] ? parseInt(oldestEntry[1]) + windowSeconds * 1000 : now + windowSeconds * 1000
       return { success: false, remaining: 0, reset: resetTime }
     }
     
-    await redisInstance.zadd(key, now, `${now}-${Math.random()}`)
-    await redisInstance.expire(key, windowSeconds)
+    await redis.zadd(key, now, `${now}-${Math.random()}`)
+    await redis.expire(key, windowSeconds)
     
     return { success: true, remaining: limit - count - 1, reset: now + windowSeconds * 1000 }
   } catch (error) {
