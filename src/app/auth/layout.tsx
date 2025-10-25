@@ -8,8 +8,18 @@ import Image from 'next/image'
 import { BRAND_CONFIG } from '@/config/brand'
 
 export default async function AuthLayout({children}: {children: React.ReactNode}) {
-  const cookieStore = await cookies()
-  const locale = cookieStore.get('NEXT_LOCALE')?.value === 'es' ? 'es' : 'en'
+  let locale: 'en' | 'es' = 'en'
+  
+  try {
+    const cookieStore = await cookies()
+    if (cookieStore) {
+      locale = cookieStore.get('NEXT_LOCALE')?.value === 'es' ? 'es' : 'en'
+    }
+  } catch {
+    // cookies() is not available in build/static contexts, use default locale
+    locale = 'en'
+  }
+  
   const messages: AbstractIntlMessages = (locale === 'es' ? es : en) as unknown as AbstractIntlMessages
 
   return (
