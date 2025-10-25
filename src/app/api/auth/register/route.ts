@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { verifyOTP } from '@/lib/otp'
 import { createCompanyVerificationRequest } from '@/lib/company-verification'
-import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { registrationSchema } from '@/lib/validation'
 
 // Force this route to be dynamic (skip static generation)
@@ -12,34 +11,42 @@ export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
-    // Guard against build-time execution
-    if (!request || typeof request.json !== 'function') {
-      return NextResponse.json(
-        { error: 'Invalid request' },
-        { status: 400 }
-      )
-    }
-
+    // Parse request body
     const body = await request.json()
 
-    // Rate limiting - only after we have the request body
-    const { checkRateLimit, getRateLimitIdentifier } = await import('@/lib/rate-limit')
-    
-    let identifier = 'register:unknown'
-    try {
-      identifier = getRateLimitIdentifier(request, 'register')
-    } catch {
-      // If rate limit identifier fails, use email from body as fallback
-      identifier = `register:${body.email || 'unknown'}`
-    }
-    
-    const rateLimit = await checkRateLimit(identifier, RATE_LIMITS.register.limit, RATE_LIMITS.register.window)
+    // Rate limiting - lazy load config and skip if any issues
+    if (request?.headers?.get) {
+      try {
+        const [
+          { checkRateLimit, getRateLimitIdentifier },
+          { RATE_LIMITS }
+        ] = await Promise.all([
+          import('@/lib/rate-limit'),
+          import('@/config/rate-limit-config')
+        ])
 
-    if (!rateLimit.success) {
-      return NextResponse.json(
-        { error: 'Too many registration attempts. Please try again later.' },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000)) }}
-      )
+        const identifier = getRateLimitIdentifier(request, 'register')
+        const rateLimit = await checkRateLimit(
+          identifier,
+          RATE_LIMITS.register.limit,
+          RATE_LIMITS.register.window
+        )
+
+        if (!rateLimit.success) {
+          return NextResponse.json(
+            { error: 'Too many registration attempts. Please try again later.' },
+            {
+              status: 429,
+              headers: {
+                'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000))
+              }
+            }
+          )
+        }
+      } catch (rateLimitError) {
+        // Silently skip rate limiting on error
+        console.warn('Rate limiting skipped:', rateLimitError)
+      }
     }
 
     // Validate with Zod (re-enabled with basic requirements)
