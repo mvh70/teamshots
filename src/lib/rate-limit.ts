@@ -26,19 +26,29 @@ export async function checkRateLimit(
   return { success: true, remaining: limit - count - 1, reset: now + windowSeconds * 1000 }
 }
 
-export function getRateLimitIdentifier(request: NextRequest, scope: string): string {
+export function getRateLimitIdentifier(request: NextRequest | unknown, scope: string): string {
   try {
-    // request.headers might be undefined during build-time static analysis
-    const headers = request?.headers
-    if (!headers) {
+    // During build-time static analysis, request may be undefined or headers may not exist
+    if (!request || typeof request !== 'object') {
+      return `${scope}:unknown`
+    }
+    
+    // Type guard to check if request has headers property
+    const req = request as Record<string, unknown>
+    if (!('headers' in req) || !req.headers) {
       return `${scope}:build-time`
+    }
+    
+    const headers = req.headers as { get?: (key: string) => string | null | undefined } | null
+    if (!headers || typeof headers.get !== 'function') {
+      return `${scope}:unknown`
     }
     
     const ip = headers.get('x-forwarded-for')?.split(',')[0] || 
                headers.get('x-real-ip') || 
                'unknown'
     return `${scope}:${ip}`
-  } catch {
+  } catch (error) {
     // If anything fails (e.g., during build-time analysis), return a safe fallback
     return `${scope}:unknown`
   }
