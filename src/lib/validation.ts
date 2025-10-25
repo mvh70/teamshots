@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import validator from 'validator'
-import DOMPurify from 'isomorphic-dompurify'
 
 // Email validation (stricter than Zod default)
 export const emailSchema = z.string()
@@ -34,12 +33,13 @@ export const registrationSchema = z.object({
   locale: z.enum(['en', 'es']).default('en'),
 })
 
-// Sanitize HTML (for any user-generated content)
+// Sanitize HTML (simple server-side version)
 export function sanitizeHtml(input: string): string {
-  return DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: [], // Strip all HTML
-    KEEP_CONTENT: true,
-  })
+  // Simple sanitization: remove all HTML tags and dangerous characters
+  return input
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/[<>'"]/g, '') // Remove dangerous characters
+    .trim()
 }
 
 // Sanitize filename
