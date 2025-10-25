@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { verifyOTP } from '@/lib/otp'
 import { createCompanyVerificationRequest } from '@/lib/company-verification'
-import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { registrationSchema } from '@/lib/validation'
 
@@ -13,6 +12,9 @@ export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    // Lazy import rate limiting to avoid build-time analysis
+    const { checkRateLimit, getRateLimitIdentifier } = await import('@/lib/rate-limit')
+    
     // Rate limiting - wrap in try-catch to handle build-time issues
     let identifier = 'register:unknown'
     try {

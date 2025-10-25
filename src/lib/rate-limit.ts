@@ -48,7 +48,7 @@ export function getRateLimitIdentifier(request: NextRequest | unknown, scope: st
                headers.get('x-real-ip') || 
                'unknown'
     return `${scope}:${ip}`
-  } catch (error) {
+  } catch {
     // If anything fails (e.g., during build-time analysis), return a safe fallback
     return `${scope}:unknown`
   }
