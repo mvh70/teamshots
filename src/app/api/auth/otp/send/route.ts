@@ -5,6 +5,9 @@ import { badRequest, internal, ok } from '@/lib/api-response'
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 
+// Force this route to be dynamic (skip static generation)
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting

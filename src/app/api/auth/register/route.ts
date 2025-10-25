@@ -7,6 +7,9 @@ import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { registrationSchema } from '@/lib/validation'
 
+// Force this route to be dynamic (skip static generation)
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
