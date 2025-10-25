@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma'
-import { verifyOTP } from '@/lib/otp'
-import { createCompanyVerificationRequest } from '@/lib/company-verification'
-import { registrationSchema } from '@/lib/validation'
 
 // Force this route to be dynamic (skip static generation)
 export const dynamic = 'force-dynamic'
@@ -13,10 +8,54 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    // NOTE: Rate limiting temporarily removed to isolate build error
-    // TODO: Re-add rate limiting after resolving build issues
+    // Lazy load ALL dependencies to avoid build-time issues
+    const [
+      bcrypt,
+      { prisma },
+      { verifyOTP },
+      { createCompanyVerificationRequest },
+      { registrationSchema }
+    ] = await Promise.all([
+      import('bcryptjs'),
+      import('@/lib/prisma'),
+      import('@/lib/otp'),
+      import('@/lib/company-verification'),
+      import('@/lib/validation')
+    ])
 
-    // Validate with Zod (re-enabled with basic requirements)
+    // Rate limiting - completely optional
+    try {
+      const [
+        { checkRateLimit, getRateLimitIdentifier },
+        { RATE_LIMITS }
+      ] = await Promise.all([
+        import('@/lib/rate-limit'),
+        import('@/config/rate-limit-config')
+      ])
+
+      const identifier = getRateLimitIdentifier(request, 'register')
+      const rateLimit = await checkRateLimit(
+        identifier,
+        RATE_LIMITS.register.limit,
+        RATE_LIMITS.register.window
+      )
+
+      if (!rateLimit.success) {
+        return NextResponse.json(
+          { error: 'Too many registration attempts. Please try again later.' },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000))
+            }
+          }
+        )
+      }
+    } catch (rateLimitError) {
+      console.warn('Rate limiting skipped:', rateLimitError)
+    }
+
+    // Validate with Zod
     const validationResult = registrationSchema.safeParse(body)
     if (!validationResult.success) {
       console.error('Validation failed:', validationResult.error.issues)
@@ -98,7 +137,7 @@ export async function POST(request: NextRequest) {
         where: { id: existingPerson.id },
         data: {
           userId: user.id,
-          firstName, // Update with provided name
+          firstName,
           lastName: lastName || null
         },
         include: {
