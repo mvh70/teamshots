@@ -75,17 +75,34 @@ export function getRateLimitIdentifier(request: NextRequest | unknown, scope: st
       return `${scope}:build-time`
     }
     
-    const headers = req.headers as { get?: (key: string) => string | null | undefined } | null
-    if (!headers || typeof headers.get !== 'function') {
+    // Try to access headers safely
+    const headers = req.headers
+    if (!headers || typeof headers !== 'object') {
       return `${scope}:unknown`
     }
     
-    const ip = headers.get('x-forwarded-for')?.split(',')[0] || 
-               headers.get('x-real-ip') || 
-               'unknown'
-    return `${scope}:${ip}`
-  } catch {
+    // Check if headers has a get method and it's callable
+    if (!('get' in headers) || typeof (headers as any).get !== 'function') {
+      return `${scope}:unknown`
+    }
+    
+    // Try to get IP from headers with additional safety
+    try {
+      const getMethod = (headers as any).get
+      const forwardedFor = getMethod('x-forwarded-for')
+      const realIp = getMethod('x-real-ip')
+      
+      const ip = forwardedFor?.split(',')[0]?.trim() || 
+                 realIp?.trim() || 
+                 'unknown'
+      return `${scope}:${ip}`
+    } catch (headerError) {
+      console.warn('Header access failed:', headerError)
+      return `${scope}:unknown`
+    }
+  } catch (error) {
     // If anything fails (e.g., during build-time analysis), return a safe fallback
+    console.warn('Rate limit identifier generation failed:', error)
     return `${scope}:unknown`
   }
 }
