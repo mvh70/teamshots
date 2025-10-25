@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { imageGenerationQueue } from '@/queue'
 
 interface JobData {
   generationId: string;
@@ -147,6 +146,9 @@ export async function POST(request: NextRequest) {
       selfieId: sourceGeneration.selfieId,
     }
 
+    // Lazy import to avoid build-time issues
+    const { imageGenerationQueue } = await import('@/queue')
+    
     const job = await imageGenerationQueue.add('generate', jobData, {
       priority: 1, // Higher priority for company generations
       jobId: `gen-${generation.id}`,

@@ -5,10 +5,11 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getQueueHealth } from '@/queue'
 
 export async function GET() {
   try {
+    // Lazy import to avoid build-time issues
+    const { getQueueHealth } = await import('@/queue')
     const health = await getQueueHealth()
     
     return NextResponse.json(health, {

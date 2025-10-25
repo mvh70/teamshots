@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { imageGenerationQueue } from '@/queue'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { SecurityLogger } from '@/lib/security-logger'
 
@@ -102,6 +101,8 @@ export async function GET(
     let jobStatus = null
     if (generation.status === 'pending' || generation.status === 'processing') {
       try {
+        // Lazy import to avoid build-time issues
+        const { imageGenerationQueue } = await import('@/queue')
         const job = await imageGenerationQueue.getJob(`gen-${generationId}`)
         if (job) {
           jobStatus = {

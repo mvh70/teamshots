@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { imageGenerationQueue } from '@/queue'
 import { hasSufficientCredits, reserveCreditsForGeneration, getUserCreditBalance } from '@/lib/credits'
 import { getRegenerationCount, PRICING_CONFIG } from '@/config/pricing'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -386,6 +385,9 @@ export async function POST(request: NextRequest) {
         console.log('🔄 Using context settings from original generation:', originalGeneration.context.name)
       }
     }
+    
+    // Lazy import to avoid build-time issues
+    const { imageGenerationQueue } = await import('@/queue')
     
     const job = await imageGenerationQueue.add('generate', {
       generationId: generation.id,
