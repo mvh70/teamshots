@@ -6,9 +6,15 @@ export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('1. Starting registration...')
+    console.log('2. Request object:', typeof request, !!request)
+    console.log('3. Request headers:', typeof request?.headers, !!request?.headers)
+    
     const body = await request.json()
+    console.log('4. Body parsed successfully')
 
     // Lazy load ALL dependencies to avoid build-time issues
+    console.log('5. Loading dependencies...')
     const [
       bcrypt,
       { prisma },
@@ -16,46 +22,16 @@ export async function POST(request: NextRequest) {
       { createCompanyVerificationRequest },
       { registrationSchema }
     ] = await Promise.all([
-      import('bcryptjs'),
-      import('@/lib/prisma'),
-      import('@/lib/otp'),
-      import('@/lib/company-verification'),
-      import('@/lib/validation')
+      import('bcryptjs').then(m => { console.log('  - bcrypt loaded'); return m.default; }),
+      import('@/lib/prisma').then(m => { console.log('  - prisma loaded'); return m; }),
+      import('@/lib/otp').then(m => { console.log('  - otp loaded'); return m; }),
+      import('@/lib/company-verification').then(m => { console.log('  - company-verification loaded'); return m; }),
+      import('@/lib/validation').then(m => { console.log('  - validation loaded'); return m; })
     ])
-
-    // Rate limiting - completely optional
-    try {
-      const [
-        { checkRateLimit, getRateLimitIdentifier },
-        { RATE_LIMITS }
-      ] = await Promise.all([
-        import('@/lib/rate-limit'),
-        import('@/config/rate-limit-config')
-      ])
-
-      const identifier = getRateLimitIdentifier(request, 'register')
-      const rateLimit = await checkRateLimit(
-        identifier,
-        RATE_LIMITS.register.limit,
-        RATE_LIMITS.register.window
-      )
-
-      if (!rateLimit.success) {
-        return NextResponse.json(
-          { error: 'Too many registration attempts. Please try again later.' },
-          {
-            status: 429,
-            headers: {
-              'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000))
-            }
-          }
-        )
-      }
-    } catch (rateLimitError) {
-      console.warn('Rate limiting skipped:', rateLimitError)
-    }
+    console.log('6. All dependencies loaded')
 
     // Validate with Zod
+    console.log('7. Validating input...')
     const validationResult = registrationSchema.safeParse(body)
     if (!validationResult.success) {
       console.error('Validation failed:', validationResult.error.issues)
@@ -71,6 +47,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    console.log('8. Validation passed')
 
     const { 
       email, 
@@ -84,7 +61,10 @@ export async function POST(request: NextRequest) {
     } = validationResult.data
 
     // Verify OTP
+    console.log('9. Verifying OTP...')
     const isOTPValid = await verifyOTP(email, otpCode)
+    console.log('10. OTP verification result:', isOTPValid)
+    
     if (!isOTPValid) {
       return NextResponse.json(
         { error: 'Invalid or expired OTP' },
@@ -93,9 +73,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
+    console.log('11. Checking existing user...')
     const existingUser = await prisma.user.findUnique({
       where: { email }
     })
+    console.log('12. Existing user check complete')
 
     if (existingUser) {
       return NextResponse.json(
@@ -105,20 +87,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash password
+    console.log('13. Hashing password...')
     const hashedPassword = await bcrypt.hash(password, 12)
+    console.log('14. Password hashed')
 
     // Check if there's an existing person record from invite acceptance
+    console.log('15. Checking existing person...')
     const existingPerson = await prisma.person.findFirst({
       where: { email },
       include: {
         company: true
       }
     })
+    console.log('16. Existing person check complete')
 
     // Determine initial role based on existing person/invite
     const initialRole = existingPerson?.companyId ? 'company_member' : 'user'
 
     // Create user with correct role
+    console.log('17. Creating user...')
     const user = await prisma.user.create({
       data: {
         email,
@@ -127,11 +114,13 @@ export async function POST(request: NextRequest) {
         locale,
       }
     })
+    console.log('18. User created:', user.id)
 
     let person
     let companyId = null
 
     if (existingPerson && !existingPerson.userId) {
+      console.log('19. Linking existing person...')
       // Link existing person (from invite) to new user
       person = await prisma.person.update({
         where: { id: existingPerson.id },
@@ -161,7 +150,9 @@ export async function POST(request: NextRequest) {
           data: { convertedUserId: user.id }
         })
       }
+      console.log('20. Person linked')
     } else {
+      console.log('19. Creating new person...')
       // Create new person record
       person = await prisma.person.create({
         data: {
@@ -171,10 +162,12 @@ export async function POST(request: NextRequest) {
           userId: user.id,
         }
       })
+      console.log('20. Person created:', person.id)
     }
 
     // Handle company registration (only if not from invite)
     if (userType === 'company' && companyWebsite && !companyId) {
+      console.log('21. Creating company...')
       const companyResult = await createCompanyVerificationRequest(
         email,
         companyWebsite,
@@ -189,6 +182,7 @@ export async function POST(request: NextRequest) {
           where: { id: person.id },
           data: { companyId }
         })
+        console.log('22. Company created:', companyId)
       } else {
         return NextResponse.json(
           { error: companyResult.error || 'Failed to create company' },
@@ -197,6 +191,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log('23. Registration complete!')
     return NextResponse.json({
       success: true,
       user: {
@@ -214,6 +209,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in registration endpoint:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
