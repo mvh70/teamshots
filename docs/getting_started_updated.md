@@ -887,7 +887,7 @@ Create `Dockerfile` in your project root:
 
 ```dockerfile
 # Use Node.js 18 (lightweight Alpine version)
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Set working directory inside container
 WORKDIR /app

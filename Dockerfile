@@ -1,5 +1,5 @@
-# Use Node.js 18 Alpine for smaller image size
-FROM node:18-alpine AS base
+# Use Node.js 20 Alpine for smaller image size
+FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -22,6 +22,13 @@ RUN npx prisma generate
 # Build Next.js application
 RUN npm run build
 
+# Install production dependencies only
+FROM base AS prod-deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev
+
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
@@ -37,6 +44,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
+COPY --from=prod-deps /app/node_modules ./node_modules
 
 USER nextjs
 
