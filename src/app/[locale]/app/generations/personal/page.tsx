@@ -79,7 +79,7 @@ export default function PersonalGenerationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900">{tg('title')}</h1>
-                <Link href="/app/generate/selfie" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
+                <Link href="/app/generate/selfie?type=personal" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
       </div>
 
       {/* Filters */}
@@ -131,7 +131,7 @@ export default function PersonalGenerationsPage() {
           <div className="text-center py-16 bg-white rounded-lg border">
             <p className="text-gray-700 mb-2">{tg('empty.title')}</p>
             <p className="text-gray-500 text-sm mb-4">{tg('empty.subtitle')}</p>
-                <Link href="/app/generate/selfie" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
+                <Link href="/app/generate/selfie?type=personal" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
           </div>
         )}
     </div>

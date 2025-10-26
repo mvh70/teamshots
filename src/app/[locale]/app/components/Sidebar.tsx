@@ -197,26 +197,28 @@ export default function Sidebar({ collapsed, pinned, onPinToggle }: SidebarProps
               </div>
             )}
             {collapsed && (
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto">
-                <Image src={BRAND_CONFIG.logo.icon} alt={BRAND_CONFIG.name} width={32} height={32} className="h-8 w-8" priority />
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto">
+                <Image src={BRAND_CONFIG.logo.icon} alt={BRAND_CONFIG.name} width={48} height={48} className="h-12 w-12" priority />
               </div>
             )}
-            <div className="relative group">
-              <button
-                onClick={onPinToggle}
-                aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
-                className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                {pinned ? (
-                  <PushPinSolidIcon className="h-8 w-8 text-gray-500" />
-                ) : (
-                  <PushPinOutlineIcon className="h-8 w-8 text-gray-500" />
-                )}
-              </button>
-              <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {pinned ? 'Unpin sidebar' : 'Pin sidebar'}
-              </span>
-            </div>
+            {!collapsed && (
+              <div className="relative group">
+                <button
+                  onClick={onPinToggle}
+                  aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                  className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  {pinned ? (
+                    <PushPinSolidIcon className="h-8 w-8 text-gray-500" />
+                  ) : (
+                    <PushPinOutlineIcon className="h-8 w-8 text-gray-500" />
+                  )}
+                </button>
+                <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Primary Action Button */}

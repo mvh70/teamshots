@@ -171,7 +171,7 @@
         "name": "Prueba Una Vez",
         "price": "$5",
         "period": "único",
-        "credits": "4 créditos",
+        "credits": "{credits} créditos",
         "description": "Perfecto para probar el servicio",
         "features": {
           "0": "1 generación de foto (4 variaciones)",
@@ -431,7 +431,7 @@
     "freestyleOnlyDescription": "Personaliza todas las configuraciones de estilo de foto para esta generación",
     "predefinedStyle": "Estilo predefinido con configuraciones preestablecidas",
         "insufficientCredits": "Créditos Insuficientes",
-        "insufficientCreditsMessage": "Necesitas 4 créditos para generar una foto. Actualmente tienes {current} créditos.",
+        "insufficientCreditsMessage": "Necesitas {required} créditos para generar una foto. Actualmente tienes {current} créditos.",
     "generatePhoto": "Generar Foto",
     "buyMoreCredits": "Comprar más créditos",
       "noCreditsTitle": "Sin Créditos Disponibles",

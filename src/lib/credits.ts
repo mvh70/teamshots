@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { PRICING_CONFIG } from '@/config/pricing'
 
 export type CreditTransactionType =
   | 'purchase'
@@ -156,7 +157,7 @@ export async function useCreditsForGeneration(
 export async function reserveCreditsForGeneration(
   personId: string | null,
   userId: string | null,
-  amount: number = 4,
+  amount: number = PRICING_CONFIG.credits.perGeneration,
   description?: string,
   companyId?: string,
   teamInviteId?: string
@@ -233,7 +234,7 @@ export async function getTeamInviteRemainingCredits(teamInviteId: string): Promi
 export async function refundCreditsForFailedGeneration(
   personId: string | null,
   userId: string | null,
-  amount: number = 4,
+  amount: number = PRICING_CONFIG.credits.perGeneration,
   description?: string,
   companyId?: string,
   teamInviteId?: string
@@ -270,7 +271,7 @@ export async function refundCreditsForFailedGeneration(
 export async function hasSufficientCredits(
   personId: string | null,
   userId: string | null,
-  amount: number = 4,
+  amount: number = PRICING_CONFIG.credits.perGeneration,
   companyId?: string
 ): Promise<boolean> {
   if (!personId && !userId && !companyId) {

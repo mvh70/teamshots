@@ -36,6 +36,7 @@ export default function StartGenerationPage() {
   const { data: session } = useSession()
   const t = useTranslations('app.sidebar.generate')
   const keyFromQuery = useMemo(() => searchParams.get('key') || '', [searchParams])
+  const typeFromQuery = useMemo(() => searchParams.get('type') as 'personal' | 'company' | null, [searchParams])
   const [key, setKey] = useState<string>('')
   const [selfieId, setSelfieId] = useState<string | null>(null)
   const [isApproved, setIsApproved] = useState<boolean>(Boolean(keyFromQuery))
@@ -101,32 +102,50 @@ export default function StartGenerationPage() {
       
       try {
         // Credits are now managed by CreditsContext
+        setContextLoaded(true)
+      } catch (err) {
+        console.error('Failed to fetch data:', err)
+        // Credits are handled by CreditsContext
+        setContextLoaded(true)
+      }
+    }
 
-        // Fetch active context and available contexts
-        const contextResponse = await fetch('/api/contexts')
+    fetchData()
+  }, [session?.user?.id])
+
+  // Fetch contexts when generation type is determined
+  useEffect(() => {
+    const fetchContexts = async () => {
+      if (!session?.user?.id || !generationType) return
+      
+      console.log('Fetching contexts for generation type:', generationType)
+      
+      try {
+        // Fetch contexts based on generation type
+        const endpoint = generationType === 'personal' ? '/api/contexts/personal' : '/api/contexts/team'
+        console.log('Fetching from endpoint:', endpoint)
+        const contextResponse = await fetch(endpoint)
+        
         if (contextResponse.ok) {
           const contextData = await contextResponse.json()
-          // For personal generations, filter to only show personal contexts (not company contexts)
-          const personalContexts = (contextData.contexts || []).filter((context: Record<string, unknown>) => 
-            context.userId && !context.companyId
-          )
-          console.log('Available contexts:', contextData.contexts)
-          console.log('Personal contexts:', personalContexts)
-          setAvailableContexts(personalContexts)
+          const contexts = contextData.contexts || []
+          console.log(`Available ${generationType} contexts:`, contexts)
+          console.log('Context data:', contextData)
+          setAvailableContexts(contexts)
           
-          // Only set active context if it's a personal context (for personal generations)
-          let activePersonalContext = null
-          if (contextData.activeContext && contextData.activeContext.userId && !contextData.activeContext.companyId) {
-            activePersonalContext = contextData.activeContext
+          // Set active context if available
+          let activeContext = null
+          if (contextData.activeContext) {
+            activeContext = contextData.activeContext
             setActiveContext(contextData.activeContext)
           } else {
-            // Default to freestyle if no personal context is active
+            // Default to freestyle if no context is active
             setActiveContext(null)
           }
           
           // Convert context settings to photo style settings format
-          if (activePersonalContext) {
-            const context = activePersonalContext
+          if (activeContext) {
+            const context = activeContext
             const settings: PhotoStyleSettingsType = {
               background: {
                 ...context.settings?.background,
@@ -165,16 +184,13 @@ export default function StartGenerationPage() {
             setOriginalContextSettings(undefined)
           }
         }
-        setContextLoaded(true)
       } catch (err) {
-        console.error('Failed to fetch data:', err)
-        // Credits are handled by CreditsContext
-        setContextLoaded(true)
+        console.error('Failed to fetch contexts:', err)
       }
     }
 
-    fetchData()
-  }, [session?.user?.id])
+    fetchContexts()
+  }, [session?.user?.id, generationType])
 
   const onPhotoUploaded = async ({ key }: { key: string; url?: string }) => {
     setKey(key)
@@ -234,6 +250,7 @@ export default function StartGenerationPage() {
   }
 
   const onTypeSelected = (type: 'personal' | 'company') => {
+    console.log('Generation type selected:', type)
     setGenerationType(type)
   }
 
@@ -268,8 +285,9 @@ export default function StartGenerationPage() {
       const result = await response.json()
       console.log('Generation created:', result)
 
-      // Redirect to generations page immediately
-      window.location.href = `/app/generations`
+      // Redirect to appropriate generations page based on generation type
+      const redirectPath = generationType === 'company' ? '/app/generations/team' : '/app/generations/personal'
+      window.location.href = redirectPath
       
     } catch (error) {
       console.error('Failed to start generation:', error)
@@ -278,7 +296,7 @@ export default function StartGenerationPage() {
   }
 
   // Determine user access and whether to show generation type selector
-  const hasCompanyAccess = Boolean(session?.user?.person?.companyId && userCredits.company > 0)
+  const hasCompanyAccess = Boolean(session?.user?.person?.companyId)
   const hasIndividualAccess = userCredits.individual > 0
   const companyName = session?.user?.person?.company?.name
   
@@ -298,18 +316,36 @@ export default function StartGenerationPage() {
   // Auto-select generation type if user only has one option
   useEffect(() => {
     if (!creditsLoading && contextLoaded && isApproved && !generationType) {
+      console.log('Auto-selecting generation type. hasCompanyAccess:', hasCompanyAccess, 'hasIndividualAccess:', hasIndividualAccess, 'typeFromQuery:', typeFromQuery)
+      
+      // If type is specified in URL, use it (if user has access)
+      if (typeFromQuery) {
+        if (typeFromQuery === 'company' && hasCompanyAccess) {
+          console.log('Using company generation type from URL')
+          setGenerationType('company')
+          return
+        } else if (typeFromQuery === 'personal' && hasIndividualAccess) {
+          console.log('Using personal generation type from URL')
+          setGenerationType('personal')
+          return
+        }
+      }
+      
       if (shouldShowGenerationTypeSelector) {
         // User has both options, keep generationType as null to show selector
+        console.log('User has both options, showing selector')
         return
       } else if (hasCompanyAccess) {
         // User only has company access
+        console.log('Auto-selecting company generation type')
         setGenerationType('company')
       } else if (hasIndividualAccess) {
         // User only has individual access
+        console.log('Auto-selecting personal generation type')
         setGenerationType('personal')
       }
     }
-  }, [creditsLoading, contextLoaded, isApproved, shouldShowGenerationTypeSelector, hasCompanyAccess, hasIndividualAccess, generationType])
+  }, [creditsLoading, contextLoaded, isApproved, shouldShowGenerationTypeSelector, hasCompanyAccess, hasIndividualAccess, generationType, typeFromQuery])
 
   // Show upsell window if no credits available
   if (!creditsLoading && !hasAnyCredits) {
@@ -443,7 +479,10 @@ export default function StartGenerationPage() {
                       <span className="text-sm font-medium text-red-800">{t('insufficientCredits')}</span>
                     </div>
                     <p className="text-xs text-red-700 mb-2">
-                      {t('insufficientCreditsMessage', { current: generationType === 'company' ? userCredits.company : userCredits.individual })}
+                      {t('insufficientCreditsMessage', { 
+                        required: PRICING_CONFIG.credits.perGeneration,
+                        current: generationType === 'company' ? userCredits.company : userCredits.individual 
+                      })}
                     </p>
                     <Link
                       href="/app/pricing"
@@ -466,10 +505,12 @@ export default function StartGenerationPage() {
             </div>
           </div>
 
-          {/* Context Selection for Personal Generations */}
-          {generationType === 'personal' && (
+          {/* Context Selection for Personal and Team Generations */}
+          {(generationType === 'personal' || generationType === 'company') && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('selectPhotoStyle')}</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                {generationType === 'personal' ? t('selectPhotoStyle') : 'Select Team Photo Style'}
+              </h2>
               
               <div className="space-y-3">
                 <div>
@@ -498,7 +539,12 @@ export default function StartGenerationPage() {
                     ))}
                   </select>
                   <p className="text-sm text-gray-600 mt-2">
-                    {activeContext ? t('predefinedStyle') : (availableContexts.length > 0 ? t('freestyleDescription') : t('freestyleOnlyDescription'))}
+                    {activeContext ? 
+                      (generationType === 'personal' ? t('predefinedStyle') : 'Predefined team style settings are applied. You can customize user-choice settings for this generation.') : 
+                      (availableContexts.length > 0 ? 
+                        (generationType === 'personal' ? t('freestyleDescription') : 'Create a custom team photo style for this generation.') : 
+                        (generationType === 'personal' ? t('freestyleOnlyDescription') : 'No team styles available. Create a custom team photo style for this generation.'))
+                    }
                   </p>
                 </div>
               </div>

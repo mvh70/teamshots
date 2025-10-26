@@ -139,7 +139,7 @@ export function getTierFeatures(tier: SubscriptionTier) {
  */
 export async function canCreateGeneration(
   userId: string,
-  requiredCredits: number = 4
+  requiredCredits: number = PRICING_CONFIG.credits.perGeneration
 ): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },

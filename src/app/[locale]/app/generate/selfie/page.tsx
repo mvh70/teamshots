@@ -111,8 +111,12 @@ export default function SelfieSelectionPage() {
   }
 
   const handleSelfieSelect = (selfieKey: string) => {
-    // Navigate to the generation start page with the selected selfie
-    window.location.href = `/app/generate/start?key=${encodeURIComponent(selfieKey)}`
+    // Get generation type from URL parameters
+    const urlParams = new URLSearchParams(window.location.search)
+    const generationType = urlParams.get('type') || 'personal'
+    
+    // Navigate to the generation start page with the selected selfie and generation type
+    window.location.href = `/app/generate/start?key=${encodeURIComponent(selfieKey)}&type=${generationType}`
   }
 
   return (

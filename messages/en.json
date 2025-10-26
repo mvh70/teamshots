@@ -171,7 +171,7 @@
         "name": "Try Once",
         "price": "$5",
         "period": "one-time",
-        "credits": "4 credits",
+        "credits": "{credits} credits",
         "description": "Perfect for testing the service",
         "features": {
           "0": "1 photo generation (4 variations)",
@@ -431,7 +431,7 @@
     "freestyleOnlyDescription": "Customize all photo style settings for this generation",
     "predefinedStyle": "Predefined style with preset settings",
         "insufficientCredits": "Insufficient Credits",
-        "insufficientCreditsMessage": "You need 4 credits to generate a photo. You currently have {current} credits.",
+        "insufficientCreditsMessage": "You need {required} credits to generate a photo. You currently have {current} credits.",
     "generatePhoto": "Generate Photo",
     "buyMoreCredits": "Buy more credits",
       "noCreditsTitle": "No Credits Available",

@@ -19,14 +19,14 @@ No free tier. All features require credits.
 ## Pricing Structure
 
 ### Credits System
-- **1 generation = 4 credits** (produces 4 photo variations)
+- **1 generation = 10 credits** (produces 4 photo variations)
 - **Credits roll over** month-to-month (never expire)
-- **Display format:** "100 credits (25 generations)" - emphasize credits for psychological impact
+- **Display format:** "100 credits (10 generations)" - emphasize credits for psychological impact
 
 ### Try Once (One-time Purchase)
 ```
 Price: $5
-Credits: 4 (1 generation)
+Credits: 10 (1 generation)
 Purpose: Low-friction proof of concept
 ```
 
