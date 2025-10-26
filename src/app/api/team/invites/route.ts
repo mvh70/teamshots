@@ -152,6 +152,14 @@ export async function GET(request: NextRequest) {
             company: {
               include: {
                 teamInvites: {
+                  include: {
+                    context: {
+                      select: {
+                        id: true,
+                        name: true
+                      }
+                    }
+                  },
                   orderBy: { createdAt: 'desc' }
                 }
               }
@@ -170,13 +178,31 @@ export async function GET(request: NextRequest) {
 
     // Calculate credits used for each invite
     const invitesWithCredits = await Promise.all(
-      user.person.company.teamInvites.map(async (invite) => {
-        const remainingCredits = await getTeamInviteRemainingCredits(invite.id)
-        const creditsUsed = invite.creditsAllocated - remainingCredits
+      user.person.company.teamInvites.map(async (invite: unknown) => {
+        const typedInvite = invite as {
+          id: string
+          email: string
+          token: string
+          expiresAt: Date
+          usedAt: Date | null
+          creditsAllocated: number
+          createdAt: Date
+          context: { id: string; name: string } | null
+        }
+        const remainingCredits = await getTeamInviteRemainingCredits(typedInvite.id)
+        const creditsUsed = typedInvite.creditsAllocated - remainingCredits
         return {
-          ...invite,
+          id: typedInvite.id,
+          email: typedInvite.email,
+          token: typedInvite.token,
+          expiresAt: typedInvite.expiresAt,
+          usedAt: typedInvite.usedAt,
+          creditsAllocated: typedInvite.creditsAllocated,
           creditsUsed,
-          creditsRemaining: remainingCredits
+          creditsRemaining: remainingCredits,
+          createdAt: typedInvite.createdAt,
+          contextId: typedInvite.context?.id,
+          contextName: typedInvite.context?.name
         }
       })
     )

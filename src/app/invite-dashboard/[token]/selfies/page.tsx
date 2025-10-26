@@ -79,12 +79,25 @@ export default function SelfiesPage() {
       if (response.ok) {
         setIsApproved(true)
         await fetchSelfies() // Refresh the list
-        // Reset validation state after a delay
-        setTimeout(() => {
-          setUploadKey('')
-          setPreviewUrl(null)
-          setIsApproved(false)
-        }, 2000)
+        
+        // Check if this was part of a generation flow
+        const fromGeneration = sessionStorage.getItem('fromGeneration')
+        if (fromGeneration === 'true') {
+          // Set flag for pending generation and redirect back to dashboard
+          sessionStorage.setItem('pendingGeneration', 'true')
+          sessionStorage.removeItem('fromGeneration')
+          // Small delay to show success message before redirect
+          setTimeout(() => {
+            router.push(`/invite-dashboard/${token}`)
+          }, 1500)
+        } else {
+          // Reset validation state after a delay for normal upload flow
+          setTimeout(() => {
+            setUploadKey('')
+            setPreviewUrl(null)
+            setIsApproved(false)
+          }, 2000)
+        }
       } else {
         console.error('Failed to save selfie')
         setError('Failed to save selfie')

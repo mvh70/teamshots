@@ -18,6 +18,8 @@ interface TeamInvite {
   creditsUsed?: number
   creditsRemaining?: number
   createdAt: string
+  contextId?: string
+  contextName?: string
 }
 
 interface CompanyData {
@@ -701,6 +703,11 @@ export default function TeamPage() {
                           </span>
                         )}
                       </p>
+                      {invite.contextName && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Photo style: {invite.contextName}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4">

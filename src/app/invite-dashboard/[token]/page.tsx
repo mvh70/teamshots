@@ -171,6 +171,31 @@ export default function InviteDashboardPage() {
     }
   }, [showGenerationFlow, fetchAvailableSelfies])
 
+  // Check if returning from selfie upload after starting generation
+  useEffect(() => {
+    const pendingGeneration = sessionStorage.getItem('pendingGeneration')
+    if (pendingGeneration === 'true') {
+      console.log('Pending generation detected, fetching selfies...')
+      fetchAvailableSelfies()
+    }
+  }, [fetchAvailableSelfies])
+
+  // Set up generation flow once selfies are fetched
+  useEffect(() => {
+    const pendingGeneration = sessionStorage.getItem('pendingGeneration')
+    if (pendingGeneration === 'true' && availableSelfies.length > 0 && !uploadKey) {
+      // Use the most recent selfie (first in the array)
+      const latestSelfie = availableSelfies[0]
+      if (latestSelfie) {
+        console.log('Setting up generation flow with selfie:', latestSelfie.key)
+        setUploadKey(latestSelfie.key)
+        setIsApproved(true)
+        setGenerationType('company')
+        sessionStorage.removeItem('pendingGeneration')
+      }
+    }
+  }, [availableSelfies, uploadKey])
+
   const onApprove = () => {
     setIsApproved(true)
     // For team members, automatically set to company type
@@ -516,6 +541,21 @@ export default function InviteDashboardPage() {
                 />
               ) : (
                 <div className="space-y-6">
+                  {/* Selfie Preview */}
+                  {uploadKey && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">Selected Selfie</h4>
+                      <div className="relative w-full h-48 rounded-lg overflow-hidden border-2 border-gray-200 mb-6">
+                        <Image
+                          src={availableSelfies.find(selfie => selfie.key === uploadKey)?.url || ''}
+                          alt="Selected Selfie"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <h3 className="text-lg font-semibold text-gray-900">Customize Your Photo</h3>
                   
                   {/* Photo Style Settings */}
@@ -571,6 +611,7 @@ export default function InviteDashboardPage() {
                   <button
                     onClick={() => {
                       setShowGenerationFlow(false)
+                      sessionStorage.setItem('fromGeneration', 'true')
                       router.push(`/invite-dashboard/${token}/selfies`)
                     }}
                     className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 text-sm font-medium"

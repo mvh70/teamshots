@@ -255,7 +255,7 @@ export default function GenerationsPage() {
 
 
                     {/* Slider for Before/After Comparison */}
-                    {generation.status === 'completed' && generation.generatedPhotos.length > 0 && (
+                    {generation.status === 'completed' && generation.generatedPhotos.length > 0 ? (
                       <div>
                         <div className="relative">
                           <div
@@ -313,11 +313,35 @@ export default function GenerationsPage() {
                           </div>
                         </div>
                       </div>
-                    )}
+                    ) : (generation.status === 'processing' || generation.status === 'pending') ? (
+                      <div className="aspect-square bg-gray-50 overflow-hidden relative">
+                        <Image 
+                          src={generation.selfieUrl} 
+                          alt="selfie" 
+                          fill 
+                          className="object-cover" 
+                          unoptimized 
+                        />
+                        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
+                            <p className="text-xs text-gray-600">Generating...</p>
+                          </div>
+                        </div>
+                        <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded bg-yellow-500 text-white">Processing</span>
+                      </div>
+                    ) : null}
 
                     <div className="p-3 space-y-2 pb-6">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-900 truncate">Photo style: {generation.generatedPhotos.length > 0 ? generation.generatedPhotos[0].style : 'Freestyle'}</p>
+                        <p className="text-sm text-gray-900 truncate">
+                          Photo style: {generation.status === 'processing' || generation.status === 'pending' 
+                            ? 'Processing...' 
+                            : generation.generatedPhotos.length > 0 
+                            ? generation.generatedPhotos[0].style 
+                            : 'Freestyle'
+                          }
+                        </p>
                         <span className="text-xs text-gray-500">{new Date(generation.createdAt).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center justify-between">
