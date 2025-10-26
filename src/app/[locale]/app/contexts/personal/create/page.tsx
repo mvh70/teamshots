@@ -30,7 +30,8 @@ export default function CreatePersonalContextPage() {
           name,
           settings: photoStyleSettings,
           customPrompt,
-          setAsActive
+          setAsActive,
+          contextType: 'personal'
         })
       })
 

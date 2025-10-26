@@ -30,7 +30,8 @@ export default function CreateTeamContextPage() {
           name,
           settings: photoStyleSettings,
           customPrompt,
-          setAsActive
+          setAsActive,
+          contextType: 'team'
         })
       })
 

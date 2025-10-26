@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, settings, customPrompt, setAsActive } = body || {}
+    const { name, settings, customPrompt, setAsActive, contextType } = body || {}
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -55,38 +55,11 @@ export async function POST(request: NextRequest) {
     // Determine if user is part of a company
     const companyId = (user as { person?: { company?: { id: string } } })?.person?.company?.id || null
 
-    // Enforce context type separation: company users can only create company contexts
-    if (companyId) {
-      // User is part of a company - create company context only
-      const context = await prisma.context.create({
-        data: {
-          name,
-          companyId,
-          userId: null, // Company contexts don't have userId
-          backgroundUrl,
-          backgroundPrompt,
-          logoUrl,
-          stylePreset,
-          customPrompt,
-          settings: settings || {}
-        }
-      })
-
-      // Set as active if requested
-      if (setAsActive) {
-        await prisma.company.update({
-          where: { id: companyId },
-          data: { activeContextId: context.id }
-        })
-      }
-
-      return NextResponse.json({
-        success: true,
-        context,
-        contextType: 'company'
-      })
-    } else {
-      // Individual user - create personal context only
+    // Determine context type based on explicit parameter or fallback to user's company status
+    const isPersonalContext = contextType === 'personal' || (!contextType && !companyId)
+    
+    if (isPersonalContext) {
+      // Create personal context
       const context = await prisma.context.create({
         data: {
           name,
@@ -118,6 +91,41 @@ export async function POST(request: NextRequest) {
         success: true,
         context,
         contextType: 'personal'
+      })
+    } else {
+      // Create company context (requires user to be part of a company)
+      if (!companyId) {
+        return NextResponse.json({ 
+          error: 'User must be part of a company to create team contexts' 
+        }, { status: 400 })
+      }
+
+      const context = await prisma.context.create({
+        data: {
+          name,
+          companyId,
+          userId: null, // Company contexts don't have userId
+          backgroundUrl,
+          backgroundPrompt,
+          logoUrl,
+          stylePreset,
+          customPrompt,
+          settings: settings || {}
+        }
+      })
+
+      // Set as active if requested
+      if (setAsActive) {
+        await prisma.company.update({
+          where: { id: companyId },
+          data: { activeContextId: context.id }
+        })
+      }
+
+      return NextResponse.json({
+        success: true,
+        context,
+        contextType: 'company'
       })
     }
 
