@@ -31,11 +31,11 @@ function addSecurityHeaders(response: NextResponse) {
   // Content Security Policy - Safari-compatible version
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'", // Add wasm-unsafe-eval for Safari
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://static.cloudflareinsights.com", // Add Cloudflare Insights
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.resend.com ws: wss:", // Add WebSocket support
+    "connect-src 'self' https://api.resend.com https://cloudflareinsights.com ws: wss:", // Add Cloudflare Insights
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
