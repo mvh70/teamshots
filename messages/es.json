@@ -367,7 +367,8 @@
       "Failed to send OTP": "No se pudo enviar el código",
       "Invalid OTP": "Código inválido",
       "Registration failed": "El registro falló",
-      "An error occurred": "Ocurrió un error"
+      "An error occurred": "Ocurrió un error",
+      "Internal server error": "Error interno del servidor"
     },
     "verify": {
       "title": "Revisa tu correo",

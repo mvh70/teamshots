@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { internal, badRequest } from '@/lib/api-response'
 
 // Force this route to be dynamic (skip static generation)
 export const dynamic = 'force-dynamic'
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
     
     if (!isOTPValid) {
       return NextResponse.json(
-        { error: 'Invalid or expired OTP' },
+        badRequest('OTP_INVALID', 'auth.signup.Invalid OTP', 'Invalid or expired OTP'),
         { status: 400 }
       )
     }
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User already exists' },
+        badRequest('USER_EXISTS', 'auth.signup.accountExists', 'User already exists'),
         { status: 400 }
       )
     }
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
         console.log('22. Company created:', companyId)
       } else {
         return NextResponse.json(
-          { error: companyResult.error || 'Failed to create company' },
+          badRequest('COMPANY_CREATION_FAILED', 'auth.signup.Registration failed', companyResult.error || 'Failed to create company'),
           { status: 400 }
         )
       }
@@ -211,7 +212,7 @@ export async function POST(request: NextRequest) {
     console.error('Error in registration endpoint:', error)
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
     return NextResponse.json(
-      { error: 'Internal server error' },
+      internal('Internal server error', 'auth.signup.Internal server error'),
       { status: 500 }
     )
   }

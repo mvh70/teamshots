@@ -367,7 +367,8 @@
       "Failed to send OTP": "Failed to send OTP",
       "Invalid OTP": "Invalid OTP",
       "Registration failed": "Registration failed",
-      "An error occurred": "An error occurred"
+      "An error occurred": "An error occurred",
+      "Internal server error": "Internal server error"
     },
     "verify": {
       "title": "Check your email",

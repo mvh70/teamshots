@@ -132,10 +132,10 @@ model Generation {
   isPublic               Boolean   @default(false)
   maxRegenerations       Int       @default(2)
   remainingRegenerations Int       @default(2)
-  generationGroupId      String?   // Same UUID for all generations in a group
-  isOriginal             Boolean   @default(true)  // true for original, false for regenerations
-  groupIndex             Int?      // 0, 1, 2, 3... within the group
   selfieId               String?
+  generationGroupId      String?
+  groupIndex             Int?
+  isOriginal             Boolean   @default(true)
   context                Context?  @relation(fields: [contextId], references: [id])
   person                 Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
   selfie                 Selfie?   @relation(fields: [selfieId], references: [id])
@@ -260,27 +260,20 @@ model CreditTransaction {
   companyId            String?
   personId             String?
   userId               String?
-  credits              Int
+  amount               Float?
   type                 String
   description          String?
   relatedTransactionId String?
   teamInviteId         String?
-  
-  // Financial tracking
-  amount               Float?              // Amount paid in dollars
-  currency             String?             @default("USD")
-  stripePaymentId      String?             // Stripe payment intent ID
-  stripeInvoiceId      String?             // Stripe invoice ID
-  stripeSubscriptionId String?             // Stripe subscription ID
-  
-  // Business intelligence
-  planTier             String?             // 'individual', 'pro', 'try_once'
-  planPeriod           String?             // 'monthly', 'annual', 'one_time'
-  
-  // Metadata
-  metadata             Json                @default("{}")
   createdAt            DateTime            @default(now())
-  
+  credits              Int
+  currency             String?             @default("USD")
+  metadata             Json                @default("{}")
+  planPeriod           String?
+  planTier             String?
+  stripeInvoiceId      String?
+  stripePaymentId      String?
+  stripeSubscriptionId String?
   company              Company?            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   person               Person?             @relation(fields: [personId], references: [id], onDelete: Cascade)
   relatedTransaction   CreditTransaction?  @relation("TransferPair", fields: [relatedTransactionId], references: [id])
