@@ -1,4 +1,5 @@
 import SessionProvider from '@/components/SessionProvider'
+import { PostHogProvider } from '@/components/PostHogProvider'
 import { auth } from '@/auth'
 import './globals.css'
 
@@ -43,7 +44,9 @@ export default function RootLayout({
       </head>
       <body>
         {/* Server-side session fetch to avoid client auth race */}
-        <SessionWrapper>{children}</SessionWrapper>
+        <SessionWrapper>
+          <PostHogProvider>{children}</PostHogProvider>
+        </SessionWrapper>
       </body>
     </html>
   )

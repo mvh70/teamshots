@@ -1,7 +1,29 @@
 'use client'
 
-import { SessionProvider as NextAuthSessionProvider } from 'next-auth/react'
+import { SessionProvider as NextAuthSessionProvider, useSession } from 'next-auth/react'
 import type { Session } from 'next-auth'
+import { useEffect } from 'react'
+import { posthog } from '@/lib/posthog'
+
+function PostHogUserIdentifier() {
+  const { data: session } = useSession()
+
+  useEffect(() => {
+    if (session?.user && posthog.__loaded) {
+      // Identify user in PostHog
+      posthog.identify(session.user.id, {
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
+      })
+    } else if (!session && posthog.__loaded) {
+      // Reset PostHog when user logs out
+      posthog.reset()
+    }
+  }, [session])
+
+  return null
+}
 
 export default function SessionProvider({
   children,
@@ -12,6 +34,7 @@ export default function SessionProvider({
 }) {
   return (
     <NextAuthSessionProvider session={session}>
+      <PostHogUserIdentifier />
       {children}
     </NextAuthSessionProvider>
   )

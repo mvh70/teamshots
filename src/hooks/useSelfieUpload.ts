@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAnalytics } from './useAnalytics'
 
 interface UseSelfieUploadOptions {
   onSuccess?: (key: string) => void
@@ -10,10 +11,18 @@ export function useSelfieUpload({ onSuccess, onError }: UseSelfieUploadOptions =
   const [isApproved, setIsApproved] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const { track } = useAnalytics()
 
   const handlePhotoUpload = async (file: File): Promise<{ key: string; url?: string }> => {
     try {
       setIsLoading(true)
+      
+      // Track photo upload attempt
+      track('selfie_upload_started', {
+        file_size: file.size,
+        file_type: file.type,
+        file_name: file.name
+      })
       
       // Store file locally for later upload
       setPendingFile(file);
@@ -27,6 +36,9 @@ export function useSelfieUpload({ onSuccess, onError }: UseSelfieUploadOptions =
       return { key: tempKey, url };
     } catch (error) {
       console.error('File preparation failed:', error);
+      track('selfie_upload_failed', {
+        error: error instanceof Error ? error.message : 'File preparation failed'
+      })
       onError?.(error instanceof Error ? error.message : 'File preparation failed');
       throw error;
     } finally {
@@ -96,10 +108,23 @@ export function useSelfieUpload({ onSuccess, onError }: UseSelfieUploadOptions =
       // If successful, mark as approved and call success callback
       setIsApproved(true);
       setUploadedKey(key);
+      
+      // Track successful upload
+      track('selfie_upload_success', {
+        file_size: pendingFile.size,
+        file_type: pendingFile.type
+      })
+      
       onSuccess?.(key);
     } catch (error) {
       console.error('Approval failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Approval failed';
+      
+      // Track approval failure
+      track('selfie_approval_failed', {
+        error: errorMessage
+      })
+      
       onError?.(errorMessage);
     } finally {
       setIsLoading(false);
@@ -107,6 +132,7 @@ export function useSelfieUpload({ onSuccess, onError }: UseSelfieUploadOptions =
   }
 
   const handleReject = async () => {
+    track('selfie_rejected')
     if (uploadedKey) {
       await deleteSelfie(uploadedKey)
     }
@@ -116,6 +142,7 @@ export function useSelfieUpload({ onSuccess, onError }: UseSelfieUploadOptions =
   }
 
   const handleRetake = async () => {
+    track('selfie_retake')
     if (uploadedKey) {
       await deleteSelfie(uploadedKey)
     }
