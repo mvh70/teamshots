@@ -7,6 +7,7 @@ import { Link } from '@/i18n/routing'
 import dynamic from 'next/dynamic'
 import UploadCard from '../../generations/components/UploadCard'
 import SelfieApproval from '@/components/Upload/SelfieApproval'
+import { jsonFetcher } from '@/lib/fetcher'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 
@@ -31,11 +32,8 @@ export default function SelfieSelectionPage() {
   const loadUploads = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/uploads/list')
-      if (response.ok) {
-        const data = await response.json()
-        setUploads(data.items || [])
-      }
+      const data = await jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list')
+      setUploads(data.items || [])
     } catch (error) {
       console.error('Failed to load uploads:', error)
     } finally {
@@ -78,12 +76,9 @@ export default function SelfieSelectionPage() {
     if (uploadedKey) {
       // Delete the uploaded selfie
       try {
-        const response = await fetch(`/api/uploads/delete?key=${encodeURIComponent(uploadedKey)}`, {
+        await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(uploadedKey)}`, {
           method: 'DELETE',
         })
-        if (!response.ok) {
-          console.error('Failed to delete rejected selfie')
-        }
       } catch (error) {
         console.error('Error deleting rejected selfie:', error)
       }
@@ -96,12 +91,9 @@ export default function SelfieSelectionPage() {
     if (uploadedKey) {
       // Delete the uploaded selfie
       try {
-        const response = await fetch(`/api/uploads/delete?key=${encodeURIComponent(uploadedKey)}`, {
+        await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(uploadedKey)}`, {
           method: 'DELETE',
         })
-        if (!response.ok) {
-          console.error('Failed to delete selfie for retake')
-        }
       } catch (error) {
         console.error('Error deleting selfie for retake:', error)
       }

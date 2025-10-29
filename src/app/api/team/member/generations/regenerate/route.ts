@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 
 interface JobData {
   generationId: string;
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
       styleSettings: finalStyleSettings,
       prompt: 'Professional headshot with same style as original',
       providerOptions: {
-        model: process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image',
+        model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
         numVariations: 4,
       },
       creditSource: 'company',
@@ -154,7 +156,7 @@ export async function POST(request: NextRequest) {
       jobId: `gen-${generation.id}`,
     })
 
-    console.log('🔄 Team regeneration job queued:', job.id)
+    Logger.info('Team regeneration job queued', { jobId: job.id })
 
     return NextResponse.json({
       success: true,
@@ -163,7 +165,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Team regeneration error:', error)
+    Logger.error('Team regeneration error', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(
       { error: 'Failed to start regeneration' },
       { status: 500 }

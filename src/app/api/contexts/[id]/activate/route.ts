@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
 
 export async function POST(
   request: NextRequest,
@@ -77,7 +78,7 @@ export async function POST(
       })
       
       if (!existingUser) {
-        console.error('User not found:', session.user.id)
+        Logger.error('User not found for context activation', { userId: session.user.id })
         return NextResponse.json({ error: 'User not found' }, { status: 404 })
       }
       
@@ -99,7 +100,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Error activating context:', error)
+    Logger.error('Error activating context', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

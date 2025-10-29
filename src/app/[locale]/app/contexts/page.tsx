@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { jsonFetcher } from '@/lib/fetcher'
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
 import PhotoStyleSettings from '@/components/customization/PhotoStyleSettings'
@@ -61,14 +62,8 @@ export default function ContextsPage() {
 
   const fetchContexts = useCallback(async () => {
     try {
-      const response = await fetch('/api/contexts')
-      const data = await response.json()
-
-      if (response.ok) {
-        setContextsData(data)
-      } else {
-        setError(data.error)
-      }
+      const data = await jsonFetcher<ContextsData>('/api/contexts')
+      setContextsData(data)
     } catch {
       setError(t('errors.fetchFailed'))
     } finally {
@@ -127,11 +122,8 @@ export default function ContextsPage() {
 
   const fetchUserRole = async () => {
     try {
-      const response = await fetch('/api/dashboard/stats')
-      if (response.ok) {
-        const data = await response.json()
-        setIsCompanyAdmin(data.userRole.isCompanyAdmin)
-      }
+      const data = await jsonFetcher<{ userRole: { isCompanyAdmin: boolean } }>('/api/dashboard/stats')
+      setIsCompanyAdmin(data.userRole.isCompanyAdmin)
     } catch (err) {
       console.error('Failed to fetch user role:', err)
     }
@@ -153,21 +145,15 @@ export default function ContextsPage() {
         setAsActive: formData.get('setAsActive') === 'on'
       }
 
-      const response = await fetch('/api/contexts', {
+      await jsonFetcher('/api/contexts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        await fetchContexts()
-        setShowCreateForm(false)
-        setPhotoStyleSettings(DEFAULT_PHOTO_STYLE_SETTINGS)
-      } else {
-        setError(data.error)
-      }
+      await fetchContexts()
+      setShowCreateForm(false)
+      setPhotoStyleSettings(DEFAULT_PHOTO_STYLE_SETTINGS)
     } catch {
       setError(t('errors.createFailed'))
     } finally {
@@ -188,7 +174,7 @@ export default function ContextsPage() {
       const updatedSettings = { ...photoStyleSettings }
 
       // Update context with new settings structure
-      const response = await fetch(`/api/contexts/${editingContext.id}`, {
+      await jsonFetcher(`/api/contexts/${editingContext.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -199,18 +185,11 @@ export default function ContextsPage() {
         })
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        await fetchContexts()
-        setEditingContext(null)
-        setPhotoStyleSettings(DEFAULT_PHOTO_STYLE_SETTINGS)
-        setError(null)
-        setSuccess(null)
-      } else {
-        setError(data.error)
-        setSuccess(null)
-      }
+      await fetchContexts()
+      setEditingContext(null)
+      setPhotoStyleSettings(DEFAULT_PHOTO_STYLE_SETTINGS)
+      setError(null)
+      setSuccess(null)
     } catch {
       setError(t('errors.updateFailed'))
     } finally {
@@ -222,17 +201,11 @@ export default function ContextsPage() {
     if (!confirm(t('confirmations.deleteContext'))) return
 
     try {
-      const response = await fetch(`/api/contexts/${contextId}`, {
+      await jsonFetcher(`/api/contexts/${contextId}`, {
         method: 'DELETE'
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        await fetchContexts()
-      } else {
-        setError(data.error)
-      }
+      await fetchContexts()
     } catch {
       setError(t('errors.deleteFailed'))
     }
@@ -240,17 +213,11 @@ export default function ContextsPage() {
 
   const handleActivateContext = async (contextId: string) => {
     try {
-      const response = await fetch(`/api/contexts/${contextId}/activate`, {
+      await jsonFetcher(`/api/contexts/${contextId}/activate`, {
         method: 'POST'
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        await fetchContexts()
-      } else {
-        setError(data.error)
-      }
+      await fetchContexts()
     } catch {
       setError(t('errors.activateFailed'))
     }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
+import { Logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,8 +18,7 @@ export async function POST(request: NextRequest) {
       await SecurityLogger.logPermissionDenied(
         session.user.id,
         'admin.change_role',
-        'Role change attempt by non-admin',
-        request
+        'Role change attempt by non-admin'
       )
       return NextResponse.json({ error: 'Permission denied. Only platform administrators can change roles.' }, { status: 403 })
     }
@@ -60,8 +60,7 @@ export async function POST(request: NextRequest) {
         targetUserId: userId, 
         oldRole: session.user.role || 'user', 
         newRole: newRole 
-      },
-      request
+      }
     )
 
     return NextResponse.json({ 
@@ -74,7 +73,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error changing role:', error)
+    Logger.error('Error changing role', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

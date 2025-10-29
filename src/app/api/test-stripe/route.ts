@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { Logger } from '@/lib/logger';
+import { Env } from '@/lib/env'
+import { getRequestHeader } from '@/lib/server-headers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,11 +19,11 @@ export async function POST(request: NextRequest) {
     const { type, priceId } = body;
 
     // Call the actual checkout endpoint
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/stripe/checkout`, {
+    const response = await fetch(`${Env.string('NEXT_PUBLIC_BASE_URL', 'http://localhost:3000')}/api/stripe/checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': request.headers.get('cookie') || '',
+        'Cookie': (await getRequestHeader('cookie')) || '',
       },
       body: JSON.stringify({ type, priceId }),
     });
@@ -36,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Test Stripe error:', error);
+    Logger.error('Test Stripe error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Failed to create test checkout' },
       { status: 500 }

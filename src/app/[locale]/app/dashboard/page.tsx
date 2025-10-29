@@ -16,6 +16,7 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import dynamic from 'next/dynamic'
 import { useRouter } from '@/i18n/routing'
 import { useEffect, useState } from 'react'
+import { jsonFetcher } from '@/lib/fetcher'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 
@@ -127,28 +128,19 @@ export default function DashboardPage() {
         setLoading(true)
         
         // Fetch stats
-        const statsResponse = await fetch('/api/dashboard/stats')
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json()
-          setStats(statsData.stats)
-          setUserRole(statsData.userRole)
-          
-          // Fetch pending invites (only for company admins)
-          if (statsData.userRole.isCompanyAdmin) {
-            const invitesResponse = await fetch('/api/dashboard/pending-invites')
-            if (invitesResponse.ok) {
-              const invitesData = await invitesResponse.json()
-              setPendingInvites(invitesData.pendingInvites)
-            }
-          }
+        const statsData = await jsonFetcher<{ stats: DashboardStats; userRole: UserRole }>('/api/dashboard/stats')
+        setStats(statsData.stats)
+        setUserRole(statsData.userRole)
+        
+        // Fetch pending invites (only for company admins)
+        if (statsData.userRole.isCompanyAdmin) {
+          const invitesData = await jsonFetcher<{ pendingInvites: PendingInvite[] }>('/api/dashboard/pending-invites')
+          setPendingInvites(invitesData.pendingInvites)
         }
 
         // Fetch recent activity
-        const activityResponse = await fetch('/api/dashboard/activity')
-        if (activityResponse.ok) {
-          const activityData = await activityResponse.json()
-          setRecentActivity(activityData.activities)
-        }
+        const activityData = await jsonFetcher<{ activities: Activity[] }>('/api/dashboard/activity')
+        setRecentActivity(activityData.activities)
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
@@ -184,24 +176,15 @@ export default function DashboardPage() {
   const handleResendInvite = async (inviteId: string) => {
     setResending(inviteId)
     try {
-      const response = await fetch('/api/team/invites/resend', {
+      await jsonFetcher('/api/team/invites/resend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: inviteId })
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        // Refresh pending invites
-        const invitesResponse = await fetch('/api/dashboard/pending-invites')
-        if (invitesResponse.ok) {
-          const invitesData = await invitesResponse.json()
-          setPendingInvites(invitesData.pendingInvites)
-        }
-      } else {
-        console.error('Failed to resend invite:', data.error)
-      }
+      // Refresh pending invites
+      const invitesData = await jsonFetcher<{ pendingInvites: PendingInvite[] }>('/api/dashboard/pending-invites')
+      setPendingInvites(invitesData.pendingInvites)
     } catch (error) {
       console.error('Failed to resend invite:', error)
     } finally {

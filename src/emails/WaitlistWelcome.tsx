@@ -12,17 +12,16 @@ import {
 } from '@react-email/components';
 import { BRAND_CONFIG } from '@/config/brand';
 import { getEmailTranslation } from '@/lib/translations';
+import { Env } from '@/lib/env'
 
 interface WaitlistWelcomeEmailProps {
-  email: string;
   locale?: 'en' | 'es';
 }
 
 export default function WaitlistWelcomeEmail({
-  email,
   locale = 'en',
 }: WaitlistWelcomeEmailProps) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.teamshots.vip';
+  const baseUrl = Env.string('NEXT_PUBLIC_BASE_URL', 'https://www.teamshots.vip');
 
   return (
     <Html>
@@ -80,39 +79,18 @@ export default function WaitlistWelcomeEmail({
               </div>
             </Section>
 
-            {/* Value Props Box */}
-            <Section style={valuePropsBox}>
-              <Heading as="h3" style={valuePropsTitle}>
-                {getEmailTranslation('waitlistWelcome.valueProps.title', locale)}
-              </Heading>
-              <ul style={valueList}>
-                <li style={valueItem}>✅ {getEmailTranslation('waitlistWelcome.valueProps.point1', locale)}</li>
-                <li style={valueItem}>✅ {getEmailTranslation('waitlistWelcome.valueProps.point2', locale)}</li>
-                <li style={valueItem}>✅ {getEmailTranslation('waitlistWelcome.valueProps.point3', locale)}</li>
-                <li style={valueItem}>✅ {getEmailTranslation('waitlistWelcome.valueProps.point4', locale)}</li>
-              </ul>
+            {/* CTA */}
+            <Section style={ctaSection}>
+              <Link href={`${baseUrl}`} style={ctaLink}>
+                {getEmailTranslation('waitlistWelcome.visitSite', locale)}
+              </Link>
             </Section>
-
-            <Text style={text}>
-              {getEmailTranslation('waitlistWelcome.questions', locale)}
-            </Text>
-
-            <Text style={signature}>
-              {getEmailTranslation('waitlistWelcome.bestRegards', locale)}<br />
-              <strong>{getEmailTranslation('waitlistWelcome.team', locale)}</strong>
-            </Text>
           </Section>
 
           {/* Footer */}
           <Section style={footer}>
             <Text style={footerText}>
-              {getEmailTranslation('waitlistWelcome.footer', locale)}
-            </Text>
-            <Text style={footerText}>
-              {getEmailTranslation('waitlistWelcome.unsubscribe', locale)}{' '}
-              <Link href={`${baseUrl}/unsubscribe?email=${encodeURIComponent(email)}`} style={footerLink}>
-                {getEmailTranslation('waitlistWelcome.unsubscribeLink', locale)}
-              </Link>
+              © {new Date().getFullYear()} {BRAND_CONFIG.name}. All rights reserved.
             </Text>
           </Section>
         </Container>
@@ -208,40 +186,6 @@ const stepDescription = {
   margin: '0',
 };
 
-const valuePropsBox = {
-  backgroundColor: '#fef3f2',
-  border: `2px solid ${BRAND_CONFIG.colors.primary}`,
-  borderRadius: '8px',
-  padding: '24px',
-  margin: '24px 0',
-};
-
-const valuePropsTitle = {
-  color: '#1a1a1a',
-  fontSize: '18px',
-  fontWeight: 'bold',
-  margin: '0 0 12px',
-};
-
-const valueList = {
-  margin: '0',
-  padding: '0',
-  listStyle: 'none',
-};
-
-const valueItem = {
-  color: '#525252',
-  fontSize: '15px',
-  lineHeight: '1.8',
-  margin: '8px 0',
-};
-
-const signature = {
-  color: '#525252',
-  fontSize: '16px',
-  lineHeight: '1.6',
-  margin: '32px 0 16px',
-};
 
 const footer = {
   padding: '0 40px',
@@ -256,8 +200,21 @@ const footerText = {
   textAlign: 'center' as const,
 };
 
-const footerLink = {
-  color: '#8898aa',
-  textDecoration: 'underline',
+
+const ctaSection = {
+  textAlign: 'center' as const,
+  marginTop: '32px',
+};
+
+const ctaLink = {
+  display: 'inline-block',
+  backgroundColor: BRAND_CONFIG.colors.primary,
+  color: '#ffffff',
+  padding: '12px 24px',
+  borderRadius: '8px',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  textDecoration: 'none',
+  lineHeight: '1.5',
 };
 

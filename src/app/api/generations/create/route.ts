@@ -7,13 +7,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { hasSufficientCredits, reserveCreditsForGeneration, getUserCreditBalance } from '@/lib/credits'
-import { getRegenerationCount, PRICING_CONFIG } from '@/config/pricing'
+import { Env } from '@/lib/env'
+import { hasSufficientCredits, reserveCreditsForGeneration, getUserCreditBalance } from '@/domain/credits/credits'
+import { PRICING_CONFIG } from '@/config/pricing'
+import { getRegenerationCount } from '@/domain/pricing'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { SecurityLogger } from '@/lib/security-logger'
 import { z } from 'zod'
 import { randomUUID } from 'crypto'
+import { Logger } from '@/lib/logger'
+import { Telemetry } from '@/lib/telemetry'
 
 // Request validation schema
 const createGenerationSchema = z.object({
@@ -51,7 +55,7 @@ export async function POST(request: NextRequest) {
     const rateLimit = await checkRateLimit(userIdentifier, RATE_LIMITS.generation.limit, RATE_LIMITS.generation.window)
 
     if (!rateLimit.success) {
-      await SecurityLogger.logRateLimitExceeded(userIdentifier, request)
+      await SecurityLogger.logRateLimitExceeded(userIdentifier)
       return NextResponse.json(
         { error: 'Generation rate limit exceeded. Please try again later.' },
         { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000)) }}
@@ -101,7 +105,7 @@ export async function POST(request: NextRequest) {
       
       // If still not found, try to find by looking for a generation with this uploadedPhotoKey
       if (!selfie) {
-        console.log('🔍 Trying to find selfie through generation with uploadedPhotoKey:', selfieKey)
+        Logger.debug('Trying to find selfie through generation with uploadedPhotoKey', { selfieKey })
         const generationWithSelfie = await prisma.generation.findFirst({
           where: { uploadedPhotoKey: selfieKey },
           include: { 
@@ -145,8 +149,7 @@ export async function POST(request: NextRequest) {
       await SecurityLogger.logSuspiciousActivity(
         session.user.id,
         'unauthorized_generation_attempt',
-        { selfieId: selfie.id, selfieOwnerId: selfie.personId },
-        request
+        { selfieId: selfie.id, selfieOwnerId: selfie.personId }
       )
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
@@ -188,7 +191,9 @@ export async function POST(request: NextRequest) {
           { 
             error: 'Insufficient individual credits',
             required: PRICING_CONFIG.credits.perGeneration,
-            available: await getUserCreditBalance(userId!)
+            available: await getUserCreditBalance(userId!),
+            message: 'Please purchase a subscription or credit package to generate photos',
+            redirectTo: '/en/app/settings?purchase=required'
           },
           { status: 402 }
         )
@@ -208,7 +213,9 @@ export async function POST(request: NextRequest) {
           { 
             error: 'Insufficient company credits',
             required: PRICING_CONFIG.credits.perGeneration,
-            available: await getCompanyCreditBalance(selfie.person.companyId)
+            available: await getCompanyCreditBalance(selfie.person.companyId),
+            message: 'Please purchase a subscription or credit package to generate photos',
+            redirectTo: '/en/app/settings?purchase=required'
           },
           { status: 402 }
         )
@@ -382,7 +389,7 @@ export async function POST(request: NextRequest) {
       
       if (originalGeneration?.context?.settings) {
         finalStyleSettings = originalGeneration.context.settings as Record<string, unknown>
-        console.log('🔄 Using context settings from original generation:', originalGeneration.context.name)
+        Logger.debug('Using context settings from original generation', { contextName: originalGeneration.context.name })
       }
     }
     
@@ -398,7 +405,7 @@ export async function POST(request: NextRequest) {
       styleSettings: finalStyleSettings,
       prompt,
       providerOptions: {
-        model: process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image',
+        model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
         numVariations: 4,
       },
       creditSource,
@@ -407,6 +414,7 @@ export async function POST(request: NextRequest) {
       jobId: `gen-${generation.id}`, // Custom ID for easier tracking
     })
 
+    Telemetry.increment('generation.create.success')
     return NextResponse.json({
       success: true,
       generationId: generation.id,
@@ -416,7 +424,8 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Failed to create generation:', error)
+    Logger.error('Failed to create generation', { error: error instanceof Error ? error.message : String(error) })
+    Telemetry.increment('generation.create.error')
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

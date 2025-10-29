@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { createPermissionContext, requirePermission, Permission } from '@/lib/roles'
+import { createPermissionContext, requirePermission, Permission } from '@/domain/access/roles'
 import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
 
-/**
- * Middleware helper to check permissions in API routes
- */
 export async function withPermission(
   request: NextRequest,
   permission: Permission,
@@ -28,12 +25,10 @@ export async function withPermission(
     await requirePermission(context, permission, resource)
     return { context, session }
   } catch {
-    // Add security logging
     await SecurityLogger.logPermissionDenied(
       session.user.id,
       permission,
-      JSON.stringify(resource),
-      request
+      JSON.stringify(resource)
     )
     return NextResponse.json(
       { error: 'Permission denied' }, 
@@ -42,9 +37,6 @@ export async function withPermission(
   }
 }
 
-/**
- * Middleware helper for company-specific operations
- */
 export async function withCompanyPermission(
   request: NextRequest,
   permission: Permission,
@@ -55,11 +47,9 @@ export async function withCompanyPermission(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Check if user has companyId in session, if not, check database
   let companyId = session.user.person?.companyId
   
   if (!companyId) {
-    // Try to get companyId from database if not in session
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: {
@@ -91,12 +81,10 @@ export async function withCompanyPermission(
     await requirePermission(context, permission, resource)
     return { context, session, companyId }
   } catch {
-    // Add security logging
     await SecurityLogger.logPermissionDenied(
       session.user.id,
       permission,
-      JSON.stringify(resource),
-      request
+      JSON.stringify(resource)
     )
     return NextResponse.json(
       { error: 'Permission denied' }, 
@@ -105,9 +93,6 @@ export async function withCompanyPermission(
   }
 }
 
-/**
- * Middleware helper for admin operations
- */
 export async function withAdminPermission(request?: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) {
@@ -123,13 +108,11 @@ export async function withAdminPermission(request?: NextRequest) {
     await requirePermission(context, 'platform.admin')
     return { context, session }
   } catch {
-    // Add security logging if request is provided
     if (request) {
       await SecurityLogger.logPermissionDenied(
         session.user.id,
         'platform.admin',
-        'admin_access',
-        request
+        'admin_access'
       )
     }
     return NextResponse.json(
@@ -139,9 +122,6 @@ export async function withAdminPermission(request?: NextRequest) {
   }
 }
 
-/**
- * Utility to check if user has permission without throwing
- */
 export async function checkPermission(
   session: { user?: { id?: string } } | null,
   permission: Permission,
@@ -162,9 +142,6 @@ export async function checkPermission(
   }
 }
 
-/**
- * Get user's effective roles for UI display
- */
 export async function getUserRoles(session: { user?: { id?: string } } | null) {
   if (!session?.user?.id) return null
 
@@ -173,7 +150,6 @@ export async function getUserRoles(session: { user?: { id?: string } } | null) {
 
   return {
     platformRole: context.user.role === 'company_admin' ? 'team_admin' : context.user.role === 'company_member' ? 'team_member' : 'user',
-    // Company/admin derived strictly from platform role (display naming)
     companyRole: context.user.role === 'company_admin' ? 'team_admin' :
       context.user.role === 'company_member' ? 'team_member' : null,
     isCompanyAdmin: context.user.role === 'company_admin',
@@ -182,3 +158,5 @@ export async function getUserRoles(session: { user?: { id?: string } } | null) {
     isRegularUser: context.user.role === 'user'
   }
 }
+
+

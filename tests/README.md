@@ -1,356 +1,270 @@
-# Selfie Upload Flow Testing Module
+# TeamShots Test Suite
 
-This testing module provides comprehensive test coverage for the selfie upload and approval flow, ensuring the user experience remains consistent and reliable across all changes.
+This directory contains comprehensive tests for the TeamShots Stripe yearly contract implementation.
 
-## 🎯 Overview
-
-The testing module covers:
-- **End-to-End Testing** with Playwright for complete user journeys
-- **Unit Testing** with Jest and React Testing Library for component logic
-- **Integration Testing** for API endpoints and database interactions
-- **Internationalization Testing** for English and Spanish language support
-- **Mobile Testing** across different device viewports
-- **Error Handling Testing** for various failure scenarios
-
-## 📁 Directory Structure
+## Test Structure
 
 ```
 tests/
-├── e2e/
-│   └── selfie-flow/
-│       ├── config.ts              # Test configuration and fixtures
-│       ├── upload.spec.ts          # Upload flow tests
-│       ├── approval.spec.ts        # Approval flow tests
-│       ├── journey.spec.ts         # Complete user journey tests
-│       ├── errors.spec.ts          # Error handling tests
-│       └── i18n-mobile.spec.ts     # Internationalization and mobile tests
-├── unit/
-│   └── components/
-│       ├── SelfieApproval.test.tsx
-│       └── SelfieUploadFlow.test.tsx
-├── fixtures/                       # Test image files
-├── utils/
-│   └── test-data.ts               # Test data management
-└── README.md                      # This file
+├── e2e/                    # End-to-end tests (Playwright)
+│   ├── complete-flow.spec.ts
+│   ├── generation-gating.spec.ts
+│   ├── pricing-page.spec.ts
+│   ├── signup-flow.spec.ts
+│   ├── stripe-checkout.spec.ts
+│   └── stripe-webhook.spec.ts
+├── integration/            # Integration tests (Playwright)
+│   ├── subscription-flow.test.ts
+│   └── credit-system.test.ts
+├── unit/                   # Unit tests (Jest)
+│   ├── stripe-checkout.test.ts
+│   └── stripe-webhook.test.ts
+├── setup/                  # Test setup and configuration
+│   └── test-setup.ts
+├── fixtures/               # Test data and files
+│   ├── valid-selfie.jpg
+│   ├── no-face.jpg
+│   └── multiple-faces.jpg
+└── utils/                  # Test utilities
+    ├── test-data.ts
+    └── test-providers.tsx
 ```
 
-## 🚀 Getting Started
+## Test Types
+
+### 1. Unit Tests (`tests/unit/`)
+- **Framework**: Jest
+- **Purpose**: Test individual functions and API endpoints
+- **Coverage**: Business logic, API routes, utility functions
+- **Run**: `npm run test:unit`
+
+### 2. Integration Tests (`tests/integration/`)
+- **Framework**: Playwright
+- **Purpose**: Test component interactions and API flows
+- **Coverage**: User workflows, component behavior, API integration
+- **Run**: `npm run test:integration`
+
+### 3. End-to-End Tests (`tests/e2e/`)
+- **Framework**: Playwright
+- **Purpose**: Test complete user journeys
+- **Coverage**: Full user flows from signup to photo generation
+- **Run**: `npm run test:e2e`
+
+## Test Coverage
+
+### Stripe Implementation
+- ✅ Checkout session creation
+- ✅ Webhook event handling
+- ✅ Subscription lifecycle management
+- ✅ Credit top-up processing
+- ✅ Upgrade/downgrade flows
+
+### User Flows
+- ✅ Signup with individual/team selection
+- ✅ Pricing page redirects
+- ✅ Checkout flow
+- ✅ Credit management
+- ✅ Photo generation gating
+
+### Business Logic
+- ✅ Credit balance validation
+- ✅ Subscription status checks
+- ✅ Contract management
+- ✅ Payment processing
+
+## Running Tests
 
 ### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- Playwright browsers installed
-
-### Installation
-
 ```bash
 # Install dependencies
 npm install
 
 # Install Playwright browsers
-npx playwright install --with-deps
+npm run test:setup
+
+# Set up test database
+npm run db:push
 ```
 
-### Running Tests
-
+### Individual Test Suites
 ```bash
-# Run all tests
-npm run test:all
+# Unit tests only
+npm run test:unit
 
-# Run only unit tests
-npm run test
+# Integration tests only
+npm run test:integration
 
-# Run only E2E tests
+# E2E tests only
 npm run test:e2e
 
-# Run selfie flow tests specifically
-npm run test:selfie-flow
+# All tests
+npm run test:all
+```
 
-# Run tests in watch mode
-npm run test:watch
+### Test Development
+```bash
+# Watch mode for unit tests
+npm run test:unit:watch
 
-# Run E2E tests with UI
+# Debug E2E tests
+npm run test:e2e:debug
+
+# UI mode for Playwright tests
 npm run test:e2e:ui
-
-# Run E2E tests in headed mode
-npm run test:e2e:headed
+npm run test:integration:ui
 ```
-
-## 🧪 Test Categories
-
-### 1. Upload Flow Tests (`upload.spec.ts`)
-
-Tests the selfie upload process including:
-- Empty state display
-- Upload flow initiation
-- Drag and drop functionality
-- File picker functionality
-- File type validation
-- Face detection validation
-- Upload progress indicators
-- Cancel functionality
-
-### 2. Approval Flow Tests (`approval.spec.ts`)
-
-Tests the selfie approval process including:
-- Approval screen display
-- Quality guidelines display
-- Selfie image display
-- Approval button functionality
-- Retake button functionality
-- Cancel button functionality
-- Processing states
-- Different user contexts
-
-### 3. Complete Journey Tests (`journey.spec.ts`)
-
-Tests the complete user journey including:
-- Full flow from login to approval
-- Retake flow handling
-- Cancel flow handling
-- Session persistence
-- Multiple selfie uploads
-- Company context flows
-
-### 4. Error Handling Tests (`errors.spec.ts`)
-
-Tests various error scenarios including:
-- Server errors during upload
-- Face detection failures
-- File size limit exceeded
-- Network timeouts
-- Insufficient credits
-- API errors during approval
-- Browser storage limitations
-- Invalid image formats
-
-### 5. Internationalization & Mobile Tests (`i18n-mobile.spec.ts`)
-
-Tests cross-language and device support including:
-- Spanish language support
-- Mobile viewport testing
-- Tablet viewport testing
-- Orientation changes
-- Touch interactions
-- Accessibility features
-- Keyboard navigation
-
-## 🔧 Test Configuration
-
-### Playwright Configuration
-
-The `playwright.config.ts` file configures:
-- Test directory and parallel execution
-- Browser projects (Chrome, Firefox, Safari, Mobile)
-- Screenshot and video capture on failure
-- Trace collection for debugging
-- Local development server integration
-
-### Jest Configuration
-
-The `jest.config.js` file configures:
-- Next.js integration
-- TypeScript support
-- Module path mapping
-- Coverage reporting
-- Test environment setup
-
-## 📊 Test Data Management
-
-### Test Fixtures
-
-The testing module includes:
-- **Test Images**: Valid selfies, invalid files, no-face images, multiple faces
-- **Test Users**: Standard users, no-credits users, company admins
-- **Test Companies**: Standard company configurations
-- **Test Data Manager**: Automated cleanup and setup
-
-### Database Management
-
-```typescript
-import { testDataManager } from './utils/test-data';
-
-// Create test user
-const user = await testDataManager.createTestUser({
-  email: 'test@example.com',
-  credits: 10,
-});
-
-// Create test selfie
-const selfie = await testDataManager.createTestSelfie(user.id, {
-  uploadedKey: 'test-key',
-  validated: true,
-});
-
-// Cleanup after tests
-await testDataManager.cleanup();
-```
-
-## 🎨 Test Data Attributes
-
-The tests use `data-testid` attributes for reliable element selection:
-
-```typescript
-// Example test selectors
-'[data-testid="selfies-title"]'
-'[data-testid="upload-cta"]'
-'[data-testid="dropzone"]'
-'[data-testid="approval-screen"]'
-'[data-testid="approve-button"]'
-'[data-testid="retake-button"]'
-'[data-testid="cancel-button"]'
-```
-
-## 🔄 CI/CD Integration
-
-### GitHub Actions Workflow
-
-The `.github/workflows/selfie-flow-tests.yml` workflow:
-- Triggers on changes to selfie-related files
-- Runs unit tests with coverage
-- Runs E2E tests with Playwright
-- Uploads test reports as artifacts
-- Comments PR with test results
-
-### Test Triggers
-
-Tests run automatically when changes are made to:
-- `src/components/Upload/**`
-- `src/app/app-routes/selfies/**`
-- `src/app/api/uploads/**`
-- `src/app/api/files/**`
-- `tests/e2e/selfie-flow/**`
-
-## 📈 Coverage and Reporting
-
-### Coverage Reports
-
-- **Unit Tests**: Jest coverage reports in `coverage/`
-- **E2E Tests**: Playwright HTML reports in `playwright-report/`
-- **CI Integration**: Artifacts uploaded to GitHub Actions
 
 ### Test Reports
-
-- **HTML Reports**: Interactive test results with screenshots
-- **JSON Reports**: Machine-readable test results
-- **JUnit Reports**: CI/CD integration format
-
-## 🐛 Debugging Tests
-
-### Playwright Debugging
-
 ```bash
-# Run tests in debug mode
-npx playwright test --debug
+# Generate coverage report
+npm run test:coverage
 
-# Run specific test in debug mode
-npx playwright test tests/e2e/selfie-flow/upload.spec.ts --debug
-
-# Open test results
-npx playwright show-report
+# View Playwright report
+npm run test:report
 ```
 
-### Jest Debugging
+## Test Configuration
 
+### Jest Configuration (`jest.config.js`)
+- Test environment: jsdom
+- Setup file: `tests/setup/test-setup.ts`
+- Coverage threshold: 70%
+- Module mapping for `@/` imports
+
+### Playwright Configuration (`tests/playwright.config.ts`)
+- Multiple browsers: Chrome, Firefox, Safari
+- Mobile testing: iPhone 12, Pixel 5
+- Screenshots and videos on failure
+- Global setup/teardown
+
+## Mocking Strategy
+
+### API Endpoints
+- Stripe API calls are mocked using Playwright's `route` method
+- Database operations are mocked in unit tests
+- External services are stubbed
+
+### Authentication
+- Mock NextAuth session data
+- Simulate different user states
+- Test both authenticated and unauthenticated flows
+
+### Stripe Events
+- Mock webhook payloads
+- Simulate different event types
+- Test error scenarios
+
+## Test Data
+
+### Fixtures
+- `valid-selfie.jpg`: Valid selfie for testing
+- `no-face.jpg`: Image without face detection
+- `multiple-faces.jpg`: Image with multiple faces
+
+### Test Users
+- Individual users with different subscription states
+- Team users with company associations
+- Users with various credit balances
+
+## Continuous Integration
+
+### GitHub Actions
+Tests run automatically on:
+- Pull requests
+- Push to main branch
+- Release tags
+
+### Test Matrix
+- Node.js versions: 18, 20
+- Browsers: Chrome, Firefox, Safari
+- Operating systems: Ubuntu, macOS, Windows
+
+## Debugging Tests
+
+### Unit Tests
 ```bash
-# Run tests in watch mode
-npm run test:watch
+# Debug specific test
+npm run test:unit -- --testNamePattern="stripe checkout"
 
-# Run tests with verbose output
-npm run test -- --verbose
-
-# Run specific test file
-npm run test -- SelfieApproval.test.tsx
+# Verbose output
+npm run test:unit -- --verbose
 ```
 
-## 🔧 Maintenance
+### Playwright Tests
+```bash
+# Debug mode
+npm run test:e2e:debug
 
-### Adding New Tests
+# Headed mode (see browser)
+npm run test:e2e:headed
 
-1. **Unit Tests**: Add to `tests/unit/components/`
-2. **E2E Tests**: Add to `tests/e2e/selfie-flow/`
-3. **Test Data**: Update `tests/utils/test-data.ts`
-4. **Fixtures**: Add to `tests/fixtures/`
-
-### Updating Test Data
-
-When the selfie flow changes:
-1. Update test selectors in existing tests
-2. Add new test cases for new functionality
-3. Update test data fixtures
-4. Update documentation
-
-### Test Maintenance Checklist
-
-- [ ] All tests pass locally
-- [ ] Tests run in CI/CD pipeline
-- [ ] Test coverage meets requirements
-- [ ] Documentation is up to date
-- [ ] Test data is properly cleaned up
-
-## 📚 Best Practices
-
-### Test Writing
-
-1. **Use descriptive test names** that explain what is being tested
-2. **Keep tests independent** - each test should be able to run in isolation
-3. **Use proper test data** - create realistic test scenarios
-4. **Clean up after tests** - ensure no test data persists
-5. **Test both happy path and error scenarios**
-
-### Test Organization
-
-1. **Group related tests** using `describe` blocks
-2. **Use `beforeEach` and `afterEach`** for setup and cleanup
-3. **Use meaningful test data** that reflects real usage
-4. **Keep tests focused** - one test should verify one behavior
-
-### Performance
-
-1. **Run tests in parallel** when possible
-2. **Use test fixtures** to avoid repeated setup
-3. **Mock external dependencies** to improve test speed
-4. **Clean up test data** to prevent test interference
-
-## 🆘 Troubleshooting
+# Specific test file
+npx playwright test tests/e2e/signup-flow.spec.ts
+```
 
 ### Common Issues
 
-1. **Tests failing in CI but passing locally**
-   - Check environment variables
-   - Verify test data setup
-   - Check for timing issues
+1. **Test Database**: Ensure test database is properly set up
+2. **Environment Variables**: Check `.env.test` file
+3. **Stripe Keys**: Use test keys for all tests
+4. **Port Conflicts**: Ensure port 3000 is available
 
-2. **Flaky tests**
-   - Add proper waits and assertions
-   - Check for race conditions
-   - Use proper test data cleanup
+## Adding New Tests
 
-3. **Slow tests**
-   - Mock external API calls
-   - Use test fixtures instead of creating data
-   - Run tests in parallel
+### Unit Tests
+1. Create test file in `tests/unit/`
+2. Import the function/component to test
+3. Mock dependencies
+4. Write test cases
+5. Run with `npm run test:unit`
+
+### Integration Tests
+1. Create test file in `tests/integration/`
+2. Use Playwright's `test` function
+3. Mock API calls with `page.route()`
+4. Test component interactions
+5. Run with `npm run test:integration`
+
+### E2E Tests
+1. Create test file in `tests/e2e/`
+2. Use Playwright's `test` function
+3. Test complete user journeys
+4. Use real browser interactions
+5. Run with `npm run test:e2e`
+
+## Best Practices
+
+1. **Test Isolation**: Each test should be independent
+2. **Mock External Dependencies**: Don't rely on external services
+3. **Clear Test Names**: Describe what the test does
+4. **Arrange-Act-Assert**: Structure tests clearly
+5. **Test Edge Cases**: Include error scenarios
+6. **Keep Tests Fast**: Avoid unnecessary delays
+7. **Maintain Test Data**: Keep fixtures up to date
+
+## Troubleshooting
+
+### Common Errors
+
+1. **"Test database not found"**
+   - Run `npm run db:push`
+   - Check database connection string
+
+2. **"Stripe API key not found"**
+   - Set `STRIPE_SECRET_KEY` in `.env.test`
+   - Use test keys, not live keys
+
+3. **"Playwright browser not found"**
+   - Run `npm run test:setup`
+   - Install system dependencies
+
+4. **"Port 3000 already in use"**
+   - Stop other development servers
+   - Use different port in test config
 
 ### Getting Help
 
-- Check the [Playwright documentation](https://playwright.dev/docs/intro)
-- Review the [Jest documentation](https://jestjs.io/docs/getting-started)
-- Check test logs in CI/CD pipeline
-- Review test artifacts for screenshots and traces
-
-## 🎉 Success Metrics
-
-The testing module is successful when:
-- ✅ All tests pass consistently
-- ✅ Tests run in under 5 minutes
-- ✅ Coverage is above 80% for selfie flow components
-- ✅ Tests catch regressions before deployment
-- ✅ New features are properly tested
-- ✅ Documentation is up to date
-
----
-
-**Last Updated**: October 2024  
-**Maintainer**: Development Team  
-**Version**: 1.0.0
+1. Check test logs for specific errors
+2. Run tests in debug mode
+3. Check Playwright trace files
+4. Review test configuration files

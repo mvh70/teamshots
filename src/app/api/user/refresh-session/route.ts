@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getUserWithRoles } from '@/lib/roles'
+import { getUserWithRoles } from '@/domain/access/roles'
+import { Logger } from '@/lib/logger'
 
 export async function POST() {
   try {
@@ -13,7 +14,7 @@ export async function POST() {
     // Get fresh user data from database
     const userWithRoles = await getUserWithRoles(session.user.id)
     
-    console.log('getUserWithRoles result:', userWithRoles)
+    Logger.debug('getUserWithRoles result', { hasUser: !!userWithRoles })
     
     if (!userWithRoles) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -39,7 +40,7 @@ export async function POST() {
     })
 
   } catch (error) {
-    console.error('Error refreshing session:', error)
+    Logger.error('Error refreshing session', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

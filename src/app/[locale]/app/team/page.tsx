@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
+import { jsonFetcher } from '@/lib/fetcher'
+import { formatDate } from '@/lib/format'
 import { Link } from '@/i18n/routing'
 import { PlusIcon, EnvelopeIcon, ClockIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { PRICING_CONFIG } from '@/config/pricing'
@@ -119,27 +121,15 @@ export default function TeamPage() {
 
   const fetchTeamData = async () => {
     try {
-      const [contextsResponse, invitesResponse, membersResponse] = await Promise.all([
-        fetch('/api/contexts'),
-        fetch('/api/team/invites'),
-        fetch('/api/company/members')
+      const [contextsData, invitesData, membersData] = await Promise.all([
+        jsonFetcher<{ activeContext: { id: string; name: string } | undefined }>('/api/contexts'),
+        jsonFetcher<{ invites: TeamInvite[] }>('/api/team/invites'),
+        jsonFetcher<{ users: TeamMember[] }>('/api/company/members')
       ])
 
-      const contextsData = await contextsResponse.json()
-      const invitesData = await invitesResponse.json()
-      const membersData = await membersResponse.json()
-
-      if (contextsResponse.ok && invitesResponse.ok && membersResponse.ok) {
-        setCompanyData(prevData => prevData ? { ...prevData, activeContext: contextsData.activeContext } : null)
-        setInvites(invitesData.invites || [])
-        setTeamMembers(membersData.users || [])
-      } else {
-        const errors = []
-        if (!contextsResponse.ok) errors.push(`Contexts: ${contextsData.error || 'Unknown error'}`)
-        if (!invitesResponse.ok) errors.push(`Invites: ${invitesData.error || 'Unknown error'}`)
-        if (!membersResponse.ok) errors.push(`Members: ${membersData.error || 'Unknown error'}`)
-        setError(`Failed to fetch team data: ${errors.join(', ')}`)
-      }
+      setCompanyData(prevData => prevData ? { ...prevData, activeContext: contextsData.activeContext } : null)
+      setInvites(invitesData.invites || [])
+      setTeamMembers(membersData.users || [])
     } catch (error) {
       console.error('Team data fetch error:', error)
       setError('Failed to fetch team data: Network error')
@@ -323,8 +313,8 @@ export default function TeamPage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatInviteDate = (dateString: string) => {
+    return formatDate(dateString, 'en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -730,8 +720,8 @@ export default function TeamPage() {
                       )}
                       <p className="text-xs text-gray-500">
                         {invite.usedAt 
-                          ? t('teamInvites.dates.used', { date: formatDate(invite.usedAt) })
-                          : t('teamInvites.dates.expires', { date: formatDate(invite.expiresAt) })
+                          ? t('teamInvites.dates.used', { date: formatInviteDate(invite.usedAt) })
+                          : t('teamInvites.dates.expires', { date: formatInviteDate(invite.expiresAt) })
                         }
                       </p>
                     </div>

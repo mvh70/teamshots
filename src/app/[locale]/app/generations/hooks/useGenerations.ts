@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import type { GenerationListItem } from '../components/GenerationCard'
+import { jsonFetcher } from '@/lib/fetcher'
 
 export function useGenerations(
   currentUserId?: string,
@@ -30,11 +31,8 @@ export function useGenerations(
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/api/company/members')
-        if (res.ok) {
-          const data = await res.json()
-          if (Array.isArray(data.users)) setCompanyUsers(data.users)
-        }
+        const data = await jsonFetcher<{ users: { id: string; name: string }[] }>('/api/company/members')
+        if (Array.isArray(data.users)) setCompanyUsers(data.users)
       } catch {}
     }
     if (isCompanyAdmin) load()
@@ -62,11 +60,9 @@ export function useGenerations(
         }
       }
       
-      const res = await fetch(url.toString())
-      if (res.ok) {
-        const data = await res.json()
-        // New API returns { generations, pagination }
-        if (Array.isArray(data.generations)) {
+      const data = await jsonFetcher<{ generations: Record<string, unknown>[]; pagination?: Record<string, unknown>; items?: Record<string, unknown>[] }>(url.toString())
+      // New API returns { generations, pagination }
+      if (Array.isArray(data.generations)) {
           const mapped = data.generations.map((g: Record<string, unknown>) => ({
             id: g.id,
             uploadedKey: g.uploadedKey,
@@ -77,7 +73,7 @@ export function useGenerations(
             createdAt: g.createdAt,
             contextName: (g.context as Record<string, unknown>)?.name as string,
             contextId: (g.context as Record<string, unknown>)?.id as string,
-            costCredits: g.creditsUsed ?? 0,
+            costCredits: (g.creditsUsed as number) ?? 0,
             isOwnGeneration: g.isOwnGeneration,
             generationType: g.generationType,
             adminApproved: g.adminApproved,
@@ -93,17 +89,41 @@ export function useGenerations(
           }
           
           if (data.pagination) {
-            setPagination(data.pagination)
+            setPagination(data.pagination as {
+              page: number
+              limit: number
+              totalCount: number
+              totalPages: number
+              hasNextPage: boolean
+              hasPrevPage: boolean
+            })
           }
         } else if (Array.isArray(data.items)) {
           // Backward compatibility
+          const mappedItems = data.items.map((g: Record<string, unknown>) => ({
+            id: g.id,
+            uploadedKey: g.uploadedKey,
+            acceptedKey: g.acceptedKey,
+            selfieKey: g.selfieKey,
+            generatedKey: g.generatedKey,
+            status: g.status,
+            createdAt: g.createdAt,
+            contextName: (g.context as Record<string, unknown>)?.name as string,
+            contextId: (g.context as Record<string, unknown>)?.id as string,
+            costCredits: (g.creditsUsed as number) ?? 0,
+            isOwnGeneration: g.isOwnGeneration,
+            generationType: g.generationType,
+            adminApproved: g.adminApproved,
+            maxRegenerations: g.maxRegenerations,
+            remainingRegenerations: g.remainingRegenerations,
+            isOriginal: g.isOriginal,
+          })) as GenerationListItem[]
           if (append) {
-            setGenerated(prev => [...prev, ...data.items])
+            setGenerated(prev => [...prev, ...mappedItems])
           } else {
-            setGenerated(data.items)
+            setGenerated(mappedItems)
           }
         }
-      }
     } catch {}
     setLoading(false)
   }, [effectiveScope, effectiveTeamView, isCompanyAdmin, selectedUserId])

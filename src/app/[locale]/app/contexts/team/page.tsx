@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
+import { jsonFetcher } from '@/lib/fetcher'
 
 interface Context {
   id: string
@@ -75,15 +76,12 @@ export default function TeamPhotoStylesPage() {
 
   const fetchContexts = useCallback(async () => {
     try {
-      const response = await fetch('/api/contexts/team')
-      const data = await response.json()
-
-      if (response.ok) {
-        setContextsData(data)
-        setError(null)
-      } else {
-        setError(data.error)
-      }
+      const data = await jsonFetcher<{ contexts?: Context[]; activeContext?: Context }>('/api/contexts/team')
+      setContextsData({
+        contexts: data.contexts || [],
+        activeContext: data.activeContext
+      })
+      setError(null)
     } catch {
       setError('Failed to fetch team photo styles')
     } finally {
@@ -100,17 +98,10 @@ export default function TeamPhotoStylesPage() {
     if (!confirm(t('confirmations.deleteContext'))) return
 
     try {
-      const response = await fetch(`/api/contexts/${contextId}`, {
+      await jsonFetcher(`/api/contexts/${contextId}`, {
         method: 'DELETE'
       })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        await fetchContexts()
-      } else {
-        setError(data.error)
-      }
+      await fetchContexts()
     } catch {
       setError(t('errors.deleteFailed'))
     }
@@ -118,17 +109,10 @@ export default function TeamPhotoStylesPage() {
 
   const handleActivateContext = async (contextId: string) => {
     try {
-      const response = await fetch(`/api/contexts/${contextId}/activate`, {
+      await jsonFetcher(`/api/contexts/${contextId}/activate`, {
         method: 'POST'
       })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        await fetchContexts()
-      } else {
-        setError(data.error)
-      }
+      await fetchContexts()
     } catch {
       setError(t('errors.activateFailed'))
     }

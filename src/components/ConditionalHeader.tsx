@@ -56,10 +56,10 @@ export default function ConditionalHeader() {
             {session ? t('dashboard') : t('signin')}
           </Link>
           <Link
-            href="/#waitlist"
+            href="/auth/signup"
             className="px-4 py-2 bg-brand-cta text-white rounded-lg hover:bg-brand-cta-hover transition-colors duration-200 font-semibold shadow-sm hover:shadow-md"
           >
-            {t('joinWaitlist')}
+            Get Started
           </Link>
         </div>
       </nav>

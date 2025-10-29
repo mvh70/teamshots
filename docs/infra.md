@@ -139,6 +139,12 @@ Notes
 - **Error tracking**: TBD (Sentry or similar)
 - **Analytics**: TBD (PostHog, Mixpanel, or simple)
 
+## Code Organization Boundaries
+
+- src/lib: generic, framework-agnostic utilities only (http, fetcher, logger, telemetry, result, errors, format, env/flags, server-headers). No business terms and no imports of `src/config/pricing`.
+- src/domain: business logic (pricing, credits, subscriptions, access/roles/permissions, auth/otp, image access, generation). `PRICING_CONFIG` is only imported here.
+- Logging/Metrics: use `Logger` and `Telemetry` wrappers. Telemetry can forward to PostHog; prefer server-side events for domain actions.
+
 ## Architecture
 
 ```

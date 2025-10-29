@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma"
 import type { Session, User } from "next-auth"
 import type { AdapterUser } from "next-auth/adapters"
 import type { JWT } from "next-auth/jwt"
+import { Env } from '@/lib/env'
 
 export const authOptions = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,12 +26,12 @@ export const authOptions = {
         console.log('🔐 NextAuth authorize called with:', { 
           email: credentials?.email, 
           hasPassword: !!credentials?.password,
-          databaseUrl: process.env.DATABASE_URL,
-          nodeEnv: process.env.NODE_ENV
+          databaseUrl: Env.string('DATABASE_URL'),
+          nodeEnv: Env.string('NODE_ENV')
         });
         
         // Check what database the prisma client is actually using
-        console.log('🗄️ Prisma client database URL:', process.env.DATABASE_URL || 'unknown');
+        console.log('🗄️ Prisma client database URL:', Env.string('DATABASE_URL'));
 
         if (!credentials?.email || !credentials?.password) {
           console.log('❌ Missing credentials');
@@ -76,8 +77,8 @@ export const authOptions = {
 
     // Magic link authentication
     ResendProvider({
-      apiKey: process.env.RESEND_API_KEY!,
-      from: process.env.EMAIL_FROM!,
+      apiKey: Env.string('RESEND_API_KEY'),
+      from: Env.string('EMAIL_FROM'),
     })
   ],
   
@@ -89,36 +90,36 @@ export const authOptions = {
   // Add cookie configuration for security - Safari-compatible
   cookies: {
     sessionToken: {
-      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.session-token`,
+      name: `${Env.string('NODE_ENV') === 'production' ? '__Secure-' : ''}next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax' as const,
         path: '/',
-        secure: process.env.NODE_ENV === 'production'
+        secure: Env.string('NODE_ENV') === 'production'
       }
     },
     callbackUrl: {
-      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
+      name: `${Env.string('NODE_ENV') === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
       options: {
         httpOnly: true,
         sameSite: 'lax' as const,
         path: '/',
-        secure: process.env.NODE_ENV === 'production'
+        secure: Env.string('NODE_ENV') === 'production'
       }
     },
     csrfToken: {
-      name: `${process.env.NODE_ENV === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
+      name: `${Env.string('NODE_ENV') === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax' as const,
         path: '/',
-        secure: process.env.NODE_ENV === 'production'
+        secure: Env.string('NODE_ENV') === 'production'
       }
     }
   },
 
   // Enable CSRF protection
-  useSecureCookies: process.env.NODE_ENV === 'production',
+  useSecureCookies: Env.string('NODE_ENV') === 'production',
   
   callbacks: {
     async jwt({ token, user }: { token: JWT; user?: User | AdapterUser | null }) {

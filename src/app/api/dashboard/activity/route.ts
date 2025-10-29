@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { getUserWithRoles, getUserEffectiveRoles } from '@/lib/roles'
+import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
+import { Logger } from '@/lib/logger'
 
 export async function GET() {
   try {
@@ -159,7 +160,7 @@ export async function GET() {
     })
 
   } catch (error) {
-    console.error('Error fetching dashboard activity:', error)
+    Logger.error('Error fetching dashboard activity', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

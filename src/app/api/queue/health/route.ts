@@ -5,6 +5,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { Logger } from '@/lib/logger'
 
 export async function GET() {
   try {
@@ -16,7 +17,7 @@ export async function GET() {
       status: health.status === 'healthy' ? 200 : 503
     })
   } catch (error) {
-    console.error('Queue health check failed:', error)
+    Logger.error('Queue health check failed', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(
       { 
         status: 'unhealthy',

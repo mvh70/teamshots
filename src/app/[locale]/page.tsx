@@ -1,7 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { routing } from '@/i18n/routing';
-import WaitlistForm from './components/WaitlistForm';
-import InlineWaitlist from './components/InlineWaitlist';
+import Link from 'next/link';
 import SampleGallery from '@/components/SampleGallery';
 import HeroGallery from '@/components/HeroGallery';
 import TrustIndicators from '@/components/TrustIndicators';
@@ -17,7 +16,6 @@ export function generateStaticParams() {
 export default function LandingPage() {
   const t = useTranslations('hero');
   const tFeatures = useTranslations('features');
-  const tw = useTranslations('waitlist');
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-brand-primary-light via-white to-gray-50">
@@ -27,35 +25,19 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-brand-primary-light via-white to-brand-cta-light opacity-60 -z-10"></div>
         
         <div className="text-center relative z-10">
-          {/* Urgency Banner - Enhanced with bold orange */}
-          <div className="inline-flex items-center bg-brand-cta text-white px-5 py-2.5 rounded-full text-sm font-semibold mb-6 shadow-md">
-            <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></span>
-            {t('urgency')}
-          </div>
 
-          <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-900 mb-6">
+          <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-900 mb-4">
             {t('title')}{' '}
             <span className="bg-gradient-to-r from-brand-primary to-brand-primary-hover bg-clip-text text-transparent">{t('titleHighlight')}</span>
           </h1>
+          <div className="text-2xl font-bold text-brand-cta mb-4">
+            {t('instantTransformation')}
+          </div>
           <p className="text-[22px] text-gray-700 mb-8 max-w-3xl mx-auto leading-relaxed">
             {t('subtitle')}
           </p>
           
-          <div className="mb-4">
-            <InlineWaitlist />
-          </div>
 
-          <div className="flex flex-col items-center gap-2 text-sm text-gray-600 mb-6">
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <span className="flex items-center"><svg className="w-4 h-4 mr-1 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4"/></svg>{tw('guarantee')}</span>
-              <span className="flex items-center"><svg className="w-4 h-4 mr-1 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6"/></svg>{tw('secure')}</span>
-              <span className="flex items-center"><svg className="w-4 h-4 mr-1 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01"/></svg>{tw('noSpam')}</span>
-            </div>
-            <div className="inline-flex items-center bg-brand-primary-light text-brand-primary px-3 py-1.5 rounded-full">
-              <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-              {tw('joinedBadge')}
-            </div>
-          </div>
 
           {/* Removed redundant guarantee paragraph under hero; trust cluster below covers it */}
         </div>
@@ -63,6 +45,30 @@ export default function LandingPage() {
         {/* Hero Gallery - Interactive Before/After Demo */}
         <div className="mt-16">
           <HeroGallery />
+          
+          {/* CTA Buttons below first transformation */}
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link
+              href="/auth/signup"
+              className="inline-block px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              {t('joinWaitlist')}
+            </Link>
+            <Link
+              href="/pricing"
+              className="inline-block px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+            >
+              {t('viewPricing')}
+            </Link>
+          </div>
+          
+          {/* Social proof below buttons */}
+          <div className="mt-6 text-center">
+            <div className="inline-flex items-center bg-brand-primary-light text-brand-primary px-4 py-2 rounded-full">
+              <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+              {t('joinedBadge')}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -71,8 +77,10 @@ export default function LandingPage() {
 
       {/* Features Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">{tFeatures('title')}</h2>
-        <div className="grid md:grid-cols-3 gap-8">
+        <h2 className="text-3xl font-bold text-center text-gray-900">{tFeatures('title')}</h2>
+        <p className="mt-3 text-lg text-center text-gray-600 max-w-3xl mx-auto">{tFeatures('subtitle')}</p>
+        <div className="mt-12 grid md:grid-cols-4 gap-8">
+          {/* Speed */}
           <div className="p-6 bg-brand-primary-light rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow duration-300">
             <div className="w-16 h-16 bg-brand-primary-lighter rounded-lg flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,6 +93,33 @@ export default function LandingPage() {
             </p>
           </div>
 
+          {/* Consistency */}
+          <div className="p-6 bg-brand-primary-light rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow duration-300">
+            <div className="w-16 h-16 bg-brand-primary-lighter rounded-lg flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M4 7l2 12h12l2-12M7 7l2-3h6l2 3" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold mb-3 text-gray-900">{tFeatures('consistency.title')}</h3>
+            <p className="text-gray-700 text-[15px] leading-relaxed">
+              {tFeatures('consistency.description')}
+            </p>
+          </div>
+
+          {/* Control */}
+          <div className="p-6 bg-brand-primary-light rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow duration-300">
+            <div className="w-16 h-16 bg-brand-primary-lighter rounded-lg flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold mb-3 text-gray-900">{tFeatures('control.title')}</h3>
+            <p className="text-gray-700 text-[15px] leading-relaxed">
+              {tFeatures('control.description')}
+            </p>
+          </div>
+
+          {/* Cost */}
           <div className="p-6 bg-brand-primary-light rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow duration-300">
             <div className="w-16 h-16 bg-brand-primary-lighter rounded-lg flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,18 +129,6 @@ export default function LandingPage() {
             <h3 className="text-xl font-bold mb-3 text-gray-900">{tFeatures('costEffective.title')}</h3>
             <p className="text-gray-700 text-[15px] leading-relaxed">
               {tFeatures('costEffective.description')}
-            </p>
-          </div>
-
-          <div className="p-6 bg-brand-primary-light rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow duration-300">
-            <div className="w-16 h-16 bg-brand-primary-lighter rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold mb-3 text-gray-900">{tFeatures('remote.title')}</h3>
-            <p className="text-gray-700 text-[15px] leading-relaxed">
-              {tFeatures('remote.description')}
             </p>
           </div>
         </div>
@@ -126,8 +149,6 @@ export default function LandingPage() {
       {/* Pricing Preview */}
       <PricingPreview />
 
-      {/* CTA Section */}
-      <WaitlistForm />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
+import { formatDate } from '@/lib/format'
 import Image from 'next/image'
 import { CameraIcon, TrashIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
@@ -157,13 +158,13 @@ export default function SelfiesPage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
+  const formatSelfieDate = (dateString: string) => {
     try {
       const date = new Date(dateString)
       if (isNaN(date.getTime())) {
         return 'Unknown date'
       }
-      return date.toLocaleDateString('en-US', {
+      return formatDate(dateString, 'en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -291,7 +292,7 @@ export default function SelfiesPage() {
                       </div>
                       <div className="mt-2">
                         <p className="text-sm text-gray-600">
-                          {formatDate(selfie.uploadedAt)}
+                          {formatSelfieDate(selfie.uploadedAt)}
                         </p>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           selfie.status === 'approved' 

@@ -9,8 +9,6 @@ export function formatTierName(tier: SubscriptionTier): string {
 }
 
 export async function getTierFeatures(tier: SubscriptionTier) {
-  // Keep this module client-safe by not importing server-only code.
-  // PRICING_CONFIG import is safe for client usage.
   const { PRICING_CONFIG } = await import('@/config/pricing') as {
     PRICING_CONFIG: {
       individual: { includedCredits: number }

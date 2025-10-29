@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { getRequestIp } from './server-headers'
 
 // Lazy import Redis to avoid build-time issues
 let redis: unknown = null
@@ -62,44 +63,16 @@ export async function checkRateLimit(
   }
 }
 
-export function getRateLimitIdentifier(request: NextRequest | unknown, scope: string): string {
+export async function getRateLimitIdentifier(request: NextRequest | unknown, scope: string): Promise<string> {
   try {
-    // During build-time static analysis, request may be undefined or headers may not exist
+    // During build-time static analysis, request may be undefined
     if (!request || typeof request !== 'object') {
       return `${scope}:unknown`
     }
     
-    // Type guard to check if request has headers property
-    const req = request as Record<string, unknown>
-    if (!('headers' in req) || !req.headers) {
-      return `${scope}:build-time`
-    }
-    
-    // Try to access headers safely
-    const headers = req.headers
-    if (!headers || typeof headers !== 'object') {
-      return `${scope}:unknown`
-    }
-    
-    // Check if headers has a get method and it's callable
-    if (!('get' in headers) || typeof (headers as { get?: (key: string) => string | null | undefined }).get !== 'function') {
-      return `${scope}:unknown`
-    }
-    
-    // Try to get IP from headers with additional safety
-    try {
-      const getMethod = (headers as { get: (key: string) => string | null | undefined }).get
-      const forwardedFor = getMethod('x-forwarded-for')
-      const realIp = getMethod('x-real-ip')
-      
-      const ip = forwardedFor?.split(',')[0]?.trim() || 
-                 realIp?.trim() || 
-                 'unknown'
-      return `${scope}:${ip}`
-    } catch (headerError) {
-      console.warn('Header access failed:', headerError)
-      return `${scope}:unknown`
-    }
+    // Use the server-headers utility for consistent IP extraction
+    const ip = await getRequestIp() || 'unknown'
+    return `${scope}:${ip}`
   } catch (error) {
     // If anything fails (e.g., during build-time analysis), return a safe fallback
     console.warn('Rate limit identifier generation failed:', error)

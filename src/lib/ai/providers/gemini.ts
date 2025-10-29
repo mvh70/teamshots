@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, GenerativeModel, GenerationConfig, SafetySetting } from '@google/generative-ai'
 import { AIProvider, AIProviderConfig, GenerateImageInput, ProviderResult, AIProviderError, GeneratedImage } from './AIProvider'
+import { Env } from '@/lib/env'
 
 export interface GeminiConfig extends AIProviderConfig {
   model?: string
@@ -20,7 +21,7 @@ export class GeminiProvider extends AIProvider {
 
     this.genAI = new GoogleGenerativeAI(config.apiKey)
     this.model = this.genAI.getGenerativeModel({ 
-      model: config.model || process.env.GEMINI_IMAGE_MODEL || 'gemini-2.0-flash-exp',
+      model: config.model || Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.0-flash-exp'),
       safetySettings: config.safetySettings || [
         {
           category: 'HARM_CATEGORY_HARASSMENT',
@@ -94,7 +95,7 @@ export class GeminiProvider extends AIProvider {
         cost: this.calculateCost(images.length),
         metadata: {
           provider: 'gemini',
-          model: this.config.model || process.env.GEMINI_IMAGE_MODEL || 'gemini-2.0-flash-exp',
+          model: this.config.model || Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.0-flash-exp'),
           duration,
           tokensUsed: response.usageMetadata?.totalTokenCount || 0
         }
@@ -109,7 +110,7 @@ export class GeminiProvider extends AIProvider {
         images: [],
         metadata: {
           provider: 'gemini',
-          model: this.config.model || process.env.GEMINI_IMAGE_MODEL || 'gemini-2.0-flash-exp',
+          model: this.config.model || Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.0-flash-exp'),
           duration
         },
         error: normalizedError

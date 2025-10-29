@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getRequestHeader } from '@/lib/server-headers'
 
 const allowedOrigins = [
   'http://localhost:3000',
@@ -6,8 +7,8 @@ const allowedOrigins = [
   'https://www.teamshots.vip',
 ]
 
-export function corsMiddleware(request: NextRequest, response: NextResponse) {
-  const origin = request.headers.get('origin')
+export async function corsMiddleware(request: NextRequest, response: NextResponse) {
+  const origin = await getRequestHeader('origin')
   
   if (origin && allowedOrigins.includes(origin)) {
     response.headers.set('Access-Control-Allow-Origin', origin)

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
+import { formatDate } from '@/lib/format'
 import { PhotoIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 
 interface Generation {
@@ -342,7 +343,7 @@ export default function GenerationsPage() {
                             : 'Freestyle'
                           }
                         </p>
-                        <span className="text-xs text-gray-500">{new Date(generation.createdAt).toLocaleDateString()}</span>
+                        <span className="text-xs text-gray-500">{formatDate(generation.createdAt)}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="text-xs text-gray-500">

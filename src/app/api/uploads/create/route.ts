@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,8 +24,7 @@ export async function POST(req: NextRequest) {
     })
     return NextResponse.json({ id: created.id })
   } catch (e) {
-     
-    console.error('[uploads/create] error', e)
+    Logger.error('[uploads/create] error', { error: e instanceof Error ? e.message : String(e) })
     return NextResponse.json({ error: 'Failed to save upload' }, { status: 500 })
   }
 }

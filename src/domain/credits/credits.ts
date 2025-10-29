@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { Logger } from '@/lib/logger'
 
 export type CreditTransactionType =
   | 'purchase'
@@ -47,7 +48,7 @@ export async function getCompanyCreditBalance(companyId: string): Promise<number
     _sum: { credits: true }
   })
   const balance = result._sum.credits || 0
-  console.log(`🔍 getCompanyCreditBalance: companyId=${companyId}, balance=${balance}`)
+  Logger.debug('getCompanyCreditBalance', { companyId, balance })
   return balance
 }
 
@@ -169,7 +170,7 @@ export async function reserveCreditsForGeneration(
   // For team members (personId exists), use company credits
   if (personId && companyId) {
     const companyBalance = await getCompanyCreditBalance(companyId)
-    console.log(`🔍 Credit validation: companyId=${companyId}, balance=${companyBalance}, required=${amount}`)
+    Logger.debug('Credit validation', { companyId, balance: companyBalance, required: amount })
     if (companyBalance < amount) {
       throw new Error(`Insufficient company credits. Available: ${companyBalance}, Required: ${amount}`)
     }
@@ -282,13 +283,13 @@ export async function hasSufficientCredits(
 
   if (companyId) {
     balance = await getCompanyCreditBalance(companyId)
-    console.log(`🔍 hasSufficientCredits: companyId=${companyId}, balance=${balance}, required=${amount}`)
+    Logger.debug('hasSufficientCredits company', { companyId, balance, required: amount })
   } else if (personId) {
     balance = await getPersonCreditBalance(personId)
-    console.log(`🔍 hasSufficientCredits: personId=${personId}, balance=${balance}, required=${amount}`)
+    Logger.debug('hasSufficientCredits person', { personId, balance, required: amount })
   } else {
     balance = await getUserCreditBalance(userId!)
-    console.log(`🔍 hasSufficientCredits: userId=${userId}, balance=${balance}, required=${amount}`)
+    Logger.debug('hasSufficientCredits user', { userId, balance, required: amount })
   }
 
   return balance >= amount
@@ -327,3 +328,5 @@ export async function getTransactionAnalytics(userId: string) {
     creditsPerDollar: calculateCreditsPerDollar(tx.credits, tx.amount || 0)
   }))
 }
+
+

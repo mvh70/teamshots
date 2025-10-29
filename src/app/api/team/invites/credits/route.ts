@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { withCompanyPermission } from '@/lib/permissions'
-import { getTeamInviteRemainingCredits } from '@/lib/credits'
+import { withCompanyPermission } from '@/domain/access/permissions'
+import { getTeamInviteRemainingCredits } from '@/domain/credits/credits'
+import { Logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching team invite credits:', error)
+    Logger.error('Error fetching team invite credits', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

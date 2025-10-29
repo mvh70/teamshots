@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { headers } from 'next/headers';
+import { getRequestHeader } from '@/lib/server-headers';
+import { Env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
 import { PRICING_CONFIG } from '@/config/pricing';
 import { PrismaClient } from '@prisma/client';
+import { Logger } from '@/lib/logger';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
   apiVersion: '2025-09-30.clover',
 });
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const webhookSecret = Env.string('STRIPE_WEBHOOK_SECRET');
 
 // Disable body parsing, we need the raw body for webhook signature verification
 export const runtime = 'nodejs';
@@ -21,8 +23,7 @@ type PrismaTransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    const headersList = await headers();
-    const signature = headersList.get('stripe-signature');
+    const signature = await getRequestHeader('stripe-signature');
 
     if (!signature) {
       return NextResponse.json(
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
-      console.error('Webhook signature verification failed:', err);
+      Logger.error('Webhook signature verification failed', { error: err instanceof Error ? err.message : String(err) });
       return NextResponse.json(
         { error: 'Webhook signature verification failed' },
         { status: 400 }
@@ -45,9 +46,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle different event types
-    console.log(`📨 Processing webhook event: ${event.type}`);
+    Logger.info(`Processing webhook event: ${event.type}`);
     
     switch (event.type) {
+      case 'subscription_schedule.created':
+      case 'subscription_schedule.updated': {
+        const schedule = event.data.object as Stripe.SubscriptionSchedule
+        await handleSubscriptionScheduleEvent(schedule)
+        break
+      }
       case 'checkout.session.completed':
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
         break;
@@ -74,14 +81,14 @@ export async function POST(request: NextRequest) {
         break;
         
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        Logger.warn(`Unhandled event type: ${event.type}`);
     }
     
-    console.log(`✅ Successfully processed webhook event: ${event.type}`);
+    Logger.info(`Successfully processed webhook event: ${event.type}`);
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('Webhook error:', error);
+    Logger.error('Webhook error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Webhook handler failed' },
       { status: 500 }
@@ -89,13 +96,45 @@ export async function POST(request: NextRequest) {
   }
 }
 
+function getInvoicePaymentIntentId(invoice: Stripe.Invoice): string {
+  const pi = (invoice as unknown as { payment_intent?: string | { id?: string } | null }).payment_intent;
+  if (typeof pi === 'string') return pi;
+  if (pi && typeof pi === 'object' && 'id' in pi && typeof pi.id === 'string') return pi.id;
+  return invoice.id;
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const userId = session.metadata?.userId;
+  let userId = session.metadata?.userId as string | undefined;
   const purchaseType = session.metadata?.type;
   
+  // In unauthenticated checkout flows, we won't have a userId.
+  // Fallback: look up/create a user by email from the session and attach the Stripe customer ID.
   if (!userId) {
-    console.error('No userId in session metadata');
-    return;
+    const email = (session.customer_details?.email || session.customer_email || '').toLowerCase();
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+    if (!email) {
+      Logger.error('No userId and no email on checkout session; cannot attribute purchase', { sessionId: session.id });
+      return;
+    }
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      userId = existing.id;
+      if (customerId && !existing.stripeCustomerId) {
+        await prisma.user.update({ where: { id: existing.id }, data: { stripeCustomerId: customerId } });
+      }
+    } else {
+      const created = await prisma.user.create({
+        data: {
+          email,
+          // password will be set after OTP verification; leave null/empty if allowed by schema
+          role: 'user',
+          stripeCustomerId: customerId || null,
+          subscriptionStatus: 'active',
+        },
+        select: { id: true }
+      });
+      userId = created.id;
+    }
   }
 
   // Retrieve the checkout session with line items
@@ -191,9 +230,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       
       let price = 0;
       if (tier === 'individual') {
-        price = PRICING_CONFIG.individual.topUp.pricePerPackage;
+        price = PRICING_CONFIG.individual.topUp.price;
       } else if (tier === 'pro') {
-        price = PRICING_CONFIG.pro.topUp.pricePerPackage;
+        price = PRICING_CONFIG.pro.topUp.price;
       }
       
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
@@ -204,7 +243,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             credits: credits,
             type: 'purchase',
             description: `Credit top-up - ${credits} credits`,
-            amount: price * Math.ceil(credits / (tier === 'individual' ? PRICING_CONFIG.individual.topUp.creditsPerPackage : PRICING_CONFIG.pro.topUp.creditsPerPackage)),
+            amount: price * Math.ceil(credits / (tier === 'individual' ? PRICING_CONFIG.individual.topUp.credits : PRICING_CONFIG.pro.topUp.credits)),
             currency: 'USD',
             stripePaymentId: session.payment_intent as string,
             planTier: tier,
@@ -219,14 +258,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       });
     }
   } catch (error) {
-    console.error('Error processing checkout:', error);
+    Logger.error('Error processing checkout', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   try {
-    console.log('🔄 Processing subscription update:', subscription.id);
+    Logger.info('Processing subscription update', { subscriptionId: subscription.id });
     
     // Try to get userId from metadata first (for new subscriptions)
     let userId = subscription.metadata?.userId;
@@ -237,7 +276,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
         ? subscription.customer 
         : subscription.customer.id;
       
-      console.log('🔍 Looking up user by customer ID:', customerId);
+      Logger.debug('Looking up user by customer ID', { customerId });
       
       const user = await prisma.user.findUnique({
         where: { stripeCustomerId: customerId },
@@ -245,23 +284,18 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       });
       
       if (!user) {
-        console.error('❌ User not found for customer ID:', customerId);
+        Logger.error('User not found for customer ID', { customerId });
         return;
       }
       
       userId = user.id;
-      console.log('✅ Found user:', userId);
+      Logger.info('Found user', { userId });
     }
 
     const price = subscription.items.data[0]?.price;
     const tier = determineTier(price?.id);
     
-    console.log('📊 Subscription details:', {
-      userId,
-      tier,
-      status: subscription.status,
-      priceId: price?.id
-    });
+    Logger.debug('Subscription details', { userId, tier, status: subscription.status, priceId: price?.id });
     
     await prisma.user.update({
       where: { id: userId },
@@ -272,9 +306,9 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       },
     });
     
-    console.log('✅ Subscription updated successfully');
+    Logger.info('Subscription updated successfully');
   } catch (error) {
-    console.error('❌ Error in handleSubscriptionUpdate:', error);
+    Logger.error('Error in handleSubscriptionUpdate', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
@@ -283,7 +317,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const userId = subscription.metadata?.userId;
   
   if (!userId) {
-    console.error('No userId in subscription metadata');
+    Logger.error('No userId in subscription metadata');
     return;
   }
 
@@ -299,17 +333,23 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
 async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   // Payment succeeded - additional logging or notification
-  console.log('Payment succeeded:', paymentIntent.id);
+  Logger.info('Payment succeeded', { paymentIntentId: paymentIntent.id });
 }
 
 async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
   // Payment failed - send notification or log error
-  console.error('Payment failed:', paymentIntent.id, paymentIntent.last_payment_error);
+  Logger.error('Payment failed', { paymentIntentId: paymentIntent.id, error: paymentIntent.last_payment_error });
 }
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   // Handle subscription renewals - allocate monthly credits
   const subscriptionId = (invoice as { subscription?: string }).subscription;
+  
+  // Check if this is a credit top-up first
+  if (invoice.metadata?.credit_topup === 'true') {
+    await handleCreditTopUp(invoice);
+    return;
+  }
   
   if (subscriptionId) {
     
@@ -325,7 +365,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     });
     
     if (!user) {
-      console.error('User not found for customer ID:', customerId);
+      Logger.error('User not found for customer ID', { customerId });
       return;
     }
     
@@ -339,7 +379,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     // If the invoice was created within 5 minutes of the subscription, it's likely the initial payment
     // Skip processing to avoid double credits
     if (timeDifference < 5 * 60 * 1000) { // 5 minutes in milliseconds
-      console.log('Skipping initial invoice payment - credits already allocated during signup');
+      Logger.info('Skipping initial invoice payment - credits already allocated during signup');
       return;
     }
     
@@ -348,7 +388,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     const tier = determineTier(price?.id);
     
     if (!tier) {
-      console.error('Could not determine tier for subscription:', subscriptionId);
+      Logger.error('Could not determine tier for subscription', { subscriptionId });
       return;
     }
     
@@ -386,6 +426,108 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
         },
       });
     });
+  }
+}
+
+async function handleCreditTopUp(invoice: Stripe.Invoice) {
+  try {
+    const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
+    if (!customerId) {
+      Logger.error('No customer ID found for credit top-up invoice', { invoiceId: invoice.id });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { stripeCustomerId: customerId },
+    });
+
+    if (!user) {
+      Logger.error('User not found for credit top-up', { customerId, invoiceId: invoice.id });
+      return;
+    }
+
+    const credits = parseInt(invoice.metadata?.credits || '0');
+    const tier = invoice.metadata?.tier || 'try_once';
+
+    if (credits <= 0) {
+      Logger.error('Invalid credits amount for top-up', { credits, invoiceId: invoice.id });
+      return;
+    }
+
+    // Check if we've already processed this invoice to avoid double-crediting
+    const existingTransaction = await prisma.creditTransaction.findFirst({
+      where: {
+        stripeInvoiceId: invoice.id,
+        type: 'purchase',
+      },
+    });
+
+    if (existingTransaction) {
+      Logger.info('Credit top-up already processed', { invoiceId: invoice.id, transactionId: existingTransaction.id });
+      return;
+    }
+
+    await prisma.$transaction(async (tx: PrismaTransactionClient) => {
+      await tx.creditTransaction.create({
+        data: {
+          userId: user.id,
+          credits: credits,
+          type: 'purchase',
+          description: `Credit top-up - ${tier} (${credits} credits)`,
+          amount: invoice.amount_paid ? invoice.amount_paid / 100 : 0,
+          currency: 'USD',
+          stripePaymentId: getInvoicePaymentIntentId(invoice),
+          stripeInvoiceId: invoice.id,
+          planTier: tier,
+          planPeriod: 'one_time',
+          metadata: {
+            stripeInvoiceId: invoice.id,
+            topUpCredits: credits,
+            tier: tier,
+          },
+        },
+      });
+    });
+
+    Logger.info('Credit top-up processed successfully', { 
+      userId: user.id, 
+      credits, 
+      tier, 
+      invoiceId: invoice.id 
+    });
+  } catch (error) {
+    Logger.error('Error processing credit top-up', { error: error instanceof Error ? error.message : String(error), invoiceId: invoice.id });
+  }
+}
+
+async function handleSubscriptionScheduleEvent(schedule: Stripe.SubscriptionSchedule) {
+  try {
+    const subId = typeof schedule.subscription === 'string' ? schedule.subscription : schedule.subscription?.id
+    if (!subId) return
+    const subscription = await stripe.subscriptions.retrieve(subId)
+    const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
+
+    const user = await prisma.user.findUnique({ where: { stripeCustomerId: customerId } })
+    if (!user) return
+
+    const contract_start = schedule.metadata?.contract_start || subscription.metadata?.contract_start
+    const contract_end = schedule.metadata?.contract_end || subscription.metadata?.contract_end
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        metadata: {
+          ...(user.metadata as Record<string, unknown>),
+          contract: {
+            contract_start,
+            contract_end,
+            scheduleId: schedule.id,
+          },
+        },
+      },
+    })
+  } catch (error) {
+    console.error('Error handling subscription schedule event', error)
   }
 }
 

@@ -64,8 +64,8 @@ export default async function LocaleLayout({ children, params }: Props) {
                     <Link href="/pricing" className="hover:text-white">
                       {t('pricing')}
                     </Link>
-                    <Link href="/#waitlist" className="hover:text-white">
-                      {t('joinWaitlist')}
+                    <Link href="/auth/signup" className="hover:text-white">
+                      Get Started
                     </Link>
                   </div>
                   <p className="text-gray-500 text-sm mt-8">

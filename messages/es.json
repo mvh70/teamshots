@@ -4,27 +4,41 @@
     "pricing": "Precios",
     "signin": "Iniciar Sesión",
     "dashboard": "Panel",
-    "joinWaitlist": "Únete a la Lista",
+    "joinWaitlist": "Comenzar",
     "settings": "Ajustes"
   },
   "hero": {
     "title": "Fotos profesionales de equipo en 60 segundos",
     "titleHighlight": "sin sesión de fotos",
-    "subtitle": "Convierte selfies del equipo en retratos coherentes con tu marca. Sin fotógrafo. Sin coordinación. Incluye nuevas incorporaciones.",
-    "joinWaitlist": "Únete a la Lista",
+    "subtitle": "Convierte selfies del equipo en retratos coherentes con tu marca. Sin fotógrafo. Sin coordinación. Transformación instantánea desde un selfie.",
+    "instantTransformation": "⚡ Transformación instantánea",
+    "getStartedFree": "Regístrate Ahora",
     "viewPricing": "Ver Precios",
+    "joinWaitlist": "Comenzar",
     "urgency": "Acceso Beta Limitado",
-    "guarantee": "Garantía de devolución de 30 días"
+    "guarantee": "Garantía de devolución de 30 días",
+    "secure": "Cifrado SSL y seguro",
+    "noSpam": "Sin spam, nunca",
+    "joinedBadge": "Únete a cientos de equipos que ya usan retratos con IA"
   },
   "features": {
-    "title": "Elimina el dolor de las fotos de equipo",
+    "title": "Retratos profesionales del equipo en aproximadamente un minuto",
+    "subtitle": "Fotos coherentes con tu marca para cada compañero—sin estudios, sin coordinación ni re‑sesiones.",
     "fast": {
       "title": "60 segundos, no 6 semanas",
-      "description": "Sin coordinar estudio. Cada persona sube una vez y obtiene resultados al instante. Tu web y press kit se mantienen al día."
+      "description": "Cada persona sube una vez y obtiene resultados al instante. Tu web y press kit se mantienen al día."
+    },
+    "consistency": {
+      "title": "En marca, siempre",
+      "description": "Una especificación para todo el equipo. Las nuevas incorporaciones encajan desde el día uno—sin re‑sesión."
+    },
+    "control": {
+      "title": "Autoservicio para cada incorporación",
+      "description": "Invita, aprueba y regenera cuando quieras—sin coordinación de estudio."
     },
     "costEffective": {
       "title": "Olvida la sesión de $2,000+",
-      "description": "Sustituye sesiones de $50–$200 por persona por IA bajo demanda. Paga solo cuando necesites fotos nuevas o actualizadas."
+      "description": "Fotos profesionales instantáneas que cuestan menos que un café por persona. Paga solo cuando necesites fotos nuevas o actualizadas."
     },
     "remote": {
       "title": "Distribuido por defecto",
@@ -46,9 +60,25 @@
     "commercialUse": "Uso comercial"
   },
   "trust": {
-    "title": "Confiado y Seguro",
-    "subtitle": "Tus datos y fotos están protegidos con seguridad de nivel empresarial",
+    "title": "Por qué los equipos eligen TeamShots",
+    "subtitle": "El único servicio de retratos con IA diseñado específicamente para equipos",
     "badges": {
+      "noWatermarks": {
+        "title": "Sin marcas de agua, nunca",
+        "description": "Tus fotos son 100% tuyas. Sin marcas de agua, sin branding, sin restricciones. Úsalas donde quieras, cuando quieras."
+      },
+      "instant": {
+        "title": "Resultados instantáneos",
+        "description": "Retratos profesionales en aproximadamente un minuto. Sin coordinación ni esperas."
+      },
+      "teamManagement": {
+        "title": "Gestión Fácil del Equipo",
+        "description": "Envía invitaciones, asigna créditos y predefine estilos. Las nuevas incorporaciones obtienen fotos profesionales el día uno."
+      },
+      "costSavings": {
+        "title": "Menos que un café",
+        "description": "Retratos profesionales de equipo por menos que un café. Perfecto para equipos de cualquier tamaño."
+      },
       "security": {
         "title": "Seguridad de Nivel Bancario",
         "description": "El cifrado de nivel empresarial protege tus datos y fotos. Nunca almacenamos ni compartimos sin permiso."
@@ -63,6 +93,9 @@
     "testimonialsTitle": "Lo Que Dicen Nuestros Usuarios Tempranos",
     "userCount": "personas ya se unieron",
     "trustMessage": "Únete a cientos de equipos transformando sus fotos profesionales con IA",
+    "noWatermarks": "Sin marcas de agua",
+    "commercialUse": "Uso comercial incluido",
+    "highResolution": "Alta resolución",
     "beta": {
       "name": "Usuario Beta",
       "role": "Probador Temprano",
@@ -75,7 +108,7 @@
     "subtitle": "Cinco pasos sencillos. Un minuto aprox. Sin sesión de fotos.",
     "totalTime": "Tiempo total:",
     "totalTimeValue": "60 segundos",
-    "cta": "Unirse a Lista de Espera",
+    "cta": "Comenzar",
     "guarantee": "Garantía de devolución de 30 días",
     "steps": {
       "1": {
@@ -179,7 +212,7 @@
           "2": "Retención de foto por 30 días",
           "3": "Soporte por correo electrónico"
         },
-        "cta": "Únete a la Lista"
+        "cta": "Regístrate Ahora"
       },
       "starter": {
         "name": "Inicial",
@@ -195,7 +228,7 @@
           "4": "Recarga a $0.90 por 4 créditos",
           "5": "Soporte prioritario por correo electrónico"
         },
-        "cta": "Únete a la Lista",
+        "cta": "Comenzar",
         "savings": "Ahorra $43/año"
       },
       "pro": {
@@ -212,7 +245,7 @@
           "4": "Recarga a $0.60 por 4 créditos",
           "5": "Soporte prioritario con gerente de cuenta dedicado"
         },
-        "cta": "Únete a la Lista",
+        "cta": "Comenzar",
         "savings": "Ahorra $108/año"
       }
     }
@@ -222,7 +255,7 @@
     "subtitle": "Únete a más de 247 equipos que ya están transformando sus fotos profesionales con IA",
     "emailPlaceholder": "Ingresa tu correo de trabajo",
     "submit": "Únete a la Lista",
-    "submitFirstPerson": "Obtén mi acceso temprano",
+    "submitFirstPerson": "Comenzar",
     "submitting": "Enviando...",
     "success": "¡Gracias por unirte! Revisa tu correo para la confirmación.",
     "error": "Algo salió mal. Por favor intenta de nuevo.",
@@ -263,7 +296,7 @@
           "Fotos retenidas por 30 días desde la generación",
           "Soporte por correo electrónico"
         ],
-        "cta": "Únete a la Lista"
+        "cta": "Regístrate Ahora"
       },
       "individual": {
         "name": "Individual",
@@ -276,7 +309,7 @@
           "Recarga de créditos disponible",
           "Soporte prioritario por correo"
         ],
-        "cta": "Únete a la Lista"
+        "cta": "Regístrate Ahora"
       },
       "pro": {
         "name": "Pro",
@@ -292,7 +325,7 @@
           "Créditos de recarga con descuento",
           "Soporte prioritario con gerente de cuenta dedicado"
         ],
-        "cta": "Únete a la Lista"
+        "cta": "Regístrate Ahora"
       }
     },
     "faq": {
@@ -355,7 +388,20 @@
       "enterCodeFor": "Ingresa el código de 6 dígitos enviado a {email}",
       "verifying": "Verificando...",
       "verifyCode": "Verificar código",
+      "bannerTitle": "¡Ya casi! Un último paso 🎉",
+      "didntReceiveCode": "¿No recibiste un código?",
+      "info": {
+        "checkoutSuccess": "Pago exitoso. Ahora estás suscrito a {plan}. Enviamos un código de un solo uso a {email}. Ingresa el código abajo para confirmar tu correo."
+      },
+      "planPro": "Pro",
+      "planIndividual": "Individual",
+      "planGeneric": "tu plan",
       "firstNameLabel": "Nombre",
+      "userTypeLabel": "¿Cómo usarás TeamShots?",
+      "individual": "Individual",
+      "individualDesc": "Para uso personal",
+      "team": "Equipo",
+      "teamDesc": "Para uso empresarial/equipo",
       "creating": "Creando cuenta...",
       "completeRegistration": "Completar registro",
       "haveAccount": "¿Ya tienes cuenta? Inicia sesión",

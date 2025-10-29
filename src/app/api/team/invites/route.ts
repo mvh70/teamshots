@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendTeamInviteEmail } from '@/lib/email'
+import { Env } from '@/lib/env'
 import { randomBytes } from 'crypto'
-import { withCompanyPermission } from '@/lib/permissions'
-import { getCompanyCreditBalance, getTeamInviteRemainingCredits } from '@/lib/credits'
+import { withCompanyPermission } from '@/domain/access/permissions'
+import { getCompanyCreditBalance, getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { Logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Send email with invite link
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+    const baseUrl = Env.string('NEXTAUTH_URL', 'http://localhost:3000')
     const inviteLink = `${baseUrl}/invite/${token}`
     
     const emailResult = await sendTeamInviteEmail({
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!emailResult.success) {
-      console.error('Failed to send team invite email:', emailResult.error)
+      Logger.error('Failed to send team invite email', { error: emailResult.error })
       // Still return success for the invite creation, but log the email error
     }
 
@@ -123,7 +125,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error creating team invite:', error)
+    Logger.error('Error creating team invite', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -211,7 +213,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching team invites:', error)
+    Logger.error('Error fetching team invites', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

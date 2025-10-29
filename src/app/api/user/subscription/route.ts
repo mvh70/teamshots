@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getUserSubscription } from '@/lib/subscription'
+import { getUserSubscription } from '@/domain/subscription/subscription'
+import { Logger } from '@/lib/logger'
 
 export async function GET() {
   const session = await auth()
@@ -13,7 +14,7 @@ export async function GET() {
     const subscription = await getUserSubscription(session.user.id)
     return NextResponse.json({ subscription })
   } catch (error) {
-    console.error('Error fetching subscription:', error)
+    Logger.error('Error fetching subscription', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Failed to fetch subscription' }, { status: 500 })
   }
 }

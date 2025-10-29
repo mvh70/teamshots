@@ -4,27 +4,41 @@
     "pricing": "Pricing",
     "signin": "Sign In",
     "dashboard": "Dashboard",
-    "joinWaitlist": "Get my early access",
+    "joinWaitlist": "Get Started",
     "settings": "Settings"
   },
   "hero": {
     "title": "Professional team photos in 60 seconds",
     "titleHighlight": "without a photoshoot",
-    "subtitle": "Turn team selfies into consistent, on‑brand headshots. No photographer. No scheduling. New hires included.",
-    "joinWaitlist": "Join Waitlist",
+    "subtitle": "Turn team selfies into consistent, on‑brand headshots. No photographer. No scheduling. Instant transformation from a selfie.",
+    "instantTransformation": "⚡ Instant transformation",
+    "getStartedFree": "Sign Up Now",
     "viewPricing": "View Pricing",
+    "joinWaitlist": "Get Started",
     "urgency": "Limited Beta Access",
-    "guarantee": "30-day money-back guarantee"
+    "guarantee": "30-day money-back guarantee",
+    "secure": "SSL encrypted & secure",
+    "noSpam": "No spam, ever",
+    "joinedBadge": "Join hundreds of teams already using AI headshots"
   },
   "features": {
-    "title": "Solve the team photo headache",
+    "title": "Professional team headshots in about a minute",
+    "subtitle": "On‑brand, consistent photos for every teammate—without studios, scheduling, or reshoots.",
     "fast": {
       "title": "60 seconds, not 6 weeks",
-      "description": "Skip studio coordination. Each person uploads once and gets results instantly. Your site and press kit stay up to date."
+      "description": "Each person uploads once and gets results instantly. Your site and press kit stay up to date."
+    },
+    "consistency": {
+      "title": "On‑brand, every time",
+      "description": "One spec for the whole team. New hires match on day one—no reshoot."
+    },
+    "control": {
+      "title": "Self‑serve for every hire",
+      "description": "Invite, approve, and regenerate anytime—no studio coordination."
     },
     "costEffective": {
       "title": "Ditch the $2,000+ photoshoot",
-      "description": "Replace $50–$200 per person sessions with on‑demand AI. Pay only when you need new or updated photos."
+      "description": "Instant professional photos costing less than a coffee per person. Pay only when you need new or updated photos."
     },
     "remote": {
       "title": "Distributed by default",
@@ -46,9 +60,25 @@
     "commercialUse": "Commercial use"
   },
   "trust": {
-    "title": "Trusted & Secure",
-    "subtitle": "Your data and photos are protected with enterprise-grade security",
+    "title": "Why Teams Choose TeamShots",
+    "subtitle": "The only AI headshot service designed specifically for teams",
     "badges": {
+      "noWatermarks": {
+        "title": "No Watermarks, Ever",
+        "description": "Your photos are 100% yours. No watermarks, no branding, no restrictions. Use them anywhere, anytime."
+      },
+        "instant": {
+          "title": "Instant results",
+          "description": "Professional headshots in about a minute. No scheduling, no waiting."
+        },
+      "teamManagement": {
+        "title": "Easy Team Management",
+        "description": "Send invites, allocate credits, and pre-define styles. New hires get professional photos on day one."
+      },
+      "costSavings": {
+        "title": "Less than a coffee",
+        "description": "Professional team headshots for less than a coffee. Perfect for teams of any size."
+      },
       "security": {
         "title": "Bank-Level Security",
         "description": "Enterprise-grade encryption protects your data and photos. We never store or share without permission."
@@ -62,7 +92,10 @@
   "socialProof": {
     "testimonialsTitle": "What Our Early Users Say",
     "userCount": "people already joined",
-    "trustMessage": "Join hundreds of teams transforming their professional photos with AI",
+    "trustMessage": "Join 1,247+ teams saving time and money with AI headshots",
+    "noWatermarks": "No watermarks",
+    "commercialUse": "Commercial use included",
+    "highResolution": "High resolution",
     "beta": {
       "name": "Beta User",
       "role": "Early Tester",
@@ -75,7 +108,7 @@
     "subtitle": "Five simple steps. About a minute. No photoshoot.",
     "totalTime": "Total time:",
     "totalTimeValue": "60 seconds",
-    "cta": "Get my early access",
+    "cta": "Get Started",
     "guarantee": "Try once almost for free, before you subscribe",
     "steps": {
       "1": {
@@ -98,15 +131,15 @@
       },
       "4": {
         "title": "Team uploads once",
-        "description": "Everyone uploads from anywhere, anytime. No scheduling, no coordination headaches.",
-        "duration": "30s",
-        "effort": "Upload & done"
+        "description": "Everyone adds a selfie one time. We keep styles consistent across the whole team.",
+        "duration": "20s",
+        "effort": "Upload"
       },
       "5": {
-        "title": "Download & celebrate",
-        "description": "Professional, consistent headshots appear instantly. Ready for LinkedIn, website, anywhere.",
-        "duration": "10s",
-        "effort": "Pure magic"
+        "title": "Generate & share",
+        "description": "Instant headshots in multiple sizes ready for LinkedIn, website, and press kits.",
+        "duration": "20s",
+        "effort": "One click"
       }
     }
   },
@@ -195,7 +228,7 @@
           "4": "Top-up at $0.90 per 4 credits",
           "5": "Priority email support"
         },
-        "cta": "Get my Starter access",
+        "cta": "Sign Up Now",
         "savings": "Save $43/year"
       },
       "pro": {
@@ -212,7 +245,7 @@
           "4": "Top-up at $0.60 per 4 credits",
           "5": "Priority support with dedicated account manager"
         },
-        "cta": "Get my Pro access",
+        "cta": "Sign Up Now",
         "savings": "Save $108/year"
       }
     }
@@ -222,7 +255,7 @@
     "subtitle": "Join 247+ teams already transforming their professional photos with AI",
     "emailPlaceholder": "Enter your work email",
     "submit": "Join Waitlist",
-    "submitFirstPerson": "Get my early access",
+    "submitFirstPerson": "Get Started",
     "submitting": "Submitting...",
     "success": "Thanks for joining! Check your email for confirmation.",
     "error": "Something went wrong. Please try again.",
@@ -263,7 +296,7 @@
           "Photos retained for 30 days from generation",
           "Email support"
         ],
-        "cta": "Join Waitlist"
+        "cta": "Sign Up Now"
       },
       "individual": {
         "name": "Individual",
@@ -276,7 +309,7 @@
           "Top-up credits available",
           "Priority email support"
         ],
-        "cta": "Join Waitlist"
+        "cta": "Sign Up Now"
       },
       "pro": {
         "name": "Pro",
@@ -292,7 +325,7 @@
           "Discounted top-up credits",
           "Priority support with dedicated account manager"
         ],
-        "cta": "Join Waitlist"
+        "cta": "Sign Up Now"
       }
     },
     "faq": {
@@ -351,7 +384,20 @@
       "enterCodeFor": "Enter the 6-digit code sent to {email}",
       "verifying": "Verifying...",
       "verifyCode": "Verify Code",
+      "bannerTitle": "You're in! One last step 🎉",
+      "didntReceiveCode": "Didn't receive a code?",
+      "info": {
+        "checkoutSuccess": "Checkout successful. You're now subscribed to {plan}. We sent a one-time code to {email}. Enter it below to confirm your email."
+      },
+      "planPro": "Pro",
+      "planIndividual": "Individual",
+      "planGeneric": "your plan",
       "firstNameLabel": "First Name",
+      "userTypeLabel": "How will you use TeamShots?",
+      "individual": "Individual",
+      "individualDesc": "For personal use",
+      "team": "Team",
+      "teamDesc": "For company/team use",
       "accountTypeLabel": "Account Type",
       "personalUse": "Personal use",
       "companyUse": "Company use",

@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { jsonFetcher } from '@/lib/fetcher'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
@@ -73,17 +74,12 @@ export default function UploadPage() {
     if (!key) return
     
     try {
-      const response = await fetch(`/api/uploads/delete?key=${encodeURIComponent(key)}`, {
+      await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(key)}`, {
         method: 'DELETE',
       })
       
-      if (response.ok) {
-        setKey('')
-        setIsApproved(false)
-      } else {
-        console.error('Failed to delete selfie')
-        // You might want to show a toast notification here
-      }
+      setKey('')
+      setIsApproved(false)
     } catch (error) {
       console.error('Error deleting selfie:', error)
       // You might want to show a toast notification here

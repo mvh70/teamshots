@@ -6,6 +6,7 @@ import { useRouter } from '@/i18n/routing'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import PhotoStyleSettings from '@/components/customization/PhotoStyleSettings'
 import { PhotoStyleSettings as PhotoStyleSettingsType, DEFAULT_PHOTO_STYLE_SETTINGS } from '@/types/photo-style'
+import { jsonFetcher } from '@/lib/fetcher'
 
 interface Context {
   id: string
@@ -36,48 +37,53 @@ export default function EditPersonalContextPage() {
   useEffect(() => {
     const fetchContext = async () => {
       try {
-        const response = await fetch(`/api/contexts/${params.id}`)
-        const data = await response.json()
-
-        if (response.ok) {
-          const contextData = data.context || data
+        const data = await jsonFetcher<{ context?: Context } & Context>(`/api/contexts/${params.id}`)
+        const contextData = data.context || data
+        
+        if (contextData) {
           setContext(contextData)
           setName(contextData.name || '')
           setCustomPrompt(contextData.customPrompt || '')
-          
-          // Load settings with proper merging
-          const existingSettings = contextData.settings || {}
-          const mergedSettings = {
-            ...DEFAULT_PHOTO_STYLE_SETTINGS,
-            ...existingSettings,
-            background: {
-              ...DEFAULT_PHOTO_STYLE_SETTINGS.background,
-              ...existingSettings.background
-            },
-            branding: {
-              ...DEFAULT_PHOTO_STYLE_SETTINGS.branding,
-              ...existingSettings.branding
-            },
-            clothing: {
-              ...DEFAULT_PHOTO_STYLE_SETTINGS.clothing,
-              ...existingSettings.clothing
-            },
-            style: {
-              ...DEFAULT_PHOTO_STYLE_SETTINGS.style,
-              ...existingSettings.style
-            },
-            expression: {
-              ...DEFAULT_PHOTO_STYLE_SETTINGS.expression,
-              ...existingSettings.expression
-            },
-            lighting: {
-              ...DEFAULT_PHOTO_STYLE_SETTINGS.lighting,
-              ...existingSettings.lighting
+            
+            // Load settings with proper merging
+            const existingSettings = contextData.settings || {}
+            const mergedSettings: PhotoStyleSettingsType = {
+              ...DEFAULT_PHOTO_STYLE_SETTINGS,
+              ...existingSettings,
+              background: {
+                ...DEFAULT_PHOTO_STYLE_SETTINGS.background,
+                ...existingSettings.background,
+                type: existingSettings.background?.type || DEFAULT_PHOTO_STYLE_SETTINGS.background!.type
+              },
+              branding: {
+                ...DEFAULT_PHOTO_STYLE_SETTINGS.branding,
+                ...existingSettings.branding,
+                type: existingSettings.branding?.type || DEFAULT_PHOTO_STYLE_SETTINGS.branding!.type
+              },
+              clothing: {
+                ...DEFAULT_PHOTO_STYLE_SETTINGS.clothing,
+                ...existingSettings.clothing,
+                style: existingSettings.clothing?.style || DEFAULT_PHOTO_STYLE_SETTINGS.clothing!.style
+              },
+              style: {
+                ...DEFAULT_PHOTO_STYLE_SETTINGS.style,
+                ...existingSettings.style,
+                type: existingSettings.style?.type || DEFAULT_PHOTO_STYLE_SETTINGS.style!.type
+              },
+              expression: {
+                ...DEFAULT_PHOTO_STYLE_SETTINGS.expression,
+                ...existingSettings.expression,
+                type: existingSettings.expression?.type || DEFAULT_PHOTO_STYLE_SETTINGS.expression!.type
+              },
+              lighting: {
+                ...DEFAULT_PHOTO_STYLE_SETTINGS.lighting,
+                ...existingSettings.lighting,
+                type: existingSettings.lighting?.type || DEFAULT_PHOTO_STYLE_SETTINGS.lighting!.type
+              }
             }
-          }
-          setPhotoStyleSettings(mergedSettings)
+            setPhotoStyleSettings(mergedSettings)
         } else {
-          setError(data.error || 'Failed to load context')
+          setError('Failed to load context')
         }
       } catch {
         setError('Failed to load context')
@@ -97,7 +103,7 @@ export default function EditPersonalContextPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch(`/api/contexts/${params.id}`, {
+      await jsonFetcher(`/api/contexts/${params.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -108,16 +114,10 @@ export default function EditPersonalContextPage() {
         })
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess('Context updated successfully!')
-        setTimeout(() => {
-          router.push('/app/contexts/personal')
-        }, 1500)
-      } else {
-        setError(data.error || 'Failed to update context')
-      }
+      setSuccess('Context updated successfully!')
+      setTimeout(() => {
+        router.push('/app/contexts/personal')
+      }, 1500)
     } catch {
       setError('Failed to update context')
     } finally {

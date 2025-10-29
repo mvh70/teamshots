@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
 
 export async function GET() {
   try {
@@ -45,8 +46,7 @@ export async function GET() {
 
     return NextResponse.json({ items })
   } catch (e) {
-     
-    console.error('[uploads/list] error', e)
+    Logger.error('[uploads/list] error', { error: e instanceof Error ? e.message : String(e) })
     return NextResponse.json({ error: 'Failed to load uploads' }, { status: 500 })
   }
 }

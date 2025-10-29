@@ -6,12 +6,13 @@
 
 import { Queue, type ConnectionOptions } from 'bullmq'
 import IORedis from 'ioredis'
+import { Env } from '@/lib/env'
 
 // Redis connection configuration
 const connection: ConnectionOptions = {
-  host: process.env.REDIS_HOST || '127.0.0.1',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
+  host: Env.string('REDIS_HOST', '127.0.0.1'),
+  port: Env.number('REDIS_PORT', 6379),
+  password: Env.string('REDIS_PASSWORD', ''),
   enableReadyCheck: false,
   // Let ioredis handle retries internally; BullMQ recommends null here to avoid warnings
   // https://docs.bullmq.io/guide/connections

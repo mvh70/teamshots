@@ -1,27 +1,23 @@
 import { prisma } from "@/lib/prisma"
+import { Logger } from "@/lib/logger"
 
-// Extract domain from email
 export function extractDomainFromEmail(email: string): string {
   return email.split('@')[1]?.toLowerCase() || ''
 }
 
-// Extract domain from URL
 export function extractDomainFromUrl(url: string): string {
   try {
-    // Add protocol if missing
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://' + url
     }
-    
     const urlObj = new URL(url)
     return urlObj.hostname.toLowerCase()
   } catch (error) {
-    console.error('Error extracting domain from URL:', error)
+    Logger.error('Error extracting domain from URL', { error: error instanceof Error ? error.message : String(error) })
     return ''
   }
 }
 
-// Check if email domain matches company website domain
 export async function verifyCompanyDomain(email: string, companyWebsite: string): Promise<{
   isValid: boolean
   emailDomain: string
@@ -31,7 +27,6 @@ export async function verifyCompanyDomain(email: string, companyWebsite: string)
   const emailDomain = extractDomainFromEmail(email)
   const websiteDomain = extractDomainFromUrl(companyWebsite)
 
-  // If domains match exactly, no verification needed
   if (emailDomain === websiteDomain) {
     return {
       isValid: true,
@@ -41,7 +36,6 @@ export async function verifyCompanyDomain(email: string, companyWebsite: string)
     }
   }
 
-  // Check if this is a common company email provider that should be allowed
   const commonProviders = [
     'gmail.com',
     'outlook.com',
@@ -60,7 +54,6 @@ export async function verifyCompanyDomain(email: string, companyWebsite: string)
   }
 }
 
-// Store company verification request
 export async function createCompanyVerificationRequest(
   email: string, 
   companyWebsite: string,
@@ -70,7 +63,6 @@ export async function createCompanyVerificationRequest(
     const verification = await verifyCompanyDomain(email, companyWebsite)
     
     if (verification.isValid) {
-      // Create company directly if domains match
       const company = await prisma.company.create({
         data: {
           name: extractDomainFromUrl(companyWebsite),
@@ -82,20 +74,15 @@ export async function createCompanyVerificationRequest(
 
       return { success: true, companyId: company.id }
     } else if (verification.requiresVerification) {
-      // Create company with pending verification
       const company = await prisma.company.create({
         data: {
           name: extractDomainFromUrl(companyWebsite),
           website: companyWebsite,
           domain: verification.websiteDomain,
           adminId: adminUserId,
-          // Add verification status fields if needed
         }
       })
 
-      // TODO: Send verification email to company email
-      // This would require implementing company email verification flow
-      
       return { 
         success: true, 
         companyId: company.id,
@@ -108,7 +95,7 @@ export async function createCompanyVerificationRequest(
       }
     }
   } catch (error) {
-    console.error('Error creating company verification request:', error)
+    Logger.error('Error creating company verification request', { error: error instanceof Error ? error.message : String(error) })
     return { 
       success: false, 
       error: 'Failed to create company verification request'
@@ -116,15 +103,13 @@ export async function createCompanyVerificationRequest(
   }
 }
 
-// Verify company email domain (for when domains don't match)
 export async function verifyCompanyEmail(
   companyId: string, 
   companyEmail: string, 
   otpCode: string
 ): Promise<boolean> {
   try {
-    // Verify OTP for company email
-    const isValidOTP = await import("@/lib/otp").then(module => 
+    const isValidOTP = await import("@/domain/auth/otp").then(module => 
       module.verifyOTP(companyEmail, otpCode)
     )
 
@@ -132,18 +117,18 @@ export async function verifyCompanyEmail(
       return false
     }
 
-    // Update company with verified domain
     await prisma.company.update({
       where: { id: companyId },
       data: {
         domain: extractDomainFromEmail(companyEmail),
-        // Add verification status fields if needed
       }
     })
 
     return true
   } catch (error) {
-    console.error('Error verifying company email:', error)
+    Logger.error('Error verifying company email', { error: error instanceof Error ? error.message : String(error) })
     return false
   }
 }
+
+

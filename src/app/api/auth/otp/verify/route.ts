@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyOTP } from '@/lib/otp'
+import { verifyOTP } from '@/domain/auth/otp'
 import { badRequest, ok, internal } from '@/lib/api-response'
+import { Logger } from '@/lib/logger'
 
 // Force this route to be dynamic (skip static generation)
 export const dynamic = 'force-dynamic'
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(badRequest('OTP_INVALID', 'errors.otpInvalid', 'Invalid or expired OTP'), { status: 400 })
     }
   } catch (error) {
-    console.error('Error in OTP verify endpoint:', error)
+    Logger.error('Error in OTP verify endpoint', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(internal('Internal server error', 'errors.internal'), { status: 500 })
   }
 }

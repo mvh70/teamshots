@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getSelfieBySequence, getPrivateImageUrl } from '@/lib/image-access'
+import { getSelfieBySequence, getPrivateImageUrl } from '@/domain/access/image-access'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(

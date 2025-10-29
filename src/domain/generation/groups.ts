@@ -1,14 +1,5 @@
-/**
- * Generation Group Utilities
- * 
- * Helper functions for working with generation groups
- */
-
 import { prisma } from '@/lib/prisma'
 
-/**
- * Get all generations in a group
- */
 export async function getGenerationGroup(generationGroupId: string) {
   return await prisma.generation.findMany({
     where: { generationGroupId },
@@ -16,9 +7,6 @@ export async function getGenerationGroup(generationGroupId: string) {
   })
 }
 
-/**
- * Get the original generation in a group
- */
 export async function getOriginalGeneration(generationGroupId: string) {
   return await prisma.generation.findFirst({
     where: { 
@@ -28,9 +16,6 @@ export async function getOriginalGeneration(generationGroupId: string) {
   })
 }
 
-/**
- * Get all regenerations in a group (excluding original)
- */
 export async function getRegenerations(generationGroupId: string) {
   return await prisma.generation.findMany({
     where: { 
@@ -41,9 +26,6 @@ export async function getRegenerations(generationGroupId: string) {
   })
 }
 
-/**
- * Get generation group info for a specific generation
- */
 export async function getGenerationGroupInfo(generationId: string) {
   const generation = await prisma.generation.findUnique({
     where: { id: generationId },
@@ -65,3 +47,5 @@ export async function getGenerationGroupInfo(generationId: string) {
     groupId: generation.generationGroupId
   }
 }
+
+

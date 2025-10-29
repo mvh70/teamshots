@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
 
 export async function GET() {
   try {
@@ -37,7 +38,7 @@ export async function GET() {
     return NextResponse.json({ settings })
 
   } catch (error) {
-    console.error('Error fetching user settings:', error)
+    Logger.error('Error fetching user settings', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -193,7 +194,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Error updating user settings:', error)
+    Logger.error('Error updating user settings', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

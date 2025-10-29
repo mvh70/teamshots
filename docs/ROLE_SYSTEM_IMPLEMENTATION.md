@@ -181,7 +181,7 @@ npm run build
 ### Checking Permissions in Components
 
 ```typescript
-import { checkPermission } from '@/lib/permissions'
+import { checkPermission } from '@/domain/access/permissions'
 
 // Check if user can invite team members
 const canInvite = await checkPermission(session, 'company.invite_members')
@@ -194,7 +194,7 @@ if (canInvite) {
 ### API Route Protection
 
 ```typescript
-import { withCompanyPermission } from '@/lib/permissions'
+import { withCompanyPermission } from '@/domain/access/permissions'
 
 export async function POST(request: NextRequest) {
   const permissionCheck = await withCompanyPermission(

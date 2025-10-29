@@ -1,24 +1,25 @@
 import { fileTypeFromBuffer } from 'file-type'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { getSelfieSequence } from '@/lib/image-access'
+import { getSelfieSequence } from '@/domain/access/image-access'
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
+import { Env } from '@/lib/env'
 
 const s3Client = new S3Client({
-  region: process.env.HETZNER_S3_REGION || 'eu-central',
-  endpoint: process.env.HETZNER_S3_ENDPOINT,
+  region: Env.string('HETZNER_S3_REGION', 'eu-central'),
+  endpoint: Env.string('HETZNER_S3_ENDPOINT'),
   credentials: {
-    accessKeyId: process.env.HETZNER_S3_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.HETZNER_S3_SECRET_ACCESS_KEY || '',
+    accessKeyId: Env.string('HETZNER_S3_ACCESS_KEY'),
+    secretAccessKey: Env.string('HETZNER_S3_SECRET_KEY'),
   },
 })
 
-const BUCKET_NAME = process.env.HETZNER_S3_BUCKET!
+const BUCKET_NAME = Env.string('HETZNER_S3_BUCKET')
 
 /**
  * S3 Storage Structure:
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Rate limiting
-  const identifier = getRateLimitIdentifier(request, 'upload')
+  const identifier = await getRateLimitIdentifier(request, 'upload')
   const rateLimit = await checkRateLimit(identifier, RATE_LIMITS.upload.limit, RATE_LIMITS.upload.window)
   if (!rateLimit.success) {
     return NextResponse.json({ error: 'Upload rate limit exceeded' }, { status: 429 })

@@ -6,6 +6,7 @@
 
 import { AIProvider, AIProviderConfig } from './providers/AIProvider'
 import { GeminiProvider, GeminiConfig } from './providers/gemini'
+import { Env } from '@/lib/env'
 
 export type ProviderType = 'gemini' | 'openai' | 'stability'
 
@@ -39,13 +40,13 @@ export function createAIProvider(factoryConfig: AIProviderFactoryConfig): AIProv
  * Get the default AI provider from environment variables
  */
 export function getDefaultAIProvider(): AIProvider {
-  const provider = (process.env.AI_PROVIDER || 'gemini') as ProviderType
+  const provider = Env.string('AI_PROVIDER', 'gemini') as ProviderType
   
   const config: AIProviderConfig = {
-    apiKey: process.env.GEMINI_API_KEY || '',
-    model: process.env.AI_MODEL || process.env.GEMINI_IMAGE_MODEL,
-    timeout: parseInt(process.env.AI_TIMEOUT || '30000'),
-    maxRetries: parseInt(process.env.AI_MAX_RETRIES || '3')
+    apiKey: Env.string('GEMINI_API_KEY', ''),
+    model: Env.string('AI_MODEL', Env.string('GEMINI_IMAGE_MODEL', '')),
+    timeout: Env.number('AI_TIMEOUT', 30000),
+    maxRetries: Env.number('AI_MAX_RETRIES', 3)
   }
   
   return createAIProvider({ provider, config })
@@ -57,10 +58,12 @@ export function getDefaultAIProvider(): AIProvider {
 export function validateAIProviderConfig(): { valid: boolean; errors: string[] } {
   const errors: string[] = []
   
-  const provider = process.env.AI_PROVIDER || 'gemini'
+  const provider = Env.string('AI_PROVIDER', 'gemini')
   
   if (provider === 'gemini') {
-    if (!process.env.GEMINI_API_KEY) {
+    try {
+      Env.string('GEMINI_API_KEY')
+    } catch {
       errors.push('GEMINI_API_KEY is required for Gemini provider')
     }
   }

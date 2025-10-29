@@ -2,7 +2,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { auth } from '@/auth'
 import AppShell from './AppShell'
-import { getUserWithRoles, getUserEffectiveRoles } from '@/lib/roles'
+import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
 import { CreditsProvider } from '@/contexts/CreditsContext'
 
 export default async function AppLayout({

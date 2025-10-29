@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sendOTPVerificationEmail } from '@/lib/otp'
+import { sendOTPVerificationEmail } from '@/domain/auth/otp'
 import { prisma } from '@/lib/prisma'
 import { badRequest, internal, ok } from '@/lib/api-response'
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
+import { Logger } from '@/lib/logger'
 
 // Force this route to be dynamic (skip static generation)
 export const dynamic = 'force-dynamic'
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const identifier = getRateLimitIdentifier(request, 'otp')
+    const identifier = await getRateLimitIdentifier(request, 'otp')
     const rateLimit = await checkRateLimit(identifier, RATE_LIMITS.otp.limit, RATE_LIMITS.otp.window)
 
     if (!rateLimit.success) {
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(internal('Failed to send OTP email', 'errors.otpSendFailed'), { status: 500 })
     }
   } catch (error) {
-    console.error('Error in OTP send endpoint:', error)
+    Logger.error('Error in OTP send endpoint', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(internal('Internal server error', 'errors.internal'), { status: 500 })
   }
 }

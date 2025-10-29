@@ -3,9 +3,10 @@ import WaitlistWelcomeEmail from '@/emails/WaitlistWelcome';
 import TeamInviteEmail from '@/emails/TeamInvite';
 import { BRAND_CONFIG } from '@/config/brand';
 import { getEmailTranslation } from '@/lib/translations';
+import { Env } from '@/lib/env';
 
 // Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(Env.string('RESEND_API_KEY'));
 
 // Email configuration - uses brand config for consistency
 const FROM_EMAIL = `${BRAND_CONFIG.name} <${BRAND_CONFIG.contact.hello}>`;
@@ -31,7 +32,7 @@ export async function sendWaitlistWelcomeEmail({
       to: email,
       replyTo: REPLY_TO_EMAIL,
       subject,
-      react: WaitlistWelcomeEmail({ email, locale }),
+      react: WaitlistWelcomeEmail({ locale }),
     });
 
     if (error) {

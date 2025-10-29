@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getPersonCreditBalance, getUserCreditBalance } from '@/lib/credits'
-import { withCompanyPermission } from '@/lib/permissions'
+import { getPersonCreditBalance, getUserCreditBalance } from '@/domain/credits/credits'
+import { withCompanyPermission } from '@/domain/access/permissions'
+import { Logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -148,8 +149,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ users: usersWithCredits })
   } catch (e) {
-     
-    console.error('[company/members] error', e)
+    Logger.error('[company/members] error', { error: e instanceof Error ? e.message : String(e) })
     return NextResponse.json({ error: 'Failed to load members' }, { status: 500 })
   }
 }

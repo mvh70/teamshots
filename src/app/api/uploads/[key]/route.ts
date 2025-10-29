@@ -4,12 +4,13 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
+import { Env } from '@/lib/env'
 
-const endpoint = process.env.HETZNER_S3_ENDPOINT
-const bucket = process.env.HETZNER_S3_BUCKET
-const accessKeyId = process.env.HETZNER_S3_ACCESS_KEY_ID || process.env.HETZNER_S3_ACCESS_KEY
-const secretAccessKey = process.env.HETZNER_S3_SECRET_ACCESS_KEY || process.env.HETZNER_S3_SECRET_KEY
-const region = process.env.HETZNER_S3_REGION || 'eu-central'
+const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
+const bucket = Env.string('HETZNER_S3_BUCKET', '')
+const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY', '')
+const secretAccessKey = Env.string('HETZNER_S3_SECRET_KEY', '')
+const region = Env.string('HETZNER_S3_REGION', 'eu-central')
 
 const resolvedEndpoint = endpoint && (endpoint.startsWith('http://') || endpoint.startsWith('https://'))
   ? endpoint
@@ -73,8 +74,7 @@ export async function GET(
         await SecurityLogger.logSuspiciousActivity(
           session.user.id,
           'unauthorized_file_access_attempt',
-          { fileKey: key, fileOwnerId: filePersonId },
-          request
+          { fileKey: key, fileOwnerId: filePersonId }
         )
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
       }

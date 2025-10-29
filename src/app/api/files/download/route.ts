@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 
-const endpoint = process.env.HETZNER_S3_ENDPOINT
-const bucket = process.env.HETZNER_S3_BUCKET
-const accessKeyId = process.env.HETZNER_S3_ACCESS_KEY_ID
-const secretAccessKey = process.env.HETZNER_S3_SECRET_ACCESS_KEY
+const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
+const bucket = Env.string('HETZNER_S3_BUCKET', '')
+const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY', '')
+const secretAccessKey = Env.string('HETZNER_S3_SECRET_KEY', '')
 
 const s3 = new S3Client({
-  region: 'eu-central-1',
+  region: Env.string('HETZNER_S3_REGION', 'eu-central-1'),
   endpoint,
   credentials: {
     accessKeyId: accessKeyId || '',
@@ -27,8 +29,7 @@ export async function GET(req: NextRequest) {
     const url = await getSignedUrl(s3, command, { expiresIn: 60 })
     return NextResponse.json({ url })
   } catch (e) {
-     
-    console.error('[files/download] error', e)
+    Logger.error('[files/download] error', { error: e instanceof Error ? e.message : String(e) })
     return NextResponse.json({ error: 'Failed to sign download' }, { status: 500 })
   }
 }

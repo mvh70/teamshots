@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import ReactCompareImage from 'react-compare-image';
-import { BRAND_CONFIG } from '@/config/brand';
+import Image from 'next/image';
 
 interface SamplePhoto {
   id: string;
@@ -23,6 +22,46 @@ const HERO_PHOTO: SamplePhoto = {
 export default function HeroGallery() {
   const t = useTranslations('gallery');
   const [isInteracting, setIsInteracting] = useState(false);
+  const [sliderPosition, setSliderPosition] = useState(50);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    const container = e.currentTarget.parentElement as HTMLDivElement;
+    const rect = container.getBoundingClientRect();
+    
+    const onMouseMove = (e: MouseEvent) => {
+      const x = e.clientX - rect.left;
+      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+      setSliderPosition(percentage);
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const container = e.currentTarget.parentElement as HTMLDivElement;
+    const rect = container.getBoundingClientRect();
+    
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const x = e.touches[0].clientX - rect.left;
+      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+      setSliderPosition(percentage);
+    };
+
+    const onTouchEnd = () => {
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+
+    document.addEventListener('touchmove', onTouchMove);
+    document.addEventListener('touchend', onTouchEnd);
+  };
 
   return (
     <div className="w-full max-w-xl mx-auto">
@@ -32,17 +71,53 @@ export default function HeroGallery() {
         onMouseEnter={() => setIsInteracting(true)}
         onTouchStart={() => setIsInteracting(true)}
       >
-        <div className="relative aspect-square">
-          <ReactCompareImage
-            leftImage={HERO_PHOTO.before}
-            rightImage={HERO_PHOTO.after}
-            leftImageAlt={`${t('before')} - AI transformation`}
-            rightImageAlt={`${t('after')} - AI transformation`}
-            sliderLineColor={BRAND_CONFIG.colors.cta}
-            sliderLineWidth={4}
-            handleSize={50}
-            hover={true}
+        <div 
+          className="relative aspect-square bg-gray-100 overflow-hidden cursor-ew-resize"
+          onMouseMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+            setSliderPosition(percentage);
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.touches[0].clientX - rect.left;
+            const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+            setSliderPosition(percentage);
+          }}
+        >
+          {/* Background: After image (now on background to make left = Before) */}
+          <Image
+            src={HERO_PHOTO.after}
+            alt={`${t('after')} - AI transformation`}
+            fill
+            className="object-cover"
+            unoptimized
           />
+          
+          {/* Foreground: Before image clipped to slider position */}
+          <div className="absolute inset-0">
+            <Image
+              src={HERO_PHOTO.before}
+              alt={`${t('before')} - AI transformation`}
+              fill
+              className="object-cover"
+              unoptimized
+              style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+            />
+          </div>
+
+          {/* Slider handle */}
+          <button
+            onMouseDown={onMouseDown}
+            onTouchStart={onTouchStart}
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-white shadow-xl border-2 border-gray-300 flex items-center justify-center text-sm hover:shadow-2xl transition-shadow"
+            style={{ left: `${sliderPosition}%` }}
+            aria-label="Drag slider"
+          >
+            ⇆
+          </button>
         </div>
 
         {/* Interactive Hint - Shows on first load */}
@@ -59,12 +134,17 @@ export default function HeroGallery() {
           </div>
         )}
 
-        {/* Before/After Labels */}
-        <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">
-          {t('before')}
-        </div>
-        <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">
-          {t('after')}
+        {/* Dynamic Labels based on slider position (right = Before, left = After) */}
+        <div className="pointer-events-none">
+          {sliderPosition > 50 ? (
+            <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">
+              {t('before')}
+            </div>
+          ) : (
+            <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide">
+              {t('after')}
+            </div>
+          )}
         </div>
 
         {/* Stats Badge */}

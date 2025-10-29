@@ -36,7 +36,6 @@ export function getUserEffectiveRoles(user: UserWithRoles): {
   isRegularUser: boolean
 } {
   const isPlatformAdmin = user.isAdmin
-  // Determine company/admin status STRICTLY from platform role
   const isCompanyAdmin = user.role === 'company_admin'
   const isCompanyMember = user.role === 'company_member'
   
@@ -61,104 +60,74 @@ export async function hasPermission(
   const roles = getUserEffectiveRoles(context.user)
   
   switch (action) {
-    // Platform-level permissions
     case 'platform.admin':
       return roles.isPlatformAdmin
-    
     case 'user.manage_own_account':
       return context.user.id === (resource as { userId?: string })?.userId
-    
-    // Company-level permissions
     case 'company.view':
       return roles.isCompanyAdmin || roles.isCompanyMember || 
              Boolean(context.companyId && context.user.person?.companyId === context.companyId)
-    
     case 'company.manage':
       return roles.isCompanyAdmin && 
              context.companyId === context.user.person?.companyId
-    
     case 'company.invite_members':
       return roles.isCompanyAdmin && 
              context.companyId === context.user.person?.companyId
-    
     case 'company.manage_members':
       return roles.isCompanyAdmin && 
              context.companyId === context.user.person?.companyId
-    
     case 'company.allocate_credits':
       return roles.isCompanyAdmin && 
              context.companyId === context.user.person?.companyId
-    
     case 'company.view_analytics':
       return roles.isCompanyAdmin && 
              context.companyId === context.user.person?.companyId
-    
-    // Generation permissions
     case 'generation.create_personal':
-      return true // Anyone can create personal generations
-    
+      return true
     case 'generation.create_company':
       return roles.isCompanyMember && 
              context.companyId === context.user.person?.companyId
-    
     case 'generation.view_own':
       return context.user.id === (resource as { userId?: string })?.userId ||
              context.personId === (resource as { personId?: string })?.personId
-    
     case 'generation.view_company':
       return roles.isCompanyMember && 
              context.companyId === context.user.person?.companyId &&
              (resource as { companyId?: string })?.companyId === context.companyId
-    
     case 'generation.approve':
       return roles.isCompanyAdmin && 
              context.companyId === context.user.person?.companyId
-    
-    // Credit permissions
     case 'credits.view_own':
-      return true // Users can view their own credits
-    
+      return true
     case 'credits.view_company':
       return roles.isCompanyMember && 
              context.companyId === context.user.person?.companyId
-    
     case 'credits.allocate_company':
       return roles.isCompanyAdmin && 
              context.companyId === context.user.person?.companyId
-    
-    // File permissions
     case 'files.upload':
-      return true // Anyone can upload files
-    
+      return true
     case 'files.view_own':
       return context.user.id === (resource as { userId?: string })?.userId ||
              context.personId === (resource as { personId?: string })?.personId
-    
     case 'files.view_company':
       return roles.isCompanyMember && 
              context.companyId === context.user.person?.companyId &&
              (resource as { companyId?: string })?.companyId === context.companyId
-    
-    // Context permissions
     case 'context.create_personal':
-      return true // Anyone can create personal contexts
-    
+      return true
     case 'context.create_company':
       return roles.isCompanyAdmin && 
              context.companyId === context.user.person?.companyId
-    
     case 'context.view_own':
       return context.user.id === (resource as { userId?: string })?.userId
-    
     case 'context.view_company':
       return roles.isCompanyMember && 
              context.companyId === context.user.person?.companyId &&
              (resource as { companyId?: string })?.companyId === context.companyId
-    
     case 'context.manage_company':
       return roles.isCompanyAdmin && 
              context.companyId === context.user.person?.companyId
-    
     default:
       return false
   }
@@ -239,38 +208,29 @@ export async function createPermissionContext(
 }
 
 export type Permission = 
-  // Platform permissions
   | 'platform.admin'
   | 'user.manage_own_account'
-  
-  // Company permissions
   | 'company.view'
   | 'company.manage'
   | 'company.invite_members'
   | 'company.manage_members'
   | 'company.allocate_credits'
   | 'company.view_analytics'
-  
-  // Generation permissions
   | 'generation.create_personal'
   | 'generation.create_company'
   | 'generation.view_own'
   | 'generation.view_company'
   | 'generation.approve'
-  
-  // Credit permissions
   | 'credits.view_own'
   | 'credits.view_company'
   | 'credits.allocate_company'
-  
-  // File permissions
   | 'files.upload'
   | 'files.view_own'
   | 'files.view_company'
-  
-  // Context permissions
   | 'context.create_personal'
   | 'context.create_company'
   | 'context.view_own'
   | 'context.view_company'
   | 'context.manage_company'
+
+

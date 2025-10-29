@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAnalytics } from './useAnalytics'
+import { jsonFetcher } from '@/lib/fetcher'
 
 interface UseSelfieUploadOptions {
   onSuccess?: (key: string) => void
@@ -93,17 +94,12 @@ export function useSelfieUpload({ onSuccess, onError }: UseSelfieUploadOptions =
       const { key } = await uploadResponse.json();
       
       // Then create database record and do validation
-      const createResponse = await fetch('/api/uploads/create', { 
+      await jsonFetcher('/api/uploads/create', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ key }),
-        credentials: 'include' // Required for Safari to send cookies
+        credentials: 'include'
       });
-      
-      if (!createResponse.ok) {
-        const errorData = await createResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Database creation failed');
-      }
       
       // If successful, mark as approved and call success callback
       setIsApproved(true);
@@ -158,13 +154,10 @@ export function useSelfieUpload({ onSuccess, onError }: UseSelfieUploadOptions =
     }
     
     try {
-      const response = await fetch(`/api/uploads/delete?key=${encodeURIComponent(key)}`, {
+      await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(key)}`, {
         method: 'DELETE',
-        credentials: 'include' // Required for Safari to send cookies
+        credentials: 'include'
       })
-      if (!response.ok) {
-        console.error('Failed to delete selfie')
-      }
     } catch (error) {
       console.error('Error deleting selfie:', error)
     }

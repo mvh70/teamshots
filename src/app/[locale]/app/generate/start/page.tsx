@@ -13,6 +13,7 @@ import PhotoStyleSettings from '@/components/customization/PhotoStyleSettings'
 import { PhotoStyleSettings as PhotoStyleSettingsType, DEFAULT_PHOTO_STYLE_SETTINGS } from '@/types/photo-style'
 import { BRAND_CONFIG } from '@/config/brand'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { jsonFetcher } from '@/lib/fetcher'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
@@ -79,17 +80,10 @@ export default function StartGenerationPage() {
 
   const findSelfieByKey = async (key: string) => {
     try {
-      const response = await fetch(`/api/uploads/find-by-key?key=${encodeURIComponent(key)}`, {
+      const { id } = await jsonFetcher<{ id: string }>(`/api/uploads/find-by-key?key=${encodeURIComponent(key)}`, {
         credentials: 'include' // Required for Safari to send cookies
       })
-      
-      if (response.ok) {
-        const { id } = await response.json()
-        setSelfieId(id)
-      } else {
-        const errorData = await response.json()
-        console.error('Failed to find selfie by key:', key, errorData)
-      }
+      setSelfieId(id)
     } catch (error) {
       console.error('Error finding selfie by key:', error)
     }
@@ -124,20 +118,17 @@ export default function StartGenerationPage() {
         // Fetch contexts based on generation type
         const endpoint = generationType === 'personal' ? '/api/contexts/personal' : '/api/contexts/team'
         console.log('Fetching from endpoint:', endpoint)
-        const contextResponse = await fetch(endpoint)
-        
-        if (contextResponse.ok) {
-          const contextData = await contextResponse.json()
-          const contexts = contextData.contexts || []
-          console.log(`Available ${generationType} contexts:`, contexts)
-          console.log('Context data:', contextData)
-          setAvailableContexts(contexts)
+        const contextData = await jsonFetcher<{ contexts?: unknown[]; activeContext?: unknown }>(endpoint)
+        const contexts = (contextData.contexts || []) as Array<{ id: string; name: string; settings?: Record<string, unknown> }>
+        console.log(`Available ${generationType} contexts:`, contexts)
+        console.log('Context data:', contextData)
+        setAvailableContexts(contexts)
           
           // Set active context if available
           let activeContext = null
           if (contextData.activeContext) {
-            activeContext = contextData.activeContext
-            setActiveContext(contextData.activeContext)
+            activeContext = contextData.activeContext as { id: string; name: string; settings?: Record<string, unknown> }
+            setActiveContext(activeContext)
           } else {
             // Default to freestyle if no context is active
             setActiveContext(null)
@@ -146,35 +137,62 @@ export default function StartGenerationPage() {
           // Convert context settings to photo style settings format
           if (activeContext) {
             const context = activeContext
+            const legacy = context as { backgroundUrl?: string; logoUrl?: string; backgroundPrompt?: string; stylePreset?: string }
+            const bg = (context.settings?.background ?? {}) as { key?: string; type?: string; prompt?: string }
+            const brand = (context.settings?.branding ?? {}) as { logoKey?: string; type?: string }
             const settings: PhotoStyleSettingsType = {
               background: {
-                ...context.settings?.background,
+                ...bg,
                 // If settings exist but key is missing, try to get it from legacy URL
-                key: context.settings?.background?.key || 
-                     (context.backgroundUrl ? extractKeyFromUrl(context.backgroundUrl) : undefined),
+                key: bg.key || 
+                     (legacy.backgroundUrl ? extractKeyFromUrl(legacy.backgroundUrl) : undefined),
                 // If settings exist but type is missing, determine from legacy URL
-                type: context.settings?.background?.type || 
-                      (context.backgroundUrl ? 'custom' : 'office'),
+                type: ((t => (t === 'office' || t === 'neutral' || t === 'gradient' || t === 'custom' || t === 'user-choice') ? t : undefined)(bg.type as string))
+                      || (legacy.backgroundUrl ? 'custom' : 'office'),
                 // If settings exist but prompt is missing, get from legacy field
-                prompt: context.settings?.background?.prompt || context.backgroundPrompt
+                prompt: bg.prompt || legacy.backgroundPrompt
               },
               branding: {
-                ...context.settings?.branding,
+                ...brand,
                 // If settings exist but logoKey is missing, try to get it from legacy URL
-                logoKey: context.settings?.branding?.logoKey || 
-                         (context.logoUrl ? extractKeyFromUrl(context.logoUrl) : undefined),
+                logoKey: brand.logoKey || 
+                         (legacy.logoUrl ? extractKeyFromUrl(legacy.logoUrl) : undefined),
                 // If settings exist but type is missing, determine from legacy URL
-                type: context.settings?.branding?.type || 
-                      (context.logoUrl ? 'include' : 'exclude')
+                type: (brand.type === 'include' || brand.type === 'exclude' || brand.type === 'user-choice')
+                  ? brand.type
+                  : (legacy.logoUrl ? 'include' : 'exclude')
               },
-              style: context.settings?.style || {
-                type: 'preset',
-                preset: context.stylePreset as 'corporate' | 'casual' | 'professional' | 'creative'
-              },
-              // Set other categories to user-choice by default for existing contexts
-              clothing: context.settings?.clothing || { type: 'user-choice' },
-              expression: context.settings?.expression || { type: 'user-choice' },
-              lighting: context.settings?.lighting || { type: 'user-choice' }
+              style: (() => {
+                const s = context.settings?.style as { type?: string; preset?: string } | undefined
+                if (s && (s.type === 'preset' || s.type === 'user-choice')) {
+                  return {
+                    type: s.type,
+                    preset: s.preset as 'corporate' | 'casual' | 'creative' | 'modern' | 'classic' | 'artistic' | undefined
+                  }
+                }
+                return {
+                  type: 'preset',
+                  preset: ((p: string | undefined) => {
+                    const allowed = ['corporate','casual','creative','modern','classic','artistic'] as const
+                    return (allowed as readonly string[]).includes(p || '') ? (p as typeof allowed[number]) : 'corporate'
+                  })(legacy.stylePreset)
+                }
+              })(),
+              // Set other categories to safe defaults
+              clothing: (() => {
+                const c = context.settings?.clothing as { style?: string; type?: string } | undefined
+                return { style: (c?.style as 'business' | 'startup' | 'black-tie' | 'user-choice') || 'user-choice', type: c?.type as 'business' | 'startup' | 'black-tie' | 'user-choice' | undefined }
+              })(),
+              expression: (() => {
+                const e = context.settings?.expression as { type?: string } | undefined
+                const allowed = ['professional','friendly','serious','confident','user-choice']
+                return { type: (allowed.includes(e?.type || '') ? (e!.type as 'professional' | 'friendly' | 'serious' | 'confident' | 'user-choice') : 'user-choice') }
+              })(),
+              lighting: (() => {
+                const l = context.settings?.lighting as { type?: string } | undefined
+                const allowed = ['natural','studio','soft','dramatic','user-choice']
+                return { type: (allowed.includes(l?.type || '') ? (l!.type as 'natural' | 'studio' | 'soft' | 'dramatic' | 'user-choice') : 'user-choice') }
+              })()
             }
             setPhotoStyleSettings(settings)
             setOriginalContextSettings(settings) // Store original context settings
@@ -183,7 +201,6 @@ export default function StartGenerationPage() {
             setPhotoStyleSettings(DEFAULT_PHOTO_STYLE_SETTINGS)
             setOriginalContextSettings(undefined)
           }
-        }
       } catch (err) {
         console.error('Failed to fetch contexts:', err)
       }
@@ -197,19 +214,13 @@ export default function StartGenerationPage() {
     
     // Create selfie record and get the ID
     try {
-      const response = await fetch('/api/uploads/create', {
+      const { id } = await jsonFetcher<{ id: string }>('/api/uploads/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key }),
         credentials: 'include' // Required for Safari to send cookies
       })
-      
-      if (response.ok) {
-        const { id } = await response.json()
-        setSelfieId(id)
-      } else {
-        console.error('Failed to create selfie record')
-      }
+      setSelfieId(id)
     } catch (error) {
       console.error('Error creating selfie record:', error)
     }
@@ -231,18 +242,13 @@ export default function StartGenerationPage() {
     if (!key) return
     
     try {
-      const response = await fetch(`/api/uploads/delete?key=${encodeURIComponent(key)}`, {
+      await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(key)}`, {
         method: 'DELETE',
         credentials: 'include' // Required for Safari to send cookies
       })
       
-      if (response.ok) {
-        setKey('')
-        setIsApproved(false)
-      } else {
-        console.error('Failed to delete selfie')
-        // You might want to show a toast notification here
-      }
+      setKey('')
+      setIsApproved(false)
     } catch (error) {
       console.error('Error deleting selfie:', error)
       // You might want to show a toast notification here
@@ -262,7 +268,7 @@ export default function StartGenerationPage() {
 
     try {
       // Create generation request
-      const response = await fetch('/api/generations/create', {
+      const result = await jsonFetcher<{ success?: boolean; error?: string }>('/api/generations/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -277,12 +283,6 @@ export default function StartGenerationPage() {
         }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create generation')
-      }
-
-      const result = await response.json()
       console.log('Generation created:', result)
 
       // Redirect to appropriate generations page based on generation type

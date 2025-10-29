@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { Logger } from '@/lib/logger'
 
 const envSchema = z.object({
   // Database
@@ -20,9 +21,7 @@ const envSchema = z.object({
   HETZNER_S3_ENDPOINT: z.string().optional(),
   HETZNER_S3_BUCKET: z.string().optional(),
   HETZNER_S3_REGION: z.string().optional(),
-  HETZNER_S3_ACCESS_KEY_ID: z.string().optional(),
   HETZNER_S3_ACCESS_KEY: z.string().optional(),
-  HETZNER_S3_SECRET_ACCESS_KEY: z.string().optional(),
   HETZNER_S3_SECRET_KEY: z.string().optional(),
   
   // Gemini AI
@@ -48,6 +47,10 @@ const envSchema = z.object({
   REDIS_PORT: z.string().regex(/^\d+$/).optional(),
   REDIS_PASSWORD: z.string().optional(),
   
+  // PostHog Analytics
+  NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
+  NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
+  
   // Node Environment
   NODE_ENV: z.enum(['development', 'production', 'test']),
 }).refine(
@@ -67,8 +70,7 @@ export function validateEnvironment() {
   const result = envSchema.safeParse(process.env)
   
   if (!result.success) {
-    console.error('❌ Invalid environment variables:')
-    console.error(result.error.format())
+    Logger.error('Invalid environment variables', { issues: result.error.format() })
     throw new Error('Environment validation failed')
   }
   

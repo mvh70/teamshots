@@ -1,14 +1,13 @@
 import { prisma } from '@/lib/prisma'
-import { NextRequest } from 'next/server'
+import { getRequestIp, getRequestHeader } from '@/lib/server-headers'
 
 export class SecurityLogger {
   static async logAuthAttempt(
     email: string,
-    success: boolean,
-    request: NextRequest
+    success: boolean
   ) {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
-    const userAgent = request.headers.get('user-agent')
+    const ip = (await getRequestIp()) || 'unknown'
+    const userAgent = await getRequestHeader('user-agent')
     
     await prisma.securityLog.create({
       data: {
@@ -24,10 +23,9 @@ export class SecurityLogger {
   static async logPermissionDenied(
     userId: string,
     action: string,
-    resource: string,
-    request: NextRequest
+    resource: string
   ) {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
+    const ip = (await getRequestIp()) || 'unknown'
     
     await prisma.securityLog.create({
       data: {
@@ -42,14 +40,13 @@ export class SecurityLogger {
   }
   
   static async logRateLimitExceeded(
-    identifier: string,
-    request: NextRequest
+    identifier: string
   ) {
     await prisma.securityLog.create({
       data: {
         type: 'rate_limit_exceeded',
         email: identifier,
-        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+        ipAddress: (await getRequestIp()) || 'unknown',
         success: false,
       },
     })
@@ -58,15 +55,14 @@ export class SecurityLogger {
   static async logSuspiciousActivity(
     userId: string | null,
     reason: string,
-    details: Record<string, unknown>,
-    request: NextRequest
+    details: Record<string, unknown>
   ) {
     await prisma.securityLog.create({
       data: {
         type: 'suspicious_activity',
         userId,
         details: { reason, ...details },
-        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+        ipAddress: (await getRequestIp()) || 'unknown',
         success: false,
       },
     })

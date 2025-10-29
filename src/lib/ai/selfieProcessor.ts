@@ -5,11 +5,12 @@ import { promisify } from 'util'
 const execAsync = promisify(exec)
 import sharp from 'sharp'
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
+import { Env } from '@/lib/env'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 // S3 client configuration (same as worker)
-const BUCKET_NAME = process.env.HETZNER_S3_BUCKET || 'teamshots'
-const endpoint = process.env.HETZNER_S3_ENDPOINT
+const BUCKET_NAME = Env.string('HETZNER_S3_BUCKET', 'teamshots')
+const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
 const resolvedEndpoint =
   endpoint && (endpoint.startsWith('http://') || endpoint.startsWith('https://'))
     ? endpoint
@@ -18,13 +19,11 @@ const resolvedEndpoint =
     : undefined
 
 const s3Client = new S3Client({
-  region: process.env.HETZNER_S3_REGION || 'eu-central',
+  region: Env.string('HETZNER_S3_REGION', 'eu-central'),
   endpoint: resolvedEndpoint,
   credentials: {
-    accessKeyId:
-      process.env.HETZNER_S3_ACCESS_KEY_ID || process.env.HETZNER_S3_ACCESS_KEY || '',
-    secretAccessKey:
-      process.env.HETZNER_S3_SECRET_ACCESS_KEY || process.env.HETZNER_S3_SECRET_KEY || '',
+    accessKeyId: Env.string('HETZNER_S3_ACCESS_KEY', ''),
+    secretAccessKey: Env.string('HETZNER_S3_SECRET_KEY', ''),
   },
   forcePathStyle: false,
 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getUserCreditBalance, getCompanyCreditBalance } from '@/lib/credits'
+import { getUserCreditBalance, getCompanyCreditBalance } from '@/domain/credits/credits'
+import { Logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 })
     }
   } catch (error) {
-    console.error('Error fetching credit balance:', error)
+    Logger.error('Error fetching credit balance', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

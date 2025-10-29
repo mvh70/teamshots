@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { allocateCreditsFromInvite } from '@/lib/credits'
+import { allocateCreditsFromInvite } from '@/domain/credits/credits'
+import { Logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error accepting invite:', error)
+    Logger.error('Error accepting invite', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

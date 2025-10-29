@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from '@/i18n/routing'
 import Image from 'next/image'
+import { formatDate } from '@/lib/format'
+import { jsonFetcher } from '@/lib/fetcher'
 
 type GenDetail = {
   id: string
@@ -27,13 +29,10 @@ export default function GenerationDetailPage({ params }: { params: Promise<{ id:
     const load = async () => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/generations/list?scope=me&limit=1&cursor=${encodeURIComponent(id)}`)
-        if (res.ok) {
-          const json = await res.json()
-          // This is a placeholder; ideally add a dedicated /api/generations/:id
-          const item = (json.items || []).find((x: GenDetail) => x.id === id) || null
-          setData(item)
-        }
+        const json = await jsonFetcher<{ items?: GenDetail[] }>(`/api/generations/list?scope=me&limit=1&cursor=${encodeURIComponent(id)}`)
+        // This is a placeholder; ideally add a dedicated /api/generations/:id
+        const item = (json.items || []).find((x: GenDetail) => x.id === id) || null
+        setData(item)
       } finally {
         setLoading(false)
       }
@@ -59,7 +58,7 @@ export default function GenerationDetailPage({ params }: { params: Promise<{ id:
           </div>
           <div className="space-y-3">
             <div className="text-sm text-gray-600">Status: <span className="font-medium text-gray-900">{data.status}</span></div>
-            <div className="text-sm text-gray-600">Created: <span className="font-medium text-gray-900">{new Date(data.createdAt).toLocaleString()}</span></div>
+            <div className="text-sm text-gray-600">Created: <span className="font-medium text-gray-900">{formatDate(data.createdAt)}</span></div>
             <div className="text-sm text-gray-600">Context: <span className="font-medium text-gray-900">{data.contextName || 'Default'}</span></div>
             <div className="text-sm text-gray-600">Credits: <span className="font-medium text-gray-900">{data.costCredits}</span></div>
             <div className="pt-2 flex gap-2">

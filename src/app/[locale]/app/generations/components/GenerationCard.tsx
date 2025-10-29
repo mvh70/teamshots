@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { useRef, useState } from 'react'
+import { formatDate } from '@/lib/format'
 
 export type GenerationListItem = {
   id: string
@@ -209,7 +210,7 @@ export default function GenerationCard({ item }: { item: GenerationListItem }) {
       </div>
       <div className="p-3 space-y-2 pb-6">
         <div className="flex items-center justify-end">
-          <span className="text-xs text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</span>
+          <span className="text-xs text-gray-500">{formatDate(item.createdAt)}</span>
         </div>
         <p className="text-sm text-gray-900 truncate">Photo style: {item.contextName || 'Freestyle'}</p>
         <div className="flex items-center justify-between">

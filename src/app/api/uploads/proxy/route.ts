@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
+import { getRequestHeader } from '@/lib/server-headers'
 
-const endpoint = process.env.HETZNER_S3_ENDPOINT
-const bucket = process.env.HETZNER_S3_BUCKET
-const accessKeyId = process.env.HETZNER_S3_ACCESS_KEY_ID || process.env.HETZNER_S3_ACCESS_KEY
-const secretAccessKey = process.env.HETZNER_S3_SECRET_ACCESS_KEY || process.env.HETZNER_S3_SECRET_KEY
-const region = process.env.HETZNER_S3_REGION || 'eu-central'
+const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
+const bucket = Env.string('HETZNER_S3_BUCKET', '')
+const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY_ID', Env.string('HETZNER_S3_ACCESS_KEY', ''))
+const secretAccessKey = Env.string('HETZNER_S3_SECRET_ACCESS_KEY', Env.string('HETZNER_S3_SECRET_KEY', ''))
+const region = Env.string('HETZNER_S3_REGION', 'eu-central')
 
 const resolvedEndpoint = endpoint && (endpoint.startsWith('http://') || endpoint.startsWith('https://'))
   ? endpoint
@@ -23,10 +26,10 @@ const s3 = new S3Client({
 export async function POST(req: NextRequest) {
   if (!bucket) return NextResponse.json({ error: 'Missing bucket' }, { status: 500 })
   try {
-    const contentType = req.headers.get('x-file-content-type') || 'application/octet-stream'
-    const extension = req.headers.get('x-file-extension') || ''
-    const keyHeader = req.headers.get('x-upload-key')
-    const fileType = req.headers.get('x-file-type') || 'selfie' // selfie, background, logo
+    const contentType = (await getRequestHeader('x-file-content-type')) || 'application/octet-stream'
+    const extension = (await getRequestHeader('x-file-extension')) || ''
+    const keyHeader = await getRequestHeader('x-upload-key')
+    const fileType = (await getRequestHeader('x-file-type')) || 'selfie' // selfie, background, logo
 
     // Organize files by type
     let folder = 'uploads'
@@ -60,8 +63,7 @@ export async function POST(req: NextRequest) {
     // This keeps the proxy focused on S3 upload only
     return NextResponse.json({ key })
   } catch (e) {
-     
-    console.error('[uploads/proxy] error', e)
+    Logger.error('[uploads/proxy] error', { error: e instanceof Error ? e.message : String(e) })
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 }

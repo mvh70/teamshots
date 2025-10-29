@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getSelfieBySequence, getGenerationBySequence } from '@/lib/image-access'
+import { getSelfieBySequence, getGenerationBySequence } from '@/domain/access/image-access'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {

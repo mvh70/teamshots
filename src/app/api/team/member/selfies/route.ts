@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
     // Transform selfies to include URLs and proper field names
     const transformedSelfies = selfies.map(selfie => {
       const url = `/api/files/get?key=${encodeURIComponent(selfie.key)}`
-      console.log('Generated selfie URL:', url, 'for key:', selfie.key)
+      Logger.info('Generated selfie URL', { url, key: selfie.key })
       return {
         id: selfie.id,
         key: selfie.key,
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ selfies: transformedSelfies })
   } catch (error) {
-    console.error('Error fetching selfies:', error)
+    Logger.error('Error fetching selfies', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ selfie })
   } catch (error) {
-    console.error('Error creating selfie:', error)
+    Logger.error('Error creating selfie', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

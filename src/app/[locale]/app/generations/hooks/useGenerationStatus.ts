@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { jsonFetcher } from '@/lib/fetcher'
 
 export interface GenerationStatus {
   id: string
@@ -91,13 +92,7 @@ export function useGenerationStatus({
     if (!generationId || !enabled) return
 
     try {
-      const response = await fetch(`/api/generations/${generationId}`)
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch generation status: ${response.statusText}`)
-      }
-
-      const data = await response.json()
+      const data = await jsonFetcher<GenerationStatus>(`/api/generations/${generationId}`)
       setGeneration(data)
       setError(null)
       

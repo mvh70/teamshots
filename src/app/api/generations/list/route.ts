@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
 
 // Define the type for the generation object returned by prisma.generation.findMany
 type GenerationWithRelations = {
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
 
     // Get user with roles to determine permissions
-    const { getUserWithRoles, getUserEffectiveRoles } = await import('@/lib/roles')
+    const { getUserWithRoles, getUserEffectiveRoles } = await import('@/domain/access/roles')
     const user = await getUserWithRoles(session.user.id)
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -299,7 +300,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Failed to get generations list:', error)
+    Logger.error('Failed to get generations list', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(
       { error: 'Failed to get generations list' },
       { status: 500 }

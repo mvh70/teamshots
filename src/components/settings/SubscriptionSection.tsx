@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { formatTierName, getTierFeatures, SubscriptionTier } from '@/lib/subscription-utils'
+import { formatTierName, getTierFeatures, SubscriptionTier } from '@/domain/subscription/utils'
 import { CreditCardIcon, CheckIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline'
+import { jsonFetcher } from '@/lib/fetcher'
 
 interface SubscriptionSectionProps {
   userId: string
@@ -21,7 +22,9 @@ const formatSubscriptionTier = (tier: unknown): 'individual' | 'pro' | null => {
   return null
 }
 
-export default function SubscriptionSection({ userId }: SubscriptionSectionProps) {
+export default function SubscriptionSection({ 
+  userId
+}: SubscriptionSectionProps) {
   const t = useTranslations('app.settings.subscription')
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
@@ -34,13 +37,8 @@ export default function SubscriptionSection({ userId }: SubscriptionSectionProps
 
   const loadSubscription = async () => {
     try {
-      const response = await fetch('/api/user/subscription')
-      if (response.ok) {
-        const data = await response.json()
-        setSubscription(data.subscription)
-      } else {
-        console.error('Failed to load subscription:', response.statusText)
-      }
+      const data = await jsonFetcher<{ subscription: Subscription }>('/api/user/subscription')
+      setSubscription(data.subscription)
     } catch (error) {
       console.error('Failed to load subscription:', error)
     } finally {

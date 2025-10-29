@@ -3,8 +3,10 @@ import Stripe from 'stripe'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY'), {
   apiVersion: '2025-09-30.clover',
 })
 
@@ -31,7 +33,7 @@ export async function DELETE() {
 
     return NextResponse.json({ message: 'Subscription cancelled successfully' })
   } catch (error) {
-    console.error('Error cancelling subscription:', error)
+    Logger.error('Error cancelling subscription', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Failed to cancel subscription' }, { status: 500 })
   }
 }
@@ -83,7 +85,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ message: 'Subscription updated successfully', tier: newTier })
   } catch (error) {
-    console.error('Error updating subscription:', error)
+    Logger.error('Error updating subscription', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Failed to update subscription' }, { status: 500 })
   }
 }

@@ -9,16 +9,18 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { SecurityLogger } from '@/lib/security-logger'
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 
 // S3 configuration for Hetzner
-const endpoint = process.env.HETZNER_S3_ENDPOINT
-const bucket = process.env.HETZNER_S3_BUCKET
-const accessKeyId = process.env.HETZNER_S3_ACCESS_KEY_ID || process.env.HETZNER_S3_ACCESS_KEY
-const secretAccessKey = process.env.HETZNER_S3_SECRET_ACCESS_KEY || process.env.HETZNER_S3_SECRET_KEY
+const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
+const bucket = Env.string('HETZNER_S3_BUCKET', '')
+const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY', '')
+const secretAccessKey = Env.string('HETZNER_S3_SECRET_KEY', '')
 
 const s3 = new S3Client({
   endpoint,
-  region: process.env.HETZNER_S3_REGION || 'us-east-1',
+  region: Env.string('HETZNER_S3_REGION', 'us-east-1'),
   credentials: {
     accessKeyId: accessKeyId || '',
     secretAccessKey: secretAccessKey || '',
@@ -88,8 +90,7 @@ export async function GET(
       await SecurityLogger.logSuspiciousActivity(
         session.user.id,
         'unauthorized_generation_access_attempt',
-        { generationId: generation.id, generationOwnerId: generation.personId },
-        request
+        { generationId: generation.id, generationOwnerId: generation.personId }
       )
       return NextResponse.json(
         { error: 'Access denied' },
@@ -115,7 +116,7 @@ export async function GET(
           }
         }
       } catch (error) {
-        console.warn('Failed to get job status:', error)
+        Logger.warn('Failed to get job status', { error: error instanceof Error ? error.message : String(error) })
       }
     }
 
@@ -185,7 +186,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Failed to get generation status:', error)
+    Logger.error('Failed to get generation status', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(
       { error: 'Failed to get generation status' },
       { status: 500 }
@@ -263,7 +264,7 @@ export async function DELETE(
       ...(generation.acceptedPhotoKey ? [generation.acceptedPhotoKey] : [])
     ].filter(Boolean)
 
-    console.log('🗑️ Deleting S3 files:', s3KeysToDelete)
+    Logger.info('Deleting S3 files', { keys: s3KeysToDelete })
 
     for (const key of s3KeysToDelete) {
       try {
@@ -272,9 +273,9 @@ export async function DELETE(
           Key: key,
         })
         await s3.send(command)
-        console.log('✅ Deleted S3 file:', key)
+        Logger.info('Deleted S3 file', { key })
       } catch (s3Error) {
-        console.error('❌ Failed to delete S3 file:', key, s3Error)
+        Logger.error('Failed to delete S3 file', { key, error: s3Error instanceof Error ? s3Error.message : String(s3Error) })
         // Continue with other deletions even if one fails
       }
     }
@@ -291,7 +292,7 @@ export async function DELETE(
       }
     })
 
-    console.log('✅ Generation marked as deleted:', generationId)
+    Logger.info('Generation marked as deleted', { generationId })
 
     return NextResponse.json({
       success: true,
@@ -300,7 +301,7 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error('Failed to delete generation:', error)
+    Logger.error('Failed to delete generation', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(
       { error: 'Failed to delete generation' },
       { status: 500 }

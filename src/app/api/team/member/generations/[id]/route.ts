@@ -2,18 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { SecurityLogger } from '@/lib/security-logger'
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 
 // S3 configuration - this should be centralized
 const s3 = new S3Client({
-  endpoint: process.env.HETZNER_S3_ENDPOINT,
-  region: process.env.HETZNER_S3_REGION || 'us-east-1',
+  endpoint: Env.string('HETZNER_S3_ENDPOINT', ''),
+  region: Env.string('HETZNER_S3_REGION', 'us-east-1'),
   credentials: {
-    accessKeyId: process.env.HETZNER_S3_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.HETZNER_S3_SECRET_ACCESS_KEY || '',
+    accessKeyId: Env.string('HETZNER_S3_ACCESS_KEY', ''),
+    secretAccessKey: Env.string('HETZNER_S3_SECRET_KEY', ''),
   },
   forcePathStyle: true,
 })
-const bucket = process.env.HETZNER_S3_BUCKET
+const bucket = Env.string('HETZNER_S3_BUCKET', '')
 
 export async function DELETE(
   request: NextRequest,
@@ -42,8 +44,7 @@ export async function DELETE(
       await SecurityLogger.logSuspiciousActivity(
         'unknown_user',
         'team_generation_delete_attempt_person_not_found',
-        { inviteToken: token, generationId },
-        request
+        { inviteToken: token, generationId }
       )
       return NextResponse.json({ error: 'Person not found for this token' }, { status: 404 })
     }
@@ -60,8 +61,7 @@ export async function DELETE(
       await SecurityLogger.logSuspiciousActivity(
         person.userId || person.id,
         'team_generation_delete_attempt_not_found_or_unauthorized',
-        { generationId },
-        request
+        { generationId }
       )
       return NextResponse.json({ error: 'Generation not found or access denied' }, { status: 404 })
     }
@@ -81,7 +81,7 @@ export async function DELETE(
         const command = new DeleteObjectCommand({ Bucket: bucket, Key: key })
         await s3.send(command)
       } catch (s3Error) {
-        console.error(`Failed to delete team S3 file: ${key}`, s3Error)
+        Logger.error('Failed to delete team S3 file', { key, error: s3Error instanceof Error ? s3Error.message : String(s3Error) })
       }
     }
 
@@ -100,7 +100,7 @@ export async function DELETE(
     return NextResponse.json({ success: true, message: 'Generation deleted successfully' })
 
   } catch (error) {
-    console.error('Failed to delete team generation:', error)
+    Logger.error('Failed to delete team generation', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Failed to delete generation' }, { status: 500 })
   }
 }

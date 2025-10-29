@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { usePathname } from '@/i18n/routing'
 import { Link } from '@/i18n/routing'
 import { useCredits } from '@/contexts/CreditsContext'
+import { jsonFetcher } from '@/lib/fetcher'
 import { 
   HomeIcon, 
   UsersIcon, 
@@ -59,14 +60,11 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
 
     const fetchCompanyMembership = async () => {
       try {
-        const response = await fetch('/api/dashboard/stats')
-        if (response.ok) {
-          const data = await response.json()
-          setIsCompanyMember(data.userRole.isCompanyMember || data.userRole.isCompanyAdmin)
-          setIsCompanyAdmin(data.userRole.isCompanyAdmin)
-          setNeedsCompanySetup(data.userRole.needsCompanySetup)
-          setNavReady(true)
-        }
+        const data = await jsonFetcher<{ userRole: { isCompanyMember?: boolean; isCompanyAdmin?: boolean; needsCompanySetup?: boolean } }>('/api/dashboard/stats')
+        setIsCompanyMember(data.userRole.isCompanyMember || data.userRole.isCompanyAdmin || false)
+        setIsCompanyAdmin(data.userRole.isCompanyAdmin || false)
+        setNeedsCompanySetup(data.userRole.needsCompanySetup || false)
+        setNavReady(true)
       } catch (err) {
         console.error('Failed to fetch company membership:', err)
         setNavReady(true)
@@ -76,24 +74,21 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
     if (session?.user?.id && !initialRole) {
       fetchCompanyMembership()
     }
-  }, [session?.user?.id])
+  }, [session?.user?.id, accountMode, initialRole, session?.user?.role])
 
   // Coerce account mode to 'individual' for pure individual users
   useEffect(() => {
     if (!isCompanyAdmin && !isCompanyMember && accountMode !== 'individual') {
       setAccountMode('individual')
     }
-  }, [isCompanyAdmin, isCompanyMember])
+  }, [isCompanyAdmin, isCompanyMember, accountMode])
 
   // Fetch allocated credits only for team admins
   useEffect(() => {
     const fetchAllocatedCredits = async () => {
       try {
-        const response = await fetch('/api/team/invites/credits')
-        if (response.ok) {
-          const data = await response.json()
-          setAllocatedCredits(data.totalRemainingCredits)
-        }
+        const data = await jsonFetcher<{ totalRemainingCredits: number }>('/api/team/invites/credits')
+        setAllocatedCredits(data.totalRemainingCredits)
       } catch (err) {
         console.error('Failed to fetch allocated credits:', err)
       }

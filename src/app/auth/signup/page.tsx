@@ -1,44 +1,96 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import {useTranslations} from 'next-intl'
 import Link from 'next/link'
+import { jsonFetcher } from '@/lib/fetcher'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
 import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
 import AuthButton from '@/components/auth/AuthButton'
 import FocusTrap from '@/components/auth/FocusTrap'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
+import { PRICING_CONFIG } from '@/config/pricing'
 
 export default function SignUpPage() {
   const t = useTranslations('auth.signup')
-  const [step, setStep] = useState(1)
+  const searchParams = useSearchParams()
+  const [step, setStep] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const initial = params.get('step') === '2' || params.get('postCheckout') === '1' || params.get('success') === 'true'
+      return initial ? 2 : 1
+    }
+    return 1
+  })
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     firstName: '',
     otpCode: '',
+    userType: 'individual' as 'individual' | 'team',
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [infoMessage, setInfoMessage] = useState('')
 
   const router = useRouter()
+  
+  // Derived: infer plan from URL params
+  const tierParam = searchParams.get('tier') as 'individual' | 'team' | null
+  const periodParam = (searchParams.get('period') || 'monthly') as 'monthly' | 'annual' | 'try_once'
+  const isTryOnce = periodParam === 'try_once'
+  const inferredTier: 'individual' | 'team' | null = tierParam ? tierParam : null
+  const postCheckout = searchParams.get('postCheckout') === '1'
+  const stepParam = searchParams.get('step')
+  const successFlag = searchParams.get('success') === 'true'
+
+  // Precompute photo counts for display
+  const photosIndividualMonthly = calculatePhotosFromCredits(PRICING_CONFIG.individual.includedCredits)
+  const photosProMonthly = calculatePhotosFromCredits(PRICING_CONFIG.pro.includedCredits)
+  const photosTryOnce = calculatePhotosFromCredits(PRICING_CONFIG.tryOnce.credits)
+
+  // Handle URL parameters to pre-select options and post-checkout OTP step
+  useEffect(() => {
+    if (inferredTier) {
+      setFormData(prev => ({ ...prev, userType: inferredTier }))
+    }
+    const emailParam = searchParams.get('email')
+    if (emailParam) {
+      setFormData(prev => ({ ...prev, email: emailParam }))
+    }
+    const shouldShowOtp = postCheckout || stepParam === '2' || successFlag
+    if (shouldShowOtp) {
+      setStep(2)
+      setInfoMessage(
+        `Checkout successful. You're now subscribed to ${isTryOnce ? 'Try Once' : inferredTier === 'team' ? 'Pro' : 'Individual'}. We sent a one-time code to ${emailParam || ''}. Enter it below to confirm your email.`
+      )
+      // Send OTP automatically if we have an email
+      if (emailParam) {
+        // fire-and-forget
+        jsonFetcher('/api/auth/otp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailParam }),
+        }).catch(() => {})
+      }
+    }
+  }, [inferredTier, postCheckout, stepParam, successFlag, isTryOnce, searchParams])
 
   const handleSendOTP = async () => {
     setIsLoading(true)
     setError('')
 
     try {
-      const response = await fetch('/api/auth/otp/send', {
+      const data = await jsonFetcher<{ success?: boolean; error?: string }>('/api/auth/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email }),
       })
-
-      const data = await response.json()
 
       if (data.success) {
         setStep(2)
@@ -63,13 +115,71 @@ export default function SignUpPage() {
     }
   }
 
+  const handleSubscribe = async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      // Persist signup fields for verify step after Stripe redirect
+      try {
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem(
+            'teamshots.pendingSignup',
+            JSON.stringify({
+              email: formData.email,
+              firstName: formData.firstName,
+              password: formData.password,
+              userType: formData.userType,
+            })
+          )
+        }
+      } catch {}
+
+      const period = (searchParams.get('period') || 'monthly') as 'monthly' | 'annual' | 'try_once'
+      const isTryOnceLocal = period === 'try_once'
+      const isTeam = formData.userType === 'team'
+      let priceId = ''
+      let type: 'subscription' | 'try_once' = 'subscription'
+
+      if (isTryOnceLocal) {
+        type = 'try_once'
+        priceId = PRICING_CONFIG.tryOnce.stripePriceId
+      } else if (isTeam) {
+        priceId = PRICING_CONFIG.pro[period].stripePriceId
+      } else {
+        priceId = PRICING_CONFIG.individual[period].stripePriceId
+      }
+
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          unauth: true,
+          email: formData.email,
+          type,
+          priceId,
+          metadata: { tier: isTeam ? 'pro' : 'individual', period },
+        }),
+      })
+      const data = await res.json()
+      if (res.ok && data.checkoutUrl) {
+        window.location.href = data.checkoutUrl as string
+        return
+      }
+      setError(data?.error || 'Failed to start checkout')
+    } catch {
+      setError('Failed to start checkout')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleVerifyOTP = async () => {
     setIsLoading(true)
     setError('')
 
     try {
       // Register directly; server will validate OTP (single verification)
-      const registerRes = await fetch('/api/auth/register', {
+      const registerData = await jsonFetcher<{ success?: boolean; error?: string }>('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -77,10 +187,9 @@ export default function SignUpPage() {
           password: formData.password,
           firstName: formData.firstName,
           otpCode: formData.otpCode,
-          userType: 'individual',
+          userType: formData.userType,
         }),
       })
-      const registerData = await registerRes.json()
       if (registerData.success) {
         const signInResult = await signIn('credentials', {
           email: formData.email,
@@ -90,7 +199,14 @@ export default function SignUpPage() {
         if (signInResult?.error) {
           router.push('/auth/signin')
         } else {
-          router.push('/app/dashboard')
+          // Post-checkout flow ends here -> go to dashboard
+          if (postCheckout) {
+            router.push('/en/app/dashboard')
+            return
+          }
+          // Fallback: if user somehow reaches here without checkout, go to settings to complete purchase
+          const period = searchParams.get('period') || 'monthly'
+          router.push(`/en/app/settings?purchase=required&tier=${formData.userType}&period=${period}`)
         }
       } else {
         if (registerData.error === 'Invalid or expired OTP') {
@@ -153,6 +269,68 @@ export default function SignUpPage() {
         <div className="space-y-6">
           {step === 1 && (
             <>
+              {/* Plan summary (inferred from entry point) */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800">
+                {isTryOnce ? (
+                  <div>
+                    <strong>Try Once</strong> — {PRICING_CONFIG.tryOnce.credits} credits ≈ {calculatePhotosFromCredits(PRICING_CONFIG.tryOnce.credits)} photos
+                  </div>
+                ) : inferredTier === 'team' ? (
+                  <div>
+                    <strong>Pro</strong> — {PRICING_CONFIG.pro.includedCredits} credits/month ≈ {calculatePhotosFromCredits(PRICING_CONFIG.pro.includedCredits)} photos/month
+                  </div>
+                ) : inferredTier === 'individual' ? (
+                  <div>
+                    <strong>Individual</strong> — {PRICING_CONFIG.individual.includedCredits} credits/month ≈ {calculatePhotosFromCredits(PRICING_CONFIG.individual.includedCredits)} photos/month
+                  </div>
+                ) : (
+                  <div>
+                    Select a plan to continue: <strong>Individual</strong> or <strong>Pro</strong>
+                  </div>
+                )}
+              </div>
+
+              {/* User Type Selection (shown when needed) */}
+              {(!inferredTier || isTryOnce) && (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  {t('userTypeLabel')}
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, userType: 'individual' })}
+                    className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                      formData.userType === 'individual'
+                        ? 'border-brand-primary bg-brand-primary-light'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-900">{t('individual')}</div>
+                    <div className="mt-1 text-xs font-semibold text-emerald-700">
+                      {isTryOnce ? `${photosTryOnce} ${photosTryOnce === 1 ? 'photo' : 'photos'}` : `${photosIndividualMonthly} ${photosIndividualMonthly === 1 ? 'photo' : 'photos'}/month`}
+                    </div>
+                    <div className="text-sm text-gray-600">{t('individualDesc')}</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, userType: 'team' })}
+                    className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                      formData.userType === 'team'
+                        ? 'border-brand-primary bg-brand-primary-light'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-900">{t('team')}</div>
+                    <div className="mt-1 text-xs font-semibold text-emerald-700">
+                      {isTryOnce ? `${photosTryOnce} ${photosTryOnce === 1 ? 'photo' : 'photos'}` : `${photosProMonthly} ${photosProMonthly === 1 ? 'photo' : 'photos'}/month`}
+                    </div>
+                    <div className="text-sm text-gray-600">{t('teamDesc')}</div>
+                  </button>
+                </div>
+              </div>
+              )}
+
               <AuthInput
                 id="firstName"
                 name="firstName"
@@ -171,6 +349,8 @@ export default function SignUpPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
+              
+              {/* Passwords */}
               <AuthInput
                 id="password"
                 name="password"
@@ -192,17 +372,22 @@ export default function SignUpPage() {
               />
               <AuthButton
                 type="button"
-                onClick={handleSendOTP}
+                onClick={handleSubscribe}
                 isLoading={isLoading}
                 disabled={isLoading || !formData.email || !formData.password || formData.password !== formData.confirmPassword || !formData.firstName}
               >
-                {isLoading ? t('sending') : t('sendCode')}
+                {isLoading ? t('sending') : 'Subscribe'}
               </AuthButton>
             </>
           )}
 
           {step === 2 && (
             <>
+              {infoMessage && (
+                <div className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-md p-3 text-center mb-2">
+                  {infoMessage}
+                </div>
+              )}
               <AuthInput
                 id="otpCode"
                 name="otpCode"

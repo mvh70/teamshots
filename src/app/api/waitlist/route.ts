@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { sendWaitlistWelcomeEmail } from '@/lib/email';
 import { ok, badRequest, unauthorized, internal } from '@/lib/api-response';
+import { Logger } from '@/lib/logger';
 
 const emailSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
@@ -42,10 +43,10 @@ export async function POST(request: Request) {
     
     if (!emailResult.success) {
       // Log error but don't fail the request
-      console.error('Failed to send welcome email:', emailResult.error);
+      Logger.error('Failed to send welcome email', { error: emailResult.error });
     }
     
-    console.log(`New waitlist signup: ${email} (locale: ${locale})`);
+    Logger.info('New waitlist signup', { email, locale });
     
     return NextResponse.json(ok(undefined, 'WAITLIST_OK', 'waitlist.success'));
   } catch (error) {
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       return NextResponse.json(badRequest('INVALID_INPUT', 'errors.invalidInput', error.issues[0].message), { status: 400 });
     }
     
-    console.error('Waitlist signup error:', error);
+    Logger.error('Waitlist signup error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(internal('Something went wrong. Please try again.', 'errors.internal'), { status: 500 });
   }
 }

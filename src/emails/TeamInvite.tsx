@@ -1,7 +1,8 @@
 import React from 'react';
 import { BRAND_CONFIG } from '@/config/brand';
 import { getEmailTranslation } from '@/lib/translations';
-import { calculatePhotosFromCredits, PRICING_CONFIG } from '@/config/pricing';
+import { PRICING_CONFIG } from '@/config/pricing';
+import { calculatePhotosFromCredits } from '@/domain/pricing';
 
 interface TeamInviteEmailProps {
   companyName: string;

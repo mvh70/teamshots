@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
+import { useSearchParams } from 'next/navigation'
 import { Link } from '@/i18n/routing'
 import { 
   CheckIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 import SubscriptionSection from '@/components/settings/SubscriptionSection'
+import { jsonFetcher } from '@/lib/fetcher'
 
 interface UserSettings {
   mode: 'individual' | 'company'
@@ -19,25 +21,37 @@ interface UserSettings {
 
 export default function SettingsPage() {
   const { data: session } = useSession()
+  const searchParams = useSearchParams()
   const t = useTranslations('app.settings')
   const [settings, setSettings] = useState<UserSettings>({ mode: 'individual' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'team' | 'subscription' | 'admin' | 'account'>('team')
+  const [activeTab, setActiveTab] = useState<'team' | 'subscription' | 'admin' | 'account'>('account')
+  
+  // Check if user needs to purchase
+  const needsPurchase = searchParams.get('purchase') === 'required'
 
   useEffect(() => {
     fetchUserSettings()
-  }, [])
+    
+    // If user needs to purchase, switch to subscription tab
+    if (needsPurchase) {
+      setActiveTab('subscription')
+    }
+    
+    // Ensure non team_admin users don't land on the team tab
+    const isTeamAdmin = session?.user?.person?.company?.adminId === session?.user?.id
+    if (!isTeamAdmin && activeTab === 'team') {
+      setActiveTab('account')
+    }
+  }, [needsPurchase, session, activeTab])
 
   const fetchUserSettings = async () => {
     try {
-      const response = await fetch('/api/user/settings')
-      if (response.ok) {
-        const data = await response.json()
-        setSettings(data.settings)
-      }
+      const data = await jsonFetcher<{ settings: UserSettings }>('/api/user/settings')
+      setSettings(data.settings)
     } catch (err) {
       console.error('Failed to fetch settings:', err)
     } finally {
@@ -54,29 +68,20 @@ export default function SettingsPage() {
       
       console.log('Making API call to refresh session...')
       // Get fresh user data from the database
-      const response = await fetch('/api/user/refresh-session', {
+      const data = await jsonFetcher<{ debug?: { databaseRole?: string } }>('/api/user/refresh-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
       
-      console.log('API response status:', response.status)
+      console.log('Fresh database data:', data)
       
-      if (response.ok) {
-        const data = await response.json()
-        console.log('Fresh database data:', data)
-        
-        if (data.debug?.databaseRole !== session?.user?.role) {
-          setSuccess(`⚠️ Session mismatch detected! Database: ${data.debug?.databaseRole}, Session: ${session?.user?.role}. Please sign out using the profile menu in the sidebar and sign back in.`)
-        } else {
-          setSuccess(`✅ Session is up to date. Database role: ${data.debug?.databaseRole}`)
-          setTimeout(() => {
-            window.location.reload()
-          }, 1500)
-        }
+      if (data.debug?.databaseRole !== session?.user?.role) {
+        setSuccess(`⚠️ Session mismatch detected! Database: ${data.debug?.databaseRole}, Session: ${session?.user?.role}. Please sign out using the profile menu in the sidebar and sign back in.`)
       } else {
-        const errorData = await response.json()
-        console.error('API error:', errorData)
-        setError(errorData.error || 'Failed to refresh session')
+        setSuccess(`✅ Session is up to date. Database role: ${data.debug?.databaseRole}`)
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
       }
     } catch (err) {
       console.error('Failed to refresh session:', err)
@@ -93,7 +98,7 @@ export default function SettingsPage() {
     setError(null)
 
     try {
-      const response = await fetch('/api/user/settings', {
+      const data = await jsonFetcher<{ settings: UserSettings }>('/api/user/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -102,16 +107,15 @@ export default function SettingsPage() {
         })
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setSettings(data.settings)
-        setSuccess('Company information updated')
-      } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Failed to update company information')
+      setSettings(data.settings)
+      setSuccess('Company information updated')
+    } catch (e) {
+      try {
+        const errorData = (e as { message?: string })
+        setError(errorData?.message || 'Failed to update company information')
+      } catch {
+        setError('Failed to update company information')
       }
-    } catch {
-      setError('Failed to update company information')
     } finally {
       setSaving(false)
     }
@@ -128,7 +132,7 @@ export default function SettingsPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/admin/change-role', {
+      await jsonFetcher('/api/admin/change-role', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -137,16 +141,15 @@ export default function SettingsPage() {
         })
       })
 
-      if (response.ok) {
-        await response.json()
-        setSuccess(`Role changed to ${newRole}. Please sign out and sign back in to see the changes.`)
-        // Don't auto-reload since session won't update automatically
-      } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Failed to change role')
+      setSuccess(`Role changed to ${newRole}. Please sign out and sign back in to see the changes.`)
+      // Don't auto-reload since session won't update automatically
+    } catch (e) {
+      try {
+        const errorData = (e as { message?: string })
+        setError(errorData?.message || 'Failed to change role')
+      } catch {
+        setError('Failed to change role')
       }
-    } catch {
-      setError('Failed to change role')
     } finally {
       setSaving(false)
     }
@@ -180,13 +183,15 @@ export default function SettingsPage() {
       {/* Tabs */}
       <div className="mb-6 overflow-x-auto">
         <div className="inline-flex rounded-lg border border-gray-200 bg-white">
-          <button
-            type="button"
-            onClick={() => setActiveTab('team')}
-            className={`px-4 py-2 text-sm font-medium rounded-l-lg border-r border-gray-200 ${activeTab === 'team' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-          >
-            {t('tabs.teamInformation')}
-          </button>
+          {session?.user?.person?.company?.adminId === session?.user?.id && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('team')}
+              className={`px-4 py-2 text-sm font-medium rounded-l-lg border-r border-gray-200 ${activeTab === 'team' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+            >
+              {t('tabs.teamInformation')}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setActiveTab('subscription')}
@@ -233,8 +238,8 @@ export default function SettingsPage() {
       )}
 
 
-      {/* Team Information */}
-      {activeTab === 'team' && settings.mode === 'company' && (
+      {/* Team Information - visible only to team_admins */}
+      {activeTab === 'team' && settings.mode === 'company' && session?.user?.person?.company?.adminId === session?.user?.id && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('companyInfo.title')}</h2>
           
@@ -287,7 +292,9 @@ export default function SettingsPage() {
 
       {/* Subscription & Billing */}
       {activeTab === 'subscription' && (
-        <SubscriptionSection userId={session?.user?.id || ''} />
+        <SubscriptionSection 
+          userId={session?.user?.id || ''} 
+        />
       )}
 
 
@@ -345,7 +352,7 @@ export default function SettingsPage() {
                   <button
                     onClick={() => handleRoleChange('user')}
                     disabled={saving}
-                    className="px-3 py-2 text-sm font-medium rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-300 disabled:opacity-50"
+                    className="px-3 py-2 text-sm font-medium rounded-md bg:white text-red-700 hover:bg-red-50 border border-red-300 disabled:opacity-50"
                   >
                     Set as Individual User
                   </button>
@@ -353,7 +360,7 @@ export default function SettingsPage() {
                   <button
                     onClick={() => handleRoleChange('company_admin')}
                     disabled={saving}
-                    className="px-3 py-2 text-sm font-medium rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-300 disabled:opacity-50"
+                    className="px-3 py-2 text-sm font-medium rounded-md bg:white text-red-700 hover:bg-red-50 border border-red-300 disabled:opacity-50"
                   >
                     Set as Team Admin
                   </button>
@@ -395,17 +402,17 @@ export default function SettingsPage() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('accountInfo.name')}</label>
+            <label className="block text.sm font-medium text-gray-700">{t('accountInfo.name')}</label>
             <p className="text-sm text-gray-900 mt-1">{session?.user?.name || t('accountInfo.notProvided')}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('accountInfo.userId')}</label>
+            <label className="block text.sm font-medium text-gray-700">{t('accountInfo.userId')}</label>
             <p className="text-sm text-gray-500 font-mono mt-1">{session?.user?.id}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('accountInfo.currentRoles')}</label>
+            <label className="block text.sm font-medium text-gray-700">{t('accountInfo.currentRoles')}</label>
             <div className="flex flex-wrap gap-2 mt-2">
               {session?.user?.isAdmin && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">

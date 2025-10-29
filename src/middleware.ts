@@ -2,6 +2,7 @@ import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getRequestHeader } from '@/lib/server-headers'
 
 function addSecurityHeaders(response: NextResponse) {
   // Prevent clickjacking
@@ -25,24 +26,24 @@ function addSecurityHeaders(response: NextResponse) {
   // Permissions Policy
   response.headers.set(
     'Permissions-Policy',
-    'camera=(self), microphone=(), geolocation=()'
+    'camera=(self), microphone=(), geolocation()'
   )
   
   // Content Security Policy - Safari-compatible version
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://static.cloudflareinsights.com", // Add Cloudflare Insights
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.resend.com https://cloudflareinsights.com ws: wss:", // Add Cloudflare Insights
+    "connect-src 'self' https://api.resend.com https://cloudflareinsights.com ws: wss:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "object-src 'none'", // Add object-src for Safari compatibility
-    "media-src 'self' data: blob:", // Add media-src for Safari
-    "worker-src 'self' blob:", // Add worker-src for Safari
-    "child-src 'self' blob:" // Add child-src for Safari
+    "object-src 'none'",
+    "media-src 'self' data: blob:",
+    "worker-src 'self' blob:",
+    "child-src 'self' blob:"
   ].join('; ')
   
   response.headers.set('Content-Security-Policy', csp)
@@ -62,9 +63,9 @@ const intlMiddleware = createMiddleware({
   localePrefix: routing.localePrefix
 })
 
-export default function middleware(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   // Allow E2E tests to bypass locale detection/redirects
-  if (request.headers.get('x-playwright-e2e') === '1') {
+  if (await getRequestHeader('x-playwright-e2e') === '1') {
     const res = NextResponse.next()
     // Preserve existing E2E headers if they exist, otherwise add defaults
     if (!res.headers.get('x-e2e-user-id')) {
@@ -87,23 +88,15 @@ export default function middleware(request: NextRequest) {
   if (url.protocol === 'about:' || !url.protocol) {
     // Redirect to proper protocol
     const newUrl = new URL(request.url)
-    newUrl.protocol = request.headers.get('x-forwarded-proto') || 'http'
+    newUrl.protocol = (await getRequestHeader('x-forwarded-proto')) || 'http'
     return NextResponse.redirect(newUrl, 301)
   }
   
   const response = intlMiddleware(request)
   
-  // Add locale information to headers for app-routes
-  // const pathname = request.nextUrl.pathname
-  // const isSpanish = pathname.startsWith('/es/')
-  // const locale = isSpanish ? 'es' : 'en'
-  // response.headers.set('x-locale', locale)
-  
   return addSecurityHeaders(response)
 }
 
 export const config = {
-  // Match only internationalized pathnames
-  // Exclude API routes, auth routes, invite routes, and static files
   matcher: ['/', '/(es|en)/:path*', '/((?!api|auth|invite|_next|_vercel|.*\\..*).*)']
 };

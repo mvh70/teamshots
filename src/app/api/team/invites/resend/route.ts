@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendTeamInviteEmail } from '@/lib/email'
-import { withCompanyPermission } from '@/lib/permissions'
+import { Env } from '@/lib/env'
+import { withCompanyPermission } from '@/domain/access/permissions'
+import { Logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send email with invite link
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+    const baseUrl = Env.string('NEXTAUTH_URL', 'http://localhost:3000')
     const inviteLink = `${baseUrl}/invite/${invite.token}`
     
     const emailResult = await sendTeamInviteEmail({
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!emailResult.success) {
-      console.error('Failed to resend team invite email:', emailResult.error)
+      Logger.error('Failed to resend team invite email', { error: emailResult.error })
       return NextResponse.json({ 
         error: 'Failed to send email',
         details: emailResult.error 
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error resending team invite:', error)
+    Logger.error('Error resending team invite', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

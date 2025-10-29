@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
   try {
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ id: selfie.id })
   } catch (e) {
-    console.error('[uploads/find-by-key] error', e)
+    Logger.error('[uploads/find-by-key] error', { error: e instanceof Error ? e.message : String(e) })
     return NextResponse.json({ error: 'Failed to find selfie' }, { status: 500 })
   }
 }

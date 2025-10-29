@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
 
 export async function GET() {
   try {
@@ -40,7 +41,7 @@ export async function GET() {
     })
 
   } catch (error) {
-    console.error('Error fetching personal contexts:', error)
+    Logger.error('Error fetching personal contexts', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPublicImageUrl } from '@/lib/image-access'
+import { getPublicImageUrl } from '@/domain/access/image-access'
 
 export async function GET(
   request: NextRequest,

@@ -2,7 +2,9 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
-import { calculatePhotosFromCredits, PRICING_CONFIG } from '@/config/pricing'
+import { PRICING_CONFIG } from '@/config/pricing'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
+import { formatDate } from '@/lib/format'
 
 interface InviteData {
   email: string
@@ -206,7 +208,7 @@ export default function InvitePage() {
         </button>
 
         <p className="text-xs text-gray-500 text-center mt-4">
-          Invite expires: {new Date(inviteData.expiresAt).toLocaleDateString()}
+          Invite expires: {formatDate(inviteData.expiresAt)}
         </p>
       </div>
     </div>

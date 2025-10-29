@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface Step {
   id: number;
@@ -191,9 +192,12 @@ export default function HowItWorks() {
           
           {/* CTA Button */}
           <div className="space-y-4">
-            <button className="bg-brand-cta text-white px-10 py-5 rounded-xl font-bold text-xl hover:bg-brand-cta-hover transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
+            <Link
+              href="/auth/signup"
+              className="inline-block bg-brand-cta text-white px-10 py-5 rounded-xl font-bold text-xl hover:bg-brand-cta-hover transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
+            >
               {t('cta')}
-            </button>
+            </Link>
             <p className="text-sm text-gray-500">
               {t('guarantee')}
             </p>

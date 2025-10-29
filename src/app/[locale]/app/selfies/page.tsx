@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import SelfieUploadFlow from '@/components/Upload/SelfieUploadFlow'
 import { PrimaryButton, UploadGrid } from '@/components/ui'
+import { jsonFetcher } from '@/lib/fetcher'
 
 interface UploadListItem {
   id: string
@@ -27,13 +28,10 @@ export default function SelfiesPage() {
   const loadUploads = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/uploads/list', {
+      const data = await jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list', {
         credentials: 'include' // Required for Safari to send cookies
       })
-      if (response.ok) {
-        const data = await response.json()
-        setUploads(data.items || [])
-      }
+      setUploads(data.items || [])
     } catch (error) {
       console.error('Failed to load uploads:', error)
     } finally {
@@ -59,15 +57,10 @@ export default function SelfiesPage() {
         throw new Error('Upload key is missing or invalid')
       }
       
-      const response = await fetch(`/api/uploads/delete?key=${encodeURIComponent(upload.uploadedKey)}`, {
+      await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(upload.uploadedKey)}`, {
         method: 'DELETE',
         credentials: 'include' // Required for Safari to send cookies
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to delete upload')
-      }
 
       // Remove from local state
       setUploads(prev => prev.filter(upload => upload.id !== uploadId))

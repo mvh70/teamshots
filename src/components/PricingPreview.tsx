@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useState } from 'react';
-import { getPricingDisplay, calculatePhotosFromCredits } from '@/config/pricing';
+import { getPricingDisplay, calculatePhotosFromCredits } from '@/domain/pricing';
 
 export default function PricingPreview() {
   const t = useTranslations('pricing');
@@ -234,7 +234,12 @@ export default function PricingPreview() {
                 </ul>
 
                 <Link
-                  href="/#waitlist"
+                  href={plan.id === 'tryOnce' 
+                    ? '/auth/signup?period=try_once'
+                    : plan.id === 'individual'
+                    ? '/auth/signup?tier=individual&period=monthly'
+                    : '/auth/signup?tier=team&period=monthly'
+                  }
                   className={`block w-full text-center px-6 py-3 rounded-lg font-semibold transition-all duration-300 mt-auto ${
                     plan.popular
                       ? "bg-brand-cta text-white hover:bg-brand-cta-hover shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"

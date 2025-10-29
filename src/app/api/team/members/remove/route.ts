@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { withCompanyPermission } from '@/lib/permissions'
+import { withCompanyPermission } from '@/domain/access/permissions'
+import { Logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error removing team member:', error)
+    Logger.error('Error removing team member', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

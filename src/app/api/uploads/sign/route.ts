@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client } from '@aws-sdk/client-s3'
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 
 // Expected env vars for Hetzner S3 compatibility
 // HETZNER_S3_ENDPOINT=https://<region>.compat.objectstorage.eu-central-1.hetzner.com
@@ -8,14 +10,13 @@ import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
 // HETZNER_S3_ACCESS_KEY=<key>
 // HETZNER_S3_SECRET_KEY=<secret>
 
-const endpoint = process.env.HETZNER_S3_ENDPOINT
-const bucket = process.env.HETZNER_S3_BUCKET
-const accessKeyId = process.env.HETZNER_S3_ACCESS_KEY
-const secretAccessKey = process.env.HETZNER_S3_SECRET_KEY
+const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
+const bucket = Env.string('HETZNER_S3_BUCKET', '')
+const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY', '')
+const secretAccessKey = Env.string('HETZNER_S3_SECRET_KEY', '')
 
 if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
-   
-  console.warn('[uploads/sign] Missing Hetzner S3 env vars')
+  Logger.warn('[uploads/sign] Missing Hetzner S3 env vars')
 }
 
 const resolvedEndpoint = endpoint && (endpoint.startsWith('http://') || endpoint.startsWith('https://'))
@@ -24,7 +25,7 @@ const resolvedEndpoint = endpoint && (endpoint.startsWith('http://') || endpoint
     ? `https://${endpoint}`
     : undefined
 
-const region = process.env.HETZNER_S3_REGION || 'us-east-1'
+const region = Env.string('HETZNER_S3_REGION', 'us-east-1')
 
 const s3 = new S3Client({
   region,
@@ -64,8 +65,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url, fields, key })
   } catch (e) {
-     
-    console.error('[uploads/sign] error', e)
+    Logger.error('[uploads/sign] error', { error: e instanceof Error ? e.message : String(e) })
     return NextResponse.json({ error: 'Failed to sign upload' }, { status: 500 })
   }
 }

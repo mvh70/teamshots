@@ -5,6 +5,7 @@ import { useRouter } from '@/i18n/routing'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import PhotoStyleSettings from '@/components/customization/PhotoStyleSettings'
 import { PhotoStyleSettings as PhotoStyleSettingsType, DEFAULT_PHOTO_STYLE_SETTINGS } from '@/types/photo-style'
+import { jsonFetcher } from '@/lib/fetcher'
 
 export default function CreatePersonalContextPage() {
   const router = useRouter()
@@ -23,7 +24,7 @@ export default function CreatePersonalContextPage() {
     setSuccess(null)
 
     try {
-      const response = await fetch('/api/contexts', {
+      await jsonFetcher('/api/contexts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -35,16 +36,10 @@ export default function CreatePersonalContextPage() {
         })
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess('Personal style created successfully!')
-        setTimeout(() => {
-          router.push('/app/contexts/personal')
-        }, 1500)
-      } else {
-        setError(data.error || 'Failed to create personal style')
-      }
+      setSuccess('Personal style created successfully!')
+      setTimeout(() => {
+        router.push('/app/contexts/personal')
+      }, 1500)
     } catch {
       setError('Failed to create personal style')
     } finally {

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import { jsonFetcher } from '@/lib/fetcher'
 
 interface CreditsContextType {
   credits: {
@@ -30,13 +31,10 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       
       // Fetch both credit types in parallel
-      const [individualResponse, companyResponse] = await Promise.all([
-        fetch('/api/credits/balance?type=individual'),
-        fetch('/api/credits/balance?type=company')
+      const [individualCredits, companyCredits] = await Promise.all([
+        jsonFetcher<{ balance: number }>('/api/credits/balance?type=individual').catch(() => ({ balance: 0 })),
+        jsonFetcher<{ balance: number }>('/api/credits/balance?type=company').catch(() => ({ balance: 0 }))
       ])
-
-      const individualCredits = individualResponse.ok ? await individualResponse.json() : { balance: 0 }
-      const companyCredits = companyResponse.ok ? await companyResponse.json() : { balance: 0 }
 
       setCredits({
         individual: individualCredits.balance || 0,

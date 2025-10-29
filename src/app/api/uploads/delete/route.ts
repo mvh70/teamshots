@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 
-const endpoint = process.env.HETZNER_S3_ENDPOINT
-const bucket = process.env.HETZNER_S3_BUCKET
-const accessKeyId = process.env.HETZNER_S3_ACCESS_KEY_ID || process.env.HETZNER_S3_ACCESS_KEY
-const secretAccessKey = process.env.HETZNER_S3_SECRET_ACCESS_KEY || process.env.HETZNER_S3_SECRET_KEY
+const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
+const bucket = Env.string('HETZNER_S3_BUCKET', '')
+const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY_ID', Env.string('HETZNER_S3_ACCESS_KEY', ''))
+const secretAccessKey = Env.string('HETZNER_S3_SECRET_ACCESS_KEY', Env.string('HETZNER_S3_SECRET_KEY', ''))
 
 if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
   throw new Error('Missing S3 configuration')
@@ -14,7 +16,7 @@ if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
 
 const s3 = new S3Client({
   endpoint,
-  region: process.env.HETZNER_S3_REGION || 'us-east-1',
+  region: Env.string('HETZNER_S3_REGION', 'us-east-1'),
   credentials: {
     accessKeyId,
     secretAccessKey,
@@ -58,7 +60,7 @@ export async function DELETE(request: NextRequest) {
       })
       await s3.send(command)
     } catch (s3Error) {
-      console.error('Failed to delete from S3:', s3Error)
+      Logger.error('Failed to delete from S3', { error: s3Error instanceof Error ? s3Error.message : String(s3Error) })
       // Continue with database deletion even if S3 deletion fails
     }
 
@@ -71,7 +73,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Delete selfie error:', error)
+    Logger.error('Delete selfie error', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(
       { error: 'Failed to delete selfie' },
       { status: 500 }
