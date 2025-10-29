@@ -11,7 +11,12 @@ const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
   apiVersion: '2025-09-30.clover',
 });
 
-const webhookSecret = Env.string('STRIPE_WEBHOOK_SECRET');
+// Webhook secret: Not required if Stripe webhooks are handled externally
+// Only needed if you want to test webhooks locally with Stripe CLI
+// Webhook secret is required in production for security
+// Can be omitted in development for local Stripe CLI testing
+const webhookSecret = Env.string('STRIPE_WEBHOOK_SECRET', '').trim();
+const isProduction = Env.string('NODE_ENV', 'development') === 'production';
 
 // Disable body parsing, we need the raw body for webhook signature verification
 export const runtime = 'nodejs';
@@ -25,24 +30,40 @@ export async function POST(request: NextRequest) {
     const body = await request.text();
     const signature = await getRequestHeader('stripe-signature');
 
-    if (!signature) {
-      return NextResponse.json(
-        { error: 'Missing stripe-signature header' },
-        { status: 400 }
-      );
-    }
-
     // Verify webhook signature
     let event: Stripe.Event;
     
-    try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    } catch (err) {
-      Logger.error('Webhook signature verification failed', { error: err instanceof Error ? err.message : String(err) });
+    // In production, webhook secret is required for security
+    if (isProduction && !webhookSecret) {
+      Logger.error('Webhook secret is required in production');
       return NextResponse.json(
-        { error: 'Webhook signature verification failed' },
-        { status: 400 }
+        { error: 'Webhook secret configuration required' },
+        { status: 500 }
       );
+    }
+    
+    // Skip signature verification only in development when webhook secret is not set
+    if (!webhookSecret) {
+      Logger.warn('Webhook secret not configured, skipping signature verification');
+      event = JSON.parse(body) as Stripe.Event;
+    } else {
+      // When webhook secret is configured, signature verification is required
+      if (!signature) {
+        return NextResponse.json(
+          { error: 'Missing stripe-signature header' },
+          { status: 400 }
+        );
+      }
+      
+      try {
+        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      } catch (err) {
+        Logger.error('Webhook signature verification failed', { error: err instanceof Error ? err.message : String(err) });
+        return NextResponse.json(
+          { error: 'Webhook signature verification failed' },
+          { status: 400 }
+        );
+      }
     }
 
     // Handle different event types
