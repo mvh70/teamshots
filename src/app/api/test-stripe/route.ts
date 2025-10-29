@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const { type, priceId } = body;
 
     // Call the actual checkout endpoint
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/stripe/checkout`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/stripe/checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

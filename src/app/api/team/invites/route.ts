@@ -93,8 +93,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Send email with invite link
-    const baseUrl = process.env.NEXTAUTH_URL || 
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
     const inviteLink = `${baseUrl}/invite/${token}`
     
     const emailResult = await sendTeamInviteEmail({

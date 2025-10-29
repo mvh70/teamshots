@@ -173,12 +173,18 @@ export async function sendTeamInviteEmail({
 }: SendTeamInviteEmailParams) {
   try {
     const subject = getEmailTranslation('teamInvite.subject', locale, { companyName });
+    const text = getEmailTranslation('teamInvite.text', locale, { 
+      companyName,
+      inviteLink,
+      creditsAllocated: String(creditsAllocated)
+    });
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
       replyTo: REPLY_TO_EMAIL,
       subject,
+      text,
       react: TeamInviteEmail({ 
         companyName, 
         inviteLink, 

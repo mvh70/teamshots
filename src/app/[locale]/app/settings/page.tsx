@@ -25,6 +25,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'team' | 'subscription' | 'admin' | 'account'>('team')
 
   useEffect(() => {
     fetchUserSettings()
@@ -151,42 +152,6 @@ export default function SettingsPage() {
     }
   }
 
-  const handleTeamRoleChange = async (newRole: 'company_member' | 'company_admin') => {
-    if (!session?.user?.person?.companyId) {
-      setError('You must be part of a company to change team roles')
-      return
-    }
-
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const response = await fetch('/api/team/members/role', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: session.user.id,
-          role: newRole
-        })
-      })
-
-      if (response.ok) {
-        setSuccess(`Team role changed to ${newRole}. Page will reload to reflect changes.`)
-        // Reload the page to update the session and sidebar
-        setTimeout(() => {
-          window.location.reload()
-        }, 1500)
-      } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Failed to change team role')
-      }
-    } catch {
-      setError('Failed to change team role')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -212,6 +177,42 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      {/* Tabs */}
+      <div className="mb-6 overflow-x-auto">
+        <div className="inline-flex rounded-lg border border-gray-200 bg-white">
+          <button
+            type="button"
+            onClick={() => setActiveTab('team')}
+            className={`px-4 py-2 text-sm font-medium rounded-l-lg border-r border-gray-200 ${activeTab === 'team' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+          >
+            {t('tabs.teamInformation')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('subscription')}
+            className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'subscription' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+          >
+            {t('tabs.subscriptionBilling')}
+          </button>
+          {session?.user?.isAdmin === true && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('admin')}
+              className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'admin' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+            >
+              {t('tabs.adminTools')}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setActiveTab('account')}
+            className={`px-4 py-2 text-sm font-medium rounded-r-lg ${activeTab === 'account' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+          >
+            {t('tabs.accountInfo')}
+          </button>
+        </div>
+      </div>
+
       {/* Success/Error Messages */}
       {success && (
         <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
@@ -232,8 +233,8 @@ export default function SettingsPage() {
       )}
 
 
-      {/* Company Information (only shown in company mode) */}
-      {settings.mode === 'company' && (
+      {/* Team Information */}
+      {activeTab === 'team' && settings.mode === 'company' && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('companyInfo.title')}</h2>
           
@@ -284,79 +285,14 @@ export default function SettingsPage() {
         </div>
       )}
 
-
       {/* Subscription & Billing */}
-      <SubscriptionSection userId={session?.user?.id || ''} />
-
-      {/* TEAM ROLE MANAGEMENT SECTION - FOR COMPANY MEMBERS */}
-      {session?.user?.person?.companyId && (
-        <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6 mb-6">
-          <div className="flex items-center mb-4">
-            <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold mr-3">
-              [TEAM]
-            </div>
-            <h2 className="text-lg font-semibold text-purple-900">Team Role Management</h2>
-          </div>
-          <p className="text-sm text-purple-700 mb-4">
-            Manage your role within your company team.
-          </p>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-purple-800 mb-2">
-                Current Team Role
-              </label>
-              <div className="flex items-center space-x-2">
-                {session?.user?.person?.company?.adminId === session?.user?.id ? (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                    Team Admin
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Team Member
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-purple-800 mb-2">
-                Change Team Role
-              </label>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleTeamRoleChange('company_member')}
-                  disabled={saving}
-                  className={`px-3 py-2 text-sm font-medium rounded-md ${
-                    session?.user?.person?.company?.adminId !== session?.user?.id
-                      ? 'bg-purple-200 text-purple-900'
-                      : 'bg-white text-purple-700 hover:bg-purple-50 border border-purple-300'
-                  } disabled:opacity-50`}
-                >
-                  Set as Team Member
-                </button>
-                <button
-                  onClick={() => handleTeamRoleChange('company_admin')}
-                  disabled={saving}
-                  className={`px-3 py-2 text-sm font-medium rounded-md ${
-                    session?.user?.person?.company?.adminId === session?.user?.id
-                      ? 'bg-purple-200 text-purple-900'
-                      : 'bg-white text-purple-700 hover:bg-purple-50 border border-purple-300'
-                  } disabled:opacity-50`}
-                >
-                  Set as Team Admin
-                </button>
-              </div>
-              <p className="text-xs text-purple-600 mt-1">
-                💡 This will change your role within your company team.
-              </p>
-            </div>
-          </div>
-        </div>
+      {activeTab === 'subscription' && (
+        <SubscriptionSection userId={session?.user?.id || ''} />
       )}
 
+
       {/* ADMIN ROLE MANAGEMENT SECTION - ADMIN ONLY */}
-      {session?.user?.isAdmin === true && (
+      {activeTab === 'admin' && session?.user?.isAdmin === true && (
         <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6 mb-6">
           <div className="flex items-center mb-4">
             <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-bold mr-3">
@@ -448,6 +384,7 @@ export default function SettingsPage() {
       )}
 
       {/* Account Information */}
+      {activeTab === 'account' && (
       <div className="bg-white rounded-lg border border-gray-200 p-6 mt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('accountInfo.title')}</h2>
         
@@ -497,6 +434,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }

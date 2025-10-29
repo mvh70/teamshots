@@ -114,13 +114,13 @@ async function createProducts() {
     console.log(`✅ Pro Monthly - Price ID: ${proMonthlyPrice.id}`);
     console.log(`✅ Pro Annual - Price ID: ${proAnnualPrice.id}`);
 
-    // Output environment variables
-    console.log('\n📋 Add these to your .env.local file:');
-    console.log(`NEXT_PUBLIC_STRIPE_TRY_ONCE_PRICE_ID=${tryOncePrice.id}`);
-    console.log(`NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID=${individualMonthlyPrice.id}`);
-    console.log(`NEXT_PUBLIC_STRIPE_STARTER_ANNUAL_PRICE_ID=${individualAnnualPrice.id}`);
-    console.log(`NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID=${proMonthlyPrice.id}`);
-    console.log(`NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID=${proAnnualPrice.id}`);
+    // Output config snippet for PRICE_IDS in src/config/pricing.ts
+    console.log('\n📋 Add these IDs to PRICE_IDS in src/config/pricing.ts:');
+    console.log('TRY_ONCE:', `["${tryOncePrice.id}"]`);
+    console.log('INDIVIDUAL_MONTHLY:', `["${individualMonthlyPrice.id}"]`);
+    console.log('INDIVIDUAL_ANNUAL:', `["${individualAnnualPrice.id}"]`);
+    console.log('PRO_MONTHLY:', `["${proMonthlyPrice.id}"]`);
+    console.log('PRO_ANNUAL:', `["${proAnnualPrice.id}"]`);
 
     console.log('\n✅ All products and prices created successfully!');
 

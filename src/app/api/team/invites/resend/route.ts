@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send email with invite link
-    const baseUrl = process.env.NEXTAUTH_URL
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
     const inviteLink = `${baseUrl}/invite/${invite.token}`
     
     const emailResult = await sendTeamInviteEmail({

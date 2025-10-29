@@ -30,20 +30,33 @@ interface SidebarProps {
   collapsed: boolean
   pinned: boolean
   onPinToggle: () => void
+  initialRole?: { isCompanyAdmin: boolean; isCompanyMember: boolean; needsCompanySetup: boolean }
+  initialAccountMode?: 'individual' | 'company'
 }
 
-export default function Sidebar({ collapsed, pinned, onPinToggle }: SidebarProps) {
+export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, initialAccountMode }: SidebarProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const t = useTranslations('app.sidebar')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [isCompanyMember, setIsCompanyMember] = useState(false)
-  const [isCompanyAdmin, setIsCompanyAdmin] = useState(false)
-  const [needsCompanySetup, setNeedsCompanySetup] = useState(false)
+  const [isCompanyMember, setIsCompanyMember] = useState(initialRole?.isCompanyMember ?? false)
+  const [isCompanyAdmin, setIsCompanyAdmin] = useState(initialRole?.isCompanyAdmin ?? false)
+  const [needsCompanySetup, setNeedsCompanySetup] = useState(initialRole?.needsCompanySetup ?? false)
   const [allocatedCredits, setAllocatedCredits] = useState(0)
+  const [accountMode, setAccountMode] = useState<'individual' | 'company'>(initialAccountMode ?? 'individual')
+  const [navReady, setNavReady] = useState(Boolean(initialRole))
   const { credits } = useCredits()
 
   useEffect(() => {
+    // Initialize role flags immediately from session to avoid UI flicker
+    if (!initialRole && session?.user?.role) {
+      setIsCompanyAdmin(session.user.role === 'company_admin')
+      setIsCompanyMember(session.user.role === 'company_member')
+      if ((session.user.role === 'company_admin' || session.user.role === 'company_member') && accountMode !== 'company') {
+        setAccountMode('company')
+      }
+    }
+
     const fetchCompanyMembership = async () => {
       try {
         const response = await fetch('/api/dashboard/stats')
@@ -52,16 +65,25 @@ export default function Sidebar({ collapsed, pinned, onPinToggle }: SidebarProps
           setIsCompanyMember(data.userRole.isCompanyMember || data.userRole.isCompanyAdmin)
           setIsCompanyAdmin(data.userRole.isCompanyAdmin)
           setNeedsCompanySetup(data.userRole.needsCompanySetup)
+          setNavReady(true)
         }
       } catch (err) {
         console.error('Failed to fetch company membership:', err)
+        setNavReady(true)
       }
     }
 
-    if (session?.user?.id) {
+    if (session?.user?.id && !initialRole) {
       fetchCompanyMembership()
     }
   }, [session?.user?.id])
+
+  // Coerce account mode to 'individual' for pure individual users
+  useEffect(() => {
+    if (!isCompanyAdmin && !isCompanyMember && accountMode !== 'individual') {
+      setAccountMode('individual')
+    }
+  }, [isCompanyAdmin, isCompanyMember])
 
   // Fetch allocated credits only for team admins
   useEffect(() => {
@@ -84,6 +106,28 @@ export default function Sidebar({ collapsed, pinned, onPinToggle }: SidebarProps
   }, [session?.user?.id, isCompanyAdmin])
 
   // Credits are now managed by CreditsContext
+
+  // Fetch account mode (individual vs company) from settings
+  useEffect(() => {
+    const fetchAccountMode = async () => {
+      try {
+        const response = await fetch('/api/user/settings')
+        if (response.ok) {
+          const data = await response.json()
+          const mode = (data as { settings?: { mode?: 'individual' | 'company' } }).settings?.mode
+          if (mode === 'company' || mode === 'individual') {
+            setAccountMode(mode)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch account mode:', err)
+      }
+    }
+
+    if (session?.user?.id) {
+      fetchAccountMode()
+    }
+  }, [session?.user?.id])
 
   // Custom pushpin icons (outline and solid) to represent pin/unpin
   const PushPinOutlineIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -172,9 +216,27 @@ export default function Sidebar({ collapsed, pinned, onPinToggle }: SidebarProps
   const userRole = getUserRole()
 
   // Filter navigation based on user role
-  const navigation = allNavigation.filter(item => {
-    return item.showFor.includes(userRole)
-  })
+  const roleFiltered = allNavigation.filter(item => item.showFor.includes(userRole))
+
+  // Further filter by selected account mode
+  const individualHrefs = new Set([
+    '/app/dashboard',
+    '/app/selfies',
+    '/app/contexts/personal',
+    '/app/generations/personal',
+  ])
+  const companyHrefs = new Set([
+    '/app/dashboard',
+    '/app/selfies',
+    '/app/generations/team',
+    '/app/contexts/team',
+    '/app/team',
+  ])
+
+  // If user is a pure individual, always show individual links regardless of stored account mode
+  const navigation = (isCompanyAdmin || isCompanyMember)
+    ? roleFiltered.filter(item => accountMode === 'company' ? companyHrefs.has(item.href) : individualHrefs.has(item.href))
+    : roleFiltered.filter(item => individualHrefs.has(item.href))
 
   const handleSignOut = () => {
     // Always use current origin to ensure correct protocol (http vs https)
@@ -237,7 +299,7 @@ export default function Sidebar({ collapsed, pinned, onPinToggle }: SidebarProps
 
         {/* Navigation - Takes up available space */}
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto min-h-0">
-          {navigation.map((item) => {
+          {!navReady ? null : navigation.map((item) => {
             const Icon = item.current ? item.iconSolid : item.icon
             return (
               <Link
@@ -281,15 +343,18 @@ export default function Sidebar({ collapsed, pinned, onPinToggle }: SidebarProps
                 </h3>
               )}
               <div className={`space-y-2 ${collapsed ? 'text-center' : ''}`}>
-                <div className={`flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
-                  <span className={`text-xs font-medium text-gray-500 ${collapsed ? 'text-center' : ''}`}>
-                    {t('credits.individual')}
-                  </span>
-                  <span className={`text-sm font-semibold ${collapsed ? 'text-lg' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
-                    {credits.individual}
-                  </span>
-                </div>
-                {isCompanyMember && (
+                {accountMode === 'individual' && (
+                  <div className={`flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
+                    <span className={`text-xs font-medium text-gray-500 ${collapsed ? 'text-center' : ''}`}>
+                      {t('credits.individual')}
+                    </span>
+                    <span className={`text-sm font-semibold ${collapsed ? 'text-lg' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
+                      {credits.individual}
+                    </span>
+                  </div>
+                )}
+
+                {accountMode === 'company' && (
                   <>
                     <div className={`flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
                       <span className={`text-xs font-medium text-gray-500 ${collapsed ? 'text-center' : ''}`}>

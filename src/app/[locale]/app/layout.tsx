@@ -2,6 +2,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { auth } from '@/auth'
 import AppShell from './AppShell'
+import { getUserWithRoles, getUserEffectiveRoles } from '@/lib/roles'
 import { CreditsProvider } from '@/contexts/CreditsContext'
 
 export default async function AppLayout({
@@ -20,10 +21,26 @@ export default async function AppLayout({
   
   const messages = await getMessages({ locale })
   
+  // Derive initial role/mode server-side to avoid client flicker
+  const user = session?.user?.id ? await getUserWithRoles(session.user.id) : null
+  const effective = user ? getUserEffectiveRoles(user) : null
+  const initialAccountMode: 'individual' | 'company' = effective && (effective.isCompanyAdmin || effective.isCompanyMember)
+    ? 'company'
+    : 'individual'
+  const initialRole = effective ? {
+    isCompanyAdmin: effective.isCompanyAdmin,
+    isCompanyMember: effective.isCompanyMember,
+    needsCompanySetup: effective.isCompanyAdmin && !user?.person?.companyId
+  } : {
+    isCompanyAdmin: false,
+    isCompanyMember: false,
+    needsCompanySetup: false
+  }
+
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <CreditsProvider>
-        <AppShell>{children}</AppShell>
+        <AppShell initialAccountMode={initialAccountMode} initialRole={initialRole}>{children}</AppShell>
       </CreditsProvider>
     </NextIntlClientProvider>
   )

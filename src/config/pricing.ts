@@ -1,3 +1,14 @@
+// Define Stripe Price IDs here. You can list multiple IDs (e.g., per environment or legacy prices).
+const STRIPE_PRICE_IDS = {
+  TRY_ONCE: 'price_1SM4F1ENr8odIuXacShZF3e7',
+  INDIVIDUAL_MONTHLY: 'price_1SM4F2ENr8odIuXaH69H80Uu',
+  INDIVIDUAL_ANNUAL: 'price_1SM4F2ENr8odIuXaycqCQUJv',
+  INDIVIDUAL_TOP_UP: '',
+  PRO_MONTHLY: 'price_1SM4F3ENr8odIuXatRRUFiR9',
+  PRO_ANNUAL: 'price_1SM4F3ENr8odIuXa2Nkt8WUt',
+  PRO_TOP_UP: '',
+} as const;
+
 export const PRICING_CONFIG = {
   // Credits system
   credits: {
@@ -18,7 +29,7 @@ export const PRICING_CONFIG = {
   tryOnce: {
     price: 5.00,
     credits: 10,
-    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_TRY_ONCE_PRICE_ID || '',
+    stripePriceId: STRIPE_PRICE_IDS.TRY_ONCE || '',
   },
   
   // Individual tier (Personal)
@@ -26,16 +37,16 @@ export const PRICING_CONFIG = {
     includedCredits: 60, // per month
     monthly: {
       price: 24.00,
-      stripePriceId: process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID || '',
+      stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL_MONTHLY || '',
     },
     annual: {
       price: 228.00,
-      stripePriceId: process.env.NEXT_PUBLIC_STRIPE_STARTER_ANNUAL_PRICE_ID || '',
+      stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL_ANNUAL || '',
     },
     topUp: {
-      pricePerPackage: 0.90,
-      creditsPerPackage: 10,
-      minimumPurchase: 20, // minimum credits to purchase
+      price: 9.99,
+      credits: 30,
+      stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL_TOP_UP || '',
     },
   },
   
@@ -44,16 +55,16 @@ export const PRICING_CONFIG = {
     includedCredits: 200, // per month
     monthly: {
       price: 59.00,
-      stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '',
+      stripePriceId: STRIPE_PRICE_IDS.PRO_MONTHLY || '',
     },
     annual: {
       price: 588.00,
-      stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID || '',
+      stripePriceId: STRIPE_PRICE_IDS.PRO_ANNUAL || '',
     },
     topUp: {
-      pricePerPackage: 0.60,
-      creditsPerPackage: 10,
-      minimumPurchase: 20, // minimum credits to purchase
+      price: 24.99,
+      credits: 100,
+      stripePriceId: STRIPE_PRICE_IDS.PRO_TOP_UP || '',
     },
   },
   
@@ -73,30 +84,7 @@ export type PricingTier = 'individual' | 'pro';
 export type PricingPeriod = 'monthly' | 'annual';
 
 // Helper functions
-export function getCreditsForTier(tier: PricingTier): number {
-  return PRICING_CONFIG[tier].includedCredits;
-}
-
-export function getPriceForTier(tier: PricingTier, period: PricingPeriod): number {
-  return PRICING_CONFIG[tier][period].price;
-}
-
-export function getTopUpPrice(tier: PricingTier): number {
-  return PRICING_CONFIG[tier].topUp.pricePerPackage;
-}
-
-export function getTopUpCredits(tier: PricingTier): number {
-  return PRICING_CONFIG[tier].topUp.creditsPerPackage;
-}
-
-export function formatCreditsDisplay(credits: number): string {
-  const generations = Math.floor(credits / PRICING_CONFIG.credits.perGeneration);
-  return `${credits} credits (${generations} generation${generations !== 1 ? 's' : ''})`;
-}
-
-export function calculateGenerations(credits: number): number {
-  return Math.floor(credits / PRICING_CONFIG.credits.perGeneration);
-}
+// Removed unused: getCreditsForTier, getPriceForTier, getTopUpPrice, getTopUpCredits, formatCreditsDisplay, calculateGenerations
 
 export function calculateAnnualSavings(tier: 'individual' | 'pro'): number {
   const monthlyTotal = PRICING_CONFIG[tier].monthly.price * 12;
@@ -186,7 +174,7 @@ export function getPricingDisplay() {
         regenerations: PRICING_CONFIG.regenerations.personal,
         savings: formatPrice(calculateAnnualSavings('individual')),
       },
-      topUp: formatPrice(PRICING_CONFIG.individual.topUp.pricePerPackage),
+      topUp: formatPrice(PRICING_CONFIG.individual.topUp.price),
     },
     pro: {
       monthly: {
@@ -202,7 +190,7 @@ export function getPricingDisplay() {
         regenerations: PRICING_CONFIG.regenerations.business,
         savings: formatPrice(calculateAnnualSavings('pro')),
       },
-      topUp: formatPrice(PRICING_CONFIG.pro.topUp.pricePerPackage),
+      topUp: formatPrice(PRICING_CONFIG.pro.topUp.price),
     },
   };
 }

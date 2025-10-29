@@ -28,26 +28,25 @@ export interface PermissionContext {
  * Determine the effective role of a user based on their User role and company relationships
  */
 export function getUserEffectiveRoles(user: UserWithRoles): {
-  platformRole: UserRole
-  companyRole: 'company_admin' | 'company_member' | null
+  platformRole: 'user' | 'team_admin' | 'team_member'
+  companyRole: 'team_admin' | 'team_member' | null
   isCompanyAdmin: boolean
   isCompanyMember: boolean
   isPlatformAdmin: boolean
   isRegularUser: boolean
 } {
   const isPlatformAdmin = user.isAdmin
-  const isCompanyAdmin = user.role === 'company_admin' || 
-    (user.person?.company?.adminId === user.id)
-  const isCompanyMember = user.person?.companyId !== null
+  // Determine company/admin status STRICTLY from platform role
+  const isCompanyAdmin = user.role === 'company_admin'
+  const isCompanyMember = user.role === 'company_member'
   
   return {
-    platformRole: user.role,
-    companyRole: isCompanyAdmin ? 'company_admin' : 
-                 isCompanyMember ? 'company_member' : null,
+    platformRole: user.role === 'company_admin' ? 'team_admin' : user.role === 'company_member' ? 'team_member' : 'user',
+    companyRole: isCompanyAdmin ? 'team_admin' : isCompanyMember ? 'team_member' : null,
     isCompanyAdmin,
     isCompanyMember,
     isPlatformAdmin,
-    isRegularUser: user.role === 'user' && !isCompanyMember
+    isRegularUser: user.role === 'user'
   }
 }
 

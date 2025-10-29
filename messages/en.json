@@ -412,7 +412,7 @@
         "title": "Available Credits",
         "individual": "Personal Credits",
         "company": "Company Credits",
-        "allocated": "Remaining on Invites",
+        "allocated": "of which allocated to invites",
         "monthlyReset": "Monthly Reset",
         "progress": "{used}/{total}",
         "buyMore": "Buy more credits"
@@ -510,6 +510,12 @@
     "settings": {
       "title": "Settings",
       "subtitle": "Manage your account preferences and company settings",
+        "tabs": {
+          "teamInformation": "Team information",
+          "subscriptionBilling": "Subscription & Billing",
+          "adminTools": "Admin tools",
+          "accountInfo": "Account info"
+        },
       "accountMode": {
         "title": "Account Mode",
         "individual": {
@@ -814,6 +820,7 @@
   "emails": {
     "teamInvite": {
       "subject": "Team invitation from {companyName} - TeamShots",
+      "text": "You've been invited to join {companyName} on TeamShots.\n\nUse this link to accept the invite: {inviteLink}\n\nYou have been allocated {creditsAllocated} credits to get started.",
       "title": "🎉 Team Invitation!",
       "greeting": "Hello! You've been invited to join {companyName}'s team on TeamShots.",
       "whatYouGet": "What you'll get:",

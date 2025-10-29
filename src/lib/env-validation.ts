@@ -37,11 +37,6 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
-  NEXT_PUBLIC_STRIPE_TRY_ONCE_PRICE_ID: z.string().optional(),
-  NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID: z.string().optional(),
-  NEXT_PUBLIC_STRIPE_STARTER_ANNUAL_PRICE_ID: z.string().optional(),
-  NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID: z.string().optional(),
-  NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID: z.string().optional(),
   
   // URLs
   NEXT_PUBLIC_BASE_URL: z.string().url().optional(),

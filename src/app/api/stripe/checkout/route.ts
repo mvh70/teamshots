@@ -57,15 +57,18 @@ export async function POST(request: NextRequest) {
     // Determine the base URL with fallback - force HTTP for local development
     // Note: Stripe webhooks must point to HTTPS (https://app.teamshots.vip/api/stripe/webhook)
     // but local redirects should use HTTP (https://localhost:3000)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
     
     // Create specific success messages based on purchase type
     let successMessage = ''
     if (type === 'try_once') {
       successMessage = 'try_once_success'
     } else if (type === 'subscription') {
-      const tier = priceId === process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID || 
-                   priceId === process.env.NEXT_PUBLIC_STRIPE_STARTER_ANNUAL_PRICE_ID ? 'individual' : 'pro'
+      const isIndividual = (
+        priceId === PRICING_CONFIG.individual.monthly.stripePriceId ||
+        priceId === PRICING_CONFIG.individual.annual.stripePriceId
+      );
+      const tier = isIndividual ? 'individual' : 'pro'
       successMessage = tier === 'individual' ? 'individual_success' : 'pro_success'
     } else if (type === 'top_up') {
       successMessage = 'top_up_success'

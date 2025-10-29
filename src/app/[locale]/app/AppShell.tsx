@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({ children, initialRole, initialAccountMode }: { children: React.ReactNode, initialRole?: { isCompanyAdmin: boolean, isCompanyMember: boolean, needsCompanySetup: boolean }, initialAccountMode?: 'individual' | 'company' }) {
   const { status } = useSession()
   const router = useRouter()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -105,6 +105,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar 
           collapsed={sidebarCollapsed} 
           pinned={sidebarPinned}
+          initialRole={initialRole}
+          initialAccountMode={initialAccountMode}
           onPinToggle={() => {
             // Pinning forces expanded state; unpinning keeps current state
             setSidebarPinned(!sidebarPinned)
@@ -114,7 +116,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className={`flex-1 flex flex-col transition-all duration-300 ${
           sidebarCollapsed ? 'ml-16' : 'ml-64'
         }`}>
-          <Header onMenuClick={() => setSidebarCollapsed(!sidebarCollapsed)} />
+          <Header onMenuClick={() => {
+            const next = !sidebarCollapsed
+            setSidebarCollapsed(next)
+            // If expanding via menu, pin to keep it open; if collapsing, unpin
+            setSidebarPinned(next ? true : false)
+          }} />
           <main className="flex-1 p-6">{children}</main>
         </div>
       </div>

@@ -392,13 +392,17 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 function determineTier(priceId: string | undefined): string | null {
   if (!priceId) return null;
   
-  if (priceId === process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID ||
-      priceId === process.env.NEXT_PUBLIC_STRIPE_STARTER_ANNUAL_PRICE_ID) {
+  if (
+    priceId === PRICING_CONFIG.individual.monthly.stripePriceId ||
+    priceId === PRICING_CONFIG.individual.annual.stripePriceId
+  ) {
     return 'individual';
   }
   
-  if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID ||
-      priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID) {
+  if (
+    priceId === PRICING_CONFIG.pro.monthly.stripePriceId ||
+    priceId === PRICING_CONFIG.pro.annual.stripePriceId
+  ) {
     return 'pro';
   }
   

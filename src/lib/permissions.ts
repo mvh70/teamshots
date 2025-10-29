@@ -172,13 +172,13 @@ export async function getUserRoles(session: { user?: { id?: string } } | null) {
   if (!context) return null
 
   return {
-    platformRole: context.user.role,
-    companyRole: context.user.person?.companyId ? 
-      (context.user.person.company?.adminId === context.user.id ? 'company_admin' : 'company_member') : 
-      null,
-    isCompanyAdmin: context.user.person?.company?.adminId === context.user.id,
-    isCompanyMember: !!context.user.person?.companyId,
+    platformRole: context.user.role === 'company_admin' ? 'team_admin' : context.user.role === 'company_member' ? 'team_member' : 'user',
+    // Company/admin derived strictly from platform role (display naming)
+    companyRole: context.user.role === 'company_admin' ? 'team_admin' :
+      context.user.role === 'company_member' ? 'team_member' : null,
+    isCompanyAdmin: context.user.role === 'company_admin',
+    isCompanyMember: context.user.role === 'company_member',
     isPlatformAdmin: context.user.isAdmin,
-    isRegularUser: context.user.role === 'user' && !context.user.person?.companyId
+    isRegularUser: context.user.role === 'user'
   }
 }

@@ -485,6 +485,15 @@ Place all visual assets in `public/branding/`:
 
 Create `config/pricing.ts`:
 ```typescript
+// In src/config/pricing.ts
+const PRICE_IDS = {
+  TRY_ONCE: ['price_...'],
+  INDIVIDUAL_MONTHLY: ['price_...'],
+  INDIVIDUAL_ANNUAL: ['price_...'],
+  PRO_MONTHLY: ['price_...'],
+  PRO_ANNUAL: ['price_...'],
+} as const;
+
 export const PRICING_CONFIG = {
   // Credits system
   credits: {
@@ -497,20 +506,23 @@ export const PRICING_CONFIG = {
   tryOnce: {
     price: 5.00,
     credits: 4,
-    stripePriceId: process.env.STRIPE_TRY_ONCE_PRICE_ID || '',
+    stripePriceIds: PRICE_IDS.TRY_ONCE,
+    stripePriceId: PRICE_IDS.TRY_ONCE[0] || '',
   },
   
-  // Starter tier
-  starter: {
+  // Individual tier
+  individual: {
     monthly: {
       price: 24.00,
       includedCredits: 100,
-      stripePriceId: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID || '',
+      stripePriceIds: PRICE_IDS.INDIVIDUAL_MONTHLY,
+      stripePriceId: PRICE_IDS.INDIVIDUAL_MONTHLY[0] || '',
     },
     annual: {
       price: 245.00,
       includedCredits: 100, // per month
-      stripePriceId: process.env.STRIPE_STARTER_ANNUAL_PRICE_ID || '',
+      stripePriceIds: PRICE_IDS.INDIVIDUAL_ANNUAL,
+      stripePriceId: PRICE_IDS.INDIVIDUAL_ANNUAL[0] || '',
     },
     topUp: {
       pricePerPackage: 0.90,
@@ -524,12 +536,14 @@ export const PRICING_CONFIG = {
     monthly: {
       price: 59.00,
       includedCredits: 280,
-      stripePriceId: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '',
+      stripePriceIds: PRICE_IDS.PRO_MONTHLY,
+      stripePriceId: PRICE_IDS.PRO_MONTHLY[0] || '',
     },
     annual: {
       price: 600.00,
       includedCredits: 280, // per month
-      stripePriceId: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || '',
+      stripePriceIds: PRICE_IDS.PRO_ANNUAL,
+      stripePriceId: PRICE_IDS.PRO_ANNUAL[0] || '',
     },
     topUp: {
       pricePerPackage: 0.60,
@@ -545,11 +559,11 @@ export const PRICING_CONFIG = {
 }
 
 // Helper functions
-export function getCreditsForTier(tier: 'starter' | 'pro', period: 'monthly' | 'annual') {
+export function getCreditsForTier(tier: 'individual' | 'pro', period: 'monthly' | 'annual') {
   return PRICING_CONFIG[tier][period].includedCredits
 }
 
-export function getTopUpPrice(tier: 'starter' | 'pro') {
+export function getTopUpPrice(tier: 'individual' | 'pro') {
   return PRICING_CONFIG[tier].topUp.pricePerPackage
 }
 
@@ -559,15 +573,10 @@ export function formatCreditsDisplay(credits: number) {
 }
 ```
 
-Add to `.env.local`:
-```bash
-# Stripe Price IDs (get these from Stripe Dashboard)
-STRIPE_TRY_ONCE_PRICE_ID=price_xxx
-STRIPE_STARTER_MONTHLY_PRICE_ID=price_xxx
-STRIPE_STARTER_ANNUAL_PRICE_ID=price_xxx
-STRIPE_PRO_MONTHLY_PRICE_ID=price_xxx
-STRIPE_PRO_ANNUAL_PRICE_ID=price_xxx
-```
+Configure Stripe Price IDs:
+- Define your Price IDs directly in `src/config/pricing.ts` under the `PRICE_IDS` object.
+- You can keep multiple IDs per tier (arrays) if you need sandbox/production or legacy prices.
+- The first entry is used as the default `stripePriceId` when a single ID is required.
 
 ---
 

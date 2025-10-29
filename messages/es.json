@@ -412,7 +412,7 @@
         "title": "Créditos Disponibles",
         "individual": "Créditos Personales",
         "company": "Créditos de Empresa",
-        "allocated": "Restantes en Invitaciones",
+        "allocated": "de los cuales asignados a invitaciones",
         "monthlyReset": "Reinicio Mensual",
         "progress": "{used}/{total}",
         "buyMore": "Comprar más créditos"
@@ -510,6 +510,12 @@
     "settings": {
       "title": "Configuración",
       "subtitle": "Gestiona las preferencias de tu cuenta y configuraciones de la empresa",
+        "tabs": {
+          "teamInformation": "Información del equipo",
+          "subscriptionBilling": "Suscripción y Facturación",
+          "adminTools": "Herramientas de administrador",
+          "accountInfo": "Información de la cuenta"
+        },
       "accountMode": {
         "title": "Modo de Cuenta",
         "individual": {
@@ -813,6 +819,7 @@
   "emails": {
     "teamInvite": {
       "subject": "Invitación al equipo de {companyName} - TeamShots",
+      "text": "Has sido invitado a unirte a {companyName} en TeamShots.\n\nUsa este enlace para aceptar la invitación: {inviteLink}\n\nSe te han asignado {creditsAllocated} créditos para empezar.",
       "title": "🎉 ¡Invitación al equipo!",
       "greeting": "¡Hola! Has sido invitado a unirte al equipo de {companyName} en TeamShots.",
       "whatYouGet": "Lo que obtendrás:",
