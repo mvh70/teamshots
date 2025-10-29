@@ -6,6 +6,7 @@
     "dev": "next dev --experimental-https -p 3000",
     "build": "next build",
     "start": "next start",
+    "start:prod": "concurrently \"npm run start\" \"npm run worker\"",
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
