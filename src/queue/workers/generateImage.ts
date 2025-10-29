@@ -45,7 +45,7 @@ const s3Client = new S3Client({
   forcePathStyle: false,
 })
 
-const BUCKET_NAME = Env.string('HETZNER_S3_BUCKET', Env.string('S3_BUCKET_NAME'))
+const BUCKET_NAME = Env.string('HETZNER_S3_BUCKET')
 
 // Create worker
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
