@@ -38,7 +38,7 @@ export const initPostHog = () => {
       loaded: (posthogInstance) => {
         // Make posthog available globally for debugging
         if (typeof window !== 'undefined') {
-          (window as any).posthog = posthogInstance
+          (window as unknown as Record<string, unknown>).posthog = posthogInstance
         }
         
         // Next.js automatically makes NODE_ENV available in client-side code
