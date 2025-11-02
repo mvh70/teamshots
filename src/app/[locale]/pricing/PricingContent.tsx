@@ -64,7 +64,7 @@ export default function PricingContent() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Monthly
+                {t('monthly')}
               </button>
               <button
                 onClick={() => setIsYearly(true)}
@@ -74,7 +74,7 @@ export default function PricingContent() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Yearly
+                {t('yearly')}
               </button>
             </div>
           </div>
