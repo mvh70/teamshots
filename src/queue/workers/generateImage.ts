@@ -329,48 +329,50 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       
       Logger.error(`Image generation failed for job ${job.id}`, errorDetails)
       
-      // Update generation status to failed
-      // Check if this is a regeneration (free) before attempting refund
-      const generationRecord = await prisma.generation.findUnique({
-        where: { id: generationId },
-        select: { creditsUsed: true }
-      })
-      
       // Truncate error message if too long (database field has limit, but we'll keep it reasonable)
       const maxErrorMessageLength = 2000
       const finalErrorMessage = errorMessage.length > maxErrorMessageLength 
         ? errorMessage.substring(0, maxErrorMessageLength) + '...[truncated]'
         : errorMessage
       
-      await prisma.generation.update({
-        where: { id: generationId },
-        data: {
-          status: 'failed',
-          errorMessage: finalErrorMessage,
-          updatedAt: new Date()
-        }
-      })
-      
-      // Only refund credits if this was a paid generation (not a regeneration)
-      if (generationRecord && generationRecord.creditsUsed > 0) {
-        try {
-          await refundCreditsForFailedGeneration(
-            personId,
-            userId || null,
-            generationRecord.creditsUsed, // Use actual credits used, not config value
-            `Refund for failed generation ${generationId}`
-          )
-          Logger.info(`Credits refunded for failed generation ${generationId}`)
-        } catch (refundError) {
-          Logger.error(`Failed to refund credits for generation ${generationId}`, { error: refundError instanceof Error ? refundError.message : String(refundError) })
-        }
-      } else {
-        Logger.debug(`Skipping refund for regeneration ${generationId} (free)`)
-      }
-      
       // Send support notification email on failure (only on final attempt to avoid spam)
       const maxAttempts = job.opts?.attempts || 3
-      if (job.attemptsMade >= maxAttempts) {
+      const isFinalAttempt = job.attemptsMade >= maxAttempts
+      
+      // Update generation status to failed on final attempt
+      if (isFinalAttempt) {
+        await prisma.generation.update({
+          where: { id: generationId },
+          data: {
+            status: 'failed',
+            errorMessage: finalErrorMessage,
+            updatedAt: new Date()
+          }
+        })
+        
+        // Check if this is a regeneration (free) before attempting refund
+        const generationRecord = await prisma.generation.findUnique({
+          where: { id: generationId },
+          select: { creditsUsed: true }
+        })
+        
+        // Only refund credits if this was a paid generation (not a regeneration)
+        if (generationRecord && generationRecord.creditsUsed > 0) {
+          try {
+            await refundCreditsForFailedGeneration(
+              personId,
+              userId || null,
+              generationRecord.creditsUsed, // Use actual credits used, not config value
+              `Refund for failed generation ${generationId}`
+            )
+            Logger.info(`Credits refunded for failed generation ${generationId}`)
+          } catch (refundError) {
+            Logger.error(`Failed to refund credits for generation ${generationId}`, { error: refundError instanceof Error ? refundError.message : String(refundError) })
+          }
+        } else {
+          Logger.debug(`Skipping refund for regeneration ${generationId} (free)`)
+        }
+        
         try {
           // Get user email for context
           const userEmail = userId ? await prisma.user.findUnique({
