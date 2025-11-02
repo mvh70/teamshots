@@ -123,12 +123,9 @@ export default function StartGenerationPage() {
     const fetchContexts = async () => {
       if (!session?.user?.id || !generationType) return
       
-      console.log('Fetching contexts for generation type:', generationType, 'isFreePlan:', isFreePlan)
-      
       try {
           // If free plan, always use the Free Package style
         if (isFreePlan) {
-          console.log('Free plan user - fetching Free Package style')
           const { contextId, ui } = await loadStyle({ scope: 'freePackage' })
           
           if (contextId && ui) {
@@ -155,11 +152,8 @@ export default function StartGenerationPage() {
 
         // For paid users, fetch contexts based on generation type
         const endpoint = generationType === 'personal' ? '/api/styles/personal' : '/api/styles/team'
-        console.log('Fetching from endpoint:', endpoint)
         const contextData = await jsonFetcher<{ contexts?: unknown[]; activeContext?: unknown }>(endpoint)
         const contexts = (contextData.contexts || []) as Array<{ id: string; name: string; settings?: Record<string, unknown> }>
-        console.log(`Available ${generationType} contexts:`, contexts)
-        console.log('Context data:', contextData)
         setAvailableContexts(contexts)
           
           // Set active context if available
@@ -182,7 +176,6 @@ export default function StartGenerationPage() {
             // Use the packageId from the loaded package (already extracted from database context)
             // This will be 'freepackage', 'headshot1', or any other package the team admin set
             const contextPackageId = pkg.id
-            console.log('Loaded context packageId from database:', contextPackageId)
             setSelectedPackageId(contextPackageId)
           } else {
             // No active context - initialize with default settings for individual users
@@ -222,7 +215,6 @@ export default function StartGenerationPage() {
   }
 
   const onTypeSelected = (type: 'personal' | 'team') => {
-    console.log('Generation type selected:', type)
     setGenerationType(type)
   }
 
@@ -237,7 +229,7 @@ export default function StartGenerationPage() {
       const packageId = selectedPackageId || PRICING_CONFIG.defaultSignupPackage
       
       // Create generation request
-      const result = await jsonFetcher<{ success?: boolean; error?: string }>('/api/generations/create', {
+      await jsonFetcher<{ success?: boolean; error?: string }>('/api/generations/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -251,8 +243,6 @@ export default function StartGenerationPage() {
           creditSource: generationType === 'team' ? 'team' : 'individual',
         }),
       })
-
-      console.log('Generation created:', result)
 
       // Redirect to appropriate generations page based on generation type
       const redirectPath = generationType === 'team' ? '/app/generations/team' : '/app/generations/personal'
@@ -285,16 +275,12 @@ export default function StartGenerationPage() {
   // Auto-select generation type if user only has one option
   useEffect(() => {
     if (!creditsLoading && contextLoaded && isApproved && !generationType) {
-      console.log('Auto-selecting generation type. hasTeamAccess:', hasTeamAccess, 'hasIndividualAccess:', hasIndividualAccess, 'typeFromQuery:', typeFromQuery)
-      
       // If type is specified in URL, use it (if user has access)
       if (typeFromQuery) {
         if (typeFromQuery === 'team' && hasTeamAccess) {
-          console.log('Using team generation type from URL')
           setGenerationType('team')
           return
         } else if (typeFromQuery === 'personal' && hasIndividualAccess) {
-          console.log('Using personal generation type from URL')
           setGenerationType('personal')
           return
         }
@@ -302,15 +288,12 @@ export default function StartGenerationPage() {
       
       if (shouldShowGenerationTypeSelector) {
         // User has both options, keep generationType as null to show selector
-        console.log('User has both options, showing selector')
         return
       } else if (hasTeamAccess) {
         // User only has team access
-        console.log('Auto-selecting team generation type')
         setGenerationType('team')
       } else if (hasIndividualAccess) {
         // User only has individual access
-        console.log('Auto-selecting personal generation type')
         setGenerationType('personal')
       }
     }

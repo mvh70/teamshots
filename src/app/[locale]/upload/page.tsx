@@ -92,7 +92,6 @@ export default function UploadPage() {
 
   const onProceed = () => {
     // TODO: call generation API with { key, generationType, personId, token }
-    console.log('Proceed to generate with', { key, generationType, personId, token })
   }
 
   if (loading) {

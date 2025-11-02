@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { CameraIcon } from '@heroicons/react/24/outline'
-import { ShotTypeSettings, SHOT_TYPE_OPTIONS } from '@/types/photo-style'
+import { ShotTypeSettings } from '@/types/photo-style'
 
 interface ShotTypeSelectorProps {
   value: ShotTypeSettings

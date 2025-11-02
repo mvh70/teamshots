@@ -167,20 +167,16 @@ export default function SettingsPage() {
   }
 
   const refreshSession = async () => {
-    console.log('Refresh session button clicked')
     try {
       setSaving(true)
       setError(null)
       setSuccess(null)
       
-      console.log('Making API call to refresh session...')
       // Get fresh user data from the database
       const data = await jsonFetcher<{ debug?: { databaseRole?: string } }>('/api/user/refresh-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
-      
-      console.log('Fresh database data:', data)
       
       if (data.debug?.databaseRole !== session?.user?.role) {
         setSuccess(`⚠️ Session mismatch detected! Database: ${data.debug?.databaseRole}, Session: ${session?.user?.role}. Please sign out using the profile menu in the sidebar and sign back in.`)

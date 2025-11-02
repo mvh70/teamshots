@@ -714,11 +714,11 @@
         "individualUser": "Usuario Individual"
       },
       "messages": {
-        "teamActivated": "¡Modo empresa activado! Las funciones de equipo ahora están disponibles.",
+        "teamActivated": "¡Modo equipo activado! Las funciones de equipo ahora están disponibles.",
         "individualActivated": "Modo individual activado. Las funciones de equipo ahora están ocultas.",
-        "teamUpdated": "Información de la empresa actualizada",
-        "cannotSwitch": "No puedes cambiar al modo individual mientras eres administrador de una empresa con otros miembros. Por favor, elimina todos los miembros del equipo primero.",
-        "companyNameRequired": "El nombre de la empresa es requerido"
+        "teamUpdated": "Información del equipo actualizada",
+        "cannotSwitch": "No puedes cambiar al modo individual mientras eres administrador de un equipo con otros miembros. Por favor, elimina todos los miembros del equipo primero.",
+        "companyNameRequired": "El nombre del equipo es requerido"
       }
     }
   },

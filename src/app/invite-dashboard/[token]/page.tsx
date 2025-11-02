@@ -15,7 +15,6 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Panel from '@/components/common/Panel'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
-import { loadStyle, loadStyleByContextId } from '@/domain/style/service'
 import { getPackageConfig } from '@/domain/style/packages'
 
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
@@ -204,7 +203,6 @@ export default function InviteDashboardPage() {
   useEffect(() => {
     const pendingGeneration = sessionStorage.getItem('pendingGeneration')
     if (pendingGeneration === 'true') {
-      console.log('Pending generation detected, fetching selfies...')
       fetchAvailableSelfies()
     }
   }, [fetchAvailableSelfies])
@@ -216,7 +214,6 @@ export default function InviteDashboardPage() {
       // Use the most recent selfie (first in the array)
       const latestSelfie = availableSelfies[0]
       if (latestSelfie) {
-        console.log('Setting up generation flow with selfie:', latestSelfie.key)
         setUploadKey(latestSelfie.key)
         setIsApproved(true)
         setGenerationType('team')
@@ -260,22 +257,13 @@ export default function InviteDashboardPage() {
 
   const onProceed = async () => {
     try {
-      console.log('=== DEBUG GENERATION TYPE ===')
-      console.log('Raw generationType:', generationType)
-      console.log('Type of generationType:', typeof generationType)
-      console.log('Is array:', Array.isArray(generationType))
-      console.log('Stringified:', JSON.stringify(generationType))
-      
       // Ensure generationType is a string, not an array
       let finalGenerationType = Array.isArray(generationType) ? generationType[0] : generationType
       
       // Additional safeguard: ensure it's a valid string
       if (!finalGenerationType || typeof finalGenerationType !== 'string') {
-        console.warn('Invalid generationType, defaulting to team:', finalGenerationType)
         finalGenerationType = 'team'
       }
-      
-      console.log('Final generation type:', finalGenerationType, 'Type:', typeof finalGenerationType)
       
       const requestBody = {
         selfieKey: uploadKey,
@@ -297,8 +285,6 @@ export default function InviteDashboardPage() {
       })
 
       if (response.ok) {
-        const result = await response.json()
-        console.log('Generation started:', result)
         // Redirect to generations page to see the result
         router.push(`/invite-dashboard/${token}/generations`)
       } else {

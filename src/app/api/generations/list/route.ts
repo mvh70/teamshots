@@ -74,7 +74,6 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const generationType = searchParams.get('type')
     const scope = searchParams.get('scope') as 'personal' | 'team' | null
-    const teamView = searchParams.get('teamView') as 'mine' | 'team' | null
     const userId = searchParams.get('userId')
     const offset = (page - 1) * limit
 

@@ -715,11 +715,11 @@
         "individualUser": "Individual User"
       },
       "messages": {
-        "companyActivated": "Company mode activated! Team features are now available.",
+        "teamActivated": "Team mode activated! Team features are now available.",
         "individualActivated": "Individual mode activated. Team features are now hidden.",
-        "teamUpdated": "Company information updated",
-        "cannotSwitch": "Cannot switch to individual mode while you are admin of a company with other members. Please remove all team members first.",
-        "companyNameRequired": "Company name is required"
+        "teamUpdated": "Team information updated",
+        "cannotSwitch": "Cannot switch to individual mode while you are admin of a team with other members. Please remove all team members first.",
+        "companyNameRequired": "Team name is required"
       }
     }
   },

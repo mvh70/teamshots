@@ -128,8 +128,7 @@ export default function GenerationsPage() {
         throw new Error(errorData.error || 'Failed to regenerate')
       }
 
-      const result = await response.json()
-      console.log('Regeneration started:', result.generationId)
+      await response.json()
       
       // Refresh the generations list
       await fetchGenerations()

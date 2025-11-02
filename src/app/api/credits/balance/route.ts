@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getUserCreditBalance, getEffectiveTeamCreditBalance } from '@/domain/credits/credits'
+import { getEffectiveTeamCreditBalance } from '@/domain/credits/credits'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 
@@ -16,11 +16,6 @@ export async function GET(request: NextRequest) {
 
     if (type === 'individual') {
       // Get individual credits for the user (only credits with planTier='individual' or no planTier)
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { planTier: true }
-      })
-      
       // For individual credits, only count credits that are NOT pro tier
       const result = await prisma.creditTransaction.aggregate({
         where: {

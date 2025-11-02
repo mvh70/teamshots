@@ -37,7 +37,7 @@ export default function TeamGenerationsPage() {
     fetchRoles()
   }, [session?.user?.id])
   const { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated } = useGenerationFilters()
-  const [teamView, setTeamView] = useState<'mine' | 'team'>('mine')
+  const [teamView] = useState<'mine' | 'team'>('mine')
   const { generated, teamUsers, pagination, loading, loadMore } = useGenerations(
     currentUserId,
     isTeamAdmin,

@@ -20,8 +20,6 @@ export default function SignInPage() {
       if (typeof window !== 'undefined' && window?.analytics?.track) {
         // @ts-expect-error analytics may be injected at runtime
         window.analytics.track(event, props)
-      } else {
-        console.log(`[analytics] ${event}`, props || {})
       }
     } catch {}
   }

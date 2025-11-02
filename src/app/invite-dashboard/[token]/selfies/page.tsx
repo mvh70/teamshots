@@ -285,7 +285,7 @@ export default function SelfiesPage() {
                             console.error('Image failed to load:', selfie.url, e)
                           }}
                           onLoad={() => {
-                            console.log('Image loaded successfully:', selfie.url)
+                            // Image loaded successfully
                           }}
                         />
                       </div>

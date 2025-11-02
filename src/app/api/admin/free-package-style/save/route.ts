@@ -25,8 +25,6 @@ export async function POST(request: NextRequest) {
     clothingSettings,
     clothingColorsSettings,
     shotTypeSettings,
-    expressionSettings,
-    lightingSettings,
     packageId
   } = body as {
     contextId?: string | null
@@ -39,8 +37,6 @@ export async function POST(request: NextRequest) {
     clothingSettings?: { type?: 'business' | 'startup' | 'black-tie' | 'user-choice'; style: 'business' | 'startup' | 'black-tie' | 'user-choice'; details?: string; colors?: { topCover?: string; topBase?: string; bottom?: string }; accessories?: string[] }
     clothingColorsSettings?: { colors: { topCover?: string; topBase?: string; bottom?: string; shoes?: string } }
     shotTypeSettings?: { type: 'headshot' | 'midchest' | 'full-body' | 'user-choice' }
-    expressionSettings?: { type: 'professional' | 'friendly' | 'serious' | 'confident' | 'user-choice' }
-    lightingSettings?: { type: 'natural' | 'studio' | 'soft' | 'dramatic' | 'user-choice' }
     packageId?: string
   }
 

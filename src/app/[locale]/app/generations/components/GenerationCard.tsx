@@ -78,8 +78,7 @@ export default function GenerationCard({ item }: { item: GenerationListItem }) {
         throw new Error(errorData.error || 'Failed to regenerate')
       }
 
-      const result = await response.json()
-      console.log('Regeneration started:', result.generationId)
+      await response.json()
       
       // Optionally refresh the page or show success message
       window.location.reload()
@@ -113,8 +112,6 @@ export default function GenerationCard({ item }: { item: GenerationListItem }) {
         throw new Error(errorData.error || 'Failed to delete generation')
       }
 
-      console.log('Generation deleted successfully')
-      
       // Refresh the page to update the list
       window.location.reload()
     } catch (error) {
