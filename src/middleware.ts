@@ -26,17 +26,27 @@ function addSecurityHeaders(response: NextResponse) {
   // Permissions Policy
   response.headers.set(
     'Permissions-Policy',
-    'camera=(self), microphone=(), geolocation()'
+    'camera=(self), microphone=(), geolocation=()'
   )
   
   // Content Security Policy - Safari-compatible version
+  // PostHog domains: supports both EU and US regions
+  const posthogDomains = [
+    'https://app.posthog.com',
+    'https://eu.i.posthog.com',
+    'https://us.i.posthog.com',
+    'https://app-assets.i.posthog.com',
+    'https://eu-assets.i.posthog.com',
+    'https://us-assets.i.posthog.com'
+  ].join(' ')
+  
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://static.cloudflareinsights.com",
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://static.cloudflareinsights.com ${posthogDomains}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.resend.com https://cloudflareinsights.com ws: wss:",
+    `connect-src 'self' https://api.resend.com https://cloudflareinsights.com ${posthogDomains} ws: wss:`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
