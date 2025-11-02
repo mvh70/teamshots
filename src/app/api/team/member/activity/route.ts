@@ -5,11 +5,10 @@ import { Logger } from '@/lib/logger'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const personId = searchParams.get('personId')
     const token = searchParams.get('token')
 
-    if (!personId || !token) {
-      return NextResponse.json({ error: 'Missing personId or token' }, { status: 400 })
+    if (!token) {
+      return NextResponse.json({ error: 'Missing token' }, { status: 400 })
     }
 
     // Validate the token and get person data
