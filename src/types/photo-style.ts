@@ -2,7 +2,7 @@
 // This defines the structure of the JSON settings stored in the Context model
 
 export interface BackgroundSettings {
-  type: 'office' | 'neutral' | 'gradient' | 'custom' | 'user-choice'
+  type: 'office' | 'neutral' | 'gradient' | 'custom' | 'user-choice' | 'tropical-beach' | 'busy-city'
   key?: string // S3 key for custom uploads (same as selfies)
   prompt?: string // For office/descriptions
   color?: string // Hex color for neutral and gradient backgrounds
@@ -10,7 +10,7 @@ export interface BackgroundSettings {
 
 export interface BrandingSettings {
   type: 'include' | 'exclude' | 'user-choice'
-  logoKey?: string // S3 key for company logo (same as selfies)
+  logoKey?: string // S3 key for team logo (same as selfies)
   position?: 'background' | 'clothing' | 'elements'
 }
 
@@ -22,8 +22,22 @@ export interface ClothingSettings {
     topCover?: string // Outer layer color (blazer, jacket, etc.)
     topBase?: string // Base layer color (shirt, t-shirt, etc.)
     bottom?: string // Bottom color (pants, skirt, etc.)
+    shoes?: string // Shoes color
   }
   accessories?: string[] // Style-dependent accessories
+}
+
+export interface ClothingColorSettings {
+  colors: {
+    topCover?: string // Outer layer color (blazer, jacket, etc.)
+    topBase?: string // Base layer color (shirt, t-shirt, etc.)
+    bottom?: string // Bottom color (pants, skirt, etc.)
+    shoes?: string // Shoes color
+  }
+}
+
+export interface ShotTypeSettings {
+  type: 'headshot' | 'midchest' | 'full-body' | 'user-choice'
 }
 
 export interface StyleSettings {
@@ -43,13 +57,15 @@ export interface PhotoStyleSettings {
   background?: BackgroundSettings
   branding?: BrandingSettings
   clothing?: ClothingSettings
+  clothingColors?: ClothingColorSettings
+  shotType?: ShotTypeSettings
   style?: StyleSettings
   expression?: ExpressionSettings
   lighting?: LightingSettings
 }
 
 // Helper types for form handling
-export type CategoryType = 'background' | 'branding' | 'clothing' | 'style' | 'expression' | 'lighting'
+export type CategoryType = 'background' | 'branding' | 'clothing' | 'clothingColors' | 'shotType' | 'style' | 'expression' | 'lighting'
 
 export interface CategoryToggle {
   category: CategoryType
@@ -66,6 +82,10 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
   },
   clothing: {
     style: 'user-choice'
+  },
+  clothingColors: undefined,
+  shotType: {
+    type: 'user-choice'
   },
   style: {
     type: 'preset',
@@ -85,6 +105,8 @@ export const BACKGROUND_OPTIONS = {
   neutral: 'Neutral Background',
   gradient: 'Gradient Background',
   custom: 'Custom Upload',
+  'tropical-beach': 'Tropical Beach',
+  'busy-city': 'Busy City',
   'user-choice': 'User Choice'
 } as const
 
@@ -144,5 +166,12 @@ export const LIGHTING_OPTIONS = {
   studio: 'Studio Lighting',
   soft: 'Soft Lighting',
   dramatic: 'Dramatic Lighting',
+  'user-choice': 'User Choice'
+} as const
+
+export const SHOT_TYPE_OPTIONS = {
+  headshot: 'Headshot',
+  midchest: 'Mid-Chest Shot',
+  'full-body': 'Full Body',
   'user-choice': 'User Choice'
 } as const

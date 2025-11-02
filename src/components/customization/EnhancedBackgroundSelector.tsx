@@ -12,10 +12,13 @@ interface EnhancedBackgroundSelectorProps {
   isPredefined?: boolean // If true, user can't change the settings
   isDisabled?: boolean // If true, controls are visually greyed and inactive
   className?: string
+  availableBackgrounds?: string[] // Optional: filter backgrounds by package
 }
 
 const BACKGROUND_TYPES = [
   { value: 'office', label: 'Office Environment', icon: PhotoIcon },
+  { value: 'tropical-beach', label: 'Tropical Beach', icon: PhotoIcon },
+  { value: 'busy-city', label: 'Busy City', icon: PhotoIcon },
   { value: 'neutral', label: 'Neutral Background', icon: SwatchIcon },
   { value: 'gradient', label: 'Gradient Background', icon: PaintBrushIcon },
   { value: 'custom', label: 'Custom Upload', icon: CloudArrowUpIcon }
@@ -50,7 +53,8 @@ export default function EnhancedBackgroundSelector({
   onChange,
   isPredefined = false,
   isDisabled = false,
-  className = ''
+  className = '',
+  availableBackgrounds
 }: EnhancedBackgroundSelectorProps) {
   const t = useTranslations('customization.photoStyle.background')
   const [showColorPicker, setShowColorPicker] = useState(false)
@@ -58,6 +62,11 @@ export default function EnhancedBackgroundSelector({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [, setImageLoaded] = useState(false)
   const previewSetRef = useRef<string | null>(null)
+
+  // Filter background types based on package availability
+  const filteredBackgroundTypes = availableBackgrounds
+    ? BACKGROUND_TYPES.filter(type => availableBackgrounds.includes(type.value))
+    : BACKGROUND_TYPES
 
   const handleTypeChange = (type: BackgroundSettings['type']) => {
     const newSettings: BackgroundSettings = { type }
@@ -181,7 +190,7 @@ export default function EnhancedBackgroundSelector({
 
       {/* Background Type Selection */}
       <div className="space-y-3 mb-6">
-        {BACKGROUND_TYPES.map((type) => {
+        {filteredBackgroundTypes.map((type) => {
           const Icon = type.icon
           const isSelected = value.type === type.value
           

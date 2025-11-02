@@ -1,7 +1,7 @@
 'use client'
 
 import { Link } from '@/i18n/routing'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import GenerationCard from '../components/GenerationCard'
 import { useGenerations, useGenerationFilters } from '../hooks/useGenerations'
@@ -15,18 +15,36 @@ export default function TeamGenerationsPage() {
   const t = useTranslations('app.sidebar.generate')
   const { data: session } = useSession()
   const { credits: userCredits, loading: creditsLoading } = useCredits()
-  const isCompanyAdmin = session?.user?.isAdmin
+  const [isTeamAdmin, setIsTeamAdmin] = useState(false)
   const currentUserId = session?.user?.id
   const currentUserName = session?.user?.name || ''
+
+  // Fetch effective roles from API (respects pro subscription = team admin)
+  useEffect(() => {
+    const fetchRoles = async () => {
+      if (session?.user?.id) {
+        try {
+          const response = await fetch('/api/dashboard/stats')
+          if (response.ok) {
+            const data = await response.json()
+            setIsTeamAdmin(data.userRole?.isTeamAdmin ?? false)
+          }
+        } catch (err) {
+          console.error('Failed to fetch roles:', err)
+        }
+      }
+    }
+    fetchRoles()
+  }, [session?.user?.id])
   const { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated } = useGenerationFilters()
   const [teamView, setTeamView] = useState<'mine' | 'team'>('mine')
-  const { generated, companyUsers, pagination, loading, loadMore } = useGenerations(
+  const { generated, teamUsers, pagination, loading, loadMore } = useGenerations(
     currentUserId,
-    isCompanyAdmin,
+    isTeamAdmin,
     currentUserName,
     'team', // scope
     teamView, // teamView
-    (isCompanyAdmin && userFilter === 'company') ? selectedUserId : 'all'
+    (isTeamAdmin && userFilter === 'team') ? selectedUserId : 'all'
   )
 
   const filteredGenerated = filterGenerated(generated)
@@ -35,11 +53,11 @@ export default function TeamGenerationsPage() {
     generated.map(g => g.contextName || 'Freestyle')
   ))
 
-  // Check if user has company credits
-  const hasCompanyCredits = userCredits.company > 0
+  // Check if user has team credits
+  const hasTeamCredits = userCredits.team > 0
 
-  // Show upsell window only if no company credits AND no existing generations
-  if (!creditsLoading && !hasCompanyCredits && filteredGenerated.length === 0 && !loading) {
+  // Show upsell window only if no team credits AND no existing generations
+  if (!creditsLoading && !hasTeamCredits && filteredGenerated.length === 0 && !loading) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -50,13 +68,13 @@ export default function TeamGenerationsPage() {
               </svg>
             </div>
             <h1 className="text-xl font-semibold text-gray-900 mb-2">
-              {isCompanyAdmin ? t('noCreditsTitle') : t('noTeamCreditsTitle')}
+              {isTeamAdmin ? t('noCreditsTitle') : t('noTeamCreditsTitle')}
             </h1>
             <p className="text-gray-600 mb-6">
-              {isCompanyAdmin ? t('noCreditsMessage') : t('noTeamCreditsMessage')}
+              {isTeamAdmin ? t('noCreditsMessage') : t('noTeamCreditsMessage')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              {isCompanyAdmin ? (
+              {isTeamAdmin ? (
                 <>
                   <Link
                     href="/app/pricing"
@@ -112,48 +130,25 @@ export default function TeamGenerationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900">{tg('title')}</h1>
-                <Link href="/app/generate/selfie?type=company" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
+                <Link href="/app/generate/selfie?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-          {/* Team View Filter for Members */}
-          {!isCompanyAdmin && (
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setTeamView('mine')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                  teamView === 'mine'
-                    ? 'bg-brand-primary text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {tg('filters.myImages')}
-              </button>
-              <button
-                onClick={() => setTeamView('team')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                  teamView === 'team'
-                    ? 'bg-brand-primary text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {tg('filters.teamGallery')}
-              </button>
-            </div>
-          )}
+          {/* Team members can only see their own photos - no team gallery filter needed */}
+          {/* Only team admins (pro users) can see all team photos and filter by user */}
 
-          {/* Admin User Filter */}
-          {isCompanyAdmin && (
+          {/* Admin User Filter - only for team admins (pro users) */}
+          {isTeamAdmin && (
             <select value={userFilter} onChange={(e) => setUserFilter(e.target.value)} className="border rounded-md px-2 py-1 text-sm">
               <option value="me">My generations</option>
-              <option value="company">{tg('filters.allUsers')}</option>
+              <option value="team">{tg('filters.allUsers')}</option>
             </select>
           )}
-          {isCompanyAdmin && userFilter === 'company' && (
+          {isTeamAdmin && userFilter === 'team' && (
             <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="border rounded-md px-2 py-1 text-sm">
               <option value="all">All users</option>
-              {companyUsers.map(u => (
+              {teamUsers.map(u => (
                 <option key={u.id} value={u.id}>{u.name}</option>
               ))}
             </select>
@@ -174,7 +169,7 @@ export default function TeamGenerationsPage() {
         </div>
 
       {/* Team Gallery Info */}
-      {teamView === 'team' && !isCompanyAdmin && (
+      {teamView === 'team' && !isTeamAdmin && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-800">{tg('viewOnly')}</p>
         </div>
@@ -213,7 +208,7 @@ export default function TeamGenerationsPage() {
           <div className="text-center py-16 bg-white rounded-lg border">
             <p className="text-gray-700 mb-2">{tg('empty.title')}</p>
             <p className="text-gray-500 text-sm mb-4">{tg('empty.subtitle')}</p>
-                <Link href="/app/generate/selfie?type=company" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
+                <Link href="/app/generate/selfie?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
           </div>
         )}
     </div>

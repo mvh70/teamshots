@@ -25,10 +25,10 @@ interface DashboardStats {
 }
 
 interface UserRole {
-  isCompanyAdmin: boolean
-  isCompanyMember: boolean
+  isTeamAdmin: boolean
+  isTeamMember: boolean
   isRegularUser: boolean
-  companyId?: string
+  teamId?: string
 }
 
 interface Activity {
@@ -39,7 +39,7 @@ interface Activity {
   time: string
   status: string
   isOwn?: boolean
-  generationType?: 'personal' | 'company'
+  generationType?: 'personal' | 'team'
 }
 
 interface PendingInvite {
@@ -65,8 +65,8 @@ export default function DashboardPage() {
     teamMembers: 0
   })
   const [userRole, setUserRole] = useState<UserRole>({
-    isCompanyAdmin: false,
-    isCompanyMember: false,
+    isTeamAdmin: false,
+    isTeamMember: false,
     isRegularUser: true
   })
   const [recentActivity, setRecentActivity] = useState<Activity[]>([])
@@ -95,8 +95,8 @@ export default function DashboardPage() {
           setRecentActivity(activityData.activities)
         }
 
-        // Fetch pending invites (only for company admins)
-        if (userRole.isCompanyAdmin) {
+        // Fetch pending invites (only for team admins)
+        if (userRole.isTeamAdmin) {
           const invitesResponse = await fetch('/api/dashboard/pending-invites')
           if (invitesResponse.ok) {
             const invitesData = await invitesResponse.json()
@@ -114,7 +114,7 @@ export default function DashboardPage() {
     if (session?.user?.id) {
       fetchDashboardData()
     }
-  }, [session?.user?.id, userRole.isCompanyAdmin])
+  }, [session?.user?.id, userRole.isTeamAdmin])
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
@@ -164,7 +164,7 @@ export default function DashboardPage() {
   }
 
   const statsConfig = [
-    ...(userRole.isCompanyAdmin ? [{
+    ...(userRole.isTeamAdmin ? [{
       name: t('stats.teamMembers'),
       value: stats.teamMembers.toString(),
       change: '+0', // TODO: Calculate change from previous period
@@ -204,13 +204,13 @@ export default function DashboardPage() {
         <p className="text-brand-primary-light">
           {loading ? (
             <span className="animate-pulse">Loading your stats...</span>
-          ) : userRole.isCompanyAdmin ? (
-            t('welcome.subtitle.companyAdmin', {
+          ) : userRole.isTeamAdmin ? (
+            t('welcome.subtitle.teamAdmin', {
               count: stats.photosGenerated,
               teamMembers: stats.teamMembers
             })
-          ) : userRole.isCompanyMember ? (
-            t('welcome.subtitle.company', {
+          ) : userRole.isTeamMember ? (
+            t('welcome.subtitle.team', {
               count: stats.photosGenerated
             })
           ) : (
@@ -222,10 +222,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${userRole.isCompanyAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6`}>
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${userRole.isTeamAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6`}>
         {loading ? (
           // Loading skeleton
-          Array.from({ length: userRole.isCompanyAdmin ? 4 : 3 }).map((_, index) => (
+          Array.from({ length: userRole.isTeamAdmin ? 4 : 3 }).map((_, index) => (
             <div key={index} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -265,8 +265,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity - Only for Company Admins */}
-        {userRole.isCompanyAdmin && (
+        {/* Recent Activity - Only for Team Admins */}
+        {userRole.isTeamAdmin && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">{t('recentActivity.title')}</h3>
@@ -325,8 +325,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Pending Invites - Only for Company Admins */}
-        {userRole.isCompanyAdmin && (
+        {/* Pending Invites - Only for Team Admins */}
+        {userRole.isTeamAdmin && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">{t('pendingInvites.title')}</h3>
@@ -397,7 +397,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Template Management - Only for Company Admins */}
+        {/* Template Management - Only for Team Admins */}
 
       </div>
 
@@ -407,7 +407,7 @@ export default function DashboardPage() {
           <h3 className="text-lg font-medium text-gray-900">{t('quickActions.title')}</h3>
         </div>
         <div className="p-6">
-          <div className={`grid grid-cols-1 ${userRole.isCompanyAdmin ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
+          <div className={`grid grid-cols-1 ${userRole.isTeamAdmin ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
             <div className="flex flex-col items-stretch justify-center px-4 py-4 border border-gray-300 rounded-lg">
               <div className="flex items-center justify-center mb-3">
                 <PhotoIcon className="h-6 w-6 text-brand-primary mr-3" />
@@ -427,7 +427,7 @@ export default function DashboardPage() {
               <DocumentTextIcon className="h-6 w-6 text-brand-primary mr-3" />
               <span className="text-sm font-medium text-gray-900">{t('quickActions.createTemplate')}</span>
             </button>
-            {userRole.isCompanyAdmin && (
+            {userRole.isTeamAdmin && (
               <button 
                 onClick={() => router.push('/app/team')}
                 className="flex items-center justify-center px-6 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

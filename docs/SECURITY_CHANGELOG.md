@@ -2,6 +2,17 @@
 
 This document tracks security improvements and fixes implemented in the Teamshots application.
 
+## Version 1.1 - January 2025
+
+### Session Management Improvements
+
+#### Authentication & Session Management
+- **IMPROVED**: Increased session duration from 15 minutes to 30 minutes for better user experience
+- **NEW**: Implemented automatic session refresh (refetches every 25 minutes)
+- **NEW**: Added automatic token extension when token is close to expiring (within 5 minutes)
+- **NEW**: Added session refresh on window focus to maintain active sessions
+- **FIXED**: Session expiration comment now accurately reflects 30-minute duration
+
 ## Version 1.0 - January 2025
 
 ### Critical Security Overhaul
@@ -30,7 +41,7 @@ This document tracks security improvements and fixes implemented in the Teamshot
 
 #### Database Security
 - **NEW**: Application-level Row-Level Security (RLS)
-- **NEW**: Data isolation by user and company
+- **NEW**: Data isolation by user and team
 - **NEW**: Secure query patterns with Prisma middleware
 - **NEW**: Audit logging for all security events
 

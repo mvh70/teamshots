@@ -34,13 +34,15 @@ export async function DELETE(
     }
 
     // Validate the token and find the person
-    const invite = await prisma.teamInvite.findFirst({ where: { token, usedAt: { not: null } } })
+    const invite = await prisma.teamInvite.findFirst({
+      where: { token, usedAt: { not: null } },
+      include: { person: true }
+    })
     if (!invite) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 })
     }
 
-    const person = await prisma.person.findFirst({ where: { email: invite.email, companyId: invite.companyId } })
-    if (!person) {
+    if (!invite.person) {
       await SecurityLogger.logSuspiciousActivity(
         'unknown_user',
         'team_generation_delete_attempt_person_not_found',
@@ -48,6 +50,8 @@ export async function DELETE(
       )
       return NextResponse.json({ error: 'Person not found for this token' }, { status: 404 })
     }
+
+    const person = invite.person
 
     // Get generation and verify ownership
     const generation = await prisma.generation.findFirst({

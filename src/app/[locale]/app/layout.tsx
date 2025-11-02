@@ -4,6 +4,7 @@ import { auth } from '@/auth'
 import AppShell from './AppShell'
 import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
 import { CreditsProvider } from '@/contexts/CreditsContext'
+import { getAccountMode } from '@/domain/account/accountMode'
 
 export default async function AppLayout({
   children,
@@ -21,26 +22,32 @@ export default async function AppLayout({
   
   const messages = await getMessages({ locale })
   
-  // Derive initial role/mode server-side to avoid client flicker
+  // Get account mode using centralized utility
+  const accountModeResult = await getAccountMode(session?.user?.id)
+  
+  // Derive initial role server-side (pro users are team admins by definition)
   const user = session?.user?.id ? await getUserWithRoles(session.user.id) : null
-  const effective = user ? getUserEffectiveRoles(user) : null
-  const initialAccountMode: 'individual' | 'company' = effective && (effective.isCompanyAdmin || effective.isCompanyMember)
-    ? 'company'
-    : 'individual'
+  const effective = user ? await getUserEffectiveRoles(user) : null
+  
   const initialRole = effective ? {
-    isCompanyAdmin: effective.isCompanyAdmin,
-    isCompanyMember: effective.isCompanyMember,
-    needsCompanySetup: effective.isCompanyAdmin && !user?.person?.companyId
+    isTeamAdmin: effective.isTeamAdmin,
+    isTeamMember: effective.isTeamMember,
+    needsTeamSetup: effective.isTeamAdmin && !user?.person?.teamId
   } : {
-    isCompanyAdmin: false,
-    isCompanyMember: false,
-    needsCompanySetup: false
+    isTeamAdmin: false,
+    isTeamMember: false,
+    needsTeamSetup: false
   }
 
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <CreditsProvider>
-        <AppShell initialAccountMode={initialAccountMode} initialRole={initialRole}>{children}</AppShell>
+        <AppShell 
+          initialAccountMode={accountModeResult.mode} 
+          initialRole={initialRole}
+        >
+          {children}
+        </AppShell>
       </CreditsProvider>
     </NextIntlClientProvider>
   )

@@ -20,8 +20,18 @@ export type GenerationListItem = {
   userId?: string
   maxRegenerations: number
   remainingRegenerations: number
-  generationType: 'personal' | 'company'
+  generationType: 'personal' | 'team'
   isOriginal?: boolean
+  isOwnGeneration?: boolean
+  jobStatus?: {
+    id: string
+    progress: number
+    message?: string
+    attemptsMade: number
+    processedOn?: number
+    finishedOn?: number
+    failedReason?: string
+  }
 }
 
 export default function GenerationCard({ item }: { item: GenerationListItem }) {
@@ -169,9 +179,14 @@ export default function GenerationCard({ item }: { item: GenerationListItem }) {
           {isIncomplete ? (
             // Placeholder for incomplete generation
             <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-              <div className="text-center">
+              <div className="text-center px-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
-                <p className="text-xs text-gray-600">Generating...</p>
+                <p className="text-xs text-gray-600">
+                  {item.jobStatus?.message || t('generating', { default: 'Generating...' })}
+                </p>
+                {item.jobStatus?.progress !== undefined && (
+                  <p className="text-[10px] text-gray-500 mt-1">{item.jobStatus.progress}%</p>
+                )}
               </div>
             </div>
           ) : (
@@ -304,36 +319,39 @@ export default function GenerationCard({ item }: { item: GenerationListItem }) {
                     </div>
                   </button>
                 )}
-                <button 
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="relative group text-sm text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-red-50 transition-colors"
-                >
-                  {isDeleting ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b border-red-600"></div>
+                {/* Only show delete button if user owns this generation */}
+                {item.isOwnGeneration === true && (
+                  <button 
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="relative group text-sm text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-red-50 transition-colors"
+                  >
+                    {isDeleting ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b border-red-600"></div>
+                      </div>
+                    ) : (
+                      <svg 
+                        className="w-4 h-4" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                        />
+                      </svg>
+                    )}
+                    {/* Popover tooltip */}
+                    <div className="absolute bottom-full left-0 transform -translate-x-2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                      {isDeleting ? 'Deleting...' : 'Delete generation'}
+                      <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                     </div>
-                  ) : (
-                    <svg 
-                      className="w-4 h-4" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
-                      />
-                    </svg>
-                  )}
-                  {/* Popover tooltip */}
-                  <div className="absolute bottom-full left-0 transform -translate-x-2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                    {isDeleting ? 'Deleting...' : 'Delete generation'}
-                    <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                  </div>
-                </button>
+                  </button>
+                )}
               </>
             )}
           </div>

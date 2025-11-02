@@ -3,7 +3,7 @@ import { testFixtures } from '../../utils/test-data';
 
 export const test = base.extend<{
   authenticatedPage: Page;
-  companyContext: Page;
+  teamContext: Page;
 }>({
   authenticatedPage: async ({ page }, use) => {
     // Set test database environment
@@ -60,7 +60,7 @@ export const test = base.extend<{
     await use(page);
   },
 
-  companyContext: async ({ page }, use) => {
+  teamContext: async ({ page }, use) => {
     // Mark E2E env to disable client-side auth redirects
     await page.addInitScript(() => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,10 +75,10 @@ export const test = base.extend<{
       });
     });
     
-    // Set up E2E authentication headers for company context
+    // Set up E2E authentication headers for team context
     await page.setExtraHTTPHeaders({
-      'x-e2e-user-id': 'test-company-user-id',
-      'x-e2e-user-email': 'admin@testcompany.com',
+      'x-e2e-user-id': 'test-team-user-id',
+      'x-e2e-user-email': 'admin@testteam.com',
       'x-e2e-user-role': 'team_admin',
       'x-e2e-user-locale': 'en'
     });
@@ -92,13 +92,13 @@ export const test = base.extend<{
       });
     });
 
-    // Set up company context in localStorage
+    // Set up team context in localStorage
     await page.addInitScript(() => {
-      localStorage.setItem('user-mode', 'company');
-      localStorage.setItem('company-context', JSON.stringify({
-        id: 'test-company-id',
-        name: 'Test Company',
-        domain: 'testcompany.com',
+      localStorage.setItem('user-mode', 'team');
+      localStorage.setItem('team-context', JSON.stringify({
+        id: 'test-team-id',
+        name: 'Test Team',
+        domain: 'testteam.com',
       }));
     });
 

@@ -145,6 +145,39 @@ test.describe('Stripe Checkout Flow', () => {
     await expect(page).toHaveURL(/checkout\.stripe\.com/)
   })
 
+  test('should prevent buying the same top-up tier twice', async ({ page }) => {
+    const { userId, userEmail } = await createTestUser('topup-once')
+
+    await page.setExtraHTTPHeaders({
+      'x-e2e-user-id': userId,
+      'x-e2e-user-email': userEmail,
+      'x-e2e-user-role': 'user',
+      'x-e2e-user-locale': 'en'
+    })
+
+    // First top-up should succeed (return checkout session URL)
+    const first = await page.request.post('https://localhost:3000/api/stripe/checkout', {
+      data: {
+        type: 'top_up',
+        metadata: { tier: 'individual', credits: 10 },
+      },
+    })
+    expect(first.status()).toBeLessThan(400)
+    const firstJson = await first.json()
+    expect(firstJson.checkoutUrl).toBeTruthy()
+
+    // Second top-up for same tier should be blocked pre-checkout (400)
+    const second = await page.request.post('https://localhost:3000/api/stripe/checkout', {
+      data: {
+        type: 'top_up',
+        metadata: { tier: 'individual', credits: 10 },
+      },
+    })
+    expect(second.status()).toBe(400)
+    const secondJson = await second.json()
+    expect(secondJson.error).toContain('Top-up for this tier already purchased')
+  })
+
   test('should handle checkout API errors gracefully', async ({ page }) => {
     const { userId, userEmail } = await createTestUser('checkout-error')
 

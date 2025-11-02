@@ -13,14 +13,17 @@ import {
 } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
+import Panel from '@/components/common/Panel'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
+import { loadStyle, loadStyleByContextId } from '@/domain/style/service'
+import { getPackageConfig } from '@/domain/style/packages'
 
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
 const PhotoStyleSettings = dynamic(() => import('@/components/customization/PhotoStyleSettings'), { ssr: false })
 
 interface InviteData {
   email: string
-  companyName: string
+  teamName: string
   creditsAllocated: number
   expiresAt: string
   hasActiveContext: boolean
@@ -43,7 +46,7 @@ interface Activity {
   action: string
   time: string
   status: string
-  generationType?: 'personal' | 'company'
+  generationType?: 'personal' | 'team'
 }
 
 interface Selfie {
@@ -71,7 +74,7 @@ export default function InviteDashboardPage() {
   // Upload flow state
   const [uploadKey, setUploadKey] = useState<string>('')
   const [isApproved, setIsApproved] = useState<boolean>(false)
-  const [generationType, setGenerationType] = useState<'personal' | 'company' | null>(null)
+  const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
   
   // Generation flow state
   const [showGenerationFlow, setShowGenerationFlow] = useState<boolean>(false)
@@ -81,6 +84,7 @@ export default function InviteDashboardPage() {
   // Photo style settings
   const [photoStyleSettings, setPhotoStyleSettings] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
+  const [packageId, setPackageId] = useState<string>('headshot1')
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -102,6 +106,46 @@ export default function InviteDashboardPage() {
     }
   }, [token])
 
+  const loadContextSettings = useCallback(async () => {
+    try {
+      // Fetch context using token-based API endpoint (since invite dashboard doesn't use session auth)
+      // The endpoint gets the context from the invite/team, so no contextId needed
+      const response = await fetch(`/api/team/member/context?token=${encodeURIComponent(token)}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch context')
+      }
+
+      const data = await response.json() as {
+        context?: { id: string; settings?: Record<string, unknown>; stylePreset?: string }
+        packageId?: string
+      }
+
+      if (!data.context) {
+        throw new Error('No context found')
+      }
+
+      // Extract packageId from API response or context settings
+      const extractedPackageId = data.packageId || (data.context.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1'
+      
+      // Load the package config and deserialize settings
+      const pkg = getPackageConfig(extractedPackageId)
+      const ui: PhotoStyleSettingsType = data.context.settings 
+        ? pkg.persistenceAdapter.deserialize(data.context.settings as Record<string, unknown>)
+        : pkg.defaultSettings
+      
+      setPhotoStyleSettings(ui)
+      setOriginalContextSettings(ui)
+      setPackageId(pkg.id)
+    } catch (error) {
+      console.error('Error loading context settings:', error)
+      // Fallback to headshot1 defaults on error
+      const headshot1Pkg = getPackageConfig('headshot1')
+      setPhotoStyleSettings(headshot1Pkg.defaultSettings)
+      setPackageId('headshot1')
+    }
+  }, [token])
+
   const validateInvite = useCallback(async () => {
     try {
       const response = await fetch('/api/team/invites/validate', {
@@ -115,10 +159,8 @@ export default function InviteDashboardPage() {
       if (response.ok) {
         setInviteData(data.invite)
         
-        // Load context settings if contextId is available
-        if (data.invite.contextId) {
-          await loadContextSettings(data.invite.contextId)
-        }
+        // Load context settings (endpoint gets context from invite/team)
+        await loadContextSettings()
         
         // Fetch dashboard data after validating invite
         if (data.invite.personId) {
@@ -132,20 +174,7 @@ export default function InviteDashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [token, fetchDashboardData])
-
-  const loadContextSettings = async (contextId: string) => {
-    try {
-      const response = await fetch(`/api/contexts/${contextId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setPhotoStyleSettings(data.context.settings)
-        setOriginalContextSettings(data.context.settings)
-      }
-    } catch (error) {
-      console.error('Error loading context settings:', error)
-    }
-  }
+  }, [token, fetchDashboardData, loadContextSettings])
 
   const fetchAvailableSelfies = useCallback(async () => {
     try {
@@ -190,7 +219,7 @@ export default function InviteDashboardPage() {
         console.log('Setting up generation flow with selfie:', latestSelfie.key)
         setUploadKey(latestSelfie.key)
         setIsApproved(true)
-        setGenerationType('company')
+        setGenerationType('team')
         sessionStorage.removeItem('pendingGeneration')
       }
     }
@@ -198,8 +227,8 @@ export default function InviteDashboardPage() {
 
   const onApprove = () => {
     setIsApproved(true)
-    // For team members, automatically set to company type
-    setGenerationType('company')
+    // For team members, automatically set to team type
+    setGenerationType('team')
   }
 
   const onReject = async () => {
@@ -242,8 +271,8 @@ export default function InviteDashboardPage() {
       
       // Additional safeguard: ensure it's a valid string
       if (!finalGenerationType || typeof finalGenerationType !== 'string') {
-        console.warn('Invalid generationType, defaulting to company:', finalGenerationType)
-        finalGenerationType = 'company'
+        console.warn('Invalid generationType, defaulting to team:', finalGenerationType)
+        finalGenerationType = 'team'
       }
       
       console.log('Final generation type:', finalGenerationType, 'Type:', typeof finalGenerationType)
@@ -251,15 +280,13 @@ export default function InviteDashboardPage() {
       const requestBody = {
         selfieKey: uploadKey,
         generationType: finalGenerationType,
-        creditSource: 'company', // Use company credits for team members
+        creditSource: 'team', // Use team credits for team members
         contextId: inviteData?.contextId, // Pass the context ID from the invite
-        // Add style settings from photo style settings
-        styleSettings: photoStyleSettings,
+        // Add style settings from photo style settings, including packageId
+        styleSettings: { ...photoStyleSettings, packageId },
         // Generate a prompt from the photo style settings
         prompt: generatePromptFromSettings(photoStyleSettings)
       }
-      
-      console.log('Request body being sent:', JSON.stringify(requestBody, null, 2))
       
       const response = await fetch('/api/generations/create', {
         method: 'POST',
@@ -412,7 +439,7 @@ export default function InviteDashboardPage() {
                 Welcome, {inviteData.firstName}!
               </h1>
               <p className="text-sm text-gray-600">
-                {inviteData.companyName} • Team Member Dashboard
+                {inviteData.teamName} • Team Member Dashboard
               </p>
             </div>
             <div className="text-right">
@@ -565,13 +592,14 @@ export default function InviteDashboardPage() {
                     readonlyPredefined={true}
                     originalContextSettings={originalContextSettings}
                     showToggles={false}
+                    packageId={packageId || 'headshot1'}
                   />
 
                   {/* Generation Summary */}
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h4 className="text-sm font-medium text-gray-900 mb-2">Generation Summary</h4>
                     <div className="text-sm text-gray-600 space-y-1">
-                      <p><strong>Type:</strong> Company Use</p>
+                      <p><strong>Type:</strong> Team Use</p>
                       <p><strong>Credits:</strong> {PRICING_CONFIG.credits.perGeneration} credits</p>
                       <p><strong>Remaining:</strong> {stats.creditsRemaining} credits</p>
                     </div>
@@ -590,19 +618,7 @@ export default function InviteDashboardPage() {
 
           {/* Generation Flow */}
           {showGenerationFlow && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Generate Team Photos</h3>
-                <button
-                  onClick={() => setShowGenerationFlow(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
+            <Panel title="Generate Team Photos" onClose={() => setShowGenerationFlow(false)}>
               {availableSelfies.length === 0 ? (
                 <div className="text-center py-8">
                   <CameraIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -674,7 +690,7 @@ export default function InviteDashboardPage() {
                   </div>
                 </div>
               )}
-            </div>
+            </Panel>
           )}
 
           {/* Sign up CTA */}

@@ -24,27 +24,11 @@ test.describe('Signup Flow with Individual/Team Selection', () => {
     await prisma.$disconnect()
   })
 
-  test('should complete individual signup and redirect to checkout', async ({ page }) => {
+  test('should complete individual signup and land on dashboard (free plan)', async ({ page }) => {
     const testId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const userEmail = `${baseUserEmail.split('@')[0]}-individual-${testId}@${baseUserEmail.split('@')[1]}`
 
-    // Mock OTP sending
-    await page.context().route('**/api/auth/otp/send', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true })
-      })
-    })
-
-    // Mock OTP verification and registration
-    await page.context().route('**/api/auth/register', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true })
-      })
-    })
+    // Use real API: no mocks
 
     // Navigate to signup page
     await page.goto('https://localhost:3000/en/auth/signup?tier=individual&period=monthly')
@@ -61,37 +45,23 @@ test.describe('Signup Flow with Individual/Team Selection', () => {
     // Send OTP
     await page.click('[data-testid="send-otp-button"]')
     
-    // Fill OTP
-    await page.fill('[data-testid="otp-input"]', '123456')
+    // Read latest OTP from DB and fill it
+    const otp = await prisma.oTP.findFirst({ where: { email: userEmail }, orderBy: { createdAt: 'desc' } })
+    const code = otp?.code || '000000'
+    await page.fill('[data-testid="otp-input"]', code)
     
     // Verify OTP and complete signup
     await page.click('[data-testid="verify-otp-button"]')
     
-    // Should redirect to checkout with individual tier
-    await expect(page).toHaveURL(/\/en\/app\/settings\?purchase=required&tier=individual&period=monthly/)
+    // Should land on dashboard (free plan)
+    await expect(page).toHaveURL(/\/en\/app\/dashboard/)
   })
 
-  test('should complete team signup and redirect to checkout', async ({ page }) => {
+  test('should complete team signup and land on dashboard (free plan)', async ({ page }) => {
     const testId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const userEmail = `${baseUserEmail.split('@')[0]}-team-${testId}@${baseUserEmail.split('@')[1]}`
 
-    // Mock OTP sending
-    await page.context().route('**/api/auth/otp/send', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true })
-      })
-    })
-
-    // Mock OTP verification and registration
-    await page.context().route('**/api/auth/register', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true })
-      })
-    })
+    // Use real API: no mocks
 
     // Navigate to signup page
     await page.goto('https://localhost:3000/en/auth/signup?tier=team&period=monthly')
@@ -108,37 +78,22 @@ test.describe('Signup Flow with Individual/Team Selection', () => {
     // Send OTP
     await page.click('[data-testid="send-otp-button"]')
     
-    // Fill OTP
-    await page.fill('[data-testid="otp-input"]', '123456')
+    const otp = await prisma.oTP.findFirst({ where: { email: userEmail }, orderBy: { createdAt: 'desc' } })
+    const code = otp?.code || '000000'
+    await page.fill('[data-testid="otp-input"]', code)
     
     // Verify OTP and complete signup
     await page.click('[data-testid="verify-otp-button"]')
     
-    // Should redirect to checkout with team tier
-    await expect(page).toHaveURL(/\/en\/app\/settings\?purchase=required&tier=team&period=monthly/)
+    // Should land on dashboard (free plan)
+    await expect(page).toHaveURL(/\/en\/app\/dashboard/)
   })
 
-  test('should handle signup without pre-selected tier', async ({ page }) => {
+  test('should handle signup without pre-selected tier and land on dashboard', async ({ page }) => {
     const testId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const userEmail = `${baseUserEmail.split('@')[0]}-no-tier-${testId}@${baseUserEmail.split('@')[1]}`
 
-    // Mock OTP sending
-    await page.context().route('**/api/auth/otp/send', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true })
-      })
-    })
-
-    // Mock OTP verification and registration
-    await page.context().route('**/api/auth/register', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true })
-      })
-    })
+    // Use real API: no mocks
 
     // Navigate to signup page without tier parameter
     await page.goto('https://localhost:3000/en/auth/signup')
@@ -158,14 +113,15 @@ test.describe('Signup Flow with Individual/Team Selection', () => {
     // Send OTP
     await page.click('[data-testid="send-otp-button"]')
     
-    // Fill OTP
-    await page.fill('[data-testid="otp-input"]', '123456')
+    const otp = await prisma.oTP.findFirst({ where: { email: userEmail }, orderBy: { createdAt: 'desc' } })
+    const code = otp?.code || '000000'
+    await page.fill('[data-testid="otp-input"]', code)
     
     // Verify OTP and complete signup
     await page.click('[data-testid="verify-otp-button"]')
     
-    // Should redirect to checkout with individual tier and monthly period
-    await expect(page).toHaveURL(/\/en\/app\/settings\?purchase=required&tier=individual&period=monthly/)
+    // Should land on dashboard (free plan)
+    await expect(page).toHaveURL(/\/en\/app\/dashboard/)
   })
 
   test('should validate required fields', async ({ page }) => {

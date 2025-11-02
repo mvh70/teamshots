@@ -14,8 +14,8 @@ declare module "next-auth" {
         id: string
         firstName: string
         lastName?: string | null
-        companyId?: string | null
-        company?: {
+        teamId?: string | null
+        team?: {
           id: string
           name: string
           adminId: string
@@ -36,8 +36,8 @@ declare module "next-auth" {
       id: string
       firstName: string
       lastName?: string | null
-      companyId?: string | null
-      company?: {
+      teamId?: string | null
+      team?: {
         id: string
         name: string
       } | null
@@ -55,8 +55,8 @@ declare module "next-auth/jwt" {
       id: string
       firstName: string
       lastName?: string | null
-      companyId?: string | null
-      company?: {
+      teamId?: string | null
+      team?: {
         id: string
         name: string
       } | null

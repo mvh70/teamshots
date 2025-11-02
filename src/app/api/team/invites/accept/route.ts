@@ -7,15 +7,15 @@ export async function POST(request: NextRequest) {
   try {
     const { token, firstName, lastName } = await request.json()
 
-    if (!token || !firstName) {
-      return NextResponse.json({ error: 'Token and first name are required' }, { status: 400 })
+    if (!token || !firstName || !lastName) {
+      return NextResponse.json({ error: 'Token, first name, and last name are required' }, { status: 400 })
     }
 
     // Find and validate invite
     const invite = await prisma.teamInvite.findUnique({
       where: { token },
       include: {
-        company: {
+        team: {
           include: {
             activeContext: true
           }
@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
     const person = await prisma.person.create({
       data: {
         firstName,
-        lastName: lastName || null,
+        lastName,
         email: invite.email,
-        companyId: invite.companyId,
+        teamId: invite.teamId,
         inviteToken: token
       }
     })
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       where: { id: invite.id },
       data: { 
         usedAt: new Date(),
+        personId: person.id,
         convertedUserId: null // Will be set when they sign up
       }
     })
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
         firstName: person.firstName,
         lastName: person.lastName,
         email: person.email,
-        companyId: person.companyId,
+        teamId: person.teamId,
         creditsAllocated: invite.creditsAllocated
       }
     })

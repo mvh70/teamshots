@@ -58,7 +58,7 @@ export async function GET(
         person: {
           include: {
             user: true,
-            company: true
+            team: true
           }
         },
         context: true,
@@ -76,7 +76,7 @@ export async function GET(
     // SECURITY: Verify user has access to this generation
     const userPerson = await prisma.person.findUnique({
       where: { userId: session.user.id },
-      select: { id: true, companyId: true }
+      select: { id: true, teamId: true }
     })
 
     if (!userPerson) {
@@ -84,9 +84,9 @@ export async function GET(
     }
 
     const isOwner = generation.personId === userPerson.id
-    const isSameCompany = userPerson.companyId && generation.person.companyId === userPerson.companyId
+    const isSameTeam = userPerson.teamId && generation.person.teamId === userPerson.teamId
 
-    if (!isOwner && !isSameCompany) {
+    if (!isOwner && !isSameTeam) {
       await SecurityLogger.logSuspiciousActivity(
         session.user.id,
         'unauthorized_generation_access_attempt',
@@ -106,9 +106,18 @@ export async function GET(
         const { imageGenerationQueue } = await import('@/queue')
         const job = await imageGenerationQueue.getJob(`gen-${generationId}`)
         if (job) {
+          // Handle progress as either number or object { progress: number, message?: string }
+          const progressData = typeof job.progress === 'object' && job.progress !== null 
+            ? job.progress as { progress?: number; message?: string }
+            : { progress: job.progress as number }
           jobStatus = {
             id: job.id,
-            progress: job.progress,
+            progress: typeof progressData === 'object' && 'progress' in progressData && typeof progressData.progress === 'number' 
+              ? progressData.progress 
+              : (typeof job.progress === 'number' ? job.progress : 0),
+            message: typeof progressData === 'object' && 'message' in progressData && typeof progressData.message === 'string' 
+              ? progressData.message 
+              : undefined,
             attemptsMade: job.attemptsMade,
             processedOn: job.processedOn,
             finishedOn: job.finishedOn,
@@ -224,7 +233,7 @@ export async function DELETE(
         person: {
           include: {
             user: true,
-            company: true
+            team: true
           }
         }
       }
@@ -237,15 +246,18 @@ export async function DELETE(
       )
     }
 
-    // Check if user has access to this generation
-    const hasAccess = 
-      generation.person.userId === session.user.id || // Owner
-      generation.person.company?.adminId === session.user.id || // Company admin
-      (generation.generationType === 'company' && generation.person.company?.adminId === session.user.id) // Company generation
+    // Check if user is the owner of this generation
+    // Team admins can only delete their own photos, not team members' photos
+    const isOwner = generation.person.userId === session.user.id
 
-    if (!hasAccess) {
+    if (!isOwner) {
+      await SecurityLogger.logSuspiciousActivity(
+        session.user.id,
+        'unauthorized_generation_delete_attempt',
+        { generationId: generation.id, generationOwnerId: generation.person.userId }
+      )
       return NextResponse.json(
-        { error: 'Access denied' },
+        { error: 'Access denied. You can only delete your own photos.' },
         { status: 403 }
       )
     }

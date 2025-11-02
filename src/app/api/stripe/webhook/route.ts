@@ -8,7 +8,7 @@ import { PrismaClient } from '@prisma/client';
 import { Logger } from '@/lib/logger';
 
 const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
-  apiVersion: '2025-09-30.clover',
+  apiVersion: '2025-10-29.clover',
 });
 
 // Webhook secret: Not required if Stripe webhooks are handled externally
@@ -101,6 +101,10 @@ export async function POST(request: NextRequest) {
         await handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
         break;
         
+      case 'invoice_payment.paid': {
+        // No-op: informational event; renewal credits handled by invoice.payment_succeeded
+        break;
+      }
       default:
         Logger.warn(`Unhandled event type: ${event.type}`);
     }
@@ -171,6 +175,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       
       const price = subscription.items.data[0]?.price;
       const tier = determineTier(price?.id);
+
+      // Determine period using configured price IDs rather than Stripe interval.
+      // Annual contracts are billed monthly, so interval === 'month' isn't reliable.
+      const isAnnualConfiguredPrice = (
+        price?.id === PRICING_CONFIG.individual.annual.stripePriceId ||
+        price?.id === PRICING_CONFIG.pro.annual.stripePriceId
+      );
+      const planPeriod = isAnnualConfiguredPrice ? 'annual' : 'monthly';
       
       // Determine credits based on tier
       let credits = 0;
@@ -185,9 +197,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         await tx.user.update({
           where: { id: userId },
           data: {
-            subscriptionTier: tier,
             subscriptionStatus: 'active',
             stripeSubscriptionId: subscriptionId,
+            planTier: tier,
+            planPeriod,
           },
         });
         
@@ -203,13 +216,25 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             stripePaymentId: subscription.latest_invoice as string,
             stripeSubscriptionId: subscriptionId,
             planTier: tier,
-            planPeriod: price?.recurring?.interval === 'year' ? 'annual' : 'monthly',
+            planPeriod,
             metadata: {
               stripePriceId: price?.id,
               subscriptionId: subscriptionId,
             },
           },
         });
+        type PrismaWithSubscriptionChange = typeof prisma & { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
+        const txEx = tx as unknown as PrismaWithSubscriptionChange
+        await txEx.subscriptionChange.create({
+          data: {
+            userId,
+            planTier: tier || 'individual',
+            planPeriod,
+            action: 'start',
+            stripeSubscriptionId: subscriptionId,
+            metadata: { priceId: price?.id },
+          }
+        })
       });
       
     } else if (purchaseType === 'try_once') {
@@ -221,8 +246,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         await tx.user.update({
           where: { id: userId },
           data: {
-            subscriptionTier: 'try_once',
             subscriptionStatus: 'active',
+            planTier: 'individual', // default; real tier remains guided by account mode elsewhere
+            planPeriod: 'try_once',
           },
         });
         
@@ -235,13 +261,24 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             amount: price,
             currency: 'USD',
             stripePaymentId: session.payment_intent as string,
-            planTier: 'try_once',
-            planPeriod: 'one_time',
+            planTier: 'individual',
+            planPeriod: 'try_once',
             metadata: {
               stripeSessionId: session.id,
             },
           },
         });
+        type PrismaWithSubscriptionChange = typeof prisma & { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
+        const txEx = tx as unknown as PrismaWithSubscriptionChange
+        await txEx.subscriptionChange.create({
+          data: {
+            userId,
+            planTier: 'individual',
+            planPeriod: 'try_once',
+            action: 'start',
+            metadata: { checkoutSessionId: session.id },
+          }
+        })
       });
       
     } else if (purchaseType === 'top_up') {
@@ -256,11 +293,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         price = PRICING_CONFIG.pro.topUp.price;
       }
       
+      // Allow repeat top-ups; do not block subsequent purchases
+
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
+        const person = await tx.person.findUnique({ where: { userId: userId || '' } })
+        const teamId = (tier === 'pro') ? person?.teamId || null : null
         
         await tx.creditTransaction.create({
           data: {
             userId,
+            teamId: teamId || undefined,
             credits: credits,
             type: 'purchase',
             description: `Credit top-up - ${credits} credits`,
@@ -268,7 +310,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             currency: 'USD',
             stripePaymentId: session.payment_intent as string,
             planTier: tier,
-            planPeriod: 'one_time',
+            planPeriod: 'try_once',
             metadata: {
               stripeSessionId: session.id,
               topUpCredits: credits,
@@ -318,14 +360,64 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     
     Logger.debug('Subscription details', { userId, tier, status: subscription.status, priceId: price?.id });
     
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        subscriptionTier: tier,
-        subscriptionStatus: subscription.status === 'active' ? 'active' : 'cancelled',
-        stripeSubscriptionId: subscription.id,
-      },
-    });
+    // Determine planPeriod by configured price IDs (not interval) to support annual contracts billed monthly
+    const planPeriodFromConfig = ((): 'annual' | 'monthly' => {
+      const pid = price?.id
+      if (!pid) return 'monthly'
+      if (
+        pid === PRICING_CONFIG.individual.annual.stripePriceId ||
+        pid === PRICING_CONFIG.pro.annual.stripePriceId
+      ) return 'annual'
+      return 'monthly'
+    })()
+
+    // Check for pending scheduled changes (schedule or cancel) that should prevent immediate updates
+    const pendingSchedule = await (prisma as unknown as { subscriptionChange: { findFirst: (args: unknown) => Promise<unknown> } }).subscriptionChange.findFirst({
+      where: { userId, action: { in: ['schedule', 'cancel'] }, effectiveDate: { gt: new Date() } },
+      orderBy: { effectiveDate: 'asc' }
+    }) as unknown as { action?: string; effectiveDate?: Date } | null
+
+    // Check if subscription is scheduled to cancel at period end
+    const cancelAtPeriodEnd = (subscription as unknown as { cancel_at_period_end?: boolean }).cancel_at_period_end || false
+
+    // If there's a pending schedule/cancel, don't update planPeriod yet
+    // If cancel_at_period_end is true, don't create a 'change' record (cancellation is already recorded)
+    if (!pendingSchedule && !cancelAtPeriodEnd) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          subscriptionStatus: subscription.status === 'active' ? 'active' : 'cancelled',
+          stripeSubscriptionId: subscription.id,
+          planTier: tier,
+          planPeriod: planPeriodFromConfig,
+        },
+      });
+      try {
+        const planPeriod = planPeriodFromConfig
+        const sc = prisma as unknown as { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
+        await sc.subscriptionChange.create({
+          data: {
+            userId,
+            planTier: tier || 'individual',
+            planPeriod,
+            action: 'change',
+            stripeSubscriptionId: subscription.id,
+            metadata: { priceId: subscription.items.data[0]?.price?.id },
+          }
+        })
+      } catch {}
+    } else {
+      if (pendingSchedule) {
+        Logger.info('Pending schedule/cancel exists; skipping immediate planPeriod update', { 
+          userId, 
+          action: pendingSchedule.action,
+          effectiveDate: pendingSchedule.effectiveDate 
+        })
+      }
+      if (cancelAtPeriodEnd) {
+        Logger.info('Subscription scheduled to cancel at period end; skipping planPeriod update', { userId })
+      }
+    }
     
     Logger.info('Subscription updated successfully');
   } catch (error) {
@@ -335,21 +427,81 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.userId;
-  
-  if (!userId) {
-    Logger.error('No userId in subscription metadata');
-    return;
-  }
+  try {
+    Logger.info('Processing subscription deletion', { subscriptionId: subscription.id });
+    
+    // Try to get userId from metadata first
+    let userId = subscription.metadata?.userId;
+    
+    if (!userId) {
+      // For existing subscriptions, find user by customer ID
+      const customerId = typeof subscription.customer === 'string' 
+        ? subscription.customer 
+        : subscription.customer.id;
+      
+      Logger.debug('Looking up user by customer ID for deletion', { customerId });
+      
+      const user = await prisma.user.findUnique({
+        where: { stripeCustomerId: customerId },
+        select: { id: true, planTier: true, planPeriod: true }
+      });
+      
+      if (!user) {
+        Logger.error('User not found for customer ID during deletion', { customerId });
+        return;
+      }
+      
+      userId = user.id;
+      Logger.info('Found user for deletion', { userId });
+    }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      subscriptionTier: null,
-      subscriptionStatus: 'cancelled',
-      stripeSubscriptionId: null,
-    },
-  });
+    // Get current tier/period before clearing
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { planTier: true, planPeriod: true }
+    });
+
+    const currentTier = (user?.planTier || 'individual') as 'individual' | 'pro'
+    const currentPlanPeriod = ((): 'monthly' | 'annual' => {
+      const p = user?.planPeriod
+      if (p === 'year') return 'annual'
+      if (p === 'month') return 'monthly'
+      return (p as 'monthly' | 'annual') || 'monthly'
+    })()
+
+    // Update user to cancelled status and clear subscription fields, set planPeriod to 'free'
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        subscriptionStatus: 'cancelled',
+        stripeSubscriptionId: null,
+        planPeriod: 'free',
+      },
+    });
+
+    // Record cancellation in ledger (effective now, since subscription is deleted)
+    try {
+      const prismaEx = prisma as unknown as { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
+      await prismaEx.subscriptionChange.create({
+        data: {
+          userId,
+          planTier: currentTier,
+          planPeriod: currentPlanPeriod,
+          action: 'cancel',
+          effectiveDate: new Date(),
+          stripeSubscriptionId: subscription.id,
+          metadata: { reason: 'subscription_deleted_at_period_end' },
+        }
+      })
+    } catch (error) {
+      Logger.error('Failed to record cancellation in ledger', { error: error instanceof Error ? error.message : String(error) })
+    }
+
+    Logger.info('Subscription deleted successfully', { userId });
+  } catch (error) {
+    Logger.error('Error in handleSubscriptionDeleted', { error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
 }
 
 async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
@@ -489,9 +641,11 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
     }
 
     await prisma.$transaction(async (tx: PrismaTransactionClient) => {
+      const person = await tx.person.findUnique({ where: { userId: user.id } })
       await tx.creditTransaction.create({
         data: {
           userId: user.id,
+          teamId: (tier === 'pro') ? person?.teamId || undefined : undefined,
           credits: credits,
           type: 'purchase',
           description: `Credit top-up - ${tier} (${credits} credits)`,
@@ -500,7 +654,7 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
           stripePaymentId: getInvoicePaymentIntentId(invoice),
           stripeInvoiceId: invoice.id,
           planTier: tier,
-          planPeriod: 'one_time',
+          planPeriod: 'try_once',
           metadata: {
             stripeInvoiceId: invoice.id,
             topUpCredits: credits,
@@ -547,6 +701,23 @@ async function handleSubscriptionScheduleEvent(schedule: Stripe.SubscriptionSche
         },
       },
     })
+    try {
+      const sc = prisma as unknown as { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
+      if (contract_end) {
+        await sc.subscriptionChange.create({
+          data: {
+            userId: user.id,
+            planTier: (user.planTier || 'individual') as string,
+            planPeriod: (user.planPeriod || 'monthly') as string,
+            action: 'schedule',
+            effectiveDate: new Date(contract_end),
+            stripeSubscriptionId: subscription.id,
+            stripeScheduleId: schedule.id,
+            metadata: { contract_start, contract_end },
+          }
+        })
+      }
+    } catch {}
   } catch (error) {
     console.error('Error handling subscription schedule event', error)
   }

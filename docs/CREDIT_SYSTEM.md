@@ -2,7 +2,7 @@
 
 ## Overview
 
-Teamshots uses a transaction-based credit system that provides full audit trails and flexible credit management for both individual users and company teams.
+Teamshots uses a transaction-based credit system that provides full audit trails and flexible credit management for both individual users and team teams.
 
 ## Architecture
 
@@ -15,8 +15,8 @@ model CreditTransaction {
   id          String    @id @default(cuid())
   
   // Who this affects (one of these should be set)
-  companyId   String?
-  company     Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  teamId   String?
+  team     Team?  @relation(fields: [teamId], references: [id], onDelete: Cascade)
   personId    String?
   person      Person?   @relation(fields: [personId], references: [id], onDelete: Cascade)
   userId      String?
@@ -38,7 +38,7 @@ model CreditTransaction {
   
   createdAt   DateTime  @default(now())
   
-  @@index([companyId])
+  @@index([teamId])
   @@index([personId])
   @@index([userId])
   @@index([type])
@@ -56,8 +56,8 @@ The `src/lib/credits.ts` file provides utility functions for managing credits:
 // Create a credit transaction
 createCreditTransaction(params: CreateCreditTransactionParams)
 
-// Get current credit balance for a company
-getCompanyCreditBalance(companyId: string): Promise<number>
+// Get current credit balance for a team
+getTeamCreditBalance(teamId: string): Promise<number>
 
 // Get current credit balance for a person
 getPersonCreditBalance(personId: string): Promise<number>
@@ -65,9 +65,9 @@ getPersonCreditBalance(personId: string): Promise<number>
 // Get current credit balance for a user
 getUserCreditBalance(userId: string): Promise<number>
 
-// Transfer credits from company to person
-transferCreditsFromCompanyToPerson(
-  companyId: string, 
+// Transfer credits from team to person
+transferCreditsFromTeamToPerson(
+  teamId: string, 
   personId: string, 
   amount: number, 
   description?: string
@@ -103,7 +103,7 @@ const person = await prisma.person.create({
     firstName,
     lastName: lastName || null,
     email: invite.email,
-    companyId: invite.companyId,
+    teamId: invite.teamId,
     inviteToken: token
   }
 })
@@ -123,11 +123,11 @@ This creates a `CreditTransaction` with:
 - `personId: person.id`
 - `teamInviteId: invite.id`
 
-### 2. Credit Transfer from Company to Person
+### 2. Credit Transfer from Team to Person
 
 ```typescript
-await transferCreditsFromCompanyToPerson(
-  companyId,
+await transferCreditsFromTeamToPerson(
+  teamId,
   personId,
   10,
   "Monthly credit allocation"
@@ -135,7 +135,7 @@ await transferCreditsFromCompanyToPerson(
 ```
 
 This creates two linked transactions:
-1. **Debit**: `amount: -10, type: 'transfer_out', companyId`
+1. **Debit**: `amount: -10, type: 'transfer_out', teamId`
 2. **Credit**: `amount: +10, type: 'transfer_in', personId`
 
 ### 3. Using Credits for Generation
@@ -171,7 +171,7 @@ export async function getPersonCreditBalance(personId: string): Promise<number> 
 ## Transaction Types
 
 - **`purchase`**: Credits purchased via subscription or top-up
-- **`transfer_in`**: Credits received from company transfer
+- **`transfer_in`**: Credits received from team transfer
 - **`transfer_out`**: Credits sent to team member
 - **`generation`**: Credits used for photo generation
 - **`refund`**: Credits refunded for failed generations
@@ -186,7 +186,7 @@ Every credit movement is recorded with timestamps, descriptions, and references 
 No more scattered credit fields across different models. All credit data is centralized.
 
 ### 3. Flexible Transfers
-Easy company-to-person credit transfers with proper transaction linking.
+Easy team-to-person credit transfers with proper transaction linking.
 
 ### 4. Real-time Balances
 Credit balances are always accurate and calculated from transaction history.
@@ -207,5 +207,5 @@ The credit system integrates seamlessly with team management:
 
 - **Team Invites**: Automatically allocate credits when invites are accepted
 - **Team Dashboard**: Display real-time credit balances for all team members
-- **Admin Controls**: Transfer credits between company pool and team members
+- **Admin Controls**: Transfer credits between team pool and team members
 - **Generation Tracking**: Track which team members use credits for generations

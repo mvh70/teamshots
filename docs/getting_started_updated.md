@@ -3,6 +3,13 @@
 ## Overview
 This guide walks you through building and deploying the AI Team Photo Generator using a phased approach.
 
+**Routes (styles UI):**
+- Personal: `/app/styles/personal`
+- Team: `/app/styles/team`
+
+**Packages:**
+- Located at `src/domain/style/packages/` (registry in `packages/index.ts`, first package `headshot1.ts`).
+
 ## Implementation Order
 
 ### Phase 1: Foundation + Waitlist
@@ -258,8 +265,8 @@ model User {
   password      String?   // Only for credentials provider
   locale        String    @default("en") // 'en' or 'es'
   credits       Int       @default(0) // Legacy field - will be deprecated
-  subscriptionTier   String?  // 'starter' | 'pro'
-  subscriptionPeriod String?  // 'monthly' | 'annual'
+  planTier           String?  // 'free' | 'try_once' | 'individual' | 'pro'
+  planPeriod         String?  // 'none' | 'one_time' | 'monthly' | 'annual'
   subscriptionStatus String?  // 'active' | 'cancelled'
   stripeCustomerId   String?  @unique
   createdAt     DateTime  @default(now())
@@ -270,7 +277,7 @@ model User {
   transactions  Transaction[]
   creditTransactions CreditTransaction[]
   person        Person?
-  companies     Company[] @relation("CompanyAdmin")
+  companies     Team[] @relation("TeamAdmin")
 }
 
 model VerificationToken {

@@ -1,53 +1,61 @@
 ---
-description: Guidelines for creating and maintaining Cursor rules to ensure consistency and effectiveness.
-globs: .cursor/rules/*.mdc
+description: Cursor rule management - when to update and how to format
+globs:.cursor/rules/**/*
 alwaysApply: true
 ---
 
-- **Required Rule Structure:**
-  ```markdown
-  ---
-  description: Clear, one-line description of what the rule enforces
-  globs: path/to/files/*.ext, other/path/**/*
-  alwaysApply: boolean
-  ---
+# Cursor Rule Management
 
-  - **Main Points in Bold**
-    - Sub-points with details
-    - Examples and explanations
-  ```
+## When to Add/Update Rules
 
-- **File References:**
-  - Use `[filename](mdc:path/to/file)` ([filename](mdc:filename)) to reference files
-  - Example: [prisma.mdc](mdc:.cursor/rules/prisma.mdc) for rule references
-  - Example: [schema.prisma](mdc:prisma/schema.prisma) for code references
+**Add new rule when:**
+- Pattern used in 3+ files
+- Common bug preventable by rule
+- Repeated code review feedback
+- New library/tool adopted project-wide
 
-- **Code Examples:**
-  - Use language-specific code blocks
-  ```typescript
-  // ✅ DO: Show good examples
-  const goodExample = true;
-  
-  // ❌ DON'T: Show anti-patterns
-  const badExample = false;
-  ```
+**Update existing rule when:**
+- Better examples exist in codebase
+- New edge cases discovered
+- Implementation changed
 
-- **Rule Content Guidelines:**
-  - Start with high-level overview
-  - Include specific, actionable requirements
-  - Show examples of correct implementation
-  - Reference existing code when possible
-  - Keep rules DRY by referencing other rules
+**Deprecate when:**
+- Pattern no longer used
+- Technology replaced
 
-- **Rule Maintenance:**
-  - Update rules when new patterns emerge
-  - Add examples from actual codebase
-  - Remove outdated patterns
-  - Cross-reference related rules
+## Rule Format
 
-- **Best Practices:**
-  - Use bullet points for clarity
-  - Keep descriptions concise
-  - Include both DO and DON'T examples
-  - Reference actual code over theoretical examples
-  - Use consistent formatting across rules 
+### Frontmatter
+```markdown
+---
+description: One-line description of rule purpose
+globs: path/to/files/*.ext, other/**/*
+---
+```
+
+### Content Structure
+- **Bold main points**
+  - Sub-points with details
+  - DO/DON'T examples from actual code
+  - Cross-reference related rules (no duplication)
+
+### File References
+- Rules: `[prisma.mdc](mdc:.cursor/rules/prisma.mdc)`
+- Code: `[schema.prisma](mdc:prisma/schema.prisma)`
+
+### Code Examples
+```typescript
+// ✅ DO: Correct pattern
+const good = true;
+
+// ❌ DON'T: Anti-pattern
+const bad = false;
+```
+
+## Quality Standards
+- Actionable and specific (not vague)
+- Examples from actual codebase
+- Consistent formatting
+- Up-to-date references
+
+**Action**: When you see a pattern 3+ times, immediately suggest adding it to the appropriate rule.

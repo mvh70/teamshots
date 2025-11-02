@@ -1,57 +1,65 @@
 ---
-description: TypeScript coding standards and best practices for modern web development
+description: TypeScript standards with strict type safety
 globs: **/*.ts, **/*.tsx, **/*.d.ts
 ---
 
-# TypeScript Best Practices
+# TypeScript Standards
 
-## Type System
-- Prefer interfaces over types for object definitions
-- Use type for unions, intersections, and mapped types
-- Avoid using `any`, prefer `unknown` for unknown types
-- Use strict TypeScript configuration
-- Leverage TypeScript's built-in utility types
-- Use generics for reusable type patterns
+## Eliminate `any` Types
+
+### Default Alternatives
+- Known structure → Specific interface
+- Unknown structure → `Record<string, unknown>` or `unknown` with type guards
+- Enums → Literal unions: `"pending" | "completed"`
+- Functions → `Parameters<typeof fn>`
+- Errors → `catch (error: unknown)` with `instanceof Error` check
+
+### Quick Fixes
+
+| Scenario | Replace | With |
+|----------|---------|------|
+| API response | `response: any` | `Record<string, unknown>` |
+| Event handler | `(e: any)` | `(e: unknown)` or specific event type |
+| Props | `React.FC<any>` | `React.FC<{...}>` or `Record<string, unknown>` |
+| Enum cast | `as any` | `as "value1" \| "value2"` |
+| Error | `catch (e: any)` | `catch (e: unknown)` |
+
+### Type Assertions
+- **Single**: `value as string` (compatible types)
+- **Double**: `obj as unknown as TargetType` (complex conversions)
+- **Property**: `(req as { ip?: string }).ip`
+
+### When to Use `eslint-disable`
+Only for: test mocks, third-party APIs without types, temporary legacy migration
+
+**Always comment why:**
+```typescript
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mock: any = { /* complex third-party structure */ };
+```
 
 ## Naming Conventions
-- Use PascalCase for type names and interfaces
-- Use camelCase for variables and functions
-- Use UPPER_CASE for constants
-- Use descriptive names with auxiliary verbs (e.g., isLoading, hasError)
-- Prefix interfaces for React props with 'Props' (e.g., ButtonProps)
+- PascalCase: Types, interfaces, classes
+- camelCase: Variables, functions
+- UPPER_CASE: Constants
+- Descriptive booleans: `isLoading`, `hasError`
+- Props suffix: `ButtonProps`, `CardProps`
 
-## Code Organization
-- Keep type definitions close to where they're used
-- Export types and interfaces from dedicated type files when shared
-- Use barrel exports (index.ts) for organizing exports
-- Place shared types in a `types` directory
-- Co-locate component props with their components
+## Type Organization
+- Interfaces for object shapes: `interface User { id: string }`
+- Types for unions/intersections: `type Status = "pending" | "complete"`
+- Co-locate component props with components
+- Shared types in `types/` directory
 
 ## Functions
-- Use explicit return types for public functions
-- Use arrow functions for callbacks and methods
-- Implement proper error handling with custom error types
-- Use function overloads for complex type scenarios
-- Prefer async/await over Promises
+- Explicit return types for public functions
+- Arrow functions for callbacks
+- Use `async/await` over Promises
+- Type guards for runtime checks
 
 ## Best Practices
 - Enable strict mode in tsconfig.json
-- Use readonly for immutable properties
+- Use `readonly` for immutable properties
 - Leverage discriminated unions for type safety
-- Use type guards for runtime type checking
-- Implement proper null checking
+- Proper null checking
 - Avoid type assertions unless necessary
-
-## Error Handling
-- Create custom error types for domain-specific errors
-- Use Result types for operations that can fail
-- Implement proper error boundaries
-- Use try-catch blocks with typed catch clauses
-- Handle Promise rejections properly
-
-## Patterns
-- Use the Builder pattern for complex object creation
-- Implement the Repository pattern for data access
-- Use the Factory pattern for object creation
-- Leverage dependency injection
-- Use the Module pattern for encapsulation 

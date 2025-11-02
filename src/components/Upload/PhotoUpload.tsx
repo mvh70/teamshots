@@ -11,7 +11,6 @@ type PhotoUploadProps = {
   onUpload?: (file: File) => Promise<{ url?: string; key?: string } | void>;
   onUploaded?: (result: { key: string; url?: string }) => void;
   testId?: string;
-  skipDatabaseCreation?: boolean;
 };
 
 export default function PhotoUpload({

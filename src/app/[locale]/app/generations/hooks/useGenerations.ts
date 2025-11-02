@@ -6,7 +6,7 @@ import { jsonFetcher } from '@/lib/fetcher'
 
 export function useGenerations(
   currentUserId?: string,
-  isCompanyAdmin?: boolean,
+  isTeamAdmin?: boolean,
   currentUserName?: string,
   scope: 'personal' | 'team' = 'personal',
   teamView?: 'mine' | 'team',
@@ -24,19 +24,19 @@ export function useGenerations(
   } | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Mock company users (current + teammate). Replace with real company members later
-  const [companyUsers, setCompanyUsers] = useState<{id:string; name:string}[]>([
+  // Mock team users (current + teammate). Replace with real team members later
+  const [teamUsers, setTeamUsers] = useState<{id:string; name:string}[]>([
     { id: currentUserId || 'u_current', name: currentUserName || 'Me' }
   ])
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await jsonFetcher<{ users: { id: string; name: string }[] }>('/api/company/members')
-        if (Array.isArray(data.users)) setCompanyUsers(data.users)
+        const data = await jsonFetcher<{ users: { id: string; name: string }[] }>('/api/team/members')
+        if (Array.isArray(data.users)) setTeamUsers(data.users)
       } catch {}
     }
-    if (isCompanyAdmin) load()
-  }, [isCompanyAdmin])
+    if (isTeamAdmin) load()
+  }, [isTeamAdmin])
 
   // Determine effective scope and teamView
   const effectiveScope = scope
@@ -55,7 +55,7 @@ export function useGenerations(
         if (effectiveTeamView) {
           url.searchParams.set('teamView', effectiveTeamView)
         }
-        if (isCompanyAdmin && selectedUserId && selectedUserId !== 'all') {
+        if (isTeamAdmin && selectedUserId && selectedUserId !== 'all') {
           url.searchParams.set('userId', selectedUserId)
         }
       }
@@ -80,6 +80,7 @@ export function useGenerations(
             maxRegenerations: g.maxRegenerations,
             remainingRegenerations: g.remainingRegenerations,
             isOriginal: g.isOriginal,
+            jobStatus: g.jobStatus as GenerationListItem['jobStatus'],
           })) as GenerationListItem[]
           
           if (append) {
@@ -117,6 +118,7 @@ export function useGenerations(
             maxRegenerations: g.maxRegenerations,
             remainingRegenerations: g.remainingRegenerations,
             isOriginal: g.isOriginal,
+            jobStatus: g.jobStatus as GenerationListItem['jobStatus'],
           })) as GenerationListItem[]
           if (append) {
             setGenerated(prev => [...prev, ...mappedItems])
@@ -126,7 +128,7 @@ export function useGenerations(
         }
     } catch {}
     setLoading(false)
-  }, [effectiveScope, effectiveTeamView, isCompanyAdmin, selectedUserId])
+  }, [effectiveScope, effectiveTeamView, isTeamAdmin, selectedUserId])
 
   useEffect(() => {
     loadGenerations(1, false)
@@ -150,7 +152,7 @@ export function useGenerations(
     }
   }
 
-  return { generated, companyUsers, pagination, loading, loadMore }
+  return { generated, teamUsers, pagination, loading, loadMore }
 }
 
 export function useGenerationFilters() {

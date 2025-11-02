@@ -14,8 +14,13 @@ export async function POST(request: NextRequest) {
     const invite = await prisma.teamInvite.findUnique({
       where: { token },
       include: {
-        company: true,
-        context: true
+        team: {
+          include: {
+            admin: true
+          }
+        },
+        context: true,
+        person: true
       }
     })
 
@@ -27,44 +32,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invite has expired' }, { status: 410 })
     }
 
-    // If invite has been used, find the person and return their data
-    if (invite.usedAt) {
-      const person = await prisma.person.findFirst({
-        where: {
-          email: invite.email,
-          companyId: invite.companyId
-        }
-      })
-
-      if (!person) {
+    // If invite has been used, return person data via relation
+    if (invite.usedAt && invite.personId) {
+      if (!invite.person) {
         return NextResponse.json({ error: 'Person not found' }, { status: 404 })
       }
+
+      // Check if team admin is on free plan
+      const adminPlanPeriod = (invite.team.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
+      const isAdminOnFreePlan = adminPlanPeriod === 'free'
 
       return NextResponse.json({
         valid: true,
         invite: {
           email: invite.email,
-          companyName: invite.company.name,
+          teamName: invite.team.name,
           creditsAllocated: invite.creditsAllocated,
           expiresAt: invite.expiresAt,
           hasActiveContext: Boolean(invite.context),
-          personId: person.id,
-          firstName: person.firstName,
-          lastName: person.lastName,
-          contextId: invite.context?.id
+          personId: invite.person.id,
+          firstName: invite.person.firstName,
+          lastName: invite.person.lastName,
+          contextId: invite.context?.id,
+          isAdminOnFreePlan
         }
       })
     }
+
+    // Check if team admin is on free plan
+    const adminPlanPeriod = (invite.team.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
+    const isAdminOnFreePlan = adminPlanPeriod === 'free'
 
     return NextResponse.json({
       valid: true,
       invite: {
         email: invite.email,
-        companyName: invite.company.name,
+        teamName: invite.team.name,
         creditsAllocated: invite.creditsAllocated,
         expiresAt: invite.expiresAt,
         hasActiveContext: Boolean(invite.context),
-        contextId: invite.context?.id
+        contextId: invite.context?.id,
+        firstName: invite.firstName,
+        isAdminOnFreePlan
       }
     })
 

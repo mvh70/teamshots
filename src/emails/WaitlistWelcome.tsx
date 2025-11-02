@@ -90,7 +90,7 @@ export default function WaitlistWelcomeEmail({
           {/* Footer */}
           <Section style={footer}>
             <Text style={footerText}>
-              © {new Date().getFullYear()} {BRAND_CONFIG.name}. All rights reserved.
+              {getEmailTranslation('waitlistWelcome.copyright', locale, { year: new Date().getFullYear().toString() })}
             </Text>
           </Section>
         </Container>

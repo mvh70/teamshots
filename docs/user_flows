@@ -52,22 +52,22 @@ OTP sent to email â†' user enters OTP
 â†"
 After verification:
 - Firstname
-- Personal or Company? (radio buttons)
-- If Company:
-  - Company website URL
-  - Domain verification check (email domain vs company domain)
-  - If mismatch: Request company email â†' OTP verification
+- Personal or Team? (radio buttons)
+- If Team:
+  - Team website URL
+  - Domain verification check (email domain vs team domain)
+  - If mismatch: Request team email â†' OTP verification
 â†"
 Language preference auto-set from current selection
 â†"
 Redirect to onboarding
 â†"
-Background: If company, scrape company team page â†' extract names/photos
+Background: If team, scrape team team page â†' extract names/photos
 ```
 
 ### Team Invite Flow
 ```
-Admin creates company context (background, logo, style)
+Admin creates team context (background, logo, style)
 â†"
 Admin invites team member with email + credit allocation
 â†"
@@ -131,11 +131,11 @@ Upload photo
 GENERATION TYPE SELECTION
 "How would you like to use this photo?"
 - Personal Use: Individual credits, full control, private
-- Company Use: Company credits, preset styles, admin visible
+- Team Use: Team credits, preset styles, admin visible
 â†"
 Customize (based on selection)
 - Personal: Select style preset, background, logo options
-- Company: Use company context (background, logo, style preset)
+- Team: Use team context (background, logo, style preset)
 - Show cost: "Uses 4 credits (1 generation)"
 â†"
 Click "Generate"
@@ -207,17 +207,17 @@ Upload selfie
 GENERATION TYPE SELECTION
 "How would you like to use this photo?"
 - Personal Use: Individual credits, full control, private
-- Company Use: Company credits, preset styles, admin visible
+- Team Use: Team credits, preset styles, admin visible
 â†'
 Processing with selected context
 - Personal: Full style control
-- Company: Background, logo, clothing, expression (set by admin)
+- Team: Background, logo, clothing, expression (set by admin)
 â†'
 APPROVAL SCREEN
 "Review your generated photo"
 - Show generated photo
-- Show logo placement variations (if company)
-- Display remaining credits (both individual & company)
+- Show logo placement variations (if team)
+- Display remaining credits (both individual & team)
 â†'
 Actions:
 - "Approve & Save" â†' Photo saved to database
@@ -227,7 +227,7 @@ Actions:
 If rejected: Original selfie kept, generated photo deleted
 ```
 
-## 4b. Company Admin Setup & Management Flow
+## 4b. Team Admin Setup & Management Flow
 
 ```
 Admin logs in â†' Dashboard
@@ -242,7 +242,7 @@ STEP 1: Context Setup (Required before inviting)
 - Preview combinations
 â†'
 STEP 2: Team Invitations
-- Import from scraped company data OR manually enter emails
+- Import from scraped team data OR manually enter emails
 - Set credit allocation per member (default: 5 credits)
 - Send invites with 24hr tokens
 â†'
@@ -250,7 +250,7 @@ ADMIN DASHBOARD
 - View team progress (uploaded/pending/approved)
 - Adjust individual credits
 - View approved photos only
-- "Regenerate All with New Context" (uses company credit pool)
+- "Regenerate All with New Context" (uses team credit pool)
 - Create additional contexts for different styles
 ```
 
@@ -262,11 +262,11 @@ See ## 4a and ## 4b for detailed team workflows.
 - 24hr expiration with automatic renewal
 - No signup required for team members
 - CTAs to sign up for personal use during/after generation
-- Same uploaded photo can be used for both personal and company generations
+- Same uploaded photo can be used for both personal and team generations
 
 ### Generation Type Selection
 - **Personal Use**: Individual credits, full style control, private photos
-- **Company Use**: Company credits, preset styles, admin visible
+- **Team Use**: Team credits, preset styles, admin visible
 - Clear credit cost display (4 credits per generation)
 - Both credit types shown in sidebar and decision screen
 

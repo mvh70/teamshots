@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
+import { getPackageConfig } from '@/domain/style/packages'
 
 interface JobData {
   generationId: string;
@@ -14,7 +15,7 @@ interface JobData {
     model: string;
     numVariations: number;
   };
-  creditSource: 'company';
+  creditSource: 'team';
   selfieId: string;
 }
 
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     const person = await prisma.person.findFirst({
       where: {
         email: invite.email,
-        companyId: invite.companyId
+        teamId: invite.teamId
       }
     })
 
@@ -103,6 +104,23 @@ export async function POST(request: NextRequest) {
     })
     const nextGroupIndex = (latestInGroup?.groupIndex ?? 0) + 1
 
+    // Get style settings from source generation (includes user customizations)
+    // Use the source generation's saved styleSettings (most accurate)
+    let finalStyleSettings: Record<string, unknown> = {}
+    if (sourceGeneration.styleSettings && typeof sourceGeneration.styleSettings === 'object' && !Array.isArray(sourceGeneration.styleSettings)) {
+      finalStyleSettings = sourceGeneration.styleSettings as Record<string, unknown>
+      Logger.debug('Using styleSettings from source generation for team regeneration')
+    } else if (sourceGeneration.context?.settings) {
+      // Fallback to context settings if generation doesn't have saved styleSettings
+      finalStyleSettings = sourceGeneration.context.settings as Record<string, unknown>
+      Logger.debug('Using context settings from source generation for team regeneration (fallback)')
+    }
+
+    // Serialize style settings for storage
+    const packageId = (finalStyleSettings['packageId'] as string) || 'headshot1'
+    const pkg = getPackageConfig(packageId)
+    const serializedStyleSettings = pkg.persistenceAdapter.serialize(finalStyleSettings)
+
     // Create new generation record
     const generation = await prisma.generation.create({
       data: {
@@ -110,7 +128,7 @@ export async function POST(request: NextRequest) {
         uploadedPhotoKey: sourceGeneration.uploadedPhotoKey,
         contextId: sourceGeneration.contextId,
         selfieId: sourceGeneration.selfieId,
-        generationType: 'company',
+        generationType: 'team',
         status: 'pending',
         maxRegenerations: 0, // Regenerations cannot be regenerated
         remainingRegenerations: 0,
@@ -118,7 +136,8 @@ export async function POST(request: NextRequest) {
         isOriginal: false,
         groupIndex: nextGroupIndex,
         creditsUsed: 0, // Regenerations don't cost credits
-        creditSource: 'company',
+        creditSource: 'team',
+        styleSettings: serializedStyleSettings as unknown as Parameters<typeof prisma.generation.create>[0]['data']['styleSettings'],
       },
     })
 
@@ -129,9 +148,6 @@ export async function POST(request: NextRequest) {
         remainingRegenerations: originalGeneration.remainingRegenerations - 1
       }
     })
-
-    // Add job to queue with context settings
-    const finalStyleSettings = (sourceGeneration.context?.settings || {}) as Record<string, unknown>
     
     const jobData: JobData = {
       generationId: generation.id,
@@ -144,7 +160,7 @@ export async function POST(request: NextRequest) {
         model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
         numVariations: 4,
       },
-      creditSource: 'company',
+      creditSource: 'team',
       selfieId: sourceGeneration.selfieId,
     }
 
@@ -152,7 +168,7 @@ export async function POST(request: NextRequest) {
     const { imageGenerationQueue } = await import('@/queue')
     
     const job = await imageGenerationQueue.add('generate', jobData, {
-      priority: 1, // Higher priority for company generations
+      priority: 1, // Higher priority for team generations
       jobId: `gen-${generation.id}`,
     })
 

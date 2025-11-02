@@ -20,7 +20,7 @@ async function checkData() {
       include: {
         person: {
           include: {
-            company: true,
+            team: true,
             _count: {
               select: {
                 generations: true,
@@ -42,7 +42,7 @@ async function checkData() {
       console.log(`User: ${user.email}`)
       console.log(`  Person: ${user.person ? 'Yes' : 'No'}`)
       if (user.person) {
-        console.log(`  Company: ${user.person.company?.name || 'None'}`)
+        console.log(`  Team: ${user.person.team?.name || 'None'}`)
         console.log(`  Generations: ${user.person._count.generations}`)
         console.log(`  Selfies: ${user.person._count.selfies}`)
       }

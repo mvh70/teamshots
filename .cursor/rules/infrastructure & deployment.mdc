@@ -1,0 +1,73 @@
+---
+description: Infrastructure and deployment configuration
+globs: src/**/*.ts, src/**/*.tsx, app/**/*.ts, app/**/*.tsx, lib/**/*.ts, prisma/**/*
+---
+# Infrastructure Setup
+
+## Hosting & Deployment
+- **Server**: Hetzner Cloud VPS (managed via Coolify Cloud)
+- **Database**: PostgreSQL (Docker container on Hetzner, managed by Coolify)
+- **Storage**: Hetzner S3-compatible bucket (separate service)
+- **CDN/Security**: Cloudflare (SSL/TLS termination, static asset caching)
+- **Version Control**: GitHub (deployments triggered via Coolify)
+- **Redis**: Worker queue only (not for caching)
+
+## Tech Stack
+- **Framework**: Next.js 15+ with App Router
+- **Language**: TypeScript (strict mode)
+- **Styling**: Tailwind CSS
+- **Auth**: Auth.js (NextAuth.js) with Google/GitHub OAuth
+- **i18n**: next-intl (English/Spanish)
+- **ORM**: Prisma (PostgreSQL)
+
+## Third-Party Services
+- **AI**: Google Gemini API (Gemini 2.5 Flash) - direct integration
+- **Payments**: Stripe (checkout, subscriptions, webhooks)
+- **Email**: Resend (transactional emails)
+- **Analytics**: PostHog (server-side events for signup, checkout, generation, subscription changes)
+- **Background Jobs**: Python 3.9+ with rembg (background removal via worker queue)
+
+## Domains
+- **Marketing**: www.teamshots.vip (landing, pricing)
+- **App**: app.teamshots.vip (dashboard, generation, account)
+- **Routing**: Locale prefixes (`/` = EN, `/es` = ES)
+
+## Connection Patterns
+- **Database**: Direct localhost connection (PostgreSQL in Docker)
+- **S3**: AWS SDK with Hetzner endpoint
+- **Gemini**: Direct API calls (no Replicate/intermediary)
+- **Redis**: Bull/BullMQ for background job queue
+- **PostHog**: Server-side capture via Telemetry wrapper
+
+
+## Code Organization
+- **src/lib**: Framework-agnostic utilities (http, logger, telemetry, errors)
+- **src/domain**: Business logic (pricing, credits, auth, generation)
+- **src/config**: Configuration constants (never imported in src/lib)
+- **app/**: Next.js App Router pages and API routes
+
+## Analytics Events (PostHog)
+Track these server-side via Telemetry wrapper:
+- `user_signup` (email, OAuth provider)
+- `checkout_started` (plan type, amount)
+- `checkout_completed` (plan, credits, payment method)
+- `generation_created` (type: personal/team, style)
+- `generation_completed` (credits used, cost)
+- `subscription_changed` (action: upgrade/downgrade/cancel)
+- `credit_transfer` (admin action, amount)
+
+## Storage & Retention
+- **Uploaded photos**: 30 days (Try Once) or active subscription + 30 days
+- **Generated photos**: Same as uploaded
+- **CORS**: Configure via boto3 Python script (AWS CLI incompatible with Hetzner)
+
+## Background Processing
+- **Queue**: Redis + Bull/BullMQ
+- **Worker**: Python rembg for background removal
+- **Flow**: Upload → S3 → Queue → Python worker → Processed S3 → Gemini API
+
+## Deployment
+- Coolify auto-deploys from GitHub
+- PostgreSQL + Redis in Docker via Coolify
+- Cloudflare caches static assets
+- Database backups managed by Coolify

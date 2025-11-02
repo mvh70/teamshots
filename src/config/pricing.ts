@@ -1,13 +1,24 @@
 // Define Stripe Price IDs here. You can list multiple IDs (e.g., per environment or legacy prices).
 const STRIPE_PRICE_IDS = {
-  TRY_ONCE: "price_1SNf1qENr8odIuXaFvdZpbvz",
+  //test
+  TRY_ONCE: "price_1SOIxTENr8odIuXaKzyE8wNZ",
+  INDIVIDUAL_MONTHLY: "price_1SOIxTENr8odIuXak0ZyR0LX",
+  INDIVIDUAL_ANNUAL_MONTHLY: "price_1SOIxUENr8odIuXa7VglkpAh",
+  PRO_MONTHLY: "price_1SOIxVENr8odIuXaSf7bFQHZ",
+  PRO_ANNUAL_MONTHLY: "price_1SOIxVENr8odIuXaUEfnEERn",
+  INDIVIDUAL_TOP_UP: "price_1SOIxWENr8odIuXaJc76b7dM",
+  PRO_TOP_UP: "price_1SOIxXENr8odIuXaEgWCKA6r", 
+  TRY_ONCE_TOP_UP: "price_1SOIxXENr8odIuXaTsZbucqN",
+
+  //production
+  /*TRY_ONCE: "price_1SNf1qENr8odIuXaFvdZpbvz",
   INDIVIDUAL_MONTHLY: "price_1SNf1sENr8odIuXaFh37KBgd",
   INDIVIDUAL_ANNUAL_MONTHLY: "price_1SNf1sENr8odIuXa6Akt2ZyK",
   PRO_MONTHLY: "price_1SNf1tENr8odIuXa2Avo6e3e",
   PRO_ANNUAL_MONTHLY: "price_1SNf1uENr8odIuXaaHbfAHbp",
   INDIVIDUAL_TOP_UP: "price_1SNf1uENr8odIuXaN01qecY0",
   PRO_TOP_UP: "price_1SNf1vENr8odIuXaATPBupuL",
-  TRY_ONCE_TOP_UP: "price_1SNf1wENr8odIuXam77AKOKo",
+  TRY_ONCE_TOP_UP: "price_1SNf1wENr8odIuXam77AKOKo",*/
 } as const;
 
 export const PRICING_CONFIG = {
@@ -83,6 +94,15 @@ export const PRICING_CONFIG = {
   team: {
     defaultInviteCredits: 10,
   },
+  
+  // Free trial credits (granted on signup)
+  freeTrial: {
+    individual: 10,  // Credits for individual users on free plan
+    pro: 30,         // Credits for pro users (teams) on free plan
+  },
+  
+  // Default package granted on signup (folder name in src/domain/style/packages/)
+  defaultSignupPackage: 'headshot1',
 } as const;
 
 // Pricing tier type

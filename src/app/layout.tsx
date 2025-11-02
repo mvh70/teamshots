@@ -1,7 +1,31 @@
 import SessionProvider from '@/components/SessionProvider'
 import { PostHogProvider } from '@/components/PostHogProvider'
 import { auth } from '@/auth'
+import type { Metadata } from 'next'
+import Script from 'next/script'
 import './globals.css'
+
+export const metadata: Metadata = {
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon.png', type: 'image/png' },
+    ],
+    apple: '/apple-icon.png',
+    shortcut: '/favicon.ico',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+  },
+  referrer: 'strict-origin-when-cross-origin',
+  other: {
+    'format-detection': 'telephone=no',
+    'apple-mobile-web-app-capable': 'yes',
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+  },
+}
 
 export default function RootLayout({
   children,
@@ -15,19 +39,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/icon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta httpEquiv="Permissions-Policy" content="camera=(self)" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="referrer" content="strict-origin-when-cross-origin" />
-        {/* Safari-specific meta tags */}
-        <meta name="format-detection" content="telephone=no" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         {/* Force protocol detection for Safari */}
         <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
-        <script
+      </head>
+      <body className="overflow-x-hidden bg-gray-50">
+        <Script
+          id="safari-compatibility-check"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               // Safari compatibility check
@@ -40,8 +59,6 @@ export default function RootLayout({
             `,
           }}
         />
-      </head>
-      <body>
         {/* Server-side session fetch to avoid client auth race */}
         <SessionWrapper>
           <PostHogProvider>{children}</PostHogProvider>

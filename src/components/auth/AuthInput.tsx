@@ -22,7 +22,7 @@ export default function AuthInput({ label, hint, id, className = '', strengthMet
     if (/[0-9]/.test(v)) score++
     if (/[^A-Za-z0-9]/.test(v)) score++
     const level = Math.min(3, Math.floor(score / 2))
-    const label = ['Weak', 'Fair', 'Good', 'Strong'][level]
+    const label = ['👶 Weak', '🫤 Fair', '💪 Good', '🦾 Strong'][level]
     return { level, label }
   }, [props.value, strengthMeter])
 
@@ -46,8 +46,9 @@ export default function AuthInput({ label, hint, id, className = '', strengthMet
             onClick={() => setShow(!show)}
             className="absolute inset-y-0 right-3 my-auto text-sm text-gray-600 hover:text-gray-900"
             aria-label={show ? 'Hide password' : 'Show password'}
+            tabIndex={-1}
           >
-            {show ? 'Hide' : 'Show'}
+            {show ? '🙈 Hide' : '👁️ Show'}
           </button>
         )}
       </div>

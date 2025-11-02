@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { Env } from '@/lib/env'
-import { hasSufficientCredits, reserveCreditsForGeneration, getUserCreditBalance } from '@/domain/credits/credits'
+import { hasSufficientCredits, reserveCreditsForGeneration, getUserCreditBalance, getPersonCreditBalance, getEffectiveTeamCreditBalance } from '@/domain/credits/credits'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getRegenerationCount } from '@/domain/pricing'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -18,6 +18,7 @@ import { z } from 'zod'
 import { randomUUID } from 'crypto'
 import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
+import { getPackageConfig } from '@/domain/style/packages'
 
 // Request validation schema
 const createGenerationSchema = z.object({
@@ -25,6 +26,7 @@ const createGenerationSchema = z.object({
   selfieKey: z.string().optional(), // Alternative: S3 key for selfie
   contextId: z.string().optional(),
   styleSettings: z.object({
+    packageId: z.string().optional(), // Package folder name (e.g., 'headshot1', 'freepackage')
     style: z.any().optional(), // Allow any type since it might be an object
     background: z.any().optional(),
     branding: z.any().optional(),
@@ -33,8 +35,8 @@ const createGenerationSchema = z.object({
     lighting: z.any().optional(),
   }).optional(),
   prompt: z.string().min(1, 'Prompt is required'),
-  generationType: z.enum(['personal', 'company']).default('personal'),
-  creditSource: z.enum(['individual', 'company']).default('individual'),
+  generationType: z.enum(['personal', 'team']).default('personal'),
+  creditSource: z.enum(['individual', 'team']).default('individual'),
   isRegeneration: z.boolean().optional().default(false), // Flag to indicate this is a regeneration
   originalGenerationId: z.string().optional(), // ID of the original generation being regenerated
 })
@@ -86,7 +88,7 @@ export async function POST(request: NextRequest) {
         where: { id: selfieId },
         include: { 
           person: {
-            include: { company: true }
+            include: { team: true }
           }
         }
       })
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
         where: { key: selfieKey },
         include: { 
           person: {
-            include: { company: true }
+            include: { team: true }
           }
         }
       })
@@ -112,7 +114,7 @@ export async function POST(request: NextRequest) {
             selfie: {
               include: { 
                 person: {
-                  include: { company: true }
+                  include: { team: true }
                 }
               }
             }
@@ -131,27 +133,81 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // SECURITY: Verify user owns the selfie or is part of the same company
+    // SECURITY: Verify user owns the selfie or is part of the same team
     const userPerson = await prisma.person.findUnique({
       where: { userId: session.user.id },
-      select: { id: true, companyId: true }
+      select: { id: true, teamId: true }
     })
 
     if (!userPerson) {
       return NextResponse.json({ error: 'User person record not found' }, { status: 404 })
     }
 
-    // Check ownership: user must own the selfie OR be in the same company
+    // Check ownership: user must own the selfie OR be in the same team
     const isOwner = selfie.personId === userPerson.id
-    const isSameCompany = userPerson.companyId && selfie.person.companyId === userPerson.companyId
+    const isSameTeam = userPerson.teamId && selfie.person.teamId === userPerson.teamId
 
-    if (!isOwner && !isSameCompany) {
+    if (!isOwner && !isSameTeam) {
       await SecurityLogger.logSuspiciousActivity(
         session.user.id,
         'unauthorized_generation_attempt',
         { selfieId: selfie.id, selfieOwnerId: selfie.personId }
       )
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // Validate package ownership
+    const requestedPackageId = (styleSettings?.['packageId'] as string) || PRICING_CONFIG.defaultSignupPackage
+    
+    // Free package is always accessible to everyone (no ownership check needed)
+    if (requestedPackageId !== 'freepackage') {
+      type PrismaWithUserPackage = typeof prisma & { 
+        userPackage: { 
+          findFirst: (...args: unknown[]) => Promise<{ id: string } | null>
+        } 
+      }
+      const prismaEx = prisma as unknown as PrismaWithUserPackage
+      
+      // For team generations, check if team admin owns the package
+      // For personal generations, check if user owns the package
+      let userIdToCheck = session.user.id
+      if (creditSource === 'team' && selfie.person.teamId) {
+        // Team member using team credits - check team admin's package ownership
+        // Fetch team to get adminId if not already loaded
+        if (selfie.person.team?.adminId) {
+          userIdToCheck = selfie.person.team.adminId
+        } else {
+          const team = await prisma.team.findUnique({
+            where: { id: selfie.person.teamId },
+            select: { adminId: true }
+          })
+          if (team?.adminId) {
+            userIdToCheck = team.adminId
+          } else {
+            // Team not found or has no admin - this shouldn't happen but handle gracefully
+            return NextResponse.json(
+              { error: 'Team not found or invalid' },
+              { status: 404 }
+            )
+          }
+        }
+      }
+      
+      const ownsPackage = await prismaEx.userPackage.findFirst({
+        where: { userId: userIdToCheck, packageId: requestedPackageId }
+      })
+
+      if (!ownsPackage) {
+        await SecurityLogger.logSuspiciousActivity(
+          session.user.id,
+          'unauthorized_package_usage',
+          { packageId: requestedPackageId, selfieId: selfie.id, userIdChecked: userIdToCheck, creditSource }
+        )
+        return NextResponse.json(
+          { error: `You don't have access to the ${requestedPackageId} package` },
+          { status: 403 }
+        )
+      }
     }
 
     // Get context if provided (contextId might be a name, not an ID)
@@ -180,45 +236,76 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine credit source and check balance
+    // Regenerations are free, so skip credit checks for regenerations
     const personId: string | null = selfie.personId
     const userId: string | null = selfie.person.userId
     
-    if (creditSource === 'individual') {
-      // For individual credits, use the user's credits
-      const hasCredits = await hasSufficientCredits(null, userId, PRICING_CONFIG.credits.perGeneration)
-      if (!hasCredits) {
-        return NextResponse.json(
-          { 
-            error: 'Insufficient individual credits',
-            required: PRICING_CONFIG.credits.perGeneration,
-            available: await getUserCreditBalance(userId!),
-            message: 'Please purchase a subscription or credit package to generate photos',
-            redirectTo: '/en/app/settings?purchase=required'
+    if (!isRegeneration) {
+      // Only check credits for new generations, not regenerations
+      if (creditSource === 'individual') {
+        // For individual credits, use the user's credits
+        const hasCredits = await hasSufficientCredits(null, userId, PRICING_CONFIG.credits.perGeneration)
+        if (!hasCredits) {
+          return NextResponse.json(
+            { 
+              error: 'Insufficient individual credits',
+              required: PRICING_CONFIG.credits.perGeneration,
+              available: await getUserCreditBalance(userId!),
+              message: 'Please purchase a subscription or credit package to generate photos',
+              redirectTo: '/en/app/settings?purchase=required'
+            },
+            { status: 402 }
+          )
+        }
+      } else {
+        // For team credits, use the team's credits
+        if (!selfie.person.teamId) {
+          return NextResponse.json(
+            { error: 'Person must be part of a team to use team credits' },
+            { status: 400 }
+          )
+        }
+        
+        // Get userId for effective team credit balance
+        const teamUser = await prisma.user.findFirst({
+          where: {
+            person: {
+              teamId: selfie.person.teamId
+            }
           },
-          { status: 402 }
+          select: { id: true }
+        })
+        
+        const hasCredits = await hasSufficientCredits(
+          null, 
+          teamUser?.id || null, 
+          PRICING_CONFIG.credits.perGeneration, 
+          selfie.person.teamId
         )
-      }
-    } else {
-      // For company credits, use the company's credits
-      if (!selfie.person.companyId) {
-        return NextResponse.json(
-          { error: 'Person must be part of a company to use company credits' },
-          { status: 400 }
-        )
-      }
-      
-      const hasCredits = await hasSufficientCredits(null, null, PRICING_CONFIG.credits.perGeneration, selfie.person.companyId)
-      if (!hasCredits) {
-        return NextResponse.json(
-          { 
-            error: 'Insufficient company credits',
-            required: PRICING_CONFIG.credits.perGeneration,
-            available: await getCompanyCreditBalance(selfie.person.companyId),
-            message: 'Please purchase a subscription or credit package to generate photos',
-            redirectTo: '/en/app/settings?purchase=required'
-          },
-          { status: 402 }
-        )
+        
+        if (!hasCredits) {
+          const available = await getEffectiveTeamCreditBalance(
+            teamUser?.id || session.user.id, 
+            selfie.person.teamId
+          )
+          
+          // Check if the person still has allocation left
+          const personAllocation = await getPersonCreditBalance(personId)
+          
+          return NextResponse.json(
+            { 
+              error: 'Insufficient team credits',
+              required: PRICING_CONFIG.credits.perGeneration,
+              available,
+              personAllocation,
+              message: personAllocation > 0 
+                ? 'You have allocation remaining but the team has insufficient credits. Contact your team admin.' 
+                : 'The team has insufficient credits. Contact your team admin.',
+              redirectTo: '/en/app'
+            },
+            { status: 402 }
+          )
+        }
       }
     }
 
@@ -267,13 +354,12 @@ export async function POST(request: NextRequest) {
       // Check if user has a subscription
       if (userId) {
         const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { subscriptionTier: true, subscriptionStatus: true }
+          where: { id: userId }
         })
-        
-        if (user?.subscriptionTier === 'starter' && user?.subscriptionStatus === 'active') {
+        const userPlanTier = (user as unknown as { planTier?: string | null })?.planTier
+        if (userPlanTier === 'individual') {
           userType = 'personal'
-        } else if (user?.subscriptionTier === 'pro' && user?.subscriptionStatus === 'active') {
+        } else if (userPlanTier === 'pro') {
           userType = 'business'
         }
       }
@@ -329,6 +415,88 @@ export async function POST(request: NextRequest) {
       groupIndex = 0
     }
 
+    // Calculate final style settings before creating generation
+    // Start with styleSettings from request, fallback to contextStyleSettings
+    let finalStyleSettings: Record<string, unknown> = (styleSettings || contextStyleSettings || {}) as Record<string, unknown>
+    
+
+    // Enforce free package style for free-plan users or when team admin is on free plan
+    try {
+      let shouldEnforceFreeStyle = false
+      
+      if (userId) {
+        const userBasic = await prisma.user.findUnique({ where: { id: userId } })
+        const basicPlanPeriod = (userBasic as unknown as { planPeriod?: string | null })?.planPeriod
+        // Check if user is on free plan
+        if (basicPlanPeriod === 'free') {
+          shouldEnforceFreeStyle = true
+        }
+      }
+      
+      // If using team credits, also check if team admin is on free plan
+      if (creditSource === 'team' && selfie.person.teamId) {
+        const team = await prisma.team.findUnique({
+          where: { id: selfie.person.teamId },
+          include: {
+            admin: true
+          }
+        })
+        
+        if (team?.admin) {
+          const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
+          if (adminPlanPeriod === 'free') {
+            shouldEnforceFreeStyle = true
+          }
+        }
+      }
+      
+      if (shouldEnforceFreeStyle) {
+        type PrismaWithAppSetting = typeof prisma & { appSetting: { findUnique: (...args: unknown[]) => Promise<{ key: string; value: string } | null> } }
+        const prismaEx = prisma as unknown as PrismaWithAppSetting
+        const setting = await prismaEx.appSetting.findUnique({ where: { key: 'freePackageStyleId' } })
+        if (setting?.value) {
+          const freeCtx = await prisma.context.findUnique({ where: { id: setting.value }, select: { id: true, settings: true } })
+          if (freeCtx && freeCtx.settings) {
+            resolvedContextId = freeCtx.id
+            // For free plan users, the frontend already sends the correct Free Package style settings
+            // with user customizations on user-choice fields. We just need to set the contextId.
+            // The finalStyleSettings from the request is already correct.
+            Logger.debug('Free plan user or team admin on free plan - using styleSettings from request (already includes Free Package + customizations)')
+          }
+        }
+      }
+    } catch (e) {
+      Logger.error('Failed to enforce free package style', { error: e instanceof Error ? e.message : String(e) })
+    }
+    
+    if (isRegeneration && originalGenerationId) {
+      // Fetch the original generation's styleSettings and context
+      const originalGeneration = await prisma.generation.findUnique({
+        where: { id: originalGenerationId },
+        include: { context: true }
+      })
+      
+      // Use the original generation's saved styleSettings (includes user customizations)
+      // This is more accurate than context settings because it contains the actual settings used
+      if (originalGeneration?.styleSettings && typeof originalGeneration.styleSettings === 'object' && !Array.isArray(originalGeneration.styleSettings)) {
+        finalStyleSettings = originalGeneration.styleSettings as Record<string, unknown>
+        Logger.debug('Using styleSettings from original generation', { 
+          contextName: originalGeneration.context?.name 
+        })
+      } else if (originalGeneration?.context?.settings) {
+        // Fallback to context settings if generation doesn't have saved styleSettings
+        finalStyleSettings = originalGeneration.context.settings as Record<string, unknown>
+        Logger.debug('Using context settings from original generation (fallback)', { 
+          contextName: originalGeneration.context.name 
+        })
+      }
+    }
+
+    // Serialize style settings with package info
+    const finalPackageId = (finalStyleSettings?.['packageId'] as string) || requestedPackageId || 'headshot1'
+    const pkg = getPackageConfig(finalPackageId)
+    const serializedStyleSettings = pkg.persistenceAdapter.serialize(finalStyleSettings)
+
     // Create generation record
     const generation = await prisma.generation.create({
       data: {
@@ -340,59 +508,46 @@ export async function POST(request: NextRequest) {
         generationType,
         creditSource,
         status: 'pending',
-        creditsUsed: PRICING_CONFIG.credits.perGeneration,
+        creditsUsed: isRegeneration ? 0 : PRICING_CONFIG.credits.perGeneration, // Regenerations are free
         provider: 'gemini',
         maxRegenerations,
         remainingRegenerations: maxRegenerations,
         generationGroupId,
         isOriginal,
         groupIndex,
+        styleSettings: serializedStyleSettings as unknown as Parameters<typeof prisma.generation.create>[0]['data']['styleSettings'],
       }
     })
 
-    // Reserve credits
-    try {
-      // Get teamInviteId for team members
-      let teamInviteId: string | undefined
-      if (creditSource === 'company' && selfie.person.inviteToken) {
-        const teamInvite = await prisma.teamInvite.findUnique({
-          where: { token: selfie.person.inviteToken }
-        })
-        teamInviteId = teamInvite?.id
-      }
+    // Reserve credits (skip for regenerations - they are free)
+    if (!isRegeneration) {
+      try {
+        // Get teamInviteId for team members
+        let teamInviteId: string | undefined
+        if (creditSource === 'team' && selfie.person.inviteToken) {
+          const teamInvite = await prisma.teamInvite.findUnique({
+            where: { token: selfie.person.inviteToken }
+          })
+          teamInviteId = teamInvite?.id
+        }
 
-      // Debug logging removed for production security
-      
-      await reserveCreditsForGeneration(
-        creditSource === 'individual' ? null : personId,
-        creditSource === 'individual' ? userId : null,
-        PRICING_CONFIG.credits.perGeneration,
-        `Reserved for generation ${generation.id}`,
-        creditSource === 'company' ? selfie.person.companyId || undefined : undefined,
-        teamInviteId
-      )
-    } catch (creditError) {
-      // If credit reservation fails, delete the generation record
-      await prisma.generation.delete({ where: { id: generation.id } })
-      throw creditError
-    }
-
-    // For regenerations, fetch the context from the database
-    let finalStyleSettings: Record<string, unknown> = (styleSettings || contextStyleSettings || {}) as Record<string, unknown>
-    
-    if (isRegeneration && originalGenerationId) {
-      // Fetch the original generation's context
-      const originalGeneration = await prisma.generation.findUnique({
-        where: { id: originalGenerationId },
-        include: { context: true }
-      })
-      
-      if (originalGeneration?.context?.settings) {
-        finalStyleSettings = originalGeneration.context.settings as Record<string, unknown>
-        Logger.debug('Using context settings from original generation', { contextName: originalGeneration.context.name })
+        // Debug logging removed for production security
+        
+        await reserveCreditsForGeneration(
+          creditSource === 'individual' ? null : personId,
+          creditSource === 'individual' ? userId : null,
+          PRICING_CONFIG.credits.perGeneration,
+          `Reserved for generation ${generation.id}`,
+          creditSource === 'team' ? selfie.person.teamId || undefined : undefined,
+          teamInviteId
+        )
+      } catch (creditError) {
+        // If credit reservation fails, delete the generation record
+        await prisma.generation.delete({ where: { id: generation.id } })
+        throw creditError
       }
     }
-    
+
     // Lazy import to avoid build-time issues
     const { imageGenerationQueue } = await import('@/queue')
     
@@ -402,7 +557,7 @@ export async function POST(request: NextRequest) {
       userId: selfie.person.userId || undefined,
       selfieId: selfie.id,
       selfieS3Key: selfie.key,
-      styleSettings: finalStyleSettings,
+      styleSettings: serializedStyleSettings,
       prompt,
       providerOptions: {
         model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
@@ -410,7 +565,7 @@ export async function POST(request: NextRequest) {
       },
       creditSource,
     }, {
-      priority: generationType === 'company' ? 1 : 0, // Higher priority for company generations
+      priority: generationType === 'team' ? 1 : 0, // Higher priority for team generations
       jobId: `gen-${generation.id}`, // Custom ID for easier tracking
     })
 
@@ -449,13 +604,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
-
-// Helper function to get company credit balance
-async function getCompanyCreditBalance(companyId: string): Promise<number> {
-  const result = await prisma.creditTransaction.aggregate({
-    where: { companyId },
-    _sum: { amount: true }
-  })
-  return result._sum.amount || 0
 }

@@ -16,7 +16,7 @@ The application currently uses **application-level RLS** implemented in `src/lib
 -- Enable RLS on all user-data tables
 ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Person" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "Company" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Team" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Generation" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Selfie" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Context" ENABLE ROW LEVEL SECURITY;
@@ -42,11 +42,11 @@ CREATE POLICY "System access" ON "User"
 CREATE POLICY "Users can access own person" ON "Person"
   FOR ALL USING (user_id = current_setting('app.current_user_id')::uuid);
 
--- Company members can access other persons in same company
-CREATE POLICY "Company members access" ON "Person"
+-- Team members can access other persons in same team
+CREATE POLICY "Team members access" ON "Person"
   FOR SELECT USING (
-    company_id = (
-      SELECT company_id FROM "Person" 
+    team_id = (
+      SELECT team_id FROM "Person" 
       WHERE user_id = current_setting('app.current_user_id')::uuid
     )
   );
@@ -61,14 +61,14 @@ CREATE POLICY "Users can access own generations" ON "Generation"
     WHERE user_id = current_setting('app.current_user_id')::uuid
   ));
 
--- Company members can access company generations
-CREATE POLICY "Company generations access" ON "Generation"
+-- Team members can access team generations
+CREATE POLICY "Team generations access" ON "Generation"
   FOR SELECT USING (
-    generation_type = 'company' AND
+    generation_type = 'team' AND
     person_id IN (
       SELECT id FROM "Person" 
-      WHERE company_id = (
-        SELECT company_id FROM "Person" 
+      WHERE team_id = (
+        SELECT team_id FROM "Person" 
         WHERE user_id = current_setting('app.current_user_id')::uuid
       )
     )
@@ -84,13 +84,13 @@ CREATE POLICY "Users can access own selfies" ON "Selfie"
     WHERE user_id = current_setting('app.current_user_id')::uuid
   ));
 
--- Company members can access company selfies
-CREATE POLICY "Company selfies access" ON "Selfie"
+-- Team members can access team selfies
+CREATE POLICY "Team selfies access" ON "Selfie"
   FOR SELECT USING (
     person_id IN (
       SELECT id FROM "Person" 
-      WHERE company_id = (
-        SELECT company_id FROM "Person" 
+      WHERE team_id = (
+        SELECT team_id FROM "Person" 
         WHERE user_id = current_setting('app.current_user_id')::uuid
       )
     )
@@ -166,7 +166,7 @@ prisma.$use(async (params, next) => {
 
 1. **Defense in Depth**: Database-level protection even if application is compromised
 2. **Data Isolation**: Ensures users can only access their own data
-3. **Company Boundaries**: Enforces company-level data isolation
+3. **Team Boundaries**: Enforces team-level data isolation
 4. **Audit Trail**: Database-level logging of access attempts
 
 ## Considerations
@@ -186,7 +186,7 @@ prisma.$use(async (params, next) => {
 ## Testing Checklist
 
 - [ ] User can only access their own data
-- [ ] Company members can access company data
+- [ ] Team members can access team data
 - [ ] Users cannot access other users' data
 - [ ] System operations work correctly
 - [ ] Performance is acceptable

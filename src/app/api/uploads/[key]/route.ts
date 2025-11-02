@@ -49,10 +49,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify user owns the file or has company access
+    // Verify user owns the file or has team access
     const person = await prisma.person.findUnique({
       where: { userId: session.user.id },
-      select: { id: true, companyId: true }
+      select: { id: true, teamId: true }
     })
 
     if (!person) {
@@ -64,13 +64,13 @@ export async function GET(
     const filePersonId = keyParts[1]
 
     if (person.id !== filePersonId) {
-      // Check if same company
+      // Check if same team
       const filePerson = await prisma.person.findUnique({
         where: { id: filePersonId },
-        select: { companyId: true }
+        select: { teamId: true }
       })
       
-      if (!person.companyId || person.companyId !== filePerson?.companyId) {
+      if (!person.teamId || person.teamId !== filePerson?.teamId) {
         await SecurityLogger.logSuspiciousActivity(
           session.user.id,
           'unauthorized_file_access_attempt',

@@ -8,10 +8,11 @@ import { formatDate } from '@/lib/format'
 
 interface InviteData {
   email: string
-  companyName: string
+  teamName: string
   creditsAllocated: number
   expiresAt: string
   hasActiveContext: boolean
+  firstName: string
 }
 
 export default function InvitePage() {
@@ -43,6 +44,10 @@ export default function InvitePage() {
           return
         }
         setInviteData(data.invite)
+        // Prefill firstName from the invite
+        if (data.invite.firstName) {
+          setFirstName(data.invite.firstName)
+        }
       } else {
         setError(data.error)
       }
@@ -60,7 +65,7 @@ export default function InvitePage() {
   }, [token, validateInvite])
 
   const acceptInvite = async () => {
-    if (!firstName.trim()) return
+    if (!firstName.trim() || !lastName.trim()) return
 
     setAccepting(true)
     try {
@@ -70,7 +75,7 @@ export default function InvitePage() {
         body: JSON.stringify({
           token,
           firstName: firstName.trim(),
-          lastName: lastName.trim() || null
+          lastName: lastName.trim()
         })
       })
 
@@ -137,7 +142,10 @@ export default function InvitePage() {
           </div>
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Team Invitation</h1>
           <p className="text-sm text-gray-600">
-            You&apos;ve been invited to join <strong>{inviteData.companyName}</strong>
+            You&apos;ve been invited to join <strong>{inviteData.teamName}</strong>
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Good news: no awkward photo sessions required.
           </p>
         </div>
 
@@ -155,13 +163,13 @@ export default function InvitePage() {
                 <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Company-branded photo generation
+                Team-branded photo generation
               </li>
               <li className="flex items-center gap-2">
                 <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                No signup required
+                Instant access (no account setup needed)
               </li>
             </ul>
           </div>
@@ -182,14 +190,15 @@ export default function InvitePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name
+                Last Name *
               </label>
               <input
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                placeholder="Enter your last name (optional)"
+                placeholder="Enter your last name"
+                required
               />
             </div>
           </div>
@@ -197,9 +206,9 @@ export default function InvitePage() {
 
         <button
           onClick={acceptInvite}
-          disabled={!firstName.trim() || accepting}
+          disabled={!firstName.trim() || !lastName.trim() || accepting}
           className={`w-full py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            firstName.trim() && !accepting
+            firstName.trim() && lastName.trim() && !accepting
               ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
           }`}

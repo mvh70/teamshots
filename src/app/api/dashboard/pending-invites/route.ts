@@ -16,11 +16,11 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const roles = getUserEffectiveRoles(user)
-    const companyId = user.person?.companyId
+    const roles = await getUserEffectiveRoles(user)
+    const teamId = user.person?.teamId
 
-    // Only company admins can see pending invites
-    if (!roles.isCompanyAdmin || !companyId) {
+    // Only team admins can see pending invites (pro users are team admins by definition)
+    if (!roles.isTeamAdmin || !teamId) {
       return NextResponse.json({
         success: true,
         pendingInvites: []
@@ -30,7 +30,7 @@ export async function GET() {
     // Get pending team invites
     const pendingInvites = await prisma.teamInvite.findMany({
       where: {
-        companyId: companyId,
+        teamId: teamId,
         usedAt: null, // Only pending invites
         expiresAt: {
           gt: new Date() // Not expired

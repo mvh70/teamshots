@@ -16,17 +16,17 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const roles = getUserEffectiveRoles(user)
+    const roles = await getUserEffectiveRoles(user)
     
-    // Only show activity for company admins
-    if (!roles.isCompanyAdmin) {
+    // Only show activity for team admins
+    if (!roles.isTeamAdmin) {
       return NextResponse.json({
         success: true,
         activities: []
       })
     }
     
-    const companyId = user.person?.companyId
+    const teamId = user.person?.teamId
 
     const activities: Array<{
       id: string
@@ -36,7 +36,7 @@ export async function GET() {
       time: Date
       status: string
       isOwn: boolean
-      generationType?: 'personal' | 'company'
+      generationType?: 'personal' | 'team'
     }> = []
 
     // Get recent generations
@@ -49,10 +49,10 @@ export async function GET() {
               userId: session.user.id 
             } 
           },
-          // Company generations (if user is part of a company)
-          ...(companyId ? [{
+          // Team generations (if user is part of a team)
+          ...(teamId ? [{
             person: {
-              companyId: companyId
+              teamId: teamId
             }
           }] : [])
         ]
@@ -92,15 +92,15 @@ export async function GET() {
         status: generation.status === 'completed' ? 'completed' : 
                 generation.status === 'processing' ? 'processing' : 'pending',
         isOwn: generation.person.user?.id === session.user.id,
-        generationType: generation.generationType as 'personal' | 'company' | undefined
+        generationType: generation.generationType as 'personal' | 'team' | undefined
       })
     }
 
-    // Get recent team invites (only for company admins)
-    if (roles.isCompanyAdmin && companyId) {
+    // Get recent team invites (only for team admins)
+    if (roles.isTeamAdmin && teamId) {
       const recentInvites = await prisma.teamInvite.findMany({
         where: {
-          companyId: companyId
+          teamId: teamId
         },
         orderBy: {
           createdAt: 'desc'
@@ -127,8 +127,8 @@ export async function GET() {
         OR: [
           // Personal contexts
           { userId: session.user.id },
-          // Company contexts (if user is part of a company)
-          ...(companyId ? [{ companyId }] : [])
+          // Team contexts (if user is part of a team)
+          ...(teamId ? [{ teamId }] : [])
         ]
       },
       orderBy: {

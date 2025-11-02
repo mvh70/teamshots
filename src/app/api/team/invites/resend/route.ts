@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendTeamInviteEmail } from '@/lib/email'
 import { Env } from '@/lib/env'
-import { withCompanyPermission } from '@/domain/access/permissions'
+import { withTeamPermission } from '@/domain/access/permissions'
 import { Logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
     // Check permission to manage team invites
-    const permissionCheck = await withCompanyPermission(
+    const permissionCheck = await withTeamPermission(
       request,
-      'company.invite_members'
+      'team.invite_members'
     )
     
     if (permissionCheck instanceof NextResponse) {
@@ -25,31 +25,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invite ID is required' }, { status: 400 })
     }
 
-    // Get user's company
+    // Get user's team
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: {
         person: {
           include: {
-            company: true
+            team: true
           }
         }
       }
     })
 
-    if (!user?.person?.company) {
-      return NextResponse.json({ error: 'User is not part of a company' }, { status: 400 })
+    if (!user?.person?.team) {
+      return NextResponse.json({ error: 'User is not part of a team' }, { status: 400 })
     }
 
     // Find the invite
     const invite = await prisma.teamInvite.findFirst({
       where: {
         id,
-        companyId: user.person.company.id,
+        teamId: user.person.team.id,
         usedAt: null // Only resend unused invites
       },
-      include: {
-        company: true
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        token: true,
+        expiresAt: true,
+        creditsAllocated: true,
+        team: {
+          select: {
+            name: true
+          }
+        }
       }
     })
 
@@ -68,9 +78,10 @@ export async function POST(request: NextRequest) {
     
     const emailResult = await sendTeamInviteEmail({
       email: invite.email,
-      companyName: invite.company.name,
+      teamName: invite.team.name,
       inviteLink,
       creditsAllocated: invite.creditsAllocated,
+      firstName: invite.firstName,
       locale: user.locale as 'en' | 'es' || 'en'
     })
 

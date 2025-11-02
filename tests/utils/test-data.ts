@@ -7,11 +7,11 @@ export interface TestUser {
   email: string;
   name: string;
   credits: number;
-  companyId?: string;
+  teamId?: string;
   role?: string;
 }
 
-export interface TestCompany {
+export interface TestTeam {
   id: string;
   name: string;
   domain: string;
@@ -20,7 +20,7 @@ export interface TestCompany {
 
 export class TestDataManager {
   private testUsers: TestUser[] = [];
-  private testCompanies: TestCompany[] = [];
+  private testCompanies: TestTeam[] = [];
 
   async createTestUser(overrides: Partial<TestUser> = {}): Promise<TestUser> {
     const user = await prisma.user.create({
@@ -35,27 +35,27 @@ export class TestDataManager {
     return user as unknown as TestUser;
   }
 
-  async createTestCompany(overrides: Partial<TestCompany> = {}): Promise<TestCompany> {
+  async createTestTeam(overrides: Partial<TestTeam> = {}): Promise<TestTeam> {
     // Create or get admin user
     const adminUser = await prisma.user.create({
       data: {
         id: `test-admin-${Date.now()}`,
-        email: `admin-${Date.now()}@testcompany.com`,
+        email: `admin-${Date.now()}@testteam.com`,
       },
     });
 
-    const company = await prisma.company.create({
+    const team = await prisma.team.create({
       data: {
-        id: `test-company-${Date.now()}`,
-        name: 'Test Company',
-        domain: 'testcompany.com',
+        id: `test-team-${Date.now()}`,
+        name: 'Test Team',
+        domain: 'testteam.com',
         adminId: adminUser.id,
         ...overrides,
       },
     });
 
-    this.testCompanies.push(company as unknown as TestCompany);
-    return company as unknown as TestCompany;
+    this.testCompanies.push(team as unknown as TestTeam);
+    return team as unknown as TestTeam;
   }
 
   async createTestSelfie(userId: string, overrides: any = {}): Promise<any> {
@@ -90,9 +90,9 @@ export class TestDataManager {
       });
     }
 
-    for (const company of this.testCompanies) {
-      await prisma.company.deleteMany({
-        where: { id: company.id },
+    for (const team of this.testCompanies) {
+      await prisma.team.deleteMany({
+        where: { id: team.id },
       });
     }
 
@@ -114,7 +114,7 @@ export class TestDataManager {
       where: { id: { startsWith: 'test-' } },
     });
     
-    await prisma.company.deleteMany({
+    await prisma.team.deleteMany({
       where: { id: { startsWith: 'test-' } },
     });
   }
@@ -135,18 +135,18 @@ export const testFixtures = {
       name: 'No Credits User',
       credits: 0,
     },
-    companyAdmin: {
-      email: 'admin@testcompany.com',
-      name: 'Company Admin',
-      companyId: 'test-company-id',
+    teamAdmin: {
+      email: 'admin@testteam.com',
+      name: 'Team Admin',
+      teamId: 'test-team-id',
       role: 'team_admin',
     },
   },
   companies: {
     standard: {
-      id: 'test-company-id',
-      name: 'Test Company',
-      domain: 'testcompany.com',
+      id: 'test-team-id',
+      name: 'Test Team',
+      domain: 'testteam.com',
       credits: 100,
     },
   },
@@ -163,8 +163,8 @@ export async function setupTestUser(overrides: Partial<TestUser> = {}): Promise<
   return await testDataManager.createTestUser(overrides);
 }
 
-export async function setupTestCompany(overrides: Partial<TestCompany> = {}): Promise<TestCompany> {
-  return await testDataManager.createTestCompany(overrides);
+export async function setupTestTeam(overrides: Partial<TestTeam> = {}): Promise<TestTeam> {
+  return await testDataManager.createTestTeam(overrides);
 }
 
 export async function setupTestSelfie(userId: string, overrides: any = {}): Promise<any> {

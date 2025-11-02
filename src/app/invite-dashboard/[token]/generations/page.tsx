@@ -17,11 +17,20 @@ interface Generation {
   }>
   status: 'pending' | 'processing' | 'completed' | 'failed'
   createdAt: string
-  generationType: 'personal' | 'company'
+  generationType: 'personal' | 'team'
   creditsUsed: number
   maxRegenerations: number
   remainingRegenerations: number
   isOriginal: boolean
+  jobStatus?: {
+    id: string
+    progress: number
+    message?: string
+    attemptsMade: number
+    processedOn?: number
+    finishedOn?: number
+    failedReason?: string
+  }
 }
 
 interface GenerationContainerElement extends HTMLDivElement {
@@ -324,9 +333,11 @@ export default function GenerationsPage() {
                           unoptimized 
                         />
                         <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-                          <div className="text-center">
+                          <div className="text-center px-4">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
-                            <p className="text-xs text-gray-600">Generating...</p>
+                            <p className="text-xs text-gray-600">
+                              {generation.jobStatus?.message || 'Generating...'}
+                            </p>
                           </div>
                         </div>
                         <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded bg-yellow-500 text-white">Processing</span>

@@ -15,7 +15,7 @@ interface PersonData {
   firstName: string
   lastName?: string
   email: string
-  companyId: string
+  teamId: string
   creditsAllocated: number
 }
 
@@ -28,7 +28,7 @@ export default function UploadPage() {
   const [personData, setPersonData] = useState<PersonData | null>(null)
   const [key, setKey] = useState<string>('')
   const [isApproved, setIsApproved] = useState<boolean>(false)
-  const [generationType, setGenerationType] = useState<'personal' | 'company' | null>(null)
+  const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,8 +39,8 @@ export default function UploadPage() {
       setPersonData({
         id: personId,
         firstName: 'Team Member', // This would come from the API
-        email: 'team@company.com',
-        companyId: 'company-id',
+        email: 'team@team.com',
+        teamId: 'team-id',
         creditsAllocated: 5
       })
       setLoading(false)
@@ -86,7 +86,7 @@ export default function UploadPage() {
     }
   }
 
-  const onTypeSelected = (type: 'personal' | 'company') => {
+  const onTypeSelected = (type: 'personal' | 'team') => {
     setGenerationType(type)
   }
 
@@ -133,11 +133,11 @@ export default function UploadPage() {
   // Mock user credits for team member
   const userCredits = {
     individual: 0, // Team members start with no individual credits
-    company: personData.creditsAllocated
+    team: personData.creditsAllocated
   }
 
-  const hasCompanyAccess = true // Team members always have company access
-  const companyName = 'Your Company' // This would come from the API
+  const hasTeamAccess = true // Team members always have team access
+  const teamName = 'Your Team' // This would come from the API
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -175,8 +175,8 @@ export default function UploadPage() {
               uploadedPhotoKey={key}
               onTypeSelected={onTypeSelected}
               userCredits={userCredits}
-              hasCompanyAccess={hasCompanyAccess}
-              companyName={companyName}
+              hasTeamAccess={hasTeamAccess}
+              teamName={teamName}
             />
           ) : (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -199,9 +199,9 @@ export default function UploadPage() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-sm font-medium text-gray-900 mb-2">Generation Details</h3>
                   <div className="text-sm text-gray-600 space-y-1">
-                    <p><strong>Type:</strong> {generationType === 'personal' ? 'Personal Use' : 'Company Use'}</p>
+                    <p><strong>Type:</strong> {generationType === 'personal' ? 'Personal Use' : 'Team Use'}</p>
                     <p><strong>Credits:</strong> {PRICING_CONFIG.credits.perGeneration} credits</p>
-                    <p><strong>Remaining:</strong> {userCredits[generationType === 'personal' ? 'individual' : 'company']} credits</p>
+                    <p><strong>Remaining:</strong> {userCredits[generationType === 'personal' ? 'individual' : 'team']} credits</p>
                   </div>
                 </div>
 
@@ -217,7 +217,7 @@ export default function UploadPage() {
         </div>
 
         {/* Sign up CTA for personal use */}
-        {generationType === 'company' && (
+        {generationType === 'team' && (
           <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Want to create personal photos too?

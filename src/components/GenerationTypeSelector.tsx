@@ -6,24 +6,24 @@ import { PRICING_CONFIG } from '@/config/pricing'
 
 interface GenerationTypeSelectorProps {
   uploadedPhotoKey: string
-  onTypeSelected: (type: 'personal' | 'company') => void
+  onTypeSelected: (type: 'personal' | 'team') => void
   userCredits: {
     individual: number
-    company: number
+    team: number
   }
-  hasCompanyAccess: boolean
-  companyName?: string
+  hasTeamAccess: boolean
+  teamName?: string
 }
 
 export default function GenerationTypeSelector({
   uploadedPhotoKey,
   onTypeSelected,
   userCredits,
-  hasCompanyAccess,
-  companyName
+  hasTeamAccess,
+  teamName
 }: GenerationTypeSelectorProps) {
   const t = useTranslations('generation')
-  const [selectedType, setSelectedType] = useState<'personal' | 'company' | null>(null)
+  const [selectedType, setSelectedType] = useState<'personal' | 'team' | null>(null)
 
   const handleContinue = () => {
     if (selectedType) {
@@ -32,7 +32,7 @@ export default function GenerationTypeSelector({
   }
 
   const canUsePersonal = userCredits.individual >= PRICING_CONFIG.credits.perGeneration
-  const canUseCompany = hasCompanyAccess && userCredits.company >= PRICING_CONFIG.credits.perGeneration
+  const canUseTeam = hasTeamAccess && userCredits.team >= PRICING_CONFIG.credits.perGeneration
 
   return (
     <div className="space-y-6">
@@ -121,62 +121,62 @@ export default function GenerationTypeSelector({
             )}
           </div>
 
-          {/* Company Use Option */}
+          {/* Team Use Option */}
           <div
             className={`relative border-2 rounded-lg p-6 cursor-pointer transition-all ${
-              selectedType === 'company'
+              selectedType === 'team'
                 ? 'border-brand-primary bg-brand-primary-light'
                 : 'border-gray-200 hover:border-gray-300'
-            } ${!canUseCompany ? 'opacity-50 cursor-not-allowed' : ''}`}
-            onClick={() => canUseCompany && setSelectedType('company')}
+            } ${!canUseTeam ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={() => canUseTeam && setSelectedType('team')}
           >
             <div className="flex items-start gap-3">
               <input
                 type="radio"
                 name="generationType"
-                checked={selectedType === 'company'}
-                onChange={() => setSelectedType('company')}
-                disabled={!canUseCompany}
+                checked={selectedType === 'team'}
+                onChange={() => setSelectedType('team')}
+                disabled={!canUseTeam}
                 className="mt-1"
               />
               <div className="flex-1">
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {t('typeSelection.company.title')}
+                  {t('typeSelection.team.title')}
                 </h3>
                 <ul className="text-sm text-gray-600 space-y-1 mb-4">
                   <li className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    {t('typeSelection.company.presetStyles')}
+                    {t('typeSelection.team.presetStyles')}
                   </li>
                   <li className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    {t('typeSelection.company.branded')}
+                    {t('typeSelection.team.branded')}
                   </li>
                   <li className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    {t('typeSelection.company.adminVisible')}
+                    {t('typeSelection.team.adminVisible')}
                   </li>
                 </ul>
                 <div className="text-sm font-medium text-gray-900">
-                  {t('typeSelection.company.cost', { credits: PRICING_CONFIG.credits.perGeneration })}
+                  {t('typeSelection.team.cost', { credits: PRICING_CONFIG.credits.perGeneration })}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {t('typeSelection.company.remaining', { credits: userCredits.company })}
-                  {companyName && ` • ${companyName}`}
+                  {t('typeSelection.team.remaining', { credits: userCredits.team })}
+                  {teamName && ` • ${teamName}`}
                 </div>
               </div>
             </div>
-            {!canUseCompany && (
+            {!canUseTeam && (
               <div className="mt-2 text-sm text-red-600">
-                {hasCompanyAccess 
-                  ? t('typeSelection.company.insufficientCredits')
-                  : t('typeSelection.company.noAccess')
+                {hasTeamAccess 
+                  ? t('typeSelection.team.insufficientCredits')
+                  : t('typeSelection.team.noAccess')
                 }
               </div>
             )}

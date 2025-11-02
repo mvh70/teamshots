@@ -39,7 +39,7 @@ export interface ImageGenerationJobData {
   styleSettings: Record<string, unknown>
   prompt: string
   providerOptions?: Record<string, unknown>
-  creditSource: 'individual' | 'company'
+  creditSource: 'individual' | 'team'
 }
 
 export interface BackgroundRemovalJobData {

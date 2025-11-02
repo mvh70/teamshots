@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 interface CreditCostDisplayProps {
   creditCost?: number
   remainingCredits?: number
-  creditType?: 'individual' | 'company'
+  creditType?: 'individual' | 'team'
   variant?: 'subtle' | 'prominent' | 'compact'
   showRemaining?: boolean
   className?: string

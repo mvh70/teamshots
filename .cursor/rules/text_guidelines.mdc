@@ -1,0 +1,92 @@
+---
+description: Text and copy generation guidelines for all user-facing content
+globs: **/*.md, **/*.tsx, **/*.ts, src/messages/**/*
+alwaysApply: false
+---
+
+# Copy & Text Generation
+
+## Tone
+- Professional with a smile - make users feel good without trying too hard
+- Conversational but credible
+- Occasional wit, never forced humor
+- Treat users like intelligent people (because they are)
+
+## Voice
+- User perspective: "You" and "your" (not "we" or "the user")
+- Exception: When representing TeamShots (e.g., "We'll send you an email")
+
+## Writing Style
+- Concise and punchy without sacrificing clarity
+- Active voice preferred
+- One idea per sentence
+- Short paragraphs (2-3 sentences max)
+
+## Capitalization & Punctuation
+- Sentence case only (capital at start of sentence)
+- Proper nouns: TeamShots, Hetzner, Stripe
+- No title case, no em-dashes (—)
+- Exclamation marks sparingly (only when genuinely exciting)
+
+## Language to Avoid
+- Corporate jargon (synergy, leverage, utilize, stakeholder)
+- Buzzwords (disrupt, revolutionize, cutting-edge, game-changer)
+- Spam triggers (FREE, URGENT, ACT NOW, CLICK HERE, BUY NOW, GUARANTEE)
+- ALL CAPS (except acronyms)
+- Passive voice when active is clearer
+
+## Internationalization
+- Base: English (en) and Spanish (es)
+- Check all language files in `src/messages/`
+- Update ALL locales when changing copy
+- Maintain same tone across translations
+
+## UI Text
+- Action-focused: "Download photo" not "Photo download"
+- Clear outcome: "Generate 4 photos (4 credits)" not just "Generate"
+
+## Error Messages
+Format: What happened + why + what to do
+- "Your upload failed. The file is too large (max 10MB). Try a smaller image."
+
+## Marketing Copy
+- Lead with benefit: "Professional team photos in 60 seconds"
+- Not features: "AI-powered headshot generation platform"
+
+## Emails
+**Personalization:**
+- Use recipient's name: "Hi Sarah," not "Hi there,"
+- Reference specific actions: "Your 4 photos are ready"
+
+**Images:**
+- Max 1 image per email (or none)
+- 80:20 text-to-image ratio minimum
+
+**Subject Lines:**
+- Short (< 50 characters)
+- Match email content
+- No ALL CAPS, no excessive punctuation
+
+**Content:**
+- Max 2-3 links per email
+- Clear sender: "TeamShots" not "noreply@"
+
+**Example:**
+```
+Subject: Your team photos are ready, Sarah
+
+Hi Sarah,
+
+Your 4 professional headshots are ready to download.
+
+[View your photos]
+
+Need different backgrounds? Regenerate with your remaining 6 credits.
+
+- TeamShots
+```
+
+## Audience
+- Primary: HR professionals (non-technical but capable)
+- Write for humans, not job titles
+- No condescension, no dumbing down

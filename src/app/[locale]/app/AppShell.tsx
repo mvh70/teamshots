@@ -6,13 +6,12 @@ import { useEffect, useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 
-export default function AppShell({ children, initialRole, initialAccountMode }: { children: React.ReactNode, initialRole?: { isCompanyAdmin: boolean, isCompanyMember: boolean, needsCompanySetup: boolean }, initialAccountMode?: 'individual' | 'company' }) {
+import { AccountMode } from '@/domain/account/accountMode'
+
+export default function AppShell({ children, initialRole, initialAccountMode }: { children: React.ReactNode, initialRole?: { isTeamAdmin: boolean, isTeamMember: boolean, needsTeamSetup: boolean }, initialAccountMode?: AccountMode }) {
   const { status } = useSession()
   const router = useRouter()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [sidebarPinned, setSidebarPinned] = useState(false)
-  // Guard to prevent rapid toggling
-  const [lastAutoToggleAt, setLastAutoToggleAt] = useState(0)
   const [hydrated, setHydrated] = useState(false)
 
   // Hydration indicator for Playwright tests
@@ -26,62 +25,25 @@ export default function AppShell({ children, initialRole, initialAccountMode }: 
     }
   }, [hydrated])
 
-  // Load pin state once on mount
+  // Load sidebar collapsed state from localStorage on mount
   useEffect(() => {
     try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem('app.sidebarPinned') : null
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('app.sidebarCollapsed') : null
       if (stored != null) {
-        const isPinned = stored === 'true'
-        setSidebarPinned(isPinned)
-        if (isPinned) setSidebarCollapsed(false)
+        const isCollapsed = stored === 'true'
+        setSidebarCollapsed(isCollapsed)
       }
     } catch {}
   }, [])
 
-  // Persist pin state
+  // Persist sidebar collapsed state
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
-        localStorage.setItem('app.sidebarPinned', String(sidebarPinned))
+        localStorage.setItem('app.sidebarCollapsed', String(sidebarCollapsed))
       }
     } catch {}
-  }, [sidebarPinned])
-
-  // Proximity-based auto expand/collapse
-  useEffect(() => {
-    if (sidebarPinned) return
-    const EXPANDED_WIDTH = 256 // Tailwind w-64
-    const COLLAPSED_WIDTH = 80  // Tailwind w-20
-    const EXPAND_EXTRA_MARGIN = 8   // additional px beyond collapsed width to trigger expand
-    const COLLAPSE_MARGIN = 24  // px beyond sidebar to auto-collapse
-    const MIN_INTERVAL_MS = 200 // debounce to avoid jitter
-
-    const handleMove = (e: MouseEvent) => {
-      const now = Date.now()
-      if (now - lastAutoToggleAt < MIN_INTERVAL_MS) return
-
-      const x = e.clientX
-
-      // Expand when cursor enters the collapsed sidebar area (plus small margin)
-      if (sidebarCollapsed && x <= (COLLAPSED_WIDTH + EXPAND_EXTRA_MARGIN)) {
-        setSidebarCollapsed(false)
-        setLastAutoToggleAt(now)
-        return
-      }
-
-      // Collapse when cursor moves sufficiently away from expanded sidebar
-      if (!sidebarCollapsed) {
-        const collapseBoundary = EXPANDED_WIDTH + COLLAPSE_MARGIN
-        if (x > collapseBoundary) {
-          setSidebarCollapsed(true)
-          setLastAutoToggleAt(now)
-        }
-      }
-    }
-
-    window.addEventListener('mousemove', handleMove)
-    return () => window.removeEventListener('mousemove', handleMove)
-  }, [sidebarCollapsed, lastAutoToggleAt, sidebarPinned])
+  }, [sidebarCollapsed])
 
   useEffect(() => {
     if (status === 'loading') return
@@ -99,28 +61,27 @@ export default function AppShell({ children, initialRole, initialAccountMode }: 
     )
   }
 
+  // Don't show sidebar for team_member mode (invited members)
+  const showSidebar = initialAccountMode !== 'team_member'
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <div className="flex">
+        {showSidebar && (
         <Sidebar 
           collapsed={sidebarCollapsed} 
-          pinned={sidebarPinned}
           initialRole={initialRole}
           initialAccountMode={initialAccountMode}
-          onPinToggle={() => {
-            // Pinning forces expanded state; unpinning keeps current state
-            setSidebarPinned(!sidebarPinned)
-            if (!sidebarPinned) setSidebarCollapsed(false)
+          onToggle={() => {
+            setSidebarCollapsed(!sidebarCollapsed)
           }}
         />
+        )}
         <div className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarCollapsed ? 'ml-16' : 'ml-64'
+          showSidebar ? (sidebarCollapsed ? 'ml-0 lg:ml-16' : 'ml-0 lg:ml-64') : 'ml-0'
         }`}>
           <Header onMenuClick={() => {
-            const next = !sidebarCollapsed
-            setSidebarCollapsed(next)
-            // If expanding via menu, pin to keep it open; if collapsing, unpin
-            setSidebarPinned(next ? true : false)
+            setSidebarCollapsed(!sidebarCollapsed)
           }} />
           <main className="flex-1 p-6">{children}</main>
         </div>

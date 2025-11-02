@@ -13,12 +13,16 @@ import {
   PlusIcon,
   AdjustmentsHorizontalIcon,
   UserIcon,
-  CameraIcon
+  CameraIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import {useTranslations} from 'next-intl'
 import { BRAND_CONFIG } from '@/config/brand'
+import { normalizePlanTierForUI, isFreePlan, type PlanPeriod } from '@/domain/subscription/utils'
+import { AccountMode, fetchAccountMode } from '@/domain/account/accountMode'
 import { 
   HomeIcon as HomeIconSolid,
   UsersIcon as UsersIconSolid,
@@ -29,59 +33,69 @@ import {
 
 interface SidebarProps {
   collapsed: boolean
-  pinned: boolean
-  onPinToggle: () => void
-  initialRole?: { isCompanyAdmin: boolean; isCompanyMember: boolean; needsCompanySetup: boolean }
-  initialAccountMode?: 'individual' | 'company'
+  onToggle: () => void
+  initialRole?: { isTeamAdmin: boolean; isTeamMember: boolean; needsTeamSetup: boolean }
+  initialAccountMode?: AccountMode
 }
 
-export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, initialAccountMode }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, initialRole, initialAccountMode }: SidebarProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const t = useTranslations('app.sidebar')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [isCompanyMember, setIsCompanyMember] = useState(initialRole?.isCompanyMember ?? false)
-  const [isCompanyAdmin, setIsCompanyAdmin] = useState(initialRole?.isCompanyAdmin ?? false)
-  const [needsCompanySetup, setNeedsCompanySetup] = useState(initialRole?.needsCompanySetup ?? false)
+  const [isTeamMember, setIsTeamMember] = useState(initialRole?.isTeamMember ?? false)
+  const [isTeamAdmin, setIsTeamAdmin] = useState(initialRole?.isTeamAdmin ?? false)
+  const [needsTeamSetup, setNeedsTeamSetup] = useState(initialRole?.needsTeamSetup ?? false)
   const [allocatedCredits, setAllocatedCredits] = useState(0)
-  const [accountMode, setAccountMode] = useState<'individual' | 'company'>(initialAccountMode ?? 'individual')
+  const [accountMode, setAccountMode] = useState<AccountMode>(initialAccountMode ?? 'individual')
   const [navReady, setNavReady] = useState(Boolean(initialRole))
+  const [planTier, setPlanTier] = useState<'free' | 'individual' | 'pro' | null>(null)
+  const [planLabel, setPlanLabel] = useState<string | null>(null)
   const { credits } = useCredits()
 
+  // Fetch account mode from centralized API and team membership
   useEffect(() => {
-    // Initialize role flags immediately from session to avoid UI flicker
-    if (!initialRole && session?.user?.role) {
-      setIsCompanyAdmin(session.user.role === 'company_admin')
-      setIsCompanyMember(session.user.role === 'company_member')
-      if ((session.user.role === 'company_admin' || session.user.role === 'company_member') && accountMode !== 'company') {
-        setAccountMode('company')
-      }
-    }
+    const loadAccountData = async () => {
+      if (!session?.user?.id) return
 
-    const fetchCompanyMembership = async () => {
       try {
-        const data = await jsonFetcher<{ userRole: { isCompanyMember?: boolean; isCompanyAdmin?: boolean; needsCompanySetup?: boolean } }>('/api/dashboard/stats')
-        setIsCompanyMember(data.userRole.isCompanyMember || data.userRole.isCompanyAdmin || false)
-        setIsCompanyAdmin(data.userRole.isCompanyAdmin || false)
-        setNeedsCompanySetup(data.userRole.needsCompanySetup || false)
+        // Fetch account mode and team membership in parallel
+        const [accountModeResult, teamData] = await Promise.all([
+          fetchAccountMode(),
+          jsonFetcher<{ userRole: { isTeamMember?: boolean; isTeamAdmin?: boolean; needsTeamSetup?: boolean } }>('/api/dashboard/stats').catch(() => null)
+        ])
+
+        // Update account mode from centralized utility
+        // This should match initialAccountMode from server-side, but update if subscription changed
+        if (accountModeResult.mode) {
+          setAccountMode(accountModeResult.mode)
+        }
+
+        // Update team membership data
+        if (teamData) {
+          setIsTeamMember(teamData.userRole.isTeamMember || teamData.userRole.isTeamAdmin || false)
+          setIsTeamAdmin(teamData.userRole.isTeamAdmin || false)
+          setNeedsTeamSetup(teamData.userRole.needsTeamSetup || false)
+        } else if (session?.user?.role) {
+          // Fallback: Use session role, but note this doesn't account for pro subscription
+          // This is a fallback only - the API should normally provide correct roles
+          const role = session.user.role
+          setIsTeamAdmin(role === 'team_admin')
+          setIsTeamMember(role === 'team_member')
+        }
+
         setNavReady(true)
       } catch (err) {
-        console.error('Failed to fetch company membership:', err)
+        console.error('Failed to fetch account data:', err)
         setNavReady(true)
       }
     }
 
-    if (session?.user?.id && !initialRole) {
-      fetchCompanyMembership()
+    // Only fetch if we don't have initial data, or refresh periodically
+    if (session?.user?.id) {
+      loadAccountData()
     }
-  }, [session?.user?.id, accountMode, initialRole, session?.user?.role])
-
-  // Coerce account mode to 'individual' for pure individual users
-  useEffect(() => {
-    if (!isCompanyAdmin && !isCompanyMember && accountMode !== 'individual') {
-      setAccountMode('individual')
-    }
-  }, [isCompanyAdmin, isCompanyMember, accountMode])
+  }, [session?.user?.id, session?.user?.role, initialAccountMode])
 
   // Fetch allocated credits only for team admins
   useEffect(() => {
@@ -95,47 +109,45 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
     }
 
     // Only fetch if user is a team admin
-    if (session?.user?.id && isCompanyAdmin) {
+    if (session?.user?.id && isTeamAdmin) {
       fetchAllocatedCredits()
     }
-  }, [session?.user?.id, isCompanyAdmin])
+  }, [session?.user?.id, isTeamAdmin])
 
-  // Credits are now managed by CreditsContext
 
-  // Fetch account mode (individual vs company) from settings
+  // Fetch subscription info for plan badge
   useEffect(() => {
-    const fetchAccountMode = async () => {
+    const fetchSubscription = async () => {
       try {
-        const response = await fetch('/api/user/settings')
-        if (response.ok) {
-          const data = await response.json()
-          const mode = (data as { settings?: { mode?: 'individual' | 'company' } }).settings?.mode
-          if (mode === 'company' || mode === 'individual') {
-            setAccountMode(mode)
-          }
+        const data = await jsonFetcher<{ subscription: { tier: string | null; period?: PlanPeriod } | null }>('/api/user/subscription')
+        const tierRaw = data?.subscription?.tier ?? null
+        const period = data?.subscription?.period ?? null
+
+        // Normalize tier for UI (checks period first to determine free plan)
+        const normalized = normalizePlanTierForUI(tierRaw, period)
+        setPlanTier(normalized)
+
+        // Compute human-readable label based on tier + period
+        let label = 'Individual Free package'
+        if (isFreePlan(period)) {
+          label = tierRaw === 'pro' ? 'Pro Free package' : 'Individual Free package'
+        } else if (period === 'try_once') {
+          // If API surfaces tier as try_once, default to Individual wording
+          label = tierRaw === 'pro' ? 'Pro try-once' : 'Individual try-once'
+        } else if (period === 'monthly') {
+          label = tierRaw === 'pro' ? 'Pro monthly' : 'Individual monthly'
+        } else if (period === 'annual') {
+          label = tierRaw === 'pro' ? 'Pro annual' : 'Individual annual'
         }
-      } catch (err) {
-        console.error('Failed to fetch account mode:', err)
+        setPlanLabel(label)
+      } catch {
+        setPlanTier('free')
+        setPlanLabel('Individual Free package')
       }
     }
-
-    if (session?.user?.id) {
-      fetchAccountMode()
-    }
+    if (session?.user?.id) fetchSubscription()
   }, [session?.user?.id])
 
-  // Custom pushpin icons (outline and solid) to represent pin/unpin
-  const PushPinOutlineIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-      <path d="M9.5 3.75l5 5m-7 2.5l7-7c.293-.293.768-.293 1.06 0l.94.94c.293.293.293.768 0 1.06l-2.12 2.12c-.3.3-.3.79 0 1.09l1.03 1.03c.47.47.14 1.27-.52 1.33l-3.69.34c-.21.02-.4.11-.55.26l-3.66 3.66c-.25.25-.65.25-.9 0l-.71-.71c-.25-.25-.25-.65 0-.9l3.66-3.66c.15-.15.24-.34.26-.55l.34-3.69c.06-.66.86-.99 1.33-.52l1.03 1.03c.3.3.79.3 1.09 0l2.12-2.12c.293-.293.293-.768 0-1.06l-.94-.94a.75.75 0 00-1.06 0l-7 7c-.2.2-.47.3-.75.27l-1.7-.16m6.33 8.88l4.24 4.24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  )
-
-  const PushPinSolidIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" {...props}>
-      <path d="M14.44 2.94l6.62 6.62c.59.59.17 1.6-.66 1.67l-4.28.4-6.08 6.08 1.06 1.06-1.41 1.41-3.89-3.89 1.41-1.41 1.06 1.06 6.08-6.08.4-4.28c.07-.83 1.08-1.25 1.67-.66z"/>
-    </svg>
-  )
 
   const allNavigation = [
     {
@@ -156,10 +168,10 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
     },
     {
       name: t('nav.personalPhotoStyles'),
-      href: '/app/contexts/personal',
+      href: '/app/styles/personal',
       icon: AdjustmentsHorizontalIcon,
       iconSolid: AdjustmentsHorizontalIconSolid,
-      current: pathname === '/app/contexts/personal',
+      current: pathname === '/app/styles/personal',
       showFor: ['user', 'team_member', 'team_admin'],
     },
     {
@@ -180,11 +192,11 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
     },
     {
       name: t('nav.teamPhotoStyles'),
-      href: '/app/contexts/team',
+      href: '/app/styles/team',
       icon: AdjustmentsHorizontalIcon,
       iconSolid: AdjustmentsHorizontalIconSolid,
-      current: pathname === '/app/contexts/team',
-      showFor: ['team_admin'],
+      current: pathname === '/app/styles/team',
+      showFor: ['team_admin', 'team_member'], // Pro users will have effective role 'team_member'
     },
     {
       name: t('nav.team'),
@@ -192,16 +204,20 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
       icon: UsersIcon,
       iconSolid: UsersIconSolid,
       current: pathname === '/team' || pathname === '/app/team',
-      badge: needsCompanySetup ? '1' : undefined,
-      showFor: ['team_admin'],
+      badge: needsTeamSetup ? '1' : undefined,
+      showFor: ['team_admin', 'team_member'], // Pro users will have effective role 'team_member'
     },
   ]
 
-  // Determine user role for navigation filtering
+  // Determine effective role for navigation filtering
+  // Pro users are team admins by definition, so they get team_admin role
   const getUserRole = () => {
-    if (isCompanyAdmin) {
+    if (isTeamAdmin) {
       return 'team_admin'
-    } else if (isCompanyMember) {
+    } else if (accountMode === 'pro') {
+      // Pro users are team admins by definition, even if not yet in a team
+      return 'team_admin'
+    } else if (isTeamMember) {
       return 'team_member'
     } else {
       return 'user'
@@ -217,21 +233,26 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
   const individualHrefs = new Set([
     '/app/dashboard',
     '/app/selfies',
-    '/app/contexts/personal',
+    '/app/styles/personal',
     '/app/generations/personal',
   ])
-  const companyHrefs = new Set([
+  const proHrefs = new Set([
     '/app/dashboard',
     '/app/selfies',
     '/app/generations/team',
-    '/app/contexts/team',
+    '/app/styles/team',
     '/app/team',
   ])
 
-  // If user is a pure individual, always show individual links regardless of stored account mode
-  const navigation = (isCompanyAdmin || isCompanyMember)
-    ? roleFiltered.filter(item => accountMode === 'company' ? companyHrefs.has(item.href) : individualHrefs.has(item.href))
-    : roleFiltered.filter(item => individualHrefs.has(item.href))
+  // Filter navigation based on account mode
+  // Pro mode: show pro/team features
+  // Individual mode: show personal features
+  // Team members (invited) don't have sidebar (handled separately)
+  const navigation = accountMode === 'pro'
+    ? roleFiltered.filter(item => proHrefs.has(item.href))
+    : accountMode === 'individual'
+    ? roleFiltered.filter(item => individualHrefs.has(item.href))
+    : [] // team_member mode - no sidebar navigation
 
   const handleSignOut = () => {
     // Always use current origin to ensure correct protocol (http vs https)
@@ -240,46 +261,45 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
   }
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300 ${
-      collapsed ? 'w-20' : 'w-64'
+    <div className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300 transform ${
+      // Width adjusts as before; add off-canvas behavior on small screens
+      (collapsed ? 'w-20' : 'w-64') + ' ' + (collapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0') + ' ' + (collapsed ? 'overflow-visible' : '')
     }`}>
-      <div className="flex flex-col h-screen">
+      <div className={`flex flex-col h-screen ${collapsed ? 'overflow-visible' : ''}`}>
         {/* Top Section - Header and Primary Action */}
         <div className="flex-shrink-0">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className={`flex p-4 border-b border-gray-200 ${collapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
             {!collapsed && (
               <div className="flex items-center space-x-2">
                 <Image src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} width={112} height={28} className="h-7 w-auto" priority />
               </div>
             )}
             {collapsed && (
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center">
                 <Image src={BRAND_CONFIG.logo.icon} alt={BRAND_CONFIG.name} width={48} height={48} className="h-12 w-12" priority />
               </div>
             )}
-            {!collapsed && (
-              <div className="relative group">
-                <button
-                  onClick={onPinToggle}
-                  aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
-                  className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
-                >
-                  {pinned ? (
-                    <PushPinSolidIcon className="h-8 w-8 text-gray-500" />
-                  ) : (
-                    <PushPinOutlineIcon className="h-8 w-8 text-gray-500" />
-                  )}
-                </button>
-                <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {pinned ? 'Unpin sidebar' : 'Pin sidebar'}
-                </span>
-              </div>
-            )}
+            <div className="relative group">
+              <button
+                onClick={onToggle}
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+              >
+                {collapsed ? (
+                  <ChevronRightIcon className="h-6 w-6 text-gray-500" />
+                ) : (
+                  <ChevronLeftIcon className="h-6 w-6 text-gray-500" />
+                )}
+              </button>
+              <span className={`pointer-events-none absolute ${collapsed ? 'left-full ml-2' : 'left-full ml-2'} top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg`}>
+                {collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              </span>
+            </div>
           </div>
 
           {/* Primary Action Button */}
-          <div className="p-4">
+          <div className="p-4 relative group">
             <Link
               href="/app/generations"
               className={`flex items-center justify-center space-x-2 bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white rounded-lg px-4 py-3 font-medium hover:from-brand-cta-hover hover:to-brand-cta transition-all duration-200 ${
@@ -289,49 +309,92 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
               <PlusIcon className="h-8 w-8" />
               {!collapsed && <span>{t('primary.generate')}</span>}
             </Link>
+            {collapsed && (
+              <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
+                {t('primary.generate')}
+              </span>
+            )}
           </div>
         </div>
 
         {/* Navigation - Takes up available space */}
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto min-h-0">
-          {!navReady ? null : navigation.map((item) => {
-            const Icon = item.current ? item.iconSolid : item.icon
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors relative ${
-                  item.current
-                    ? 'bg-brand-primary-light text-brand-primary'
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                } ${collapsed ? 'justify-center' : ''}`}
-              >
-                <Icon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
-                {!collapsed && (
-                  <>
+        <nav className={`flex-1 px-4 space-y-1 min-h-0 ${collapsed ? 'overflow-visible' : 'overflow-y-auto overflow-x-visible'}`}>
+          {!collapsed ? (
+            <div className="h-full overflow-y-auto overflow-x-visible">
+              {!navReady ? null : navigation.map((item) => {
+                const Icon = item.current ? item.iconSolid : item.icon
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors relative ${
+                      item.current
+                        ? 'bg-brand-primary-light text-brand-primary'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 mr-3" />
                     <span>{item.name}</span>
                     {item.badge && (
                       <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
                         {item.badge}
                       </span>
                     )}
-                  </>
-                )}
-                {collapsed && item.badge && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
+                  </Link>
+                )
+              })}
+            </div>
+          ) : (
+            <>
+              {!navReady ? null : navigation.map((item) => {
+                const Icon = item.current ? item.iconSolid : item.icon
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`group flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg transition-colors relative ${
+                      item.current
+                        ? 'bg-brand-primary-light text-brand-primary'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.badge && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {item.badge}
+                      </span>
+                    )}
+                    <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
+                      {item.name}
+                    </span>
+                  </Link>
+                )
+              })}
+            </>
+          )}
         </nav>
 
         {/* Bottom Section - Credits and User Profile (Fixed at bottom) */}
-        <div className="flex-shrink-0 bg-white border-t border-gray-200">
+        <div className={`flex-shrink-0 bg-white border-t border-gray-200 ${collapsed ? 'overflow-visible' : ''}`}>
           {/* Credits Section */}
           {session?.user && (
             <div className="px-4 py-3 border-t border-gray-200">
+              {/* Plan stamp just above credits */}
+              {!collapsed && planTier && (
+                <div className="mb-3 flex justify-center">
+                  <span
+                    className={`inline-block rotate-[-3deg] px-3 py-1 text-[10px] uppercase tracking-widest font-semibold rounded-md border-2 border-dashed shadow-sm ${
+                      planTier === 'pro'
+                        ? 'bg-purple-50 text-purple-700 border-purple-500'
+                        : planTier === 'individual'
+                        ? 'bg-blue-50 text-blue-700 border-blue-500'
+                        : 'bg-gray-50 text-gray-700 border-gray-400'
+                    }`}
+                  >
+                    {planLabel ?? ''}
+                  </span>
+                </div>
+              )}
               {!collapsed && (
                 <h3 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">
                   {t('credits.title')}
@@ -339,45 +402,77 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
               )}
               <div className={`space-y-2 ${collapsed ? 'text-center' : ''}`}>
                 {accountMode === 'individual' && (
-                  <div className={`flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
+                  <div className={`relative group flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
                     <span className={`text-xs font-medium text-gray-500 ${collapsed ? 'text-center' : ''}`}>
                       {t('credits.individual')}
                     </span>
                     <span className={`text-sm font-semibold ${collapsed ? 'text-lg' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
-                      {credits.individual}
+                      {credits.individual ?? 0}
                     </span>
+                    {collapsed && (
+                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
+                        {t('credits.individual')}: {credits.individual ?? 0}
+                      </span>
+                    )}
                   </div>
                 )}
 
-                {accountMode === 'company' && (
+                {accountMode === 'pro' && (
                   <>
-                    <div className={`flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
+                    <div className={`relative group flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
                       <span className={`text-xs font-medium text-gray-500 ${collapsed ? 'text-center' : ''}`}>
-                        {t('credits.company')}
+                        {t('credits.team')}
                       </span>
                       <span className={`text-sm font-semibold ${collapsed ? 'text-lg' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
-                        {credits.company}
+                        {credits.team ?? 0}
                       </span>
+                      {collapsed && (
+                        <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
+                          {t('credits.team')}: {credits.team ?? 0}
+                        </span>
+                      )}
                     </div>
-                    {isCompanyAdmin && allocatedCredits > 0 && (
-                      <div className={`flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
+                    {isTeamAdmin && allocatedCredits > 0 && (
+                      <div className={`relative group flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
                         <span className={`text-xs font-medium text-gray-500 ${collapsed ? 'text-center' : ''}`}>
                           {t('credits.allocated')}
                         </span>
                         <span className={`text-sm font-semibold ${collapsed ? 'text-lg' : ''} text-orange-600`}>
                           {allocatedCredits}
                         </span>
+                        {collapsed && (
+                          <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
+                            {t('credits.allocated')}: {allocatedCredits}
+                          </span>
+                        )}
                       </div>
                     )}
                   </>
                 )}
+                
+                {/* Don't render sidebar for team_member mode (invited members) */}
+                {accountMode === 'team_member' && null}
               </div>
               
               {/* Buy Credits Button */}
-              {!collapsed && (
-                <div className="mt-3">
+              <div className={`mt-3 ${collapsed ? 'relative group' : ''}`}>
+                {collapsed ? (
                   <Link
-                    href="/pricing"
+                    href={planTier === 'free' ? '/app/upgrade' : '/app/top-up'}
+                    className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-white rounded-md transition-colors"
+                    style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
+                    }}
+                  >
+                    <PlusIcon className="h-3 w-3" />
+                  </Link>
+                ) : (
+                  <Link
+                    href={planTier === 'free' ? '/app/upgrade' : '/app/top-up'}
                     className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-white rounded-md transition-colors"
                     style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
                     onMouseEnter={(e) => {
@@ -390,8 +485,13 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
                     <PlusIcon className="h-3 w-3 mr-1" />
                     {t('credits.buyMore')}
                   </Link>
-                </div>
-              )}
+                )}
+                {collapsed && (
+                  <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
+                    {t('credits.buyMore')}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -399,7 +499,7 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
           {session?.user && (
             <div className="p-4 border-t border-gray-200 relative">
             <div
-              className={`flex items-center space-x-3 ${collapsed ? 'justify-center' : ''} cursor-pointer`}
+              className={`relative group flex items-center space-x-3 ${collapsed ? 'justify-center' : ''} cursor-pointer`}
               onClick={() => setMenuOpen(!menuOpen)}
               data-testid="user-menu"
             >
@@ -426,9 +526,18 @@ export default function Sidebar({ collapsed, pinned, onPinToggle, initialRole, i
                   </p>
                 </div>
               )}
+              {collapsed && (
+                <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
+                  {session?.user?.name || session?.user?.email}
+                </span>
+              )}
             </div>
-            {!collapsed && menuOpen && (
-              <div className="absolute bottom-16 left-4 right-4 rounded-lg border border-gray-200 bg-white shadow-lg">
+            {menuOpen && (
+              <div className={`absolute rounded-lg border border-gray-200 bg-white shadow-lg z-[9999] ${
+                collapsed 
+                  ? 'left-full ml-2 bottom-4 w-48' 
+                  : 'bottom-16 left-4 right-4'
+              }`}>
                 <Link
                   href="/app/settings"
                   className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg"

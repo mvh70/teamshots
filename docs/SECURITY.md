@@ -10,11 +10,11 @@ This document outlines the security measures implemented in the Teamshots applic
 
 - **Multi-factor Authentication**: OTP verification required for registration
 - **Password Security**: Minimum 6 characters with complexity requirements
-- **Session Management**: 15-minute access tokens with refresh token rotation
+- **Session Management**: 30-minute access tokens with automatic refresh and refresh token rotation
 - **Role-Based Access Control**: Granular permissions for different user types
 - **CSRF Protection**: NextAuth built-in CSRF protection with secure cookies
 - **Authorization Checks**: Comprehensive authorization for all data access
-- **Company Data Isolation**: Company members can only access company data
+- **Team Data Isolation**: Team members can only access team data
 
 ### 2. File Upload Security
 

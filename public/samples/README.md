@@ -42,7 +42,7 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
     attribution: {
       name: 'Real User Name',
       role: 'Their Job Title',
-      company: 'Their Company'
+      team: 'Their Team'
     }
   }
 ];

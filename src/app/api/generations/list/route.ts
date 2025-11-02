@@ -44,7 +44,7 @@ type GenerationWithRelations = {
     lastName: string | null;
     email: string | null;
     userId: string | null;
-    company: {
+    team: {
       id: string;
       name: string;
     } | null;
@@ -84,8 +84,8 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
-    const roles = getUserEffectiveRoles(user)
-    const userCompanyId = user.person?.companyId
+    const roles = await getUserEffectiveRoles(user)
+    const userTeamId = user.person?.teamId
 
     // Build where clause based on scope
     let where: Record<string, unknown> = {}
@@ -99,52 +99,34 @@ export async function GET(request: NextRequest) {
         generationType: 'personal'
       }
     } else if (scope === 'team') {
-      if (!userCompanyId) {
-        return NextResponse.json({ error: 'Not part of a company' }, { status: 403 })
+      if (!userTeamId) {
+        return NextResponse.json({ error: 'Not part of a team' }, { status: 403 })
       }
 
-      if (roles.isCompanyAdmin) {
-        // Admin can see all company generations, optionally filtered by user
+      if (roles.isTeamAdmin) {
+        // Pro users (team admins) can see all team generations, optionally filtered by user
         where = {
           person: {
-            companyId: userCompanyId
+            teamId: userTeamId
           },
-          generationType: 'company'
+          generationType: 'team'
         }
         if (userId && userId !== 'all') {
           (where.person as Record<string, unknown>).id = userId
         }
-      } else {
-        // Company member (not admin)
-        if (teamView === 'mine') {
-          // Member's own team generations (both approved and unapproved)
-          where = {
-            person: {
-              userId: session.user.id,
-              companyId: userCompanyId
-            },
-            generationType: 'company'
-          }
-        } else if (teamView === 'team') {
-          // Only approved team generations from others
-          where = {
-            person: {
-              companyId: userCompanyId,
-              userId: { not: session.user.id }
-            },
-            generationType: 'company',
-            adminApproved: true
-          }
-        } else {
-          // Default to 'mine' if no teamView specified
-          where = {
-            person: {
-              userId: session.user.id,
-              companyId: userCompanyId
-            },
-            generationType: 'company'
-          }
+      } else if (roles.isTeamMember) {
+        // Team members (invited) can ONLY see their own photos
+        // They cannot see other team members' photos
+        where = {
+          person: {
+            userId: session.user.id,
+            teamId: userTeamId
+          },
+          generationType: 'team'
         }
+      } else {
+        // Regular users without team - shouldn't reach here for team scope, but handle gracefully
+        return NextResponse.json({ error: 'Not authorized for team scope' }, { status: 403 })
       }
     } else {
       // Fallback to original logic for backward compatibility
@@ -156,14 +138,14 @@ export async function GET(request: NextRequest) {
               userId: session.user.id
             }
           },
-          // Company generations where user is admin
+          // Team generations where user is admin
           {
             person: {
-              company: {
+              team: {
                 adminId: session.user.id
               }
             },
-            generationType: 'company'
+            generationType: 'team'
           }
         ]
       }
@@ -196,7 +178,7 @@ export async function GET(request: NextRequest) {
               lastName: true,
               email: true,
               userId: true, // Make sure userId is selected
-              company: {
+              team: {
                 select: {
                   id: true,
                   name: true
@@ -220,6 +202,45 @@ export async function GET(request: NextRequest) {
       }),
       prisma.generation.count({ where: where as any }) // eslint-disable-line @typescript-eslint/no-explicit-any
     ])
+
+    // Helper function to get job status for processing generations
+    const getJobStatus = async (generationId: string, status: string) => {
+      if (status !== 'pending' && status !== 'processing') {
+        return null
+      }
+      try {
+        const { imageGenerationQueue } = await import('@/queue')
+        const job = await imageGenerationQueue.getJob(`gen-${generationId}`)
+        if (job) {
+          // Handle progress as either number or object { progress: number, message?: string }
+          const progressData = typeof job.progress === 'object' && job.progress !== null
+            ? job.progress as { progress?: number; message?: string }
+            : { progress: job.progress as number }
+          return {
+            id: job.id,
+            progress: typeof progressData === 'object' && 'progress' in progressData && typeof progressData.progress === 'number'
+              ? progressData.progress
+              : (typeof job.progress === 'number' ? job.progress : 0),
+            message: typeof progressData === 'object' && 'message' in progressData && typeof progressData.message === 'string'
+              ? progressData.message
+              : undefined,
+            attemptsMade: job.attemptsMade,
+            processedOn: job.processedOn,
+            finishedOn: job.finishedOn,
+            failedReason: job.failedReason,
+          }
+        }
+      } catch (error) {
+        Logger.warn('Failed to get job status in list', { error: error instanceof Error ? error.message : String(error) })
+      }
+      return null
+    }
+
+    // Get job status for processing generations in parallel
+    const processingGenerations = generations.filter(g => g.status === 'pending' || g.status === 'processing')
+    const jobStatusPromises = processingGenerations.map(g => getJobStatus(g.id, g.status))
+    const jobStatuses = await Promise.all(jobStatusPromises)
+    const jobStatusMap = new Map(processingGenerations.map((g, i) => [g.id, jobStatuses[i]]))
 
     // Transform generations for response
     const transformedGenerations = generations.map((generation: GenerationWithRelations) => ({
@@ -247,6 +268,9 @@ export async function GET(request: NextRequest) {
       userApproved: generation.userApproved,
       adminApproved: generation.adminApproved,
       
+      // Job status for processing generations
+      jobStatus: jobStatusMap.get(generation.id) || null,
+      
       // Moderation
       moderationScore: generation.moderationScore,
       moderationPassed: generation.moderationPassed,
@@ -267,7 +291,7 @@ export async function GET(request: NextRequest) {
         firstName: generation.person.firstName,
         lastName: generation.person.lastName,
         email: generation.person.email,
-        company: generation.person.company
+        team: generation.person.team
       },
       context: generation.context,
       

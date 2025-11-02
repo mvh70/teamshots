@@ -1,78 +1,56 @@
 ---
-description: Tailwind CSS and UI component best practices for modern web applications
-globs: **/*.css, **/*.tsx, **/*.jsx, tailwind.config.js, tailwind.config.ts
+description: Tailwind CSS best practices for consistent styling
+globs: **/*.css, **/*.tsx, **/*.jsx, tailwind.config.*
 ---
 
 # Tailwind CSS Best Practices
 
-## Project Setup
-- Use proper Tailwind configuration
-- Configure theme extension properly
-- Set up proper purge configuration
-- Use proper plugin integration
-- Configure custom spacing and breakpoints
-- Set up proper color palette
-
-## Component Styling
-- Use utility classes over custom CSS
-- Group related utilities with @apply when needed
-- Use proper responsive design utilities
-- Implement dark mode properly
-- Use proper state variants
-- Keep component styles consistent
-
-## Layout
-- Use Flexbox and Grid utilities effectively
-- Implement proper spacing system
-- Use container queries when needed
-- Implement proper responsive breakpoints
-- Use proper padding and margin utilities
-- Implement proper alignment utilities
-
-## Typography
-- Use proper font size utilities
-- Implement proper line height
-- Use proper font weight utilities
-- Configure custom fonts properly
-- Use proper text alignment
-- Implement proper text decoration
-
-## Colors
-- Use semantic color naming
-- Implement proper color contrast
-- Use opacity utilities effectively
-- Configure custom colors properly
-- Use proper gradient utilities
-- Implement proper hover states
-
-## Components
+## Core Principles
+- Utility classes over custom CSS
+- @apply sparingly (only for repeated patterns)
+- Mobile-first responsive design
 - Use shadcn/ui components when available
-- Extend components properly
-- Keep component variants consistent
-- Implement proper animations
-- Use proper transition utilities
-- Keep accessibility in mind
+- Consistent spacing scale (2, 4, 6, 8)
 
-## Responsive Design
-- Use mobile-first approach
-- Implement proper breakpoints
-- Use container queries effectively
-- Handle different screen sizes properly
-- Implement proper responsive typography
-- Use proper responsive spacing
+## Layout Patterns
+- Flexbox: `flex flex-col gap-4` (not manual margins)
+- Grid: `grid grid-cols-3 gap-4`
+- Container: `container mx-auto px-4 max-w-6xl`
 
-## Performance
-- Use proper purge configuration
-- Minimize custom CSS
-- Use proper caching strategies
-- Implement proper code splitting
-- Optimize for production
-- Monitor bundle size
+## Responsive
+- Mobile-first: base styles, then `md:`, `lg:`
+- Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
+- Hide/show: `hidden md:block`
 
-## Best Practices
-- Follow naming conventions
-- Keep styles organized
-- Use proper documentation
-- Implement proper testing
-- Follow accessibility guidelines
-- Use proper version control 
+## Colors & Typography
+- Semantic naming: `bg-primary`, `text-secondary`
+- Proper contrast for accessibility
+- Type scale: `text-sm/base/lg/xl`
+- Line height: `leading-tight/normal/relaxed`
+
+## State Variants
+- `hover:bg-gray-100`
+- `focus:ring-2 focus:ring-blue-500`
+- `disabled:opacity-50 disabled:cursor-not-allowed`
+- `dark:bg-gray-800` (when dark mode enabled)
+
+## Common Patterns
+```tsx
+// Button
+className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+
+// Card
+className="bg-white rounded-lg shadow p-6"
+
+// Input
+className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+
+// Centered content
+className="container mx-auto px-4 max-w-6xl"
+
+// Flex with gap
+className="flex items-center gap-4"
+
+// Responsive grid
+className="grid grid-cols-1 md:grid-cols-3 gap-6"
+```

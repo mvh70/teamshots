@@ -84,7 +84,7 @@ export const authOptions = {
   
   session: {
     strategy: "jwt" as const,
-    maxAge: 15 * 60, // 30 minutes (gradual reduction)
+    maxAge: 30 * 60, // 30 minutes
   },
 
   // Add cookie configuration for security - Safari-compatible
@@ -122,7 +122,8 @@ export const authOptions = {
   useSecureCookies: Env.string('NODE_ENV') === 'production',
   
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: User | AdapterUser | null }) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async jwt({ token, user, trigger: _trigger }: { token: JWT; user?: User | AdapterUser | null; trigger?: string }) {
       if (user) {
         token.role = user.role
         token.isAdmin = user.isAdmin
@@ -133,7 +134,7 @@ export const authOptions = {
           const person = await prisma.person.findUnique({
             where: { userId: user.id },
             include: {
-              company: {
+              team: {
                 select: { id: true, name: true, adminId: true }
               }
             }
@@ -143,20 +144,25 @@ export const authOptions = {
               id: person.id,
               firstName: person.firstName,
               lastName: person.lastName,
-              companyId: person.companyId,
-              company: person.company
+              teamId: person.teamId,
+              team: person.team
             }
             token.givenName = person.firstName
           }
         } catch {}
+        
+        // Set token expiration time when user first authenticates
+        const now = Math.floor(Date.now() / 1000)
+        token.exp = now + (30 * 60) // 30 minutes from now
       }
+      
       // On subsequent requests, ensure we hydrate person data if missing
       if (!token.person && token.sub) {
         try {
           const person = await prisma.person.findUnique({
             where: { userId: token.sub },
             include: {
-              company: {
+              team: {
                 select: { id: true, name: true, adminId: true }
               }
             }
@@ -166,13 +172,27 @@ export const authOptions = {
               id: person.id,
               firstName: person.firstName,
               lastName: person.lastName,
-              companyId: person.companyId,
-              company: person.company
+              teamId: person.teamId,
+              team: person.team
             }
             token.givenName = person.firstName
           }
         } catch {}
       }
+      
+      // Extend token expiration if it's close to expiring (within 5 minutes)
+      // Only do this on subsequent requests (not during initial authentication)
+      if (!user && token.exp) {
+        const now = Math.floor(Date.now() / 1000)
+        const expirationTime = token.exp
+        const timeUntilExpiry = expirationTime - now
+        
+        // If token expires in less than 5 minutes, extend it by 30 minutes
+        if (timeUntilExpiry < 5 * 60 && timeUntilExpiry > 0) {
+          token.exp = now + (30 * 60)
+        }
+      }
+      
       return token
     },
     async session({ session, token }: { session: Session; token: JWT }) {
@@ -185,8 +205,8 @@ export const authOptions = {
           id: string
           firstName: string
           lastName?: string | null
-          companyId?: string | null
-          company?: {
+          teamId?: string | null
+          team?: {
             id: string
             name: string
             adminId: string

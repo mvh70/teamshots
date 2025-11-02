@@ -1,4 +1,5 @@
 // Test setup configuration
+import '@testing-library/jest-dom'
 import { beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals'
 
 // Mock environment variables
@@ -52,7 +53,7 @@ jest.mock('next-intl', () => ({
         'individual': 'Individual',
         'individualDesc': 'For personal use',
         'team': 'Team',
-        'teamDesc': 'For company/team use'
+        'teamDesc': 'For team use'
       },
       'pricing': {
         'individual': 'Individual',

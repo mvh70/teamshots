@@ -155,7 +155,7 @@ test.describe('Complete User Flow - Pricing to Generation', () => {
     
     // Step 3: Complete signup form
     await page.fill('[data-testid="firstName-input"]', 'Jane')
-    await page.fill('[data-testid="email-input"]', 'jane@company.com')
+    await page.fill('[data-testid="email-input"]', 'jane@team.com')
     await page.fill('[data-testid="password-input"]', 'password123')
     await page.fill('[data-testid="confirmPassword-input"]', 'password123')
     

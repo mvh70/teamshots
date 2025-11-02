@@ -223,7 +223,6 @@ export default function SelfiesPage() {
                 <PhotoUpload 
                   onUploaded={handleUpload}
                   disabled={uploading}
-                  skipDatabaseCreation={true}
                 />
                 {uploading && (
                   <p className="mt-2 text-sm text-gray-600">Uploading...</p>

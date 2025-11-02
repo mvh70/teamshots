@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import SelfieApproval from './SelfieApproval'
@@ -9,13 +9,14 @@ import { useSelfieUpload } from '@/hooks/useSelfieUpload'
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 
 interface SelfieUploadFlowProps {
-  onSelfieApproved: (selfieKey: string) => void
+  onSelfieApproved: (selfieKey: string, selfieId?: string) => void
   onCancel: () => void
   onError?: (error: string) => void
   onRetake?: () => void
+  saveEndpoint?: (key: string) => Promise<void> // Custom save function for invite flows
 }
 
-export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, onRetake }: SelfieUploadFlowProps) {
+export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, onRetake, saveEndpoint }: SelfieUploadFlowProps) {
   const t = useTranslations('selfies')
   const {
     uploadedKey,
@@ -26,8 +27,11 @@ export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, 
     handleReject,
     handleRetake
   } = useSelfieUpload({
-    onSuccess: onSelfieApproved,
-    onError: onError
+    onSuccess: (key, id) => {
+      onSelfieApproved(key, id)
+    },
+    onError: onError,
+    saveEndpoint
   })
 
   // Store the preview URL for the approval screen
@@ -52,12 +56,11 @@ export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, 
     onRetake?.()
   }
 
-  // If approved, call the callback immediately
-  useEffect(() => {
-    if (isApproved && uploadedKey) {
-      onSelfieApproved(uploadedKey)
-    }
-  }, [isApproved, uploadedKey, onSelfieApproved])
+  // Wrapper for handleReject to call parent onCancel callback
+  const handleRejectWrapper = async () => {
+    await handleReject()
+    onCancel()
+  }
 
   if (uploadedKey && !isApproved) {
     return (
@@ -65,7 +68,7 @@ export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, 
         uploadedPhotoKey={uploadedKey}
         previewUrl={previewUrl || undefined}
         onApprove={handleApprove}
-        onReject={handleReject}
+        onReject={handleRejectWrapper}
         onRetake={handleRetakeWrapper}
         onCancel={onCancel}
       />

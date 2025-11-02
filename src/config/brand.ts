@@ -28,7 +28,7 @@ export const BRAND_CONFIG = {
   ogImage: '/branding/og-image.jpg',
   
   legal: {
-    companyName: 'TeamShots Inc.',
+    teamName: 'TeamShots Inc.',
     address: '123 Main St, San Francisco, CA 94105',
     foundedYear: 2025,
   },

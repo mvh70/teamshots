@@ -86,9 +86,13 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
       framing_composition.shot_type = 'mid-chest portrait, showing from chest up with positive space around the subject'
     } else if (shotTypeValue === 'full-body') {
       framing_composition.shot_type = 'full body portrait, showing the complete subject from head to toe'
+    } else {
+      // Default fallback for unrecognized shot types
+      framing_composition.shot_type = 'head-and-shoulders portrait, with ample headroom and negative space above their head, ensuring the top of their head is not cropped'
     }
   } else {
-    framing_composition.shot_type = framing_composition.shot_type || 'head-and-shoulders portrait, with ample headroom and negative space above their head, ensuring the top of their head is not cropped'
+    // Default when shotType is missing or 'user-choice'
+    framing_composition.shot_type = 'head-and-shoulders portrait, with ample headroom and negative space above their head, ensuring the top of their head is not cropped'
   }
 
   framing_composition.orientation = framing_composition.orientation || 'vertical'

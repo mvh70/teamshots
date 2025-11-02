@@ -30,8 +30,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing userId or newRole' }, { status: 400 })
     }
 
-    if (!['user', 'company_admin'].includes(newRole)) {
-      return NextResponse.json({ error: 'Invalid role. Must be "user" or "company_admin"' }, { status: 400 })
+    if (!['user', 'team_admin'].includes(newRole)) {
+      return NextResponse.json({ error: 'Invalid role. Must be "user" or "team_admin"' }, { status: 400 })
     }
 
     // Prevent changing other users' roles (for now, only allow self-role changes)
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       include: {
         person: {
           include: {
-            company: true
+            team: true
           }
         }
       }

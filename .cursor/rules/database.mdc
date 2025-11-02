@@ -1,86 +1,65 @@
 ---
-description: Database best practices focusing on Prisma and Supabase integration
-globs: prisma/**/*, src/db/**/*, **/*.prisma, supabase/**/*
+description: Database best practices for Prisma with local PostgreSQL
+globs: prisma/**/*, src/db/**/*, **/*.prisma
 ---
 
-# Database Best Practices
+# Database Best Practices (Prisma + PostgreSQL)
 
-## Prisma Setup
-- Use proper schema design
-- Implement proper migrations
-- Use proper relation definitions
-- Configure proper connection
-- Implement proper seeding
-- Use proper client setup
+## Prisma Schema
+- Use clear model naming (PascalCase)
+- Define proper relations and field types
+- Implement indexes on frequently queried fields
+- Use enums for fixed value sets
+- Add constraints (unique, default, optional)
+- Configure connection pooling in schema.prisma
 
-## Prisma Models
-- Use proper model naming
-- Implement proper relations
-- Use proper field types
-- Define proper indexes
-- Implement proper constraints
-- Use proper enums
+## Migrations & Seeding
+- Generate migrations for schema changes
+- Review migrations before applying
+- Use proper seeding for initial/test data
+- Version control all migration files
+- Test migrations on staging before production
 
-## Prisma Queries
-- Use proper query optimization
-- Implement proper filtering
-- Use proper relations loading
-- Handle transactions properly
-- Implement proper pagination
-- Use proper aggregations
+## Query Optimization
+- Avoid N+1 queries (use `include` or `select`)
+- Use proper filtering and pagination
+- Implement cursor-based pagination for large datasets
+- Leverage transactions for related operations
+- Use aggregations and grouping efficiently
+- Batch operations where possible
 
-## Supabase Setup
-- Configure proper project setup
-- Implement proper authentication
-- Use proper database setup
-- Configure proper storage
-- Implement proper policies
-- Use proper client setup
-
-## Supabase Security
-- Implement proper RLS policies
-- Use proper authentication
-- Configure proper permissions
-- Handle sensitive data properly
-- Implement proper backups
-- Use proper encryption
-
-## Supabase Queries
-- Use proper query optimization
-- Implement proper filtering
-- Use proper joins
-- Handle real-time properly
-- Implement proper pagination
-- Use proper functions
-
-## Database Design
-- Use proper normalization
-- Implement proper indexing
-- Use proper constraints
-- Define proper relations
-- Implement proper cascades
-- Use proper data types
-
-## Performance
-- Use proper connection pooling
-- Implement proper caching
-- Use proper query optimization
-- Handle N+1 queries properly
-- Implement proper batching
-- Monitor performance metrics
+## PostgreSQL Configuration
+- Configure proper connection strings with pooling
+- Use environment variables for credentials
+- Set appropriate pool size and timeout
+- Enable query logging in development
+- Use read replicas for scaling (if applicable)
 
 ## Security
-- Use proper authentication
-- Implement proper authorization
-- Handle sensitive data properly
-- Use proper encryption
-- Implement proper backups
-- Monitor security issues
+- Never commit credentials to version control
+- Use parameterized queries (Prisma handles this)
+- Implement proper authentication/authorization
+- Encrypt sensitive data at rest
+- Regular backups with tested restore procedures
+- Monitor and log database access
+
+## Schema Design
+- Normalize to reduce redundancy
+- Use appropriate data types (timestamptz, jsonb, etc)
+- Define cascade rules for deletions
+- Add proper foreign key constraints
+- Index foreign keys and frequently filtered columns
+
+## Performance Monitoring
+- Track slow queries and optimize
+- Monitor connection pool usage
+- Review and optimize indexes regularly
+- Use EXPLAIN ANALYZE for complex queries
+- Set up alerts for connection/performance issues
 
 ## Best Practices
-- Follow database conventions
-- Use proper migrations
-- Implement proper versioning
-- Handle errors properly
-- Document schema properly
-- Monitor database health 
+- Document schema with comments
+- Use TypeScript types generated from Prisma
+- Handle errors with proper try-catch
+- Keep client instantiation singleton pattern
+- Regular database maintenance (VACUUM, ANALYZE)

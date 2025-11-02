@@ -10,38 +10,28 @@ import { useCredits } from '@/contexts/CreditsContext'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 import PhotoStyleSettings from '@/components/customization/PhotoStyleSettings'
+import FreePlanBanner from '@/components/styles/FreePlanBanner'
+import PackageSelector from '@/components/packages/PackageSelector'
 import { PhotoStyleSettings as PhotoStyleSettingsType, DEFAULT_PHOTO_STYLE_SETTINGS } from '@/types/photo-style'
 import { BRAND_CONFIG } from '@/config/brand'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { jsonFetcher } from '@/lib/fetcher'
+import { loadStyle, loadStyleByContextId } from '@/domain/style/service'
+import { getPackageConfig } from '@/domain/style/packages'
 
-const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
-const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
+const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
-
-// Helper function to extract key from proxy URL
-function extractKeyFromUrl(url: string): string | undefined {
-  try {
-    const urlObj = new URL(url)
-    if (urlObj.pathname === '/api/files/get') {
-      return urlObj.searchParams.get('key') || undefined
-    }
-    return undefined
-  } catch {
-    return undefined
-  }
-}
 
 export default function StartGenerationPage() {
   const searchParams = useSearchParams()
   const { data: session } = useSession()
   const t = useTranslations('app.sidebar.generate')
   const keyFromQuery = useMemo(() => searchParams.get('key') || '', [searchParams])
-  const typeFromQuery = useMemo(() => searchParams.get('type') as 'personal' | 'company' | null, [searchParams])
+  const typeFromQuery = useMemo(() => searchParams.get('type') as 'personal' | 'team' | null, [searchParams])
   const [key, setKey] = useState<string>('')
   const [selfieId, setSelfieId] = useState<string | null>(null)
   const [isApproved, setIsApproved] = useState<boolean>(Boolean(keyFromQuery))
-  const [generationType, setGenerationType] = useState<'personal' | 'company' | null>(null)
+  const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
   const { credits: userCredits, loading: creditsLoading } = useCredits()
   const [activeContext, setActiveContext] = useState<{
     id: string
@@ -66,6 +56,8 @@ export default function StartGenerationPage() {
   const [contextLoaded, setContextLoaded] = useState(false)
   const [photoStyleSettings, setPhotoStyleSettings] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
+  const [isFreePlan, setIsFreePlan] = useState(false)
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('')
 
   useEffect(() => {
     // Keep local state in sync if query changes
@@ -107,16 +99,62 @@ export default function StartGenerationPage() {
     fetchData()
   }, [session?.user?.id])
 
+  // Check if user is on free plan (based on planPeriod)
+  useEffect(() => {
+    const checkFreePlan = async () => {
+      if (!session?.user?.id) return
+      
+      try {
+        const subRes = await jsonFetcher<{ subscription: { period?: 'free' | 'try_once' | 'monthly' | 'annual' | null } | null }>('/api/user/subscription')
+        const period = subRes?.subscription?.period ?? null
+        const free = period === 'free'
+        setIsFreePlan(free)
+      } catch (err) {
+        console.error('Failed to check subscription:', err)
+        setIsFreePlan(false)
+      }
+    }
+
+    checkFreePlan()
+  }, [session?.user?.id])
+
   // Fetch contexts when generation type is determined
   useEffect(() => {
     const fetchContexts = async () => {
       if (!session?.user?.id || !generationType) return
       
-      console.log('Fetching contexts for generation type:', generationType)
+      console.log('Fetching contexts for generation type:', generationType, 'isFreePlan:', isFreePlan)
       
       try {
-        // Fetch contexts based on generation type
-        const endpoint = generationType === 'personal' ? '/api/contexts/personal' : '/api/contexts/team'
+          // If free plan, always use the Free Package style
+        if (isFreePlan) {
+          console.log('Free plan user - fetching Free Package style')
+          const { contextId, ui } = await loadStyle({ scope: 'freePackage' })
+          
+          if (contextId && ui) {
+            // Use the deserialized UI settings from the loadStyle service
+            const freeContext = {
+              id: contextId,
+              name: 'Free Package Style',
+              settings: ui
+            }
+            setActiveContext(freeContext)
+            setPhotoStyleSettings(ui)
+            setOriginalContextSettings(ui) // Store original context settings
+            setAvailableContexts([]) // Free plan users don't have custom contexts
+            // Set freepackage as selected for free plan users
+            setSelectedPackageId('freepackage')
+          } else {
+            console.error('Free Package style not found')
+            setActiveContext(null)
+            setPhotoStyleSettings(DEFAULT_PHOTO_STYLE_SETTINGS)
+            setOriginalContextSettings(undefined)
+          }
+          return
+        }
+
+        // For paid users, fetch contexts based on generation type
+        const endpoint = generationType === 'personal' ? '/api/styles/personal' : '/api/styles/team'
         console.log('Fetching from endpoint:', endpoint)
         const contextData = await jsonFetcher<{ contexts?: unknown[]; activeContext?: unknown }>(endpoint)
         const contexts = (contextData.contexts || []) as Array<{ id: string; name: string; settings?: Record<string, unknown> }>
@@ -134,72 +172,26 @@ export default function StartGenerationPage() {
             setActiveContext(null)
           }
           
-          // Convert context settings to photo style settings format
+          // Load deserialized settings for active context if available
           if (activeContext) {
-            const context = activeContext
-            const legacy = context as { backgroundUrl?: string; logoUrl?: string; backgroundPrompt?: string; stylePreset?: string }
-            const bg = (context.settings?.background ?? {}) as { key?: string; type?: string; prompt?: string }
-            const brand = (context.settings?.branding ?? {}) as { logoKey?: string; type?: string }
-            const settings: PhotoStyleSettingsType = {
-              background: {
-                ...bg,
-                // If settings exist but key is missing, try to get it from legacy URL
-                key: bg.key || 
-                     (legacy.backgroundUrl ? extractKeyFromUrl(legacy.backgroundUrl) : undefined),
-                // If settings exist but type is missing, determine from legacy URL
-                type: ((t => (t === 'office' || t === 'neutral' || t === 'gradient' || t === 'custom' || t === 'user-choice') ? t : undefined)(bg.type as string))
-                      || (legacy.backgroundUrl ? 'custom' : 'office'),
-                // If settings exist but prompt is missing, get from legacy field
-                prompt: bg.prompt || legacy.backgroundPrompt
-              },
-              branding: {
-                ...brand,
-                // If settings exist but logoKey is missing, try to get it from legacy URL
-                logoKey: brand.logoKey || 
-                         (legacy.logoUrl ? extractKeyFromUrl(legacy.logoUrl) : undefined),
-                // If settings exist but type is missing, determine from legacy URL
-                type: (brand.type === 'include' || brand.type === 'exclude' || brand.type === 'user-choice')
-                  ? brand.type
-                  : (legacy.logoUrl ? 'include' : 'exclude')
-              },
-              style: (() => {
-                const s = context.settings?.style as { type?: string; preset?: string } | undefined
-                if (s && (s.type === 'preset' || s.type === 'user-choice')) {
-                  return {
-                    type: s.type,
-                    preset: s.preset as 'corporate' | 'casual' | 'creative' | 'modern' | 'classic' | 'artistic' | undefined
-                  }
-                }
-                return {
-                  type: 'preset',
-                  preset: ((p: string | undefined) => {
-                    const allowed = ['corporate','casual','creative','modern','classic','artistic'] as const
-                    return (allowed as readonly string[]).includes(p || '') ? (p as typeof allowed[number]) : 'corporate'
-                  })(legacy.stylePreset)
-                }
-              })(),
-              // Set other categories to safe defaults
-              clothing: (() => {
-                const c = context.settings?.clothing as { style?: string; type?: string } | undefined
-                return { style: (c?.style as 'business' | 'startup' | 'black-tie' | 'user-choice') || 'user-choice', type: c?.type as 'business' | 'startup' | 'black-tie' | 'user-choice' | undefined }
-              })(),
-              expression: (() => {
-                const e = context.settings?.expression as { type?: string } | undefined
-                const allowed = ['professional','friendly','serious','confident','user-choice']
-                return { type: (allowed.includes(e?.type || '') ? (e!.type as 'professional' | 'friendly' | 'serious' | 'confident' | 'user-choice') : 'user-choice') }
-              })(),
-              lighting: (() => {
-                const l = context.settings?.lighting as { type?: string } | undefined
-                const allowed = ['natural','studio','soft','dramatic','user-choice']
-                return { type: (allowed.includes(l?.type || '') ? (l!.type as 'natural' | 'studio' | 'soft' | 'dramatic' | 'user-choice') : 'user-choice') }
-              })()
-            }
-            setPhotoStyleSettings(settings)
-            setOriginalContextSettings(settings) // Store original context settings
+            // loadStyleByContextId extracts packageId from the context settings in the database
+            const { ui, pkg } = await loadStyleByContextId(activeContext.id)
+            setPhotoStyleSettings(ui)
+            setOriginalContextSettings(ui) // Store original context settings
+            
+            // Use the packageId from the loaded package (already extracted from database context)
+            // This will be 'freepackage', 'headshot1', or any other package the team admin set
+            const contextPackageId = pkg.id
+            console.log('Loaded context packageId from database:', contextPackageId)
+            setSelectedPackageId(contextPackageId)
           } else {
             // No active context - initialize with default settings for individual users
             setPhotoStyleSettings(DEFAULT_PHOTO_STYLE_SETTINGS)
             setOriginalContextSettings(undefined)
+            // Set default package if not already set (PackageSelector will set it, but this is a fallback)
+            if (!selectedPackageId) {
+              setSelectedPackageId(PRICING_CONFIG.defaultSignupPackage)
+            }
           }
       } catch (err) {
         console.error('Failed to fetch contexts:', err)
@@ -207,55 +199,29 @@ export default function StartGenerationPage() {
     }
 
     fetchContexts()
-  }, [session?.user?.id, generationType])
+  }, [session?.user?.id, generationType, isFreePlan, selectedPackageId])
 
-  const onPhotoUploaded = async ({ key }: { key: string; url?: string }) => {
-    setKey(key)
-    
-    // Create selfie record and get the ID
-    try {
-      const { id } = await jsonFetcher<{ id: string }>('/api/uploads/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key }),
-        credentials: 'include' // Required for Safari to send cookies
-      })
-      setSelfieId(id)
-    } catch (error) {
-      console.error('Error creating selfie record:', error)
-    }
-  }
-
-  const onApprove = () => {
+  const onSelfieApproved = async (selfieKey: string, selfieId?: string) => {
+    setKey(selfieKey)
     setIsApproved(true)
-  }
-
-  const onReject = async () => {
-    await deleteSelfie()
-  }
-
-  const onRetake = async () => {
-    await deleteSelfie()
-  }
-
-  const deleteSelfie = async () => {
-    if (!key) return
     
-    try {
-      await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(key)}`, {
-        method: 'DELETE',
-        credentials: 'include' // Required for Safari to send cookies
-      })
-      
-      setKey('')
-      setIsApproved(false)
-    } catch (error) {
-      console.error('Error deleting selfie:', error)
-      // You might want to show a toast notification here
+    // Set selfie ID if provided
+    if (selfieId) {
+      setSelfieId(selfieId)
+    } else {
+      // Fallback to finding selfie by key if ID not provided
+      await findSelfieByKey(selfieKey)
     }
   }
 
-  const onTypeSelected = (type: 'personal' | 'company') => {
+  const onSelfieUploadCancel = () => {
+    // User cancelled upload - go back to no key state
+    setKey('')
+    setIsApproved(false)
+    setSelfieId(null)
+  }
+
+  const onTypeSelected = (type: 'personal' | 'team') => {
     console.log('Generation type selected:', type)
     setGenerationType(type)
   }
@@ -267,6 +233,9 @@ export default function StartGenerationPage() {
     }
 
     try {
+      // Ensure packageId is set (default to headshot1 if not selected)
+      const packageId = selectedPackageId || PRICING_CONFIG.defaultSignupPackage
+      
       // Create generation request
       const result = await jsonFetcher<{ success?: boolean; error?: string }>('/api/generations/create', {
         method: 'POST',
@@ -276,17 +245,17 @@ export default function StartGenerationPage() {
         body: JSON.stringify({
           selfieId: selfieId,
           contextId: activeContext?.id,
-          styleSettings: photoStyleSettings,
+          styleSettings: { ...photoStyleSettings, packageId },
           prompt: activeContext?.customPrompt || 'Professional headshot',
           generationType,
-          creditSource: generationType === 'company' ? 'company' : 'individual',
+          creditSource: generationType === 'team' ? 'team' : 'individual',
         }),
       })
 
       console.log('Generation created:', result)
 
       // Redirect to appropriate generations page based on generation type
-      const redirectPath = generationType === 'company' ? '/app/generations/team' : '/app/generations/personal'
+      const redirectPath = generationType === 'team' ? '/app/generations/team' : '/app/generations/personal'
       window.location.href = redirectPath
       
     } catch (error) {
@@ -296,33 +265,33 @@ export default function StartGenerationPage() {
   }
 
   // Determine user access and whether to show generation type selector
-  const hasCompanyAccess = Boolean(session?.user?.person?.companyId)
+  const hasTeamAccess = Boolean(session?.user?.person?.teamId)
   const hasIndividualAccess = userCredits.individual > 0
-  const companyName = session?.user?.person?.company?.name
+  const teamName = session?.user?.person?.team?.name
   
   // Check if user has enough credits for generation
-  const hasEnoughCredits = (generationType === 'company' && userCredits.company >= PRICING_CONFIG.credits.perGeneration) || 
+  const hasEnoughCredits = (generationType === 'team' && userCredits.team >= PRICING_CONFIG.credits.perGeneration) || 
                           (generationType === 'personal' && userCredits.individual >= PRICING_CONFIG.credits.perGeneration)
   
   // Check if user has any credits at all
-  const hasAnyCredits = userCredits.company > 0 || userCredits.individual > 0
+  const hasAnyCredits = userCredits.team > 0 || userCredits.individual > 0
   
   // Check if we have all required data
   const canGenerate = hasEnoughCredits && selfieId && generationType
   
   // Only show generation type selector if user has both options available
-  const shouldShowGenerationTypeSelector = hasCompanyAccess && hasIndividualAccess
+  const shouldShowGenerationTypeSelector = hasTeamAccess && hasIndividualAccess
 
   // Auto-select generation type if user only has one option
   useEffect(() => {
     if (!creditsLoading && contextLoaded && isApproved && !generationType) {
-      console.log('Auto-selecting generation type. hasCompanyAccess:', hasCompanyAccess, 'hasIndividualAccess:', hasIndividualAccess, 'typeFromQuery:', typeFromQuery)
+      console.log('Auto-selecting generation type. hasTeamAccess:', hasTeamAccess, 'hasIndividualAccess:', hasIndividualAccess, 'typeFromQuery:', typeFromQuery)
       
       // If type is specified in URL, use it (if user has access)
       if (typeFromQuery) {
-        if (typeFromQuery === 'company' && hasCompanyAccess) {
-          console.log('Using company generation type from URL')
-          setGenerationType('company')
+        if (typeFromQuery === 'team' && hasTeamAccess) {
+          console.log('Using team generation type from URL')
+          setGenerationType('team')
           return
         } else if (typeFromQuery === 'personal' && hasIndividualAccess) {
           console.log('Using personal generation type from URL')
@@ -335,17 +304,17 @@ export default function StartGenerationPage() {
         // User has both options, keep generationType as null to show selector
         console.log('User has both options, showing selector')
         return
-      } else if (hasCompanyAccess) {
-        // User only has company access
-        console.log('Auto-selecting company generation type')
-        setGenerationType('company')
+      } else if (hasTeamAccess) {
+        // User only has team access
+        console.log('Auto-selecting team generation type')
+        setGenerationType('team')
       } else if (hasIndividualAccess) {
         // User only has individual access
         console.log('Auto-selecting personal generation type')
         setGenerationType('personal')
       }
     }
-  }, [creditsLoading, contextLoaded, isApproved, shouldShowGenerationTypeSelector, hasCompanyAccess, hasIndividualAccess, generationType, typeFromQuery])
+  }, [creditsLoading, contextLoaded, isApproved, shouldShowGenerationTypeSelector, hasTeamAccess, hasIndividualAccess, generationType, typeFromQuery])
 
   // Show upsell window if no credits available
   if (!creditsLoading && !hasAnyCredits) {
@@ -390,28 +359,13 @@ export default function StartGenerationPage() {
   return (
     <div className="space-y-6">
       {!key ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-semibold text-gray-900">{t('getSelfie')}</h1>
-            <Link 
-              href="/app/dashboard"
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
-            >
-              Cancel
-            </Link>
-          </div>
-          <p className="text-sm text-gray-600 mb-4">{t('getSelfieDescription')}</p>
-          <div className="max-w-md">
-            <PhotoUpload onUploaded={onPhotoUploaded} />
-          </div>
-        </div>
-      ) : !isApproved ? (
-        <SelfieApproval
-          uploadedPhotoKey={key}
-          onApprove={onApprove}
-          onReject={onReject}
-          onRetake={onRetake}
-          onCancel={() => {}}
+        <SelfieUploadFlow
+          onSelfieApproved={onSelfieApproved}
+          onCancel={onSelfieUploadCancel}
+          onError={(error) => {
+            console.error('Selfie upload error:', error)
+            alert(error)
+          }}
         />
       ) : creditsLoading || !contextLoaded ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -420,11 +374,11 @@ export default function StartGenerationPage() {
             <p className="mt-2 text-sm text-gray-600">Loading...</p>
           </div>
         </div>
-      ) : !activeContext && hasCompanyAccess ? (
+      ) : !activeContext && hasTeamAccess ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">No Active Context</h2>
-            <p className="text-gray-600 mb-4">Company users need to set up a photo style context before generating photos.</p>
+            <p className="text-gray-600 mb-4">Team users need to set up a photo style context before generating photos.</p>
             <Link 
               href="/app/contexts" 
               className="inline-flex items-center px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-hover"
@@ -438,8 +392,8 @@ export default function StartGenerationPage() {
           uploadedPhotoKey={key}
           onTypeSelected={onTypeSelected}
           userCredits={userCredits}
-          hasCompanyAccess={hasCompanyAccess}
-          companyName={companyName}
+          hasTeamAccess={hasTeamAccess}
+          teamName={teamName}
         />
       ) : (
         <>
@@ -481,7 +435,7 @@ export default function StartGenerationPage() {
                     <p className="text-xs text-red-700 mb-2">
                       {t('insufficientCreditsMessage', { 
                         required: PRICING_CONFIG.credits.perGeneration,
-                        current: generationType === 'company' ? userCredits.company : userCredits.individual 
+                        current: generationType === 'team' ? userCredits.team : userCredits.individual 
                       })}
                     </p>
                     <Link
@@ -505,8 +459,8 @@ export default function StartGenerationPage() {
             </div>
           </div>
 
-          {/* Context Selection for Personal and Team Generations */}
-          {(generationType === 'personal' || generationType === 'company') && (
+          {/* Context Selection for Personal and Team Generations - Hide for free plan users */}
+          {!isFreePlan && (generationType === 'personal' || generationType === 'team') && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 {generationType === 'personal' ? t('selectPhotoStyle') : 'Select Team Photo Style'}
@@ -550,12 +504,34 @@ export default function StartGenerationPage() {
               </div>
             </div>
           )}
+          
+          {/* Free plan banner + Free package info */}
+          {(isFreePlan || selectedPackageId === 'freepackage') && (
+            <>
+              <FreePlanBanner variant="personal" className="mb-4" />
+            </>
+          )}
+
+          {/* Package Selector - Hide for free package contexts (set by team admin) */}
+          {selectedPackageId !== 'freepackage' && (
+            <PackageSelector
+              value={selectedPackageId}
+              onChange={(packageId) => {
+                setSelectedPackageId(packageId)
+                // Reload style settings for the selected package
+                const pkg = getPackageConfig(packageId)
+                setPhotoStyleSettings(pkg.defaultSettings)
+              }}
+            />
+          )}
 
           {/* Photo Style Settings */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Photo Style Settings</h2>
             <p className="text-sm text-gray-600 mb-6">
-              {activeContext ? (
+              {isFreePlan || selectedPackageId === 'freepackage' ? (
+                <>Free Package style settings are applied. These settings are fixed for this context.</>
+              ) : activeContext ? (
                 <>Predefined settings from your context are shown below. You can customize user-choice settings for this generation.</>
               ) : generationType === 'personal' ? (
                 <>Customize your photo style settings for this generation. All options are available since you chose freestyle.</>
@@ -567,9 +543,10 @@ export default function StartGenerationPage() {
             <PhotoStyleSettings
               value={photoStyleSettings}
               onChange={setPhotoStyleSettings}
-              readonlyPredefined={!!activeContext}
+              readonlyPredefined={!!activeContext || isFreePlan || selectedPackageId === 'freepackage'}
               originalContextSettings={originalContextSettings}
-              showToggles={!!activeContext}
+              showToggles={!!activeContext && !isFreePlan && selectedPackageId !== 'freepackage'}
+              packageId={selectedPackageId || PRICING_CONFIG.defaultSignupPackage}
             />
 
             {/* Custom Prompt */}

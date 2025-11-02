@@ -59,10 +59,11 @@ export async function POST(request: Request) {
   }
 }
 
-// GET endpoint to view waitlist (admin only - add auth later)
+// GET endpoint to view waitlist (platform admin only)
 export async function GET() {
   const session = await auth();
-  if (!session?.user || session.user.role !== 'admin') {
+  // Check platform admin status (isAdmin field, not role)
+  if (!session?.user || !session.user.isAdmin) {
     return NextResponse.json(unauthorized('errors.unauthorized', 'Unauthorized'), { status: 401 });
   }
 

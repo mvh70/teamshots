@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
+import { getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +19,8 @@ export async function GET(request: NextRequest) {
         usedAt: { not: null }
       },
       include: {
-        company: true
+        team: true,
+        person: true
       }
     })
 
@@ -26,17 +28,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
     }
 
-    // Find the person by email from the invite
-    const person = await prisma.person.findFirst({
-      where: {
-        email: invite.email,
-        companyId: invite.companyId
-      }
-    })
-
-    if (!person) {
+    if (!invite.person) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 })
     }
+
+    const person = invite.person
 
     // Get stats for the person
     const [photosGenerated, selfiesCount, teamPhotosCount] = await Promise.all([
@@ -60,23 +56,13 @@ export async function GET(request: NextRequest) {
         where: {
           personId: person.id,
           status: 'completed',
-          generationType: 'company'
+          generationType: 'team'
         }
       })
     ])
 
-    // Calculate remaining credits
-    const creditsUsed = await prisma.generation.aggregate({
-      where: {
-        personId: person.id,
-        status: 'completed'
-      },
-      _sum: {
-        creditsUsed: true
-      }
-    })
-
-    const creditsRemaining = Math.max(0, invite.creditsAllocated - (creditsUsed._sum.creditsUsed || 0))
+    // Calculate remaining credits using the same logic as getPersonCreditBalance
+    const creditsRemaining = await getTeamInviteRemainingCredits(invite.id)
 
     const stats = {
       photosGenerated,

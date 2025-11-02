@@ -1,10 +1,13 @@
 {
+  "common": {
+    "loading": "Loading..."
+  },
   "nav": {
     "home": "Home",
     "pricing": "Pricing",
     "signin": "Sign In",
     "dashboard": "Dashboard",
-    "joinWaitlist": "Get Started",
+    "joinWaitlist": "Get 1 free generation",
     "settings": "Settings"
   },
   "hero": {
@@ -14,12 +17,15 @@
     "instantTransformation": "⚡ Instant transformation",
     "getStartedFree": "Sign Up Now",
     "viewPricing": "View Pricing",
-    "joinWaitlist": "Get Started",
+    "joinWaitlist": "Get 1 free generation",
+    "freeCtaSubtext": "No commitment. 60 seconds.",
+    "freeCtaAria": "Get one free generation when you sign up. No commitment.",
     "urgency": "Limited Beta Access",
-    "guarantee": "30-day money-back guarantee",
+    "guarantee": "Your first generation is free. No commitment.",
     "secure": "SSL encrypted & secure",
     "noSpam": "No spam, ever",
-    "joinedBadge": "Join hundreds of teams already using AI headshots"
+    "joinedBadge": "Join hundreds of teams already using AI headshots",
+    "freeOffer": "Get 1 free generation when you sign up"
   },
   "features": {
     "title": "Professional team headshots in about a minute",
@@ -109,7 +115,7 @@
     "totalTime": "Total time:",
     "totalTimeValue": "60 seconds",
     "cta": "Get Started",
-    "guarantee": "Try once almost for free, before you subscribe",
+    "guarantee": "Your first generation is free—no commitment required",
     "steps": {
       "1": {
         "title": "Pick your perfect backdrop",
@@ -164,7 +170,7 @@
       },
       "2": {
         "question": "How much does it cost?",
-        "answer": "We offer flexible pricing starting at $5 for a one-time trial (10 credits), or monthly subscriptions starting at $24/month for 60 credits. Credits never expire, so you can use them whenever you need professional photos."
+        "answer": "Your first generation is free when you sign up. After that: one-time credits from $5, or subscriptions from $24/month. Credits never expire. Each generation uses 4 credits and produces 3–4 variations."
       },
       "3": {
         "question": "What if I'm not satisfied with the results?",
@@ -196,6 +202,7 @@
     "title": "Simple, Transparent Pricing",
     "subtitle": "No hidden fees, no monthly commitments. Pay only for what you use.",
     "mostPopular": "Most Popular",
+    "recommended": "Recommended",
     "questions": "Have questions about pricing?",
     "viewFullPricing": "View Full Pricing Details",
     "poweredBy": "Powered by Google Gemini AI",
@@ -278,6 +285,9 @@
     "description": "Turn team selfies into on-brand headshots without a photoshoot. Fast, consistent, and remote-first."
   },
   "pricing": {
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "freeIntro": "Your first generation is free when you sign up. Choose credits or a plan when you’re ready.",
     "title": "Simple, Transparent Pricing",
     "subtitle": "Choose the plan that works best for you. All plans include credits that roll over and never expire.",
     "mostPopular": "Most Popular",
@@ -286,51 +296,83 @@
     "generations": "generations",
     "year": "year",
     "save": "Save",
+    "topUpTitle": "Credit top-up",
+    "individualTopUp": "Individual top-up",
+    "proTopUp": "Pro top-up",
+    "tryOnceTopUp": "Try Once top-up",
+    "topUpSubtitle": "For occasional use",
+    "topUpPackageLabel": "Top-up package",
+    "confirmTopUp": "Refill my credits",
+    "photoGenerations": "photo generations",
+    "variations": "variations",
+    "photosRetained30": "Photos retained for 30 days from generation",
+    "photosRetainedAfterSubscription": "Photos retained while active + 30 days after",
+    "topUpCreditsAvailable": "Top-up credits available",
+    "noSupport": "No support",
+    "checkoutCanceled": "Checkout canceled. No charges were made.",
+    "checkoutError": "Something went wrong. Please try again.",
+    "checkoutApiError": "Failed to create checkout session",
+    "actions": {
+      "upgradeToYearly": "Change to yearly",
+      "downgradeToMonthly": "Downgrade to monthly",
+      "effectiveOn": "Effective on {date}"
+    },
     "plans": {
       "tryOnce": {
         "name": "Try Once",
         "period": "one-time",
         "description": "Perfect for testing the service",
         "features": [
-          "<strong>{photos}</strong> photo generation ({regenerations} variations)",
+          "<strong>{photos}</strong> photo generation",
+          "Regenerate up to 2 times to perfect each photo",
           "Photos retained for 30 days from generation",
+          "Top-up credits available",
           "Email support"
         ],
-        "cta": "Sign Up Now"
+        "cta": "Test drive a headshot"
       },
       "individual": {
         "name": "Individual",
         "period": "per month",
         "description": "For single person use",
         "features": [
-          "<strong>{photos}</strong> photo generations ({regenerations} variations)",
+          "<strong>{photos}</strong> photo generations",
+          "Regenerate up to 3 times to perfect each photo",
           "Photos retained while active + 30 days after",
           "Credits roll over, never expire",
           "Top-up credits available",
           "Priority email support"
         ],
-        "cta": "Sign Up Now"
+        "cta": "Level me up"
       },
       "pro": {
         "name": "Pro",
         "period": "per month",
         "description": "For teams",
         "features": [
-          "<strong>{photos}</strong> photo generations ({regenerations} variations)",
+          "<strong>{photos}</strong> photo generations",
+          "Regenerate up to 4 times to perfect each photo",
           "All Individual features, plus:",
           "Team member invitations",
           "Team photo management",
-          "Company context templates",
+          "Company style templates",
           "Admin approval workflow",
           "Discounted top-up credits",
           "Priority support with dedicated account manager"
         ],
-        "cta": "Sign Up Now"
+        "cta": "Level up the team"
       }
     },
+    "perPhotoVariation": "per photo variation",
+    "includesVariationsPerPhoto": "Includes {count} variations per photo",
+    "variationsBullet": "Regenerate up to {count} times to perfect each photo",
     "faq": {
       "title": "Frequently Asked Questions",
       "questions": {
+        "freeGen": {
+          "question": "Do I get a free generation?",
+          "answer": "Yes. New accounts receive 1 free generation. Each generation uses 4 credits and produces 3–4 variations."
+        },
         "howCreditsWork": {
           "question": "How do credits work?",
           "answer": "Each photo generation uses 4 credits and produces 3-4 high-quality variations. Credits roll over month-to-month and never expire."
@@ -368,23 +410,24 @@
       "An error occurred": "An error occurred"
     },
     "signup": {
+      "freeBadge": "Includes 1 free generation on us",
       "title": "Create your account",
       "welcome": "Create your account",
-      "welcomeSubtitle": "Join in seconds. No photoshoot, no hassle.",
+      "welcomeSubtitle": "Join in seconds. No photoshoot, no photographer, no problem.",
       "benefit1": "Generate professional headshots in 60 seconds",
-      "benefit2": "Credits never expire; use them when you need",
+      "benefit2": "Credits never expire. Use them whenever.",
       "benefit3": "Perfect for remote teams and new hires",
       "stepOf": "Step {step} of 2",
       "emailLabel": "Email address",
       "passwordLabel": "Password",
-      "confirmPasswordLabel": "Confirm Password",
-      "sending": "Sending...",
-      "sendCode": "Send Verification Code",
-      "verificationCodeLabel": "Verification Code",
-      "enterCodeFor": "Enter the 6-digit code sent to {email}",
+      "confirmPasswordLabel": "Confirm password",
+      "sending": "Sending verification code...",
+      "sendCode": "Send verification code",
+      "verificationCodeLabel": "Verification code",
+      "enterCodeFor": "Enter the 6-digit code we just sent to {email}",
       "verifying": "Verifying...",
-      "verifyCode": "Verify Code",
-      "bannerTitle": "You're in! One last step 🎉",
+      "verifyCode": "Verify code",
+      "bannerTitle": "You're in. One last step.",
       "didntReceiveCode": "Didn't receive a code?",
       "info": {
         "checkoutSuccess": "Checkout successful. You're now subscribed to {plan}. We sent a one-time code to {email}. Enter it below to confirm your email."
@@ -392,23 +435,28 @@
       "planPro": "Pro",
       "planIndividual": "Individual",
       "planGeneric": "your plan",
-      "firstNameLabel": "First Name",
+      "planTryOnce": "Try Once",
+      "planSummaryTryOnce": "{credits} credits, {photos} photos",
+      "planSummaryPro": "{credits} credits/month, {photos} photos/month",
+      "planSummaryIndividual": "{credits} credits/month, {photos} photos/month",
+      "selectPlanPrompt": "Select a plan to continue",
+      "firstNameLabel": "First name",
       "userTypeLabel": "How will you use TeamShots?",
       "individual": "Individual",
-      "individualDesc": "For personal use",
+      "individualDesc": "For personal use. Just you, looking great.",
       "team": "Team",
-      "teamDesc": "For company/team use",
-      "accountTypeLabel": "Account Type",
+      "teamDesc": "For company or team use. Your whole crew.",
+      "accountTypeLabel": "Account type",
       "personalUse": "Personal use",
-      "companyUse": "Company use",
-      "companyWebsiteLabel": "Company Website",
-      "creating": "Creating Account...",
-      "completeRegistration": "Complete Registration",
+      "teamUse": "Company use",
+      "teamWebsiteLabel": "Company website",
+      "creating": "Creating your account...",
+      "completeRegistration": "Complete registration",
       "haveAccount": "Already have an account? Sign in",
       "resendCode": "Resend code",
       "resendIn": "Resend in {seconds}s",
       "otpHelp": "Code expires in 10 min",
-      "newCodeSent": "Invalid/expired code. A new verification code was sent.",
+      "newCodeSent": "Invalid or expired code. A new verification code was sent.",
       "accountExists": "Account already exists. Please sign in with your existing password.",
       "Failed to send OTP": "Failed to send OTP",
       "Invalid OTP": "Invalid OTP",
@@ -453,11 +501,16 @@
       "primary": {
         "generate": "Generate Photos"
       },
+      "plan": {
+        "free": "Free plan",
+        "individual": "Individual plan",
+        "pro": "Pro plan"
+      },
       "credits": {
         "label": "Credits",
         "title": "Available Credits",
         "individual": "Personal Credits",
-        "company": "Company Credits",
+        "team": "Team Credits",
         "allocated": "of which allocated to invites",
         "monthlyReset": "Monthly Reset",
         "progress": "{used}/{total}",
@@ -499,8 +552,8 @@
         "title": "Welcome back, {name}! 👋",
         "subtitle": {
           "individual": "You've generated {count} professional photos. Ready to create more?",
-          "company": "Your team has generated {count} professional photos this month. Keep up the great work!",
-          "companyAdmin": "Your team has generated {count} professional photos this month. {teamMembers} team members are ready to create more."
+          "team": "Your team has generated {count} professional photos this month. Keep up the great work!",
+          "teamAdmin": "Your team has generated {count} professional photos this month. {teamMembers} team members are ready to create more."
         }
       },
       "stats": {
@@ -544,7 +597,11 @@
         "individual": "Individual plan activated successfully! {credits} credits have been added to your account.",
         "pro": "Pro plan activated successfully! {credits} credits have been added to your account.",
         "topUp": "Credit top-up completed successfully! Your credits have been added to your account.",
-        "default": "Purchase completed successfully! Your credits have been added to your account."
+        "default": "Purchase completed successfully! Your credits have been added to your account.",
+        "titleTryOnce": "All set! 🎉",
+        "titleIndividual": "You're in! 🚀",
+        "titlePro": "Pro unlocked! 🎯",
+        "titleTopUp": "Credits loaded! ⚡"
       },
       "timeAgo": {
         "justNow": "Just now",
@@ -558,7 +615,8 @@
       "subtitle": "Manage your account preferences and company settings",
         "tabs": {
           "teamInformation": "Team information",
-          "subscriptionBilling": "Subscription & Billing",
+          "subscription": "Subscription",
+          "billing": "Billing",
           "adminTools": "Admin tools",
           "accountInfo": "Account info"
         },
@@ -574,32 +632,33 @@
             "analytics": "Analytics for your own usage"
           }
         },
-        "company": {
+        "team": {
           "description": "Company mode - Team management enabled",
           "features": {
             "title": "Company Mode Features:",
             "team": "Team member management and invitations",
-            "credits": "Company-wide credit allocation",
+            "credits": "Team-wide credit allocation",
             "contexts": "Shared photo styles and settings",
             "analytics": "Team analytics and reporting",
             "admin": "Admin controls and permissions"
           }
         }
       },
-      "companyInfo": {
-        "title": "Company Information",
+      "teamInfo": {
+        "title": "Team Information",
         "name": {
-          "label": "Company Name",
-          "placeholder": "Enter your company name"
+          "label": "Team Name",
+          "placeholder": "Enter your team name"
         },
         "website": {
           "label": "Company Website (Optional)",
           "placeholder": "https://yourcompany.com"
         },
-        "adminNote": "You are the company administrator with full access to team management features."
+        "adminNote": "You are the team administrator with full access to team management features."
       },
       "accountInfo": {
         "title": "Account Information",
+        "intro": "🛟 You won't need this info unless something's gone wrong and support asks for it. Just in case, here it is!",
         "email": "Email",
         "name": "Name",
         "userId": "User ID",
@@ -608,20 +667,57 @@
         "notProvided": "Not provided"
       },
       "subscription": {
-        "title": "Subscription & Billing",
+        "downgrade": {
+          "title": "Downgrade to {tier} monthly? 🤔",
+          "description": "The path less traveled... but with fewer savings! 🗺️",
+          "button": "Proceed anyway (we tried!) 😅"
+        },
+        "title": "Subscription",
         "noSubscription": "No active subscription. Choose a plan to get started.",
-        "upgradeOptions": "Upgrade Options"
+        "upgradeOptions": "Upgrade Options",
+        "plan": {
+          "individual": "Individual subscription",
+          "pro": "Pro subscription"
+        },
+        "cancelConfirm": "Are you sure you want to cancel your subscription? Your benefits remain active until the end of the current billing period. After the last subscription day, your photos will be retained for 30 days.",
+        "downgrading": {
+          "note": "📉 Switching to monthly? Your benefits remain active until the end of your annual period.",
+          "noSavings": "We won't judge (but we did try to warn you about missing out on those sweet savings 🍯).",
+          "supportLinkText": "Still wanna switch?"
+        },
+        "cancelling": {
+          "sorryMessage": "😭 We're sorry to see you go! Your benefits will remain active until the end of your billing period.",
+          "photosRetained": "Don't worry – your photos won't disappear! They'll hang around for 30 days after cancellation so you can grab what you need (because we're sentimental like that 📸).",
+          "changedMind": "Changed your mind? {supportLink} keep your photos looking perfect!",
+          "supportLinkText": "We're here to help"
+        }
+      },
+      "billing": {
+        "title": "Billing & Invoices",
+        "free": {
+          "message": "🎉 Hey there! You haven't bought anything yet, so this screen is empty. No invoices, no bills, no surprises (except the good kind when you see our photos!)",
+          "button": "Fill this screen with greatness! 🚀"
+        },
+        "tryOnce": {
+          "message": "🎉 Yay, you bought some photos! Invoices will appear here soon (we're just adding the finishing touches to make them look professional, because that's how we roll)."
+        },
+        "individual": {
+          "message": "🎉 Yay, you bought some photos! Invoices will appear here soon (we're just adding the finishing touches to make them look professional, because that's how we roll)."
+        },
+        "pro": {
+          "message": "🎉 Yay, we know that as a business you need these invoices. We'll give them to you as soon as possible (because organized finances are hot, and we support that energy)."
+        }
       },
       "roles": {
         "platformAdmin": "Platform Administrator",
-        "companyAdmin": "Company Administrator",
+        "teamAdmin": "Company Administrator",
         "teamMember": "Team Member",
         "individualUser": "Individual User"
       },
       "messages": {
         "companyActivated": "Company mode activated! Team features are now available.",
         "individualActivated": "Individual mode activated. Team features are now hidden.",
-        "companyUpdated": "Company information updated",
+        "teamUpdated": "Company information updated",
         "cannotSwitch": "Cannot switch to individual mode while you are admin of a company with other members. Please remove all team members first.",
         "companyNameRequired": "Company name is required"
       }
@@ -773,7 +869,7 @@
         "remaining": "{credits} individual credits remaining",
         "insufficientCredits": "Insufficient individual credits"
       },
-      "company": {
+      "team": {
         "title": "Company Use",
         "presetStyles": "Company style presets",
         "branded": "Branded with logo",
@@ -843,7 +939,7 @@
       "active": "Active",
       "activeContext": "Active Photo Style: {name}",
       "noActiveContext": "No Active Photo Style",
-      "teamWillUse": "Team members will use this photo style for company photo generations",
+      "teamWillUse": "Team members will use this photo style for team photo generations",
       "individualWillUse": "You will use this photo style for your photo generations",
       "mustSetActive": "You must set an active photo style before inviting team members",
       "mustSetActiveIndividual": "Create and set an active photo style to start generating professional photos"
@@ -861,47 +957,65 @@
     },
     "sections": {
       "photoGenerationSettings": "Photo Generation Settings"
+    },
+    "freePlan": {
+      "title": "Free plan limitation",
+      "bodyPersonal": "Only the Free Package style can be applied. Custom personal styles are disabled on the free plan.",
+      "bodyTeam": "Only the Free Package style can be applied. Custom team styles are disabled on the free plan.",
+      "bodyGeneric": "Only the Free Package style can be applied. Custom styles are disabled on the free plan.",
+      "stamp": "View Only",
+      "cta": "Upgrade"
     }
   },
   "emails": {
+    "otp": {
+      "subject": "Your verification code",
+      "body": "Your verification code is: {code}\n\nThis code expires in 5 minutes."
+    },
+    "magicLink": {
+      "subject": "Your sign-in link",
+      "body": "Click the following link to sign in:\n\n{link}\n\nThis link expires in 24 hours."
+    },
     "teamInvite": {
-      "subject": "Team invitation from {companyName} - TeamShots",
-      "text": "You've been invited to join {companyName} on TeamShots.\n\nUse this link to accept the invite: {inviteLink}\n\nYou have been allocated {creditsAllocated} credits to get started.",
-      "title": "🎉 Team Invitation!",
-      "greeting": "Hello! You've been invited to join {companyName}'s team on TeamShots.",
-      "whatYouGet": "What you'll get:",
+      "subject": "Team invitation from {teamName}",
+      "text": "You've been invited to join {teamName} on TeamShots.\n\nUse this link to accept: {inviteLink}\n\nYou have {creditsAllocated} credits to get started.",
+      "title": "Team invitation",
+      "greeting": "You've been invited to join {teamName}'s team on TeamShots. Good news: no awkward office photo sessions required.",
+      "greetingWithName": "Hi {firstName}, you've been invited to join {teamName}'s team on TeamShots. Good news: no awkward office photo sessions required.",
+      "whatYouGet": "What you get:",
       "credits": "{photos} professional photos ({variations} variations)",
-      "companyBranded": "Company-branded photo generation",
+      "teamBranded": "Team-branded photo generation",
+      "photosDescription": "Get {photos} team-branded {photosText} from just a selfie. Your selfie doesn't need to be perfect. We'll handle the professional polish.",
       "noSignup": "No signup required",
       "directAccess": "Direct access to upload your selfie",
-      "acceptButton": "Accept Invitation",
+      "acceptButton": "Accept invitation",
       "expires": "This invitation expires in 24 hours. If you can't click the button, copy and paste this link in your browser:",
-      "questions": "Questions? Reply to this email and we'll help you out."
+      "questions": "Questions? Just reply to this email. We're real people and we'll get back to you."
     },
     "waitlistWelcome": {
-      "subject": "Welcome to TeamShots! 🎉",
-      "title": "Welcome to TeamShots!",
-      "greeting": "Hi there!",
-      "thankYou": "Thank you for joining the TeamShots waitlist! We're excited to have you on board as we prepare to launch the future of professional team photography.",
+      "subject": "Welcome to TeamShots",
+      "title": "Welcome to TeamShots",
+      "greeting": "Hi there",
+      "thankYou": "Thanks for joining the TeamShots waitlist. We're excited to have you on board as we prepare to launch professional team photography.",
       "whatToExpect": "What to expect:",
       "earlyAccess": "Early access to our platform",
-      "exclusiveUpdates": "Exclusive updates on new features",
-      "specialPricing": "Special launch pricing for waitlist members",
-      "getReady": "Get ready to transform your team photos!",
-      "bestRegards": "Best regards,",
+      "exclusiveUpdates": "Updates on new features",
+      "specialPricing": "Launch pricing for waitlist members",
+      "getReady": "Get ready to transform your team photos.",
+      "bestRegards": "Best regards",
       "team": "The TeamShots Team",
       "steps": {
         "step1": {
-          "title": "We're Finalizing the Product",
+          "title": "We're finalizing the product",
           "description": "Our team is working hard to deliver an amazing experience. We're in the final stages of development."
         },
         "step2": {
-          "title": "You'll Get Early Access",
+          "title": "You'll get early access",
           "description": "As a waitlist member, you'll be among the first to try TeamShots when we launch."
         },
         "step3": {
-          "title": "Special Launch Offer",
-          "description": "We'll send you an exclusive discount code when we go live. You'll save big on your first professional team photos."
+          "title": "Launch offer",
+          "description": "We'll send you a discount code when we go live. You'll save on your first professional team photos."
         }
       },
       "valueProps": {
@@ -911,10 +1025,12 @@
         "point3": "Perfect for remote and distributed teams",
         "point4": "AI-powered by Google Gemini"
       },
-      "questions": "Have questions? Just reply to this email - we'd love to hear from you!",
+      "questions": "Have questions? Just reply to this email and we'll help you out.",
       "footer": "You're receiving this because you signed up for the TeamShots waitlist.",
       "unsubscribe": "Don't want these emails?",
-      "unsubscribeLink": "Unsubscribe"
+      "unsubscribeLink": "Unsubscribe",
+      "visitSite": "Visit our site",
+      "copyright": "© {year} TeamShots. All rights reserved."
     }
   },
   "customization": {
@@ -983,6 +1099,14 @@
         "clothing": {
           "title": "Clothing",
           "description": "Clothing style and accessories"
+        },
+        "clothingColors": {
+          "title": "Clothing Colors",
+          "description": "Colors for clothing items"
+        },
+        "shotType": {
+          "title": "Shot Type",
+          "description": "Photo framing and composition"
         },
         "style": {
           "title": "Photo Style",
@@ -1064,12 +1188,22 @@
           "cufflinks": "Cufflinks",
           "watch": "Watch"
         }
+      },
+      "clothingColors": {
+        "title": "Clothing Colors",
+        "subtitle": "Choose colors for clothing items",
+        "predefined": "Predefined"
+      },
+      "shotType": {
+        "title": "Shot Type",
+        "subtitle": "Choose the framing for your photo",
+        "predefined": "Predefined"
       }
     }
   },
   "team": {
     "title": "Team Management",
-    "subtitle": "Invite team members and manage company photo generation",
+    "subtitle": "Invite team members and manage team photo generation",
     "setupRequired": {
       "title": "Setup Required",
       "message": "You must create and set an active photo style before inviting team members.",
@@ -1092,13 +1226,13 @@
         "generations": "Generations",
         "personal": "Personal",
         "personalCredits": "Personal Credits",
-        "company": "Company",
-        "companyCredits": "Company Credits",
+        "team": "Team",
+        "teamCredits": "Team Credits",
         "status": "Status",
         "actions": "Actions"
       },
       "roles": {
-        "companyAdmin": "Company Admin",
+        "teamAdmin": "Team Admin",
         "teamMember": "Team Member",
         "guest": "Guest"
       },
@@ -1121,7 +1255,7 @@
       "subtitle": "Manage pending and sent invitations",
       "noInvites": {
         "title": "No invites sent yet",
-        "subtitle": "Invite team members to start generating company photos",
+        "subtitle": "Invite team members to start generating team photos",
         "button": "Send First Invite"
       },
       "creditsAllocated": "{count} credits allocated",
@@ -1142,8 +1276,8 @@
         "revoking": "Revoking..."
       },
       "noCredits": {
-        "title": "No Company Credits",
-        "subtitle": "You need to add credits to your company account before you can invite new team members.",
+        "title": "No Team Credits",
+        "subtitle": "You need to add credits to your team account before you can invite new team members.",
         "button": "Top Up Credits"
       }
     },
@@ -1153,16 +1287,23 @@
         "label": "Email Address",
         "placeholder": "colleague@company.com"
       },
+      "firstName": {
+        "label": "First Name",
+        "placeholder": "John"
+      },
       "credits": {
         "label": "Credits to Allocate",
-        "hint": "Each photo generation uses 4 credits"
+        "hint": "Each photo generation uses {credits} credits"
       },
+      "success": "Invitation sent successfully to {email}",
       "photoStyle": {
         "label": "Photo Style",
         "useActiveStyle": "Use Active Photo Style",
         "useActiveStyleDesc": "Team member will use the predefined photo style: {name}",
         "allowFreestyle": "Allow Freestyle",
-        "allowFreestyleDesc": "Team member can customize their own photo style"
+        "allowFreestyleDesc": "Team member can customize their own photo style",
+        "useFreePackageStyle": "Free Package Style",
+        "useFreePackageStyleDesc": "Team member will use the free package photo style. This cannot be changed for free plan accounts."
       },
       "whatHappensNext": {
         "title": "What happens next?",
@@ -1193,13 +1334,16 @@
       "backToDashboard": "Back to Dashboard"
     },
     "setup": {
-      "title": "Create Your Company Profile",
-      "subtitle": "Before you can manage your team, please set up your company details.",
+      "title": "Create Your Team Profile",
+      "subtitle": "Before you can manage your team, please set up your team details.",
+      "teamNameLabel": "Team Name",
+      "teamNamePlaceholder": "Your Team Name",
       "companyNameLabel": "Company Name",
       "companyNamePlaceholder": "Your Company Inc.",
-      "companyWebsiteLabel": "Company Website (Optional)",
+      "teamWebsiteLabel": "Company Website (Optional)",
+      "teamWebsitePlaceholder": "https://yourcompany.com",
       "companyWebsitePlaceholder": "https://yourcompany.com",
-      "createButton": "Create Company"
+      "createButton": "Create Team"
     }
   },
   "selfieApproval": {
@@ -1221,5 +1365,68 @@
       "deleting": "Deleting..."
     },
     "disclaimer": "By approving, you confirm you have the rights to use this photo and consent to its use for photo generation."
+  },
+  "api": {
+    "errors": {
+      "internalServerError": "Internal server error",
+      "unauthorized": "Unauthorized",
+      "forbidden": "Forbidden",
+      "teamInvites": {
+        "tokenRequired": "Token is required",
+        "firstNameLastNameRequired": "Token, first name, and last name are required",
+        "emailRequired": "Email is required",
+        "firstNameRequired": "First name is required",
+        "inviteIdRequired": "Invite ID is required",
+        "invalidToken": "Invalid invite token",
+        "expired": "Invite has expired",
+        "alreadyUsed": "Invite has already been used",
+        "personNotFound": "Person not found",
+        "userNotInTeam": "User is not part of a team",
+        "inviteNotFound": "Invite not found or already used",
+        "cannotResendExpired": "Cannot resend expired invite",
+        "failedToSendEmail": "Failed to send email",
+        "inviteResentSuccessfully": "Invite resent successfully",
+        "teamNameRequired": "Team name is required",
+        "userAlreadyInTeam": "User is already part of a team",
+        "userProfileNotFound": "User profile not found",
+        "notAuthorized": "Not authorized for team scope",
+        "notPartOfTeam": "Not part of a team",
+        "noActiveContext": "Team must have an active context before inviting team members. Please create and set a team context first.",
+        "insufficientTeamCredits": "Insufficient team credits. Available: {available}, Required: {required}",
+        "invalidCreditAllocation": "Credits allocated must be a multiple of {credits}"
+      },
+      "credits": {
+        "invalidType": "Invalid type parameter"
+      },
+      "generations": {
+        "userPersonNotFound": "User person record not found",
+        "unauthorized": "Unauthorized",
+        "rateLimitExceeded": "Generation rate limit exceeded. Please try again later.",
+        "eitherSelfieIdOrKeyRequired": "Either selfieId or selfieKey is required"
+      },
+      "user": {
+        "userNotFound": "User not found",
+        "invalidMode": "Invalid mode",
+        "invalidJsonInput": "Invalid JSON input"
+      },
+      "styles": {
+        "nameRequired": "Name is required",
+        "styleCreationNotAvailable": "Style creation is not available on the free plan"
+      },
+      "stripe": {
+        "tryOnceAlreadyUsed": "Try Once already used",
+        "topUpNotAllowedOnFree": "Top-up not allowed on free plan",
+        "missingSubscriptionIdOrNewPriceId": "Missing subscriptionId or newPriceId",
+        "missingSubscriptionIdOrNewLowerPriceId": "Missing subscriptionId or newLowerPriceId",
+        "missingPriceIdTierOrPeriod": "Missing priceId, tier or period",
+        "noActiveSubscription": "No active subscription found",
+        "failedToCancelSubscription": "Failed to cancel subscription",
+        "failedToUpdateSubscription": "Failed to update subscription",
+        "failedToCreateCheckout": "Failed to create checkout session"
+      },
+      "dashboard": {
+        "failedToLoadMembers": "Failed to load members"
+      }
+    }
   }
 }

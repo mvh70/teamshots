@@ -7,7 +7,7 @@ import { Logger } from '@/lib/logger';
 import { Env } from '@/lib/env';
 
 const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
-  apiVersion: '2025-09-30.clover',
+  apiVersion: '2025-10-29.clover',
 });
 
 export async function POST(request: NextRequest) {
@@ -33,13 +33,58 @@ export async function POST(request: NextRequest) {
       stripeCustomerId = customer.id;
     }
 
+    // Enforce business rules before creating session
+    if (!unauth && user) {
+      if (type === 'try_once') {
+        const priorTryOnce = await prisma.creditTransaction.findFirst({
+          where: { userId: user.id, planPeriod: 'try_once' }
+        })
+        if (priorTryOnce) {
+          return NextResponse.json({ error: 'TRY_ONCE_ALREADY_USED' }, { status: 400 })
+        }
+      }
+      if (type === 'top_up') {
+        if ((user.planPeriod || '') === 'free') {
+          return NextResponse.json({ error: 'TOP_UP_NOT_ALLOWED_ON_FREE' }, { status: 400 })
+        }
+      }
+    }
+
     // Determine the base URL with fallback - force HTTP for local development
     // Note: Stripe webhooks must point to HTTPS (https://app.teamshots.vip/api/stripe/webhook)
     // but local redirects should use HTTP (https://localhost:3000)
     const baseUrl = Env.string('NEXT_PUBLIC_BASE_URL')
     
+    // Prefer returning to the page that initiated checkout. Accept explicit body.returnUrl or Referer header.
+    // Validate to prevent open redirects: must start with our baseUrl; otherwise, fall back to dashboard.
+    const requestedReturnUrl = (body as Record<string, unknown>)?.returnUrl as string | undefined;
+    const referer = request.headers.get('referer') || undefined;
+    const preferredReturnUrl = requestedReturnUrl || referer || '';
+    let safeReturnUrl = `${baseUrl}/en/app/dashboard`;
+    try {
+      if (preferredReturnUrl && preferredReturnUrl.startsWith(baseUrl)) {
+        // Strip hash to avoid losing search params when we add ours
+        safeReturnUrl = preferredReturnUrl.split('#')[0];
+      }
+    } catch {}
+
+    // Helper to append query parameters
+    const withParams = (url: string, params: Record<string, string>) => {
+      const u = new URL(url);
+      // Strip existing query params to avoid stale flags (e.g., canceled=true)
+      u.search = ''
+      Object.entries(params).forEach(([k, v]) => {
+        if (typeof v === 'string' && v.length) {
+          u.searchParams.set(k, v);
+        }
+      });
+      return u.toString();
+    };
+
     // Create specific success messages based on purchase type
     let successMessage = ''
+    let successTier = ''
+    let successPeriod = ''
     if (type === 'try_once') {
       successMessage = 'try_once_success'
     } else if (type === 'subscription') {
@@ -47,20 +92,31 @@ export async function POST(request: NextRequest) {
         priceId === PRICING_CONFIG.individual.monthly.stripePriceId ||
         priceId === PRICING_CONFIG.individual.annual.stripePriceId
       );
+      const isAnnual = (
+        priceId === PRICING_CONFIG.individual.annual.stripePriceId ||
+        priceId === PRICING_CONFIG.pro.annual.stripePriceId
+      );
       const tier = isIndividual ? 'individual' : 'pro'
       successMessage = tier === 'individual' ? 'individual_success' : 'pro_success'
+      successTier = tier
+      successPeriod = isAnnual ? 'annual' : 'monthly'
     } else if (type === 'top_up') {
       successMessage = 'top_up_success'
     }
     
-    const tierMeta = (metadata as Record<string, string>)?.tier || ''
-    const periodMeta = (metadata as Record<string, string>)?.period || ''
+    const tierMeta = (metadata as Record<string, string>)?.tier || successTier
+    const periodMeta = (metadata as Record<string, string>)?.period || successPeriod
+    const queryExtras = type === 'subscription'
+      ? { tier: encodeURIComponent(tierMeta), period: encodeURIComponent(periodMeta) }
+      : {}
+
     const successUrl = unauth
-      ? `${baseUrl}/auth/verify?success=true&type=${successMessage}&tier=${encodeURIComponent(tierMeta)}&period=${encodeURIComponent(periodMeta)}&email=${encodeURIComponent(email || '')}`
-      : `${baseUrl}/en/app/dashboard?success=true&type=${successMessage}`
+      ? `${baseUrl}/auth/verify?success=true&type=${successMessage}${type === 'subscription' ? `&tier=${encodeURIComponent(tierMeta)}&period=${encodeURIComponent(periodMeta)}` : ''}&email=${encodeURIComponent(email || '')}`
+      : withParams(safeReturnUrl, { success: 'true', type: successMessage, ...(queryExtras as Record<string, string>) })
+
     const cancelUrl = unauth
       ? `${baseUrl}/auth/signup?canceled=true`
-      : `${baseUrl}/en/app/settings?canceled=true`
+      : withParams(safeReturnUrl, { canceled: 'true' })
 
     // Build checkout session parameters
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -106,6 +162,7 @@ export async function POST(request: NextRequest) {
     } else if (type === 'top_up') {
       // For top-ups, create a one-time payment. Support tiers: 'individual' | 'pro' | 'try_once'
       const { tier, credits } = metadata as { tier?: string; credits?: number };
+      // Allow repeat purchases of top-ups; no one-per-tier restriction
       let pricePerPackage = 0;
       let creditsPerPackage = 0;
       if (tier === 'individual') {
@@ -152,18 +209,8 @@ export async function POST(request: NextRequest) {
       sessionId: checkoutSession.id,
     });
   } catch (error) {
-    Logger.error('Stripe checkout error', { error: error instanceof Error ? error.message : String(error) });
-    
-    if (error instanceof Stripe.errors.StripeError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
-    
-    return NextResponse.json(
-      { error: 'Failed to create checkout session' },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    Logger.error('Failed to create checkout session', { error: message });
+    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
   }
 }

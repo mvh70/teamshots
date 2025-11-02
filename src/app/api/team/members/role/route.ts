@@ -32,20 +32,20 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    if (!['company_member', 'company_admin'].includes(role)) {
+    if (!['team_member', 'team_admin'].includes(role)) {
       return NextResponse.json({ 
-        error: 'Invalid role. Must be company_member or company_admin' 
+        error: 'Invalid role. Must be team_member or team_admin' 
       }, { status: 400 })
     }
 
-    // Find the target person/user to get their company
+    // Find the target person/user to get their team
     let targetPerson = null
     if (personId) {
       targetPerson = await prisma.person.findFirst({
         where: { id: personId },
         include: {
           user: true,
-          company: true
+          team: true
         }
       })
     } else if (userId) {
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         where: { userId: userId },
         include: {
           user: true,
-          company: true
+          team: true
         }
       })
     }
@@ -62,21 +62,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 })
     }
 
-    if (!targetPerson.company) {
-      return NextResponse.json({ error: 'Target user is not part of a company' }, { status: 400 })
+    if (!targetPerson.team) {
+      return NextResponse.json({ error: 'Target user is not part of a team' }, { status: 400 })
     }
 
-    const companyId = targetPerson.company.id
+    const teamId = targetPerson.team.id
 
-    // Security check: Prevent demoting the only admin in a company
-    if (targetPerson.userId === session.user.id && role === 'company_member') {
+    // Security check: Prevent demoting the only admin in a team
+    if (targetPerson.userId === session.user.id && role === 'team_member') {
       // Check if this is the only admin trying to demote themselves
       const adminCount = await prisma.person.count({
         where: {
-          companyId: companyId,
+          teamId: teamId,
           userId: { not: null },
           user: {
-            role: 'company_admin'
+            role: 'team_admin'
           }
         }
       })
@@ -88,40 +88,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If promoting to admin, update the company's adminId
-    if (role === 'company_admin') {
+    // If promoting to admin, update the team's adminId
+    if (role === 'team_admin') {
       if (!targetPerson.userId) {
         return NextResponse.json({ 
           error: 'Cannot promote guest user to admin. User must have an account.' 
         }, { status: 400 })
       }
 
-      // Update company admin
-      await prisma.company.update({
-        where: { id: companyId },
+      // Update team admin
+      await prisma.team.update({
+        where: { id: teamId },
         data: { adminId: targetPerson.userId }
       })
 
       // Update user role
       await prisma.user.update({
         where: { id: targetPerson.userId },
-        data: { role: 'company_admin' }
+        data: { role: 'team_admin' }
       })
     } else {
       // Demoting to member
       if (targetPerson.userId) {
         await prisma.user.update({
           where: { id: targetPerson.userId },
-          data: { role: 'company_member' }
+          data: { role: 'team_member' }
         })
       }
 
       // If this was the admin, we need to assign a new admin
-      if (targetPerson.company.adminId === targetPerson.userId) {
-        // Find another company member to promote to admin
+      if (targetPerson.team.adminId === targetPerson.userId) {
+        // Find another team member to promote to admin
         const otherMember = await prisma.person.findFirst({
           where: {
-            companyId: companyId,
+            teamId: teamId,
             userId: { not: null },
             id: { not: targetPerson.id }
           },
@@ -131,14 +131,14 @@ export async function POST(request: NextRequest) {
         })
 
         if (otherMember?.userId) {
-          await prisma.company.update({
-            where: { id: companyId },
+          await prisma.team.update({
+            where: { id: teamId },
             data: { adminId: otherMember.userId }
           })
 
           await prisma.user.update({
             where: { id: otherMember.userId },
-            data: { role: 'company_admin' }
+            data: { role: 'team_admin' }
           })
         } else {
           return NextResponse.json({ 
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
         targetUserId: targetPerson.userId,
         targetPersonId: targetPerson.id,
         newRole: role,
-        companyId: companyId,
+        teamId: teamId,
         isSelfChange: targetPerson.userId === session.user.id
       }
     )

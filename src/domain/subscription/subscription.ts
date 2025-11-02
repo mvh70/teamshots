@@ -1,15 +1,25 @@
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getUserCreditBalance } from '@/domain/credits/credits'
 
-export type SubscriptionTier = 'individual' | 'pro' | 'try_once' | null
+export type PlanTier = 'individual' | 'pro' | 'try_once' | null
 export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due' | 'unpaid' | null
+export type PlanPeriod = 'free' | 'try_once' | 'monthly' | 'annual' | null
 
 export interface SubscriptionInfo {
-  tier: SubscriptionTier
+  tier: PlanTier
   status: SubscriptionStatus
   stripeSubscriptionId: string | null
   stripeCustomerId: string | null
+  period?: PlanPeriod
+  nextRenewal?: Date | null
+  nextChange?: {
+    action: 'start' | 'change' | 'cancel' | 'schedule'
+    planTier: Exclude<PlanTier, null>
+    planPeriod: Exclude<PlanPeriod, null>
+    effectiveDate: Date
+  } | null
 }
 
 /**
@@ -18,28 +28,86 @@ export interface SubscriptionInfo {
 export async function getUserSubscription(userId: string): Promise<SubscriptionInfo | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      subscriptionTier: true,
-      subscriptionStatus: true,
-      stripeSubscriptionId: true,
-      stripeCustomerId: true,
-    },
   })
 
   if (!user) return null
 
+  // Find upcoming change (effective in the future)
+  const upcoming = await (prisma as unknown as { subscriptionChange: { findFirst: (args: unknown) => Promise<unknown> } }).subscriptionChange.findFirst({
+    where: {
+      userId,
+      effectiveDate: { gt: new Date() },
+    },
+    orderBy: { effectiveDate: 'asc' },
+  }) as unknown as { action: 'start'|'change'|'cancel'|'schedule'; planTier: string; planPeriod: string; effectiveDate: Date } | null
+
+  // Derive effective tier: a try_once purchase is represented as planPeriod 'try_once'
+  // even though planTier may remain 'individual'. Surface 'try_once' in API to drive UI correctly.
+  const storedTier = (user as unknown as { planTier?: PlanTier }).planTier ?? null
+  const rawPeriod = (user as unknown as { planPeriod?: string | null }).planPeriod ?? null
+  const period = ((): PlanPeriod => {
+    if (rawPeriod === 'month') return 'monthly'
+    if (rawPeriod === 'year') return 'annual'
+    return (rawPeriod as PlanPeriod) ?? null
+  })()
+  Logger.info('subscription.period.normalized', { userId, rawPeriod, period })
+  const effectiveTier: PlanTier = period === 'try_once' ? 'try_once' : storedTier
+
+  // Compute next renewal date when applicable
+  let nextRenewal: Date | null = null
+  if (user.subscriptionStatus === 'active' && (period === 'monthly' || period === 'annual')) {
+    // Try to compute from latest effective change (<= now)
+    const latestEffective = await (prisma as unknown as { subscriptionChange: { findFirst: (args: unknown) => Promise<unknown> } }).subscriptionChange.findFirst({
+      where: {
+        userId,
+        effectiveDate: { lte: new Date() },
+        action: { in: ['start', 'change'] },
+      },
+      orderBy: { effectiveDate: 'desc' },
+    }) as unknown as { effectiveDate?: Date } | null
+
+    if (latestEffective?.effectiveDate) {
+      const base = new Date(latestEffective.effectiveDate)
+      if (period === 'monthly') {
+        nextRenewal = new Date(base)
+        nextRenewal.setMonth(nextRenewal.getMonth() + 1)
+      } else if (period === 'annual') {
+        nextRenewal = new Date(base)
+        nextRenewal.setFullYear(nextRenewal.getFullYear() + 1)
+      }
+      Logger.info('subscription.nextRenewal.computed', {
+        userId,
+        base: base.toISOString(),
+        period,
+        nextRenewal: nextRenewal?.toISOString?.() ?? null,
+      })
+    } else {
+      Logger.info('subscription.latestEffective.missing', { userId })
+    }
+  }
+
   return {
-    tier: user.subscriptionTier as SubscriptionTier,
+    tier: effectiveTier,
     status: user.subscriptionStatus as SubscriptionStatus,
     stripeSubscriptionId: user.stripeSubscriptionId,
     stripeCustomerId: user.stripeCustomerId,
+    period,
+    nextRenewal,
+    nextChange: upcoming
+      ? {
+          action: upcoming.action,
+          planTier: upcoming.planTier as Exclude<PlanTier, null>,
+          planPeriod: upcoming.planPeriod as Exclude<PlanPeriod, null>,
+          effectiveDate: new Date(upcoming.effectiveDate),
+        }
+      : null,
   }
 }
 
 /**
  * Get credits allocated for a subscription tier
  */
-export function getCreditsForTier(tier: SubscriptionTier): number {
+export function getCreditsForTier(tier: PlanTier): number {
   if (tier === 'individual') {
     return PRICING_CONFIG.individual.includedCredits
   } else if (tier === 'pro') {
@@ -61,8 +129,8 @@ export function hasActiveSubscription(status: SubscriptionStatus | null): boolea
  * Check if user has access to a specific tier or better
  */
 export function hasTierAccess(
-  userTier: SubscriptionTier,
-  requiredTier: SubscriptionTier
+  userTier: PlanTier,
+  requiredTier: PlanTier
 ): boolean {
   if (!requiredTier) return true // No tier requirement
   if (!userTier) return false // User has no tier
@@ -95,7 +163,7 @@ export function isSubscriptionPastDue(status: SubscriptionStatus | null): boolea
 /**
  * Get formatted subscription tier name
  */
-export function formatTierName(tier: SubscriptionTier): string {
+export function formatTierName(tier: PlanTier): string {
   if (tier === 'individual') return 'Starter'
   if (tier === 'pro') return 'Pro'
   if (tier === 'try_once') return 'Try Once'
@@ -105,7 +173,7 @@ export function formatTierName(tier: SubscriptionTier): string {
 /**
  * Get subscription features for a tier
  */
-export function getTierFeatures(tier: SubscriptionTier) {
+export function getTierFeatures(tier: PlanTier) {
   if (tier === 'individual') {
     return {
       credits: PRICING_CONFIG.individual.includedCredits,
@@ -141,10 +209,6 @@ export async function canCreateGeneration(
 ): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      subscriptionTier: true,
-      subscriptionStatus: true,
-    },
   })
 
   if (!user) return false

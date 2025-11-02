@@ -3,17 +3,18 @@ import { prisma } from '@/lib/prisma'
 import { sendTeamInviteEmail } from '@/lib/email'
 import { Env } from '@/lib/env'
 import { randomBytes } from 'crypto'
-import { withCompanyPermission } from '@/domain/access/permissions'
-import { getCompanyCreditBalance, getTeamInviteRemainingCredits } from '@/domain/credits/credits'
+import { withTeamPermission } from '@/domain/access/permissions'
+import { getEffectiveTeamCreditBalance, getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { Logger } from '@/lib/logger'
+import { getTranslation } from '@/lib/translations'
 
 export async function POST(request: NextRequest) {
   try {
     // Check permission to invite team members
-    const permissionCheck = await withCompanyPermission(
+    const permissionCheck = await withTeamPermission(
       request,
-      'company.invite_members'
+      'team.invite_members'
     )
     
     if (permissionCheck instanceof NextResponse) {
@@ -22,58 +23,89 @@ export async function POST(request: NextRequest) {
     
     const { session } = permissionCheck
 
-    const { email, creditsAllocated = PRICING_CONFIG.team.defaultInviteCredits } = await request.json()
+    const { email, firstName, creditsAllocated = PRICING_CONFIG.team.defaultInviteCredits } = await request.json()
+
+    // Get user locale from session for translations
+    const locale = (session.user.locale || 'en') as 'en' | 'es'
 
     if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+      return NextResponse.json({ error: getTranslation('api.errors.teamInvites.emailRequired', locale) }, { status: 400 })
+    }
+
+    if (!firstName) {
+      return NextResponse.json({ error: getTranslation('api.errors.teamInvites.firstNameRequired', locale) }, { status: 400 })
     }
 
     // Validate credits allocation
     const creditsPerGeneration = PRICING_CONFIG.credits.perGeneration
     if (creditsAllocated % creditsPerGeneration !== 0) {
+      const error = getTranslation('api.errors.teamInvites.invalidCreditAllocation', locale, { credits: creditsPerGeneration.toString() })
       return NextResponse.json({ 
-        error: `Credits allocated must be a multiple of ${creditsPerGeneration} (credits per generation)`,
+        error,
         errorCode: 'INVALID_CREDIT_ALLOCATION'
       }, { status: 400 })
     }
 
-    // Get user's company
+    // Get user's team
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: {
         person: {
           include: {
-            company: true
+            team: {
+              include: { activeContext: true, admin: true }
+            }
           }
         }
       }
     })
 
-    if (!user?.person?.company) {
-      return NextResponse.json({ error: 'User is not part of a company' }, { status: 400 })
+    if (!user?.person?.team) {
+      return NextResponse.json({ error: getTranslation('api.errors.teamInvites.userNotInTeam', locale) }, { status: 400 })
     }
 
-    // Check if company has an active context
-    const company = await prisma.company.findUnique({
-      where: { id: user.person.company.id },
-      include: { activeContext: true }
-    })
+    const team = user.person.team
 
-    if (!company?.activeContext) {
+    // Check if team admin is on free plan
+    const rawAdminPlanPeriod = (team?.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
+    // Normalize period: 'month' -> 'monthly', 'year' -> 'annual', otherwise as-is
+    const adminPlanPeriod = rawAdminPlanPeriod === 'month' ? 'monthly' : rawAdminPlanPeriod === 'year' ? 'annual' : rawAdminPlanPeriod
+    const isAdminOnFreePlan = adminPlanPeriod === 'free' || !adminPlanPeriod
+
+    // If no active context, check if we can use free package context
+    let contextToUse = team?.activeContext
+    if (!contextToUse && isAdminOnFreePlan) {
+      // Get free package context
+      const setting = await prisma.appSetting.findUnique({ where: { key: 'freePackageStyleId' } })
+      if (setting?.value) {
+        const freePackageContext = await prisma.context.findUnique({ 
+          where: { id: setting.value }
+        })
+        if (freePackageContext) {
+          contextToUse = freePackageContext
+        }
+      }
+    }
+
+    if (!contextToUse) {
       return NextResponse.json({ 
-        error: 'Company must have an active context before inviting team members. Please create and set a company context first.',
+        error: getTranslation('api.errors.teamInvites.noActiveContext', locale),
         errorCode: 'NO_ACTIVE_CONTEXT',
         helpUrl: '/app/contexts'
       }, { status: 400 })
     }
 
-    // Check if company has sufficient credits
-    const companyCredits = await getCompanyCreditBalance(company.id)
-    if (companyCredits < creditsAllocated) {
+    // Check if team has sufficient credits (uses centralized function)
+    const teamCredits = await getEffectiveTeamCreditBalance(user.id, team.id)
+    
+    if (teamCredits < creditsAllocated) {
       return NextResponse.json({ 
-        error: `Insufficient company credits. Available: ${companyCredits}, Required: ${creditsAllocated}`,
-        errorCode: 'INSUFFICIENT_COMPANY_CREDITS',
-        availableCredits: companyCredits,
+        error: getTranslation('api.errors.teamInvites.insufficientTeamCredits', locale, { 
+          available: teamCredits.toString(), 
+          required: creditsAllocated.toString() 
+        }),
+        errorCode: 'INSUFFICIENT_TEAM_CREDITS',
+        availableCredits: teamCredits,
         requiredCredits: creditsAllocated
       }, { status: 400 })
     }
@@ -86,11 +118,12 @@ export async function POST(request: NextRequest) {
     const teamInvite = await prisma.teamInvite.create({
       data: {
         email,
-        companyId: user.person.company.id,
+        firstName,
+        teamId: user.person.team.id,
         token,
         expiresAt,
         creditsAllocated,
-        contextId: company.activeContext?.id
+        contextId: contextToUse.id
       }
     })
 
@@ -100,9 +133,10 @@ export async function POST(request: NextRequest) {
     
     const emailResult = await sendTeamInviteEmail({
       email: teamInvite.email,
-      companyName: company.name,
+      teamName: team.name,
       inviteLink,
       creditsAllocated: teamInvite.creditsAllocated,
+      firstName,
       locale: user.locale as 'en' | 'es' || 'en'
     })
 
@@ -126,16 +160,16 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     Logger.error('Error creating team invite', { error: error instanceof Error ? error.message : String(error) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: getTranslation('api.errors.internalServerError', 'en') }, { status: 500 })
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
     // Check permission to view team invites
-    const permissionCheck = await withCompanyPermission(
+    const permissionCheck = await withTeamPermission(
       request,
-      'company.view'
+      'team.view'
     )
     
     if (permissionCheck instanceof NextResponse) {
@@ -144,13 +178,13 @@ export async function GET(request: NextRequest) {
     
     const { session } = permissionCheck
 
-    // Get user's company invites
+    // Get user's team invites
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: {
         person: {
           include: {
-            company: {
+            team: {
               include: {
                 teamInvites: {
                   include: {
@@ -170,8 +204,8 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    if (!user?.person?.company) {
-      // User is not part of a company yet, return empty response
+    if (!user?.person?.team) {
+      // User is not part of a team yet, return empty response
       return NextResponse.json({
         invites: []
       })
@@ -179,10 +213,11 @@ export async function GET(request: NextRequest) {
 
     // Calculate credits used for each invite
     const invitesWithCredits = await Promise.all(
-      user.person.company.teamInvites.map(async (invite: unknown) => {
+      user.person.team.teamInvites.map(async (invite: unknown) => {
         const typedInvite = invite as {
           id: string
           email: string
+          firstName: string
           token: string
           expiresAt: Date
           usedAt: Date | null
@@ -195,6 +230,7 @@ export async function GET(request: NextRequest) {
         return {
           id: typedInvite.id,
           email: typedInvite.email,
+          firstName: typedInvite.firstName,
           token: typedInvite.token,
           expiresAt: typedInvite.expiresAt,
           usedAt: typedInvite.usedAt,
@@ -214,6 +250,6 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     Logger.error('Error fetching team invites', { error: error instanceof Error ? error.message : String(error) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: getTranslation('api.errors.internalServerError', 'en') }, { status: 500 })
   }
 }

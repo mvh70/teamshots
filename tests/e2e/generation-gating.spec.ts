@@ -179,26 +179,26 @@ test.describe('Generation Gating', () => {
     await expect(page).toHaveURL(/\/en\/app\/settings\?purchase=required/)
   })
 
-  test('should handle company credits for team users', async ({ page }) => {
-    // Mock user with company credits
+  test('should handle team credits for team users', async ({ page }) => {
+    // Mock user with team credits
     await page.route('**/api/user/credits', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           balance: 0,
-          companyBalance: 100,
+          teamBalance: 100,
           transactions: []
         })
       })
     })
 
-    // Mock generation API success for company credits
+    // Mock generation API success for team credits
     await page.route('**/api/generations/create', async (route) => {
       const request = route.request()
       const body = JSON.parse(request.postData() || '{}')
       
-      if (body.creditSource === 'company') {
+      if (body.creditSource === 'team') {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -220,8 +220,8 @@ test.describe('Generation Gating', () => {
 
     await page.goto('/en/app/dashboard')
     
-    // Select company credits
-    await page.selectOption('[data-testid="credit-source-select"]', 'company')
+    // Select team credits
+    await page.selectOption('[data-testid="credit-source-select"]', 'team')
     
     // Fill out generation form
     await page.fill('[data-testid="prompt-input"]', 'Professional headshot')
@@ -242,7 +242,7 @@ test.describe('Generation Gating', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           balance: 25,
-          companyBalance: 50,
+          teamBalance: 50,
           transactions: []
         })
       })
@@ -253,7 +253,7 @@ test.describe('Generation Gating', () => {
     // Should show individual credit balance
     await expect(page.locator('[data-testid="individual-credits"]')).toContainText('25')
     
-    // Should show company credit balance
-    await expect(page.locator('[data-testid="company-credits"]')).toContainText('50')
+    // Should show team credit balance
+    await expect(page.locator('[data-testid="team-credits"]')).toContainText('50')
   })
 })

@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { withCompanyPermission } from '@/domain/access/permissions'
+import { withTeamPermission } from '@/domain/access/permissions'
 import { getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { Logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
     // Check permission to view team invites
-    const permissionCheck = await withCompanyPermission(
+    const permissionCheck = await withTeamPermission(
       request,
-      'company.view'
+      'team.view'
     )
     
     if (permissionCheck instanceof NextResponse) {
@@ -18,13 +18,13 @@ export async function GET(request: NextRequest) {
     
     const { session } = permissionCheck
 
-    // Get user's company invites
+    // Get user's team invites
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: {
         person: {
           include: {
-            company: {
+            team: {
               include: {
                 teamInvites: {
                   orderBy: { createdAt: 'desc' }
@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    if (!user?.person?.company) {
-      // User is not part of a company yet, return empty response
+    if (!user?.person?.team) {
+      // User is not part of a team yet, return empty response
       return NextResponse.json({
         totalRemainingCredits: 0,
         invites: []
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate remaining credits for each invite
     const invitesWithRemainingCredits = await Promise.all(
-      user.person.company.teamInvites.map(async (invite) => {
+      user.person.team.teamInvites.map(async (invite) => {
         const remainingCredits = await getTeamInviteRemainingCredits(invite.id)
         return {
           ...invite,

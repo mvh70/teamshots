@@ -1,120 +1,71 @@
 ---
-description: Python best practices and patterns for modern software development with Flask and SQLite
-globs: **/*.py, src/**/*.py, tests/**/*.py
+description: Python best practices for background workers and image processing
+globs: **/*.py, workers/**/*.py, scripts/**/*.py
 ---
 
 # Python Best Practices
 
-## Project Structure
-- Use src-layout with `src/your_package_name/`
-- Place tests in `tests/` directory parallel to `src/`
-- Keep configuration in `config/` or as environment variables
-- Store requirements in `requirements.txt` or `pyproject.toml`
-- Place static files in `static/` directory
-- Use `templates/` for Jinja2 templates
-
 ## Code Style
-- Follow Black code formatting
-- Use isort for import sorting
-- Follow PEP 8 naming conventions:
-  - snake_case for functions and variables
-  - PascalCase for classes
-  - UPPER_CASE for constants
-- Maximum line length of 88 characters (Black default)
-- Use absolute imports over relative imports
+- Black formatting (88 char lines)
+- isort for imports
+- PEP 8 naming: snake_case (functions), PascalCase (classes), UPPER_CASE (constants)
+- Type hints on all function parameters and returns
 
-## Type Hints
-- Use type hints for all function parameters and returns
-- Import types from `typing` module
-- Use `Optional[Type]` instead of `Type | None`
-- Use `TypeVar` for generic types
-- Define custom types in `types.py`
-- Use `Protocol` for duck typing
+## Image Processing (rembg)
+- Use `u2net_human_seg` model for human subjects
+- Validate input before processing
+- Handle PIL Image objects properly
+- Clean up temporary files
+```python
+from rembg import remove
+from PIL import Image
+from pathlib import Path
 
-## Flask Structure
-- Use Flask factory pattern
-- Organize routes using Blueprints
-- Use Flask-SQLAlchemy for database
-- Implement proper error handlers
-- Use Flask-Login for authentication
-- Structure views with proper separation of concerns
+def remove_background(input_path: Path, output_path: Path) -> bool:
+    try:
+        with Image.open(input_path) as img:
+            output = remove(img, model_name="u2net_human_seg")
+            output.save(output_path)
+        return True
+    except Exception as e:
+        logger.error(f"Failed: {e}")
+        return False
+```
 
-## Database
-- Use SQLAlchemy ORM
-- Implement database migrations with Alembic
-- Use proper connection pooling
-- Define models in separate modules
-- Implement proper relationships
-- Use proper indexing strategies
+## Worker Integration
+- Redis for job queues (Bull/BullMQ from Node.js)
+- Return JSON via stdout
+- Use proper exit codes (0 = success, 1 = error)
+- Log errors to stderr
+```python
+import json, sys
 
-## Authentication
-- Use Flask-Login for session management
-- Implement Google OAuth using Flask-OAuth
-- Hash passwords with bcrypt
-- Use proper session security
-- Implement CSRF protection
-- Use proper role-based access control
-
-## API Design
-- Use Flask-RESTful for REST APIs
-- Implement proper request validation
-- Use proper HTTP status codes
-- Handle errors consistently
-- Use proper response formats
-- Implement proper rate limiting
-
-## Testing
-- Use pytest for testing
-- Write tests for all routes
-- Use pytest-cov for coverage
-- Implement proper fixtures
-- Use proper mocking with pytest-mock
-- Test all error scenarios
-
-## Security
-- Use HTTPS in production
-- Implement proper CORS
-- Sanitize all user inputs
-- Use proper session configuration
-- Implement proper logging
-- Follow OWASP guidelines
-
-## Performance
-- Use proper caching with Flask-Caching
-- Implement database query optimization
-- Use proper connection pooling
-- Implement proper pagination
-- Use background tasks for heavy operations
-- Monitor application performance
+try:
+    job = json.loads(sys.stdin.read())
+    result = process_job(job)
+    print(json.dumps(result))
+    sys.exit(0)
+except Exception as e:
+    print(json.dumps({"error": str(e)}), file=sys.stderr)
+    sys.exit(1)
+```
 
 ## Error Handling
-- Create custom exception classes
-- Use proper try-except blocks
-- Implement proper logging
-- Return proper error responses
-- Handle edge cases properly
-- Use proper error messages
-
-## Documentation
-- Use Google-style docstrings
-- Document all public APIs
-- Keep README.md updated
-- Use proper inline comments
-- Generate API documentation
-- Document environment setup
-
-## Development Workflow
-- Use virtual environments (venv)
-- Implement pre-commit hooks
-- Use proper Git workflow
-- Follow semantic versioning
-- Use proper CI/CD practices
-- Implement proper logging
+- Catch specific exceptions (FileNotFoundError, PIL errors)
+- Log with context
+- Return proper status codes
 
 ## Dependencies
-- Pin dependency versions
-- Use requirements.txt for production
-- Separate dev dependencies
-- Use proper package versions
-- Regularly update dependencies
-- Check for security vulnerabilities
+Pin versions in requirements.txt:
+```
+rembg>=2.0.50
+Pillow>=9.0.0
+numpy>=1.21.0
+onnxruntime
+```
+
+## Performance
+- Process asynchronously
+- Monitor memory usage (images can be large)
+- Clean up resources
+- Use connection pooling for external services

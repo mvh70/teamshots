@@ -55,7 +55,7 @@ export default function BrandingControls({
           className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
         />
         <span className="text-gray-700">
-          {t('branding.includeLogo', { default: 'Include company logo placement variations' })}
+          {t('branding.includeLogo', { default: 'Include team logo placement variations' })}
         </span>
       </label>
 

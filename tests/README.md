@@ -163,7 +163,7 @@ npm run test:report
 
 ### Test Users
 - Individual users with different subscription states
-- Team users with company associations
+- Team users with team associations
 - Users with various credit balances
 
 ## Continuous Integration

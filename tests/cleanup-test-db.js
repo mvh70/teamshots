@@ -28,6 +28,10 @@ try {
   console.log('Running migrations on fresh test database...');
   execSync('npx prisma migrate deploy', { stdio: 'inherit' });
   
+  // Generate Prisma client
+  console.log('Generating Prisma client...');
+  execSync('npx prisma generate', { stdio: 'inherit' });
+  
   console.log('✅ Test database cleanup complete!');
   
 } catch (error) {

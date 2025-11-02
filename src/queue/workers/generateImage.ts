@@ -9,20 +9,23 @@ import { ImageGenerationJobData, redis } from '@/queue'
 import { prisma } from '@/lib/prisma'
 import { refundCreditsForFailedGeneration } from '@/domain/credits/credits'
 import { Logger } from '@/lib/logger'
-import { PRICING_CONFIG } from '@/config/pricing'
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { Telemetry } from '@/lib/telemetry'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import sharp from 'sharp'
 import { httpFetch } from '@/lib/http'
 import { Env } from '@/lib/env'
+import { writeFile as fsWriteFile } from 'node:fs/promises'
 // Gemini SDK per docs: https://ai.google.dev/gemini-api/docs/image-generation#javascript_8
 // Ensure dependency '@google/genai' is installed in package.json
 // Fallback: type-only import to avoid runtime errors until installed
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { GoogleGenAI } from '@google/genai'
-import { buildStructuredPromptFromStyle } from '@/lib/ai/promptBuilder'
+import { getPackageConfig } from '@/domain/style/packages'
+import { PhotoStyleSettings } from '@/types/photo-style'
+import { sendSupportNotificationEmail } from '@/lib/email'
+import { getProgressMessage, formatProgressMessage } from '@/lib/generation-progress-messages'
 // Background removal processing disabled
 // import { processSelfieForBackgroundRemoval, getBestSelfieKey } from '@/lib/ai/selfieProcessor'
 
@@ -65,56 +68,179 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
       })
       
-      await job.updateProgress(10)
-      
-      // Check if selfie needs processing and get the best available version
-      const bestSelfieKey = selfieS3Key
+      await job.updateProgress({ progress: 10, message: formatProgressMessage(getProgressMessage('starting-preprocessing')) })
       
       // Background removal processing disabled - using original selfie
       Logger.debug('Using original selfie without background removal processing')
       
-      // Fetch the generation record to get the context
+      // Fetch the generation record to get the saved style settings and context
       const generation = await prisma.generation.findUnique({
         where: { id: generationId },
-        include: { context: true }
+        select: { 
+          styleSettings: true, 
+          context: {
+            select: {
+              name: true,
+              settings: true
+            }
+          }
+        }
       })
       
       if (!generation) {
         throw new Error('Generation not found')
       }
       
-      // Use context settings if available, otherwise fall back to job styleSettings
+      // Use saved styleSettings from generation record if available, otherwise fall back to context or job
+      const savedStyleSettings = generation.styleSettings
       const contextSettings = generation.context?.settings
-      const finalStyleSettings =
-        (typeof contextSettings === 'object' &&
-          contextSettings !== null &&
-          !Array.isArray(contextSettings))
-          ? contextSettings
-          : styleSettings || {}
+      
+      let rawStyleSettings: Record<string, unknown> = {}
+      if (savedStyleSettings && typeof savedStyleSettings === 'object' && !Array.isArray(savedStyleSettings)) {
+        // Use saved styleSettings from generation record (most accurate)
+        rawStyleSettings = savedStyleSettings as Record<string, unknown>
+        Logger.debug('Using saved styleSettings from generation record')
+      } else if (contextSettings && typeof contextSettings === 'object' && !Array.isArray(contextSettings)) {
+        // Fall back to context settings
+        rawStyleSettings = contextSettings as Record<string, unknown>
+        Logger.debug('Using context settings')
+      } else {
+        // Finally fall back to job styleSettings
+        rawStyleSettings = (styleSettings as Record<string, unknown>) || {}
+        Logger.debug('Using job styleSettings')
+      }
+      
+      // Determine packageId - check multiple sources if not present
+      let packageId = rawStyleSettings['packageId'] as string | undefined
+      if (!packageId && savedStyleSettings && typeof savedStyleSettings === 'object' && !Array.isArray(savedStyleSettings)) {
+        packageId = (savedStyleSettings as Record<string, unknown>)['packageId'] as string | undefined
+      }
+      if (!packageId && styleSettings && typeof styleSettings === 'object' && !Array.isArray(styleSettings)) {
+        packageId = (styleSettings as Record<string, unknown>)['packageId'] as string | undefined
+      }
+      packageId = packageId || 'headshot1'
+      
+      const pkg = getPackageConfig(packageId)
+      const finalStyleSettings = pkg.persistenceAdapter.deserialize(rawStyleSettings)
       
       // Debug logging
       Logger.debug('Generation context', { name: generation.context?.name })
-      Logger.debug('Context settings', { settings: generation.context?.settings })
-      Logger.debug('Job styleSettings', { styleSettings })
-      Logger.debug('Final styleSettings', { finalStyleSettings })
+      Logger.debug('Raw saved styleSettings', { savedStyleSettings })
+      Logger.debug('Raw context settings', { settings: generation.context?.settings })
+      Logger.debug('Raw job styleSettings', { styleSettings })
+      Logger.debug('Deserialized finalStyleSettings', { finalStyleSettings })
+      Logger.debug('Package ID', { packageId })
+      Logger.debug('ShotType in finalStyleSettings', { shotType: finalStyleSettings.shotType })
       
-      // Build prompt from style settings (structured only)
-      let builtPrompt = buildStructuredPromptFromStyle(finalStyleSettings as Record<string, unknown>, prompt)
-
-      // Create composite image with labeled sections
+      // Package-specific image preprocessing
+      let processedSelfieBuffer: Buffer
+      try {
+        // Dynamically import package-specific preprocessor
+        let preprocessor
+        try {
+          if (packageId === 'headshot1') {
+            const headshot1Module = await import('@/domain/style/packages/headshot1/preprocessor')
+            preprocessor = headshot1Module.preprocessHeadshot1
+          } else if (packageId === 'freepackage') {
+            const freepackageModule = await import('@/domain/style/packages/freepackage/preprocessor')
+            preprocessor = freepackageModule.preprocessFreepackage
+          }
+        } catch (importError) {
+          Logger.warn('Could not load package preprocessor, using default', { 
+            packageId, 
+            error: importError instanceof Error ? importError.message : String(importError) 
+          })
+        }
+        
+        if (preprocessor) {
+          // Download selfie and process with package-specific preprocessor
+          const selfieBuffer = await downloadSelfieAsBase64(selfieS3Key).then(res => Buffer.from(res.base64, 'base64'))
+          
+          // Prepare additional context for multi-step preprocessing
+          const backgroundS3Key = (finalStyleSettings as { background?: { key?: string } })?.background?.key
+          const logoS3Key = (finalStyleSettings as { branding?: { logoKey?: string } })?.branding?.logoKey
+          
+          // Progress callback for preprocessing steps
+          const onStepProgress = (stepName: string) => {
+            const progressMsg = getProgressMessage(stepName)
+            const formattedMsg = formatProgressMessage(progressMsg)
+            // Update progress with step message (keep progress percentage at 15% during preprocessing)
+            job.updateProgress({ progress: 15, message: formattedMsg }).catch(err => {
+              Logger.warn('Failed to update progress', { error: err instanceof Error ? err.message : String(err) })
+            })
+          }
+          
+          // Call preprocessor - handle both old signature (2 args) and new signature (3 args with context)
+          let preprocessResult
+          if (preprocessor.length > 2) {
+            // New signature with additional context
+            preprocessResult = await (preprocessor as (
+              selfieBuffer: Buffer,
+              styleSettings: PhotoStyleSettings,
+              additionalContext?: { backgroundS3Key?: string; logoS3Key?: string; onStepProgress?: (stepName: string) => void }
+            ) => Promise<{ processedBuffer: Buffer; metadata?: Record<string, unknown> }>)(
+              selfieBuffer,
+              finalStyleSettings as unknown as PhotoStyleSettings,
+              { backgroundS3Key, logoS3Key, onStepProgress }
+            )
+          } else {
+            // Old signature (backward compatibility)
+            preprocessResult = await preprocessor(selfieBuffer, finalStyleSettings as unknown as PhotoStyleSettings)
+          }
+          
+          processedSelfieBuffer = preprocessResult.processedBuffer
+          Logger.debug('Applied package-specific preprocessing', { 
+            packageId, 
+            metadata: preprocessResult.metadata 
+          })
+        } else {
+          // No preprocessor - use original selfie buffer
+          const selfieBase64 = await downloadSelfieAsBase64(selfieS3Key)
+          processedSelfieBuffer = Buffer.from(selfieBase64.base64, 'base64')
+        }
+      } catch (preprocessError) {
+        Logger.error('Preprocessing failed, using original image', { 
+          packageId, 
+          error: preprocessError instanceof Error ? preprocessError.message : String(preprocessError) 
+        })
+        // Fallback to original selfie
+        const selfieBase64 = await downloadSelfieAsBase64(selfieS3Key)
+        processedSelfieBuffer = Buffer.from(selfieBase64.base64, 'base64')
+      }
+      
+      // Build prompt from style settings using the style package's prompt builder
+      const builtPromptRaw = pkg.promptBuilder(finalStyleSettings as unknown as PhotoStyleSettings, { prompt })
+      let builtPrompt: string
+      if (typeof builtPromptRaw === 'string') {
+        builtPrompt = builtPromptRaw
+      } else {
+        // If it returns an object, convert to string
+        builtPrompt = JSON.stringify(builtPromptRaw)
+      }
+      
+      // Create composite image with labeled sections (using processed selfie if available)
       const compositeImage = await createCompositeImage(finalStyleSettings as {
         background?: { type?: string; key?: string; prompt?: string; color?: string }
         branding?: { type?: string; logoKey?: string; position?: string }
         clothing?: { style?: string; details?: string; accessories?: string[]; colors?: { topCover?: string; topBase?: string; bottom?: string } }
         expression?: { type?: string }
         lighting?: { type?: string }
-      }, bestSelfieKey)
+      }, selfieS3Key, processedSelfieBuffer)
       
       // Debug code removed for production security
       
       // Update prompt to reference the labeled sections in the composite image
       builtPrompt += `\n\nUse the labeled sections in the composite image: "SUBJECT" for the person, "BACKGROUND" for the background, and "LOGO" for the brand logo if present. Generate a professional headshot using the subject and applying the specified style settings.`
-      await job.updateProgress(20)
+      await job.updateProgress({ progress: 20, message: formatProgressMessage(getProgressMessage()) })
+
+      // Debug: write composite image to /tmp for inspection
+      try {
+        const compositePath = `/tmp/composite-${generationId}.png`
+        await fsWriteFile(compositePath, Buffer.from(compositeImage.base64, 'base64'))
+        Logger.debug('Wrote composite image to /tmp', { path: compositePath })
+      } catch (e) {
+        Logger.warn('Failed to write composite image to /tmp', { error: e instanceof Error ? e.message : String(e) })
+      }
 
       // Log the generated prompt for debugging
       Logger.debug('Generated Prompt for Gemini', { prompt: builtPrompt })
@@ -122,14 +248,14 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       // Call Gemini image generation API with composite image only
       const imageBuffers = await generateWithGemini(builtPrompt, [compositeImage])
 
-      await job.updateProgress(60)
+      await job.updateProgress({ progress: 60, message: formatProgressMessage(getProgressMessage()) })
       if (!imageBuffers.length) {
         throw new Error('AI generation returned no images')
       }
 
       // Upload generated images to S3
       const generatedImageKeys = await uploadGeneratedImagesToS3(imageBuffers, personId, generationId)
-      await job.updateProgress(80)
+      await job.updateProgress({ progress: 80, message: formatProgressMessage(getProgressMessage()) })
       
       // Update generation record with results
       await prisma.generation.update({
@@ -144,7 +270,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
       })
       
-      await job.updateProgress(100)
+      await job.updateProgress({ progress: 100, message: '✨ All done! Your photo is ready!' })
       
       Logger.info(`Image generation completed for job ${job.id}`)
       
@@ -161,6 +287,12 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       Logger.error(`Image generation failed for job ${job.id}`, { error: error instanceof Error ? error.message : String(error) })
       
       // Update generation status to failed
+      // Check if this is a regeneration (free) before attempting refund
+      const generationRecord = await prisma.generation.findUnique({
+        where: { id: generationId },
+        select: { creditsUsed: true }
+      })
+      
       await prisma.generation.update({
         where: { id: generationId },
         data: {
@@ -170,17 +302,66 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
       })
       
-      // Refund credits
-      try {
-        await refundCreditsForFailedGeneration(
-          personId,
-          userId || null,
-          PRICING_CONFIG.credits.perGeneration, // Credits per generation from config
-          `Refund for failed generation ${generationId}`
-        )
-        Logger.info(`Credits refunded for failed generation ${generationId}`)
-      } catch (refundError) {
-        Logger.error(`Failed to refund credits for generation ${generationId}`, { error: refundError instanceof Error ? refundError.message : String(refundError) })
+      // Only refund credits if this was a paid generation (not a regeneration)
+      if (generationRecord && generationRecord.creditsUsed > 0) {
+        try {
+          await refundCreditsForFailedGeneration(
+            personId,
+            userId || null,
+            generationRecord.creditsUsed, // Use actual credits used, not config value
+            `Refund for failed generation ${generationId}`
+          )
+          Logger.info(`Credits refunded for failed generation ${generationId}`)
+        } catch (refundError) {
+          Logger.error(`Failed to refund credits for generation ${generationId}`, { error: refundError instanceof Error ? refundError.message : String(refundError) })
+        }
+      } else {
+        Logger.debug(`Skipping refund for regeneration ${generationId} (free)`)
+      }
+      
+      // Send support notification email on failure (only on final attempt to avoid spam)
+      const maxAttempts = job.opts?.attempts || 3
+      if (job.attemptsMade >= maxAttempts) {
+        try {
+          // Get user email for context
+          const userEmail = userId ? await prisma.user.findUnique({
+            where: { id: userId },
+            select: { email: true }
+          }).then(u => u?.email) : undefined
+
+          await sendSupportNotificationEmail({
+            subject: `Image Generation Failed - Generation ${generationId}`,
+            message: `Image generation has failed after ${maxAttempts} attempts.
+
+Generation ID: ${generationId}
+Person ID: ${personId}
+User ID: ${userId || 'N/A'}
+User Email: ${userEmail || 'N/A'}
+Job ID: ${job.id}
+Attempts: ${job.attemptsMade}/${maxAttempts}
+
+Error: ${error instanceof Error ? error.message : String(error)}
+Error Stack: ${error instanceof Error ? error.stack : 'N/A'}`,
+            metadata: {
+              generationId,
+              personId,
+              userId,
+              userEmail,
+              jobId: job.id,
+              attemptsMade: job.attemptsMade,
+              maxAttempts,
+              errorMessage: error instanceof Error ? error.message : String(error),
+              errorName: error instanceof Error ? error.name : 'Unknown',
+              selfieS3Key,
+              packageId: (styleSettings as { packageId?: string })?.packageId || 'unknown'
+            }
+          })
+          Logger.info(`Support notification sent for failed generation ${generationId}`)
+        } catch (emailError) {
+          Logger.error(`Failed to send support notification for generation ${generationId}`, { 
+            error: emailError instanceof Error ? emailError.message : String(emailError) 
+          })
+        }
       }
       
       // Rethrow to trigger retry mechanism if attempts remain
@@ -249,16 +430,29 @@ async function downloadAssetAsBase64(s3Key: string): Promise<{ mimeType: string;
 }
 
 // Create composite image with labeled sections
-async function createCompositeImage(styleSettings: {
-  background?: { type?: string; key?: string; prompt?: string; color?: string }
-  branding?: { type?: string; logoKey?: string; position?: string }
-  clothing?: { style?: string; details?: string; accessories?: string[]; colors?: { topCover?: string; topBase?: string; bottom?: string } }
-  expression?: { type?: string }
-  lighting?: { type?: string }
-}, selfieS3Key: string): Promise<{ mimeType: string; base64: string }> {
-  Logger.debug('Creating composite image for selfie', { selfieS3Key })
-  const selfie = await downloadSelfieAsBase64(selfieS3Key)
-  Logger.debug('Selfie downloaded', { sizeChars: selfie.base64.length })
+async function createCompositeImage(
+  styleSettings: {
+    background?: { type?: string; key?: string; prompt?: string; color?: string }
+    branding?: { type?: string; logoKey?: string; position?: string }
+    clothing?: { style?: string; details?: string; accessories?: string[]; colors?: { topCover?: string; topBase?: string; bottom?: string } }
+    expression?: { type?: string }
+    lighting?: { type?: string }
+  },
+  selfieS3Key: string,
+  preprocessedSelfieBuffer?: Buffer
+): Promise<{ mimeType: string; base64: string }> {
+  Logger.debug('Creating composite image for selfie', { selfieS3Key, hasPreprocessed: !!preprocessedSelfieBuffer })
+  
+  // Use preprocessed buffer if provided, otherwise download from S3
+  let selfieBuffer: Buffer
+  if (preprocessedSelfieBuffer) {
+    selfieBuffer = preprocessedSelfieBuffer
+    Logger.debug('Using preprocessed selfie buffer', { bytes: selfieBuffer.length })
+  } else {
+    const selfie = await downloadSelfieAsBase64(selfieS3Key)
+    Logger.debug('Selfie downloaded', { sizeChars: selfie.base64.length })
+    selfieBuffer = Buffer.from(selfie.base64, 'base64')
+  }
   
   // Simple vertical stacking approach with more spacing
   const margin = 20
@@ -271,16 +465,15 @@ async function createCompositeImage(styleSettings: {
   let maxWidth = 0
   
   // Load selfie and get original dimensions
-  const selfieBuffer = Buffer.from(selfie.base64, 'base64')
   Logger.debug('Selfie buffer size', { bytes: selfieBuffer.length })
   
   const selfieSharp = sharp(selfieBuffer)
   const selfieMetadata = await selfieSharp.metadata()
   Logger.debug('Selfie original dimensions', { width: selfieMetadata.width, height: selfieMetadata.height })
   
-  // Use original selfie buffer without additional processing to preserve quality
+  // Use selfie buffer (either preprocessed or original)
   const selfieProcessed = selfieBuffer
-  Logger.debug('Using original selfie buffer size', { bytes: selfieProcessed.length })
+  Logger.debug('Using selfie buffer size', { bytes: selfieProcessed.length, preprocessed: !!preprocessedSelfieBuffer })
   
   // Add selfie at top
   const subjectText = await createTextOverlay('SUBJECT', 24, '#000000')

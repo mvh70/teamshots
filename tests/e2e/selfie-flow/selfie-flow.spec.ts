@@ -500,35 +500,35 @@ test.describe('Selfie Flow - Complete Tests', () => {
 
  
 
-  test('Handle company context flow', async ({ companyContext }) => {
-    // Set up E2E authentication headers for company context
-    await companyContext.setExtraHTTPHeaders({
-      'x-e2e-user-id': 'test-company-user-id',
-      'x-e2e-user-email': 'admin@testcompany.com',
+  test('Handle team context flow', async ({ teamContext }) => {
+    // Set up E2E authentication headers for team context
+    await teamContext.setExtraHTTPHeaders({
+      'x-e2e-user-id': 'test-team-user-id',
+      'x-e2e-user-email': 'admin@testteam.com',
       'x-e2e-user-role': 'team_admin',
       'x-e2e-user-locale': 'en'
     });
 
     // Set medium viewport for this test (tablet size to show selfies title)
-    await companyContext.setViewportSize({ width: 1024, height: 768 });
+    await teamContext.setViewportSize({ width: 1024, height: 768 });
     
     // Navigate to selfies page
-    await companyContext.goto('https://localhost:3000/en/app/selfies');
-    await companyContext.waitForLoadState('networkidle');
+    await teamContext.goto('https://localhost:3000/en/app/selfies');
+    await teamContext.waitForLoadState('networkidle');
     
     // Wait for page to load and check for upload button instead of title
-    await expect(companyContext.locator('[data-testid="upload-cta"]').first()).toBeVisible();
+    await expect(teamContext.locator('[data-testid="upload-cta"]').first()).toBeVisible();
     
     // Upload selfie
-    await clickUploadButton(companyContext);
-    await companyContext.locator('[data-testid="desktop-file-input"]').setInputFiles(testData.files.validSelfie);
-    await expect(companyContext.locator('[data-testid="approval-screen"]')).toBeVisible();
+    await clickUploadButton(teamContext);
+    await teamContext.locator('[data-testid="desktop-file-input"]').setInputFiles(testData.files.validSelfie);
+    await expect(teamContext.locator('[data-testid="approval-screen"]')).toBeVisible();
     
     // Approve selfie
-    await companyContext.click('[data-testid="approve-button"]');
+    await teamContext.click('[data-testid="approve-button"]');
     
     // Verify we return to the selfies page (success)
-    await expect(companyContext.locator('[data-testid="upload-cta"]').first()).toBeVisible();
+    await expect(teamContext.locator('[data-testid="upload-cta"]').first()).toBeVisible();
   });
 
   

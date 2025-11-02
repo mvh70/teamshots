@@ -9,14 +9,69 @@ import {
   CheckIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
+import StripeNotice from '@/components/stripe/StripeNotice'
 import SubscriptionSection from '@/components/settings/SubscriptionSection'
+import BillingSection from '@/components/settings/BillingSection'
+import FreePackageStyleAdminPanel from './FreePackageStyleAdminPanel'
 import { jsonFetcher } from '@/lib/fetcher'
 
 interface UserSettings {
-  mode: 'individual' | 'company'
-  companyName?: string
-  companyWebsite?: string
+  mode: 'individual' | 'team'
+  teamName?: string
+  teamWebsite?: string
   isAdmin?: boolean
+}
+
+// Component to display user role badge using effective roles
+function RoleDisplayBadge() {
+  const { data: session } = useSession()
+  const [roleDisplay, setRoleDisplay] = useState<string>('Loading...')
+  const [needsTeamSetup, setNeedsTeamSetup] = useState(false)
+
+  useEffect(() => {
+    const fetchRole = async () => {
+      if (session?.user?.id) {
+        try {
+          const response = await fetch('/api/dashboard/stats')
+          if (response.ok) {
+            const data = await response.json()
+            const { isTeamAdmin, isTeamMember, needsTeamSetup: setupNeeded } = data.userRole || {}
+            
+            setNeedsTeamSetup(setupNeeded || false)
+            
+            if (isTeamAdmin) {
+              setRoleDisplay(setupNeeded ? 'Team Admin (No Team)' : 'Team Admin')
+            } else if (isTeamMember) {
+              setRoleDisplay('Team Member')
+            } else {
+              setRoleDisplay('Individual User')
+            }
+          } else {
+            setRoleDisplay('Individual User')
+          }
+        } catch {
+          setRoleDisplay('Individual User')
+        }
+      }
+    }
+    fetchRole()
+  }, [session?.user?.id])
+
+  return (
+    <>
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        {roleDisplay}
+      </span>
+      {needsTeamSetup && (
+        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            💡 You&apos;re a Team Admin but haven&apos;t set up a team yet. 
+            <Link href="/app/team" className="underline hover:no-underline">Go to Team page</Link> to create or join a team.
+          </p>
+        </div>
+      )}
+    </>
+  )
 }
 
 export default function SettingsPage() {
@@ -28,7 +83,52 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'team' | 'subscription' | 'admin' | 'account'>('account')
+  const [activeTab, setActiveTab] = useState<'team' | 'subscription' | 'billing' | 'admin' | 'account' | 'freeStyle'>(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      const savedTab = localStorage.getItem('settings-active-tab')
+      if (savedTab && ['team', 'subscription', 'billing', 'admin', 'account', 'freeStyle'].includes(savedTab)) {
+        return savedTab as 'team' | 'subscription' | 'billing' | 'admin' | 'account' | 'freeStyle'
+      }
+    }
+    return 'subscription'
+  })
+  const [userRoles, setUserRoles] = useState<{ isTeamAdmin: boolean; isPlatformAdmin: boolean }>({ isTeamAdmin: false, isPlatformAdmin: false })
+  
+  // Persist tab selection to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('settings-active-tab', activeTab)
+    }
+  }, [activeTab])
+  
+  // Fetch effective roles from API (respects pro subscription = team admin)
+  useEffect(() => {
+    const fetchRoles = async () => {
+      if (session?.user?.id) {
+        try {
+          const response = await fetch('/api/dashboard/stats')
+          if (response.ok) {
+            const data = await response.json()
+            setUserRoles({
+              isTeamAdmin: data.userRole?.isTeamAdmin ?? false,
+              isPlatformAdmin: session?.user?.isAdmin ?? false
+            })
+          }
+        } catch {
+          // Fallback to session data (doesn't account for pro subscription, but better than nothing)
+          setUserRoles({
+            isTeamAdmin: (session?.user?.person?.team?.adminId === session?.user?.id) || false,
+            isPlatformAdmin: session?.user?.isAdmin || false
+          })
+        }
+      }
+    }
+    fetchRoles()
+  }, [session?.user?.id, session?.user?.person?.team?.adminId, session?.user?.isAdmin])
+  
+  const isTeamAdmin = userRoles.isTeamAdmin
+  const isPlatformAdmin = userRoles.isPlatformAdmin
   
   // Check if user needs to purchase
   const needsPurchase = searchParams.get('purchase') === 'required'
@@ -42,11 +142,18 @@ export default function SettingsPage() {
     }
     
     // Ensure non team_admin users don't land on the team tab
-    const isTeamAdmin = session?.user?.person?.company?.adminId === session?.user?.id
-    if (!isTeamAdmin && activeTab === 'team') {
+    // Use the effective role from state (includes pro subscription check)
+    if (!userRoles.isTeamAdmin && activeTab === 'team') {
       setActiveTab('account')
     }
-  }, [needsPurchase, session, activeTab])
+  }, [needsPurchase, session, activeTab, userRoles.isTeamAdmin])
+
+  // If success present, show subscription tab so banner is contextually relevant
+  useEffect(() => {
+    if (searchParams.get('success') === 'true') {
+      setActiveTab('subscription')
+    }
+  }, [searchParams])
 
   const fetchUserSettings = async () => {
     try {
@@ -91,8 +198,8 @@ export default function SettingsPage() {
     }
   }
 
-  const handleCompanyInfoUpdate = async (field: string, value: string) => {
-    if (settings.mode !== 'company') return
+  const handleTeamInfoUpdate = async (field: string, value: string) => {
+    if (settings.mode !== 'team') return
 
     setSaving(true)
     setError(null)
@@ -108,20 +215,20 @@ export default function SettingsPage() {
       })
 
       setSettings(data.settings)
-      setSuccess('Company information updated')
+      setSuccess('Team information updated')
     } catch (e) {
       try {
         const errorData = (e as { message?: string })
-        setError(errorData?.message || 'Failed to update company information')
+        setError(errorData?.message || 'Failed to update team information')
       } catch {
-        setError('Failed to update company information')
+        setError('Failed to update team information')
       }
     } finally {
       setSaving(false)
     }
   }
 
-  const handleRoleChange = async (newRole: 'user' | 'company_admin') => {
+  const handleRoleChange = async (newRole: 'user' | 'team_admin') => {
     if (!session?.user?.isAdmin) {
       setError('Only platform administrators can change roles')
       return
@@ -158,7 +265,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="space-y-4">
@@ -171,7 +278,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
@@ -180,10 +287,13 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      {/* Stripe notices */}
+      <StripeNotice className="mb-6" />
+
       {/* Tabs */}
       <div className="mb-6 overflow-x-auto">
         <div className="inline-flex rounded-lg border border-gray-200 bg-white">
-          {session?.user?.person?.company?.adminId === session?.user?.id && (
+          {isTeamAdmin && (
             <button
               type="button"
               onClick={() => setActiveTab('team')}
@@ -197,24 +307,40 @@ export default function SettingsPage() {
             onClick={() => setActiveTab('subscription')}
             className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'subscription' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
           >
-            {t('tabs.subscriptionBilling')}
+            {t('tabs.subscription')}
           </button>
-          {session?.user?.isAdmin === true && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('billing')}
+            className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'billing' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+          >
+            {t('tabs.billing')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('account')}
+            className={`px-4 py-2 text-sm font-medium ${isPlatformAdmin ? 'border-r border-gray-200' : 'rounded-r-lg'} ${activeTab === 'account' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+          >
+            {t('tabs.accountInfo')}
+          </button>
+          {isPlatformAdmin && (
             <button
               type="button"
               onClick={() => setActiveTab('admin')}
-              className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'admin' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+              className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'admin' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-50'}`}
             >
               {t('tabs.adminTools')}
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setActiveTab('account')}
-            className={`px-4 py-2 text-sm font-medium rounded-r-lg ${activeTab === 'account' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-          >
-            {t('tabs.accountInfo')}
-          </button>
+          {isPlatformAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('freeStyle')}
+              className={`px-4 py-2 text-sm font-medium rounded-r-lg ${activeTab === 'freeStyle' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-50'}`}
+            >
+              Free Plan Style
+            </button>
+          )}
         </div>
       </div>
 
@@ -239,39 +365,39 @@ export default function SettingsPage() {
 
 
       {/* Team Information - visible only to team_admins */}
-      {activeTab === 'team' && settings.mode === 'company' && session?.user?.person?.company?.adminId === session?.user?.id && (
+      {activeTab === 'team' && settings.mode === 'team' && session?.user?.person?.team?.adminId === session?.user?.id && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('companyInfo.title')}</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('teamInfo.title')}</h2>
           
           <div className="space-y-4">
             <div>
-              <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
-                {t('companyInfo.name.label')}
+              <label htmlFor="teamName" className="block text-sm font-medium text-gray-700 mb-1">
+                {t('teamInfo.name.label')}
               </label>
               <input
                 type="text"
-                id="companyName"
-                value={settings.companyName || ''}
-                onChange={(e) => setSettings(prev => ({ ...prev, companyName: e.target.value }))}
-                onBlur={(e) => handleCompanyInfoUpdate('companyName', e.target.value)}
+                id="teamName"
+                value={settings.teamName || ''}
+                onChange={(e) => setSettings(prev => ({ ...prev, teamName: e.target.value }))}
+                onBlur={(e) => handleTeamInfoUpdate('teamName', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                placeholder={t('companyInfo.name.placeholder')}
+                placeholder={t('teamInfo.name.placeholder')}
                 disabled={saving}
               />
             </div>
 
             <div>
-              <label htmlFor="companyWebsite" className="block text-sm font-medium text-gray-700 mb-1">
-                {t('companyInfo.website.label')}
+              <label htmlFor="teamWebsite" className="block text-sm font-medium text-gray-700 mb-1">
+                {t('teamInfo.website.label')}
               </label>
               <input
                 type="url"
-                id="companyWebsite"
-                value={settings.companyWebsite || ''}
-                onChange={(e) => setSettings(prev => ({ ...prev, companyWebsite: e.target.value }))}
-                onBlur={(e) => handleCompanyInfoUpdate('companyWebsite', e.target.value)}
+                id="teamWebsite"
+                value={settings.teamWebsite || ''}
+                onChange={(e) => setSettings(prev => ({ ...prev, teamWebsite: e.target.value }))}
+                onBlur={(e) => handleTeamInfoUpdate('teamWebsite', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-                placeholder={t('companyInfo.website.placeholder')}
+                placeholder={t('teamInfo.website.placeholder')}
                 disabled={saving}
               />
             </div>
@@ -282,7 +408,7 @@ export default function SettingsPage() {
               <div className="flex items-center">
                 <CheckIcon className="h-5 w-5 text-blue-400 mr-2" />
                 <span className="text-sm text-blue-800">
-                  {t('companyInfo.adminNote')}
+                  {t('teamInfo.adminNote')}
                 </span>
               </div>
             </div>
@@ -290,10 +416,18 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Subscription & Billing */}
+      {/* Subscription */}
       {activeTab === 'subscription' && (
         <SubscriptionSection 
-          userId={session?.user?.id || ''} 
+          userId={session?.user?.id || ''}
+          userMode={settings.mode}
+        />
+      )}
+
+      {/* Billing */}
+      {activeTab === 'billing' && (
+        <BillingSection 
+          userId={session?.user?.id || ''}
         />
       )}
 
@@ -317,30 +451,13 @@ export default function SettingsPage() {
                 Current User Role
               </label>
               <div className="flex items-center space-x-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                  {session?.user?.role === 'company_admin' && session?.user?.person?.companyId && session?.user?.person?.company?.adminId === session?.user?.id
-                    ? 'Team Admin' 
-                    : session?.user?.role === 'company_admin' && !session?.user?.person?.companyId
-                      ? 'Team Admin (No Company)'
-                      : session?.user?.person?.companyId && session?.user?.person?.company?.adminId !== session?.user?.id
-                        ? 'Team Member'
-                        : 'Individual User'
-                  }
-                </span>
-                {session?.user?.isAdmin && (
+                <RoleDisplayBadge />
+                {isPlatformAdmin && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                     Platform Admin
                   </span>
                 )}
               </div>
-              {session?.user?.role === 'company_admin' && !session?.user?.person?.companyId && (
-                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <p className="text-sm text-yellow-800">
-                    💡 You&apos;re a Team Admin but haven&apos;t set up a company yet. 
-                    <Link href="/app/team" className="underline hover:no-underline">Go to Team page</Link> to create or join a company.
-                  </p>
-                </div>
-              )}
             </div>
 
             <div>
@@ -348,7 +465,7 @@ export default function SettingsPage() {
                 Change Role (Testing Only)
               </label>
               <div className="flex space-x-2">
-                {session?.user?.role === 'company_admin' ? (
+                {session?.user?.role === 'team_admin' ? (
                   <button
                     onClick={() => handleRoleChange('user')}
                     disabled={saving}
@@ -358,7 +475,7 @@ export default function SettingsPage() {
                   </button>
                 ) : (
                   <button
-                    onClick={() => handleRoleChange('company_admin')}
+                    onClick={() => handleRoleChange('team_admin')}
                     disabled={saving}
                     className="px-3 py-2 text-sm font-medium rounded-md bg:white text-red-700 hover:bg-red-50 border border-red-300 disabled:opacity-50"
                   >
@@ -390,10 +507,21 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* ADMIN: Free Package Style Designer */}
+      {activeTab === 'freeStyle' && session?.user?.isAdmin === true && (
+        <FreePackageStyleAdminPanel />
+      )}
+
       {/* Account Information */}
       {activeTab === 'account' && (
       <div className="bg-white rounded-lg border border-gray-200 p-6 mt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('accountInfo.title')}</h2>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <p className="text-sm text-blue-900">
+            {t('accountInfo.intro', { default: "🛟 You probably won't need this info unless something's gone sideways and support asks for it. But just in case, here it is!" })}
+          </p>
+        </div>
         
         <div className="space-y-3">
           <div>
@@ -419,17 +547,17 @@ export default function SettingsPage() {
                   {t('roles.platformAdmin')}
                 </span>
               )}
-              {session?.user?.person?.company?.adminId === session?.user?.id && (
+              {session?.user?.person?.team?.adminId === session?.user?.id && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  {t('roles.companyAdmin')}
+                  {t('roles.teamAdmin')}
                 </span>
               )}
-              {session?.user?.person?.companyId && session?.user?.person?.company?.adminId !== session?.user?.id && (
+              {session?.user?.person?.teamId && session?.user?.person?.team?.adminId !== session?.user?.id && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   {t('roles.teamMember')}
                 </span>
               )}
-              {session?.user?.role === 'user' && !session?.user?.person?.companyId && (
+              {session?.user?.role === 'user' && !session?.user?.person?.teamId && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                   {t('roles.individualUser')}
                 </span>

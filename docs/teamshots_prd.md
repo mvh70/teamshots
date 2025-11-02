@@ -17,17 +17,17 @@ Upload any photo â†’ Get professional team photos in 60 seconds using AI.
 - Remote teams without access to photographers
 - Startups with frequent new hires
 - HR/Marketing uploading on behalf of teams
-- Company admins managing team photo consistency
+- Team admins managing team photo consistency
 
 ## MVP Scope
 **In:**
 - **Waitlist phase:** Landing + pricing pages with email signup (teamshots.vip purchased)
 - Individual photo upload & generation (single photo with logo placement variations)
-- Company accounts with team management
+- Team accounts with team management
 - Team member token-based invitation system (24hr tokens, no signup required)
 - Context templates (reusable background/style/logo settings)
-- Generation type selection (personal vs company use)
-- Automated team scraping from company website
+- Generation type selection (personal vs team use)
+- Automated team scraping from team website
 - 5 style presets + custom backgrounds
 - Credit-based pricing: Try Once + 2 subscription tiers with top-ups
 - Credits roll over, never expire
@@ -37,14 +37,14 @@ Upload any photo â†’ Get professional team photos in 60 seconds using AI.
 - Per-team-member credit allocation (5 default, admin adjustable)
 - Photo consent & approval workflow (consent before upload, approval before save)
 - Logo placement variations (multiple positions generated)
-- Company-level credit pool for bulk operations
-- **Enhanced Credit System**: Separate company credits (admin-allocated) and individual credits (user-owned)
+- Team-level credit pool for bulk operations
+- **Enhanced Credit System**: Separate team credits (admin-allocated) and individual credits (user-owned)
 - **Content Moderation**: LLM-based validation for inappropriate content (nudity/obscenity filtering)
 - Admin views approved photos only
 - Context regeneration (admin can regenerate all team photos with new contexts)
 - Audit trail for credit usage (tracks rejections without storing photos)
 - Email/password authentication with OTP verification and magic links
-- Company domain verification
+- Team domain verification
 - Bilingual support (EN/ES) with next-intl (machine translation for beta)
 - Basic onboarding
 - Payment integration (Stripe)

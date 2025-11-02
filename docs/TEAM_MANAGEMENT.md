@@ -2,13 +2,13 @@
 
 ## Overview
 
-Teamshots provides comprehensive team management capabilities for company admins to manage team photo generation workflows, including team member invitations, credit allocation, and generation oversight.
+Teamshots provides comprehensive team management capabilities for team admins to manage team photo generation workflows, including team member invitations, credit allocation, and generation oversight.
 
 *See [Role System Implementation](ROLE_SYSTEM_IMPLEMENTATION.md) for detailed role definitions and permissions.*
 
 ## Key Features
 
-### 1. Company Context Setup
+### 1. Team Context Setup
 - **Reusable Templates**: Create branded contexts with custom backgrounds, logos, and style presets
 - **Multiple Contexts**: Maintain different contexts for different use cases (executive, casual, etc.)
 - **Active Context**: Set default context for new team photo generations
@@ -28,7 +28,7 @@ Teamshots provides comprehensive team management capabilities for company admins
 ### 4. Credit Management
 - **Transaction-Based System**: All credit movements tracked in `CreditTransaction` table
 - **Real-time Balances**: Credit balances calculated from transaction history
-- **Transfer Capabilities**: Transfer credits between company pool and team members
+- **Transfer Capabilities**: Transfer credits between team pool and team members
 - **Audit Trail**: Full history of all credit allocations and usage
 
 ## Database Schema
@@ -45,11 +45,11 @@ model Person {
   
   // Optional User link (if person signs up)
   userId              String?   @unique
-  user                User?     @relation(fields: [userId], Company: Company[]
+  user                User?     @relation(fields: [userId], Team: Team[]
   
-  // Company relationship
-  companyId           String?
-  company             Company?  @relation(fields: [companyId], references: [id])
+  // Team relationship
+  teamId           String?
+  team             Team?  @relation(fields: [teamId], references: [id])
   
   // Generation tracking
   generations         Generation[]
@@ -67,8 +67,8 @@ model Person {
   updatedAt           DateTime  @updatedAt
 }
 
-// Company - Organization managing team photos
-model Company {
+// Team - Organization managing team photos
+model Team {
   id                  String    @id @default(cuid())
   name                String
   website             String?
@@ -76,7 +76,7 @@ model Company {
   
   // Admin relationship
   adminId             String
-  admin               User      @relation("CompanyAdmin", fields: [adminId])
+  admin               User      @relation("TeamAdmin", fields: [adminId])
   
   // Team members
   teamMembers         Person[]
@@ -100,8 +100,8 @@ model Company {
 model TeamInvite {
   id              String    @id @default(cuid())
   email           String
-  companyId       String
-  company         Company   @relation(fields: [companyId])
+  teamId       String
+  team         Team   @relation(fields: [teamId])
   token           String    @unique
   expiresAt       DateTime
   usedAt          DateTime?
@@ -125,7 +125,7 @@ model TeamInvite {
 
 #### Get Team Members
 ```
-GET /api/company/members
+GET /api/team/members
 ```
 Returns list of team members with their stats and credit balances.
 
@@ -167,7 +167,7 @@ Cancels/revokes a pending team invitation (admin only).
 #### Change Member Role
 ```
 POST /api/team/members/role
-Body: { personId: string, role: 'company_member' | 'company_admin' }
+Body: { personId: string, role: 'team_member' | 'team_admin' }
 ```
 Promotes or demotes team members (admin only).
 
@@ -176,7 +176,7 @@ Promotes or demotes team members (admin only).
 POST /api/team/members/remove
 Body: { personId: string }
 ```
-Removes a team member from the company (admin only).
+Removes a team member from the team (admin only).
 
 ## User Interface
 
@@ -198,9 +198,9 @@ The team management dashboard provides:
    - Credit allocation settings
    - Admin controls: resend and revoke buttons for pending invites
 
-4. **Admin Controls** (Company Admin Only):
+4. **Admin Controls** (Team Admin Only):
    - Promote/demote team members
-   - Remove team members from company
+   - Remove team members from team
    - Resend expired invitations
    - Revoke pending invitations
    - Safety checks prevent removing sole admin
@@ -209,7 +209,7 @@ The team management dashboard provides:
 
 - **Registered**: User has signed up and has User account
 - **Guest**: Person record only, no User account yet
-- **Admin**: Company administrator with full permissions
+- **Admin**: Team administrator with full permissions
 
 ## Credit Allocation Flow
 
@@ -218,8 +218,8 @@ The team management dashboard provides:
 // Admin creates invite with credit allocation
 const invite = await prisma.teamInvite.create({
   data: {
-    email: "team@company.com",
-    companyId: company.id,
+    email: "team@team.com",
+    teamId: team.id,
     token: generateToken(),
     expiresAt: addHours(new Date(), 24),
     creditsAllocated: 5
@@ -235,7 +235,7 @@ const person = await prisma.person.create({
     firstName,
     lastName,
     email: invite.email,
-    companyId: invite.companyId,
+    teamId: invite.teamId,
     inviteToken: token
   }
 })
@@ -271,7 +271,7 @@ The team management system supports:
 ## Security Considerations
 
 ### Access Control
-- Only company admins can manage team members
+- Only team admins can manage team members
 - Team invites are token-based with 24-hour expiration
 - Credit transfers require admin privileges
 

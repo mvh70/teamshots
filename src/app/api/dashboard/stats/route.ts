@@ -16,9 +16,9 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const roles = getUserEffectiveRoles(user)
-    const companyId = user.person?.companyId
-    const companyName = user.person?.company?.name || null
+    const roles = await getUserEffectiveRoles(user)
+    const teamId = user.person?.teamId
+    const teamName = user.person?.team?.name || null
 
     // Base stats for all users
     const stats: {
@@ -31,7 +31,7 @@ export async function GET() {
       photosGenerated: 0,
       activeTemplates: 0,
       creditsUsed: 0,
-      teamMembers: 0, // Only relevant for company admins
+      teamMembers: 0, // Only relevant for team admins
     }
 
     // Get user's generations count
@@ -44,10 +44,10 @@ export async function GET() {
               userId: session.user.id 
             } 
           },
-          // Company generations (if user is part of a company)
-          ...(companyId ? [{
+          // Team generations (if user is part of a team)
+          ...(teamId ? [{
             person: {
-              companyId: companyId
+              teamId: teamId
             }
           }] : [])
         ]
@@ -62,8 +62,8 @@ export async function GET() {
         OR: [
           // Personal contexts
           { userId: session.user.id },
-          // Company contexts (if user is part of a company)
-          ...(companyId ? [{ companyId }] : [])
+          // Team contexts (if user is part of a team)
+          ...(teamId ? [{ teamId }] : [])
         ]
       }
     })
@@ -80,10 +80,10 @@ export async function GET() {
               userId: session.user.id 
             } 
           },
-          // Company generations (if user is part of a company)
-          ...(companyId ? [{
+          // Team generations (if user is part of a team)
+          ...(teamId ? [{
             person: {
-              companyId: companyId
+              teamId: teamId
             }
           }] : [])
         ]
@@ -95,11 +95,11 @@ export async function GET() {
 
     stats.creditsUsed = creditsUsedResult._sum.creditsUsed || 0
 
-    // Get team members count (only for company admins)
-    if (roles.isCompanyAdmin && companyId) {
+    // Get team members count (only for team admins)
+    if (roles.isTeamAdmin && teamId) {
       const teamMembersCount = await prisma.person.count({
         where: {
-          companyId: companyId
+          teamId: teamId
         }
       })
       stats.teamMembers = teamMembersCount
@@ -109,12 +109,12 @@ export async function GET() {
       success: true,
       stats,
       userRole: {
-        isCompanyAdmin: roles.isCompanyAdmin,
-        isCompanyMember: roles.isCompanyMember,
+        isTeamAdmin: roles.isTeamAdmin,
+        isTeamMember: roles.isTeamMember,
         isRegularUser: roles.isRegularUser,
-        companyId: companyId,
-        companyName: companyName,
-        needsCompanySetup: roles.isCompanyAdmin && !companyId
+        teamId: teamId,
+        teamName: teamName,
+        needsTeamSetup: roles.isTeamAdmin && !teamId
       }
     })
 

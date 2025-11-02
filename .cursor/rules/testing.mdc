@@ -1,72 +1,38 @@
 ---
-alwaysApply: true
+description: Testing best practices for E2E and integration tests
+globs: tests/**/*.ts, **/*.test.ts, **/*.spec.ts
 ---
 # Testing Best Practices
 
-## Test Setup Maintenance
-- **Always update test configurations** when making code changes that affect authentication, database connections, or API endpoints
-- **Keep test configs synchronized** with actual application behavior - don't rely on outdated mocks
-- **Use real database connections** for E2E tests instead of extensive API mocking
-- **Verify test database setup** is working before writing new tests
-- **Update navigation URLs** in tests when routes change in the application
+## Test Setup
+- Update test configs when code changes affect auth, DB, or API endpoints
+- Use real database connections for E2E tests (not extensive mocking)
+- Verify test database setup works before writing tests
+- Update navigation URLs when routes change
 
-## Test Development Process
-- **Read the actual source code** before writing test selectors and assertions
-- **Inspect the DOM structure** using debug tests to understand real element selectors
-- **Check database schema** to use correct model names and field relationships
-- **Verify API endpoints** exist and match the actual implementation
-- **Test with real data** instead of making assumptions about data structures
+## Test Development
+- Read actual source code before writing selectors/assertions
+- Inspect DOM structure using debug tests
+- Check Prisma schema for correct model names and relationships
+- Verify API endpoints exist and match implementation
+- Test with real data, not assumptions
 
-## Configuration Patterns
-- **Use E2E authentication headers** (`x-e2e-user-id`, `x-e2e-user-email`, etc.) instead of session mocking
-- **Set test database environment** with `__TEST_DB__ = true` for database isolation
-- **Only mock CSRF tokens** - let other API calls go to real endpoints
-- **Use absolute URLs** (`https://localhost:3000`) instead of relative paths
-- **Handle browser dialogs** (confirm/alert) with proper Playwright dialog handlers
+## Configuration
+- Use E2E auth headers (`x-e2e-user-id`, `x-e2e-user-email`)
+- Set `__TEST_DB__ = true` for database isolation
+- Only mock CSRF tokens - let other API calls hit real endpoints
+- Use absolute URLs (`https://localhost:3000`)
+- Handle browser dialogs with Playwright dialog handlers
 
-## Code Investigation Requirements
-- **Search the codebase** for actual component implementations before writing tests
-- **Check Prisma schema** for correct model names and relationships
-- **Verify API route handlers** exist and match expected behavior
-- **Inspect UI components** to understand real selectors and data attributes
-- **Read existing working tests** as reference for patterns and approaches
+## Code Investigation
+- Search codebase for actual component implementations
+- Check Prisma schema for model names and relationships
+- Verify API route handlers exist
+- Inspect UI components for real selectors and data attributes
+- Read existing working tests as reference
 
-## Test Database Management
-- **Create real users** in test database with proper relationships (User + Person)
-- **Use beforeAll/afterAll** hooks for test data setup and cleanup
-- **Verify database operations** in tests to ensure real functionality
-- **Clean up test data** after each test run to maintain isolation# Testing Best Practices
-
-## Test Setup Maintenance
-- **Always update test configurations** when making code changes that affect authentication, database connections, or API endpoints
-- **Keep test configs synchronized** with actual application behavior - don't rely on outdated mocks
-- **Use real database connections** for E2E tests instead of extensive API mocking
-- **Verify test database setup** is working before writing new tests
-- **Update navigation URLs** in tests when routes change in the application
-
-## Test Development Process
-- **Read the actual source code** before writing test selectors and assertions
-- **Inspect the DOM structure** using debug tests to understand real element selectors
-- **Check database schema** to use correct model names and field relationships
-- **Verify API endpoints** exist and match the actual implementation
-- **Test with real data** instead of making assumptions about data structures
-
-## Configuration Patterns
-- **Use E2E authentication headers** (`x-e2e-user-id`, `x-e2e-user-email`, etc.) instead of session mocking
-- **Set test database environment** with `__TEST_DB__ = true` for database isolation
-- **Only mock CSRF tokens** - let other API calls go to real endpoints
-- **Use absolute URLs** (`https://localhost:3000`) instead of relative paths
-- **Handle browser dialogs** (confirm/alert) with proper Playwright dialog handlers
-
-## Code Investigation Requirements
-- **Search the codebase** for actual component implementations before writing tests
-- **Check Prisma schema** for correct model names and relationships
-- **Verify API route handlers** exist and match expected behavior
-- **Inspect UI components** to understand real selectors and data attributes
-- **Read existing working tests** as reference for patterns and approaches
-
-## Test Database Management
-- **Create real users** in test database with proper relationships (User + Person)
-- **Use beforeAll/afterAll** hooks for test data setup and cleanup
-- **Verify database operations** in tests to ensure real functionality
-- **Clean up test data** after each test run to maintain isolation
+## Database Management
+- Create real users with proper relationships (User + Person)
+- Use beforeAll/afterAll hooks for setup/cleanup
+- Verify database operations in tests
+- Clean up test data after each run

@@ -8,7 +8,8 @@ import {
   UserIcon, 
   PaintBrushIcon, 
   FaceSmileIcon, 
-  LightBulbIcon
+  LightBulbIcon,
+  CameraIcon
 } from '@heroicons/react/24/outline'
 import { 
   PhotoStyleSettings as PhotoStyleSettingsType, 
@@ -17,7 +18,10 @@ import {
 } from '@/types/photo-style'
 import EnhancedBackgroundSelector from './EnhancedBackgroundSelector'
 import ClothingStyleSelector from './ClothingStyleSelector'
+import ClothingColorSelector from './ClothingColorSelector'
+import ShotTypeSelector from './ShotTypeSelector'
 import BrandingSelector from './BrandingSelector'
+import { getPackageConfig } from '@/domain/style/packages'
 
 interface PhotoStyleSettingsProps {
   value: PhotoStyleSettingsType
@@ -26,6 +30,7 @@ interface PhotoStyleSettingsProps {
   readonlyPredefined?: boolean // If true, predefined fields are read-only
   originalContextSettings?: PhotoStyleSettingsType // Original context settings to determine what was predefined
   showToggles?: boolean // If false, hide toggles entirely (for direct photo definition)
+  packageId?: string // Optional package to control visible categories/overrides
 }
 
 type CategoryConfig = {
@@ -64,6 +69,18 @@ const USER_STYLE_CATEGORIES: CategoryConfig[] = [
     description: 'Clothing style and accessories'
   },
   {
+    key: 'clothingColors',
+    label: 'Clothing Colors',
+    icon: SwatchIcon,
+    description: 'Colors for clothing items'
+  },
+  {
+    key: 'shotType',
+    label: 'Shot Type',
+    icon: CameraIcon,
+    description: 'Photo framing and composition'
+  },
+  {
     key: 'expression',
     label: 'Expression',
     icon: FaceSmileIcon,
@@ -83,10 +100,12 @@ export default function PhotoStyleSettings({
   className = '',
   readonlyPredefined = false,
   originalContextSettings,
-  showToggles = true
+  showToggles = true,
+  packageId
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   // All categories are always expanded per UX requirement
+  const pkg = getPackageConfig(packageId)
 
   const handleCategoryToggle = (category: CategoryType, isPredefined: boolean, event?: React.MouseEvent) => {
     if (event) {
@@ -116,6 +135,12 @@ export default function PhotoStyleSettings({
           case 'clothing':
             newSettings.clothing = { style: 'business' }
             break
+          case 'clothingColors':
+            newSettings.clothingColors = { colors: { topCover: 'navy', topBase: 'white', bottom: 'gray' } }
+            break
+          case 'shotType':
+            newSettings.shotType = { type: 'headshot' }
+            break
           case 'style':
             newSettings.style = { type: 'preset', preset: 'corporate' }
             break
@@ -138,6 +163,12 @@ export default function PhotoStyleSettings({
           case 'clothing':
             newSettings.clothing = { style: 'user-choice' }
             break
+          case 'clothingColors':
+            newSettings.clothingColors = undefined
+            break
+          case 'shotType':
+            newSettings.shotType = { type: 'user-choice' }
+            break
           case 'style':
             newSettings.style = { type: 'user-choice' }
             break
@@ -155,6 +186,12 @@ export default function PhotoStyleSettings({
   }
 
   const handleCategorySettingsChange = (category: CategoryType, settings: unknown) => {
+    // Don't allow changes if in readonly mode and the category is predefined
+    // Allow changes to user-choice fields even when readonlyPredefined is true
+    if (readonlyPredefined && isCategoryPredefined(category)) {
+      return
+    }
+    
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const newSettings: any = { ...value }
     newSettings[category] = settings
@@ -168,6 +205,9 @@ export default function PhotoStyleSettings({
       if (category === 'clothing') {
         return originalSettings && (originalSettings as { style?: string }).style !== 'user-choice'
       }
+      if (category === 'clothingColors') {
+        return originalSettings !== undefined
+      }
       return originalSettings && (originalSettings as { type?: string }).type !== 'user-choice'
     }
     
@@ -176,11 +216,18 @@ export default function PhotoStyleSettings({
     if (category === 'clothing') {
       return categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
     }
+    if (category === 'clothingColors') {
+      return categorySettings !== undefined
+    }
     return categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
   }
 
   const getCategoryStatus = (category: CategoryType) => {
     const categorySettings = value[category]
+    if (category === 'clothingColors') {
+      // clothingColors is undefined for user-choice, defined for predefined
+      return categorySettings ? 'predefined' : 'user-choice'
+    }
     if (!categorySettings) return 'not-set'
     if (category === 'clothing') {
       if ((categorySettings as { style?: string }).style === 'user-choice') return 'user-choice'
@@ -261,6 +308,7 @@ export default function PhotoStyleSettings({
               value={value.background || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('background', settings)}
               isDisabled={readonlyPredefined && isPredefined}
+              availableBackgrounds={pkg.availableBackgrounds}
             />
           )}
           
@@ -268,6 +316,22 @@ export default function PhotoStyleSettings({
             <ClothingStyleSelector
               value={value.clothing || { style: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('clothing', settings)}
+              isDisabled={readonlyPredefined && isPredefined}
+            />
+          )}
+
+          {category.key === 'clothingColors' && (
+            <ClothingColorSelector
+              value={value.clothingColors || { colors: {} }}
+              onChange={(settings) => handleCategorySettingsChange('clothingColors', settings)}
+              isDisabled={readonlyPredefined && isPredefined}
+            />
+          )}
+
+          {category.key === 'shotType' && (
+            <ShotTypeSelector
+              value={value.shotType || { type: 'user-choice' }}
+              onChange={(settings) => handleCategorySettingsChange('shotType', settings)}
               isDisabled={readonlyPredefined && isPredefined}
             />
           )}
@@ -281,7 +345,7 @@ export default function PhotoStyleSettings({
           )}
           
           {/* Placeholder for other categories */}
-          {!['background', 'clothing', 'branding'].includes(category.key) && (
+          {!['background', 'clothing', 'clothingColors', 'shotType', 'branding'].includes(category.key) && (
             <div className={`text-center py-8 text-gray-500 ${isUserChoice ? 'pointer-events-none' : ''}`}>
               <p className="text-sm">
                 {t('comingSoon', { default: 'Settings for this category coming soon' })}
@@ -293,13 +357,16 @@ export default function PhotoStyleSettings({
     )
   }
 
+  const visiblePhotoCategories = PHOTO_STYLE_CATEGORIES.filter(c => pkg.visibleCategories.includes(c.key))
+  const visibleUserCategories = USER_STYLE_CATEGORIES.filter(c => pkg.visibleCategories.includes(c.key))
+
   return (
     <div className={`space-y-6 ${className}`}>
 
       {/* Photo Style Section */}
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {PHOTO_STYLE_CATEGORIES.map(renderCategoryCard)}
+          {visiblePhotoCategories.map(renderCategoryCard)}
         </div>
       </div>
 
@@ -314,7 +381,7 @@ export default function PhotoStyleSettings({
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {USER_STYLE_CATEGORIES.map(renderCategoryCard)}
+          {visibleUserCategories.map(renderCategoryCard)}
         </div>
       </div>
     </div>

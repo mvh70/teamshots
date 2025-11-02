@@ -24,8 +24,8 @@ export const registrationSchema = z.object({
   password: passwordSchema,
   firstName: nameSchema,
   lastName: nameSchema.optional(),
-  userType: z.enum(['individual', 'company']).optional(),
-  companyWebsite: z.string().optional().refine(
+  userType: z.enum(['individual', 'team']).optional(),
+  teamWebsite: z.string().optional().refine(
     (val) => !val || z.string().url().safeParse(val).success,
     'Invalid website URL'
   ),

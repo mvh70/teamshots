@@ -10,13 +10,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user with their company info
+    // Get user with their team info
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: {
         person: {
           include: {
-            company: true
+            team: true
           }
         }
       }
@@ -26,13 +26,17 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Determine mode and company info
-    const isCompanyMode = !!user.person?.company
+    // Determine mode and team info
+    // Check subscription tier to determine if user has pro features
+    const subscription = await import('@/domain/subscription/subscription').then(m => m.getUserSubscription(user.id)).catch(() => null)
+    const hasProTier = subscription?.tier === 'pro'
+    const isTeamMember = !!user.person?.team
+    
     const settings = {
-      mode: isCompanyMode ? 'company' as const : 'individual' as const,
-      companyName: user.person?.company?.name || undefined,
-      companyWebsite: user.person?.company?.website || undefined,
-      isAdmin: user.person?.company?.adminId === user.id
+      mode: (hasProTier || isTeamMember) ? 'pro' as const : 'individual' as const,
+      teamName: user.person?.team?.name || undefined,
+      teamWebsite: user.person?.team?.website || undefined,
+      isAdmin: user.person?.team?.adminId === user.id
     }
 
     return NextResponse.json({ settings })
@@ -51,11 +55,14 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const { mode, companyName, companyWebsite } = await request.json()
+      const { mode, teamName, teamWebsite } = await request.json()
 
-      if (!mode || !['individual', 'company'].includes(mode)) {
+      if (!mode || !['individual', 'team', 'pro'].includes(mode)) {
         return NextResponse.json({ error: 'Invalid mode' }, { status: 400 })
       }
+      
+      // Map 'team' to 'pro' for consistency
+      const effectiveMode = mode === 'team' ? 'pro' : mode
 
       // Get current user with their person record
       const user = await prisma.user.findUnique({
@@ -63,7 +70,7 @@ export async function POST(request: NextRequest) {
         include: {
           person: {
             include: {
-              company: true
+              team: true
             }
           }
         }
@@ -73,83 +80,117 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 })
       }
 
-      if (mode === 'company') {
-        // Switching to company mode - create or update company
-        if (!companyName) {
-          return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
+      if (effectiveMode === 'pro') {
+        // Switching to pro mode - create or update team
+        if (!teamName) {
+          return NextResponse.json({ error: 'Team name is required' }, { status: 400 })
         }
 
-          let company
+          let team
 
-          if (user.person?.company) {
-            // User already has a company, update it
-            company = await prisma.company.update({
-              where: { id: user.person.company.id },
+          if (user.person?.team) {
+            // User already has a team, update it
+            team = await prisma.team.update({
+              where: { id: user.person.team.id },
               data: {
-                name: companyName,
-                website: companyWebsite || null
+                name: teamName,
+                website: teamWebsite || null
               }
             })
 
-            // Ensure user role is company_admin if they're the admin
-            if (company.adminId === user.id && user.role !== 'company_admin') {
+            // Ensure user role is team_admin if they're the admin
+            if (team.adminId === user.id && user.role !== 'team_admin') {
               await prisma.user.update({
                 where: { id: user.id },
-                data: { role: 'company_admin' }
+                data: { role: 'team_admin' }
+              })
+            }
+
+            // Migrate any remaining pro-tier credits (in case they weren't migrated before)
+            try {
+              const { migrateProCreditsToTeam } = await import('@/domain/credits/credits')
+              await migrateProCreditsToTeam(user.id, team.id)
+            } catch (migrateError) {
+              Logger.error('Failed to migrate credits to existing team', {
+                error: migrateError instanceof Error ? migrateError.message : String(migrateError),
+                userId: user.id,
+                teamId: team.id
               })
             }
           } else {
-            // Create new company and link user as admin
-            company = await prisma.company.create({
+            // Create new team and link user as admin
+            team = await prisma.team.create({
               data: {
-                name: companyName,
-                website: companyWebsite || null,
+                name: teamName,
+                website: teamWebsite || null,
                 adminId: user.id
               }
             })
 
-            // Update user role to company_admin
+            // Update user role to team_admin
             await prisma.user.update({
               where: { id: user.id },
-              data: { role: 'company_admin' }
+              data: { role: 'team_admin' }
             })
 
             if (user.person) {
-              // Link existing person to company
+              // Link existing person to team
               await prisma.person.update({
                 where: { id: user.person.id },
-                data: { companyId: company.id }
+                data: { teamId: team.id }
               })
             } else {
-              // Create new person record linked to company
+              // Create new person record linked to team
               await prisma.person.create({
                 data: {
                   firstName: session.user.name?.split(' ')[0] || 'User',
                   lastName: session.user.name?.split(' ').slice(1).join(' ') || null,
                   email: session.user.email!,
                   userId: user.id,
-                  companyId: company.id
+                  teamId: team.id
                 }
               })
+            }
+
+            // Migrate pro-tier credits from userId to teamId
+            // This handles the case where user signed up with pro tier and got credits,
+            // then later created a team - credits should move from personal to team
+            try {
+              const { migrateProCreditsToTeam } = await import('@/domain/credits/credits')
+              const migratedCredits = await migrateProCreditsToTeam(user.id, team.id)
+              if (migratedCredits > 0) {
+                Logger.info('Migrated credits to team during team creation', {
+                  userId: user.id,
+                  teamId: team.id,
+                  credits: migratedCredits
+                })
+              }
+            } catch (migrateError) {
+              Logger.error('Failed to migrate credits to team', {
+                error: migrateError instanceof Error ? migrateError.message : String(migrateError),
+                userId: user.id,
+                teamId: team.id
+              })
+              // Don't fail team creation if credit migration fails
             }
           }
 
         return NextResponse.json({
           settings: {
-            mode: 'company' as const,
-            companyName: company.name,
-            companyWebsite: company.website,
-            isAdmin: company.adminId === user.id
+            mode: 'pro' as const,
+            teamName: team.name,
+            teamWebsite: team.website,
+            isAdmin: team.adminId === user.id
           }
         })
 
       } else {
-        // Switching to individual mode - remove company association
-        if (user.person?.company) {
-          // If user is admin of a company with other members, prevent switching
-          const companyWithMembers = await prisma.company.findFirst({
+        // Switching to individual mode - remove team association
+        if (user.person?.team) {
+          // If user is admin of a team with other members, prevent switching
+          const teamWithMembers = await prisma.team.findFirst({
             where: { 
-              id: user.person.company.id,
+              id: user.person.team.id,
               adminId: user.id
             },
             include: {
@@ -161,22 +202,22 @@ export async function POST(request: NextRequest) {
             }
           })
 
-          if (companyWithMembers && companyWithMembers.teamMembers.length > 0) {
+          if (teamWithMembers && teamWithMembers.teamMembers.length > 0) {
             return NextResponse.json({ 
-              error: 'Cannot switch to individual mode while you are admin of a company with other members. Please remove all team members first.' 
+              error: 'Cannot switch to individual mode while you are admin of a team with other members. Please remove all team members first.' 
             }, { status: 400 })
           }
 
-          // Remove company association
+          // Remove team association
           await prisma.person.update({
             where: { id: user.person.id },
-            data: { companyId: null }
+            data: { teamId: null }
           })
 
-          // If this was the admin's company and it's now empty, delete the company
-          if (companyWithMembers?.adminId === user.id) {
-            await prisma.company.delete({
-              where: { id: user.person.company.id }
+          // If this was the admin's team and it's now empty, delete the team
+          if (teamWithMembers?.adminId === user.id) {
+            await prisma.team.delete({
+              where: { id: user.person.team.id }
             })
           }
         }

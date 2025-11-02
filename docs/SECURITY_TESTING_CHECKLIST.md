@@ -7,16 +7,16 @@
 - [ ] **Invalid Login**: Cannot login with incorrect credentials
 - [ ] **Rate Limiting**: Login attempts are rate limited (3 per 5 minutes)
 - [ ] **OTP Verification**: OTP codes are required and validated
-- [ ] **Session Management**: Sessions expire after 15 minutes
+- [ ] **Session Management**: Sessions expire after 30 minutes with automatic refresh
 - [ ] **Secure Cookies**: Cookies are httpOnly and secure in production
 
 ### Authorization Checks
 - [ ] **Selfie Access**: Users can only access their own selfies
-- [ ] **Company Access**: Company members can access company selfies
+- [ ] **Team Access**: Team members can access team selfies
 - [ ] **Generation Access**: Users can only access their own generations
-- [ ] **File Access**: Users can only access files they own or company files
+- [ ] **File Access**: Users can only access files they own or team files
 - [ ] **Cross-User Access**: Users cannot access other users' data
-- [ ] **Admin Access**: Company admins have appropriate access
+- [ ] **Admin Access**: Team admins have appropriate access
 
 ## Input Validation & Sanitization
 
@@ -80,7 +80,7 @@
 ### Data Access
 - [ ] **Row-Level Security**: Database RLS is documented and planned
 - [ ] **Application RLS**: Prisma middleware enforces data isolation
-- [ ] **Company Boundaries**: Company data is properly isolated
+- [ ] **Team Boundaries**: Team data is properly isolated
 - [ ] **User Data Isolation**: User data is properly isolated
 
 ## Command Injection Prevention

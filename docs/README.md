@@ -29,11 +29,11 @@ This documentation provides a complete guide to the Teamshots AI Team Photo Gene
 ## 🎯 **Key Features (Current Implementation)**
 
 ### **✅ Implemented Features**
-- **Role-Based Permission System** - Comprehensive access control with 4 user roles (Platform Admin, Company Admin, Company Member, Individual User)
+- **Role-Based Permission System** - Comprehensive access control with 4 user roles (Platform Admin, Team Admin, Team Member, Individual User)
 - **Transaction-Based Credit System** - Full audit trail for all credit movements
 - **Team Management Dashboard** - Complete team member overview with stats and credit balances
 - **Token-Based Team Invites** - 24hr tokens with automatic credit allocation
-- **Generation Type Selection** - Personal vs Company use with different credit sources
+- **Generation Type Selection** - Personal vs Team use with different credit sources
 - **Context Management** - Reusable photo generation settings
 - **File Upload System** - S3 storage for uploaded and generated images
 - **Internationalization** - English and Spanish support
@@ -42,7 +42,7 @@ This documentation provides a complete guide to the Teamshots AI Team Photo Gene
 
 ### **🔄 Current User Flow**
 1. **Photo Upload** - Drag-drop or file picker with validation
-2. **Generation Type Selection** - Choose Personal or Company use
+2. **Generation Type Selection** - Choose Personal or Team use
 3. **Customization** - Style, background, and logo options
 4. **Generation** - AI processing with context application
 5. **Review & Approval** - Generated photo review and selection

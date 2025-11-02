@@ -152,21 +152,21 @@ Notes
 │         User Browser (Next.js)          │
 │  Upload → Customize → Review → Download │
 └─────────────────────────────────┬───────────┘
-                 │
+                │
 ┌─────────────────────────────────▼─────────────┐
 │    API Routes (Hetzner + Coolify)       │
 │  /api/upload, /api/generate, /api/download │
 └─────────────────────────────┬─────────────┬───┘
-         │                   │
-    ┌────▼───┐      ┌────────▼────────┐
-    │ Database │      │ Gemini API  │
-    │(Hetzner) │      │ (Generation)│
-    └────────┬─┘      └───────────────┘
-         │
-    ┌────▼───┐
-    │ Hetzner  │
-    │ S3       │
-    └──────────┘
+        │                   │
+   ┌────▼───┐      ┌────────▼────────┐
+   │ Database │      │ Gemini API  │
+   │(Hetzner) │      │ (Generation)│
+   └────────┬─┘      └───────────────┘
+        │
+   ┌────▼───┐
+   │ Hetzner  │
+   │ S3       │
+   └──────────┘
 ```
 
 ## AI Integration Architecture
@@ -284,6 +284,10 @@ await prisma.generation.create({
 })
 ```
 
+### AI Prompting
+- Packages directory: `src/domain/style/packages/`
+- Each package defines a `promptBuilder(settings)` and controls the UI via `visibleCategories` and persistence adapters.
+
 ## API Endpoints
 
 ### Core (Current)
@@ -292,8 +296,8 @@ await prisma.generation.create({
 - `GET /api/uploads/list` - List current user's selfies
 - `GET /api/files/get?key=<s3-key>` - Signed GET URL for displaying an S3 image
 - `GET /api/files/download?key=<s3-key>` - Signed GET URL intended for downloads
-- `GET /api/generations/list` - List generations (scope=user or company, supports filters)
-- `GET /api/company/members` - List company members (admin only)
+- `GET /api/generations/list` - List generations (scope=user or team, supports filters)
+- `GET /api/team/members` - List team members (admin only)
 - `GET /api/health` - Health check for monitoring
 
 ### Core (Planned)
@@ -313,6 +317,23 @@ await prisma.generation.create({
 ### Marketing
 - `POST /api/waitlist` - Waitlist signup
 - `GET /api/waitlist` - View waitlist (admin)
+
+### Styles
+- `GET /api/styles/personal` - List personal styles
+- `GET /api/styles/team` - List team styles (admin only)
+- `POST /api/styles` - Create a style (name, scope, packageId, settings)
+- `GET /api/styles/:id` - Style detail
+- `PUT /api/styles/:id` - Update style (name, package settings, setAsActive)
+- `DELETE /api/styles/:id` - Delete style
+- `POST /api/styles/:id/activate` - Set active style
+
+
+
+### Uploads in styles
+- Persist S3 keys in settings:
+  - `settings.background.key` for custom backgrounds
+  - `settings.branding.logoKey` for logos
+- Upload `File` objects to `/api/upload` before saving, then store returned keys in settings
 
 ## Data Models
 

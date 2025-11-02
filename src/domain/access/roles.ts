@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
+import { getUserSubscription } from '@/domain/subscription/subscription'
 
-export type UserRole = 'user' | 'company_admin' | 'company_member'
+export type UserRole = 'user' | 'team_admin' | 'team_member'
 
 export interface UserWithRoles {
   id: string
@@ -9,8 +10,8 @@ export interface UserWithRoles {
   isAdmin: boolean
   person?: {
     id: string
-    companyId?: string | null
-    company?: {
+    teamId?: string | null
+    team?: {
       id: string
       name: string
       adminId: string
@@ -20,32 +21,44 @@ export interface UserWithRoles {
 
 export interface PermissionContext {
   user: UserWithRoles
-  companyId?: string
+  teamId?: string
   personId?: string
 }
 
 /**
- * Determine the effective role of a user based on their User role and company relationships
+ * Determine the effective role of a user based on their User role, subscription tier, and team relationships
+ * Pro users are by definition team admins
  */
-export function getUserEffectiveRoles(user: UserWithRoles): {
+export async function getUserEffectiveRoles(user: UserWithRoles): Promise<{
   platformRole: 'user' | 'team_admin' | 'team_member'
-  companyRole: 'team_admin' | 'team_member' | null
-  isCompanyAdmin: boolean
-  isCompanyMember: boolean
+  teamRole: 'team_admin' | 'team_member' | null
+  isTeamAdmin: boolean
+  isTeamMember: boolean
   isPlatformAdmin: boolean
   isRegularUser: boolean
-} {
+}> {
   const isPlatformAdmin = user.isAdmin
-  const isCompanyAdmin = user.role === 'company_admin'
-  const isCompanyMember = user.role === 'company_member'
+  
+  // Check if user has pro subscription - pro users are team admins by definition
+  const subscription = await getUserSubscription(user.id)
+  const hasProTier = subscription?.tier === 'pro'
+  
+  // User is team admin if:
+  // 1. They have the 'team_admin' role in the database, OR
+  // 2. They have a pro subscription (pro users are team admins by definition)
+  const isTeamAdmin = user.role === 'team_admin' || hasProTier
+  
+  // Team members are ONLY invited members (cannot be pro users)
+  // Pro users are team admins, not team members
+  const isTeamMember = user.role === 'team_member' && !hasProTier
   
   return {
-    platformRole: user.role === 'company_admin' ? 'team_admin' : user.role === 'company_member' ? 'team_member' : 'user',
-    companyRole: isCompanyAdmin ? 'team_admin' : isCompanyMember ? 'team_member' : null,
-    isCompanyAdmin,
-    isCompanyMember,
+    platformRole: isTeamAdmin ? 'team_admin' : isTeamMember ? 'team_member' : 'user',
+    teamRole: isTeamAdmin ? 'team_admin' : isTeamMember ? 'team_member' : null,
+    isTeamAdmin,
+    isTeamMember,
     isPlatformAdmin,
-    isRegularUser: user.role === 'user'
+    isRegularUser: user.role === 'user' && !hasProTier
   }
 }
 
@@ -57,77 +70,83 @@ export async function hasPermission(
   action: Permission,
   resource?: unknown
 ): Promise<boolean> {
-  const roles = getUserEffectiveRoles(context.user)
+  const roles = await getUserEffectiveRoles(context.user)
   
   switch (action) {
     case 'platform.admin':
       return roles.isPlatformAdmin
     case 'user.manage_own_account':
       return context.user.id === (resource as { userId?: string })?.userId
-    case 'company.view':
-      return roles.isCompanyAdmin || roles.isCompanyMember || 
-             Boolean(context.companyId && context.user.person?.companyId === context.companyId)
-    case 'company.manage':
-      return roles.isCompanyAdmin && 
-             context.companyId === context.user.person?.companyId
-    case 'company.invite_members':
-      return roles.isCompanyAdmin && 
-             context.companyId === context.user.person?.companyId
-    case 'company.manage_members':
-      return roles.isCompanyAdmin && 
-             context.companyId === context.user.person?.companyId
-    case 'company.allocate_credits':
-      return roles.isCompanyAdmin && 
-             context.companyId === context.user.person?.companyId
-    case 'company.view_analytics':
-      return roles.isCompanyAdmin && 
-             context.companyId === context.user.person?.companyId
+    case 'team.view':
+      return roles.isTeamAdmin || roles.isTeamMember || 
+             Boolean(context.teamId && context.user.person?.teamId === context.teamId)
+    case 'team.manage':
+      return roles.isTeamAdmin && 
+             context.teamId === context.user.person?.teamId
+    case 'team.invite_members':
+      return roles.isTeamAdmin && 
+             context.teamId === context.user.person?.teamId
+    case 'team.manage_members':
+      return roles.isTeamAdmin && 
+             context.teamId === context.user.person?.teamId
+    case 'team.allocate_credits':
+      return roles.isTeamAdmin && 
+             context.teamId === context.user.person?.teamId
+    case 'team.view_analytics':
+      return roles.isTeamAdmin && 
+             context.teamId === context.user.person?.teamId
     case 'generation.create_personal':
       return true
-    case 'generation.create_company':
-      return roles.isCompanyMember && 
-             context.companyId === context.user.person?.companyId
+    case 'generation.create_team':
+      // Both team admins (pro users) and team members (invited) can create team generations
+      return (roles.isTeamAdmin || roles.isTeamMember) && 
+             context.teamId === context.user.person?.teamId
     case 'generation.view_own':
       return context.user.id === (resource as { userId?: string })?.userId ||
              context.personId === (resource as { personId?: string })?.personId
-    case 'generation.view_company':
-      return roles.isCompanyMember && 
-             context.companyId === context.user.person?.companyId &&
-             (resource as { companyId?: string })?.companyId === context.companyId
+    case 'generation.view_team':
+      // Only team admins (pro users) can view all team generations
+      // Team members can only see their own photos
+      return roles.isTeamAdmin && 
+             context.teamId === context.user.person?.teamId &&
+             (resource as { teamId?: string })?.teamId === context.teamId
     case 'generation.approve':
-      return roles.isCompanyAdmin && 
-             context.companyId === context.user.person?.companyId
+      return roles.isTeamAdmin && 
+             context.teamId === context.user.person?.teamId
     case 'credits.view_own':
       return true
-    case 'credits.view_company':
-      return roles.isCompanyMember && 
-             context.companyId === context.user.person?.companyId
-    case 'credits.allocate_company':
-      return roles.isCompanyAdmin && 
-             context.companyId === context.user.person?.companyId
+    case 'credits.view_team':
+      // Both team admins (pro users) and team members can view team credits
+      return (roles.isTeamAdmin || roles.isTeamMember) && 
+             context.teamId === context.user.person?.teamId
+    case 'credits.allocate_team':
+      return roles.isTeamAdmin && 
+             context.teamId === context.user.person?.teamId
     case 'files.upload':
       return true
     case 'files.view_own':
       return context.user.id === (resource as { userId?: string })?.userId ||
              context.personId === (resource as { personId?: string })?.personId
-    case 'files.view_company':
-      return roles.isCompanyMember && 
-             context.companyId === context.user.person?.companyId &&
-             (resource as { companyId?: string })?.companyId === context.companyId
+    case 'files.view_team':
+      // Both team admins (pro users) and team members can view team files
+      return (roles.isTeamAdmin || roles.isTeamMember) && 
+             context.teamId === context.user.person?.teamId &&
+             (resource as { teamId?: string })?.teamId === context.teamId
     case 'context.create_personal':
       return true
-    case 'context.create_company':
-      return roles.isCompanyAdmin && 
-             context.companyId === context.user.person?.companyId
+    case 'context.create_team':
+      return roles.isTeamAdmin && 
+             context.teamId === context.user.person?.teamId
     case 'context.view_own':
       return context.user.id === (resource as { userId?: string })?.userId
-    case 'context.view_company':
-      return roles.isCompanyMember && 
-             context.companyId === context.user.person?.companyId &&
-             (resource as { companyId?: string })?.companyId === context.companyId
-    case 'context.manage_company':
-      return roles.isCompanyAdmin && 
-             context.companyId === context.user.person?.companyId
+    case 'context.view_team':
+      // Both team admins (pro users) and team members can view team contexts
+      return (roles.isTeamAdmin || roles.isTeamMember) && 
+             context.teamId === context.user.person?.teamId &&
+             (resource as { teamId?: string })?.teamId === context.teamId
+    case 'context.manage_team':
+      return roles.isTeamAdmin && 
+             context.teamId === context.user.person?.teamId
     default:
       return false
   }
@@ -142,7 +161,7 @@ export async function getUserWithRoles(userId: string): Promise<UserWithRoles | 
     include: {
       person: {
         include: {
-          company: {
+          team: {
             select: {
               id: true,
               name: true,
@@ -163,11 +182,11 @@ export async function getUserWithRoles(userId: string): Promise<UserWithRoles | 
     isAdmin: user.isAdmin,
     person: user.person ? {
       id: user.person.id,
-      companyId: user.person.companyId,
-      company: user.person.company ? {
-        id: user.person.company.id,
-        name: user.person.company.name,
-        adminId: user.person.company.adminId
+      teamId: user.person.teamId,
+      team: user.person.team ? {
+        id: user.person.team.id,
+        name: user.person.team.name,
+        adminId: user.person.team.adminId
       } : null
     } : null
   }
@@ -192,7 +211,7 @@ export async function requirePermission(
  */
 export async function createPermissionContext(
   session: { user?: { id?: string } } | null,
-  companyId?: string,
+  teamId?: string,
   personId?: string
 ): Promise<PermissionContext | null> {
   if (!session?.user?.id) return null
@@ -202,7 +221,7 @@ export async function createPermissionContext(
 
   return {
     user,
-    companyId,
+    teamId,
     personId
   }
 }
@@ -210,27 +229,27 @@ export async function createPermissionContext(
 export type Permission = 
   | 'platform.admin'
   | 'user.manage_own_account'
-  | 'company.view'
-  | 'company.manage'
-  | 'company.invite_members'
-  | 'company.manage_members'
-  | 'company.allocate_credits'
-  | 'company.view_analytics'
+  | 'team.view'
+  | 'team.manage'
+  | 'team.invite_members'
+  | 'team.manage_members'
+  | 'team.allocate_credits'
+  | 'team.view_analytics'
   | 'generation.create_personal'
-  | 'generation.create_company'
+  | 'generation.create_team'
   | 'generation.view_own'
-  | 'generation.view_company'
+  | 'generation.view_team'
   | 'generation.approve'
   | 'credits.view_own'
-  | 'credits.view_company'
-  | 'credits.allocate_company'
+  | 'credits.view_team'
+  | 'credits.allocate_team'
   | 'files.upload'
   | 'files.view_own'
-  | 'files.view_company'
+  | 'files.view_team'
   | 'context.create_personal'
-  | 'context.create_company'
+  | 'context.create_team'
   | 'context.view_own'
-  | 'context.view_company'
-  | 'context.manage_company'
+  | 'context.view_team'
+  | 'context.manage_team'
 
 

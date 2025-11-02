@@ -58,11 +58,11 @@ node_modules/
 *.sw?
 # OS specific
 
-# Task files
-# tasks.json
-# tasks/
-
 # Playwright auth state
 playwright/.auth/ 
 
 certificates
+
+# Task files
+# tasks.json
+# tasks/ 

@@ -13,7 +13,7 @@ interface SamplePhoto {
   attribution?: {
     name: string;
     role: string;
-    company: string;
+    team: string;
   };
 }
 
@@ -27,7 +27,7 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
     attribution: {
       name: 'Sarah Johnson',
       role: 'Marketing',
-      company: 'Digital Agency'
+      team: 'Digital Agency'
     }
   },
   {
@@ -38,7 +38,7 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
     attribution: {
       name: 'Matthieu van Haperen',
       role: 'Entrepreneur',
-      company: 'Carpe Diem Ventures'
+      team: 'Carpe Diem Ventures'
     }
   },
   {
@@ -49,7 +49,7 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
     attribution: {
       name: 'Matthieu van Haperen',
       role: 'Founder',
-      company: 'TeamShots'
+      team: 'TeamShots'
     }
   }
 ];
@@ -231,7 +231,7 @@ export default function SampleGallery() {
                         {photo.attribution.name}
                       </p>
                       <p className="text-xs text-gray-600">
-                        {photo.attribution.role} • {photo.attribution.company}
+                        {photo.attribution.role} • {photo.attribution.team}
                       </p>
                     </div>
                   )}

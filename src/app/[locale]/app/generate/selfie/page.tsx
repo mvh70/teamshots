@@ -6,10 +6,9 @@ import { useEffect, useState } from 'react'
 import { Link } from '@/i18n/routing'
 import dynamic from 'next/dynamic'
 import UploadCard from '../../generations/components/UploadCard'
-import SelfieApproval from '@/components/Upload/SelfieApproval'
 import { jsonFetcher } from '@/lib/fetcher'
 
-const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
+const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
 interface UploadListItem {
   id: string
@@ -25,8 +24,6 @@ export default function SelfieSelectionPage() {
   const [uploads, setUploads] = useState<UploadListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
-  const [uploadedKey, setUploadedKey] = useState<string | null>(null)
-  const [isApproved, setIsApproved] = useState(false)
 
   // Load uploads from API
   const loadUploads = async () => {
@@ -54,52 +51,11 @@ export default function SelfieSelectionPage() {
     }
   }, [loading, uploads.length])
 
-  const handlePhotoUploaded = async (result: { key: string; url?: string }) => {
-    try {
-      // Set the uploaded key to show approval screen
-      setUploadedKey(result.key)
-      setShowUpload(false)
-    } catch (error) {
-      console.error('Failed to handle upload:', error)
-      alert('Selfie upload failed. Please try again.')
-    }
-  }
-
-  const handleApprove = async () => {
-    setIsApproved(true)
-    // Reload uploads to show the new selfie
-    await loadUploads()
-    setUploadedKey(null)
-  }
-
-  const handleReject = async () => {
-    if (uploadedKey) {
-      // Delete the uploaded selfie
-      try {
-        await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(uploadedKey)}`, {
-          method: 'DELETE',
-        })
-      } catch (error) {
-        console.error('Error deleting rejected selfie:', error)
-      }
-    }
-    setUploadedKey(null)
-    setShowUpload(true)
-  }
-
-  const handleRetake = async () => {
-    if (uploadedKey) {
-      // Delete the uploaded selfie
-      try {
-        await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(uploadedKey)}`, {
-          method: 'DELETE',
-        })
-      } catch (error) {
-        console.error('Error deleting selfie for retake:', error)
-      }
-    }
-    setUploadedKey(null)
-    setShowUpload(true)
+  const handleSelfieApproved = async (selfieKey: string) => {
+    // After approval, go straight to style selection/start screen with the new selfie
+    const urlParams = new URLSearchParams(window.location.search)
+    const generationType = urlParams.get('type') || 'personal'
+    window.location.href = `/app/generate/start?key=${encodeURIComponent(selfieKey)}&type=${generationType}`
   }
 
   const handleSelfieSelect = (selfieKey: string) => {
@@ -126,39 +82,15 @@ export default function SelfieSelectionPage() {
         </Link>
       </div>
 
-      {uploadedKey && !isApproved && (
-        <SelfieApproval
-          uploadedPhotoKey={uploadedKey}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          onRetake={handleRetake}
-          onCancel={() => {
-            setUploadedKey(null)
-            setShowUpload(true)
+      {showUpload && (
+        <SelfieUploadFlow
+          onSelfieApproved={handleSelfieApproved}
+          onCancel={() => setShowUpload(false)}
+          onError={(error) => {
+            console.error('Selfie upload error:', error)
+            alert(error)
           }}
         />
-      )}
-
-      {showUpload && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {uploads.length === 0 ? t('upload.title') : t('upload.title')}
-            </h2>
-            {uploads.length > 0 && (
-              <button
-                onClick={() => setShowUpload(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-          <p className="text-sm text-gray-600 mb-4">{t('upload.description')}</p>
-          <div className="max-w-md">
-            <PhotoUpload onUploaded={handlePhotoUploaded} />
-          </div>
-        </div>
       )}
 
       {!showUpload && (

@@ -102,7 +102,7 @@ Public launch: After 1 week of beta feedback
 - 5 standard presets (office, neutral, gradient, branded, outdoor)
 
 ### 4. Branding (Optional)
-- Add company logo to clothing/background
+- Add team logo to clothing/background
 - Adjust clothing style (formal, business casual, casual)
 
 ### 5. Account & Billing
@@ -289,7 +289,7 @@ Public launch: After 1 week of beta feedback
 - Professional branding assets
 - Team composite photos (MVP2+)
 - Batch processing
-- Company accounts
+- Team accounts
 - Integrations
 - Free tier
 

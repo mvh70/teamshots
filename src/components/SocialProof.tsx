@@ -8,7 +8,7 @@ interface Testimonial {
   id: string;
   name: string;
   role: string;
-  company: string;
+  team: string;
   content: string;
   rating: number;
 }
@@ -22,7 +22,7 @@ export default function SocialProof() {
       id: '1',
       name: 'Sarah Chen',
       role: 'Head of Marketing',
-      company: 'TechFlow',
+      team: 'TechFlow',
       content: 'Saved us $3,000 and 3 weeks of coordination. Our team photos look more professional than our previous $200/person photographer.',
       rating: 5
     },
@@ -30,7 +30,7 @@ export default function SocialProof() {
       id: '2',
       name: 'Marcus Rodriguez',
       role: 'CEO',
-      company: 'StartupCo',
+      team: 'StartupCo',
       content: 'Perfect for our remote team. New hires get professional photos on day one without any scheduling headaches.',
       rating: 5
     },
@@ -38,7 +38,7 @@ export default function SocialProof() {
       id: '3',
       name: 'Emily Watson',
       role: 'HR Director',
-      company: 'ScaleUp Inc',
+      team: 'ScaleUp Inc',
       content: 'The quality is incredible. Our LinkedIn profiles and website look cohesive and professional. Best $50 we ever spent.',
       rating: 5
     }
@@ -104,7 +104,7 @@ export default function SocialProof() {
                     {TESTIMONIALS[currentTestimonial].name}
                   </div>
                   <div className="text-sm text-gray-600">
-                    {TESTIMONIALS[currentTestimonial].role}, {TESTIMONIALS[currentTestimonial].company}
+                    {TESTIMONIALS[currentTestimonial].role}, {TESTIMONIALS[currentTestimonial].team}
                   </div>
                 </div>
               </div>

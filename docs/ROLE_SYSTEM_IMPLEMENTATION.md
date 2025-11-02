@@ -16,7 +16,7 @@ model User {
   email               String    @unique
   password            String?
   emailVerified       DateTime?
-  role                String    @default("user") // 'user' | 'company_admin' | 'company_member'
+  role                String    @default("user") // 'user' | 'team_admin' | 'team_member'
   isAdmin             Boolean   @default(false)  // Platform admin status
   locale              String    @default("en")
   // ... other fields
@@ -29,18 +29,18 @@ model User {
 - **Database Field**: `isAdmin = true`
 - **Permissions**: Full platform access
 - **Capabilities**: Manage all companies, users, and platform-wide features
-- **Note**: Can be combined with any role (user, company_admin, company_member)
+- **Note**: Can be combined with any role (user, team_admin, team_member)
 
-#### 2. Company Admin (`company_admin`)
-- **Database Role**: `role = 'company_admin'`
-- **Company Admin**: User is the `adminId` of their company
-- **Permissions**: Full company management
-- **Capabilities**: Invite team members, allocate credits, manage company settings
+#### 2. Team Admin (`team_admin`)
+- **Database Role**: `role = 'team_admin'`
+- **Team Admin**: User is the `adminId` of their team
+- **Permissions**: Full team management
+- **Capabilities**: Invite team members, allocate credits, manage team settings
 
-#### 3. Company Member (`company_member`)
-- **Database Role**: `role = 'company_member'`
-- **Company Member**: User has a `Person` record linked to a company
-- **Permissions**: Company features access
+#### 3. Team Member (`team_member`)
+- **Database Role**: `role = 'team_member'`
+- **Team Member**: User has a `Person` record linked to a team
+- **Permissions**: Team features access
 - **Capabilities**: View team dashboard, collaborate with team
 
 #### 4. Individual User (`user`)
@@ -52,9 +52,9 @@ model User {
 ### Role Assignment on Signup
 
 When users sign up:
-- **From team invite**: Automatically assigned `company_member` role (if they accepted a team invite before signing up)
+- **From team invite**: Automatically assigned `team_member` role (if they accepted a team invite before signing up)
 - **New individual user**: Assigned `user` role by default
-- **Company admin**: Assigned `company_admin` role when they create a company and are designated as admin
+- **Team admin**: Assigned `team_admin` role when they create a team and are designated as admin
 
 ### Admin Status Assignment
 
@@ -79,7 +79,7 @@ Core functions for role management:
 API middleware for enforcing permissions:
 
 - `withPermission()` - General permission checking
-- `withCompanyPermission()` - Company-specific permissions
+- `withTeamPermission()` - Team-specific permissions
 - `withAdminPermission()` - Platform admin permissions
 - `checkPermission()` - UI-level permission checking
 - `getUserRoles()` - Get effective roles for UI display
@@ -95,7 +95,7 @@ interface Session {
     email: string
     role: string
     person?: {
-      company?: {
+      team?: {
         id: string
         name: string
         adminId: string
@@ -109,20 +109,20 @@ interface Session {
 
 Protected endpoints with role-based access control:
 
-- `/api/company/members` - Company admin/member access
-- `/api/team/invites` - Company admin access for creating invites
-- `/api/team/invites/resend` - Company admin access for resending invites
-- `/api/team/invites/revoke` - Company admin access for revoking invites
-- `/api/team/members/role` - Company admin access for role changes
-- `/api/team/members/remove` - Company admin access for removing members
-- `/api/contexts` - Company member access
+- `/api/team/members` - Team admin/member access
+- `/api/team/invites` - Team admin access for creating invites
+- `/api/team/invites/resend` - Team admin access for resending invites
+- `/api/team/invites/revoke` - Team admin access for revoking invites
+- `/api/team/members/role` - Team admin access for role changes
+- `/api/team/members/remove` - Team admin access for removing members
+- `/api/styles` - Team member access
 - `/api/user/settings` - User's own settings only
 
 ### 5. UI Role Indicators
 
 Role indicators throughout the interface:
 
-- **Sidebar**: Clean user profile display with context-aware credits (individual mode shows "Credits", company mode shows "Personal Credits" and "Company Credits")
+- **Sidebar**: Clean user profile display with context-aware credits (individual mode shows "Credits", team mode shows "Personal Credits" and "Team Credits")
 - **Team Page**: Detailed role information for team members
 - **Settings Page**: Current roles display
 - **Conditional Rendering**: UI elements shown/hidden based on permissions
@@ -131,9 +131,9 @@ Role indicators throughout the interface:
 
 ### Dual Role Support
 
-Users can be both company members and individual users:
+Users can be both team members and individual users:
 
-- **Company Mode**: Access to team features and company dashboard
+- **Team Mode**: Access to team features and team dashboard
 - **Individual Mode**: Personal features and individual dashboard
 - **Seamless Switching**: Toggle between modes in settings
 
@@ -157,7 +157,7 @@ Users can be both company members and individual users:
 All protected endpoints correctly return `401 Unauthorized` when no authentication is provided:
 
 ```bash
-curl http://localhost:3000/api/company/members
+curl http://localhost:3000/api/team/members
 # Returns: {"error": "Unauthorized"}
 
 curl http://localhost:3000/api/team/invites  
@@ -184,7 +184,7 @@ npm run build
 import { checkPermission } from '@/domain/access/permissions'
 
 // Check if user can invite team members
-const canInvite = await checkPermission(session, 'company.invite_members')
+const canInvite = await checkPermission(session, 'team.invite_members')
 
 if (canInvite) {
   // Show invite button
@@ -194,12 +194,12 @@ if (canInvite) {
 ### API Route Protection
 
 ```typescript
-import { withCompanyPermission } from '@/domain/access/permissions'
+import { withTeamPermission } from '@/domain/access/permissions'
 
 export async function POST(request: NextRequest) {
-  const permissionCheck = await withCompanyPermission(
+  const permissionCheck = await withTeamPermission(
     request,
-    'company.invite_members'
+    'team.invite_members'
   )
   
   if (permissionCheck instanceof NextResponse) {
@@ -211,9 +211,9 @@ export async function POST(request: NextRequest) {
 
 // Example: Member management endpoint
 export async function POST(request: NextRequest) {
-  const permissionCheck = await withCompanyPermission(
+  const permissionCheck = await withTeamPermission(
     request,
-    'company.manage_members'
+    'team.manage_members'
   )
   
   if (permissionCheck instanceof NextResponse) {
@@ -234,9 +234,9 @@ export async function POST(request: NextRequest) {
   </span>
 )}
 
-{session?.user?.person?.company?.adminId === session?.user?.id && (
+{session?.user?.person?.team?.adminId === session?.user?.id && (
   <span className="badge bg-purple-100 text-purple-800">
-    Company Admin
+    Team Admin
   </span>
 )}
 
@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
 ) : (
   <>
     <span>Personal Credits: {credits.individual}</span>
-    <span>Company Credits: {credits.company}</span>
+    <span>Team Credits: {credits.team}</span>
   </>
 )}
 ```

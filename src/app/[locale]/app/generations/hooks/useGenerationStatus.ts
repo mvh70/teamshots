@@ -10,8 +10,8 @@ import { jsonFetcher } from '@/lib/fetcher'
 export interface GenerationStatus {
   id: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
-  generationType: 'personal' | 'company'
-  creditSource: 'individual' | 'company'
+  generationType: 'personal' | 'team'
+  creditSource: 'individual' | 'team'
   creditsUsed: number
   provider: string
   actualCost?: number
@@ -37,6 +37,7 @@ export interface GenerationStatus {
   jobStatus?: {
     id: string
     progress: number
+    message?: string
     attemptsMade: number
     processedOn?: number
     finishedOn?: number

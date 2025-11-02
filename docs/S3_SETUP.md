@@ -20,7 +20,7 @@ The application expects the following folder structure in your S3 bucket:
 your-bucket-name/
 ├── backgrounds/          # Custom background images for contexts
 ├── selfies/             # User uploaded selfie photos
-├── logos/               # Company logos for contexts
+├── logos/               # Team logos for contexts
 └── generations/         # Generated professional photos
 ```
 

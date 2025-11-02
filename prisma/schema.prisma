@@ -8,28 +8,32 @@ datasource db {
 }
 
 model User {
-  id                   String              @id @default(cuid())
-  email                String              @unique
+  id                   String               @id @default(cuid())
+  email                String               @unique
   password             String?
   emailVerified        DateTime?
-  locale               String              @default("en")
-  subscriptionTier     String?
+  locale               String               @default("en")
   subscriptionStatus   String?
-  stripeCustomerId     String?             @unique
-  stripeSubscriptionId String?             @unique
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  role                 String              @default("user")
-  metadata             Json                @default("{}")
-  isAdmin              Boolean             @default(false)
+  stripeCustomerId     String?              @unique
+  stripeSubscriptionId String?              @unique
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  role                 String               @default("user")
+  metadata             Json                 @default("{}")
+  isAdmin              Boolean              @default(false)
+  freeTrialGrantedAt   DateTime?
+  planPeriod           String?
+  planTier             String?
   accounts             Account[]
-  companies            Company[]           @relation("CompanyAdmin")
+  teams                Team[]               @relation("TeamAdmin")
   creditTransactions   CreditTransaction[]
   person               Person?
   refreshTokens        RefreshToken[]
   sessions             Session[]
   convertedFromInvite  TeamInvite?
   transactions         Transaction[]
+  subscriptionChanges  SubscriptionChange[]
+  userPackages         UserPackage[]
 
   @@index([email])
 }
@@ -40,7 +44,7 @@ model Person {
   lastName           String?
   email              String?
   userId             String?             @unique
-  companyId          String?
+  teamId             String?
   inviteToken        String?             @unique
   invitedAt          DateTime?
   inviteAcceptedAt   DateTime?
@@ -48,35 +52,36 @@ model Person {
   updatedAt          DateTime            @updatedAt
   creditTransactions CreditTransaction[]
   generations        Generation[]
-  company            Company?            @relation(fields: [companyId], references: [id])
+  team               Team?               @relation(fields: [teamId], references: [id])
   user               User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
   selfies            Selfie[]
+  teamInvite         TeamInvite?
 
   @@index([email])
-  @@index([companyId])
+  @@index([teamId])
   @@index([inviteToken])
   @@index([userId])
 }
 
-model Company {
-  id                   String              @id @default(cuid())
+model Team {
+  id                   String               @id @default(cuid())
   name                 String
   website              String?
   domain               String?
   adminId              String
-  subscriptionTier     String?
   subscriptionStatus   String?
-  stripeCustomerId     String?             @unique
-  stripeSubscriptionId String?             @unique
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  activeContextId      String?             @unique
-  activeContext        Context?            @relation("ActiveContext", fields: [activeContextId], references: [id])
-  admin                User                @relation("CompanyAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?              @unique
+  stripeSubscriptionId String?              @unique
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  activeContextId      String?              @unique
+  activeContext        Context?             @relation("ActiveContext", fields: [activeContextId], references: [id])
+  admin                User                 @relation("TeamAdmin", fields: [adminId], references: [id], onDelete: Cascade)
   contexts             Context[]
   creditTransactions   CreditTransaction[]
   teamMembers          Person[]
   teamInvites          TeamInvite[]
+  subscriptionChanges  SubscriptionChange[]
 
   @@index([adminId])
   @@index([domain])
@@ -85,7 +90,7 @@ model Company {
 model Context {
   id               String       @id @default(cuid())
   name             String
-  companyId        String?
+  teamId           String?
   userId           String?
   backgroundUrl    String?
   backgroundPrompt String?
@@ -95,12 +100,12 @@ model Context {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   settings         Json         @default("{}")
-  activeForCompany Company?     @relation("ActiveContext")
-  company          Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  activeForTeam    Team?        @relation("ActiveContext")
+  team             Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
   generations      Generation[]
   teamInvites      TeamInvite[]
 
-  @@index([companyId])
+  @@index([teamId])
   @@index([userId])
 }
 
@@ -136,6 +141,7 @@ model Generation {
   generationGroupId      String?
   groupIndex             Int?
   isOriginal             Boolean   @default(true)
+  styleSettings          Json?
   context                Context?  @relation(fields: [contextId], references: [id])
   person                 Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
   selfie                 Selfie?   @relation(fields: [selfieId], references: [id])
@@ -257,7 +263,7 @@ model OTP {
 
 model CreditTransaction {
   id                   String              @id @default(cuid())
-  companyId            String?
+  teamId               String?
   personId             String?
   userId               String?
   amount               Float?
@@ -274,14 +280,14 @@ model CreditTransaction {
   stripeInvoiceId      String?
   stripePaymentId      String?
   stripeSubscriptionId String?
-  company              Company?            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  team                 Team?               @relation(fields: [teamId], references: [id], onDelete: Cascade)
   person               Person?             @relation(fields: [personId], references: [id], onDelete: Cascade)
   relatedTransaction   CreditTransaction?  @relation("TransferPair", fields: [relatedTransactionId], references: [id])
   reverseTransactions  CreditTransaction[] @relation("TransferPair")
   teamInvite           TeamInvite?         @relation(fields: [teamInviteId], references: [id])
   user                 User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([companyId])
+  @@index([teamId])
   @@index([personId])
   @@index([userId])
   @@index([type])
@@ -291,27 +297,58 @@ model CreditTransaction {
   @@index([planTier])
 }
 
+model AppSetting {
+  key   String @id
+  value String
+}
+
+model SubscriptionChange {
+  id                   String   @id @default(cuid())
+  userId               String
+  teamId               String?
+  planTier             String // 'individual' | 'pro'
+  planPeriod           String // 'free' | 'try_once' | 'monthly' | 'annual'
+  action               String // 'start' | 'change' | 'cancel' | 'schedule'
+  actionDate           DateTime @default(now())
+  effectiveDate        DateTime @default(now())
+  stripeSubscriptionId String?
+  stripeScheduleId     String?
+  metadata             Json     @default("{}")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team? @relation(fields: [teamId], references: [id])
+
+  @@index([userId, effectiveDate])
+  @@index([teamId])
+  @@index([planTier])
+  @@index([planPeriod])
+}
+
 model TeamInvite {
   id                 String              @id @default(cuid())
   email              String
-  companyId          String
+  firstName          String
+  teamId             String
   token              String              @unique
   expiresAt          DateTime
   usedAt             DateTime?
   creditsAllocated   Int                 @default(5)
+  personId           String?             @unique
   convertedUserId    String?             @unique
   contextId          String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   creditTransactions CreditTransaction[]
-  company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  team               Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
   context            Context?            @relation(fields: [contextId], references: [id])
+  person             Person?             @relation(fields: [personId], references: [id], onDelete: SetNull)
   convertedUser      User?               @relation(fields: [convertedUserId], references: [id])
 
   @@index([email])
   @@index([token])
   @@index([expiresAt])
-  @@index([companyId])
+  @@index([teamId])
+  @@index([personId])
 }
 
 model RefreshToken {
@@ -347,4 +384,17 @@ model SecurityLog {
   @@index([userId])
   @@index([createdAt])
   @@index([ipAddress])
+}
+
+model UserPackage {
+  id          String    @id @default(cuid())
+  userId      String
+  packageId   String // Folder name where package definition is located (e.g., 'headshot1', 'freepackage')
+  purchasedAt DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, packageId])
+  @@index([userId])
+  @@index([packageId])
 }

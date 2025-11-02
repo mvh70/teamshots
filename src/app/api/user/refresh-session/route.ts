@@ -33,8 +33,8 @@ export async function POST() {
       debug: {
         databaseRole: userWithRoles.role,
         hasPerson: !!userWithRoles.person,
-        companyId: userWithRoles.person?.companyId,
-        isCompanyAdmin: userWithRoles.person?.company?.adminId === userWithRoles.id
+        teamId: userWithRoles.person?.teamId,
+        isTeamAdmin: userWithRoles.person?.team?.adminId === userWithRoles.id
       },
       requiresReauth: true // Indicate that session needs to be refreshed
     })

@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
       where: {
         token,
         usedAt: { not: null }
+      },
+      include: {
+        person: true
       }
     })
 
@@ -24,17 +27,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
     }
 
-    // Find the person by email from the invite
-    const person = await prisma.person.findFirst({
-      where: {
-        email: invite.email,
-        companyId: invite.companyId
-      }
-    })
-
-    if (!person) {
+    if (!invite.person) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 })
     }
+
+    const person = invite.person
 
     // Get recent activity
     const generations = await prisma.generation.findMany({

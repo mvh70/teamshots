@@ -41,7 +41,7 @@
 ### Fetch Calls (High Priority)
 - ✅ `src/app/[locale]/app/team/page.tsx` - Migrated team data fetching to jsonFetcher
 - ✅ `src/app/[locale]/app/dashboard/page.tsx` - Migrated dashboard data fetching to jsonFetcher
-- ✅ `src/app/[locale]/app/contexts/page.tsx` - Migrated context management to jsonFetcher
+- ✅ `src/app/[locale]/app/styles/page.tsx` - Migrated styles management to jsonFetcher
 - ✅ `src/hooks/useSelfieUpload.ts` - Upload flow
 - ✅ `src/contexts/CreditsContext.tsx` - Migrated credit balance fetching to jsonFetcher
 - ✅ `src/app/[locale]/app/settings/page.tsx` - Migrated settings API calls to jsonFetcher
@@ -51,7 +51,7 @@
 - ✅ `src/app/[locale]/app/generations/[id]/page.tsx` - Migrated generation details to jsonFetcher
 - ✅ `src/app/[locale]/app/selfies/page.tsx` - Migrated upload list and delete to jsonFetcher
 - ✅ `src/app/[locale]/app/generate/start/page.tsx` - Migrated all generation flow calls to jsonFetcher
-- ✅ `src/app/[locale]/app/contexts/personal/create/page.tsx` - Migrated context creation to jsonFetcher
+- ✅ `src/app/[locale]/app/styles/personal/create/page.tsx` - Migrated style creation to jsonFetcher
 - ✅ `src/app/[locale]/app/contexts/team/create/page.tsx` - Migrated context creation to jsonFetcher
 - ✅ `src/app/[locale]/app/contexts/personal/page.tsx` - Migrated all context operations to jsonFetcher
 - ✅ `src/app/[locale]/app/contexts/team/page.tsx` - Migrated all context operations to jsonFetcher

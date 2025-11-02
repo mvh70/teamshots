@@ -8,7 +8,7 @@ export async function withPermission(
   request: NextRequest,
   permission: Permission,
   resource?: unknown,
-  companyId?: string,
+  teamId?: string,
   personId?: string
 ) {
   const session = await auth()
@@ -16,7 +16,7 @@ export async function withPermission(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const context = await createPermissionContext(session, companyId, personId)
+  const context = await createPermissionContext(session, teamId, personId)
   if (!context) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
@@ -37,7 +37,7 @@ export async function withPermission(
   }
 }
 
-export async function withCompanyPermission(
+export async function withTeamPermission(
   request: NextRequest,
   permission: Permission,
   resource?: unknown
@@ -47,31 +47,31 @@ export async function withCompanyPermission(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let companyId = session.user.person?.companyId
+  let teamId = session.user.person?.teamId
   
-  if (!companyId) {
+  if (!teamId) {
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: {
         person: {
-          select: { companyId: true }
+          select: { teamId: true }
         }
       }
     })
     
-    companyId = user?.person?.companyId || null
+    teamId = user?.person?.teamId || null
   }
 
-  if (!companyId) {
+  if (!teamId) {
     return NextResponse.json(
-      { error: 'Not part of a company' }, 
+      { error: 'Not part of a team' }, 
       { status: 403 }
     )
   }
 
   const context = await createPermissionContext(
     session, 
-    companyId
+    teamId
   )
   if (!context) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -79,7 +79,7 @@ export async function withCompanyPermission(
 
   try {
     await requirePermission(context, permission, resource)
-    return { context, session, companyId }
+    return { context, session, teamId }
   } catch {
     await SecurityLogger.logPermissionDenied(
       session.user.id,
@@ -126,12 +126,12 @@ export async function checkPermission(
   session: { user?: { id?: string } } | null,
   permission: Permission,
   resource?: unknown,
-  companyId?: string,
+  teamId?: string,
   personId?: string
 ): Promise<boolean> {
   if (!session?.user?.id) return false
 
-  const context = await createPermissionContext(session, companyId, personId)
+  const context = await createPermissionContext(session, teamId, personId)
   if (!context) return false
 
   try {
@@ -148,14 +148,20 @@ export async function getUserRoles(session: { user?: { id?: string } } | null) {
   const context = await createPermissionContext(session)
   if (!context) return null
 
+  // Use getUserEffectiveRoles to check pro subscription (pro users are team admins)
+  const { getUserWithRoles, getUserEffectiveRoles } = await import('@/domain/access/roles')
+  const user = await getUserWithRoles(session.user.id)
+  if (!user) return null
+  
+  const effective = await getUserEffectiveRoles(user)
+
   return {
-    platformRole: context.user.role === 'company_admin' ? 'team_admin' : context.user.role === 'company_member' ? 'team_member' : 'user',
-    companyRole: context.user.role === 'company_admin' ? 'team_admin' :
-      context.user.role === 'company_member' ? 'team_member' : null,
-    isCompanyAdmin: context.user.role === 'company_admin',
-    isCompanyMember: context.user.role === 'company_member',
-    isPlatformAdmin: context.user.isAdmin,
-    isRegularUser: context.user.role === 'user'
+    platformRole: effective.platformRole,
+    teamRole: effective.teamRole,
+    isTeamAdmin: effective.isTeamAdmin,
+    isTeamMember: effective.isTeamMember,
+    isPlatformAdmin: effective.isPlatformAdmin,
+    isRegularUser: effective.isRegularUser
   }
 }
 

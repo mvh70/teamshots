@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { Logger } from '@/lib/logger'
+import { getUserSubscription } from '@/domain/subscription/subscription'
 
 export type CreditTransactionType =
   | 'purchase'
@@ -14,7 +15,7 @@ export interface CreateCreditTransactionParams {
   credits: number
   type: CreditTransactionType
   description?: string
-  companyId?: string
+  teamId?: string
   personId?: string
   userId?: string
   teamInviteId?: string
@@ -30,7 +31,7 @@ export async function createCreditTransaction(params: CreateCreditTransactionPar
       credits: params.credits,
       type: params.type,
       description: params.description,
-      companyId: params.companyId,
+      teamId: params.teamId,
       personId: params.personId,
       userId: params.userId,
       teamInviteId: params.teamInviteId,
@@ -40,22 +41,104 @@ export async function createCreditTransaction(params: CreateCreditTransactionPar
 }
 
 /**
- * Get current credit balance for a company
+ * Get current credit balance for a team (only credits explicitly assigned to teamId)
+ * This does NOT include unmigrated pro credits on userId
  */
-export async function getCompanyCreditBalance(companyId: string): Promise<number> {
+export async function getTeamCreditBalance(teamId: string): Promise<number> {
   const result = await prisma.creditTransaction.aggregate({
-    where: { companyId },
+    where: { teamId },
     _sum: { credits: true }
   })
   const balance = result._sum.credits || 0
-  Logger.debug('getCompanyCreditBalance', { companyId, balance })
+  Logger.debug('getTeamCreditBalance', { teamId, balance })
   return balance
 }
 
 /**
+ * Get effective team credit balance for a user
+ * This includes:
+ * - Team credits (if teamId is provided)
+ * - Unmigrated pro credits on userId (if user has pro tier)
+ * 
+ * This is the centralized function that should be used everywhere
+ * to get the "total available team credits" for a user.
+ */
+export async function getEffectiveTeamCreditBalance(userId: string, teamId?: string | null): Promise<number> {
+  // Get base team balance if team exists
+  let teamBalance = 0
+  if (teamId) {
+    teamBalance = await getTeamCreditBalance(teamId)
+  }
+  
+  // Check if user has pro tier
+  const subscription = await getUserSubscription(userId)
+  const hasProTier = subscription?.tier === 'pro'
+  
+  // If user has pro tier, also check for unmigrated pro credits on userId
+  // This handles the case where credits were assigned before team was created
+  if (hasProTier) {
+    const userProBalance = await prisma.creditTransaction.aggregate({
+      where: {
+        userId: userId,
+        planTier: 'pro',
+        teamId: null, // Only count credits not yet migrated
+        credits: { gt: 0 }
+      },
+      _sum: { credits: true }
+    })
+    
+    const unmigratedCredits = userProBalance._sum.credits || 0
+    const totalBalance = teamBalance + unmigratedCredits
+    
+    Logger.debug('getEffectiveTeamCreditBalance', { 
+      userId, 
+      teamId, 
+      teamBalance, 
+      unmigratedCredits, 
+      totalBalance,
+      hasProTier 
+    })
+    
+    return totalBalance
+  }
+  
+  // If no pro tier but has team, return team balance
+  if (teamId) {
+    return teamBalance
+  }
+  
+  // No team and no pro tier
+  return 0
+}
+
+/**
  * Get current credit balance for a person
+ * For team members, this returns the remaining allocated credits (allocation - usage)
+ * For individual users, this returns their personal credit balance
  */
 export async function getPersonCreditBalance(personId: string): Promise<number> {
+  // First, check if this person has a team invite with allocation
+  const invite = await prisma.teamInvite.findFirst({
+    where: { personId },
+    include: {
+      creditTransactions: {
+        where: {
+          type: 'generation' // Only count generation transactions
+        }
+      }
+    }
+  })
+
+  // If person has a team invite, return remaining allocation
+  if (invite) {
+    const usedCredits = invite.creditTransactions.reduce((sum: number, transaction: { credits: number }) => {
+      return sum + Math.abs(transaction.credits) // Credits is negative for debits
+    }, 0)
+    const remaining = Math.max(0, (invite.creditsAllocated ?? 0) - usedCredits)
+    return remaining
+  }
+
+  // Otherwise, return standard credit balance
   const result = await prisma.creditTransaction.aggregate({
     where: { personId },
     _sum: { credits: true }
@@ -75,33 +158,33 @@ export async function getUserCreditBalance(userId: string): Promise<number> {
 }
 
 /**
- * Transfer credits from company to person
+ * Transfer credits from team to person
  */
-export async function transferCreditsFromCompanyToPerson(
-  companyId: string,
+export async function transferCreditsFromTeamToPerson(
+  teamId: string,
   personId: string,
   amount: number,
   description?: string
 ) {
-  // Check company has enough credits
-  const companyBalance = await getCompanyCreditBalance(companyId)
-  if (companyBalance < amount) {
-    throw new Error(`Insufficient credits. Company has ${companyBalance}, trying to transfer ${amount}`)
+  // Check team has enough credits
+  const teamBalance = await getTeamCreditBalance(teamId)
+  if (teamBalance < amount) {
+    throw new Error(`Insufficient credits. Team has ${teamBalance}, trying to transfer ${amount}`)
   }
 
-  // Create debit transaction for company
+  // Create debit transaction for team
   const debitTransaction = await createCreditTransaction({
     credits: -amount,
     type: 'transfer_out',
     description: description || `Transfer to team member`,
-    companyId
+    teamId
   })
 
   // Create credit transaction for person
   const creditTransaction = await createCreditTransaction({
     credits: amount,
     type: 'transfer_in',
-    description: description || `Transfer from company`,
+    description: description || `Transfer from team`,
     personId,
     relatedTransactionId: debitTransaction.id
   })
@@ -114,6 +197,8 @@ export async function transferCreditsFromCompanyToPerson(
 
 /**
  * Allocate credits to a person from an invite
+ * This creates a record of allocation WITHOUT transferring credits from team
+ * Credits remain with the team until they are actually used for generation
  */
 export async function allocateCreditsFromInvite(
   personId: string,
@@ -128,6 +213,49 @@ export async function allocateCreditsFromInvite(
     personId,
     teamInviteId
   })
+}
+
+/**
+ * Migrate pro-tier credits from user to team when team is created
+ * This moves credits that were assigned to userId (personal pro credits) to teamId (team credits)
+ */
+export async function migrateProCreditsToTeam(userId: string, teamId: string): Promise<number> {
+  // Find all pro-tier credits assigned to the user that don't have a teamId
+  const userProCredits = await prisma.creditTransaction.findMany({
+    where: {
+      userId: userId,
+      planTier: 'pro',
+      teamId: null,
+      credits: { gt: 0 } // Only positive credits (not debits)
+    }
+  })
+
+  if (userProCredits.length === 0) {
+    return 0
+  }
+
+  // Calculate total credits to migrate
+  const totalCredits = userProCredits.reduce((sum, tx) => sum + tx.credits, 0)
+
+  // Migrate each transaction by updating teamId
+  // We keep the userId for audit trail, but add teamId
+  await prisma.$transaction(
+    userProCredits.map(tx =>
+      prisma.creditTransaction.update({
+        where: { id: tx.id },
+        data: { teamId: teamId }
+      })
+    )
+  )
+
+  Logger.info('Migrated pro credits to team', {
+    userId,
+    teamId,
+    transactionCount: userProCredits.length,
+    totalCredits
+  })
+
+  return totalCredits
 }
 
 /**
@@ -160,26 +288,52 @@ export async function reserveCreditsForGeneration(
   userId: string | null,
   amount: number = PRICING_CONFIG.credits.perGeneration,
   description?: string,
-  companyId?: string,
+  teamId?: string,
   teamInviteId?: string
 ) {
   if (!personId && !userId) {
     throw new Error('Either personId or userId must be provided')
   }
 
-  // For team members (personId exists), use company credits
-  if (personId && companyId) {
-    const companyBalance = await getCompanyCreditBalance(companyId)
-    Logger.debug('Credit validation', { companyId, balance: companyBalance, required: amount })
-    if (companyBalance < amount) {
-      throw new Error(`Insufficient company credits. Available: ${companyBalance}, Required: ${amount}`)
+  // For team members (personId exists), deduct from team AND track person usage
+  if (personId && teamId) {
+    // Get team admin's userId to check for unmigrated pro credits
+    let userIdForBalance: string | null = userId
+    if (!userIdForBalance) {
+      // Try to get userId from person (for team admin generating their own photos)
+      const person = await prisma.person.findUnique({
+        where: { id: personId },
+        select: { userId: true }
+      })
+      userIdForBalance = person?.userId || null
+      
+      // If person doesn't have userId (team member), get team admin's userId
+      if (!userIdForBalance) {
+        const team = await prisma.team.findUnique({
+          where: { id: teamId },
+          select: { adminId: true }
+        })
+        userIdForBalance = team?.adminId || null
+      }
+    }
+    
+    // Use effective team balance (includes unmigrated pro credits)
+    const teamBalance = userIdForBalance 
+      ? await getEffectiveTeamCreditBalance(userIdForBalance, teamId)
+      : await getTeamCreditBalance(teamId)
+    
+    Logger.debug('Credit validation', { teamId, userId: userIdForBalance, balance: teamBalance, required: amount })
+    if (teamBalance < amount) {
+      throw new Error(`Insufficient team credits. Available: ${teamBalance}, Required: ${amount}`)
     }
 
+    // Create transaction that deducts from team AND tracks person usage
     return await createCreditTransaction({
       credits: -amount,
       type: 'generation',
       description: description || `Reserved for photo generation`,
-      companyId: companyId,
+      teamId: teamId,
+      personId: personId, // Track which person used it
       teamInviteId: teamInviteId
     })
   }
@@ -199,6 +353,7 @@ export async function reserveCreditsForGeneration(
     description: description || `Reserved for photo generation`,
     personId: personId || undefined,
     userId: userId || undefined,
+    teamId: teamId || undefined,
     teamInviteId: teamInviteId
   })
 }
@@ -222,8 +377,8 @@ export async function getTeamInviteRemainingCredits(teamInviteId: string): Promi
     return 0
   }
 
-  const usedCredits = invite.creditTransactions.reduce((sum: number, transaction: { amount: number | null }) => {
-    return sum + Math.abs(transaction.amount ?? 0) // Amount is negative, so we need absolute value
+  const usedCredits = invite.creditTransactions.reduce((sum: number, transaction: { credits: number }) => {
+    return sum + Math.abs(transaction.credits) // Credits is negative for debits, so we need absolute value
   }, 0)
 
   return Math.max(0, (invite.creditsAllocated ?? 0) - usedCredits)
@@ -237,20 +392,21 @@ export async function refundCreditsForFailedGeneration(
   userId: string | null,
   amount: number = PRICING_CONFIG.credits.perGeneration,
   description?: string,
-  companyId?: string,
+  teamId?: string,
   teamInviteId?: string
 ) {
   if (!personId && !userId) {
     throw new Error('Either personId or userId must be provided')
   }
 
-  // For team members (personId exists), refund to company credits
-  if (personId && companyId) {
+  // For team members (personId exists), refund to team credits
+  if (personId && teamId) {
     return await createCreditTransaction({
       credits: amount,
       type: 'refund',
       description: description || `Refund for failed photo generation`,
-      companyId: companyId,
+      teamId: teamId,
+      personId: personId, // Track that this person got refunded
       teamInviteId: teamInviteId
     })
   }
@@ -273,17 +429,22 @@ export async function hasSufficientCredits(
   personId: string | null,
   userId: string | null,
   amount: number = PRICING_CONFIG.credits.perGeneration,
-  companyId?: string
+  teamId?: string
 ): Promise<boolean> {
-  if (!personId && !userId && !companyId) {
+  if (!personId && !userId && !teamId) {
     return false
   }
 
   let balance: number
 
-  if (companyId) {
-    balance = await getCompanyCreditBalance(companyId)
-    Logger.debug('hasSufficientCredits company', { companyId, balance, required: amount })
+  if (teamId && userId) {
+    // Use effective team balance (includes unmigrated pro credits)
+    balance = await getEffectiveTeamCreditBalance(userId, teamId)
+    Logger.debug('hasSufficientCredits team', { teamId, userId, balance, required: amount })
+  } else if (teamId) {
+    // Fallback to basic team balance if no userId provided
+    balance = await getTeamCreditBalance(teamId)
+    Logger.debug('hasSufficientCredits team (no userId)', { teamId, balance, required: amount })
   } else if (personId) {
     balance = await getPersonCreditBalance(personId)
     Logger.debug('hasSufficientCredits person', { personId, balance, required: amount })

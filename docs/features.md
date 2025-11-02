@@ -18,14 +18,14 @@ All features below
 *See [Role System Implementation](ROLE_SYSTEM_IMPLEMENTATION.md) for detailed role definitions and permissions.*
 
 ### How it works (8 steps)
-1. Company admin creates company context (background, logo, style, expression)
-2. Company admin invites team members with 24hr tokens + credit allocation
+1. Team admin creates team context (background, logo, style, expression)
+2. Team admin invites team members with 24hr tokens + credit allocation
 3. Team members upload selfies (no signup required)
-4. Team members choose: Personal use OR Company use
+4. Team members choose: Personal use OR Team use
 5. System generates photos with selected context
 6. Team members review & approve/regenerate
-7. Company admin views approved photos only
-8. Company admin can regenerate all photos with new contexts
+7. Team admin views approved photos only
+8. Team admin can regenerate all photos with new contexts
 
 ### 1. Photo Upload
 - Single person per photo
@@ -44,18 +44,24 @@ All features below
 
 **Admin Control**: Each category can be set as predefined (admin-controlled) or user choice
 
+**Routes**:
+- Personal Photo Styles: `/app/styles/personal`
+- Team Photo Styles: `/app/styles/team`
+
+**Package-aware UI**:
+- The styles UI adapts based on the active `packageId`. Packages control which fields are visible, how settings are persisted, and how prompts are generated.
 
 ### 3. Generation Type Selection
 - **Personal Use**: Individual credits, full style control, private photos
-- **Company Use**: Company credits, preset styles, admin visible
+- **Team Use**: Team credits, preset styles, admin visible
 - Same uploaded photo can be used for both types
 - Clear credit cost display (4 credits per generation)
 
 ### 4. Photo Style Management
-**Company Users:**
-- Company admins create reusable contexts (background, logo, style, expression)
+**Team Users:**
+- Team admins create reusable contexts (background, logo, style, expression)
 - Required before inviting team members
-- Multiple contexts per company (e.g., "Executive", "Casual Friday")
+- Multiple contexts per team (e.g., "Executive", "Casual Friday")
 - Regenerate all team photos with new context
 
 **Individual Users:**
@@ -69,16 +75,16 @@ All features below
 - Preview generated photos and logo placement options
 - Download selected image (1024x1024px)
 - Regenerate with style changes (costs 1 credit)
-- Company admin can bulk regenerate all photos with new context
+- Team admin can bulk regenerate all photos with new context
 
 ### 6. Account & Billing
 - Email/password authentication with OTP verification and magic links
-- Company accounts with team management
+- Team accounts with team management
 - Team member token-based invites (24hr expiration, no signup required)
 - Context templates (reusable settings)
-- Automated team scraping from company website
-- Company domain verification
-- Credit balance display (individual + company credits)
+- Automated team scraping from team website
+- Team domain verification
+- Credit balance display (individual + team credits)
 - Try Once purchase option
 - Subscription plans (monthly/annual)
 - Subscription management:
@@ -95,10 +101,10 @@ All features below
 
 ### 6.5 Enhanced Team Member Credit System
 - **Transaction-Based Credits**: All credit movements tracked in dedicated `CreditTransaction` table
-- **Credit Types**: Company credits (admin-allocated) and individual credits (user-owned)
+- **Credit Types**: Team credits (admin-allocated) and individual credits (user-owned)
 - **Full Audit Trail**: Every credit allocation, transfer, and usage is recorded with timestamps
 - **Team Invites**: Credits automatically allocated when team members accept invites
-- **Transfer System**: Company admins can transfer credits between company pool and team members
+- **Transfer System**: Team admins can transfer credits between team pool and team members
 - **Real-time Balances**: Credit balances calculated from transaction history for accuracy
 - **Admin Dashboard**: Credit management with bulk allocation and individual adjustments
 
@@ -115,7 +121,7 @@ All features below
 ### 6.7 Content Moderation System
 - **LLM-Based Validation**: Automated filtering for nudity and obscenity
 - **Approval Flags**: userApproved and fitnessApproved for selfies, userApproved and adminApproved for generations
-- **Company Admin Approval**: Required for all public-facing company photo generations
+- **Team Admin Approval**: Required for all public-facing team photo generations
 - **User Feedback**: Clear error messages for rejected uploads with guidance
 - **Audit Trail**: Moderation scores and results stored without inappropriate content
 - **Performance**: Moderation integrated into upload flow with proper error handling
@@ -126,16 +132,16 @@ All features below
   - Background watermark (behind subject)
   - Clothing/apparel overlay
   - Physical item in scene (cup, desk item)
-- Company admin or team member selects preferred variation
+- Team admin or team member selects preferred variation
 
-### 6.9 Company Admin Controls
+### 6.9 Team Admin Controls
 - View approved team photos only
-- Bulk regeneration with new contexts (uses company credit pool)
+- Bulk regeneration with new contexts (uses team credit pool)
 - Manual credit adjustment per team member
 - View team progress and approval status
 - **Team Member Management**:
   - Promote/demote team members to/from admin roles
-  - Remove team members from company (with safety checks)
+  - Remove team members from team (with safety checks)
   - Resend expired team invitations
   - Revoke pending team invitations
 - **Role-Based Access Control**: Admin-only features properly protected
@@ -186,3 +192,12 @@ All features below
 - Post-download editing
 - Integrations (website builders, HR systems)
 - Free tier or trial
+
+---
+
+## How to add a new style package
+
+1. Create a package file: `src/domain/style/packages/myPackage.ts` implementing `StylePackage` (see `headshot1.ts` for a template).
+2. Register the package in `src/domain/style/packages/index.ts`.
+3. Use it by passing `packageId='myPackage'` to `PhotoStyleSettings` and to the save/load service.
+4. Build prompts inside the package’s `promptBuilder` to fully control generation behavior.

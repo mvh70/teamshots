@@ -9,6 +9,8 @@ import { Link } from '@/i18n/routing'
 import { PlusIcon, EnvelopeIcon, ClockIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { useCredits } from '@/contexts/CreditsContext'
+import FreePlanBanner from '@/components/styles/FreePlanBanner'
+import StyleCard from '@/components/styles/StyleCard'
 
 interface TeamInvite {
   id: string
@@ -24,7 +26,7 @@ interface TeamInvite {
   contextName?: string
 }
 
-interface CompanyData {
+interface TeamData {
   id: string
   name: string
   activeContext?: {
@@ -44,7 +46,7 @@ interface TeamMember {
     selfies: number
     generations: number
     individualCredits: number
-    companyCredits: number
+    teamCredits: number
   }
 }
 
@@ -52,12 +54,12 @@ export default function TeamPage() {
   const { data: session } = useSession()
   const t = useTranslations('team')
   const { credits } = useCredits()
-  const [companyData, setCompanyData] = useState<CompanyData | null>(null)
+  const [teamData, setTeamData] = useState<TeamData | null>(null)
   const [invites, setInvites] = useState<TeamInvite[]>([])
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [needsCompanySetup, setNeedsCompanySetup] = useState(false)
+  const [needsTeamSetup, setNeedsTeamSetup] = useState(false)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [inviting, setInviting] = useState(false)
   const [resending, setResending] = useState<string | null>(null)
@@ -65,17 +67,20 @@ export default function TeamPage() {
   const [changingRole, setChangingRole] = useState<string | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
   const [userRoles, setUserRoles] = useState<{
-    isCompanyAdmin: boolean
-    isCompanyMember: boolean
+    isTeamAdmin: boolean
+    isTeamMember: boolean
     isPlatformAdmin: boolean
   }>({
-    isCompanyAdmin: false,
-    isCompanyMember: false,
+    isTeamAdmin: false,
+    isTeamMember: false,
     isPlatformAdmin: false
   })
   const [inviteError, setInviteError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [allocatedCredits, setAllocatedCredits] = useState<number>(PRICING_CONFIG.team.defaultInviteCredits)
   const [creditsInputValue, setCreditsInputValue] = useState(PRICING_CONFIG.team.defaultInviteCredits.toString())
+  const [isFreePlan, setIsFreePlan] = useState(false)
+  const [freePackageContext, setFreePackageContext] = useState<{ id: string; settings?: unknown; stylePreset?: string } | null>(null)
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -84,20 +89,20 @@ export default function TeamPage() {
           const response = await fetch('/api/dashboard/stats')
           if (response.ok) {
             const data = await response.json()
-            const { isCompanyAdmin, isCompanyMember, isPlatformAdmin, companyId, companyName, needsCompanySetup } = data.userRole
+            const { isTeamAdmin, isTeamMember, isPlatformAdmin, teamId, teamName, needsTeamSetup } = data.userRole
 
-            setUserRoles({ isCompanyAdmin, isCompanyMember, isPlatformAdmin })
+            setUserRoles({ isTeamAdmin, isTeamMember, isPlatformAdmin })
 
-            if (isCompanyAdmin) {
-              if (needsCompanySetup) {
-                setNeedsCompanySetup(true)
+            if (isTeamAdmin) {
+              if (needsTeamSetup) {
+                setNeedsTeamSetup(true)
                 setLoading(false)
-              } else if (companyId && companyName) {
-                setCompanyData({ id: companyId, name: companyName })
+              } else if (teamId && teamName) {
+                setTeamData({ id: teamId, name: teamName })
                 await fetchTeamData()
               } else {
                 setLoading(false)
-                setError('Could not retrieve company information.')
+                setError('Could not retrieve team information.')
               }
             } else {
               setLoading(false) // Not an admin, will show admin-only message
@@ -122,12 +127,12 @@ export default function TeamPage() {
   const fetchTeamData = async () => {
     try {
       const [contextsData, invitesData, membersData] = await Promise.all([
-        jsonFetcher<{ activeContext: { id: string; name: string } | undefined }>('/api/contexts'),
+        jsonFetcher<{ activeContext: { id: string; name: string } | undefined }>('/api/styles'),
         jsonFetcher<{ invites: TeamInvite[] }>('/api/team/invites'),
-        jsonFetcher<{ users: TeamMember[] }>('/api/company/members')
+        jsonFetcher<{ users: TeamMember[] }>('/api/team/members')
       ])
 
-      setCompanyData(prevData => prevData ? { ...prevData, activeContext: contextsData.activeContext } : null)
+      setTeamData(prevData => prevData ? { ...prevData, activeContext: contextsData.activeContext } : null)
       setInvites(invitesData.invites || [])
       setTeamMembers(membersData.users || [])
     } catch (error) {
@@ -138,28 +143,50 @@ export default function TeamPage() {
     }
   }
 
-  const handleCreateCompany = async (formData: FormData) => {
+  // Check if user is on free plan and fetch free package context
+  useEffect(() => {
+    ;(async () => {
+      if (!session?.user) return
+      try {
+        const subRes = await jsonFetcher<{ subscription: { period?: 'free' | 'try_once' | 'monthly' | 'annual' | null } | null }>('/api/user/subscription')
+        const period = subRes?.subscription?.period ?? null
+        const free = period === 'free'
+        setIsFreePlan(free)
+        if (free) {
+          const freeData = await jsonFetcher<{ context: { id: string; settings?: unknown; stylePreset?: string } | null }>(
+            '/api/styles/get?scope=freePackage'
+          )
+          setFreePackageContext(freeData.context || null)
+        }
+      } catch {
+        // If subscription fetch fails, default to not-free to avoid blocking paid users
+        setIsFreePlan(false)
+      }
+    })()
+  }, [session?.user])
+
+  const handleCreateTeam = async (formData: FormData) => {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch('/api/company', {
+      const response = await fetch('/api/team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.get('companyName'),
-          website: formData.get('companyWebsite')
+          name: formData.get('teamName'),
+          website: formData.get('teamWebsite')
         })
       })
 
       if (response.ok) {
-        setNeedsCompanySetup(false)
+        setNeedsTeamSetup(false)
         await fetchTeamData()
       } else {
         const data = await response.json()
-        setError(data.error || 'Failed to create company.')
+        setError(data.error || 'Failed to create team.')
       }
     } catch {
-      setError('An error occurred while creating the company.')
+      setError('An error occurred while creating the team.')
     } finally {
       setLoading(false)
     }
@@ -168,9 +195,13 @@ export default function TeamPage() {
   const handleInviteTeamMember = async (formData: FormData) => {
     setError(null)
     setInviteError(null)
+    setSuccessMessage(null)
     setInviting(true)
 
-    if (credits.company < allocatedCredits) {
+    const email = formData.get('email') as string
+    const firstName = formData.get('firstName') as string
+
+    if (credits.team < allocatedCredits) {
       setInviteError(t('invites.insufficientCredits'))
       setInviting(false)
       return
@@ -181,7 +212,8 @@ export default function TeamPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: formData.get('email'),
+          email,
+          firstName,
           creditsAllocated: allocatedCredits
         })
       })
@@ -192,7 +224,9 @@ export default function TeamPage() {
         await fetchTeamData()
         setShowInviteForm(false)
         setError(null)
-        // TODO: Show success message
+        setSuccessMessage(t('inviteForm.success', { email }))
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccessMessage(null), 5000)
       } else {
         if (data.errorCode === 'NO_ACTIVE_CONTEXT') {
           setError(`${data.error} Click here to set up a context.`)
@@ -256,7 +290,7 @@ export default function TeamPage() {
     }
   }
 
-  const handleChangeMemberRole = async (memberId: string, newRole: 'company_member' | 'company_admin') => {
+  const handleChangeMemberRole = async (memberId: string, newRole: 'team_member' | 'team_admin') => {
     setChangingRole(memberId)
     try {
       const response = await fetch('/api/team/members/role', {
@@ -334,35 +368,35 @@ export default function TeamPage() {
     )
   }
 
-  if (needsCompanySetup) {
+  if (needsTeamSetup) {
     return (
       <div className="max-w-xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
         <h2 className="text-2xl font-bold text-gray-900">{t('setup.title')}</h2>
         <p className="mt-2 text-gray-600">{t('setup.subtitle')}</p>
-        <form action={handleCreateCompany} className="mt-6 space-y-4 text-left">
+        <form action={handleCreateTeam} className="mt-6 space-y-4 text-left">
           <div>
-            <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">
-              {t('setup.companyNameLabel')}
+            <label htmlFor="teamName" className="block text-sm font-medium text-gray-700">
+              {t('setup.teamNameLabel')}
             </label>
             <input
               type="text"
-              name="companyName"
-              id="companyName"
+              name="teamName"
+              id="teamName"
               required
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
-              placeholder={t('setup.companyNamePlaceholder')}
+              placeholder={t('setup.teamNamePlaceholder')}
             />
           </div>
           <div>
-            <label htmlFor="companyWebsite" className="block text-sm font-medium text-gray-700">
-              {t('setup.companyWebsiteLabel')}
+            <label htmlFor="teamWebsite" className="block text-sm font-medium text-gray-700">
+              {t('setup.teamWebsiteLabel')}
             </label>
             <input
               type="url"
-              name="companyWebsite"
-              id="companyWebsite"
+              name="teamWebsite"
+              id="teamWebsite"
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
-              placeholder={t('setup.companyWebsitePlaceholder')}
+              placeholder={t('setup.teamWebsitePlaceholder')}
             />
           </div>
           <button
@@ -376,8 +410,8 @@ export default function TeamPage() {
     )
   }
 
-  // Show message if user is not a company admin
-  if (!userRoles.isCompanyAdmin && !loading) {
+  // Show message if user is not a team admin
+  if (!userRoles.isTeamAdmin && !loading) {
     return (
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="text-center">
@@ -411,20 +445,28 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+          <CheckIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
+          <p className="text-green-800">{successMessage}</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{companyData?.name || t('title')}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{teamData?.name || t('title')}</h1>
           <p className="text-gray-600 mt-1">
             {t('subtitle')}
           </p>
         </div>
-        {userRoles.isCompanyAdmin && (
+        {userRoles.isTeamAdmin && (
           <button
             onClick={() => setShowInviteForm(true)}
-            disabled={!companyData?.activeContext || credits.company === 0}
+            disabled={(!teamData?.activeContext && !isFreePlan) || credits.team === 0}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-              companyData?.activeContext && credits.company > 0
+              (teamData?.activeContext || isFreePlan) && credits.team > 0
                 ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
                 : 'bg-gray-200 text-gray-500 cursor-not-allowed'
             }`}
@@ -436,7 +478,28 @@ export default function TeamPage() {
       </div>
 
       {/* Setup Status */}
-      {!companyData?.activeContext ? (
+      {isFreePlan && !teamData?.activeContext ? (
+        <div className="space-y-4">
+          <FreePlanBanner variant="team" />
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <CheckIcon className="h-5 w-5 text-green-600" />
+              <span className="text-green-800 font-medium">
+                Free Package Style Active
+              </span>
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Active
+              </span>
+            </div>
+            <div className="rounded-lg border border-green-300 bg-white p-4">
+              <StyleCard
+                settings={freePackageContext?.settings}
+                stylePreset={freePackageContext?.stylePreset || 'corporate'}
+              />
+            </div>
+          </div>
+        </div>
+      ) : !teamData?.activeContext ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-center gap-2">
             <svg className="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -465,7 +528,7 @@ export default function TeamPage() {
             </span>
           </div>
           <p className="text-green-700 text-sm mt-1">
-            {t('readyToInvite.activeStyle', { name: companyData.activeContext.name })}
+            {t('readyToInvite.activeStyle', { name: teamData.activeContext.name })}
           </p>
         </div>
       )}
@@ -501,9 +564,9 @@ export default function TeamPage() {
                   <div className="flex justify-center min-w-[60px]">{t('teamMembers.headers.selfies')}</div>
                   <div className="flex justify-center min-w-[60px]">{t('teamMembers.headers.generations')}</div>
                   <div className="flex justify-center min-w-[80px]">{t('teamMembers.headers.personalCredits')}</div>
-                  <div className="flex justify-center min-w-[80px]">{t('teamMembers.headers.companyCredits')}</div>
+                  <div className="flex justify-center min-w-[80px]">{t('teamMembers.headers.teamCredits')}</div>
                   <div className="flex justify-center min-w-[100px]">{t('teamMembers.headers.status')}</div>
-                  {userRoles.isCompanyAdmin && (
+                  {userRoles.isTeamAdmin && (
                     <div className="flex justify-center min-w-[120px]">{t('teamMembers.headers.actions')}</div>
                   )}
                 </div>
@@ -530,7 +593,7 @@ export default function TeamPage() {
                         </p>
                         {member.isAdmin && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 flex-shrink-0">
-                            {t('teamMembers.roles.companyAdmin')}
+                            {t('teamMembers.roles.teamAdmin')}
                           </span>
                         )}
                         {!member.isAdmin && member.userId && (
@@ -565,7 +628,7 @@ export default function TeamPage() {
                           <span className="font-semibold text-gray-900">{member.stats.individualCredits}</span>
                         </div>
                         <div className="flex justify-center min-w-[80px]">
-                          <span className="font-semibold text-gray-900">{member.stats.companyCredits}</span>
+                          <span className="font-semibold text-gray-900">{member.stats.teamCredits}</span>
                         </div>
                       </>
                     )}
@@ -586,11 +649,11 @@ export default function TeamPage() {
                     </div>
                     
                     {/* Admin Actions */}
-                    {userRoles.isCompanyAdmin && !member.isCurrentUser && member.userId && (
+                    {userRoles.isTeamAdmin && !member.isCurrentUser && member.userId && (
                       <div className="flex items-center gap-2 min-w-[120px]">
                         {!member.isAdmin && (
                           <button
-                            onClick={() => handleChangeMemberRole(member.id, 'company_admin')}
+                            onClick={() => handleChangeMemberRole(member.id, 'team_admin')}
                             disabled={changingRole === member.id}
                             className="text-xs px-2 py-1 text-purple-600 hover:text-purple-800 disabled:opacity-50"
                           >
@@ -599,7 +662,7 @@ export default function TeamPage() {
                         )}
                         {member.isAdmin && (
                           <button
-                            onClick={() => handleChangeMemberRole(member.id, 'company_member')}
+                            onClick={() => handleChangeMemberRole(member.id, 'team_member')}
                             disabled={changingRole === member.id}
                             className="text-xs px-2 py-1 text-orange-600 hover:text-orange-800 disabled:opacity-50"
                           >
@@ -634,7 +697,7 @@ export default function TeamPage() {
 
         {invites.length === 0 ? (
           <div className="p-6 text-center">
-            {credits.company === 0 ? (
+            {credits.team === 0 ? (
               <>
                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -645,11 +708,12 @@ export default function TeamPage() {
                 <p className="text-gray-600 mb-4">
                   {t('teamInvites.noCredits.subtitle')}
                 </p>
-                <button
-                  className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-hover"
+                <Link
+                  href={isFreePlan ? '/app/upgrade' : '/app/top-up'}
+                  className="inline-block px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-hover transition-colors text-center"
                 >
                   {t('teamInvites.noCredits.button')}
-                </button>
+                </Link>
               </>
             ) : (
               <>
@@ -658,12 +722,12 @@ export default function TeamPage() {
                 <p className="text-gray-600 mb-4">
                   {t('teamInvites.noInvites.subtitle')}
                 </p>
-                {userRoles.isCompanyAdmin && (
+                {userRoles.isTeamAdmin && (
                   <button
                     onClick={() => setShowInviteForm(true)}
-                    disabled={!companyData?.activeContext}
+                    disabled={(!teamData?.activeContext && !isFreePlan) || credits.team === 0}
                     className={`px-4 py-2 rounded-md ${
-                      companyData?.activeContext
+                      (teamData?.activeContext || isFreePlan) && credits.team > 0
                         ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
                         : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                     }`}
@@ -727,7 +791,7 @@ export default function TeamPage() {
                     </div>
                     
                     {/* Action buttons for admins */}
-                    {userRoles.isCompanyAdmin && !invite.usedAt && (
+                    {userRoles.isTeamAdmin && !invite.usedAt && (
                       <div className="flex items-center gap-2">
                         {!isExpired(invite.expiresAt) && (
                           <button
@@ -786,6 +850,22 @@ export default function TeamPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('inviteForm.firstName.label')} *
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                    placeholder={t('inviteForm.firstName.placeholder')}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Personalizes the invite email
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t('inviteForm.credits.label')}
                   </label>
                   <input
@@ -813,7 +893,10 @@ export default function TeamPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    {t('inviteForm.credits.hint')}
+                    {t('inviteForm.credits.hint', { 
+                      credits: PRICING_CONFIG.credits.perGeneration,
+                      default: `Each photo generation uses ${PRICING_CONFIG.credits.perGeneration} credits`
+                    })}
                   </p>
                 </div>
 
@@ -821,46 +904,66 @@ export default function TeamPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     {t('inviteForm.photoStyle.label', { default: 'Photo Style' })}
                   </label>
-                  <div className="space-y-3">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="photoStyleType"
-                        value="context"
-                        defaultChecked
-                        className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300"
-                      />
-                      <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          {t('inviteForm.photoStyle.useActiveStyle', { default: 'Use Active Photo Style' })}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {t('inviteForm.photoStyle.useActiveStyleDesc', { 
-                            default: 'Team member will use the predefined photo style',
-                            name: companyData?.activeContext?.name || 'Active Style'
-                          })}
-                        </div>
+                  {isFreePlan ? (
+                    // Free plan: Show static message about free package style (no choice)
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <div className="text-sm font-medium text-gray-900 mb-1">
+                        {t('inviteForm.photoStyle.useFreePackageStyle', { 
+                          default: 'Free Package Style',
+                          name: 'Free Package Style'
+                        })}
                       </div>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="photoStyleType"
-                        value="freestyle"
-                        className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300"
-                      />
-                      <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          {t('inviteForm.photoStyle.allowFreestyle', { default: 'Allow Freestyle' })}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {t('inviteForm.photoStyle.allowFreestyleDesc', { 
-                            default: 'Team member can customize their own photo style'
-                          })}
-                        </div>
+                      <div className="text-xs text-gray-600">
+                        {t('inviteForm.photoStyle.useFreePackageStyleDesc', { 
+                          default: 'Team member will use the free package photo style. This cannot be changed for free plan accounts.'
+                        })}
                       </div>
-                    </label>
-                  </div>
+                      {/* Hidden input to ensure form submission works */}
+                      <input type="hidden" name="photoStyleType" value="context" />
+                    </div>
+                  ) : (
+                    // Paid plan: Show radio button choices
+                    <div className="space-y-3">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="photoStyleType"
+                          value="context"
+                          defaultChecked
+                          className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300"
+                        />
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">
+                            {t('inviteForm.photoStyle.useActiveStyle', { default: 'Use Active Photo Style' })}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {t('inviteForm.photoStyle.useActiveStyleDesc', { 
+                              default: 'Team member will use the predefined photo style',
+                              name: teamData?.activeContext?.name || 'Active Style'
+                            })}
+                          </div>
+                        </div>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="photoStyleType"
+                          value="freestyle"
+                          className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300"
+                        />
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">
+                            {t('inviteForm.photoStyle.allowFreestyle', { default: 'Allow Freestyle' })}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {t('inviteForm.photoStyle.allowFreestyleDesc', { 
+                              default: 'Team member can customize their own photo style'
+                            })}
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -869,16 +972,20 @@ export default function TeamPage() {
                     <li>• {t('inviteForm.whatHappensNext.step1')}</li>
                     <li>• {t('inviteForm.whatHappensNext.step2')}</li>
                     <li>• {t('inviteForm.whatHappensNext.step3')}</li>
-                    <li>• {t('inviteForm.whatHappensNext.step4', { name: companyData?.activeContext?.name || '' })}</li>
+                    <li>• {t('inviteForm.whatHappensNext.step4', { 
+                      name: isFreePlan 
+                        ? 'Free Package Style' 
+                        : (teamData?.activeContext?.name || 'Active Style')
+                    })}</li>
                   </ul>
                 </div>
 
-                {allocatedCredits > credits.company && (
+                {allocatedCredits > credits.team && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                     <p className="text-red-800 text-sm">
                       {t('inviteForm.insufficientCreditsModal', { 
                         required: allocatedCredits, 
-                        available: credits.company 
+                        available: credits.team 
                       })}
                     </p>
                   </div>
@@ -887,9 +994,9 @@ export default function TeamPage() {
                 <div className="flex items-center gap-3 pt-4">
                   <button
                     type="submit"
-                    disabled={inviting || allocatedCredits > credits.company}
+                    disabled={inviting || allocatedCredits > credits.team}
                     className={`flex-1 px-4 py-2 rounded-md ${
-                      allocatedCredits > credits.company
+                      allocatedCredits > credits.team
                         ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                         : 'bg-brand-primary text-white hover:bg-brand-primary-hover disabled:opacity-50'
                     }`}

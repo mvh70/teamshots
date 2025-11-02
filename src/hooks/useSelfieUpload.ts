@@ -3,11 +3,12 @@ import { useAnalytics } from './useAnalytics'
 import { jsonFetcher } from '@/lib/fetcher'
 
 interface UseSelfieUploadOptions {
-  onSuccess?: (key: string) => void
+  onSuccess?: (key: string, id?: string) => void
   onError?: (error: string) => void
+  saveEndpoint?: (key: string) => Promise<void> // Custom save function for invite flows
 }
 
-export function useSelfieUpload({ onSuccess, onError }: UseSelfieUploadOptions = {}) {
+export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieUploadOptions = {}) {
   const [uploadedKey, setUploadedKey] = useState<string | null>(null)
   const [isApproved, setIsApproved] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -93,13 +94,19 @@ export function useSelfieUpload({ onSuccess, onError }: UseSelfieUploadOptions =
       
       const { key } = await uploadResponse.json();
       
-      // Then create database record and do validation
-      await jsonFetcher('/api/uploads/create', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ key }),
-        credentials: 'include'
-      });
+      // Then create database record using custom endpoint or default
+      let selfieId: string | undefined;
+      if (saveEndpoint) {
+        await saveEndpoint(key);
+      } else {
+        const createResponse = await jsonFetcher<{ id: string }>('/api/uploads/create', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ key }),
+          credentials: 'include'
+        });
+        selfieId = createResponse.id;
+      }
       
       // If successful, mark as approved and call success callback
       setIsApproved(true);
@@ -111,7 +118,7 @@ export function useSelfieUpload({ onSuccess, onError }: UseSelfieUploadOptions =
         file_type: pendingFile.type
       })
       
-      onSuccess?.(key);
+      onSuccess?.(key, selfieId);
     } catch (error) {
       console.error('Approval failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Approval failed';

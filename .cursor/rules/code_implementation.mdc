@@ -1,0 +1,66 @@
+---
+description: Code quality standards and task-focused implementation
+globs: **/*.ts, **/*.tsx, **/*.py
+alwaysApply: true
+---
+# Code Standards
+
+## Core Principle: Focus on the Task
+- Make only changes directly related to current task
+- Don't refactor, rewrite, or delete unrelated working code
+- Preserve existing functionality, patterns, and structure
+- Use existing utilities and patterns (don't reinvent)
+- Smallest possible changes to achieve requirements
+- Don't add features beyond task scope
+
+## Workflow
+- Make changes file-by-file (allow review between files)
+- Complete every task fully - no TODOs or partial implementations
+- No apologies, summaries, or understanding feedback
+- No whitespace-only suggestions
+- Provide edits in single chunks per file
+- Only suggest changes when needed
+- Link to real files, not placeholders
+
+## Verification
+- Verify information before presenting
+- Don't invent changes beyond explicit requests
+- Don't ask to verify visible context
+- Don't discuss current implementation unless requested
+- Test assumptions against existing code
+
+## Clean Code Principles
+
+### Naming & Clarity
+- Use descriptive names that reveal purpose
+- Replace magic numbers with named constants
+- Avoid abbreviations unless universally understood
+
+### Functions & Structure
+- One function = one responsibility
+- Keep functions small and focused
+- Extract repeated code (DRY)
+- Move nested conditionals into named functions
+
+### Comments
+- Don't comment what code does (make code self-documenting)
+- Comment why decisions were made
+- Document complex algorithms and non-obvious behavior
+- Don't rewrite existing comments unless factually incorrect
+
+### Organization
+- Keep related code together
+- Hide implementation details (encapsulation)
+- Maintain single sources of truth
+- Leave code cleaner than you found it
+
+## Debugging Methodology
+When stuck after multiple failed attempts:
+1. **Research the issue** thoroughly
+2. **Generate 3 hypotheses** for the root cause
+3. **Investigate each hypothesis** systematically
+4. **Choose most plausible** and implement fix
+5. **If fails**: Evaluate remaining hypotheses, try next best
+6. **Repeat** until resolved
+
+Don't take shortcuts or settle for simpler workarounds.

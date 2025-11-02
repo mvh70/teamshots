@@ -19,7 +19,7 @@ export default function PersonalGenerationsPage() {
   const { timeframe, context, setTimeframe, setContext, filterGenerated } = useGenerationFilters()
   const { generated, pagination, loading, loadMore } = useGenerations(
     currentUserId,
-    false, // isCompanyAdmin - not needed for personal
+    false, // isTeamAdmin - not needed for personal
     currentUserName,
     'personal', // scope
     undefined, // teamView - not needed for personal

@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
       where: {
         token,
         usedAt: { not: null }
+      },
+      include: {
+        person: true
       }
     })
 
@@ -23,17 +26,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
     }
 
-    // Find the person by email from the invite
-    const person = await prisma.person.findFirst({
-      where: {
-        email: invite.email,
-        companyId: invite.companyId
-      }
-    })
-
-    if (!person) {
+    if (!invite.person) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 })
     }
+
+    const person = invite.person
 
     // Get generations for the person
     const generations = await prisma.generation.findMany({
@@ -49,6 +46,45 @@ export async function GET(request: NextRequest) {
         context: true
       }
     })
+
+    // Helper function to get job status for processing generations
+    const getJobStatus = async (generationId: string, status: string) => {
+      if (status !== 'pending' && status !== 'processing') {
+        return null
+      }
+      try {
+        const { imageGenerationQueue } = await import('@/queue')
+        const job = await imageGenerationQueue.getJob(`gen-${generationId}`)
+        if (job) {
+          // Handle progress as either number or object { progress: number, message?: string }
+          const progressData = typeof job.progress === 'object' && job.progress !== null
+            ? job.progress as { progress?: number; message?: string }
+            : { progress: job.progress as number }
+          return {
+            id: job.id,
+            progress: typeof progressData === 'object' && 'progress' in progressData && typeof progressData.progress === 'number'
+              ? progressData.progress
+              : (typeof job.progress === 'number' ? job.progress : 0),
+            message: typeof progressData === 'object' && 'message' in progressData && typeof progressData.message === 'string'
+              ? progressData.message
+              : undefined,
+            attemptsMade: job.attemptsMade,
+            processedOn: job.processedOn,
+            finishedOn: job.finishedOn,
+            failedReason: job.failedReason,
+          }
+        }
+      } catch (error) {
+        Logger.warn('Failed to get job status in team member generations', { error: error instanceof Error ? error.message : String(error) })
+      }
+      return null
+    }
+
+    // Get job status for processing generations in parallel
+    const processingGenerations = generations.filter(g => g.status === 'pending' || g.status === 'processing')
+    const jobStatusPromises = processingGenerations.map(g => getJobStatus(g.id, g.status))
+    const jobStatuses = await Promise.all(jobStatusPromises)
+    const jobStatusMap = new Map(processingGenerations.map((g, i) => [g.id, jobStatuses[i]]))
 
     // Transform the data for the frontend
     const transformedGenerations = generations.map(generation => ({
@@ -68,7 +104,8 @@ export async function GET(request: NextRequest) {
       remainingRegenerations: generation.remainingRegenerations,
       generationGroupId: generation.generationGroupId,
       isOriginal: generation.isOriginal,
-      groupIndex: generation.groupIndex
+      groupIndex: generation.groupIndex,
+      jobStatus: jobStatusMap.get(generation.id) || undefined
     }))
 
     return NextResponse.json({ generations: transformedGenerations })
