@@ -327,7 +327,7 @@ export default function StartGenerationPage() {
                 {t('buyCredits')}
               </Link>
               <Link
-                href="/dashboard"
+                href="/app/dashboard"
                 className="px-6 py-3 rounded-md border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
               >
                 {t('backToDashboard')}
