@@ -8,6 +8,7 @@ import { useGenerations, useGenerationFilters } from '../hooks/useGenerations'
 import { useSession } from 'next-auth/react'
 import { useCredits } from '@/contexts/CreditsContext'
 import { BRAND_CONFIG } from '@/config/brand'
+import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import { PRICING_CONFIG } from '@/config/pricing'
 
 export default function TeamGenerationsPage() {
@@ -37,6 +38,7 @@ export default function TeamGenerationsPage() {
     fetchRoles()
   }, [session?.user?.id])
   const { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated } = useGenerationFilters()
+  const { href: buyCreditsHref } = useBuyCreditsLink()
   const [teamView] = useState<'mine' | 'team'>('mine')
   const { generated, teamUsers, pagination, loading, loadMore } = useGenerations(
     currentUserId,
@@ -77,7 +79,7 @@ export default function TeamGenerationsPage() {
               {isTeamAdmin ? (
                 <>
                   <Link
-                    href="/app/pricing"
+                    href={buyCreditsHref}
                     className="px-6 py-3 rounded-md text-white font-medium transition-colors"
                     style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
                     onMouseEnter={(e) => {

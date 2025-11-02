@@ -7,6 +7,7 @@ import { useGenerations, useGenerationFilters } from '../hooks/useGenerations'
 import { useSession } from 'next-auth/react'
 import { useCredits } from '@/contexts/CreditsContext'
 import { BRAND_CONFIG } from '@/config/brand'
+import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import { PRICING_CONFIG } from '@/config/pricing'
 
 export default function PersonalGenerationsPage() {
@@ -17,6 +18,7 @@ export default function PersonalGenerationsPage() {
   const currentUserId = session?.user?.id
   const currentUserName = session?.user?.name || ''
   const { timeframe, context, setTimeframe, setContext, filterGenerated } = useGenerationFilters()
+  const { href: buyCreditsHref } = useBuyCreditsLink()
   const { generated, pagination, loading, loadMore } = useGenerations(
     currentUserId,
     false, // isTeamAdmin - not needed for personal
@@ -50,7 +52,7 @@ export default function PersonalGenerationsPage() {
             <p className="text-gray-600 mb-6">{t('noCreditsMessage')}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
-                href="/app/pricing"
+                href={buyCreditsHref}
                 className="px-6 py-3 rounded-md text-white font-medium transition-colors"
                 style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
                 onMouseEnter={(e) => {

@@ -9,6 +9,7 @@ import { Link } from '@/i18n/routing'
 import { useCredits } from '@/contexts/CreditsContext'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
+import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import PhotoStyleSettings from '@/components/customization/PhotoStyleSettings'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import PackageSelector from '@/components/packages/PackageSelector'
@@ -33,6 +34,7 @@ export default function StartGenerationPage() {
   const [isApproved, setIsApproved] = useState<boolean>(Boolean(keyFromQuery))
   const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
   const { credits: userCredits, loading: creditsLoading } = useCredits()
+  const { href: buyCreditsHref } = useBuyCreditsLink()
   const [activeContext, setActiveContext] = useState<{
     id: string
     name: string
@@ -314,7 +316,7 @@ export default function StartGenerationPage() {
             <p className="text-gray-600 mb-6">{t('noCreditsMessage')}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
-                href="/app/pricing"
+                href={buyCreditsHref}
                 className="px-6 py-3 rounded-md text-white font-medium transition-colors"
                 style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
                 onMouseEnter={(e) => {
@@ -422,7 +424,7 @@ export default function StartGenerationPage() {
                       })}
                     </p>
                     <Link
-                      href="/app/pricing"
+                      href={buyCreditsHref}
                       className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white rounded-md transition-colors"
                       style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
                       onMouseEnter={(e) => {
