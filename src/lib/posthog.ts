@@ -1,5 +1,4 @@
 import posthog from 'posthog-js'
-import { Env } from '@/lib/env'
 
 export const initPostHog = () => {
   if (typeof window !== 'undefined' && !posthog.__loaded) {
@@ -21,7 +20,8 @@ export const initPostHog = () => {
         capture_pageview: false, // We'll handle this manually
         capture_pageleave: true,
         loaded: (posthogInstance) => {
-          if (Env.string('NODE_ENV') === 'development') {
+          // Next.js automatically makes NODE_ENV available in client-side code
+          if (process.env.NODE_ENV === 'development') {
             posthogInstance.debug()
           }
         },
@@ -29,8 +29,8 @@ export const initPostHog = () => {
         autocapture: false
       })
     } catch (error) {
-      // Silently fail in development if PostHog isn't properly configured
-      if (Env.string('NODE_ENV') === 'production') {
+      // Log errors in production only
+      if (process.env.NODE_ENV === 'production') {
         console.error('PostHog initialization failed:', error)
       }
     }
