@@ -8,55 +8,57 @@
     "signin": "Iniciar Sesión",
     "dashboard": "Panel",
     "joinWaitlist": "Obtén 1 generación gratis",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "getStarted": "Empezar"
   },
   "hero": {
     "title": "Fotos profesionales de equipo en 60 segundos",
     "titleHighlight": "sin sesión de fotos",
-    "subtitle": "Convierte selfies del equipo en retratos coherentes con tu marca. Sin fotógrafo. Sin coordinación. Transformación instantánea desde un selfie.",
-    "instantTransformation": "⚡ Transformación instantánea",
-    "getStartedFree": "Regístrate Ahora",
-    "viewPricing": "Ver Precios",
-    "joinWaitlist": "Obtén 1 generación gratis",
-    "freeCtaSubtext": "Sin compromiso. 60 segundos.",
-    "freeCtaAria": "Obtén una generación gratis al registrarte. Sin compromiso.",
-    "urgency": "Acceso Beta Limitado",
-    "guarantee": "Tu primera generación es gratis. Sin compromiso.",
+    "subtitle": "Construido para equipos, fundadores de startups y empresas en crecimiento. Retratos consistentes y acordes a tu marca para cada miembro del equipo. Sin fotógrafo, sin programar, sin facturas de más de $2,000.",
+    "instantTransformation": "⚡ Transformación instantánea (en serio, es así de rápido)",
+    "getStartedFree": "Regístrate ahora",
+    "getStarted": "Empezar",
+    "viewPricing": "Ver precios",
+    "joinWaitlist": "Obtén 1 generación de prueba gratis",
+    "freeCtaSubtext": "Obtén 1 generación de prueba gratis en un estilo predefinido al registrarte. Te entendemos, quieres probarlo primero.",
+    "freeCtaAria": "Obtén una generación de prueba gratis en un estilo predefinido al registrarte. Sin compromiso.",
+    "urgency": "Acceso beta limitado",
+    "guarantee": "Tu primera generación de prueba es gratis en un estilo predefinido. Sin compromiso, no se requiere tarjeta de crédito. Pruébalo con tu equipo sin riesgo.",
     "secure": "Cifrado SSL y seguro",
-    "noSpam": "Sin spam, nunca",
-    "joinedBadge": "Únete a cientos de equipos que ya usan retratos con IA",
+    "noSpam": "Sin spam, nunca (lo prometemos)",
+    "joinedBadge": "Únete a cientos de equipos y startups (ejem, aún no, pero casi 😉) ahorrando tiempo y dinero con retratos con IA",
     "freeOffer": "Obtén 1 generación gratis al registrarte"
   },
   "features": {
     "title": "Retratos profesionales del equipo en aproximadamente un minuto",
-    "subtitle": "Fotos coherentes con tu marca para cada compañero—sin estudios, sin coordinación ni re‑sesiones.",
+    "subtitle": "Diseñado para equipos y fundadores de startups que necesitan fotos consistentes y acordes a su marca sin complicaciones. Perfecto para incorporaciones, páginas del equipo y press kits.",
     "fast": {
       "title": "60 segundos, no 6 semanas",
-      "description": "Cada persona sube una vez y obtiene resultados al instante. Tu web y press kit se mantienen al día."
+      "description": "A los equipos les encanta. Cada persona sube una vez y obtiene resultados al instante. Tu sitio web corporativo y press kit se mantienen actualizados. No más perseguir fotógrafos por pruebas."
     },
     "consistency": {
-      "title": "En marca, siempre",
-      "description": "Una especificación para todo el equipo. Las nuevas incorporaciones encajan desde el día uno—sin re‑sesión."
+      "title": "Acorde a tu marca, siempre",
+      "description": "Establece una especificación de estilo para todo tu equipo. Las nuevas incorporaciones coinciden con tu marca desde el día uno—esencial para startups que escalan rápido. Sin re-sesiones cuando alguien se une tarde o trabaja remotamente."
     },
     "control": {
-      "title": "Autoservicio para cada incorporación",
-      "description": "Invita, aprueba y regenera cuando quieras—sin coordinación de estudio."
+      "title": "Flujo de trabajo amigable para equipos",
+      "description": "Invita miembros del equipo, asigna créditos y aprueba fotos—todo desde un solo panel. Sin coordinación de estudio, sin gestión de proveedores. Solo gestión simple que realmente funciona."
     },
     "costEffective": {
-      "title": "Olvida la sesión de $2,000+",
-      "description": "Fotos profesionales instantáneas que cuestan menos que un café por persona. Paga solo cuando necesites fotos nuevas o actualizadas."
+      "title": "Ahorra miles en sesiones de fotos",
+      "description": "Las sesiones tradicionales cuestan $2,000+ y toman semanas. Obtén la misma calidad por menos que un café por persona. Perfecto para startups vigilando su tasa de consumo y equipos con presupuestos ajustados."
     },
     "remote": {
-      "title": "Distribuido por defecto",
-      "description": "Perfecto para equipos remotos. Una especificación, resultados consistentes. Las nuevas incorporaciones generan el día uno—sin re‑sesión."
+      "title": "Remoto primero por diseño",
+      "description": "Diseñado para equipos distribuidos desde el día uno. Establece el estilo de tu marca una vez, y cada nueva incorporación—ya sea en San Francisco, Londres o su oficina en casa—obtiene fotos consistentes al instante."
     }
   },
   "gallery": {
-    "title": "Ve la Magia en Acción",
-    "subtitle": "Transformaciones reales de usuarios reales. Sube cualquier foto y observa cómo la IA crea retratos profesionales en segundos.",
-    "viewComparison": "Ver Comparación",
-    "comparisonView": "Comparación Antes y Después",
-    "tryWithSample": "Probar con Foto de Muestra",
+    "title": "Mira la magia en acción",
+    "subtitle": "Transformaciones reales de usuarios reales. Sube cualquier foto y observa cómo la IA convierte tu selfie casual en algo digno de LinkedIn en segundos. No se necesitan habilidades de Photoshop.",
+    "viewComparison": "Ver comparación",
+    "comparisonView": "Comparación antes y después",
+    "tryWithSample": "Probar con foto de muestra",
     "before": "Antes",
     "after": "Después",
     "dragToCompare": "Arrastra para comparar",
@@ -66,86 +68,86 @@
     "commercialUse": "Uso comercial"
   },
   "trust": {
-    "title": "Por qué los equipos eligen TeamShots",
-    "subtitle": "El único servicio de retratos con IA diseñado específicamente para equipos",
+    "title": "¿Por qué equipos y startups eligen TeamShots?",
+    "subtitle": "El único servicio de retratos con IA diseñado específicamente para equipos B2B y empresas en crecimiento",
     "badges": {
       "noWatermarks": {
         "title": "Sin marcas de agua, nunca",
-        "description": "Tus fotos son 100% tuyas. Sin marcas de agua, sin branding, sin restricciones. Úsalas donde quieras, cuando quieras."
+        "description": "Tus fotos son 100% tuyas. Úsalas en tu sitio web, comunicados de prensa, LinkedIn—donde tu negocio las necesite. Sin marcas de agua, sin restricciones, sin ventas adicionales."
       },
       "instant": {
         "title": "Resultados instantáneos",
-        "description": "Retratos profesionales en aproximadamente un minuto. Sin coordinación ni esperas."
+        "description": "Retratos profesionales en aproximadamente un minuto. Perfecto para equipos incorporando nuevos contratados rápidamente, o fundadores que necesitan fotos ayer. Sin retrasos de programación."
       },
       "teamManagement": {
-        "title": "Gestión Fácil del Equipo",
-        "description": "Envía invitaciones, asigna créditos y predefine estilos. Las nuevas incorporaciones obtienen fotos profesionales el día uno."
+        "title": "Diseñado para flujos de trabajo de equipo",
+        "description": "Envía invitaciones, asigna créditos por miembro y establece estándares de marca. Las nuevas incorporaciones obtienen fotos profesionales el día uno—incluso si empiezan el viernes por la tarde. A los equipos les encanta lo simple que es."
       },
       "costSavings": {
-        "title": "Menos que un café",
-        "description": "Retratos profesionales de equipo por menos que un café. Perfecto para equipos de cualquier tamaño."
+        "title": "Ahorros empresariales, precios de startup",
+        "description": "Retratos profesionales por una fracción del costo tradicional. Ahorra $2,000+ por sesión—esencial para startups gestionando su tasa de consumo y equipos con presupuestos limitados."
       },
       "security": {
-        "title": "Seguridad de Nivel Bancario",
-        "description": "El cifrado de nivel empresarial protege tus datos y fotos. Nunca almacenamos ni compartimos sin permiso."
+        "title": "Seguridad de nivel empresarial",
+        "description": "Tus datos y fotos están cifrados con seguridad empresarial. Conforme a GDPR, listo para SOC 2. Perfecto para equipos gestionando datos de empleados y startups preparándose para ventas empresariales."
       },
       "ai": {
         "title": "Impulsado por Google Gemini AI",
-        "description": "Resultados profesionales utilizando la última tecnología de IA de Google. Confiado por miles de equipos en todo el mundo."
+        "description": "Resultados profesionales con la última tecnología de IA de Google. Confiado por equipos y fundadores que necesitan retratos de calidad sin molestias tradicionales."
       }
     }
   },
   "socialProof": {
-    "testimonialsTitle": "Lo Que Dicen Nuestros Usuarios Tempranos",
+    "testimonialsTitle": "¿Qué dicen equipos y fundadores?",
     "userCount": "personas ya se unieron",
-    "trustMessage": "Únete a cientos de equipos transformando sus fotos profesionales con IA",
+    "trustMessage": "Únete a 1,247+ equipos y startups ahorrando miles en sesiones de fotos",
     "noWatermarks": "Sin marcas de agua",
     "commercialUse": "Uso comercial incluido",
     "highResolution": "Alta resolución",
     "beta": {
-      "name": "Usuario Beta",
-      "role": "Probador Temprano",
+      "name": "Usuario beta",
+      "role": "Probador temprano",
       "company": "Próximamente",
-      "message": "¡Únete a nuestro programa beta para aparecer aquí y ayudar a dar forma al futuro de TeamShots!"
+      "message": "¡Únete a nuestro programa beta para aparecer aquí y ayudar a dar forma al futuro de TeamShots! (Además, parecerás un innovador)"
     }
   },
   "howItWorks": {
-    "title": "Cómo Funciona",
-    "subtitle": "Cinco pasos sencillos. Un minuto aprox. Sin sesión de fotos.",
+    "title": "Cómo funciona para tu equipo",
+    "subtitle": "Cinco pasos simples. Aproximadamente un minuto por persona. Perfecto para equipos incorporando nuevos y fundadores gestionando crecimiento rápido.",
     "totalTime": "Tiempo total:",
     "totalTimeValue": "60 segundos",
-    "cta": "Comenzar",
-    "guarantee": "Tu primera generación es gratis—sin compromiso",
+    "cta": "Empezar",
+    "guarantee": "Tu primera generación de prueba es gratis en un estilo predefinido—perfecto para probar con tu equipo (somos así de amables)",
     "steps": {
       "1": {
-        "title": "Elige tu fondo perfecto",
-        "description": "Un clic para elegir entre escenas profesionales, o sube el fondo de tu oficina.",
+        "title": "Establece el estilo de tu marca",
+        "description": "Administradores y fundadores definen el estilo de foto de la empresa una vez. Elige fondos, establece pautas—esto se convierte en tu estándar.",
         "duration": "5s",
-        "effort": "Solo hacer clic"
+        "effort": "Solo clic"
       },
       "2": {
-        "title": "Añade tu marca (opcional)",
-        "description": "Agrega tu logo sutilmente a fondos o ropa—completamente opcional.",
+        "title": "Agrega tu logo",
+        "description": "Agrega tu logo corporativo opcionalmente para consistencia. Perfecto para startups construyendo identidad y equipos gestionando estándares.",
         "duration": "5s",
         "effort": "Arrastra y suelta"
       },
       "3": {
         "title": "Elige tu estilo",
-        "description": "¿Sala de juntas formal o startup casual? Ve vistas previas instantáneas mientras eliges.",
+        "description": "¿Formal corporativo o casual de startup? Establece el tono que coincida con tu cultura. Previsualiza al instante antes de confirmar.",
         "duration": "10s",
-        "effort": "Vista previa y elige"
+        "effort": "Previsualiza y elige"
       },
       "4": {
-        "title": "El equipo sube una vez",
-        "description": "Todos suben desde cualquier lugar, en cualquier momento. Sin programación, sin dolores de cabeza de coordinación.",
-        "duration": "30s",
-        "effort": "Sube y listo"
+        "title": "Miembros del equipo suben",
+        "description": "Envía invitaciones. Cada persona sube un selfie una vez—perfecto para remotos y agendas ocupadas. Administradores gestionan desde un panel.",
+        "duration": "20s",
+        "effort": "Sube"
       },
       "5": {
-        "title": "Descarga y celebra",
-        "description": "Fotos profesionales y consistentes aparecen instantáneamente. Listas para LinkedIn, sitio web, donde sea.",
-        "duration": "10s",
-        "effort": "Pura magia"
+        "title": "Obtén fotos profesionales",
+        "description": "Retratos instantáneos listos para sitio web, LinkedIn, press kits y presentaciones. Descarga múltiples tamaños—todo para uso comercial.",
+        "duration": "20s",
+        "effort": "Un clic"
       }
     }
   },
@@ -162,49 +164,45 @@
     },
     "noResults": "No se encontraron preguntas que coincidan con tu búsqueda.",
     "stillHaveQuestions": "¿Aún tienes preguntas?",
-    "contactSupport": "Contactar Soporte",
+    "contactSupport": "Contactar soporte",
     "items": {
       "1": {
         "question": "¿Mis datos son seguros y privados?",
-        "answer": "Absolutamente. Utilizamos encriptación de nivel empresarial y nunca almacenamos tus fotos permanentemente. Tus fotos cargadas se procesan y luego se eliminan automáticamente dentro de 30 días. Nunca compartimos tus datos con terceros."
+        "answer": "Absolutamente. Usamos cifrado empresarial y nunca almacenamos fotos permanentemente. Se eliminan automáticamente 30 días después de que termine tu suscripción, o puedes solicitarlo cuando quieras. No compartimos datos con terceros—ni siquiera con tu jefe, lo prometemos."
       },
       "2": {
         "question": "¿Cuánto cuesta?",
-        "answer": "Tu primera generación es gratis al registrarte. Después: paquetes de créditos desde $5, o suscripciones desde $24/mes. Los créditos no caducan. Cada generación usa 4 créditos y produce 3–4 variaciones."
+        "answer": "Al registrarte, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Luego: paquete Prueba Una Vez por $5 (2 generaciones), plan Individual a $24/mes (6 generaciones/mes), o plan Pro a $59/mes (20 generaciones/mes). Planes anuales ahorran más. Créditos nunca caducan, así que acumúlalos como oro digital. Cada generación usa 10 créditos y produce 4 variaciones."
       },
       "3": {
-        "question": "¿Qué pasa si no estoy satisfecho con los resultados?",
-        "answer": "Ofrecemos una garantía de devolución de dinero de 30 días. Si no estás contento con tus fotos profesionales, reembolsaremos tu compra, sin preguntas. Confiamos en la calidad de nuestra IA, pero queremos que estés completamente satisfecho."
+        "question": "¿Qué tipos de fotos funcionan mejor?",
+        "answer": "¡Cualquier foto clara de tu rostro! Selfies y fotos casuales funcionan genial. Mejor calidad en tu selfie, mejor resultado. Cuanto menos adivinemos, mejor."
       },
       "4": {
-        "question": "¿Qué tipos de fotos funcionan mejor?",
-        "answer": "¡Cualquier foto clara de tu rostro funciona! Selfies, fotos casuales, o incluso fotos grupales donde seas claramente visible. La IA funciona mejor con buena iluminación y una vista clara de tu rostro, pero es sorprendentemente buena manejando varias calidades de fotos."
+        "question": "¿Puedo usar estas fotos para LinkedIn, sitio web, etc.?",
+        "answer": "¡Sí! Todas las fotos generadas son tuyas para cualquier propósito profesional: LinkedIn, sitios web, tarjetas, presentaciones y más. Recibes archivos de alta resolución (1024x1024px) perfectos para uso profesional. Adelante, luce increíble en todas partes."
       },
       "5": {
-        "question": "¿Puedo usar estas fotos para mi LinkedIn, sitio web, etc.?",
-        "answer": "¡Sí! Todas las fotos generadas son tuyas para usar en cualquier propósito profesional - LinkedIn, sitios web de empresas, tarjetas de presentación, presentaciones y más. Recibes archivos de alta resolución (1024x1024px) perfectos para cualquier uso profesional."
+        "question": "¿Cómo funciona la generación de fotos con IA?",
+        "answer": "Nuestra IA analiza tu foto con algoritmos avanzados de reconocimiento facial y transferencia de estilo (prometemos que no es magia, solo matemáticas inteligentes). Crea retratos profesionales aplicando estilos corporativos mientras mantiene tus rasgos únicos—sí, seguirás pareciendo tú, solo más pulido."
       },
       "6": {
-        "question": "¿Cómo funciona la generación de fotos con IA?",
-        "answer": "Nuestra IA analiza tu foto cargada utilizando algoritmos avanzados de reconocimiento facial y transferencia de estilo. Crea retratos profesionales aplicando estilos de fotografía corporativa mientras mantiene tus características faciales únicas e identidad."
+        "question": "¿Cuántas fotos obtengo por generación?",
+        "answer": "Cada generación produce 4 variaciones profesionales diferentes. Descárgalas todas y elige favoritas. Te da opciones para contextos diferentes—LinkedIn serio, sitio web amigable, ya sabes."
       },
       "7": {
-        "question": "¿Cuántas fotos obtengo por generación?",
-        "answer": "Cada generación produce 3-4 variaciones profesionales diferentes de tu foto. Puedes descargarlas todas y elegir tus favoritas. Esto te da opciones para diferentes contextos o preferencias."
-      },
-      "8": {
         "question": "¿Soportan fotos de equipo o solo retratos individuales?",
-        "answer": "Actualmente, nos enfocamos en retratos profesionales individuales. Cada persona necesita subir su propia foto para obtener los mejores resultados. Estamos trabajando en capacidades de fotos de equipo para futuras actualizaciones."
+        "answer": "Actualmente nos enfocamos en retratos individuales. Cada persona sube su propia foto para mejores resultados (al menos no necesitan estar en la misma habitación). Estamos trabajando en capacidades de fotos grupales para futuras actualizaciones, porque las fotos en grupo son difíciles."
       }
     }
   },
   "pricingPreview": {
-    "title": "Precios Simples y Transparentes",
+    "title": "Precios simples y transparentes",
     "subtitle": "Sin tarifas ocultas, sin compromisos mensuales. Paga solo por lo que uses.",
-    "mostPopular": "Más Popular",
+    "mostPopular": "Más popular",
     "recommended": "Recomendado",
     "questions": "¿Tienes preguntas sobre precios?",
-    "viewFullPricing": "Ver Detalles Completos de Precios",
+    "viewFullPricing": "Ver detalles completos",
     "poweredBy": "Impulsado por Google Gemini AI",
     "plans": {
       "tryOnce": {
@@ -219,7 +217,7 @@
           "2": "Retención de foto por 30 días",
           "3": "Soporte por correo electrónico"
         },
-        "cta": "Regístrate Ahora"
+        "cta": "Obtén mi prueba"
       },
       "starter": {
         "name": "Inicial",
@@ -231,11 +229,11 @@
           "0": "25 generaciones de fotos por mes",
           "1": "Descargas de alta resolución 1024x1024px",
           "2": "Retención de foto por 30 días",
-          "3": "Los créditos se acumulan, nunca expiran",
+          "3": "Créditos se acumulan, nunca caducan",
           "4": "Recarga a $0.90 por 4 créditos",
-          "5": "Soporte prioritario por correo electrónico"
+          "5": "Soporte prioritario por correo"
         },
-        "cta": "Comenzar",
+        "cta": "Regístrate ahora",
         "savings": "Ahorra $43/año"
       },
       "pro": {
@@ -248,41 +246,41 @@
           "0": "70 generaciones de fotos por mes",
           "1": "Descargas de alta resolución 1024x1024px",
           "2": "Retención de foto por 30 días",
-          "3": "Los créditos se acumulan, nunca expiran",
+          "3": "Créditos se acumulan, nunca caducan",
           "4": "Recarga a $0.60 por 4 créditos",
-          "5": "Soporte prioritario con gerente de cuenta dedicado"
+          "5": "Soporte prioritario con gerente dedicado"
         },
-        "cta": "Comenzar",
+        "cta": "Regístrate ahora",
         "savings": "Ahorra $108/año"
       }
     }
   },
   "waitlist": {
     "title": "Únete a la Lista de Espera",
-    "subtitle": "Únete a más de 247 equipos que ya están transformando sus fotos profesionales con IA",
+    "subtitle": "Únete a 247+ equipos y startups ya transformando sus fotos (y ahorrando miles)",
     "emailPlaceholder": "Ingresa tu correo de trabajo",
-    "submit": "Únete a la Lista",
+    "submit": "Únete a la lista",
     "submitFirstPerson": "Comenzar",
     "submitting": "Enviando...",
-    "success": "¡Gracias por unirte! Revisa tu correo para la confirmación.",
-    "error": "Algo salió mal. Por favor intenta de nuevo.",
-    "invalidEmail": "Por favor ingresa un correo electrónico válido",
-    "limitedSpots": "Acceso Beta Limitado - ¡Solo quedan 100 espacios!",
-    "benefit1": "Resultados en 60 Segundos",
+    "success": "¡Gracias por unirte! Revisa tu correo para confirmar. (Revisa spam si no lo ves—somos amables, pero el correo a veces se confunde)",
+    "error": "¡Ups! Algo salió mal. Vuelve a intentar (somos humanos, a veces fallamos).",
+    "invalidEmail": "Ingresa un correo válido (necesitamos saber dónde enviar lo bueno)",
+    "limitedSpots": "Acceso beta limitado - ¡Solo 100 espacios!",
+    "benefit1": "Resultados en 60 segundos",
     "benefit2": "Ahorra $2,000+",
     "benefit3": "100% Seguro",
-    "guarantee": "Garantía de devolución de 30 días",
-    "secure": "Encriptado SSL y seguro",
+    "guarantee": "Prueba una vez casi gratis, antes de suscribirte",
+    "secure": "Cifrado SSL y seguro",
     "noSpam": "Sin spam, nunca",
-    "joinedBadge": "Únete a cientos de equipos que ya usan retratos con IA"
+    "joinedBadge": "Únete a cientos de equipos usando IA para retratos (ejem, aún no, pero casi 😉)"
   },
   "footer": {
     "tagline": "Fotos profesionales de equipo en 60 segundos",
     "copyright": "© 2025 TeamShots. Todos los derechos reservados."
   },
   "metadata": {
-    "title": "TeamShots — Fotos profesionales y consistentes de equipo en 60 segundos",
-    "description": "Convierte selfies del equipo en retratos alineados con tu marca sin sesión de fotos. Rápido, consistente y remoto por diseño."
+    "title": "TeamShots - Fotos profesionales y consistentes de equipo en 60 segundos",
+    "description": "Diseñado para equipos y fundadores de startups. Convierte selfies en retratos acordes a tu marca sin sesiones. Rápido, consistente y perfecto para remotos."
   },
   "pricing": {
     "monthly": "Mensual",
@@ -290,10 +288,10 @@
     "perPhotoVariation": "por variación de foto",
     "includesVariationsPerPhoto": "Incluye {count} variaciones por foto",
     "variationsBullet": "Regenera hasta {count} veces para perfeccionar cada foto",
-    "freeIntro": "Tu primera generación es gratis al registrarte. Elige créditos o un plan cuando estés listo.",
-    "title": "Precios Simples y Transparentes",
-    "subtitle": "Elige el plan que mejor se adapte a ti. Todos los planes incluyen créditos que se acumulan y nunca expiran.",
-    "mostPopular": "Más Popular",
+    "freeIntro": "Tu primera generación es gratis al registrarte. Elige créditos o plan cuando estés listo.",
+    "title": "Precios simples y transparentes",
+    "subtitle": "Elige el plan que mejor te funcione. Todos incluyen créditos que se acumulan y nunca caducan.",
+    "mostPopular": "Más popular",
     "credits": "créditos",
     "creditsPerMonth": "créditos mensuales",
     "generations": "generaciones",
@@ -302,67 +300,68 @@
     "topUpTitle": "Recarga de créditos",
     "individualTopUp": "Recarga individual",
     "proTopUp": "Recarga Pro",
-    "tryOnceTopUp": "Recarga Try Once",
+    "tryOnceTopUp": "Recarga Prueba Una Vez",
     "topUpSubtitle": "Para uso ocasional",
     "topUpPackageLabel": "Paquete de recarga",
-    "confirmTopUp": "Recargar créditos",
+    "confirmTopUp": "Recargar mis créditos",
     "photoGenerations": "generaciones de fotos",
     "variations": "variaciones",
-    "photosRetained30": "Fotos retenidas por 30 días desde la generación",
-    "photosRetainedAfterSubscription": "Fotos retenidas mientras esté activo + 30 días después",
+    "photosRetained30": "Fotos retenidas por 30 días desde generación",
+    "photosRetainedAfterSubscription": "Fotos retenidas mientras activo + 30 días después",
     "topUpCreditsAvailable": "Recarga de créditos disponible",
     "noSupport": "Sin soporte",
-    "checkoutCanceled": "Pago cancelado. No se realizaron cargos.",
-    "checkoutError": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "checkoutCanceled": "Pago cancelado. No se realizaron cargos. (¿Cambiaste de idea? Te entendemos, pasa a los mejores)",
+    "checkoutError": "¡Ups! Algo salió mal. Vuelve a intentar. (Si persiste, avísanos—estamos para ayudar)",
     "checkoutApiError": "Error al crear sesión de pago",
     "actions": {
       "upgradeToYearly": "Cambiar a anual",
-      "downgradeToMonthly": "Cambiar a mensual",
+      "downgradeToMonthly": "Bajar a mensual",
       "effectiveOn": "Efectivo el {date}"
     },
     "plans": {
       "tryOnce": {
         "name": "Prueba Una Vez",
-        "period": "único pago",
+        "period": "pago único",
         "description": "Perfecto para probar el servicio",
         "features": [
           "<strong>{photos}</strong> generación de foto",
           "Regenera hasta 2 veces para perfeccionar cada foto",
-          "Fotos retenidas por 30 días desde la generación",
-          "Soporte por correo electrónico"
+          "Fotos retenidas por 30 días desde generación",
+          "Recarga de créditos disponible",
+          "Soporte por correo"
         ],
-        "cta": "Regístrate Ahora"
+        "cta": "Prueba un retrato"
       },
       "individual": {
         "name": "Individual",
         "period": "por mes",
-        "description": "Para uso de una sola persona",
+        "description": "Para profesionales independientes que quieren lucir bien",
         "features": [
           "<strong>{photos}</strong> generaciones de fotos",
           "Regenera hasta 3 veces para perfeccionar cada foto",
-          "Fotos retenidas mientras esté activo + 30 días después",
-          "Los créditos se acumulan y nunca expiran",
+          "Fotos retenidas mientras activo + 30 días después",
+          "Créditos se acumulan, nunca caducan",
           "Recarga de créditos disponible",
           "Soporte prioritario por correo"
         ],
-        "cta": "Regístrate Ahora"
+        "cta": "Súbeme de nivel"
       },
       "pro": {
         "name": "Pro",
         "period": "por mes",
-        "description": "Para equipos",
+        "description": "Para equipos que quieren que todos luzcan increíbles",
         "features": [
           "<strong>{photos}</strong> generaciones de fotos",
           "Regenera hasta 4 veces para perfeccionar cada foto",
           "Todas las funciones Individual, más:",
-          "Invitaciones a miembros del equipo",
+          "Invitaciones a equipo",
           "Gestión de fotos del equipo",
-          "Plantillas de contexto de empresa",
-          "Flujo de trabajo de aprobación de administrador",
+          "Plantillas de estilo empresa",
+          "Flujo de aprobación admin",
           "Créditos de recarga con descuento",
-          "Soporte prioritario con gerente de cuenta dedicado"
+          "Soporte prioritario con gerente dedicado"
         ],
-        "cta": "Regístrate Ahora"
+        "cta": "Sube de nivel al equipo"
       }
     },
     "faq": {
@@ -370,19 +369,19 @@
       "questions": {
         "freeGen": {
           "question": "¿Tengo una generación gratis?",
-          "answer": "Sí. Las cuentas nuevas reciben 1 generación gratis. Cada generación usa 4 créditos y produce 3–4 variaciones."
+          "answer": "Sí. Cuentas nuevas reciben 1 generación de prueba gratis en estilo predefinido para ver la calidad. Cada generación usa 10 créditos y produce 4 variaciones."
         },
         "howCreditsWork": {
           "question": "¿Cómo funcionan los créditos?",
-          "answer": "Cada generación de foto usa 4 créditos y produce 3-4 variaciones de alta calidad. Los créditos se acumulan mes a mes y nunca expiran."
+          "answer": "Cada generación usa 10 créditos y produce 4 variaciones de alta calidad. Créditos se acumulan mensualmente y nunca caducan."
         },
         "topUp": {
           "question": "¿Puedo recargar créditos?",
-          "answer": "¡Sí! Los suscriptores pueden comprar créditos adicionales en cualquier momento. Los precios varían según el nivel."
+          "answer": "¡Sí! Suscriptores pueden comprar créditos adicionales cuando quieran. Precios varían por nivel."
         },
         "satisfaction": {
-          "question": "¿Qué pasa si no estoy satisfecho?",
-          "answer": "Ofrecemos una garantía de devolución de dinero de 30 días. Si no estás contento con el servicio, te reembolsaremos tu pago de suscripción, sin preguntas."
+          "question": "¿Qué si no estoy satisfecho?",
+          "answer": "Cada foto incluye 2-4 regeneraciones según tu plan, para refinar hasta que quede perfecta. Por eso ofrecemos generación de prueba gratis al registrarte—prueba primero, sin obligaciones."
         }
       }
     }
@@ -391,45 +390,45 @@
     "signin": {
       "title": "Inicia sesión en tu cuenta",
       "welcomeBack": "Bienvenido de nuevo",
-      "welcomeSubtitle": "Inicia sesión para seguir generando fotos profesionales del equipo.",
-      "benefit1": "Retratos consistentes y rápidos para todo tu equipo",
-      "benefit2": "Sin sesión de fotos — ideal para trabajo remoto",
+      "welcomeSubtitle": "Inicia para seguir generando fotos profesionales. ¡Te extrañamos!",
+      "benefit1": "Retratos rápidos y consistentes para tu equipo",
+      "benefit2": "Sin sesión de fotos—ideal para remotos",
       "benefit3": "Fondos y estilos alineados con tu marca",
       "emailLabel": "Correo electrónico",
       "emailPlaceholder": "Correo electrónico",
       "passwordLabel": "Contraseña",
       "passwordPlaceholder": "Contraseña",
-      "useMagicLink": "Usar enlace mágico en lugar de contraseña",
-      "forgotPassword": "¿Olvidaste tu contraseña?",
-      "signingIn": "Iniciando sesión...",
+      "useMagicLink": "Usar enlace mágico en vez de contraseña",
+      "forgotPassword": "¿Olvidaste contraseña?",
+      "signingIn": "Iniciando...",
       "submit": "Iniciar sesión",
       "noAccount": "¿No tienes cuenta? Regístrate",
-      "Invalid credentials": "Credenciales inválidas",
-      "Failed to send magic link": "No se pudo enviar el enlace mágico",
-      "An error occurred": "Ocurrió un error"
+      "Invalid credentials": "Esas credenciales no parecen correctas. Verifica correo y contraseña, o restablece tu contraseña.",
+      "Failed to send magic link": "No pudimos enviar el enlace. Verifica tu correo y prueba de nuevo, o usa contraseña.",
+      "An error occurred": "¡Ups! Algo salió mal. Intenta de nuevo, y si persiste, avísanos."
     },
     "signup": {
-      "freeBadge": "Incluye 1 generación gratis por nuestra cuenta",
+      "freeBadge": "Incluye 1 generación de prueba gratis en estilo predefinido",
       "title": "Crea tu cuenta",
       "welcome": "Crea tu cuenta",
-      "welcomeSubtitle": "Únete en segundos. Sin sesión de fotos, sin fotógrafo, sin problema.",
-      "benefit1": "Genera retratos profesionales en 60 segundos",
-      "benefit2": "Los créditos nunca expiran. Úsalos cuando quieras.",
-      "benefit3": "Perfecto para equipos remotos y nuevas contrataciones",
+      "welcomeSubtitle": "Diseñado para equipos y fundadores. Únete en segundos. Sin fotógrafo ni gestión—solo fotos profesionales.",
+      "benefit1": "Genera retratos en 60 segundos",
+      "benefit2": "Créditos nunca caducan. Úsalos cuando quieras.",
+      "benefit3": "Perfecto para remotos y nuevas incorporaciones",
       "stepOf": "Paso {step} de 2",
       "emailLabel": "Correo electrónico",
       "passwordLabel": "Contraseña",
       "confirmPasswordLabel": "Confirmar contraseña",
-      "sending": "Enviando código de verificación...",
+      "sending": "Enviando código...",
       "sendCode": "Enviar código de verificación",
       "verificationCodeLabel": "Código de verificación",
-      "enterCodeFor": "Ingresa el código de 6 dígitos que acabamos de enviar a {email}",
+      "enterCodeFor": "Ingresa el código de 6 dígitos enviado a {email}",
       "verifying": "Verificando...",
       "verifyCode": "Verificar código",
       "bannerTitle": "Ya estás dentro. Un último paso.",
-      "didntReceiveCode": "¿No recibiste un código?",
+      "didntReceiveCode": "¿No recibiste código?",
       "info": {
-        "checkoutSuccess": "Pago exitoso. Ahora estás suscrito a {plan}. Enviamos un código de un solo uso a {email}. Ingresa el código abajo para confirmar tu correo."
+        "checkoutSuccess": "¡Pago exitoso! Suscrito a {plan}. Enviamos código a {email}. Ingrésalo para confirmar y empezar."
       },
       "planPro": "Pro",
       "planIndividual": "Individual",
@@ -442,45 +441,45 @@
       "firstNameLabel": "Nombre",
       "userTypeLabel": "¿Cómo usarás TeamShots?",
       "individual": "Individual",
-      "individualDesc": "Para uso personal. Solo tú, viéndote genial.",
+      "individualDesc": "Para uso personal. Solo tú, luciendo genial.",
       "team": "Equipo",
-      "teamDesc": "Para uso empresarial o de equipo. Todo tu equipo.",
+      "teamDesc": "Para uso de empresa o equipo. Todo tu crew.",
       "accountTypeLabel": "Tipo de cuenta",
       "personalUse": "Uso personal",
-      "teamUse": "Uso empresarial",
-      "teamWebsiteLabel": "Sitio web de la empresa",
-      "creating": "Creando tu cuenta...",
+      "teamUse": "Uso de empresa",
+      "teamWebsiteLabel": "Sitio web de empresa",
+      "creating": "Creando cuenta...",
       "completeRegistration": "Completar registro",
       "haveAccount": "¿Ya tienes cuenta? Inicia sesión",
       "resendCode": "Reenviar código",
       "resendIn": "Reenviar en {seconds}s",
-      "otpHelp": "El código expira en 10 min",
-      "newCodeSent": "Código inválido o expirado. Se envió un nuevo código de verificación.",
-      "accountExists": "La cuenta ya existe. Por favor, inicia sesión con tu contraseña existente.",
-      "Failed to send OTP": "No se pudo enviar el código",
-      "Invalid OTP": "Código inválido",
-      "Registration failed": "El registro falló",
-      "An error occurred": "Ocurrió un error",
-      "Internal server error": "Error interno del servidor"
+      "otpHelp": "Código caduca en 10 min",
+      "newCodeSent": "Código inválido o caducado. Enviamos uno nuevo.",
+      "accountExists": "Cuenta ya existe. Inicia con tu contraseña existente.",
+      "Failed to send OTP": "No pudimos enviar código. Verifica correo y prueba de nuevo.",
+      "Invalid OTP": "Ese código no parece correcto. Verifica o solicita nuevo.",
+      "Registration failed": "Registro falló. Intenta de nuevo o contacta soporte.",
+      "An error occurred": "¡Ups! Algo salió mal. Intenta de nuevo, avísanos si persiste.",
+      "Internal server error": "Algo falló en nuestro lado. Notificados, solucionando. Intenta en un momento."
     },
     "verify": {
       "title": "Revisa tu correo",
-      "subtitle": "Te hemos enviado un enlace mágico para finalizar el inicio de sesión.",
-      "yourEmail": "tu correo electrónico",
-      "sentTo": "Hemos enviado un enlace mágico a {email}",
-      "instructions": "Haz clic en el enlace del correo para iniciar sesión. El enlace expira en 24 horas.",
-      "cantFindTitle": "¿No encuentras el correo?",
-      "tipSpam": "Revisa tu carpeta de spam o no deseado",
-      "tipCorrect": "Asegúrate de haber ingresado el correo correctamente",
-      "tipDelay": "El correo puede tardar unos minutos en llegar",
-      "backToSignIn": "Volver a iniciar sesión",
+      "subtitle": "Enviamos enlace mágico para finalizar inicio.",
+      "yourEmail": "tu correo",
+      "sentTo": "Enviamos enlace mágico a {email}",
+      "instructions": "Haz clic en el enlace para iniciar. Expira en 24 horas.",
+      "cantFindTitle": "¿No encuentras correo?",
+      "tipSpam": "Revisa spam o no deseado",
+      "tipCorrect": "Asegúrate correo correcto",
+      "tipDelay": "Correo puede tardar minutos",
+      "backToSignIn": "Volver a inicio",
       "loading": "Cargando…"
     }
   },
   "app": {
     "header": {
       "title": "Panel",
-      "subtitle": "¡Bienvenido de nuevo! Esto es lo que sucede con tu equipo.",
+      "subtitle": "¡Bienvenido! Esto pasa con tu equipo.",
       "notificationsCount": "{count}"
     },
     "sidebar": {
@@ -489,11 +488,11 @@
         "dashboard": "Panel",
         "team": "Equipo",
         "personalGenerations": "Generaciones Personales",
-        "teamGenerations": "Generaciones del Equipo",
+        "teamGenerations": "Generaciones Equipo",
         "selfies": "Selfies",
-        "contexts": "Estilos de Fotos",
+        "contexts": "Estilos Fotos",
         "personalPhotoStyles": "Estilos Personales",
-        "teamPhotoStyles": "Estilos del Equipo",
+        "teamPhotoStyles": "Estilos Equipo",
         "analytics": "Analítica",
         "settings": "Ajustes"
       },
@@ -507,39 +506,39 @@
       },
       "credits": {
         "label": "Créditos",
-        "title": "Créditos Disponibles",
-        "individual": "Créditos Personales",
-        "team": "Créditos de equipo",
+        "title": "Créditos disponibles",
+        "individual": "Créditos personales",
+        "team": "Créditos equipo",
         "allocated": "de los cuales asignados a invitaciones",
-        "monthlyReset": "Reinicio Mensual",
+        "monthlyReset": "Reinicio mensual",
         "progress": "{used}/{total}",
         "buyMore": "Comprar más créditos"
       },
       "generate": {
         "getSelfie": "Obtener selfie",
-        "getSelfieDescription": "Sube una foto o usa tu cámara para tomar un selfie.",
-        "readyToGenerate": "Listo para Generar",
+        "getSelfieDescription": "Sube foto o usa cámara para selfie.",
+        "readyToGenerate": "Listo para generar",
     "yourSelfie": "Tu selfie",
-    "selectPhotoStyle": "Elegir Estilo de Foto",
-    "selectPhotoStyleDescription": "Selecciona un estilo de foto predefinido o elige freestyle para personalización completa.",
-    "noPredefinedStylesMessage": "No hay estilos de foto predefinidos disponibles. Puedes personalizar todas las configuraciones a continuación.",
-    "photoStyleFilter": "Estilo de Foto",
+        "selectPhotoStyle": "Elegir estilo foto",
+        "selectPhotoStyleDescription": "Selecciona estilo predefinido o freestyle para personalización.",
+        "noPredefinedStylesMessage": "No hay estilos predefinidos. Personaliza abajo.",
+        "photoStyleFilter": "Estilo foto",
     "freestyle": "Freestyle",
-    "freestyleDescription": "Personalización completa con todas las opciones disponibles",
-    "freestyleOnlyDescription": "Personaliza todas las configuraciones de estilo de foto para esta generación",
-    "predefinedStyle": "Estilo predefinido con configuraciones preestablecidas",
-        "insufficientCredits": "Créditos Insuficientes",
-        "insufficientCreditsMessage": "Necesitas {required} créditos para generar una foto. Actualmente tienes {current} créditos.",
-    "generatePhoto": "Generar Foto",
+        "freestyleDescription": "Personalización completa con todas opciones",
+        "freestyleOnlyDescription": "Personaliza todas configuraciones para esta generación",
+        "predefinedStyle": "Estilo predefinido con preajustes",
+        "insufficientCredits": "Créditos insuficientes",
+        "insufficientCreditsMessage": "Necesitas {required} créditos para generar. Tienes {current}. ¡Recarga!",
+    "generatePhoto": "Generar foto",
     "buyMoreCredits": "Comprar más créditos",
-      "noCreditsTitle": "Sin Créditos Disponibles",
-      "noCreditsMessage": "Necesitas créditos para generar fotos. Compra créditos para comenzar con la generación de fotos.",
-      "noTeamCreditsTitle": "Sin Créditos de Equipo Disponibles",
-      "noTeamCreditsMessage": "Tu equipo no tiene créditos disponibles para generaciones de equipo. Contacta al administrador de tu equipo para solicitar créditos o usa tus créditos personales.",
-      "buyCredits": "Comprar Créditos",
-      "requestCredits": "Solicitar Créditos",
-      "usePersonalCredits": "Usar Créditos Personales",
-      "backToDashboard": "Volver al Panel"
+      "noCreditsTitle": "Sin créditos disponibles",
+        "noCreditsMessage": "Necesitas créditos para generar (piénsalos como tickets para lucir increíble). Compra para empezar.",
+        "noTeamCreditsTitle": "Sin créditos equipo disponibles",
+        "noTeamCreditsMessage": "Tu equipo no tiene créditos para generaciones equipo. Contacta admin para solicitar (amablemente) o usa personales.",
+      "buyCredits": "Comprar créditos",
+      "requestCredits": "Solicitar créditos",
+      "usePersonalCredits": "Usar créditos personales",
+      "backToDashboard": "Volver al panel"
       },
       "profile": {
         "pro": "PRO",
@@ -549,6 +548,7 @@
     "dashboard": {
       "welcome": {
         "title": "¡Bienvenido de nuevo, {name}! 👋",
+        "titleFirstTime": "¡Bienvenido a TeamShots, {name}! 🎉",
         "subtitle": {
           "individual": "Has generado {count} fotos profesionales. ¿Listo para crear más?",
           "team": "Tu equipo ha generado {count} fotos profesionales este mes. ¡Sigue así!",
@@ -575,8 +575,8 @@
         }
       },
       "pendingInvites": {
-        "title": "Invitaciones de Equipo Pendientes",
-        "invite": "Invitar Miembro del Equipo",
+        "title": "Invitaciones de equipo pendientes",
+        "invite": "Invitar miembro del equipo",
         "resend": "Reenviar",
         "resending": "Reenviando...",
         "sent": "Enviado {when}",
@@ -586,10 +586,10 @@
         }
       },
       "quickActions": {
-        "title": "Acciones Rápidas",
-        "generate": "Generar Fotos",
-        "createTemplate": "Crear Plantilla",
-        "manageTeam": "Gestionar Equipo"
+        "title": "Acciones rápidas",
+        "generate": "Generar fotos",
+        "createTemplate": "Crear plantilla",
+        "manageTeam": "Gestionar equipo"
       },
       "successMessages": {
         "tryOnce": "¡Paquete Try Once comprado exitosamente! Se han agregado {credits} créditos a tu cuenta.",
@@ -672,13 +672,13 @@
           "button": "Proceder de todos modos (¡lo intentamos!) 😅"
         },
         "title": "Suscripción",
-        "noSubscription": "No hay suscripción activa. Elige un plan para comenzar.",
+        "noSubscription": "No hay suscripción activa. Elige un plan para comenzar y comenzar a lucir increíble.",
         "upgradeOptions": "Opciones de Actualización",
         "plan": {
           "individual": "Suscripción individual",
           "pro": "Suscripción Pro"
         },
-        "cancelConfirm": "¿Estás seguro de que deseas cancelar tu suscripción? Tus beneficios seguirán activos hasta el final del período de facturación actual. Después del último día de suscripción, tus fotos se conservarán durante 30 días.",
+        "cancelConfirm": "¿Estás seguro de que deseas cancelar? Tus beneficios seguirán activos hasta el final de tu período de facturación, y conservaremos tus fotos durante 30 días después de eso para que puedas descargar lo que necesites. Estamos tristes de verte ir, ¡pero te entendemos—la vida pasa!",
         "downgrading": {
           "note": "📉 ¿Cambiando a mensual? Tus beneficios seguirán activos hasta el final de tu período anual.",
           "noSavings": "No te juzgaremos (pero sí intentamos advertirte sobre perder esos dulces ahorros 🍯).",
@@ -696,6 +696,9 @@
         "free": {
           "message": "🎉 ¡Hola! Aún no has comprado nada, así que esta pantalla está vacía. Sin facturas, sin cuentas, sin sorpresas (excepto las buenas cuando veas nuestras fotos).",
           "button": "¡Llena esta pantalla con grandeza! 🚀"
+        },
+        "paid": {
+          "message": "🎉 ¡Genial, eres un usuario de negocios y necesitas estas facturas! Lo sabemos y te las daremos lo antes posible (porque las finanzas organizadas son geniales y apoyamos esa energía)."
         },
         "tryOnce": {
           "message": "🎉 ¡Genial, compraste algunas fotos! Las facturas aparecerán aquí pronto (solo estamos agregando los toques finales para que se vean profesionales, porque así somos)."
@@ -725,14 +728,14 @@
   "generations": {
     "title": "Generaciones",
     "personal": {
-      "title": "Generaciones Personales",
+      "title": "Generaciones personales",
       "empty": {
         "title": "Aún no hay generaciones personales",
-        "subtitle": "Cuando generes fotos personales, tus resultados aparecerán aquí.",
+        "subtitle": "Cuando generes fotos personales, tus resultados aparecerán aquí. ¿Listo para hacer algo de magia?",
         "uploads": {
           "title": "Aún no se han subido selfies",
           "subtitle": "Sube una selfie para comenzar con la generación de fotos personales.",
-          "cta": "Subir Selfie"
+          "cta": "Subir selfie"
         }
       },
       "tabs": {
@@ -740,24 +743,24 @@
         "selfies": "Selfies"
       },
       "actions": {
-        "newSelfie": "Nueva Selfie"
+        "newSelfie": "Nueva selfie"
       }
     },
     "team": {
-      "title": "Generaciones del Equipo",
+      "title": "Generaciones del equipo",
       "empty": {
         "title": "Aún no hay generaciones del equipo",
-        "subtitle": "Cuando tú o tu equipo generen fotos, los resultados aparecerán aquí.",
+        "subtitle": "Cuando tú o tu equipo generen fotos, los resultados aparecerán aquí. ¡El trabajo en equipo hace que el sueño funcione!",
         "uploads": {
           "title": "Aún no se han subido selfies",
           "subtitle": "Sube una selfie para comenzar con la generación de fotos del equipo.",
-          "cta": "Subir Selfie"
+          "cta": "Subir selfie"
         }
       },
       "filters": {
-        "myImages": "Mis Imágenes del Equipo",
-        "teamGallery": "Galería del Equipo",
-        "allUsers": "Todos los Usuarios"
+        "myImages": "Mis imágenes del equipo",
+        "teamGallery": "Galería del equipo",
+        "allUsers": "Todos los usuarios"
       },
       "viewOnly": "Solo visualización - trabajo aprobado de miembros del equipo",
       "tabs": {
@@ -765,7 +768,7 @@
         "selfies": "Selfies"
       },
       "actions": {
-        "newSelfie": "Nueva Selfie"
+        "newSelfie": "Nueva selfie"
       }
     },
     "tabs": {
@@ -817,6 +820,11 @@
     "labels": {
       "usedInGeneration": "Usado en una generación",
       "readyToGenerate": "Listo para generar"
+    },
+    "generatedBy": {
+      "you": "Generado por ti",
+      "prefix": "Generado por",
+      "name": "Generado por {name}"
     }
   },
   "selfies": {
@@ -886,11 +894,11 @@
     "title": "Estilos de Fotos",
     "subtitle": "Un estilo de foto es un estándar que puedes aplicar a múltiples fotos para mantener la consistencia en tu imagen profesional.",
     "subtitleIndividual": "Un estilo de foto es un estándar que puedes aplicar a múltiples fotos para mantener la consistencia en tu imagen profesional.",
-    "createContext": "Crear Estilo de Foto",
-    "editContext": "Editar Estilo de Foto",
-    "deleteContext": "Eliminar Estilo de Foto",
-    "activateContext": "Activar Estilo de Foto",
-    "activeContext": "Estilo de Foto Activo",
+    "createContext": "Crear estilo de foto",
+    "editContext": "Editar estilo de foto",
+    "deleteContext": "Eliminar estilo de foto",
+    "activateContext": "Activar estilo de foto",
+    "activeContext": "Estilo de foto activo",
     "noContexts": "Aún no se han creado estilos de fotos",
     "noContextsSubtitle": "Crea tu primer estilo de foto para comenzar con la generación de fotos profesionales.",
     "form": {
@@ -935,8 +943,8 @@
     },
     "status": {
       "active": "Activo",
-      "activeContext": "Estilo de Foto Activo: {name}",
-      "noActiveContext": "Sin Estilo de Foto Activo",
+      "activeContext": "Estilo de foto activo: {name}",
+      "noActiveContext": "Sin estilo de foto activo",
       "teamWillUse": "Los miembros del equipo usarán este estilo de foto para las generaciones de fotos del equipo",
       "individualWillUse": "Usarás este estilo de foto para tus generaciones de fotos",
       "mustSetActive": "Debes establecer un estilo de foto activo antes de invitar miembros del equipo",
@@ -950,11 +958,11 @@
       "included": "Incluido"
     },
     "buttons": {
-      "setAsActive": "Establecer como Activo",
-      "setAsDefault": "Establecer como Predeterminado"
+      "setAsActive": "Establecer como activo",
+      "setAsDefault": "Establecer como predeterminado"
     },
     "sections": {
-      "photoGenerationSettings": "Configuración de Generación de Fotos"
+      "photoGenerationSettings": "Configuración de generación de fotos"
     },
     "freePlan": {
       "title": "Límite del plan gratuito",
@@ -1212,26 +1220,26 @@
       "activeStyle": "Estilo de foto activo: {name}"
     },
     "teamMembers": {
-      "title": "Miembros del Equipo",
+      "title": "Miembros del equipo",
       "subtitle": "Miembros actuales del equipo y su estado",
       "noMembers": {
         "title": "Aún no hay miembros del equipo",
         "subtitle": "Invita miembros del equipo para comenzar a construir tu equipo"
       },
       "headers": {
-        "member": "Miembro del Equipo",
+        "member": "Miembro del equipo",
         "selfies": "Selfies",
         "generations": "Generaciones",
         "personal": "Personal",
-        "personalCredits": "Créditos Personales",
+        "personalCredits": "Créditos personales",
         "team": "Equipo",
-        "teamCredits": "Créditos del Equipo",
+        "teamCredits": "Créditos del equipo",
         "status": "Estado",
         "actions": "Acciones"
       },
       "roles": {
-        "teamAdmin": "Administrador del Equipo",
-        "teamMember": "Miembro del Equipo",
+        "teamAdmin": "Administrador del equipo",
+        "teamMember": "Miembro del equipo",
         "guest": "Invitado"
       },
       "you": "TÚ",
@@ -1240,7 +1248,7 @@
         "guest": "Invitado"
       },
       "actions": {
-        "makeAdmin": "Hacer Admin",
+        "makeAdmin": "Hacer admin",
         "demote": "Degradar",
         "remove": "Eliminar",
         "promoting": "Promoviendo...",
@@ -1338,7 +1346,7 @@
       "teamNamePlaceholder": "Nombre de tu Equipo",
       "companyNameLabel": "Nombre de la Empresa",
       "companyNamePlaceholder": "Tu Empresa Inc.",
-      "teamWebsiteLabel": "Sitio Web de la Empresa (Opcional)",
+      "teamWebsiteLabel": "Sitio web de la empresa (opcional)",
       "teamWebsitePlaceholder": "https://tuempresa.com",
       "companyWebsitePlaceholder": "https://tuempresa.com",
       "createButton": "Crear Equipo"
@@ -1355,52 +1363,52 @@
     },
     "uploadedSuccessfully": "Foto subida exitosamente",
     "buttons": {
-      "approveContinue": "Aprobar y Guardar",
-      "retakePhoto": "Tomar Otra Foto",
+      "approveContinue": "Aprobar y guardar",
+      "retakePhoto": "Tomar otra foto",
       "cancel": "Cancelar",
       "processing": "Procesando...",
-      "delete": "Eliminar Foto",
+      "delete": "Eliminar foto",
       "deleting": "Eliminando..."
     },
     "disclaimer": "Al aprobar, confirmas que tienes los derechos para usar esta foto y consientes su uso para la generación de fotos."
   },
   "api": {
     "errors": {
-      "internalServerError": "Error interno del servidor",
-      "unauthorized": "No autorizado",
-      "forbidden": "Prohibido",
+      "internalServerError": "¡Ups! Algo salió mal en nuestro lado. Hemos sido notificados y lo estamos solucionando. Por favor, vuelve a intentar en un momento.",
+      "unauthorized": "Parece que necesitas iniciar sesión primero. No te preocupes, ¡es rápido!",
+      "forbidden": "Hmm, parece que no tienes permiso para eso. Si crees que es un error, ¡háznoslo saber!",
       "teamInvites": {
         "tokenRequired": "Se requiere el token",
         "firstNameLastNameRequired": "Se requiere el token, nombre y apellido",
         "emailRequired": "Se requiere el correo electrónico",
         "firstNameRequired": "Se requiere el nombre",
         "inviteIdRequired": "Se requiere el ID de invitación",
-        "invalidToken": "Token de invitación inválido",
-        "expired": "La invitación ha expirado",
-        "alreadyUsed": "La invitación ya ha sido usada",
+        "invalidToken": "Este enlace de invitación no se ve bien. Verifica el enlace o pide una nueva invitación.",
+        "expired": "¡Ups! Esta invitación ha caducado (solo duran 24 horas). Pide a tu administrador del equipo que te envíe una nueva.",
+        "alreadyUsed": "Esta invitación ya ha sido usada. Si tienes problemas para acceder a tu cuenta, intenta iniciar sesión en su lugar.",
         "personNotFound": "Persona no encontrada",
-        "userNotInTeam": "El usuario no es parte de un equipo",
-        "inviteNotFound": "Invitación no encontrada o ya usada",
-        "cannotResendExpired": "No se puede reenviar una invitación expirada",
-        "failedToSendEmail": "Error al enviar el correo electrónico",
-        "inviteResentSuccessfully": "Invitación reenviada exitosamente",
-        "teamNameRequired": "Se requiere el nombre del equipo",
-        "userAlreadyInTeam": "El usuario ya es parte de un equipo",
+        "userNotInTeam": "Parece que aún no eres parte de un equipo. Pide a tu administrador del equipo que te envíe una invitación.",
+        "inviteNotFound": "Invitación no encontrada o ya usada. Pide a tu administrador del equipo una nueva invitación si la necesitas.",
+        "cannotResendExpired": "No se puede reenviar una invitación caducada—solo duran 24 horas. Envía una nueva en su lugar.",
+        "failedToSendEmail": "Error al enviar el correo. La invitación fue creada, pero no pudimos enviar el correo. Intenta reenviarla.",
+        "inviteResentSuccessfully": "¡Invitación reenviada exitosamente! Debería recibirla en breve.",
+        "teamNameRequired": "Se requiere el nombre del equipo (tu equipo necesita un nombre, después de todo)",
+        "userAlreadyInTeam": "Parece que esta persona ya es parte de un equipo. ¡Qué suerte!",
         "userProfileNotFound": "Perfil de usuario no encontrado",
-        "notAuthorized": "No autorizado para el ámbito del equipo",
-        "notPartOfTeam": "No eres parte de un equipo",
-        "noActiveContext": "El equipo debe tener un contexto activo antes de invitar miembros del equipo. Por favor, crea y establece un contexto del equipo primero.",
-        "insufficientTeamCredits": "Créditos del equipo insuficientes. Disponibles: {available}, Requeridos: {required}",
-        "invalidCreditAllocation": "Los créditos asignados deben ser un múltiplo de {credits}"
+        "notAuthorized": "No tienes permiso para esa acción del equipo. Consulta con tu administrador del equipo si crees que es un error.",
+        "notPartOfTeam": "No eres parte de un equipo. Pide a tu administrador del equipo que te invite.",
+        "noActiveContext": "Necesitas crear y establecer un estilo de foto activo antes de invitar miembros del equipo. Configúralo primero, ¡luego vuelve!",
+        "insufficientTeamCredits": "No hay suficientes créditos del equipo. Tienes {available} disponibles, pero necesitas {required}. ¡Es hora de recargar!",
+        "invalidCreditAllocation": "Los créditos deben asignarse en múltiplos de {credits} (porque matemáticas, por eso)"
       },
       "credits": {
         "invalidType": "Parámetro de tipo inválido"
       },
       "generations": {
-        "userPersonNotFound": "Registro de persona del usuario no encontrado",
-        "unauthorized": "No autorizado",
-        "rateLimitExceeded": "Límite de generación excedido. Por favor, intenta de nuevo más tarde.",
-        "eitherSelfieIdOrKeyRequired": "Se requiere selfieId o selfieKey"
+        "userPersonNotFound": "No pudimos encontrar tu perfil. Intenta actualizar la página o contacta al soporte si esto sigue pasando.",
+        "unauthorized": "Necesitas iniciar sesión para generar fotos. ¡Es rápido, lo prometemos!",
+        "rateLimitExceeded": "¡Vaya! Estás generando fotos más rápido de lo que podemos manejar. Danos un momento (literalmente, solo unos minutos) y vuelve a intentar.",
+        "eitherSelfieIdOrKeyRequired": "Necesitamos un ID de selfie o clave de selfie para generar tu foto. ¡Asegúrate de haber subido un selfie primero!"
       },
       "user": {
         "userNotFound": "Usuario no encontrado",
@@ -1408,19 +1416,19 @@
         "invalidJsonInput": "Entrada JSON inválida"
       },
       "styles": {
-        "nameRequired": "Se requiere el nombre",
-        "styleCreationNotAvailable": "La creación de estilos no está disponible en el plan gratuito"
+        "nameRequired": "Tu estilo de foto necesita un nombre (incluso si es solo 'Mi Estilo Increíble')",
+        "styleCreationNotAvailable": "La creación de estilos de foto no está disponible en el plan gratuito. ¡Actualiza para desbloquear esta función y crear estilos personalizados!"
       },
       "stripe": {
-        "tryOnceAlreadyUsed": "Inténtalo una vez ya usado",
-        "topUpNotAllowedOnFree": "Recarga no permitida en plan gratuito",
-        "missingSubscriptionIdOrNewPriceId": "Falta subscriptionId o newPriceId",
-        "missingSubscriptionIdOrNewLowerPriceId": "Falta subscriptionId o newLowerPriceId",
-        "missingPriceIdTierOrPeriod": "Falta priceId, tier o period",
-        "noActiveSubscription": "No se encontró suscripción activa",
-        "failedToCancelSubscription": "Error al cancelar la suscripción",
-        "failedToUpdateSubscription": "Error al actualizar la suscripción",
-        "failedToCreateCheckout": "Error al crear sesión de checkout"
+        "tryOnceAlreadyUsed": "Ya usaste el paquete Prueba Una Vez. ¿Listo para actualizar? ¡Nos encantaría tenerte de vuelta!",
+        "topUpNotAllowedOnFree": "Las recargas no están disponibles en el plan gratuito. Actualiza a un plan de pago para recargar tus créditos.",
+        "missingSubscriptionIdOrNewPriceId": "Falta información de suscripción. Por favor, actualiza y vuelve a intentar, o contacta al soporte si esto persiste.",
+        "missingSubscriptionIdOrNewLowerPriceId": "Falta información de suscripción. Por favor, actualiza y vuelve a intentar.",
+        "missingPriceIdTierOrPeriod": "Falta información de precios. Por favor, actualiza y vuelve a intentar.",
+        "noActiveSubscription": "No se encontró suscripción activa. ¡Suscríbete a un plan para comenzar a generar fotos!",
+        "failedToCancelSubscription": "Error al cancelar la suscripción. Por favor, vuelve a intentar o contacta al soporte—estamos aquí para ayudar.",
+        "failedToUpdateSubscription": "Error al actualizar la suscripción. Por favor, vuelve a intentar o contacta al soporte.",
+        "failedToCreateCheckout": "Error al crear sesión de pago. Por favor, vuelve a intentar—a veces los sistemas de pago necesitan un momento."
       },
       "dashboard": {
         "failedToLoadMembers": "Error al cargar miembros"

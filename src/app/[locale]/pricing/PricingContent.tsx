@@ -52,7 +52,6 @@ export default function PricingContent() {
           <p className="text-xl text-gray-600">
             {t('subtitle')}
           </p>
-          <p className="mt-3 text-sm font-semibold text-emerald-700">{t('freeIntro')}</p>
           
           {/* Monthly/Yearly Toggle */}
           <div className="flex items-center justify-center mb-8">

@@ -56,6 +56,7 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
 
 export default function SampleGallery() {
   const t = useTranslations('gallery');
+  const tHero = useTranslations('hero');
   const [selectedPhoto, setSelectedPhoto] = useState<SamplePhoto | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sliderPositions, setSliderPositions] = useState<Record<string, number>>({});
@@ -254,8 +255,14 @@ export default function SampleGallery() {
               href="/auth/signup"
               className="bg-brand-cta text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-brand-cta-hover transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
-              Get Started
+              {tHero('getStarted')}
             </Link>
+            {/* Subtext reinforcing free offer below CTA */}
+            <div className="mt-4">
+              <p className="text-sm text-gray-600">
+                {tHero('freeCtaSubtext')}
+              </p>
+            </div>
           </div>
         </div>
       </section>

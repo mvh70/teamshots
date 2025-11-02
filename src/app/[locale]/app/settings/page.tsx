@@ -16,7 +16,7 @@ import FreePackageStyleAdminPanel from './FreePackageStyleAdminPanel'
 import { jsonFetcher } from '@/lib/fetcher'
 
 interface UserSettings {
-  mode: 'individual' | 'team'
+  mode: 'individual' | 'team' | 'pro'
   teamName?: string
   teamWebsite?: string
   isAdmin?: boolean
@@ -84,11 +84,20 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'team' | 'subscription' | 'billing' | 'admin' | 'account' | 'freeStyle'>(() => {
-    // Initialize from localStorage if available
+    // Initialize from localStorage if available and recent (< 5 min)
     if (typeof window !== 'undefined') {
       const savedTab = localStorage.getItem('settings-active-tab')
-      if (savedTab && ['team', 'subscription', 'billing', 'admin', 'account', 'freeStyle'].includes(savedTab)) {
-        return savedTab as 'team' | 'subscription' | 'billing' | 'admin' | 'account' | 'freeStyle'
+      const savedTimestamp = localStorage.getItem('settings-active-tab-timestamp')
+      
+      if (savedTab && savedTimestamp && ['team', 'subscription', 'billing', 'admin', 'account', 'freeStyle'].includes(savedTab)) {
+        const timestamp = parseInt(savedTimestamp, 10)
+        const now = Date.now()
+        const fiveMinutes = 5 * 60 * 1000
+        
+        // Only restore if saved within last 5 minutes
+        if (now - timestamp < fiveMinutes) {
+          return savedTab as 'team' | 'subscription' | 'billing' | 'admin' | 'account' | 'freeStyle'
+        }
       }
     }
     return 'subscription'
@@ -99,6 +108,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('settings-active-tab', activeTab)
+      localStorage.setItem('settings-active-tab-timestamp', Date.now().toString())
     }
   }, [activeTab])
   
@@ -158,7 +168,12 @@ export default function SettingsPage() {
   const fetchUserSettings = async () => {
     try {
       const data = await jsonFetcher<{ settings: UserSettings }>('/api/user/settings')
-      setSettings(data.settings)
+      // Map 'pro' to 'team' for UI consistency
+      const mappedSettings = {
+        ...data.settings,
+        mode: data.settings.mode === 'pro' ? 'team' : data.settings.mode
+      }
+      setSettings(mappedSettings)
     } catch (err) {
       console.error('Failed to fetch settings:', err)
     } finally {
@@ -205,12 +220,17 @@ export default function SettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          mode: settings.mode,
+          mode: 'team',
           [field]: value
         })
       })
 
-      setSettings(data.settings)
+      // Map 'pro' to 'team' for UI consistency
+      const mappedSettings = {
+        ...data.settings,
+        mode: data.settings.mode === 'pro' ? 'team' : data.settings.mode
+      }
+      setSettings(mappedSettings)
       setSuccess('Team information updated')
     } catch (e) {
       try {
@@ -361,7 +381,7 @@ export default function SettingsPage() {
 
 
       {/* Team Information - visible only to team_admins */}
-      {activeTab === 'team' && settings.mode === 'team' && session?.user?.person?.team?.adminId === session?.user?.id && (
+      {activeTab === 'team' && settings.mode === 'team' && isTeamAdmin && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('teamInfo.title')}</h2>
           
@@ -416,7 +436,7 @@ export default function SettingsPage() {
       {activeTab === 'subscription' && (
         <SubscriptionSection 
           userId={session?.user?.id || ''}
-          userMode={settings.mode}
+          userMode={settings.mode === 'pro' ? 'team' : settings.mode}
         />
       )}
 

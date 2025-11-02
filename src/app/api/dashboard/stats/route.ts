@@ -20,6 +20,17 @@ export async function GET() {
     const teamId = user.person?.teamId
     const teamName = user.person?.team?.name || null
 
+    // Get user's creation date to determine if this is their first visit
+    const userRecord = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { createdAt: true }
+    })
+    
+    // Consider it a first visit if account was created within the last 2 hours
+    const isFirstVisit = userRecord?.createdAt 
+      ? new Date().getTime() - userRecord.createdAt.getTime() < 2 * 60 * 60 * 1000
+      : false
+
     // Base stats for all users
     const stats: {
       photosGenerated: number
@@ -114,7 +125,8 @@ export async function GET() {
         isRegularUser: roles.isRegularUser,
         teamId: teamId,
         teamName: teamName,
-        needsTeamSetup: roles.isTeamAdmin && !teamId
+        needsTeamSetup: roles.isTeamAdmin && !teamId,
+        isFirstVisit: isFirstVisit
       }
     })
 

@@ -1,7 +1,7 @@
 import SessionProvider from '@/components/SessionProvider'
 import { PostHogProvider } from '@/components/PostHogProvider'
 import { auth } from '@/auth'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import './globals.css'
 
@@ -14,10 +14,6 @@ export const metadata: Metadata = {
     apple: '/apple-icon.png',
     shortcut: '/favicon.ico',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-  },
   referrer: 'strict-origin-when-cross-origin',
   other: {
     'format-detection': 'telephone=no',
@@ -25,6 +21,11 @@ export const metadata: Metadata = {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'default',
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({

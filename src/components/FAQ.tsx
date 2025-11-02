@@ -59,12 +59,6 @@ export default function FAQ() {
       question: t('items.7.question'),
       answer: t('items.7.answer'),
       category: 'technical'
-    },
-    {
-      id: '8',
-      question: t('items.8.question'),
-      answer: t('items.8.answer'),
-      category: 'usage'
     }
   ];
 

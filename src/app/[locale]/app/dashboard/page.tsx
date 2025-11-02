@@ -32,6 +32,7 @@ interface UserRole {
   isTeamMember: boolean
   isRegularUser: boolean
   teamId?: string
+  isFirstVisit?: boolean
 }
 
 interface Activity {
@@ -264,8 +265,11 @@ export default function DashboardPage() {
         <>
           {/* Welcome Section */}
       <div className="bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-lg p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2">
-          {t('welcome.title', {name: firstName})}
+        <h2 className="text-2xl font-bold mb-2 text-white">
+          {userRole.isFirstVisit 
+            ? t('welcome.titleFirstTime', {name: firstName})
+            : t('welcome.title', {name: firstName})
+          }
         </h2>
         <p className="text-brand-primary-light">
           {loading ? (

@@ -80,6 +80,8 @@ export function useGenerations(
             maxRegenerations: g.maxRegenerations,
             remainingRegenerations: g.remainingRegenerations,
             isOriginal: g.isOriginal,
+            personFirstName: (g.person as Record<string, unknown>)?.firstName as string,
+            personUserId: (g.person as Record<string, unknown>)?.userId as string,
             jobStatus: g.jobStatus as GenerationListItem['jobStatus'],
           })) as GenerationListItem[]
           
@@ -118,6 +120,8 @@ export function useGenerations(
             maxRegenerations: g.maxRegenerations,
             remainingRegenerations: g.remainingRegenerations,
             isOriginal: g.isOriginal,
+            personFirstName: (g.person as Record<string, unknown>)?.firstName as string,
+            personUserId: (g.person as Record<string, unknown>)?.userId as string,
             jobStatus: g.jobStatus as GenerationListItem['jobStatus'],
           })) as GenerationListItem[]
           if (append) {

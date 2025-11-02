@@ -43,8 +43,7 @@ export default function BillingSection({
   const currentTier = subscription?.tier
   const currentPeriod = subscription?.period || null
   const isFree = currentPeriod === 'free' || !currentTier
-  const isTryOnce = currentPeriod === 'try_once' || currentTier === 'try_once'
-  const isPro = currentTier === 'pro'
+  const isPaid = !isFree && (currentTier === 'try_once' || currentTier === 'individual' || currentTier === 'pro')
 
   if (loading) {
     return (
@@ -87,24 +86,11 @@ export default function BillingSection({
         </div>
       )}
 
-      {isTryOnce && (
+      {isPaid && (
         <div className="text-center py-12">
           <div className="max-w-md mx-auto space-y-6">
             <p className="text-base text-gray-700 leading-relaxed">
-              {t('tryOnce.message', { default: "🎉 Yay, you bought some photos! Invoices will appear here soon (we're just adding the finishing touches to make them look professional, because that's how we roll)." })}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {(currentTier === 'individual' || currentTier === 'pro') && (
-        <div className="text-center py-12">
-          <div className="max-w-md mx-auto space-y-6">
-            <p className="text-base text-gray-700 leading-relaxed">
-              {isPro 
-                ? t('pro.message', { default: "🎉 Yay, you're a business user and you need these invoices. We know, and we'll give them to you as soon as possible (because organized finances are hot, and we support that energy)." })
-                : t('individual.message', { default: "🎉 Yay, you bought some photos! Invoices will appear here soon (we're just adding the finishing touches to make them look professional, because that's how we roll)." })
-              }
+              {t('paid.message', { default: "🎉 Yay, we know that as a business you need these invoices. We'll give them to you as soon as possible (because organized finances are hot, and we support that energy)." })}
             </p>
           </div>
         </div>

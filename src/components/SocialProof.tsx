@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { formatNumber } from '@/lib/format';
 
 interface Testimonial {
   id: string;
@@ -15,6 +14,7 @@ interface Testimonial {
 
 export default function SocialProof() {
   const t = useTranslations('socialProof');
+  const tHero = useTranslations('hero');
   
   // Real testimonials from beta users
   const TESTIMONIALS: Testimonial[] = [
@@ -43,8 +43,6 @@ export default function SocialProof() {
       rating: 5
     }
   ];
-  // Real user count with growth
-  const userCount = 1247;
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
 
   // Rotate testimonials
@@ -75,10 +73,8 @@ export default function SocialProof() {
         {/* User Count */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center bg-brand-primary-light text-brand-primary px-6 py-3 rounded-full shadow-md">
-            <div className="w-3 h-3 bg-green-500 rounded-full mr-3 animate-pulse"></div>
-            <span className="font-semibold">
-              <span className="text-2xl font-bold">{formatNumber(userCount)}</span> {t('userCount')}
-            </span>
+            <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+            {tHero('joinedBadge')}
           </div>
         </div>
 
@@ -121,33 +117,6 @@ export default function SocialProof() {
                   onClick={() => setCurrentTestimonial(index)}
                 />
               ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Social Proof - Real Stats */}
-        <div className="mt-12 text-center">
-          <p className="text-lg font-semibold text-gray-700 mb-4">
-            Join 1,247+ teams saving time and money with AI headshots
-          </p>
-          <div className="flex justify-center items-center gap-8 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span>No watermarks</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span>Commercial use included</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span>High resolution</span>
             </div>
           </div>
         </div>

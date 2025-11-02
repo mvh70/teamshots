@@ -180,7 +180,7 @@ export default function TeamGenerationsPage() {
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredGenerated.map(item => (
-                <GenerationCard key={item.id} item={item} />
+                <GenerationCard key={item.id} item={item} currentUserId={currentUserId} />
               ))}
             </div>
             

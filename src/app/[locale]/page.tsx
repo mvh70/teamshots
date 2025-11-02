@@ -30,13 +30,6 @@ export default function LandingPage() {
             {t('title')}{' '}
             <span className="bg-gradient-to-r from-brand-primary to-brand-primary-hover bg-clip-text text-transparent">{t('titleHighlight')}</span>
           </h1>
-          {/* Free offer badge - strengthened contrast and icon */}
-          <div className="inline-flex items-center bg-emerald-100/90 text-emerald-800 px-4 py-2 rounded-full font-semibold mb-4 shadow-sm ring-1 ring-emerald-300">
-            <svg className="w-4 h-4 mr-2 text-emerald-700" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.171 7.707 8.878a1 1 0 10-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            {t('freeOffer')}
-          </div>
           <div className="text-2xl font-bold text-brand-cta mb-4">
             {t('instantTransformation')}
           </div>
@@ -68,18 +61,6 @@ export default function LandingPage() {
             >
               {t('viewPricing')}
             </Link>
-          </div>
-            {/* Subtext reinforcing free offer next to CTA */}
-          <div className="mt-3 text-center">
-            <span className="text-sm text-gray-600">{t('freeCtaSubtext')}</span>
-          </div>
-          
-          {/* Social proof below buttons */}
-          <div className="mt-6 text-center">
-            <div className="inline-flex items-center bg-brand-primary-light text-brand-primary px-4 py-2 rounded-full">
-              <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-              {t('joinedBadge')}
-            </div>
           </div>
         </div>
       </section>
