@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { jsonFetcher } from '@/lib/fetcher'
-import { normalizePlanTierForUI, type PlanPeriod, type UIPlanTier } from '@/domain/subscription/utils'
+import { normalizePlanTierForUI, type PlanPeriod } from '@/domain/subscription/utils'
 
 /**
  * Hook to determine the correct "Buy Credits" link based on user's subscription tier.

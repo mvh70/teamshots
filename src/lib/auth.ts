@@ -156,6 +156,7 @@ export const authOptions = {
         token.exp = now + (30 * 60) // 30 minutes from now
       }
       
+      
       // On subsequent requests, ensure we hydrate person data if missing
       if (!token.person && token.sub) {
         try {
@@ -215,6 +216,11 @@ export const authOptions = {
         // Prefer person.firstName when available
         if (token.givenName) {
           session.user.name = token.givenName
+        }
+        // Add impersonation metadata if active
+        if (token.impersonating && token.originalUserId) {
+          session.user.impersonating = true
+          session.user.originalUserId = token.originalUserId as string
         }
       }
       return session

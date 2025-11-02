@@ -10,6 +10,8 @@ declare module "next-auth" {
       role: string
       isAdmin: boolean
       locale: string
+      impersonating?: boolean
+      originalUserId?: string
       person?: {
         id: string
         firstName: string
@@ -51,6 +53,8 @@ declare module "next-auth/jwt" {
     isAdmin: boolean
     locale: string
     givenName?: string
+    impersonating?: boolean
+    originalUserId?: string
     person?: {
       id: string
       firstName: string

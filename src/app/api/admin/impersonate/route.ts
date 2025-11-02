@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
@@ -39,7 +40,6 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         email: true,
-        name: true,
         role: true,
         isAdmin: true,
         locale: true
@@ -67,7 +67,17 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Return the impersonation token that can be used in session
+    // Set the impersonation cookie
+    const cookieStore = await cookies()
+    cookieStore.set('impersonate_user_id', userId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60, // 1 hour
+      path: '/'
+    })
+
+    // Return the impersonation data
     return NextResponse.json({ 
       success: true,
       impersonationData: {
@@ -83,10 +93,10 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/admin/impersonate/stop
+ * DELETE /api/admin/impersonate
  * Stop impersonating and return to admin account
  */
-export async function POST(request: NextRequest) {
+export async function DELETE() {
   try {
     const session = await auth()
     
@@ -95,23 +105,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get the impersonation data from request body
-    const body = await request.json()
-    const { impersonatedUserId } = body
-
-    if (!impersonatedUserId) {
-      return NextResponse.json({ error: 'Missing impersonatedUserId' }, { status: 400 })
-    }
+    // Get the original admin user ID from session
+    const originalUserId = session.user.originalUserId || session.user.id
 
     // Log the impersonation stop
     await SecurityLogger.logSuspiciousActivity(
-      session.user.id,
+      originalUserId,
       'impersonation_stop',
       { 
-        impersonatedUserId,
-        adminId: session.user.id
+        impersonatedUserId: session.user.id
       }
     )
+
+    // Clear the impersonation cookie
+    const cookieStore = await cookies()
+    cookieStore.delete('impersonate_user_id')
 
     return NextResponse.json({ 
       success: true,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
@@ -71,6 +71,123 @@ function RoleDisplayBadge() {
         </div>
       )}
     </>
+  )
+}
+
+// User search component for impersonation
+function UserSearchImpersonation({ onStartImpersonation, disabled }: { onStartImpersonation: (userId: string) => Promise<void>, disabled: boolean }) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Array<{id: string, displayName: string}>>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<{id: string, displayName: string} | null>(null)
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout>()
+
+  useEffect(() => {
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    // If query is too short, clear results
+    if (searchQuery.length < 2) {
+      setSearchResults([])
+      return
+    }
+
+    // Debounce search
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        const response = await fetch(`/api/admin/search-users?query=${encodeURIComponent(searchQuery)}`)
+        if (response.ok) {
+          const data = await response.json()
+          setSearchResults(data.users || [])
+        } else {
+          setSearchResults([])
+        }
+      } catch {
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [searchQuery])
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-purple-800 mb-2">
+          Search User
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name or email..."
+            className="block w-full px-3 py-2 border border-purple-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+          />
+          {isSearching && (
+            <div className="absolute right-3 top-2.5">
+              <div className="animate-spin h-5 w-5 border-2 border-purple-600 border-t-transparent rounded-full"></div>
+            </div>
+          )}
+          
+          {/* Search results dropdown */}
+          {searchResults.length > 0 && !selectedUser && (
+            <div className="absolute z-50 mt-1 w-full bg-white border border-purple-200 rounded-md shadow-lg max-h-60 overflow-auto">
+              {searchResults.map((user) => (
+                <button
+                  key={user.id}
+                  onClick={() => {
+                    setSelectedUser(user)
+                    setSearchQuery('')
+                    setSearchResults([])
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-purple-50 border-b border-gray-100 last:border-b-0"
+                >
+                  <span className="text-sm text-gray-900">{user.displayName}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Selected user display */}
+        {selectedUser && (
+          <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-md">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-900">Selected: {selectedUser.displayName}</p>
+              </div>
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="text-purple-600 hover:text-purple-800"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        <p className="text-xs text-purple-600 mt-1">
+          ⚠️ You cannot impersonate other platform administrators.
+        </p>
+      </div>
+      <button
+        onClick={() => selectedUser && onStartImpersonation(selectedUser.id)}
+        disabled={!selectedUser || disabled}
+        className="px-4 py-2 text-sm font-medium rounded-md bg-white text-purple-700 hover:bg-purple-50 border border-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {disabled ? '🔄 Starting...' : '🎭 Start Impersonation'}
+      </button>
+    </div>
   )
 }
 
@@ -520,6 +637,81 @@ export default function SettingsPage() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ADMIN USER IMPERSONATION SECTION - ADMIN ONLY */}
+      {activeTab === 'admin' && session?.user?.isAdmin === true && (
+        <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6 mb-6">
+          <div className="flex items-center mb-4">
+            <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold mr-3">
+              [IMPERSONATE]
+            </div>
+            <h2 className="text-lg font-semibold text-purple-900">User Impersonation</h2>
+          </div>
+          <p className="text-sm text-purple-700 mb-4">
+            Impersonate a user to see the application from their perspective. All actions will be logged.
+          </p>
+          
+          {session?.user?.impersonating ? (
+            <div className="space-y-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ <strong>You are currently impersonating a user.</strong> All actions will be logged and attributed to the impersonated user.
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  setSaving(true)
+                  try {
+                    const response = await fetch('/api/admin/impersonate', {
+                      method: 'DELETE'
+                    })
+                    if (response.ok) {
+                      setSuccess('Impersonation stopped. Redirecting...')
+                      setTimeout(() => {
+                        window.location.href = '/app/dashboard'
+                      }, 1000)
+                    } else {
+                      const data = await response.json()
+                      setError(data.error || 'Failed to stop impersonation')
+                    }
+                  } catch {
+                    setError('Failed to stop impersonation')
+                  } finally {
+                    setSaving(false)
+                  }
+                }}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium rounded-md bg-white text-purple-700 hover:bg-purple-50 border border-purple-300 disabled:opacity-50"
+              >
+                {saving ? '🔄 Stopping...' : '🛑 Stop Impersonation'}
+              </button>
+            </div>
+          ) : (
+            <UserSearchImpersonation 
+              onStartImpersonation={async (userId) => {
+                setSaving(true)
+                try {
+                  const response = await fetch(`/api/admin/impersonate?userId=${userId}`)
+                  if (response.ok) {
+                    setSuccess('Impersonation started. Redirecting...')
+                    setTimeout(() => {
+                      window.location.href = '/app/dashboard'
+                    }, 1000)
+                  } else {
+                    const data = await response.json()
+                    setError(data.error || 'Failed to start impersonation')
+                  }
+                } catch {
+                  setError('Failed to start impersonation')
+                } finally {
+                  setSaving(false)
+                }
+              }}
+              disabled={saving}
+            />
+          )}
         </div>
       )}
 

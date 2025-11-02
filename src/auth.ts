@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth"
 
 const { handlers: { GET, POST }, auth: originalAuth } = NextAuth(authOptions)
 
-// Custom auth function that checks for E2E headers
+// Custom auth function that checks for E2E headers and handles impersonation
 export async function auth() {
   try {
     // In build contexts, using async functions that depend on request context
@@ -38,6 +38,79 @@ export async function auth() {
         }
       } catch {
         // If anything fails while reading headers, fall through to standard auth
+      }
+    }
+
+    // Check for impersonation cookie
+    const cookieStore = await (async () => {
+      try {
+        const { cookies } = await import("next/headers")
+        return await cookies()
+      } catch {
+        return null
+      }
+    })()
+
+    if (cookieStore) {
+      try {
+        const impersonateUserId = cookieStore.get('impersonate_user_id')?.value
+        
+        if (impersonateUserId) {
+          // First, get the original admin session
+          const originalSession = await originalAuth()
+          
+          if (originalSession?.user?.isAdmin) {
+            // Import prisma dynamically to avoid circular dependencies
+            const { prisma } = await import("@/lib/prisma")
+            
+            // Fetch the impersonated user
+            const impersonatedUser = await prisma.user.findUnique({
+              where: { id: impersonateUserId },
+              select: {
+                id: true,
+                email: true,
+                role: true,
+                isAdmin: true,
+                locale: true
+              }
+            })
+
+            if (impersonatedUser && !impersonatedUser.isAdmin) {
+              // Fetch person data for the impersonated user
+              const person = await prisma.person.findUnique({
+                where: { userId: impersonatedUser.id },
+                include: {
+                  team: {
+                    select: { id: true, name: true, adminId: true }
+                  }
+                }
+              })
+
+              // Return impersonated session
+              return {
+                user: {
+                  ...originalSession.user,
+                  id: impersonatedUser.id,
+                  email: impersonatedUser.email,
+                  role: impersonatedUser.role,
+                  locale: impersonatedUser.locale,
+                  impersonating: true,
+                  originalUserId: originalSession.user.id,
+                  person: person ? {
+                    id: person.id,
+                    firstName: person.firstName,
+                    lastName: person.lastName,
+                    teamId: person.teamId,
+                    team: person.team
+                  } : undefined
+                },
+                expires: originalSession.expires
+              }
+            }
+          }
+        }
+      } catch {
+        // If anything fails, fall through to standard auth
       }
     }
   } catch {

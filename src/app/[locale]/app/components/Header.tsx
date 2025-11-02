@@ -3,6 +3,7 @@
 import { Bars3Icon } from '@heroicons/react/24/outline'
 import {useTranslations} from 'next-intl'
 import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -11,6 +12,7 @@ interface HeaderProps {
 export default function Header({ onMenuClick }: HeaderProps) {
   const t = useTranslations('app.header')
   const pathname = usePathname()
+  const { data: session } = useSession()
   
   // Only show the dashboard header on the actual dashboard page
   const isDashboard = pathname === '/app/dashboard' || pathname.endsWith('/dashboard')
@@ -32,6 +34,27 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </div>
           )}
         </div>
+        {session?.user?.impersonating && (
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/admin/impersonate', {
+                  method: 'DELETE'
+                })
+                if (response.ok) {
+                  window.location.href = '/app/dashboard'
+                }
+              } catch (err) {
+                console.error('Failed to stop impersonation', err)
+              }
+            }}
+            className="bg-yellow-100 border-2 border-yellow-400 text-yellow-900 px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-yellow-200 transition-colors"
+          >
+            <span className="text-lg">🎭</span>
+            <span className="text-sm font-medium">Impersonating User</span>
+            <span className="text-xs ml-2 opacity-75">(Click to stop)</span>
+          </button>
+        )}
       </div>
     </header>
   )
