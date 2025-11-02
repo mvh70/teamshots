@@ -255,9 +255,6 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
     : [] // team_member mode - no sidebar navigation
 
   const handleSignOut = () => {
-    // Clear impersonation cookie before signing out
-    document.cookie = 'impersonate_user_id=; Path=/; Max-Age=0;'
-    
     // Always use current origin to ensure correct protocol (http vs https)
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
     signOut({ callbackUrl: `${baseUrl}/` })
@@ -304,7 +301,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
           {/* Primary Action Button */}
           <div className="p-4 relative group">
             <Link
-              href="/app/generate/selfie"
+              href="/app/generations"
               className={`flex items-center justify-center space-x-2 bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white rounded-lg px-4 py-3 font-medium hover:from-brand-cta-hover hover:to-brand-cta transition-all duration-200 ${
                 collapsed ? 'px-2' : ''
               }`}

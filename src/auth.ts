@@ -56,27 +56,14 @@ export async function auth() {
         const impersonateUserId = cookieStore.get('impersonate_user_id')?.value
         
         if (impersonateUserId) {
-          // Get the raw JWT session without impersonation applied
-          // We need to check the actual admin status from the token
-          const rawSession = await originalAuth()
+          // First, get the original admin session
+          const originalSession = await originalAuth()
           
-          // Check if rawSession exists before proceeding
-          if (!rawSession || !rawSession.user) {
-            // If no session, fall through to standard auth
-            return originalAuth()
-          }
-          
-          // SECURITY: Check if user is truly an admin by querying database directly
-          // This prevents cookie injection attacks where attacker sets impersonate cookie
-          // before being logged in as admin
-          const { prisma } = await import("@/lib/prisma")
-          const adminCheck = await prisma.user.findUnique({
-            where: { id: rawSession.user.id },
-            select: { isAdmin: true }
-          })
-          
-          if (adminCheck?.isAdmin) {
-            // Now fetch the impersonated user
+          if (originalSession?.user?.isAdmin) {
+            // Import prisma dynamically to avoid circular dependencies
+            const { prisma } = await import("@/lib/prisma")
+            
+            // Fetch the impersonated user
             const impersonatedUser = await prisma.user.findUnique({
               where: { id: impersonateUserId },
               select: {
@@ -102,13 +89,14 @@ export async function auth() {
               // Return impersonated session
               return {
                 user: {
-                  ...rawSession.user,
+                  ...originalSession.user,
                   id: impersonatedUser.id,
                   email: impersonatedUser.email,
+                  name: person?.firstName || impersonatedUser.email,
                   role: impersonatedUser.role,
                   locale: impersonatedUser.locale,
                   impersonating: true,
-                  originalUserId: rawSession.user.id,
+                  originalUserId: originalSession.user.id,
                   person: person ? {
                     id: person.id,
                     firstName: person.firstName,
@@ -117,7 +105,7 @@ export async function auth() {
                     team: person.team
                   } : undefined
                 },
-                expires: rawSession.expires
+                expires: originalSession.expires
               }
             }
           }

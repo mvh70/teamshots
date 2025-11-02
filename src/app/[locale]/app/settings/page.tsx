@@ -80,7 +80,7 @@ function UserSearchImpersonation({ onStartImpersonation, disabled }: { onStartIm
   const [searchResults, setSearchResults] = useState<Array<{id: string, displayName: string}>>([])
   const [isSearching, setIsSearching] = useState(false)
   const [selectedUser, setSelectedUser] = useState<{id: string, displayName: string} | null>(null)
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined)
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     // Clear previous timeout
