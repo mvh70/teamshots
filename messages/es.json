@@ -14,13 +14,13 @@
   "hero": {
     "title": "Fotos profesionales de equipo en 60 segundos",
     "titleHighlight": "sin sesión de fotos",
-    "subtitle": "Construido para equipos, fundadores de startups y empresas en crecimiento. Retratos consistentes y acordes a tu marca para cada miembro del equipo. Sin fotógrafo, sin programar, sin facturas de más de $2,000.",
+    "subtitle": "Diseñado para equipos, fundadores de startups y empresas en expansión. Retratos consistentes y fieles a tu marca para cada miembro. Sin fotógrafo, sin agendas, sin facturas de $2,000+.",
     "instantTransformation": "⚡ Transformación instantánea (en serio, es así de rápido)",
     "getStartedFree": "Regístrate ahora",
     "getStarted": "Empezar",
     "viewPricing": "Ver precios",
     "joinWaitlist": "Obtén 1 generación de prueba gratis",
-    "freeCtaSubtext": "Obtén 1 generación de prueba gratis en un estilo predefinido al registrarte. Te entendemos, quieres probarlo primero.",
+    "freeCtaSubtext": "Obtén 1 generación de prueba gratis en un estilo predefinido al registrarte. Lo entendemos, quieres probar antes de comprometerte.",
     "freeCtaAria": "Obtén una generación de prueba gratis en un estilo predefinido al registrarte. Sin compromiso.",
     "urgency": "Acceso beta limitado",
     "guarantee": "Tu primera generación de prueba es gratis en un estilo predefinido. Sin compromiso, no se requiere tarjeta de crédito. Pruébalo con tu equipo sin riesgo.",
@@ -34,7 +34,7 @@
     "subtitle": "Diseñado para equipos y fundadores de startups que necesitan fotos consistentes y acordes a su marca sin complicaciones. Perfecto para incorporaciones, páginas del equipo y press kits.",
     "fast": {
       "title": "60 segundos, no 6 semanas",
-      "description": "A los equipos les encanta. Cada persona sube una vez y obtiene resultados al instante. Tu sitio web corporativo y press kit se mantienen actualizados. No más perseguir fotógrafos por pruebas."
+      "description": "A los equipos les encanta. Cada uno sube una vez y obtiene resultados al instante. Tu sitio web y kit de prensa siempre actualizados. Adiós a perseguir fotógrafos por pruebas."
     },
     "consistency": {
       "title": "Acorde a tu marca, siempre",
@@ -116,7 +116,7 @@
     "subtitle": "Cinco pasos simples. Aproximadamente un minuto por persona. Perfecto para equipos incorporando nuevos y fundadores gestionando crecimiento rápido.",
     "totalTime": "Tiempo total:",
     "totalTimeValue": "60 segundos",
-    "cta": "Empezar",
+    "cta": "¡Súbeme de nivel!",
     "guarantee": "Tu primera generación de prueba es gratis en un estilo predefinido—perfecto para probar con tu equipo (somos así de amables)",
     "steps": {
       "1": {
@@ -403,7 +403,7 @@
       "signingIn": "Iniciando...",
       "submit": "Iniciar sesión",
       "noAccount": "¿No tienes cuenta? Regístrate",
-      "Invalid credentials": "Esas credenciales no parecen correctas. Verifica correo y contraseña, o restablece tu contraseña.",
+      "Invalid credentials": "Esas credenciales no cuadran. Revisa tu correo y contraseña, o prueba restableciendo la contraseña (pasa a los mejores).",
       "Failed to send magic link": "No pudimos enviar el enlace. Verifica tu correo y prueba de nuevo, o usa contraseña.",
       "An error occurred": "¡Ups! Algo salió mal. Intenta de nuevo, y si persiste, avísanos."
     },
