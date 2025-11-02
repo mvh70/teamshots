@@ -284,7 +284,50 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       
     } catch (error) {
       Telemetry.increment('generation.worker.error')
-      Logger.error(`Image generation failed for job ${job.id}`, { error: error instanceof Error ? error.message : String(error) })
+      
+      // Extract comprehensive error details
+      let errorMessage = error instanceof Error ? error.message : String(error)
+      const errorDetails: Record<string, unknown> = {
+        message: errorMessage,
+        name: error instanceof Error ? error.name : 'Unknown',
+      }
+      
+      // Try to extract additional details from the error object (e.g., Gemini API response)
+      if (error && typeof error === 'object') {
+        // Google SDK errors often have additional properties
+        if ('status' in error) errorDetails.status = error.status
+        if ('statusText' in error) errorDetails.statusText = error.statusText
+        if ('response' in error) {
+          try {
+            errorDetails.response = JSON.stringify(error.response)
+            // Enhance error message with response details if available
+            errorMessage = `${errorMessage} | Response: ${JSON.stringify(error.response)}`
+          } catch {
+            errorDetails.response = String(error.response)
+            errorMessage = `${errorMessage} | Response: ${String(error.response)}`
+          }
+        }
+        if ('cause' in error) {
+          try {
+            errorDetails.cause = JSON.stringify(error.cause)
+            errorMessage = `${errorMessage} | Cause: ${JSON.stringify(error.cause)}`
+          } catch {
+            errorDetails.cause = String(error.cause)
+            errorMessage = `${errorMessage} | Cause: ${String(error.cause)}`
+          }
+        }
+        // Check for Gemini-specific error properties
+        if ('code' in error) errorDetails.code = error.code
+        if ('details' in error) {
+          try {
+            errorDetails.details = JSON.stringify(error.details)
+          } catch {
+            errorDetails.details = String(error.details)
+          }
+        }
+      }
+      
+      Logger.error(`Image generation failed for job ${job.id}`, errorDetails)
       
       // Update generation status to failed
       // Check if this is a regeneration (free) before attempting refund
@@ -293,11 +336,17 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         select: { creditsUsed: true }
       })
       
+      // Truncate error message if too long (database field has limit, but we'll keep it reasonable)
+      const maxErrorMessageLength = 2000
+      const finalErrorMessage = errorMessage.length > maxErrorMessageLength 
+        ? errorMessage.substring(0, maxErrorMessageLength) + '...[truncated]'
+        : errorMessage
+      
       await prisma.generation.update({
         where: { id: generationId },
         data: {
           status: 'failed',
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorMessage: finalErrorMessage,
           updatedAt: new Date()
         }
       })
@@ -340,8 +389,9 @@ User Email: ${userEmail || 'N/A'}
 Job ID: ${job.id}
 Attempts: ${job.attemptsMade}/${maxAttempts}
 
-Error: ${error instanceof Error ? error.message : String(error)}
-Error Stack: ${error instanceof Error ? error.stack : 'N/A'}`,
+Error: ${finalErrorMessage}
+Error Stack: ${error instanceof Error ? error.stack : 'N/A'}
+Error Details: ${JSON.stringify(errorDetails, null, 2)}`,
             metadata: {
               generationId,
               personId,
@@ -350,8 +400,9 @@ Error Stack: ${error instanceof Error ? error.stack : 'N/A'}`,
               jobId: job.id,
               attemptsMade: job.attemptsMade,
               maxAttempts,
-              errorMessage: error instanceof Error ? error.message : String(error),
+              errorMessage: finalErrorMessage,
               errorName: error instanceof Error ? error.name : 'Unknown',
+              errorDetails,
               selfieS3Key,
               packageId: (styleSettings as { packageId?: string })?.packageId || 'unknown'
             }
