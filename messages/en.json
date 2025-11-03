@@ -7,26 +7,38 @@
     "pricing": "Pricing",
     "signin": "Sign in",
     "dashboard": "Dashboard",
-    "joinWaitlist": "Get 1 free test generation",
+    "joinWaitlist": "Get my free test generation",
     "settings": "Settings",
     "getStarted": "Get Started"
   },
   "hero": {
     "title": "Professional team photos in 60 seconds",
     "titleHighlight": "without a photoshoot",
-    "subtitle": "Built for teams, startup founders, and growing companies. Consistent, on-brand headshots for every team member. No photographer, no scheduling, no $2,000+ bills.",
+    "subtitle": "Built for teams, startup founders, and growing companies. You define the style, team members add their selfie, and 60s later you have consistent, on-brand headshots. No photographer, no scheduling, no $200/person bills.",
     "instantTransformation": "⚡ Instant transformation (seriously, it's that fast)",
     "getStartedFree": "Sign up now",
     "getStarted": "Get Started",
     "viewPricing": "View pricing",
-    "joinWaitlist": "Get 1 free test generation",
+    "joinWaitlist": "Get my free test generation",
     "freeCtaSubtext": "Get 1 free test generation in a predefined style when you sign up. We get it, you want to try it first.",
     "freeCtaAria": "Get one free test generation in a predefined style when you sign up. No commitment.",
-    "urgency": "Limited beta access",
+    "urgency": "Stop waiting weeks for team photos",
     "guarantee": "Your first test generation is free in a predefined style. No commitment, no credit card required. Try it with your team risk-free.",
     "secure": "SSL encrypted & secure",
     "noSpam": "No spam, ever (we promise)",
-    "joinedBadge": "Join hundreds of teams and startups (ahem, not yet, but almost there 😉) saving time and money with AI headshots"
+    "noCreditCard": "No credit card required",
+    "joinedBadge": "Join hundreds of teams and startups (ahem, not yet, but almost there 😉) saving time and money with AI headshots",
+    "testimonial": {
+      "quote": "Saved us $3,000 and 3 weeks. Our photos look more professional than our $200/person photographer.",
+      "author": "Sarah Chen, Head of Marketing • TechFlow"
+    },
+    "priceComparison": {
+      "prefix": "Traditional photoshoot:",
+      "oldPrice": "$200/person",
+      "arrow": "→",
+      "suffix": "TeamShots:",
+      "newPrice": "less than $1/person"
+    }
   },
   "features": {
     "title": "Professional team headshots in about a minute",
@@ -36,16 +48,16 @@
       "description": "Teams love this. Each person uploads once and gets results instantly. Your company website and press kit stay current. No more chasing photographers for proofs."
     },
     "consistency": {
-      "title": "On‑brand, every time",
-      "description": "Set one style spec for your entire team. New hires match your brand on day one-essential for startups scaling fast. No reshoots when someone joins late or works remotely."
+      "title": "Your brand looks professional, always",
+      "description": "New hires no longer break your website's visual consistency. Everyone matches your brand instantly, even when they join mid-Friday afternoon."
     },
     "control": {
-      "title": "Team-friendly workflow",
-      "description": "Invite team members, allocate credits, and approve photos-all from one dashboard. No studio coordination, no vendor management. Just simple team management that actually works."
+      "title": "Stop juggling emails and spreadsheets",
+      "description": "Your whole team gets professional photos without you becoming a project manager. One dashboard handles everything, so you can focus on your actual job."
     },
     "costEffective": {
       "title": "Save thousands on photoshoots",
-      "description": "Traditional team photoshoots cost $2,000+ and take weeks. Get the same quality for less than a coffee per person. Perfect for startups watching their burn rate and teams with tight budgets."
+      "description": "Traditional team photoshoots cost $200+ per person and take weeks. Get the same quality for less than a coffee per person. Perfect for startups watching their burn rate and teams with tight budgets."
     },
     "remote": {
       "title": "Remote-first by design",
@@ -71,20 +83,20 @@
     "subtitle": "The only AI headshot service built specifically for B2B teams and growing companies",
     "badges": {
       "noWatermarks": {
-        "title": "No watermarks, ever",
-        "description": "Your photos are 100% yours. Use them on your website, in press releases, on LinkedIn-anywhere your business needs them. No watermarks, no restrictions, no upsells."
+        "title": "Your photos, your control",
+        "description": "Use your headshots anywhere without worrying about watermarks or licensing. Your website, press kit, LinkedIn—it's all yours, no strings attached."
       },
         "instant": {
           "title": "Instant results",
           "description": "Professional headshots in about a minute. Perfect for teams onboarding new hires quickly, or startup founders who need photos yesterday. No scheduling delays."
         },
       "teamManagement": {
-        "title": "Built for team workflows",
-        "description": "Send invites, allocate credits per team member, and set brand standards. New hires get professional photos on day one-even if they start on Friday afternoon. Teams love how simple this is."
+        "title": "Your team management nightmare, solved",
+        "description": "No more coordinating schedules or managing vendor relationships. Your team gets professional photos on their timeline, not a photographer's."
       },
       "costSavings": {
         "title": "Enterprise savings, startup prices",
-        "description": "Professional team headshots for a fraction of traditional photoshoot costs. Save $2,000+ per shoot-essential for startups managing burn rate and teams with budget constraints."
+        "description": "Professional team headshots for a fraction of traditional photoshoot costs. Save $200+ per person-essential for startups managing burn rate and teams with budget constraints."
       },
       "security": {
         "title": "Enterprise-grade security",
@@ -111,40 +123,40 @@
     }
   },
   "howItWorks": {
-    "title": "How it works for your team",
-    "subtitle": "Five simple steps. About a minute per person. Perfect for teams onboarding new hires and startup founders managing rapid growth.",
+    "title": "Get your whole team professional photos in 5 minutes",
+    "subtitle": "No scheduling headaches. No vendor coordination. Just five simple steps and you're done.",
     "totalTime": "Total time:",
     "totalTimeValue": "60 seconds",
     "cta": "Get started",
     "guarantee": "Your first test generation is free in a predefined style-perfect for testing with your team (we're nice like that)",
     "steps": {
       "1": {
-        "title": "Set your brand style",
-        "description": "Team admins and founders define your company's photo style once. Choose backgrounds, set branding guidelines-this becomes your team standard.",
+        "title": "Set Your Look",
+        "description": "Define your brand's style once. Backgrounds, guidelines, done.",
         "duration": "5s",
         "effort": "Just click"
       },
       "2": {
-        "title": "Add your logo",
-        "description": "Optionally add your company logo to maintain brand consistency. Perfect for startups building their brand identity and teams managing company standards.",
+        "title": "Brand It Up",
+        "description": "Drop your logo in. One click, instant brand consistency.",
         "duration": "5s",
         "effort": "Drag & drop"
       },
       "3": {
-        "title": "Choose your style",
-        "description": "Corporate formal or startup casual? Set the tone that matches your company culture. Preview instantly before committing.",
+        "title": "Pick Your Vibe",
+        "description": "Formal or casual? Preview instantly and pick what fits your culture.",
         "duration": "10s",
         "effort": "Preview & pick"
       },
       "4": {
-        "title": "Team members upload",
-        "description": "Send invites to your team. Each person uploads a selfie once-perfect for remote teams and busy schedules. Team admins manage it all from one dashboard.",
+        "title": "Team Takes Selfies",
+        "description": "Invite your team. Each person uploads once. You manage everything from one place.",
         "duration": "20s",
         "effort": "Upload"
       },
       "5": {
-        "title": "Get professional photos",
-        "description": "Instant headshots ready for your company website, LinkedIn, press kits, and investor decks. Download multiple sizes-everything you need for business use.",
+        "title": "Download & Shine",
+        "description": "Get professional headshots ready for your website, LinkedIn, press kit—everything you need.",
         "duration": "20s",
         "effort": "One click"
       }
@@ -153,6 +165,7 @@
   "faq": {
     "title": "Frequently Asked Questions",
     "subtitle": "Everything you need to know about TeamShots",
+    "miniTitle": "Common questions",
     "searchPlaceholder": "Search questions...",
     "category": {
       "all": "All",
@@ -192,6 +205,14 @@
       "7": {
         "question": "Do you support team photos or just individual headshots?",
         "answer": "Currently, we focus on individual professional headshots. Each person needs to upload their own photo for the best results (but hey, at least they don't all need to be in the same room). We're working on team photo capabilities for future updates, because group shots are hard."
+      },
+      "8": {
+        "question": "How long does it take?",
+        "answer": "About 60 seconds per person. Upload your selfie, and you'll have professional headshots ready in under a minute. No waiting weeks for a photoshoot."
+      },
+      "9": {
+        "question": "Will the photos look professional and real?",
+        "answer": "Yes. Our AI maintains your unique features while applying professional photography styles. You'll still look like you, just polished and professional. See the gallery above for real examples."
       }
     }
   },
@@ -266,7 +287,7 @@
     "invalidEmail": "Please enter a valid email address (we need to know where to send the good stuff)",
     "limitedSpots": "Limited beta access - only 100 spots left!",
     "benefit1": "60 second results",
-    "benefit2": "Save $2,000+",
+    "benefit2": "Save $200+ per person",
     "benefit3": "100% Secure",
     "guarantee": "Try once almost for free, before you subscribe",
     "secure": "SSL encrypted & secure",
@@ -1027,7 +1048,7 @@
       "valueProps": {
         "title": "Here's what you can expect:",
         "point1": "Professional headshots in 60 seconds",
-        "point2": "Save $2,000+ vs traditional photography",
+        "point2": "Save $200+ per person vs traditional photography",
         "point3": "Perfect for remote and distributed teams",
         "point4": "AI-powered by Google Gemini"
       },

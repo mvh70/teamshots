@@ -17,6 +17,36 @@ export default function LandingPage() {
   const t = useTranslations('hero');
   const tFeatures = useTranslations('features');
 
+  // Hero section headline and subheadline - make ultra-specific, urgent, unique, useful
+  const heroHeadline = t('landing.headline'); // Original: "Professional team headshots in about a minute. Built for lean and growing startups, not the ones juggling pricey photoshoots, low res images, and life."
+  // Revised: "Get pro team headshots in 60 seconds - no photoshoots needed"
+  const heroSubheadline = t('landing.subheadline'); // Original: "Your brand looks instantly credible, polished, and pro."
+  // Revised: "Ditch mismatched selfies. Look unified and professional now."
+
+  // Benefits section - shorten each to 1-2 punchy sentences, focus on benefits
+  const benefits = [
+    {
+      title: t('landing.benefits.fast.title'), // Original: "60 seconds. 6 easy steps."
+      description: t('landing.benefits.fast.description'), // Original: "Upload selfie, choose style, get results. No skills required."
+    },
+    {
+      title: t('landing.benefits.credible.title'), // Original: "Your brand looks instantly credible, polished, and pro."
+      description: t('landing.benefits.credible.description'), // Original: "Stop juggling professional photos from your team. We make it easy."
+    },
+    {
+      title: t('landing.benefits.juggling.title'), // Original: "Stop juggling professional photos from your team."
+      description: t('landing.benefits.juggling.description'), // Original: "We make it easy."
+    },
+    {
+      title: t('landing.benefits.save.title'), // Original: "Save thousands on professional photoshoots and light budget."
+      description: t('landing.benefits.save.description'), // Original: "Perfect for $99 per user and unlimited generations."
+    },
+  ];
+
+  // Lower section - make more specific to startups
+  const lowerHeadline = t('landing.lower.headline'); // Original: "The only service built for startups who need team headshots. Instantly growing and generating."
+  // Revised: "Built for startups: Instant team photos that scale with you."
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-brand-primary-light via-white to-gray-50">
       {/* Hero Section with Gradient Background */}
@@ -30,6 +60,15 @@ export default function LandingPage() {
             {t('title')}{' '}
             <span className="bg-gradient-to-r from-brand-primary to-brand-primary-hover bg-clip-text text-transparent">{t('titleHighlight')}</span>
           </h1>
+
+          {/* Urgency Badge - Time-based pain */}
+          <div className="flex justify-center mb-4">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+              <span className="w-1.5 h-1.5 bg-orange-600 rounded-full mr-2"></span>
+              {t('urgency')}
+            </span>
+          </div>
+
           <div className="text-xl sm:text-2xl font-bold text-brand-cta mb-4">
             {t('instantTransformation')}
           </div>
@@ -38,6 +77,41 @@ export default function LandingPage() {
           </p>
           
 
+          {/* Social Proof Snippet - Above Mobile CTA */}
+          <div className="mb-6 md:hidden max-w-md mx-auto">
+            <div className="flex items-center justify-center mb-2">
+              <div className="flex text-yellow-400 text-sm">
+                ★★★★★
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 italic mb-2 px-4">
+              &quot;{t('testimonial.quote')}&quot;
+            </p>
+            <p className="text-xs text-gray-600">
+              {t('testimonial.author')}
+            </p>
+          </div>
+
+          {/* Mobile-First CTA - Visible Above Fold (Mobile Only) */}
+          <div className="mb-12 md:hidden flex flex-col items-center">
+            <Link
+              href="/auth/signup"
+              aria-label={t('freeCtaAria')}
+              className="w-full inline-block px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-center"
+            >
+              {t('joinWaitlist')}
+            </Link>
+            <p className="mt-3 text-sm text-gray-600 text-center max-w-md">
+              {t('freeCtaSubtext')}
+            </p>
+            <p className="mt-1 text-xs text-gray-500 text-center max-w-md">
+              {t('noCreditCard')}
+            </p>
+            {/* Price Anchor - Mobile */}
+            <p className="mt-2 text-xs text-gray-500 text-center max-w-md">
+              {t('priceComparison.prefix')} <span className="line-through text-gray-400">{t('priceComparison.oldPrice')}</span> {t('priceComparison.arrow')} {t('priceComparison.suffix')} <span className="font-semibold text-brand-cta">{t('priceComparison.newPrice')}</span>
+            </p>
+          </div>
 
           {/* Removed redundant guarantee paragraph under hero; trust cluster below covers it */}
         </div>
@@ -46,21 +120,46 @@ export default function LandingPage() {
         <div className="mt-16">
           <HeroGallery />
           
-          {/* CTA Buttons below first transformation */}
-          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link
-              href="/auth/signup"
-              aria-label={t('freeCtaAria')}
-              className="inline-block px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              {t('joinWaitlist')}
-            </Link>
-            <Link
-              href="/pricing"
-              className="inline-block px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
-            >
-              {t('viewPricing')}
-            </Link>
+          {/* Social Proof Snippet - Above Desktop CTA */}
+          <div className="mt-8 mb-6 hidden md:block max-w-lg mx-auto">
+            <div className="flex items-center justify-center mb-2">
+              <div className="flex text-yellow-400 text-sm">
+                ★★★★★
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 italic mb-2">
+              &quot;{t('testimonial.quote')}&quot;
+            </p>
+            <p className="text-xs text-gray-600 text-center">
+              {t('testimonial.author')}
+            </p>
+          </div>
+
+          {/* CTA Buttons below first transformation (Desktop Only) */}
+          <div className="mt-8 hidden md:block">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/auth/signup"
+                aria-label={t('freeCtaAria')}
+                className="inline-block px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                {t('joinWaitlist')}
+              </Link>
+              <Link
+                href="/pricing"
+                className="inline-block px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+              >
+                {t('viewPricing')}
+              </Link>
+            </div>
+            {/* Trust Signal - Desktop */}
+            <p className="mt-2 text-xs text-gray-500 text-center w-full">
+              {t('noCreditCard')}
+            </p>
+            {/* Price Anchor - Desktop */}
+            <p className="mt-2 text-xs text-gray-500 text-center w-full">
+              {t('priceComparison.prefix')} <span className="line-through text-gray-400">{t('priceComparison.oldPrice')}</span> {t('priceComparison.arrow')} {t('priceComparison.suffix')} <span className="font-semibold text-brand-cta">{t('priceComparison.newPrice')}</span>
+            </p>
           </div>
         </div>
       </section>

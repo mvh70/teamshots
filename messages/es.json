@@ -14,20 +14,32 @@
   "hero": {
     "title": "Fotos profesionales de equipo en 60 segundos",
     "titleHighlight": "sin sesión de fotos",
-    "subtitle": "Diseñado para equipos, fundadores de startups y empresas en expansión. Retratos consistentes y fieles a tu marca para cada miembro. Sin fotógrafo, sin agendas, sin facturas de $2,000+.",
+    "subtitle": "Diseñado para equipos, fundadores de startups y empresas en expansión. Tú defines el estilo, los miembros del equipo añaden su selfie, y 60 segundos después tienes retratos consistentes y fieles a tu marca. Sin fotógrafo, sin agendas, sin facturas de $200/persona.",
     "instantTransformation": "⚡ Transformación instantánea (en serio, es así de rápido)",
     "getStartedFree": "Regístrate ahora",
     "getStarted": "Empezar",
     "viewPricing": "Ver precios",
-    "joinWaitlist": "Obtén 1 generación de prueba gratis",
+    "joinWaitlist": "Obtén mi generación de prueba gratis",
     "freeCtaSubtext": "Obtén 1 generación de prueba gratis en un estilo predefinido al registrarte. Lo entendemos, quieres probar antes de comprometerte.",
     "freeCtaAria": "Obtén una generación de prueba gratis en un estilo predefinido al registrarte. Sin compromiso.",
-    "urgency": "Acceso beta limitado",
+    "urgency": "Deja de esperar semanas por fotos de equipo",
     "guarantee": "Tu primera generación de prueba es gratis en un estilo predefinido. Sin compromiso, no se requiere tarjeta de crédito. Pruébalo con tu equipo sin riesgo.",
     "secure": "Cifrado SSL y seguro",
     "noSpam": "Sin spam, nunca (lo prometemos)",
+    "noCreditCard": "No se requiere tarjeta de crédito",
     "joinedBadge": "Únete a cientos de equipos y startups (ejem, aún no, pero casi 😉) ahorrando tiempo y dinero con retratos con IA",
-    "freeOffer": "Obtén 1 generación gratis al registrarte"
+    "freeOffer": "Obtén 1 generación gratis al registrarte",
+    "testimonial": {
+      "quote": "Nos ahorró $3,000 y 3 semanas. Nuestras fotos se ven más profesionales que las de nuestro fotógrafo de $200/persona.",
+      "author": "Sarah Chen, Directora de Marketing • TechFlow"
+    },
+    "priceComparison": {
+      "prefix": "Sesión tradicional:",
+      "oldPrice": "$200/persona",
+      "arrow": "→",
+      "suffix": "TeamShots:",
+      "newPrice": "menos de $1/persona"
+    }
   },
   "features": {
     "title": "Retratos profesionales del equipo en aproximadamente un minuto",
@@ -37,16 +49,16 @@
       "description": "A los equipos les encanta. Cada uno sube una vez y obtiene resultados al instante. Tu sitio web y kit de prensa siempre actualizados. Adiós a perseguir fotógrafos por pruebas."
     },
     "consistency": {
-      "title": "Acorde a tu marca, siempre",
-      "description": "Establece una especificación de estilo para todo tu equipo. Las nuevas incorporaciones coinciden con tu marca desde el día uno—esencial para startups que escalan rápido. Sin re-sesiones cuando alguien se une tarde o trabaja remotamente."
+      "title": "Tu marca se ve profesional, siempre",
+      "description": "Las nuevas incorporaciones ya no rompen la consistencia visual de tu sitio web. Todos coinciden con tu marca al instante, incluso cuando se unen un viernes por la tarde."
     },
     "control": {
-      "title": "Flujo de trabajo amigable para equipos",
-      "description": "Invita miembros del equipo, asigna créditos y aprueba fotos—todo desde un solo panel. Sin coordinación de estudio, sin gestión de proveedores. Solo gestión simple que realmente funciona."
+      "title": "Deja de hacer malabares con correos y hojas de cálculo",
+      "description": "Todo tu equipo obtiene fotos profesionales sin que te conviertas en gestor de proyectos. Un panel lo maneja todo, para que puedas enfocarte en tu trabajo real."
     },
     "costEffective": {
       "title": "Ahorra miles en sesiones de fotos",
-      "description": "Las sesiones tradicionales cuestan $2,000+ y toman semanas. Obtén la misma calidad por menos que un café por persona. Perfecto para startups vigilando su tasa de consumo y equipos con presupuestos ajustados."
+      "description": "Las sesiones tradicionales cuestan $200+ por persona y toman semanas. Obtén la misma calidad por menos que un café por persona. Perfecto para startups vigilando su tasa de consumo y equipos con presupuestos ajustados."
     },
     "remote": {
       "title": "Remoto primero por diseño",
@@ -72,20 +84,20 @@
     "subtitle": "El único servicio de retratos con IA diseñado específicamente para equipos B2B y empresas en crecimiento",
     "badges": {
       "noWatermarks": {
-        "title": "Sin marcas de agua, nunca",
-        "description": "Tus fotos son 100% tuyas. Úsalas en tu sitio web, comunicados de prensa, LinkedIn—donde tu negocio las necesite. Sin marcas de agua, sin restricciones, sin ventas adicionales."
+        "title": "Tus fotos, tu control",
+        "description": "Usa tus retratos donde quieras sin preocuparte por marcas de agua o licencias. Tu sitio web, kit de prensa, LinkedIn—todo es tuyo, sin condiciones."
       },
       "instant": {
         "title": "Resultados instantáneos",
         "description": "Retratos profesionales en aproximadamente un minuto. Perfecto para equipos incorporando nuevos contratados rápidamente, o fundadores que necesitan fotos ayer. Sin retrasos de programación."
       },
       "teamManagement": {
-        "title": "Diseñado para flujos de trabajo de equipo",
-        "description": "Envía invitaciones, asigna créditos por miembro y establece estándares de marca. Las nuevas incorporaciones obtienen fotos profesionales el día uno—incluso si empiezan el viernes por la tarde. A los equipos les encanta lo simple que es."
+        "title": "Tu pesadilla de gestión de equipo, resuelta",
+        "description": "Ya no más coordinación de horarios ni gestión de relaciones con proveedores. Tu equipo obtiene fotos profesionales en su propio tiempo, no en el del fotógrafo."
       },
       "costSavings": {
         "title": "Ahorros empresariales, precios de startup",
-        "description": "Retratos profesionales por una fracción del costo tradicional. Ahorra $2,000+ por sesión—esencial para startups gestionando su tasa de consumo y equipos con presupuestos limitados."
+        "description": "Retratos profesionales por una fracción del costo tradicional. Ahorra $200+ por persona—esencial para startups gestionando su tasa de consumo y equipos con presupuestos limitados."
       },
       "security": {
         "title": "Seguridad de nivel empresarial",
@@ -112,40 +124,40 @@
     }
   },
   "howItWorks": {
-    "title": "Cómo funciona para tu equipo",
-    "subtitle": "Cinco pasos simples. Aproximadamente un minuto por persona. Perfecto para equipos incorporando nuevos y fundadores gestionando crecimiento rápido.",
+    "title": "Obtén fotos profesionales para todo tu equipo en 5 minutos",
+    "subtitle": "Sin dolores de cabeza de programación. Sin coordinación de proveedores. Solo cinco pasos simples y listo.",
     "totalTime": "Tiempo total:",
     "totalTimeValue": "60 segundos",
     "cta": "¡Súbeme de nivel!",
     "guarantee": "Tu primera generación de prueba es gratis en un estilo predefinido—perfecto para probar con tu equipo (somos así de amables)",
     "steps": {
       "1": {
-        "title": "Establece el estilo de tu marca",
-        "description": "Administradores y fundadores definen el estilo de foto de la empresa una vez. Elige fondos, establece pautas—esto se convierte en tu estándar.",
+        "title": "Define Tu Estilo",
+        "description": "Define el estilo de tu marca una vez. Fondos, pautas, listo.",
         "duration": "5s",
         "effort": "Solo clic"
       },
       "2": {
-        "title": "Agrega tu logo",
-        "description": "Agrega tu logo corporativo opcionalmente para consistencia. Perfecto para startups construyendo identidad y equipos gestionando estándares.",
+        "title": "Marca Personal",
+        "description": "Arrastra tu logo. Un clic, consistencia de marca instantánea.",
         "duration": "5s",
         "effort": "Arrastra y suelta"
       },
       "3": {
-        "title": "Elige tu estilo",
-        "description": "¿Formal corporativo o casual de startup? Establece el tono que coincida con tu cultura. Previsualiza al instante antes de confirmar.",
+        "title": "Elige Tu Vibra",
+        "description": "¿Formal o casual? Previsualiza al instante y elige lo que encaja con tu cultura.",
         "duration": "10s",
         "effort": "Previsualiza y elige"
       },
       "4": {
-        "title": "Miembros del equipo suben",
-        "description": "Envía invitaciones. Cada persona sube un selfie una vez—perfecto para remotos y agendas ocupadas. Administradores gestionan desde un panel.",
+        "title": "El Equipo Se Toma Selfies",
+        "description": "Invita a tu equipo. Cada uno sube una vez. Tú gestionas todo desde un lugar.",
         "duration": "20s",
         "effort": "Sube"
       },
       "5": {
-        "title": "Obtén fotos profesionales",
-        "description": "Retratos instantáneos listos para sitio web, LinkedIn, press kits y presentaciones. Descarga múltiples tamaños—todo para uso comercial.",
+        "title": "Descarga y Brilla",
+        "description": "Obtén retratos profesionales listos para tu sitio web, LinkedIn, press kit—todo lo que necesitas.",
         "duration": "20s",
         "effort": "Un clic"
       }
@@ -154,6 +166,7 @@
   "faq": {
     "title": "Preguntas Frecuentes",
     "subtitle": "Todo lo que necesitas saber sobre TeamShots",
+    "miniTitle": "Preguntas comunes",
     "searchPlaceholder": "Buscar preguntas...",
     "category": {
       "all": "Todas",
@@ -193,6 +206,14 @@
       "7": {
         "question": "¿Soportan fotos de equipo o solo retratos individuales?",
         "answer": "Actualmente nos enfocamos en retratos individuales. Cada persona sube su propia foto para mejores resultados (al menos no necesitan estar en la misma habitación). Estamos trabajando en capacidades de fotos grupales para futuras actualizaciones, porque las fotos en grupo son difíciles."
+      },
+      "8": {
+        "question": "¿Cuánto tiempo toma?",
+        "answer": "Aproximadamente 60 segundos por persona. Sube tu selfie y tendrás retratos profesionales listos en menos de un minuto. Sin esperar semanas por una sesión de fotos."
+      },
+      "9": {
+        "question": "¿Las fotos se verán profesionales y reales?",
+        "answer": "Sí. Nuestra IA mantiene tus características únicas mientras aplica estilos de fotografía profesional. Seguirás viéndote como tú, solo más pulido y profesional. Ve la galería arriba para ejemplos reales."
       }
     }
   },
@@ -267,7 +288,7 @@
     "invalidEmail": "Ingresa un correo válido (necesitamos saber dónde enviar lo bueno)",
     "limitedSpots": "Acceso beta limitado - ¡Solo 100 espacios!",
     "benefit1": "Resultados en 60 segundos",
-    "benefit2": "Ahorra $2,000+",
+    "benefit2": "Ahorra $200+ por persona",
     "benefit3": "100% Seguro",
     "guarantee": "Prueba una vez casi gratis, antes de suscribirte",
     "secure": "Cifrado SSL y seguro",
@@ -1027,7 +1048,7 @@
       "valueProps": {
         "title": "Esto es lo que puedes esperar:",
         "point1": "Fotos profesionales en 60 segundos",
-        "point2": "Ahorra más de $2,000 vs fotografía tradicional",
+        "point2": "Ahorra $200+ por persona vs fotografía tradicional",
         "point3": "Perfecto para equipos remotos y distribuidos",
         "point4": "Impulsado por IA de Google Gemini"
       },
