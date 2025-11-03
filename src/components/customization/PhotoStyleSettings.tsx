@@ -130,7 +130,7 @@ export default function PhotoStyleSettings({
             newSettings.clothing = { style: 'business' }
             break
           case 'clothingColors':
-            newSettings.clothingColors = { colors: { topCover: 'navy', topBase: 'white', bottom: 'gray' } }
+            newSettings.clothingColors = pkg.defaultSettings.clothingColors || { colors: {} }
             break
           case 'shotType':
             newSettings.shotType = { type: 'headshot' }

@@ -43,11 +43,12 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
     
     // Handle colors from separate clothingColors setting
     const clothingColors = style?.clothingColors as Record<string, unknown> | undefined
+    let includeTopCoverColor = false
     if (clothingColors) {
       const colorParts = []
       const colors = clothingColors.colors as { topBase?: string; topCover?: string; bottom?: string; shoes?: string } | undefined
       
-      const includeTopCoverColor = Boolean(colors?.topCover) && !NO_TOP_COVER_DETAILS.has(clothingDetailsValue)
+      includeTopCoverColor = Boolean(colors?.topCover) && !NO_TOP_COVER_DETAILS.has(clothingDetailsValue)
       if (includeTopCoverColor && colors?.topCover) {
         colorParts.push(`top cover: ${colors.topCover} color`)
       }
@@ -72,9 +73,10 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
     
     // Add pose description based on garment when branding is on clothing
     if (brandingType === 'include' && subject.pose) {
-      if (/jacket|blazer/i.test(clothingDetailsValue)) {
+      const clothingStyleValue = resolvedStyle.toLowerCase()
+      if (clothingStyleValue.includes('business') || clothingStyleValue.includes('black tie')) {
         (subject.pose as Record<string, unknown>).description = 'elegantly opening the jacket to reveal the logo on the base garment beneath. The jacket should not be fully open but partially unbuttoned to tastefully display the logo'
-      } else if (/(hoodie|t-?shirt|polo|button[ -]?down)/i.test(clothingDetailsValue)) {
+      } else if (clothingStyleValue.includes('startup')) {
         (subject.pose as Record<string, unknown>).description = 'both hands gently pointing towards the logo on the base garment (t-shirt/hoodie/polo/button down) to draw attention in a natural, professional manner'
       }
     }
@@ -306,14 +308,7 @@ export const freepackage: StylePackage = {
         clothingColors = undefined
       } else {
         // Use the saved value
-        clothingColors = {
-          colors: {
-            topBase: rawClothingColors.colors?.topBase || '#ffffff',
-            topCover: rawClothingColors.colors?.topCover || '#4a5568',
-            bottom: rawClothingColors.colors?.bottom,
-            shoes: rawClothingColors.colors?.shoes
-          }
-        }
+        clothingColors = rawClothingColors
       }
 
       // Shot type handling
