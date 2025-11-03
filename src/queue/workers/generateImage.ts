@@ -394,7 +394,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       
       // Send support notification email on failure (only on final attempt to avoid spam)
       const maxAttempts = job.opts?.attempts || 3
-      const isFinalAttempt = job.attemptsMade >= maxAttempts
+      const isFinalAttempt = job.attemptsMade >= maxAttempts - 1
       
       // Update generation status to failed on final attempt
       if (isFinalAttempt) {
@@ -430,6 +430,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           Logger.debug(`Skipping refund for regeneration ${generationId} (free)`)
         }
         
+        // Only send support notification email on final attempt to avoid spam
         try {
           // Get user email for context
           const userEmail = userId ? await prisma.user.findUnique({
