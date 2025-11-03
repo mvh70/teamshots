@@ -26,14 +26,14 @@ export default function LandingPage() {
         
         <div className="text-center relative z-10">
 
-          <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-900 mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 mb-4">
             {t('title')}{' '}
             <span className="bg-gradient-to-r from-brand-primary to-brand-primary-hover bg-clip-text text-transparent">{t('titleHighlight')}</span>
           </h1>
-          <div className="text-2xl font-bold text-brand-cta mb-4">
+          <div className="text-xl sm:text-2xl font-bold text-brand-cta mb-4">
             {t('instantTransformation')}
           </div>
-          <p className="text-[22px] text-gray-700 mb-8 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-gray-700 mb-8 max-w-3xl mx-auto leading-relaxed">
             {t('subtitle')}
           </p>
           
@@ -81,7 +81,7 @@ export default function LandingPage() {
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3 text-gray-900">{tFeatures('fast.title')}</h3>
-            <p className="text-gray-700 text-[15px] leading-relaxed">
+            <p className="text-gray-700 text-base leading-relaxed">
               {tFeatures('fast.description')}
             </p>
           </div>
@@ -94,7 +94,7 @@ export default function LandingPage() {
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3 text-gray-900">{tFeatures('consistency.title')}</h3>
-            <p className="text-gray-700 text-[15px] leading-relaxed">
+            <p className="text-gray-700 text-base leading-relaxed">
               {tFeatures('consistency.description')}
             </p>
           </div>
@@ -107,7 +107,7 @@ export default function LandingPage() {
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3 text-gray-900">{tFeatures('control.title')}</h3>
-            <p className="text-gray-700 text-[15px] leading-relaxed">
+            <p className="text-gray-700 text-base leading-relaxed">
               {tFeatures('control.description')}
             </p>
           </div>
@@ -120,7 +120,7 @@ export default function LandingPage() {
               </svg>
             </div>
             <h3 className="text-xl font-bold mb-3 text-gray-900">{tFeatures('costEffective.title')}</h3>
-            <p className="text-gray-700 text-[15px] leading-relaxed">
+            <p className="text-gray-700 text-base leading-relaxed">
               {tFeatures('costEffective.description')}
             </p>
           </div>
