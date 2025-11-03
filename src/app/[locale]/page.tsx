@@ -17,36 +17,6 @@ export default function LandingPage() {
   const t = useTranslations('hero');
   const tFeatures = useTranslations('features');
 
-  // Hero section headline and subheadline - make ultra-specific, urgent, unique, useful
-  const heroHeadline = t('landing.headline'); // Original: "Professional team headshots in about a minute. Built for lean and growing startups, not the ones juggling pricey photoshoots, low res images, and life."
-  // Revised: "Get pro team headshots in 60 seconds - no photoshoots needed"
-  const heroSubheadline = t('landing.subheadline'); // Original: "Your brand looks instantly credible, polished, and pro."
-  // Revised: "Ditch mismatched selfies. Look unified and professional now."
-
-  // Benefits section - shorten each to 1-2 punchy sentences, focus on benefits
-  const benefits = [
-    {
-      title: t('landing.benefits.fast.title'), // Original: "60 seconds. 6 easy steps."
-      description: t('landing.benefits.fast.description'), // Original: "Upload selfie, choose style, get results. No skills required."
-    },
-    {
-      title: t('landing.benefits.credible.title'), // Original: "Your brand looks instantly credible, polished, and pro."
-      description: t('landing.benefits.credible.description'), // Original: "Stop juggling professional photos from your team. We make it easy."
-    },
-    {
-      title: t('landing.benefits.juggling.title'), // Original: "Stop juggling professional photos from your team."
-      description: t('landing.benefits.juggling.description'), // Original: "We make it easy."
-    },
-    {
-      title: t('landing.benefits.save.title'), // Original: "Save thousands on professional photoshoots and light budget."
-      description: t('landing.benefits.save.description'), // Original: "Perfect for $99 per user and unlimited generations."
-    },
-  ];
-
-  // Lower section - make more specific to startups
-  const lowerHeadline = t('landing.lower.headline'); // Original: "The only service built for startups who need team headshots. Instantly growing and generating."
-  // Revised: "Built for startups: Instant team photos that scale with you."
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-brand-primary-light via-white to-gray-50">
       {/* Hero Section with Gradient Background */}
