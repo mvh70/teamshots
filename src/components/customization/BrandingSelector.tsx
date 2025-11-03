@@ -12,6 +12,7 @@ interface BrandingSelectorProps {
   isPredefined?: boolean // If true, user can't change the settings
   isDisabled?: boolean // If true, controls are visually greyed and inactive
   className?: string
+  showHeader?: boolean
 }
 
 
@@ -20,7 +21,8 @@ export default function BrandingSelector({
   onChange,
   isPredefined = false,
   isDisabled = false,
-  className = ''
+  className = '',
+  showHeader = false
 }: BrandingSelectorProps) {
   const t = useTranslations('customization.photoStyle.branding')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -108,22 +110,24 @@ export default function BrandingSelector({
   }, [value.logoKey])
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            {t('title', { default: 'Branding' })}
-          </h3>
-          <p className="text-sm text-gray-600">
-            {t('subtitle', { default: 'Choose logo and branding options' })}
-          </p>
+    <div className={`${className}`}>
+      {showHeader && (
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {t('title', { default: 'Branding' })}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {t('subtitle', { default: 'Choose logo and branding options' })}
+            </p>
+          </div>
+          {isPredefined && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {t('predefined', { default: 'Predefined' })}
+            </span>
+          )}
         </div>
-        {isPredefined && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            {t('predefined', { default: 'Predefined' })}
-          </span>
-        )}
-      </div>
+      )}
 
       {/* Include Logo Toggle */}
       <div className="mb-6">
@@ -153,9 +157,6 @@ export default function BrandingSelector({
       {/* Toggle include/exclude via buttons above; when include is active, show upload and position */}
       {value.type === 'include' && (
         <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">
-            {t('logoUpload', { default: 'Upload Logo' })}
-          </label>
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-0 text-center relative overflow-hidden">
             {previewUrl ? (
               <div className="relative w-full h-56">

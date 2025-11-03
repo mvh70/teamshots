@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     clothingSettings,
     clothingColorsSettings,
     shotTypeSettings,
+    expressionSettings,
     packageId
   } = body as {
     contextId?: string | null
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
     clothingSettings?: { type?: 'business' | 'startup' | 'black-tie' | 'user-choice'; style: 'business' | 'startup' | 'black-tie' | 'user-choice'; details?: string; colors?: { topCover?: string; topBase?: string; bottom?: string }; accessories?: string[] }
     clothingColorsSettings?: { colors: { topCover?: string; topBase?: string; bottom?: string; shoes?: string } }
     shotTypeSettings?: { type: 'headshot' | 'midchest' | 'full-body' | 'user-choice' }
+    expressionSettings?: { type: 'professional' | 'friendly' | 'serious' | 'confident' | 'happy' | 'sad' | 'neutral' | 'thoughtful' | 'user-choice' }
     packageId?: string
   }
 
@@ -60,7 +62,8 @@ export async function POST(request: NextRequest) {
       clothingColors: (clothingColorsSettings !== undefined && clothingColorsSettings !== null) 
         ? clothingColorsSettings 
         : undefined,
-      shotType: shotTypeSettings || pkg.defaultSettings.shotType
+      shotType: shotTypeSettings || pkg.defaultSettings.shotType,
+      expression: expressionSettings || pkg.defaultSettings.expression
     }
     
     // Use the package serializer to ensure format matches what deserializer expects

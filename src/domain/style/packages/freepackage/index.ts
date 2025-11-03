@@ -2,11 +2,13 @@ import { PhotoStyleSettings, BackgroundSettings } from '@/types/photo-style'
 import type { StylePackage } from '../index'
 import { generateBackgroundPrompt } from '../../backgrounds'
 
+const NO_TOP_COVER_DETAILS = new Set(['t-shirt', 'hoodie', 'polo', 'button-down'])
+
 function localBuild(style: Record<string, unknown>, basePrompt?: string): string {
   const scene: Record<string, unknown> = { environment: {} as Record<string, unknown> }
   const subject: Record<string, unknown> = { 
     type: 'subject from the attached image, maintaining the facial structure, identity, and key features of the input image.',
-    pose: { expression: 'smiling' }
+    pose: {}
   }
   const framing_composition: Record<string, unknown> = {}
   const camera: Record<string, unknown> = {}
@@ -25,15 +27,19 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
 
   const branding = style?.branding as Record<string, unknown> | undefined
   const brandingType = branding?.type
+  const brandingPosition = branding?.position as 'background' | 'clothing' | 'elements' | undefined
   
-  // Clothing settings for freepackage - business casual with t-shirt and jacket
-  const clothing = style?.clothing as Record<string, unknown> | undefined
+  // Clothing settings – respect UI values; default only when user-choice
+  const clothing = style?.clothing as { style?: string; details?: string; accessories?: string[] } | undefined
   if (clothing) {
-    const subjectWardrobe = { 
-      style: 'business casual',
-      details: 't-shirt'
-    } as Record<string, unknown>
+    const resolvedStyle = (clothing.style && clothing.style !== 'user-choice') ? clothing.style : 'business casual'
+    const resolvedDetails = (clothing.details && clothing.details !== 'user-choice') ? clothing.details : 't-shirt'
+    const subjectWardrobe = { style: resolvedStyle, details: resolvedDetails } as Record<string, unknown>
     subject.wardrobe = subjectWardrobe
+    if (clothing.accessories && Array.isArray(clothing.accessories) && clothing.accessories.length > 0) {
+      subjectWardrobe.accessories = clothing.accessories
+    }
+    const clothingDetailsValue = typeof clothing['details'] === 'string' ? (clothing['details'] as string).toLowerCase() : ''
     
     // Handle colors from separate clothingColors setting
     const clothingColors = style?.clothingColors as Record<string, unknown> | undefined
@@ -41,21 +47,22 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
       const colorParts = []
       const colors = clothingColors.colors as { topBase?: string; topCover?: string; bottom?: string; shoes?: string } | undefined
       
-      if (colors?.topCover) {
-        colorParts.push(`top cover: elegant business casual jacket in ${colors.topCover} color`)
+      const includeTopCoverColor = Boolean(colors?.topCover) && !NO_TOP_COVER_DETAILS.has(clothingDetailsValue)
+      if (includeTopCoverColor && colors?.topCover) {
+        colorParts.push(`top cover: ${colors.topCover} color`)
       }
       if (colors?.topBase) {
-        colorParts.push(`base layer: business casual t-shirt in ${colors.topBase} color`)
+        colorParts.push(`base layer: ${colors.topBase} color`)
         // Add logo information if branding is included
-        if (brandingType === 'include') {
-          colorParts.push('the t-shirt features a brand logo from the attached image, positioned prominently on the chest area')
+        if (brandingType === 'include' && (!brandingPosition || brandingPosition === 'clothing')) {
+          colorParts.push('the base garment features a brand logo from the attached image, positioned prominently on the chest area')
         }
       }
       if (colors?.bottom) {
-        colorParts.push(`bottom: ${colors.bottom}`)
+        colorParts.push(`The trousers are in ${colors.bottom} color`)
       }
       if (colors?.shoes) {
-        colorParts.push(`shoes: ${colors.shoes}`)
+        colorParts.push(`The shoes are in ${colors.shoes} color`)
       }
       
       if (colorParts.length > 0) {
@@ -63,17 +70,48 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
       }
     }
     
-    // Add pose description for elegant jacket opening if logo is included
+    // Add pose description based on garment when branding is on clothing
     if (brandingType === 'include' && subject.pose) {
-      (subject.pose as Record<string, unknown>).description = 'elegantly opening the jacket to reveal the logo on the t-shirt beneath. The jacket should not be fully open but partially unbuttoned to tastefully display the logo'
+      if (/jacket|blazer/i.test(clothingDetailsValue)) {
+        (subject.pose as Record<string, unknown>).description = 'elegantly opening the jacket to reveal the logo on the base garment beneath. The jacket should not be fully open but partially unbuttoned to tastefully display the logo'
+      } else if (/(hoodie|t-?shirt|polo|button[ -]?down)/i.test(clothingDetailsValue)) {
+        (subject.pose as Record<string, unknown>).description = 'both hands gently pointing towards the logo on the base garment (t-shirt/hoodie/polo/button down) to draw attention in a natural, professional manner'
+      }
     }
   }
 
   // Branding in environment if not on clothing
   if (brandingType === 'include') {
-    // Logo is already handled in clothing section above
+    // Strict placement by position (default to clothing chest)
+    let rules: string
+    if (brandingPosition === 'background') {
+      rules = 'Place the provided brand logo once as a framed element on a background wall only, aligned with the wall perspective. Do not place on the subject, floors, windows, or floating in space. Keep original colors and aspect ratio.'
+    } else if (brandingPosition === 'elements') {
+      rules = 'Place the provided brand logo once on a plausible scene element only, such as: a coffee mug label, a laptop sticker, a notebook cover, a standing banner flag, a signboard, or a door plaque. The element must be grounded in the scene (on a desk/floor/wall) and the logo must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.'
+    } else {
+      rules = 'Place the provided brand logo exactly once on the center chest area of the base garment (e.g., t‑shirt/hoodie/shirt). Do not place the logo on outer layers (jackets/coats), background, walls, floors, signs, accessories, or skin. Do not create patterns or duplicates. Keep original aspect ratio and colors; no stylization or warping. The logo size should be modest and proportional to the garment.'
+    }
+    ;(subject as Record<string, unknown>).branding_rules = rules
   } else if (brandingType === 'exclude') {
     sceneEnv.branding = 'no brand marks'
+  }
+
+  // Expression handling
+  const expression = style?.expression as Record<string, unknown> | undefined
+  const expressionType = (expression?.['type'] as string | undefined) || 'user-choice'
+  if (expressionType && expressionType !== 'user-choice') {
+    const map: Record<string, string> = {
+      professional: 'professional, approachable expression with a subtle smile',
+      friendly: 'friendly warm smile',
+      serious: 'serious neutral expression',
+      confident: 'confident slight smile',
+      happy: 'happy smile',
+      sad: 'subtle sad expression',
+      neutral: 'neutral expression',
+      thoughtful: 'thoughtful look'
+    }
+    const desc = map[expressionType] || 'neutral expression'
+    subject.pose = { ...(subject.pose as Record<string, unknown>), expression: desc }
   }
 
   // Shot type handling
@@ -85,7 +123,10 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
     } else if (shotTypeValue === 'midchest') {
       framing_composition.shot_type = 'mid-chest portrait, showing from chest up with positive space around the subject'
     } else if (shotTypeValue === 'full-body') {
-      framing_composition.shot_type = 'full body portrait, showing the complete subject from head to toe'
+      framing_composition.shot_type = 'full body portrait, showing the complete subject from head to toe; include the entire body with feet fully visible, no cropping at ankles or knees; keep a bit of floor visible beneath the shoes'
+      // For full body, bias toward a wider focal length and add explicit framing rules
+      camera.lens = { focal_length_mm: 35, type: 'prime', character: 'neutral rendering, low distortion' }
+      ;(framing_composition as Record<string, unknown>).composition_rules = 'Frame the subject head-to-toe within a vertical canvas; maintain comfortable headroom and footroom; do not crop any part of the body; step back to capture the entire person if needed.'
     } else {
       // Default fallback for unrecognized shot types
       framing_composition.shot_type = 'head-and-shoulders portrait, with ample headroom and negative space above their head, ensuring the top of their head is not cropped'
@@ -105,6 +146,7 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
   lighting.quality = 'soft, natural'
 
   rendering_intent.texture = 'retain fabric weave and hair strands'
+  rendering_intent.cleanliness = 'Do not include any interface overlays, labels, or text such as "BACKGROUND", "SUBJECT", or "LOGO" from the reference composites. The final image must look natural with no UI markings.'
 
   const structured: Record<string, unknown> = {}
   const hasKeys = (obj: unknown): boolean => typeof obj === 'object' && obj !== null && Object.keys(obj as Record<string, unknown>).length > 0
@@ -126,14 +168,15 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
   }
 
   const preface = 'Follow the JSON below to generate a professional photo. Only use specified fields; otherwise use sensible defaults.'
-  return preface + '\n' + JSON.stringify(structured)
+  // Append a lightweight package marker for debugging/trace without changing semantics
+  return preface + '\n' + JSON.stringify(structured) + '\n[PACKAGE: freepackage]'
 }
 
 export const freepackage: StylePackage = {
   id: 'freepackage',
   label: 'Free Package',
   version: 1,
-  visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'shotType'],
+  visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'shotType', 'expression'],
   availableBackgrounds: ['office', 'tropical-beach', 'busy-city', 'neutral', 'gradient', 'custom'],
   // Free package defaults - business casual with t-shirt and jacket
   defaultSettings: {
@@ -149,7 +192,8 @@ export const freepackage: StylePackage = {
         topCover: '#4a5568' // Default gray jacket
       }
     },
-    shotType: { type: 'headshot' }
+    shotType: { type: 'headshot' },
+    expression: { type: 'professional' }
   },
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   promptBuilder: (settings, _ctx) => {
@@ -169,13 +213,8 @@ export const freepackage: StylePackage = {
       })(),
       clothing: (() => {
         const c = settings.clothing
-        if (!c || c.style === 'user-choice') {
-          return d.clothing
-        }
-        return {
-          style: 'startup',
-          details: 't-shirt'
-        }
+        if (!c || c.style === 'user-choice') return d.clothing
+        return { ...c }
       })(),
       clothingColors: (() => {
         const cc = settings.clothingColors
@@ -193,6 +232,11 @@ export const freepackage: StylePackage = {
         const st = settings.shotType
         if (!st || st.type === 'user-choice') return d.shotType
         return st
+      })(),
+      expression: (() => {
+        const ex = settings.expression
+        if (!ex || ex.type === 'user-choice') return d.expression || { type: 'professional' }
+        return ex
       })()
     }
 
@@ -207,7 +251,8 @@ export const freepackage: StylePackage = {
       clothing: ui.clothing,
       // Explicitly save null for undefined (user-choice) so it can be restored
       clothingColors: ui.clothingColors === undefined ? null : ui.clothingColors,
-      shotType: ui.shotType
+      shotType: ui.shotType,
+      expression: ui.expression
     }),
     deserialize: (raw) => {
       const r = raw as Record<string, unknown>
@@ -257,8 +302,8 @@ export const freepackage: StylePackage = {
         // Explicitly null means user-choice (explicitly saved as such)
         clothingColors = undefined
       } else if (rawClothingColors === undefined || !('clothingColors' in r)) {
-        // Missing field means legacy data - use defaults for backward compatibility
-        clothingColors = freepackage.defaultSettings.clothingColors
+        // Missing field: treat as user-choice to avoid unintentionally forcing defaults
+        clothingColors = undefined
       } else {
         // Use the saved value
         clothingColors = {
@@ -273,13 +318,15 @@ export const freepackage: StylePackage = {
 
       // Shot type handling
       const shotType: PhotoStyleSettings['shotType'] = (r.shotType as PhotoStyleSettings['shotType']) || freepackage.defaultSettings.shotType
+      const expression: PhotoStyleSettings['expression'] = (r.expression as PhotoStyleSettings['expression']) || freepackage.defaultSettings.expression
 
       return {
         background: background || { type: 'user-choice' },
         branding,
         clothing,
         clothingColors,
-        shotType
+        shotType,
+        expression
       }
     }
   }

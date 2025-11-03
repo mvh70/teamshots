@@ -12,7 +12,7 @@ interface StyleSummaryCardProps {
 export default function StyleSummaryCard(props: StyleSummaryCardProps) {
   return (
     <div className="space-y-2">
-      <h4 className="font-bold text-gray-800 mb-2">Photo Style</h4>
+      <h4 className="font-bold text-gray-800 mb-2">Composition</h4>
       <StyleSummary {...props} />
     </div>
   )

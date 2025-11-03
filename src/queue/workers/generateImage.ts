@@ -122,6 +122,52 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       
       const pkg = getPackageConfig(packageId)
       const finalStyleSettings = pkg.persistenceAdapter.deserialize(rawStyleSettings)
+
+      // Merge explicit overrides from the job payload to ensure latest UI choices are honored
+      // Particularly important when context saved values were null (user-choice) but the user
+      // provided concrete selections (e.g., clothingColors, branding.position) at generation time
+      const jobStyleSettings = (styleSettings && typeof styleSettings === 'object' && !Array.isArray(styleSettings))
+        ? (styleSettings as Record<string, unknown>)
+        : {}
+      const fs = finalStyleSettings as Record<string, unknown>
+      const jsBranding = jobStyleSettings['branding'] as { type?: string; logoKey?: string; position?: string } | undefined
+      const jsClothingColors = jobStyleSettings['clothingColors'] as { colors?: { topCover?: string; topBase?: string; bottom?: string; shoes?: string } } | undefined
+      const jsClothing = jobStyleSettings['clothing'] as { style?: string; details?: string; accessories?: string[] } | undefined
+      const jsExpression = jobStyleSettings['expression'] as { type?: string } | undefined
+      const jsBackground = jobStyleSettings['background'] as { type?: string; key?: string; prompt?: string; color?: string } | undefined
+
+      if (jsClothingColors && Object.keys(jsClothingColors).length > 0) {
+        fs['clothingColors'] = jsClothingColors
+      }
+      if (jsBranding && Object.keys(jsBranding).length > 0) {
+        const currentBranding = (fs['branding'] as Record<string, unknown>) || {}
+        fs['branding'] = {
+          ...currentBranding,
+          ...(jsBranding.type ? { type: jsBranding.type } : {}),
+          ...(jsBranding.logoKey ? { logoKey: jsBranding.logoKey } : {}),
+          ...(jsBranding.position ? { position: jsBranding.position } : {})
+        }
+      }
+      if (jsClothing && Object.keys(jsClothing).length > 0) {
+        const currentClothing = (fs['clothing'] as Record<string, unknown>) || {}
+        fs['clothing'] = { ...currentClothing, ...jsClothing }
+      }
+      if (jsExpression && Object.keys(jsExpression).length > 0) {
+        const currentExpression = (fs['expression'] as Record<string, unknown>) || {}
+        fs['expression'] = { ...currentExpression, ...jsExpression }
+      }
+      if (jsBackground && Object.keys(jsBackground).length > 0) {
+        const currentBackground = (fs['background'] as Record<string, unknown>) || {}
+        fs['background'] = { ...currentBackground, ...jsBackground }
+      }
+
+      // Prefer explicit shotType from the job payload if provided (and not user-choice)
+      // This prevents stale context defaults (e.g., headshot) from overriding a user's current selection (e.g., full-body)
+      const jobShotType = (styleSettings as { shotType?: { type?: string } } | undefined)?.shotType?.type
+      const jobHasExplicitShotType = jobShotType && jobShotType !== 'user-choice'
+      const mergedStyleSettings: PhotoStyleSettings = jobHasExplicitShotType
+        ? { ...(finalStyleSettings as PhotoStyleSettings), shotType: { type: jobShotType as 'headshot' | 'midchest' | 'full-body' | 'user-choice' } }
+        : (finalStyleSettings as PhotoStyleSettings)
       
       // Debug logging
       Logger.debug('Generation context', { name: generation.context?.name })
@@ -129,6 +175,9 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       Logger.debug('Raw context settings', { settings: generation.context?.settings })
       Logger.debug('Raw job styleSettings', { styleSettings })
       Logger.debug('Deserialized finalStyleSettings', { finalStyleSettings })
+      if (jobHasExplicitShotType) {
+        Logger.debug('Overriding shotType from job payload', { jobShotType })
+      }
       Logger.debug('Package ID', { packageId })
       Logger.debug('ShotType in finalStyleSettings', { shotType: finalStyleSettings.shotType })
       
@@ -209,7 +258,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       }
       
       // Build prompt from style settings using the style package's prompt builder
-      const builtPromptRaw = pkg.promptBuilder(finalStyleSettings as unknown as PhotoStyleSettings, { prompt })
+      const builtPromptRaw = pkg.promptBuilder(mergedStyleSettings as unknown as PhotoStyleSettings, { prompt })
       let builtPrompt: string
       if (typeof builtPromptRaw === 'string') {
         builtPrompt = builtPromptRaw
@@ -219,7 +268,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       }
       
       // Create composite image with labeled sections (using processed selfie if available)
-      const compositeImage = await createCompositeImage(finalStyleSettings as {
+      const compositeImage = await createCompositeImage(mergedStyleSettings as {
         background?: { type?: string; key?: string; prompt?: string; color?: string }
         branding?: { type?: string; logoKey?: string; position?: string }
         clothing?: { style?: string; details?: string; accessories?: string[]; colors?: { topCover?: string; topBase?: string; bottom?: string } }
@@ -230,7 +279,13 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       // Debug code removed for production security
       
       // Update prompt to reference the labeled sections in the composite image
-      builtPrompt += `\n\nUse the labeled sections in the composite image: "SUBJECT" for the person, "BACKGROUND" for the background, and "LOGO" for the brand logo if present. Generate a professional headshot using the subject and applying the specified style settings.`
+      const shotTypeForText = (mergedStyleSettings?.shotType?.type || '').toString()
+      const shotText = shotTypeForText === 'full-body'
+        ? 'full-body portrait'
+        : shotTypeForText === 'midchest'
+          ? 'mid-chest portrait'
+          : 'headshot'
+      builtPrompt += `\n\nUse the labeled sections in the composite image: "SUBJECT" for the person, "BACKGROUND" for the background, and "LOGO" for the brand logo if present. Generate a professional photo using the subject and the specified style settings. STRICTLY follow \"framing_composition.shot_type\" (requested: ${shotText}) and \"orientation\". Do not change the requested shot type; avoid cropping that contradicts it.`
       await job.updateProgress({ progress: 20, message: formatProgressMessage(getProgressMessage()) })
 
       // Debug: write composite image to /tmp for inspection
@@ -245,8 +300,10 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       // Log the generated prompt for debugging
       Logger.debug('Generated Prompt for Gemini', { prompt: builtPrompt })
 
+      // Determine aspect ratio from shot type (enforce tall canvas for full body)
+      const aspectRatio = shotTypeForText === 'full-body' ? '9:16' : shotTypeForText === 'midchest' ? '3:4' : '1:1'
       // Call Gemini image generation API with composite image only
-      const imageBuffers = await generateWithGemini(builtPrompt, [compositeImage])
+      const imageBuffers = await generateWithGemini(builtPrompt, [compositeImage], aspectRatio)
 
       await job.updateProgress({ progress: 60, message: formatProgressMessage(getProgressMessage()) })
       if (!imageBuffers.length) {
@@ -630,7 +687,8 @@ async function createTextOverlay(text: string, fontSize: number, color: string):
 
 async function generateWithGemini(
   prompt: string,
-  images: Array<{ mimeType: string; base64: string }>
+  images: Array<{ mimeType: string; base64: string }>,
+  aspectRatio?: string
 ): Promise<Buffer[]> {
   const ai = new GoogleGenAI({})
   const contents: Array<Record<string, unknown>> = [{ text: prompt }]
@@ -641,7 +699,7 @@ async function generateWithGemini(
     model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
     contents,
     // Optional aspect ratio via config
-    // config: { imageConfig: { aspectRatio: providerOptions?.aspectRatio || '1:1' } }
+    config: aspectRatio ? { imageConfig: { aspectRatio } } : undefined
   })
 
   const parts = (response as unknown as { candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { data?: string } }> } }> })?.candidates?.[0]?.content?.parts ?? []

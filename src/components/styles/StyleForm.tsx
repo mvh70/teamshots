@@ -66,7 +66,7 @@ export default function StyleForm({
     scope,
     packageId: scope === 'freePackage' ? 'freepackage' : 'headshot1',
     settings: photoStyleSettings,
-    initialContextId: mode === 'edit' ? (styleContextId ?? undefined) : undefined,
+    initialContextId: mode === 'edit' ? styleContextId : undefined,
     name: autosaveName || name
   })
 
@@ -100,6 +100,17 @@ export default function StyleForm({
               const { ui, contextId: loadedId } = await loadStyleByContextId(idToLoad)
               setPhotoStyleSettings(ui)
               setStyleContextId(loadedId)
+              // Determine if this context is currently the default (active)
+              try {
+                const listEndpoint = `/api/styles/${contextType === 'team' ? 'team' : 'personal'}`
+                const listRes = await jsonFetcher<{ activeContext?: { id?: string } }>(listEndpoint)
+                const activeId = listRes?.activeContext?.id
+                if (activeId && activeId === idToLoad) {
+                  setSetAsActive(true)
+                }
+              } catch {
+                // Non-fatal if this check fails; checkbox remains manual
+              }
             } else {
               setError('Failed to load context')
             }
@@ -115,7 +126,7 @@ export default function StyleForm({
     } else {
       setLoading(false)
     }
-  }, [mode, params.id, apiEndpoint, scope, contextId])
+  }, [mode, params.id, apiEndpoint, scope, contextId, contextType])
 
   // Sync autosave context ID
   useEffect(() => {
@@ -253,7 +264,7 @@ export default function StyleForm({
             className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
           />
           <label htmlFor="setAsActive" className="ml-2 text-sm text-gray-700">
-            Set as Active {contextType === 'personal' ? 'Personal' : 'Team'} Style
+            Set as default {contextType === 'personal' ? 'personal' : 'team'} style
           </label>
         </div>
       )}

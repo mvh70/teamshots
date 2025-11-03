@@ -144,8 +144,10 @@ export class GeminiProvider extends AIProvider {
       prompt += `\n\nAvoid: ${options.negativePrompt}`
     }
     
-    // Add professional photo generation instructions
-    prompt += `\n\nGenerate professional headshot variations with consistent lighting, high quality, and professional appearance.`
+    // Add professional photo generation instructions (shot-type agnostic)
+    prompt += `\n\nGenerate professional photo variations with consistent lighting, high quality, and professional appearance. Strictly follow the JSON fields provided above, especially 'framing_composition.shot_type' and 'orientation'—do not change the requested shot type.`
+    // Reinforce strict logo placement rules when a logo is present in the JSON
+    prompt += `\nIf a brand logo is included in the instructions, place it only where specified (e.g., chest area of the t-shirt) and nowhere else. Do not add, duplicate, pattern, or move the logo to the background, clothing layers other than the t-shirt, skin, or accessories.`
     
     return prompt
   }

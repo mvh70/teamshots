@@ -301,7 +301,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
           {/* Primary Action Button */}
           <div className="p-4 relative group">
             <Link
-              href="/app/generations"
+              href="/app/generate/selfie"
               className={`flex items-center justify-center space-x-2 bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white rounded-lg px-4 py-3 font-medium hover:from-brand-cta-hover hover:to-brand-cta transition-all duration-200 ${
                 collapsed ? 'px-2' : ''
               }`}

@@ -2,6 +2,8 @@ import { PhotoStyleSettings, BackgroundSettings } from '@/types/photo-style'
 import type { StylePackage } from '../index'
 import { generateBackgroundPrompt } from '../../backgrounds'
 
+const NO_TOP_COVER_DETAILS = new Set(['t-shirt', 'hoodie', 'polo', 'button-down'])
+
 // Local reference to builder (currently in roDelete)
 function localBuild(style: Record<string, unknown>, basePrompt?: string): string {
   const scene: Record<string, unknown> = { environment: {} as Record<string, unknown> }
@@ -25,11 +27,17 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
   const brandingType = branding?.type
   const brandingPosition = branding?.position
   if (brandingType === 'include') {
-    let placement = 'tastefully placed'
-    if (brandingPosition === 'background') placement = 'subtly integrated into the background. It can be like framed and hanging on the wall. Ensure the position and alignment fits well with the wall it is hanging on'
-    if (brandingPosition === 'clothing') placement = 'incorporated into the clothing. Ensure that the logo is positioned outside of overlapping elements, like napels.'
-    if (brandingPosition === 'elements') placement = 'included as design elements in the composition, preferable on a background wall, a window, or as a frame on the wall. Ensure the branding is inline with the background, eg if the background is fuzzy, also the branding should be fuzzy. Ensure the logo does not just fly in the air. That doesnt make sense. '
-    sceneEnv.branding = `Include a tasteful brand logo which you can find in the attached image, with the logo lable. The logo should be${placement}, labeled as logo. Do not copy the label from the image picture.`
+    // Strict placement constraints by position
+    let rules: string
+    if (brandingPosition === 'background') {
+      rules = 'Place the provided brand logo once as a framed element on a background wall only, aligned with the wall perspective. Do not place on the subject, floors, windows, or floating in space. Keep original colors and aspect ratio.'
+    } else if (brandingPosition === 'elements') {
+      rules = 'Place the provided brand logo once on a plausible scene element only, such as: a coffee mug label, a laptop sticker, a notebook cover, a standing banner flag, a signboard, or a door plaque. The element must be grounded in the scene (on a desk/floor/wall) and the logo must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.'
+    } else {
+      // default or clothing
+      rules = 'Place the provided brand logo exactly once on the center chest area of the clothing (t-shirt/hoodie/polo/button down), or on the arms only. Do not place the logo on the jacket exterior, background, walls, floors, signs, accessories, or skin. Do not duplicate or create patterns. Keep original colors and aspect ratio.'
+    }
+    ;(subject as Record<string, unknown>).branding_rules = rules
   }
   if (brandingType === 'exclude') sceneEnv.branding = 'no brand marks'
 
@@ -45,6 +53,7 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
   }
 
   const clothing = style?.clothing as Record<string, unknown> | undefined
+  const clothingDetailsValue = typeof clothing?.details === 'string' ? (clothing.details as string).toLowerCase() : ''
   // Support both 'style' (new) and 'type' (legacy) fields
   const clothingStyle = clothing?.style || clothing?.type
   if (clothingStyle) {
@@ -60,11 +69,16 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
     const clothingColors = style?.clothingColors as Record<string, unknown> | undefined
     if (clothingColors) {
       const colorParts = []
-      const colors = clothingColors.colors as Record<string, unknown>
-      if (colors.topCover) colorParts.push(`top cover: ${colors.topCover}`)
-      if (colors.topBase) colorParts.push(`base layer: ${colors.topBase}`)
-      if (colors.bottom) colorParts.push(`bottom: ${colors.bottom}`)
-      if (colors.shoes) colorParts.push(`shoes: ${colors.shoes}`)
+      const colors = clothingColors.colors as { topBase?: string; topCover?: string; bottom?: string; shoes?: string } | undefined
+      const includeTopCoverColor = Boolean(colors?.topCover) && !NO_TOP_COVER_DETAILS.has(clothingDetailsValue)
+      if (includeTopCoverColor) colorParts.push(`top cover: ${colors?.topCover} color`)
+      if (colors?.topBase) colorParts.push(`base layer: ${colors.topBase} color`)
+      if (colors?.bottom) colorParts.push(`The trousers are in ${colors.bottom} color`)
+      if (colors?.shoes) colorParts.push(`The shoes are in ${colors.shoes} color`)
+      // If branding is included and position is clothing, ensure logo instruction on base garment
+      if (brandingType === 'include' && (!brandingPosition || brandingPosition === 'clothing')) {
+        colorParts.push('the clothing features a brand logo from the attached image, positioned prominently on the chest area of the base garment')
+      }
       if (colorParts.length > 0) {
         subjectWardrobe.color_palette = colorParts
       }
@@ -73,10 +87,37 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
 
   const expression = style?.expression as Record<string, unknown> | undefined
   if (expression?.type) {
-    subject.pose = { ...(subject.pose as Record<string, unknown> || {}), expression: expression.type }
+    const expr = expression.type as string
+    const expressionMap: Record<string, string> = {
+      happy: 'genuine smile, slight teeth visible, eyes engaged',
+      serious: 'neutral mouth, focused eyes, composed demeanor',
+      sad: 'subtle downturned mouth, soft gaze',
+      neutral: 'relaxed mouth, natural expression',
+      confident: 'subtle smile or neutral lips, chin slightly raised, direct eye contact',
+      friendly: 'soft smile, approachable',
+      professional: 'calm and composed, minimal smile'
+    }
+    const expressionText = expressionMap[expr] || 'natural expression'
+    subject.pose = { ...(subject.pose as Record<string, unknown> || {}), expression: expressionText }
   }
 
   // const lightingStyle = style?.lighting as Record<string, unknown> | undefined
+  // Clothing colors handling - incorporate into subject wardrobe palette
+  const clothingColors = style?.clothingColors as { colors?: { topBase?: string; topCover?: string; bottom?: string; shoes?: string } } | undefined
+  if (clothingColors?.colors) {
+    const colors = clothingColors.colors
+    const palette: string[] = []
+    const includeTopCoverColor = Boolean(colors.topCover) && !NO_TOP_COVER_DETAILS.has(clothingDetailsValue)
+    if (includeTopCoverColor) palette.push(`If there is a top cover, like a jacker, its color is: ${colors.topCover}`)
+    if (colors.topBase) palette.push(`If there is a visible base layer, like a shirt, its color is: ${colors.topBase}`)
+    if (colors.bottom) palette.push(`If there are trousers, their color is: ${colors.bottom}`)
+    if (colors.shoes) palette.push(`If shoes are visible their color is: ${colors.shoes}`)
+    if (palette.length > 0) {
+      (subject.wardrobe as Record<string, unknown> | undefined) ||= {} as Record<string, unknown>
+      ;(subject.wardrobe as Record<string, unknown>).color_palette = palette
+    }
+  }
+
   // const lightType = lightingStyle?.type
   // if (lightType === 'natural') {
   //   lighting.key = 'soft window key light'
@@ -101,7 +142,9 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
     } else if (shotTypeValue === 'midchest') {
       framing_composition.shot_type = 'mid-chest portrait, showing from chest up with positive space around the subject'
     } else if (shotTypeValue === 'full-body') {
-      framing_composition.shot_type = 'full body portrait, showing the complete subject from head to toe'
+      framing_composition.shot_type = 'full body portrait, showing the complete subject from head to toe; include the entire body with feet fully visible, no cropping at ankles or knees; keep a bit of floor visible beneath the shoes'
+      camera.lens = { focal_length_mm: 35, type: 'prime', character: 'neutral rendering, low distortion' }
+      ;(framing_composition as Record<string, unknown>).composition_rules = 'Frame the subject head-to-toe within a vertical canvas; maintain comfortable headroom and footroom; do not crop any part of the body; step back to capture the entire person if needed.'
     }
   } else {
     framing_composition.shot_type = framing_composition.shot_type || 'head-and-shoulders portrait, with ample headroom and negative space above their head, ensuring the top of their head is not cropped'
@@ -115,6 +158,7 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
   camera.settings = { aperture: 'f/2.8', shutter_speed: '1/200', iso: 200, white_balance: 'auto', focus: 'eye-AF' }
 
   rendering_intent.texture = 'retain fabric weave and hair strands'
+  rendering_intent.cleanliness = 'Do not include any interface overlays, labels, or text such as "BACKGROUND", "SUBJECT", or "LOGO" from the reference composites. The final image must look natural with no UI markings.'
 
   const structured: Record<string, unknown> = {}
   const hasKeys = (obj: unknown): boolean => typeof obj === 'object' && obj !== null && Object.keys(obj as Record<string, unknown>).length > 0
@@ -135,8 +179,9 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
     structured.notes = basePrompt
   }
 
-  const preface = 'Follow the JSON below to generate a professional headshot. Only use specified fields; otherwise use sensible defaults.'
-  return preface + '\n' + JSON.stringify(structured)
+  const preface = 'Follow the JSON below to generate a professional photo. Only use specified fields; otherwise use sensible defaults.'
+  // Append a lightweight package marker for debugging/trace without changing semantics
+  return preface + '\n' + JSON.stringify(structured) + '\n[PACKAGE: headshot1]'
 }
 
 export const headshot1: StylePackage = {
@@ -260,8 +305,9 @@ export const headshot1: StylePackage = {
         // Explicitly null means user-choice (explicitly saved as such)
         clothingColors = undefined
       } else if (rawClothingColors === undefined || !('clothingColors' in r)) {
-        // Missing field means legacy data - use defaults for backward compatibility
-        clothingColors = headshot1.defaultSettings.clothingColors
+        // Missing field: treat as user-choice to avoid unintentionally forcing defaults
+        // (prevents resetting UI to predefined when user left it as user-choice)
+        clothingColors = undefined
       } else {
         // Use the saved value
         clothingColors = rawClothingColors

@@ -9,6 +9,7 @@ interface ClothingColorSelectorProps {
   isPredefined?: boolean // If true, user can't change the settings
   isDisabled?: boolean // If true, controls are visually greyed and inactive
   className?: string
+  showHeader?: boolean
 }
 
 export default function ClothingColorSelector({
@@ -16,7 +17,8 @@ export default function ClothingColorSelector({
   onChange,
   isPredefined = false,
   isDisabled = false,
-  className = ''
+  className = '',
+  showHeader = false
 }: ClothingColorSelectorProps) {
   const t = useTranslations('customization.photoStyle.clothingColors')
 
@@ -32,22 +34,24 @@ export default function ClothingColorSelector({
   }
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            {t('title', { default: 'Clothing Colors' })}
-          </h3>
-          <p className="text-sm text-gray-600">
-            {t('subtitle', { default: 'Choose colors for clothing items' })}
-          </p>
+    <div className={`${className}`}>
+      {showHeader && (
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {t('title', { default: 'Clothing Colors' })}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {t('subtitle', { default: 'Choose colors for clothing items' })}
+            </p>
+          </div>
+          {isPredefined && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {t('predefined', { default: 'Predefined' })}
+            </span>
+          )}
         </div>
-        {isPredefined && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            {t('predefined', { default: 'Predefined' })}
-          </span>
-        )}
-      </div>
+      )}
 
       {/* Colors Section */}
       <div className={`space-y-3 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>

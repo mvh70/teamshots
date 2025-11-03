@@ -1,7 +1,7 @@
 'use client'
 
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from '@/i18n/routing'
-import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import GenerationCard from '../components/GenerationCard'
 import { useGenerations, useGenerationFilters } from '../hooks/useGenerations'
@@ -10,15 +10,18 @@ import { useCredits } from '@/contexts/CreditsContext'
 import { BRAND_CONFIG } from '@/config/brand'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { Toast } from '@/components/ui'
 
 export default function TeamGenerationsPage() {
   const tg = useTranslations('generations.team')
   const t = useTranslations('app.sidebar.generate')
+  const toastMessages = useTranslations('generations.toasts')
   const { data: session } = useSession()
-  const { credits: userCredits, loading: creditsLoading } = useCredits()
+  const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
   const currentUserId = session?.user?.id
   const currentUserName = session?.user?.name || ''
+  const [failureToast, setFailureToast] = useState<string | null>(null)
 
   // Fetch effective roles from API (respects pro subscription = team admin)
   useEffect(() => {
@@ -40,14 +43,35 @@ export default function TeamGenerationsPage() {
   const { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated } = useGenerationFilters()
   const { href: buyCreditsHref } = useBuyCreditsLink()
   const [teamView] = useState<'mine' | 'team'>('mine')
+  const handleGenerationFailed = useCallback(
+    ({ errorMessage }: { id: string; errorMessage?: string }) => {
+      if (errorMessage) {
+        console.warn('Team generation failed', errorMessage)
+      }
+      setFailureToast(toastMessages('generationFailed'))
+      void refetchCredits()
+    },
+    [toastMessages, refetchCredits]
+  )
+
   const { generated, teamUsers, pagination, loading, loadMore } = useGenerations(
     currentUserId,
     isTeamAdmin,
     currentUserName,
     'team', // scope
     teamView, // teamView
-    (isTeamAdmin && userFilter === 'team') ? selectedUserId : 'all'
+    (isTeamAdmin && userFilter === 'team') ? selectedUserId : 'all',
+    handleGenerationFailed
   )
+
+  useEffect(() => {
+    if (!failureToast) return
+
+    const timer = window.setTimeout(() => setFailureToast(null), 6000)
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [failureToast])
 
   const filteredGenerated = filterGenerated(generated)
   // Build photo style options dynamically from existing generations
@@ -213,6 +237,13 @@ export default function TeamGenerationsPage() {
                 <Link href="/app/generate/selfie?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
           </div>
         )}
+      {failureToast && (
+        <Toast
+          message={failureToast}
+          type="error"
+          onDismiss={() => setFailureToast(null)}
+        />
+      )}
     </div>
   )
 }

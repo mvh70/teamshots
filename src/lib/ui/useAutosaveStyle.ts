@@ -24,14 +24,17 @@ export function useAutosaveStyle(params: {
   const [status, setStatus] = useState<AutosaveStatus>("idle")
   const [contextId, setContextId] = useState<string | null>(initialContextId ?? null)
 
-  // Keep internal contextId in sync if a caller provides/changes it later (e.g., after load)
+  // Keep internal contextId in sync only when the caller-provided id changes.
+  // Depending on contextId creates a feedback loop with parents that mirror this value.
   useEffect(() => {
-    // Update contextId when initialContextId changes from undefined/null to a value
-    // Also allow updating from a value to a different value
-    if (initialContextId !== undefined && initialContextId !== contextId) {
+    if (initialContextId === undefined) return
+    // Avoid redundant state updates
+    if (initialContextId !== contextId) {
       setContextId(initialContextId)
     }
-  }, [initialContextId, contextId])
+  // We intentionally do not include `contextId` to avoid a feedback loop with parents mirroring this value.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialContextId])
 
   const payloadValue = useMemo(() => ({ settings, name: (name ?? '').trim() }), [settings, name])
 

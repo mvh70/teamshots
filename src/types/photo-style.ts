@@ -46,7 +46,16 @@ export interface StyleSettings {
 }
 
 export interface ExpressionSettings {
-  type: 'professional' | 'friendly' | 'serious' | 'confident' | 'user-choice'
+  type:
+    | 'professional'
+    | 'friendly'
+    | 'serious'
+    | 'confident'
+    | 'happy'
+    | 'sad'
+    | 'neutral'
+    | 'thoughtful'
+    | 'user-choice'
 }
 
 export interface LightingSettings {
@@ -158,6 +167,10 @@ export const EXPRESSION_OPTIONS = {
   friendly: 'Friendly',
   serious: 'Serious',
   confident: 'Confident',
+  happy: 'Happy',
+  sad: 'Sad',
+  neutral: 'Neutral',
+  thoughtful: 'Thoughtful',
   'user-choice': 'User Choice'
 } as const
 

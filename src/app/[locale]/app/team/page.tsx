@@ -11,6 +11,7 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import { useCredits } from '@/contexts/CreditsContext'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import StyleCard from '@/components/styles/StyleCard'
+import { usePlanInfo } from '@/hooks/usePlanInfo'
 
 interface TeamInvite {
   id: string
@@ -54,6 +55,7 @@ export default function TeamPage() {
   const { data: session } = useSession()
   const t = useTranslations('team')
   const { credits } = useCredits()
+  const { isFreePlan } = usePlanInfo()
   const [teamData, setTeamData] = useState<TeamData | null>(null)
   const [invites, setInvites] = useState<TeamInvite[]>([])
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -79,7 +81,6 @@ export default function TeamPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [allocatedCredits, setAllocatedCredits] = useState<number>(PRICING_CONFIG.team.defaultInviteCredits)
   const [creditsInputValue, setCreditsInputValue] = useState(PRICING_CONFIG.team.defaultInviteCredits.toString())
-  const [isFreePlan, setIsFreePlan] = useState(false)
   const [freePackageContext, setFreePackageContext] = useState<{ id: string; settings?: unknown; stylePreset?: string } | null>(null)
 
   useEffect(() => {
@@ -143,27 +144,22 @@ export default function TeamPage() {
     }
   }
 
-  // Check if user is on free plan and fetch free package context
+  // Fetch free package context for free plan users
   useEffect(() => {
     ;(async () => {
       if (!session?.user) return
       try {
-        const subRes = await jsonFetcher<{ subscription: { period?: 'free' | 'try_once' | 'monthly' | 'annual' | null } | null }>('/api/user/subscription')
-        const period = subRes?.subscription?.period ?? null
-        const free = period === 'free'
-        setIsFreePlan(free)
-        if (free) {
+        if (isFreePlan) {
           const freeData = await jsonFetcher<{ context: { id: string; settings?: unknown; stylePreset?: string } | null }>(
             '/api/styles/get?scope=freePackage'
           )
           setFreePackageContext(freeData.context || null)
         }
       } catch {
-        // If subscription fetch fails, default to not-free to avoid blocking paid users
-        setIsFreePlan(false)
+        // Silently fail - free package context fetch is optional
       }
     })()
-  }, [session?.user])
+  }, [session?.user, isFreePlan])
 
   const handleCreateTeam = async (formData: FormData) => {
     setLoading(true)

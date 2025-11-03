@@ -13,7 +13,7 @@ export function buildStructuredPromptFromStyle(style: Record<string, unknown>, b
   const sceneEnv = scene.environment as Record<string, unknown>
   const bgType = background?.type
   if (bgType === 'office') {
-    sceneEnv.location_type = 'a corporate office environment, the background should be fuzzy, like we take a potrait image and the background is blurred out.'
+    sceneEnv.location_type = 'a corporate office environment, the background should be fuzzy, so that the subject is central in the image and the background is blurred out.'
   } else if (bgType === 'neutral') {
     sceneEnv.location_type = 'a studio with a neutral background'
     const bgColor = background?.color

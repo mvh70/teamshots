@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import type { GenerationListItem } from '../components/GenerationCard'
 import { jsonFetcher } from '@/lib/fetcher'
 
@@ -10,7 +10,8 @@ export function useGenerations(
   currentUserName?: string,
   scope: 'personal' | 'team' = 'personal',
   teamView?: 'mine' | 'team',
-  selectedUserId: string = 'all'
+  selectedUserId: string = 'all',
+  onGenerationFailed?: (details: { id: string; errorMessage?: string }) => void
 ) {
   // Mock data; replace with real fetch later
   const [generated, setGenerated] = useState<GenerationListItem[]>([])
@@ -23,6 +24,8 @@ export function useGenerations(
     hasPrevPage: boolean
   } | null>(null)
   const [loading, setLoading] = useState(false)
+  const previousGenerationsRef = useRef<GenerationListItem[]>([])
+  const notifiedFailuresRef = useRef<Set<string>>(new Set())
 
   // Mock team users (current + teammate). Replace with real team members later
   const [teamUsers, setTeamUsers] = useState<{id:string; name:string}[]>([
@@ -84,13 +87,43 @@ export function useGenerations(
             personUserId: (g.person as Record<string, unknown>)?.userId as string,
             jobStatus: g.jobStatus as GenerationListItem['jobStatus'],
           })) as GenerationListItem[]
-          
           if (append) {
-            setGenerated(prev => [...prev, ...mapped])
+            setGenerated(prev => {
+              const merged = [...prev, ...mapped]
+              previousGenerationsRef.current = merged
+              return merged
+            })
           } else {
+            if (onGenerationFailed && previousGenerationsRef.current.length > 0) {
+              const previousProcessingIds = previousGenerationsRef.current
+                .filter(g => g.status === 'processing' || g.status === 'pending')
+                .map(g => g.id)
+              const currentIds = new Set(mapped.map(g => g.id))
+              const removedProcessingIds = previousProcessingIds.filter(id => !currentIds.has(id))
+
+              if (removedProcessingIds.length > 0) {
+                await Promise.all(
+                  removedProcessingIds
+                    .filter(id => !notifiedFailuresRef.current.has(id))
+                    .map(async (id) => {
+                      try {
+                        const detail = await jsonFetcher<{ status: string; errorMessage?: string }>(`/api/generations/${id}`)
+                        if (detail.status === 'failed') {
+                          notifiedFailuresRef.current.add(id)
+                          onGenerationFailed({ id, errorMessage: detail.errorMessage })
+                        }
+                      } catch {
+                        // Ignore fetch errors for removed generations
+                      }
+                    })
+                )
+              }
+            }
+
             setGenerated(mapped)
+            previousGenerationsRef.current = mapped
           }
-          
+
           if (data.pagination) {
             setPagination(data.pagination as {
               page: number
@@ -125,14 +158,45 @@ export function useGenerations(
             jobStatus: g.jobStatus as GenerationListItem['jobStatus'],
           })) as GenerationListItem[]
           if (append) {
-            setGenerated(prev => [...prev, ...mappedItems])
+            setGenerated(prev => {
+              const merged = [...prev, ...mappedItems]
+              previousGenerationsRef.current = merged
+              return merged
+            })
           } else {
+            if (onGenerationFailed && previousGenerationsRef.current.length > 0) {
+              const previousProcessingIds = previousGenerationsRef.current
+                .filter(g => g.status === 'processing' || g.status === 'pending')
+                .map(g => g.id)
+              const currentIds = new Set(mappedItems.map(g => g.id))
+              const removedProcessingIds = previousProcessingIds.filter(id => !currentIds.has(id))
+
+              if (removedProcessingIds.length > 0) {
+                await Promise.all(
+                  removedProcessingIds
+                    .filter(id => !notifiedFailuresRef.current.has(id))
+                    .map(async (id) => {
+                      try {
+                        const detail = await jsonFetcher<{ status: string; errorMessage?: string }>(`/api/generations/${id}`)
+                        if (detail.status === 'failed') {
+                          notifiedFailuresRef.current.add(id)
+                          onGenerationFailed({ id, errorMessage: detail.errorMessage })
+                        }
+                      } catch {
+                        // Ignore fetch errors for removed generations
+                      }
+                    })
+                )
+              }
+            }
+
             setGenerated(mappedItems)
+            previousGenerationsRef.current = mappedItems
           }
         }
     } catch {}
     setLoading(false)
-  }, [effectiveScope, effectiveTeamView, isTeamAdmin, selectedUserId])
+  }, [effectiveScope, effectiveTeamView, isTeamAdmin, selectedUserId, onGenerationFailed])
 
   useEffect(() => {
     loadGenerations(1, false)

@@ -19,7 +19,7 @@ const OFFICE_BG: BackgroundDefinition = {
   id: 'office',
   label: 'Office Environment',
   generatePrompt: (settings) => ({
-    location_type: 'a corporate office environment, the background should be fuzzy, like we take a potrait image and the background is blurred out.',
+    location_type: 'a corporate office environment, the background should be fuzzy, so that the subject is central in the image and the background is blurred out.',
     description: settings.prompt
   })
 }

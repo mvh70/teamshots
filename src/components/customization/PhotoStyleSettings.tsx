@@ -6,7 +6,6 @@ import {
   PhotoIcon, 
   SwatchIcon, 
   UserIcon, 
-  PaintBrushIcon, 
   FaceSmileIcon, 
   LightBulbIcon,
   CameraIcon
@@ -21,6 +20,7 @@ import ClothingStyleSelector from './ClothingStyleSelector'
 import ClothingColorSelector from './ClothingColorSelector'
 import ShotTypeSelector from './ShotTypeSelector'
 import BrandingSelector from './BrandingSelector'
+import ExpressionSelector from './ExpressionSelector'
 import { getPackageConfig } from '@/domain/style/packages'
 
 interface PhotoStyleSettingsProps {
@@ -45,7 +45,7 @@ const PHOTO_STYLE_CATEGORIES: CategoryConfig[] = [
     key: 'background',
     label: 'Background',
     icon: PhotoIcon,
-    description: 'Choose background style and settings'
+    description: 'Choose background style'
   },
   {
     key: 'branding',
@@ -54,10 +54,10 @@ const PHOTO_STYLE_CATEGORIES: CategoryConfig[] = [
     description: 'Logo and branding options'
   },
   {
-    key: 'style',
-    label: 'Photo Style',
-    icon: PaintBrushIcon,
-    description: 'Overall photo style preset'
+    key: 'shotType',
+    label: 'Shot Type',
+    icon: CameraIcon,
+    description: 'Photo framing'
   }
 ]
 
@@ -73,12 +73,6 @@ const USER_STYLE_CATEGORIES: CategoryConfig[] = [
     label: 'Clothing Colors',
     icon: SwatchIcon,
     description: 'Colors for clothing items'
-  },
-  {
-    key: 'shotType',
-    label: 'Shot Type',
-    icon: CameraIcon,
-    description: 'Photo framing and composition'
   },
   {
     key: 'expression',
@@ -344,8 +338,16 @@ export default function PhotoStyleSettings({
             />
           )}
           
+          {category.key === 'expression' && (
+            <ExpressionSelector
+              value={value.expression || { type: 'user-choice' }}
+              onChange={(settings) => handleCategorySettingsChange('expression', settings)}
+              isDisabled={readonlyPredefined && isPredefined}
+            />
+          )}
+          
           {/* Placeholder for other categories */}
-          {!['background', 'clothing', 'clothingColors', 'shotType', 'branding'].includes(category.key) && (
+          {!['background', 'clothing', 'clothingColors', 'shotType', 'branding', 'expression'].includes(category.key) && (
             <div className={`text-center py-8 text-gray-500 ${isUserChoice ? 'pointer-events-none' : ''}`}>
               <p className="text-sm">
                 {t('comingSoon', { default: 'Settings for this category coming soon' })}

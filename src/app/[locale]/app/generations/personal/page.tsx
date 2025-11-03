@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
 import GenerationCard from '../components/GenerationCard'
@@ -9,24 +10,48 @@ import { useCredits } from '@/contexts/CreditsContext'
 import { BRAND_CONFIG } from '@/config/brand'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { Toast } from '@/components/ui'
 
 export default function PersonalGenerationsPage() {
   const tg = useTranslations('generations.personal')
   const t = useTranslations('app.sidebar.generate')
+  const toastMessages = useTranslations('generations.toasts')
   const { data: session } = useSession()
-  const { credits: userCredits, loading: creditsLoading } = useCredits()
+  const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
   const currentUserId = session?.user?.id
   const currentUserName = session?.user?.name || ''
+  const [failureToast, setFailureToast] = useState<string | null>(null)
   const { timeframe, context, setTimeframe, setContext, filterGenerated } = useGenerationFilters()
   const { href: buyCreditsHref } = useBuyCreditsLink()
+  const handleGenerationFailed = useCallback(
+    ({ errorMessage }: { id: string; errorMessage?: string }) => {
+      if (errorMessage) {
+        console.warn('Generation failed', errorMessage)
+      }
+      setFailureToast(toastMessages('generationFailed'))
+      void refetchCredits()
+    },
+    [toastMessages, refetchCredits]
+  )
+
   const { generated, pagination, loading, loadMore } = useGenerations(
     currentUserId,
     false, // isTeamAdmin - not needed for personal
     currentUserName,
     'personal', // scope
     undefined, // teamView - not needed for personal
-    'all' // selectedUserId - not needed for personal
+    'all', // selectedUserId - not needed for personal
+    handleGenerationFailed
   )
+
+  useEffect(() => {
+    if (!failureToast) return
+
+    const timer = window.setTimeout(() => setFailureToast(null), 6000)
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [failureToast])
 
   const filteredGenerated = filterGenerated(generated)
   // Build photo style options dynamically from existing generations
@@ -136,6 +161,13 @@ export default function PersonalGenerationsPage() {
                 <Link href="/app/generate/selfie?type=personal" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
           </div>
         )}
+      {failureToast && (
+        <Toast
+          message={failureToast}
+          type="error"
+          onDismiss={() => setFailureToast(null)}
+        />
+      )}
     </div>
   )
 }

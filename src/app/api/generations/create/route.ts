@@ -20,6 +20,24 @@ import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { getPackageConfig } from '@/domain/style/packages'
 
+const cloneDeep = <T>(value: T): T => JSON.parse(JSON.stringify(value))
+
+// Generic deep merge that preserves user-choice nulls and ignores undefined
+function deepMerge(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = Array.isArray(base) ? [...base] as unknown as Record<string, unknown> : { ...base }
+  for (const [k, v] of Object.entries(override)) {
+    if (v === undefined) continue
+    if (v === null) { out[k] = null; continue }
+    const bv = out[k]
+    if (bv && typeof bv === 'object' && !Array.isArray(bv) && typeof v === 'object' && !Array.isArray(v)) {
+      out[k] = deepMerge(bv as Record<string, unknown>, v as Record<string, unknown>)
+    } else {
+      out[k] = v
+    }
+  }
+  return out
+}
+
 // Request validation schema
 const createGenerationSchema = z.object({
   selfieId: z.string().optional(), // Database ID for selfie
@@ -31,6 +49,8 @@ const createGenerationSchema = z.object({
     background: z.any().optional(),
     branding: z.any().optional(),
     clothing: z.any().optional(),
+    clothingColors: z.any().optional(),
+    shotType: z.any().optional(),
     expression: z.any().optional(),
     lighting: z.any().optional(),
   }).optional(),
@@ -416,8 +436,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate final style settings before creating generation
-    // Start with styleSettings from request, fallback to contextStyleSettings
-    let finalStyleSettings: Record<string, unknown> = (styleSettings || contextStyleSettings || {}) as Record<string, unknown>
+    const baseStyleSettings: Record<string, unknown> = contextStyleSettings && typeof contextStyleSettings === 'object' && !Array.isArray(contextStyleSettings)
+      ? cloneDeep(contextStyleSettings as Record<string, unknown>)
+      : {}
+
+    const requestStyleSettings: Record<string, unknown> | null = styleSettings && typeof styleSettings === 'object' && !Array.isArray(styleSettings)
+      ? (styleSettings as Record<string, unknown>)
+      : null
+
+    let finalStyleSettings: Record<string, unknown> = requestStyleSettings
+      ? deepMerge(baseStyleSettings, requestStyleSettings)
+      : baseStyleSettings
+
+    // Normalize potential UI variants before serialization
+    try {
+      const clothing = (finalStyleSettings['clothing'] as { colors?: unknown } | undefined)
+      const clothingColors = finalStyleSettings['clothingColors'] as Record<string, unknown> | null | undefined
+      // Some UIs may send colors under clothing.colors; lift to clothingColors if present
+      if (!clothingColors && clothing && clothing.colors && typeof clothing.colors === 'object') {
+        finalStyleSettings['clothingColors'] = { colors: clothing.colors as Record<string, unknown> }
+        // keep clothing.colors as-is for backward compatibility; do not delete
+      }
+    } catch {}
     
 
     // Enforce free package style for free-plan users or when team admin is on free plan

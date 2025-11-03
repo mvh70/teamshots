@@ -12,7 +12,7 @@ export type GenerationListItem = {
   acceptedKey?: string
   selfieKey?: string
   generatedKey?: string
-  status: 'processing' | 'completed' | 'failed'
+  status: 'pending' | 'processing' | 'completed' | 'failed'
   createdAt: string
   contextName?: string
   contextId?: string
@@ -125,7 +125,7 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
   }
   
   // Check if generation is incomplete
-  const isIncomplete = item.status === 'processing' && !item.generatedKey
+  const isIncomplete = (item.status === 'processing' || item.status === 'pending') && !item.generatedKey
 
   const updateFromEvent = (clientX: number) => {
     const el = containerRef.current

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { getPackageConfig } from '@/domain/style/packages'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,14 +16,21 @@ export async function GET(request: NextRequest) {
   // If a specific contextId is provided, return that context directly (ownership checks could be added here)
   if (contextIdParam) {
     const ctx = await prisma.context.findUnique({ where: { id: contextIdParam }, select: { id: true, settings: true, stylePreset: true } })
-    return NextResponse.json({ context: ctx ?? null, packageId: (ctx?.settings as Record<string, unknown> | null)?.['packageId'] ?? 'headshot1' })
+    if (!ctx) return NextResponse.json({ context: null, packageId: 'headshot1' })
+    const pkg = getPackageConfig((ctx.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1')
+    const ui = pkg.persistenceAdapter.deserialize((ctx.settings as Record<string, unknown>) || {})
+    return NextResponse.json({ context: { ...ctx, settings: ui }, packageId: pkg.id })
   }
 
   if (scope === 'freePackage') {
     const setting = await prisma.appSetting.findUnique({ where: { key: 'freePackageStyleId' } })
     if (!setting?.value) return NextResponse.json({ context: null, packageId: 'freepackage' })
-    const context = await prisma.context.findUnique({ where: { id: setting.value }, select: { id: true, settings: true, stylePreset: true } })
-    return NextResponse.json({ context, packageId: (context?.settings as Record<string, unknown> | null)?.['packageId'] ?? 'freepackage' })
+    const ctx = await prisma.context.findUnique({ where: { id: setting.value }, select: { id: true, settings: true, stylePreset: true } })
+    if (!ctx) return NextResponse.json({ context: null, packageId: 'freepackage' })
+    const pkg = getPackageConfig('freepackage')
+    const ui = pkg.persistenceAdapter.deserialize((ctx.settings as Record<string, unknown>) || {})
+    const context = { ...ctx, settings: ui }
+    return NextResponse.json({ context, packageId: 'freepackage' })
   }
 
   if (scope === 'individual') {
@@ -32,7 +40,10 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: 'desc' },
       select: { id: true, settings: true, stylePreset: true }
     })
-    return NextResponse.json({ context: ctx ?? null, packageId: (ctx?.settings as Record<string, unknown> | null)?.['packageId'] ?? 'headshot1' })
+    if (!ctx) return NextResponse.json({ context: null, packageId: 'headshot1' })
+    const pkg = getPackageConfig((ctx.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1')
+    const ui = pkg.persistenceAdapter.deserialize((ctx.settings as Record<string, unknown>) || {})
+    return NextResponse.json({ context: { ...ctx, settings: ui }, packageId: pkg.id })
   }
 
   if (scope === 'pro') {
@@ -51,7 +62,10 @@ export async function GET(request: NextRequest) {
         select: { id: true, settings: true, stylePreset: true }
       })
     }
-    return NextResponse.json({ context: ctx ?? null, packageId: (ctx?.settings as Record<string, unknown> | null)?.['packageId'] ?? 'headshot1' })
+    if (!ctx) return NextResponse.json({ context: null, packageId: 'headshot1' })
+    const pkg = getPackageConfig((ctx.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1')
+    const ui = pkg.persistenceAdapter.deserialize((ctx.settings as Record<string, unknown>) || {})
+    return NextResponse.json({ context: { ...ctx, settings: ui }, packageId: pkg.id })
   }
 
   // Unknown scope

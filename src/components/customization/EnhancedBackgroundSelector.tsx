@@ -13,6 +13,7 @@ interface EnhancedBackgroundSelectorProps {
   isDisabled?: boolean // If true, controls are visually greyed and inactive
   className?: string
   availableBackgrounds?: string[] // Optional: filter backgrounds by package
+  showHeader?: boolean
 }
 
 const BACKGROUND_TYPES = [
@@ -54,7 +55,8 @@ export default function EnhancedBackgroundSelector({
   isPredefined = false,
   isDisabled = false,
   className = '',
-  availableBackgrounds
+  availableBackgrounds,
+  showHeader = false
 }: EnhancedBackgroundSelectorProps) {
   const t = useTranslations('customization.photoStyle.background')
   const [showColorPicker, setShowColorPicker] = useState(false)
@@ -171,22 +173,24 @@ export default function EnhancedBackgroundSelector({
 
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            {t('title', { default: 'Background' })}
-          </h3>
-          <p className="text-sm text-gray-600">
-            {t('subtitle', { default: 'Choose your background style' })}
-          </p>
+    <div className={`${className}`}>
+      {showHeader && (
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {t('title', { default: 'Background' })}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {t('subtitle', { default: 'Choose your background style' })}
+            </p>
+          </div>
+          {isPredefined && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {t('predefined', { default: 'Predefined' })}
+            </span>
+          )}
         </div>
-        {isPredefined && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            {t('predefined', { default: 'Predefined' })}
-          </span>
-        )}
-      </div>
+      )}
 
       {/* Background Type Selection */}
       <div className="space-y-3 mb-6">

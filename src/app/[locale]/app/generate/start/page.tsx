@@ -19,6 +19,7 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import { jsonFetcher } from '@/lib/fetcher'
 import { loadStyle, loadStyleByContextId } from '@/domain/style/service'
 import { getPackageConfig } from '@/domain/style/packages'
+import { usePlanInfo } from '@/hooks/usePlanInfo'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
@@ -27,6 +28,7 @@ export default function StartGenerationPage() {
   const searchParams = useSearchParams()
   const { data: session } = useSession()
   const t = useTranslations('app.sidebar.generate')
+  const { isFreePlan } = usePlanInfo()
   const keyFromQuery = useMemo(() => searchParams.get('key') || '', [searchParams])
   const typeFromQuery = useMemo(() => searchParams.get('type') as 'personal' | 'team' | null, [searchParams])
   const [key, setKey] = useState<string>('')
@@ -58,7 +60,6 @@ export default function StartGenerationPage() {
   const [contextLoaded, setContextLoaded] = useState(false)
   const [photoStyleSettings, setPhotoStyleSettings] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
-  const [isFreePlan, setIsFreePlan] = useState(false)
   const [selectedPackageId, setSelectedPackageId] = useState<string>('')
 
   useEffect(() => {
@@ -101,24 +102,6 @@ export default function StartGenerationPage() {
     fetchData()
   }, [session?.user?.id])
 
-  // Check if user is on free plan (based on planPeriod)
-  useEffect(() => {
-    const checkFreePlan = async () => {
-      if (!session?.user?.id) return
-      
-      try {
-        const subRes = await jsonFetcher<{ subscription: { period?: 'free' | 'try_once' | 'monthly' | 'annual' | null } | null }>('/api/user/subscription')
-        const period = subRes?.subscription?.period ?? null
-        const free = period === 'free'
-        setIsFreePlan(free)
-      } catch (err) {
-        console.error('Failed to check subscription:', err)
-        setIsFreePlan(false)
-      }
-    }
-
-    checkFreePlan()
-  }, [session?.user?.id])
 
   // Fetch contexts when generation type is determined
   useEffect(() => {
@@ -270,6 +253,10 @@ export default function StartGenerationPage() {
   
   // Check if we have all required data
   const canGenerate = hasEnoughCredits && selfieId && generationType
+
+  // Resolve selected photo style label for display
+  const selectedPackage = getPackageConfig(selectedPackageId || PRICING_CONFIG.defaultSignupPackage)
+  const selectedPhotoStyleLabel = selectedPackage.label
   
   // Only show generation type selector if user has both options available
   const shouldShowGenerationTypeSelector = hasTeamAccess && hasIndividualAccess
@@ -405,10 +392,26 @@ export default function StartGenerationPage() {
                   <p className="text-sm text-gray-600 mt-1">
                     Generation type: <span className="font-medium text-gray-800">{generationType}</span>
                   </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Photo style: <span className="font-medium text-gray-800">{selectedPhotoStyleLabel}</span>
+                  </p>
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} credits</div>
                   <div className="text-sm text-gray-500">Cost per generation</div>
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={onProceed}
+                      disabled={!canGenerate}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        canGenerate
+                          ? 'bg-brand-cta text-white hover:bg-brand-cta-hover'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {t('generatePhoto')}
+                    </button>
+                  </div>
                 {!hasEnoughCredits && (
                   <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
                     <div className="flex items-center mb-2">
@@ -455,16 +458,19 @@ export default function StartGenerationPage() {
                 <div>
                   <select
                     value={activeContext?.id || 'freestyle'}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       if (e.target.value === 'freestyle') {
                         setActiveContext(null)
                         setPhotoStyleSettings(DEFAULT_PHOTO_STYLE_SETTINGS)
                       } else {
                         const selectedContext = availableContexts.find(ctx => ctx.id === e.target.value)
                         if (selectedContext) {
+                          // Fetch and deserialize the context properly using loadStyleByContextId
+                          const { ui, pkg } = await loadStyleByContextId(selectedContext.id)
                           setActiveContext(selectedContext)
-                          setPhotoStyleSettings(selectedContext.settings || DEFAULT_PHOTO_STYLE_SETTINGS)
-                          setOriginalContextSettings(selectedContext.settings)
+                          setPhotoStyleSettings(ui)
+                          setOriginalContextSettings(ui)
+                          setSelectedPackageId(pkg.id)
                         }
                       }
                     }}
@@ -544,24 +550,7 @@ export default function StartGenerationPage() {
               </div>
             )}
 
-            {/* Generate Button */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="flex justify-end">
-                <button
-                  onClick={onProceed}
-                  disabled={!canGenerate}
-                  className={`px-6 py-2 rounded-md font-medium transition-colors ${
-                    canGenerate
-                      ? 'bg-brand-cta text-white hover:bg-brand-cta-hover'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  {!selfieId ? 'Processing upload...' : 
-                   !hasEnoughCredits ? t('insufficientCredits') : 
-                   t('generatePhoto')}
-                </button>
-              </div>
-            </div>
+            {/* Generate Button moved to top summary under credits */}
           </div>
         </>
       )}

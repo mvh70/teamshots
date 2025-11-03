@@ -1,43 +1,42 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { CameraIcon } from '@heroicons/react/24/outline'
-import { ShotTypeSettings } from '@/types/photo-style'
+import { ExpressionSettings } from '@/types/photo-style'
 
-interface ShotTypeSelectorProps {
-  value: ShotTypeSettings
-  onChange: (settings: ShotTypeSettings) => void
-  isPredefined?: boolean // If true, user can't change the settings
-  isDisabled?: boolean // If true, controls are visually greyed and inactive
+interface ExpressionSelectorProps {
+  value: ExpressionSettings
+  onChange: (settings: ExpressionSettings) => void
+  isPredefined?: boolean
+  isDisabled?: boolean
   className?: string
   showHeader?: boolean
 }
 
-const SHOT_TYPES = [
-  { value: 'headshot', label: 'Headshot' },
-  { value: 'midchest', label: 'Mid-Chest Shot' },
-  { value: 'full-body', label: 'Full Body' }
+const EXPRESSIONS = [
+  { value: 'happy', label: 'Happy', emoji: '😀' },
+  { value: 'serious', label: 'Serious', emoji: '😐' },
+  { value: 'sad', label: 'Sad', emoji: '😔' },
+  { value: 'neutral', label: 'Neutral', emoji: '😶' },
+  { value: 'confident', label: 'Confident', emoji: '😎' }
 ] as const
 
-export default function ShotTypeSelector({
+export default function ExpressionSelector({
   value,
   onChange,
   isPredefined = false,
   isDisabled = false,
   className = '',
   showHeader = false
-}: ShotTypeSelectorProps) {
-  const t = useTranslations('customization.photoStyle.shotType')
+}: ExpressionSelectorProps) {
+  const t = useTranslations('customization.photoStyle.expression')
 
-  const handleShotTypeChange = (shotType: ShotTypeSettings['type'], event?: React.MouseEvent) => {
+  const handleChange = (expr: ExpressionSettings['type'], event?: React.MouseEvent) => {
     if (event) {
       event.preventDefault()
       event.stopPropagation()
     }
-    
     if (isPredefined) return
-    
-    onChange({ type: shotType })
+    onChange({ type: expr })
   }
 
   return (
@@ -46,10 +45,10 @@ export default function ShotTypeSelector({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
-              {t('title', { default: 'Shot Type' })}
+              {t('title', { default: 'Expression' })}
             </h3>
             <p className="text-sm text-gray-600">
-              {t('subtitle', { default: 'Choose the framing for your photo' })}
+              {t('subtitle', { default: 'Choose a facial expression' })}
             </p>
           </div>
           {isPredefined && (
@@ -60,16 +59,14 @@ export default function ShotTypeSelector({
         </div>
       )}
 
-      {/* Shot Type Selection */}
       <div className={`space-y-3 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
-        {SHOT_TYPES.map((shotType) => {
-          const isSelected = value.type === shotType.value
-          
+        {EXPRESSIONS.map((expr) => {
+          const isSelected = value.type === expr.value
           return (
             <button
               type="button"
-              key={shotType.value}
-              onClick={(e) => !(isPredefined || isDisabled) && handleShotTypeChange(shotType.value as ShotTypeSettings['type'], e)}
+              key={expr.value}
+              onClick={(e) => !(isPredefined || isDisabled) && handleChange(expr.value as ExpressionSettings['type'], e)}
               disabled={isPredefined || isDisabled}
               className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                 isSelected
@@ -77,11 +74,11 @@ export default function ShotTypeSelector({
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
               } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
             >
-              <CameraIcon className="h-5 w-5 flex-shrink-0" />
-              <span className="text-sm font-medium">{shotType.label}</span>
-              {isSelected && (
-                <div className="ml-auto w-2 h-2 bg-brand-primary rounded-full"></div>
-              )}
+              <span className="text-lg leading-none" aria-hidden>
+                {expr.emoji}
+              </span>
+              <span className="text-sm font-medium">{expr.label}</span>
+              {isSelected && <div className="ml-auto w-2 h-2 bg-brand-primary rounded-full"></div>}
             </button>
           )
         })}
@@ -89,4 +86,5 @@ export default function ShotTypeSelector({
     </div>
   )
 }
+
 

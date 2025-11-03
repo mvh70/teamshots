@@ -846,6 +846,9 @@
       "you": "Generado por ti",
       "prefix": "Generado por",
       "name": "Generado por {name}"
+    },
+    "toasts": {
+      "generationFailed": "No pudimos terminar esa foto. Tus créditos volvieron a tu saldo."
     }
   },
   "selfies": {
@@ -1117,7 +1120,7 @@
       "categories": {
         "background": {
           "title": "Fondo",
-          "description": "Elige el estilo y configuración del fondo"
+          "description": "Elige el estilo del fondo"
         },
         "branding": {
           "title": "Marca",
@@ -1224,6 +1227,11 @@
       "shotType": {
         "title": "Tipo de Toma",
         "subtitle": "Elige el encuadre para tu foto",
+        "predefined": "Predefinido"
+      },
+      "expression": {
+        "title": "Expresión",
+        "subtitle": "Elige una expresión facial",
         "predefined": "Predefinido"
       }
     }

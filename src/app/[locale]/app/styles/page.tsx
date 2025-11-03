@@ -9,6 +9,7 @@ import StyleCard from '@/components/styles/StyleCard'
 import StyleForm from '@/components/styles/StyleForm'
 import Panel from '@/components/common/Panel'
 import { PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
+import { usePlanInfo } from '@/hooks/usePlanInfo'
 
 interface Context {
   id: string
@@ -31,6 +32,7 @@ interface ContextsData {
 
 export default function ContextsPage() {
   const t = useTranslations('contexts')
+  const { isFreePlan } = usePlanInfo()
   const [contextsData, setContextsData] = useState<ContextsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +40,6 @@ export default function ContextsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingContext, setEditingContext] = useState<Context | null>(null)
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
-  const [isFreePlan, setIsFreePlan] = useState(false)
   const [freePackageContext, setFreePackageContext] = useState<{ id: string; settings?: Context['settings']; stylePreset?: string } | null>(null)
 
 
@@ -60,22 +61,17 @@ export default function ContextsPage() {
     fetchUserRole()
     ;(async () => {
       try {
-        const subRes = await jsonFetcher<{ subscription: { period?: 'free' | 'try_once' | 'monthly' | 'annual' | null } | null }>('/api/user/subscription')
-        const period = subRes?.subscription?.period ?? null
-        const free = period === 'free'
-        setIsFreePlan(free)
-        if (free) {
+        if (isFreePlan) {
           const freeData = await jsonFetcher<{ context: { id: string; settings?: Context['settings']; stylePreset?: string } | null }>(
             '/api/styles/get?scope=freePackage'
           )
           setFreePackageContext(freeData.context || null)
         }
       } catch {
-        // If subscription fetch fails, default to not-free to avoid blocking paid users
-        setIsFreePlan(false)
+        // Silently fail - free package context fetch is optional
       }
     })()
-  }, [fetchContexts])
+  }, [fetchContexts, isFreePlan])
 
   const fetchUserRole = async () => {
     try {
@@ -203,7 +199,7 @@ export default function ContextsPage() {
       {isFreePlan ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <FreePlanBanner variant="generic" className="col-span-1 md:col-span-2 lg:col-span-3" />
-          <div className="rounded-lg border-2 p-6 border-green-500 bg-green-50">
+          <div className="rounded-lg border-2 p-6 border-green-500 bg-white">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-900">Free Package Style</h3>
@@ -238,7 +234,7 @@ export default function ContextsPage() {
             key={context.id}
             className={`rounded-lg border-2 p-6 ${
               contextsData.activeContext?.id === context.id
-                ? 'border-green-500 bg-green-50'
+                ? 'border-green-500 bg-white'
                 : 'border-gray-200 bg-white'
             }`}
           >
