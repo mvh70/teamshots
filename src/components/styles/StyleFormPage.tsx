@@ -25,6 +25,7 @@ export default function StyleFormPage({ mode, contextType, scope, backUrl, title
         contextType={contextType}
         backUrl={backUrl}
         scope={scope}
+        showButtons={contextType !== 'personal'}
       />
     </div>
   )
