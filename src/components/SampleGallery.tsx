@@ -236,14 +236,6 @@ export default function SampleGallery() {
                       </p>
                     </div>
                   )}
-
-                  {/* Click to expand */}
-                  <button
-                    onClick={() => openModal(photo)}
-                    className="absolute bottom-4 right-4 bg-white text-gray-900 px-3 py-1.5 rounded-lg text-sm font-medium shadow-md hover:shadow-lg transition-shadow"
-                  >
-                    {t('viewComparison')}
-                  </button>
                 </div>
               </div>
             ))}
