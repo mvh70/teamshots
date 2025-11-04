@@ -66,10 +66,10 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
       subjectWardrobe.accessories = clothing.accessories
     }
     // Handle colors from separate clothingColors setting
-    const clothingColors = style?.clothingColors as Record<string, unknown> | undefined
-    if (clothingColors) {
+    const clothingColors = style?.clothingColors as { type?: string; colors?: { topBase?: string; topCover?: string; bottom?: string; shoes?: string } } | undefined
+    if (clothingColors && clothingColors.type !== 'user-choice') {
       const colorParts = []
-      const colors = clothingColors.colors as { topBase?: string; topCover?: string; bottom?: string; shoes?: string } | undefined
+      const colors = clothingColors.colors
       const includeTopCoverColor = Boolean(colors?.topCover) && !NO_TOP_COVER_DETAILS.has(clothingDetailsValue)
       if (includeTopCoverColor) colorParts.push(`top cover: ${colors?.topCover} color`)
       if (colors?.topBase) colorParts.push(`base layer: ${colors.topBase} color`)
@@ -103,8 +103,8 @@ function localBuild(style: Record<string, unknown>, basePrompt?: string): string
 
   // const lightingStyle = style?.lighting as Record<string, unknown> | undefined
   // Clothing colors handling - incorporate into subject wardrobe palette
-  const clothingColors = style?.clothingColors as { colors?: { topBase?: string; topCover?: string; bottom?: string; shoes?: string } } | undefined
-  if (clothingColors?.colors) {
+  const clothingColors = style?.clothingColors as { type?: string; colors?: { topBase?: string; topCover?: string; bottom?: string; shoes?: string } } | undefined
+  if (clothingColors && clothingColors.type !== 'user-choice' && clothingColors.colors) {
     const colors = clothingColors.colors
     const palette: string[] = []
     const includeTopCoverColor = Boolean(colors.topCover) && !NO_TOP_COVER_DETAILS.has(clothingDetailsValue)
@@ -195,7 +195,7 @@ export const headshot1: StylePackage = {
     background: { type: 'neutral', color: '#f2f2f2' },
     branding: { type: 'exclude' },
     clothing: { style: 'business', details: 'formal' },
-    clothingColors: { colors: { topBase: 'white', topCover: 'navy', bottom: 'gray' } },
+    clothingColors: { type: 'predefined', colors: { topBase: 'white', topCover: 'navy', bottom: 'gray' } },
     shotType: { type: 'headshot' },
     style: { type: 'preset', preset: 'corporate' },
     expression: { type: 'professional' }
@@ -223,9 +223,10 @@ export const headshot1: StylePackage = {
       })(),
       clothingColors: (() => {
         const cc = settings.clothingColors
-        if (!cc) return d.clothingColors
+        if (!cc || cc.type === 'user-choice') return d.clothingColors
         const dc = d.clothingColors?.colors || {}
         return {
+          type: 'predefined',
           colors: {
             topBase: cc.colors?.topBase || dc.topBase,
             topCover: cc.colors?.topCover || dc.topCover,
@@ -261,8 +262,8 @@ export const headshot1: StylePackage = {
       background: ui.background,
       branding: ui.branding,
       clothing: ui.clothing,
-      // Explicitly save null for undefined (user-choice) so it can be restored
-      clothingColors: ui.clothingColors === undefined ? null : ui.clothingColors,
+      // Save as-is, type field now handles user-choice state
+      clothingColors: ui.clothingColors || { type: 'user-choice' },
       shotType: ui.shotType,
       style: ui.style,
       expression: ui.expression
@@ -296,20 +297,22 @@ export const headshot1: StylePackage = {
         ? { type: brandingType, logoKey: rb.logoKey, position: rb.position }
         : { type: 'user-choice' }
 
-      // Clothing colors handling - preserve undefined (user-choice) if it was null
-      // null is used to explicitly mark user-choice (undefined gets converted to null in JSON)
-      // If field is missing entirely, use defaults for backward compatibility
+      // Clothing colors handling - now uses type field like other categories
       const rawClothingColors = r.clothingColors as PhotoStyleSettings['clothingColors'] | null | undefined
       let clothingColors: PhotoStyleSettings['clothingColors']
-      if (rawClothingColors === null) {
-        // Explicitly null means user-choice (explicitly saved as such)
-        clothingColors = undefined
-      } else if (rawClothingColors === undefined || !('clothingColors' in r)) {
-        // Missing field: treat as user-choice to avoid unintentionally forcing defaults
-        // (prevents resetting UI to predefined when user left it as user-choice)
-        clothingColors = undefined
+      if (rawClothingColors === null || rawClothingColors === undefined || !('clothingColors' in r)) {
+        // Missing or null: treat as user-choice for backward compatibility
+        clothingColors = { type: 'user-choice' }
+      } else if (rawClothingColors.type === 'user-choice') {
+        // Explicitly user-choice
+        clothingColors = { type: 'user-choice' }
+      } else if (!rawClothingColors.type) {
+        // Legacy format without type field - assume predefined if colors exist
+        clothingColors = {
+          type: 'predefined',
+          colors: rawClothingColors.colors
+        }
       } else {
-        // Use the saved value
         clothingColors = rawClothingColors
       }
 

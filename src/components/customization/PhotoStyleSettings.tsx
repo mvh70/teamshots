@@ -130,7 +130,7 @@ export default function PhotoStyleSettings({
             newSettings.clothing = { style: 'business' }
             break
           case 'clothingColors':
-            newSettings.clothingColors = pkg.defaultSettings.clothingColors || { colors: {} }
+            newSettings.clothingColors = { type: 'predefined', colors: { topCover: 'navy', topBase: 'white', bottom: 'gray' } }
             break
           case 'shotType':
             newSettings.shotType = { type: 'headshot' }
@@ -139,7 +139,7 @@ export default function PhotoStyleSettings({
             newSettings.style = { type: 'preset', preset: 'corporate' }
             break
           case 'expression':
-            newSettings.expression = { type: 'professional' }
+            newSettings.expression = { type: 'neutral' }
             break
           case 'lighting':
             newSettings.lighting = { type: 'natural' }
@@ -158,7 +158,7 @@ export default function PhotoStyleSettings({
             newSettings.clothing = { style: 'user-choice' }
             break
           case 'clothingColors':
-            newSettings.clothingColors = undefined
+            newSettings.clothingColors = { type: 'user-choice' }
             break
           case 'shotType':
             newSettings.shotType = { type: 'user-choice' }
@@ -199,9 +199,6 @@ export default function PhotoStyleSettings({
       if (category === 'clothing') {
         return originalSettings && (originalSettings as { style?: string }).style !== 'user-choice'
       }
-      if (category === 'clothingColors') {
-        return originalSettings !== undefined
-      }
       return originalSettings && (originalSettings as { type?: string }).type !== 'user-choice'
     }
     
@@ -210,18 +207,11 @@ export default function PhotoStyleSettings({
     if (category === 'clothing') {
       return categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
     }
-    if (category === 'clothingColors') {
-      return categorySettings !== undefined
-    }
     return categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
   }
 
   const getCategoryStatus = (category: CategoryType) => {
     const categorySettings = value[category]
-    if (category === 'clothingColors') {
-      // clothingColors is undefined for user-choice, defined for predefined
-      return categorySettings ? 'predefined' : 'user-choice'
-    }
     if (!categorySettings) return 'not-set'
     if (category === 'clothing') {
       if ((categorySettings as { style?: string }).style === 'user-choice') return 'user-choice'
@@ -316,7 +306,7 @@ export default function PhotoStyleSettings({
 
           {category.key === 'clothingColors' && (
             <ClothingColorSelector
-              value={value.clothingColors || { colors: {} }}
+              value={value.clothingColors || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('clothingColors', settings)}
               isDisabled={readonlyPredefined && isPredefined}
             />

@@ -286,6 +286,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           ? 'mid-chest portrait'
           : 'headshot'
       builtPrompt += `\n\nUse the labeled sections in the composite image: "SUBJECT" for the person, "BACKGROUND" for the background, and "LOGO" for the brand logo if present. Generate a professional photo using the subject and the specified style settings. STRICTLY follow \"framing_composition.shot_type\" (requested: ${shotText}) and \"orientation\". Do not change the requested shot type; avoid cropping that contradicts it.`
+      
       await job.updateProgress({ progress: 20, message: formatProgressMessage(getProgressMessage()) })
 
       // Debug: write composite image to /tmp for inspection

@@ -28,7 +28,8 @@ export interface ClothingSettings {
 }
 
 export interface ClothingColorSettings {
-  colors: {
+  type: 'predefined' | 'user-choice'
+  colors?: {
     topCover?: string // Outer layer color (blazer, jacket, etc.)
     topBase?: string // Base layer color (shirt, t-shirt, etc.)
     bottom?: string // Bottom color (pants, skirt, etc.)
@@ -92,7 +93,9 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
   clothing: {
     style: 'user-choice'
   },
-  clothingColors: undefined,
+  clothingColors: {
+    type: 'user-choice'
+  },
   shotType: {
     type: 'user-choice'
   },

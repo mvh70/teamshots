@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     branding?: { type: 'include' | 'exclude' | 'user-choice'; logoKey?: string; position?: 'background' | 'clothing' | 'elements' }
     backgroundSettings?: { type: 'office' | 'neutral' | 'gradient' | 'custom' | 'user-choice' | 'tropical-beach' | 'busy-city'; key?: string; prompt?: string; color?: string }
     clothingSettings?: { type?: 'business' | 'startup' | 'black-tie' | 'user-choice'; style: 'business' | 'startup' | 'black-tie' | 'user-choice'; details?: string; colors?: { topCover?: string; topBase?: string; bottom?: string }; accessories?: string[] }
-    clothingColorsSettings?: { colors: { topCover?: string; topBase?: string; bottom?: string; shoes?: string } }
+    clothingColorsSettings?: { type: 'predefined' | 'user-choice'; colors?: { topCover?: string; topBase?: string; bottom?: string; shoes?: string } }
     shotTypeSettings?: { type: 'headshot' | 'midchest' | 'full-body' | 'user-choice' }
     expressionSettings?: { type: 'professional' | 'friendly' | 'serious' | 'confident' | 'happy' | 'sad' | 'neutral' | 'thoughtful' | 'user-choice' }
     packageId?: string
@@ -56,12 +56,8 @@ export async function POST(request: NextRequest) {
       },
       branding: branding || { type: includeLogo ? 'include' : 'exclude' },
       clothing: clothingSettings || pkg.defaultSettings.clothing,
-      // Preserve undefined/null (user-choice) - don't default it
-      // null comes from JSON parsing when undefined was explicitly saved
-      // The serializer will handle converting undefined to null for persistence
-      clothingColors: (clothingColorsSettings !== undefined && clothingColorsSettings !== null) 
-        ? clothingColorsSettings 
-        : undefined,
+      // Use provided settings or default to user-choice
+      clothingColors: clothingColorsSettings || { type: 'user-choice' },
       shotType: shotTypeSettings || pkg.defaultSettings.shotType,
       expression: expressionSettings || pkg.defaultSettings.expression
     }
