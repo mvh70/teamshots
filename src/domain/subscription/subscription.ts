@@ -22,10 +22,20 @@ export interface SubscriptionInfo {
   } | null
 }
 
+// Add cache at the top of the file, after imports
+const subscriptionCache = new Map<string, { data: SubscriptionInfo | null; timestamp: number }>();
+const CACHE_TTL = 60 * 1000; // 1 minute
+
 /**
  * Get subscription information for a user
  */
 export async function getUserSubscription(userId: string): Promise<SubscriptionInfo | null> {
+  const cached = subscriptionCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    Logger.debug('subscription.cache.hit', { userId });
+    return cached.data;
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
   })
@@ -86,7 +96,7 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
     }
   }
 
-  return {
+  const result = {
     tier: effectiveTier,
     status: user.subscriptionStatus as SubscriptionStatus,
     stripeSubscriptionId: user.stripeSubscriptionId,
@@ -102,6 +112,10 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
         }
       : null,
   }
+
+  // After computing result
+  subscriptionCache.set(userId, { data: result, timestamp: Date.now() });
+  return result;
 }
 
 /**

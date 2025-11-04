@@ -15,19 +15,21 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import sharp from 'sharp'
 import { httpFetch } from '@/lib/http'
 import { Env } from '@/lib/env'
-import { writeFile as fsWriteFile } from 'node:fs/promises'
+import { writeFile as fsWriteFile, readFile as fsReadFile } from 'node:fs/promises'
 // Gemini SDK per docs: https://ai.google.dev/gemini-api/docs/image-generation#javascript_8
 // Ensure dependency '@google/genai' is installed in package.json
 // Fallback: type-only import to avoid runtime errors until installed
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import { GoogleGenAI } from '@google/genai'
 import { getPackageConfig } from '@/domain/style/packages'
 import { PhotoStyleSettings } from '@/types/photo-style'
 import { sendSupportNotificationEmail } from '@/lib/email'
 import { getProgressMessage, formatProgressMessage } from '@/lib/generation-progress-messages'
 // Background removal processing disabled
 // import { processSelfieForBackgroundRemoval, getBestSelfieKey } from '@/lib/ai/selfieProcessor'
+
+// New import for Vertex AI (after other imports, e.g., around line 25)
+import { VertexAI } from '@google-cloud/vertexai';
+import { Content, GenerateContentResult } from '@google-cloud/vertexai';
+import { Part } from '@google-cloud/vertexai';
 
 // S3 client configuration (Hetzner-compatible, aligned with /api/files/get)
 const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
@@ -54,10 +56,27 @@ const BUCKET_NAME = Env.string('HETZNER_S3_BUCKET')
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
   'image-generation',
   async (job: Job<ImageGenerationJobData>) => {
-    const { generationId, personId, userId, selfieS3Key, styleSettings, prompt } = job.data
+    const { generationId, personId, userId, selfieS3Key, styleSettings, prompt, creditSource } = job.data
+    
+    // Get attempt info for inclusion in all progress messages
+    const maxAttempts = job.opts?.attempts || 3
+    const currentAttempt = job.attemptsMade + 1
+    const attemptSuffix = maxAttempts > 1 ? ` (Attempt ${currentAttempt}/${maxAttempts})` : ''
+    
+    // Helper to format progress messages with attempt info
+    const formatProgressWithAttempt = (progressMsg: { message: string; emoji?: string }): string => {
+      const formatted = formatProgressMessage(progressMsg)
+      const result = formatted + attemptSuffix
+      Logger.debug('Progress message formatted', { 
+        original: formatted.substring(0, 50), 
+        suffix: attemptSuffix, 
+        final: result.substring(0, 80) 
+      })
+      return result
+    }
     
     try {
-      Logger.info(`Starting image generation for job ${job.id}, generation ${generationId}`)
+      Logger.info(`Starting image generation for job ${job.id}, generation ${generationId}, attempt ${currentAttempt}/${maxAttempts}`)
       
       // Update generation status to processing
       await prisma.generation.update({
@@ -68,7 +87,9 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
       })
       
-      await job.updateProgress({ progress: 10, message: formatProgressMessage(getProgressMessage('starting-preprocessing')) })
+      const firstProgressMsg = formatProgressWithAttempt(getProgressMessage('starting-preprocessing'))
+      Logger.info('Updating progress with message', { message: firstProgressMsg, progress: 10 })
+      await job.updateProgress({ progress: 10, message: firstProgressMsg })
       
       // Background removal processing disabled - using original selfie
       Logger.debug('Using original selfie without background removal processing')
@@ -212,7 +233,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           // Progress callback for preprocessing steps
           const onStepProgress = (stepName: string) => {
             const progressMsg = getProgressMessage(stepName)
-            const formattedMsg = formatProgressMessage(progressMsg)
+            const formattedMsg = formatProgressWithAttempt(progressMsg)
             // Update progress with step message (keep progress percentage at 15% during preprocessing)
             job.updateProgress({ progress: 15, message: formattedMsg }).catch(err => {
               Logger.warn('Failed to update progress', { error: err instanceof Error ? err.message : String(err) })
@@ -287,7 +308,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           : 'headshot'
       builtPrompt += `\n\nUse the labeled sections in the composite image: "SUBJECT" for the person, "BACKGROUND" for the background, and "LOGO" for the brand logo if present. Generate a professional photo using the subject and the specified style settings. STRICTLY follow \"framing_composition.shot_type\" (requested: ${shotText}) and \"orientation\". Do not change the requested shot type; avoid cropping that contradicts it.`
       
-      await job.updateProgress({ progress: 20, message: formatProgressMessage(getProgressMessage()) })
+      await job.updateProgress({ progress: 20, message: formatProgressWithAttempt(getProgressMessage()) })
 
       // Debug: write composite image to /tmp for inspection
       try {
@@ -298,22 +319,21 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         Logger.warn('Failed to write composite image to /tmp', { error: e instanceof Error ? e.message : String(e) })
       }
 
-      // Log the generated prompt for debugging
-      Logger.debug('Generated Prompt for Gemini', { prompt: builtPrompt })
+      Logger.info('Generated Prompt for Gemini', { prompt: builtPrompt })
 
       // Determine aspect ratio from shot type (enforce tall canvas for full body)
       const aspectRatio = shotTypeForText === 'full-body' ? '9:16' : shotTypeForText === 'midchest' ? '3:4' : '1:1'
       // Call Gemini image generation API with composite image only
       const imageBuffers = await generateWithGemini(builtPrompt, [compositeImage], aspectRatio)
 
-      await job.updateProgress({ progress: 60, message: formatProgressMessage(getProgressMessage()) })
+      await job.updateProgress({ progress: 60, message: formatProgressWithAttempt(getProgressMessage()) })
       if (!imageBuffers.length) {
         throw new Error('AI generation returned no images')
       }
 
       // Upload generated images to S3
       const generatedImageKeys = await uploadGeneratedImagesToS3(imageBuffers, personId, generationId)
-      await job.updateProgress({ progress: 80, message: formatProgressMessage(getProgressMessage()) })
+      await job.updateProgress({ progress: 80, message: formatProgressWithAttempt(getProgressMessage()) })
       
       // Update generation record with results
       await prisma.generation.update({
@@ -328,7 +348,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
       })
       
-      await job.updateProgress({ progress: 100, message: '✨ All done! Your photo is ready!' })
+      await job.updateProgress({ progress: 100, message: `✨ All done! Your photo is ready!${attemptSuffix}` })
       
       Logger.info(`Image generation completed for job ${job.id}`)
       
@@ -397,6 +417,20 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       const maxAttempts = job.opts?.attempts || 3
       const isFinalAttempt = job.attemptsMade >= maxAttempts - 1
       
+      // Get current progress for retry message
+      const currentProgress = typeof job.progress === 'object' && job.progress !== null && 'progress' in job.progress 
+        ? (job.progress as { progress?: number }).progress || 0
+        : typeof job.progress === 'number' ? job.progress : 0
+      
+      if (!isFinalAttempt) {
+        // Update progress with retry message before throwing to trigger retry
+        // Make retry message more prominent by keeping it at current progress
+        const retryMessage = `🔄 Attempt ${currentAttempt} of ${maxAttempts} failed. Retrying...`
+        await job.updateProgress({ progress: currentProgress, message: retryMessage })
+        // Wait a bit to ensure the message is visible before retry
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
+      
       // Update generation status to failed on final attempt
       if (isFinalAttempt) {
         await prisma.generation.update({
@@ -409,26 +443,72 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         })
         
         // Check if this is a regeneration (free) before attempting refund
+        // Get generation record with creditSource and person info
         const generationRecord = await prisma.generation.findUnique({
           where: { id: generationId },
-          select: { creditsUsed: true }
+          select: { 
+            creditsUsed: true,
+            creditSource: true,
+            person: {
+              select: {
+                teamId: true,
+                userId: true
+              }
+            }
+          }
         })
         
         // Only refund credits if this was a paid generation (not a regeneration)
         if (generationRecord && generationRecord.creditsUsed > 0) {
           try {
+            // Use creditSource from generation record (more reliable than job data)
+            const genCreditSource = (generationRecord.creditSource as 'individual' | 'team') || creditSource
+            
+            // Match the same pattern used when reserving credits:
+            // For individual: personId = null, userId = userId
+            // For team: personId = personId, userId = null
+            const refundPersonId = genCreditSource === 'individual' ? null : personId
+            const refundUserId = genCreditSource === 'individual' ? (generationRecord.person.userId || userId || null) : null
+            
+            // Get teamId from person record (from generation)
+            const teamId = generationRecord.person.teamId || undefined
+            
+            Logger.debug('Refunding credits', { 
+              genCreditSource, 
+              refundPersonId, 
+              refundUserId, 
+              teamId, 
+              creditsRefunded: generationRecord.creditsUsed,
+              personTeamId: generationRecord.person.teamId
+            })
+            
             await refundCreditsForFailedGeneration(
-              personId,
-              userId || null,
+              refundPersonId,
+              refundUserId,
               generationRecord.creditsUsed, // Use actual credits used, not config value
-              `Refund for failed generation ${generationId}`
+              `Refund for failed generation ${generationId}`,
+              teamId
             )
-            Logger.info(`Credits refunded for failed generation ${generationId}`)
+            Logger.info(`Credits refunded for failed generation ${generationId}`, { 
+              personId: refundPersonId, 
+              userId: refundUserId, 
+              teamId, 
+              creditsRefunded: generationRecord.creditsUsed,
+              creditSource: genCreditSource 
+            })
           } catch (refundError) {
-            Logger.error(`Failed to refund credits for generation ${generationId}`, { error: refundError instanceof Error ? refundError.message : String(refundError) })
+            Logger.error(`Failed to refund credits for generation ${generationId}`, { 
+              error: refundError instanceof Error ? refundError.message : String(refundError),
+              personId,
+              userId,
+              creditSource,
+              creditsUsed: generationRecord.creditsUsed
+            })
           }
         } else {
-          Logger.debug(`Skipping refund for regeneration ${generationId} (free)`)
+          Logger.debug(`Skipping refund for regeneration ${generationId} (free)`, { 
+            creditsUsed: generationRecord?.creditsUsed 
+          })
         }
         
         // Only send support notification email on final attempt to avoid spam
@@ -692,26 +772,63 @@ async function generateWithGemini(
   images: Array<{ mimeType: string; base64: string }>,
   aspectRatio?: string
 ): Promise<Buffer[]> {
-  const ai = new GoogleGenAI({})
-  const contents: Array<Record<string, unknown>> = [{ text: prompt }]
-  for (const img of images) {
-    contents.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
-  }
-  const response = await ai.models.generateContent({
-    model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
-    contents,
-    // Optional aspect ratio via config
-    config: aspectRatio ? { imageConfig: { aspectRatio } } : undefined
-  })
+  void aspectRatio
+  let projectId = Env.string('GOOGLE_PROJECT_ID', '')
+  const location = Env.string('GOOGLE_LOCATION', 'us-central1') // Default to US for reliability
 
-  const parts = (response as unknown as { candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { data?: string } }> } }> })?.candidates?.[0]?.content?.parts ?? []
-  const out: Buffer[] = []
-  for (const part of parts) {
-    if (part?.inlineData?.data) {
-      out.push(Buffer.from(part.inlineData.data, 'base64'))
+  // If project ID not explicitly set, try to extract it from service account JSON
+  if (!projectId) {
+    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
+    if (credentialsPath) {
+      try {
+        const credentialsContent = await fsReadFile(credentialsPath, 'utf-8')
+        const credentials = JSON.parse(credentialsContent) as { project_id?: string }
+        if (credentials.project_id) {
+          projectId = credentials.project_id
+          Logger.debug('Extracted project ID from service account credentials', { projectId, credentialsPath })
+        }
+      } catch (error) {
+        Logger.warn('Failed to read project ID from service account credentials', { 
+          credentialsPath, 
+          error: error instanceof Error ? error.message : String(error) 
+        })
+      }
     }
   }
-  return out
+
+  if (!projectId) {
+    throw new Error('GOOGLE_PROJECT_ID is not set in environment and could not be extracted from GOOGLE_APPLICATION_CREDENTIALS. Please set GOOGLE_PROJECT_ID in your .env file or deployment environment variables.')
+  }
+
+  const vertexAI = new VertexAI({ project: projectId, location });
+
+  const model = vertexAI.getGenerativeModel({
+    model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash'),
+  });
+
+  // Prepare contents with explicit types
+  const contents: Content[] = [{
+    role: 'user',
+    parts: [
+      { text: prompt },
+      ...images.map((img): Part => ({
+        inlineData: { mimeType: img.mimeType, data: img.base64 }
+      }))
+    ]
+  }];
+
+  // Generate without generationConfig if no params
+  const response: GenerateContentResult = await model.generateContent({ contents });
+
+  // Access candidates safely
+  const parts = response.response.candidates?.[0]?.content?.parts ?? [];
+  const out: Buffer[] = [];
+  for (const part of parts) {
+    if (part.inlineData?.data) {
+      out.push(Buffer.from(part.inlineData.data, 'base64'));
+    }
+  }
+  return out;
 }
 
 async function uploadGeneratedImagesToS3(images: Buffer[], personId: string, generationId: string): Promise<string[]> {

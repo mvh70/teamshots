@@ -1,4 +1,4 @@
-import { PhotoStyleSettings, BackgroundSettings } from '@/types/photo-style'
+import { PhotoStyleSettings } from '@/types/photo-style'
 import type { StylePackage } from '../index'
 import { generateBackgroundPrompt } from '../../backgrounds'
 
@@ -258,6 +258,7 @@ export const freepackage: StylePackage = {
   availableBackgrounds: ['office', 'tropical-beach', 'busy-city', 'neutral', 'gradient', 'custom'],
   defaultSettings: DEFAULTS,
   promptBuilder: (settings, _ctx) => {
+    void _ctx
     // Apply defaults to any missing values
     const resolvedSettings: PhotoStyleSettings = {
       background: getValueOrDefault(settings.background, DEFAULTS.background),

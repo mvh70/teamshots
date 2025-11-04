@@ -399,9 +399,19 @@ export async function refundCreditsForFailedGeneration(
     throw new Error('Either personId or userId must be provided')
   }
 
+  Logger.debug('refundCreditsForFailedGeneration called', {
+    personId,
+    userId,
+    teamId,
+    amount,
+    hasTeamId: !!teamId,
+    hasPersonId: !!personId
+  })
+
   // For team members (personId exists), refund to team credits
   if (personId && teamId) {
-    return await createCreditTransaction({
+    Logger.debug('Creating team credit refund transaction', { personId, teamId, amount })
+    const transaction = await createCreditTransaction({
       credits: amount,
       type: 'refund',
       description: description || `Refund for failed photo generation`,
@@ -409,10 +419,17 @@ export async function refundCreditsForFailedGeneration(
       personId: personId, // Track that this person got refunded
       teamInviteId: teamInviteId
     })
+    Logger.info('Team credit refund transaction created', { 
+      transactionId: transaction.id, 
+      teamId: transaction.teamId, 
+      personId: transaction.personId 
+    })
+    return transaction
   }
 
   // For individual users, refund to personal credits
-  return await createCreditTransaction({
+  Logger.debug('Creating individual credit refund transaction', { personId, userId, amount })
+  const transaction = await createCreditTransaction({
     credits: amount,
     type: 'refund',
     description: description || `Refund for failed photo generation`,
@@ -420,6 +437,13 @@ export async function refundCreditsForFailedGeneration(
     userId: userId || undefined,
     teamInviteId: teamInviteId
   })
+  Logger.info('Individual credit refund transaction created', { 
+    transactionId: transaction.id, 
+    personId: transaction.personId, 
+    userId: transaction.userId,
+    teamId: transaction.teamId
+  })
+  return transaction
 }
 
 /**

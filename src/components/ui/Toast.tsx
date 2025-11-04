@@ -36,7 +36,7 @@ export function Toast({ message, type = 'info', duration = 6000, onDismiss }: To
   const ariaLive = type === 'error' ? 'assertive' : 'polite'
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-full mx-4">
       <div
         className={`${baseClasses} ${typeClass}`}
         role="alert"
