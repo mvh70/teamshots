@@ -43,6 +43,13 @@ export default function TeamGenerationsPage() {
   const { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated } = useGenerationFilters()
   const { href: buyCreditsHref } = useBuyCreditsLink()
   const [teamView] = useState<'mine' | 'team'>('mine')
+  
+  // Guard: redirect individual users (no team) away from team page
+  useEffect(() => {
+    if (session?.user && !session.user.person?.teamId) {
+      window.location.href = '/app/generations/personal'
+    }
+  }, [session?.user])
   const handleGenerationFailed = useCallback(
     ({ errorMessage }: { id: string; errorMessage?: string }) => {
       if (errorMessage) {

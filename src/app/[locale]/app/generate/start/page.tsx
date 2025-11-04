@@ -20,6 +20,7 @@ import { jsonFetcher } from '@/lib/fetcher'
 import { loadStyle, loadStyleByContextId } from '@/domain/style/service'
 import { getPackageConfig } from '@/domain/style/packages'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
+import { fetchAccountMode } from '@/domain/account/accountMode'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
@@ -213,7 +214,7 @@ export default function StartGenerationPage() {
       // Ensure packageId is set (default to headshot1 if not selected)
       const packageId = selectedPackageId || PRICING_CONFIG.defaultSignupPackage
       
-      // Create generation request
+      // Create generation request (server decides mode and credits)
       await jsonFetcher<{ success?: boolean; error?: string }>('/api/generations/create', {
         method: 'POST',
         headers: {
@@ -224,14 +225,21 @@ export default function StartGenerationPage() {
           contextId: activeContext?.id,
           styleSettings: { ...photoStyleSettings, packageId },
           prompt: activeContext?.customPrompt || 'Professional headshot',
-          generationType,
-          creditSource: generationType === 'team' ? 'team' : 'individual',
         }),
       })
 
-      // Redirect to appropriate generations page based on generation type
-      const redirectPath = generationType === 'team' ? '/app/generations/team' : '/app/generations/personal'
-      window.location.href = redirectPath
+      // Redirect: team managers (pro accounts) should land on team generations
+      try {
+        const accountMode = await fetchAccountMode()
+        if (accountMode.isPro) {
+          window.location.href = '/app/generations/team'
+          return
+        }
+      } catch (_) {
+        // If account mode fetch fails, fall back to generation type based redirect
+      }
+      const fallbackRedirect = (session?.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
+      window.location.href = fallbackRedirect
       
     } catch (error) {
       console.error('Failed to start generation:', error)
@@ -258,8 +266,8 @@ export default function StartGenerationPage() {
   const selectedPackage = getPackageConfig(selectedPackageId || PRICING_CONFIG.defaultSignupPackage)
   const selectedPhotoStyleLabel = selectedPackage.label
   
-  // Only show generation type selector if user has both options available
-  const shouldShowGenerationTypeSelector = hasTeamAccess && hasIndividualAccess
+  // No client-side choice: server enforces mode
+  const shouldShowGenerationTypeSelector = false
 
   // Auto-select generation type if user only has one option
   useEffect(() => {

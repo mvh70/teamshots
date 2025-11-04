@@ -19,6 +19,7 @@ import { randomUUID } from 'crypto'
 import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { getPackageConfig } from '@/domain/style/packages'
+import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
 
 const cloneDeep = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
@@ -55,8 +56,6 @@ const createGenerationSchema = z.object({
     lighting: z.any().optional(),
   }).optional(),
   prompt: z.string().min(1, 'Prompt is required'),
-  generationType: z.enum(['personal', 'team']).default('personal'),
-  creditSource: z.enum(['individual', 'team']).default('individual'),
   isRegeneration: z.boolean().optional().default(false), // Flag to indicate this is a regeneration
   originalGenerationId: z.string().optional(), // ID of the original generation being regenerated
 })
@@ -88,7 +87,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createGenerationSchema.parse(body)
     
-    const { selfieId, selfieKey, contextId, styleSettings, prompt, generationType, creditSource, isRegeneration, originalGenerationId } = validatedData
+    const { selfieId, selfieKey, contextId, styleSettings, prompt, isRegeneration, originalGenerationId } = validatedData
 
     // Debug logging removed for production security
 
@@ -176,6 +175,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
+    // Determine enforced generation type and credit source (server-side only)
+    const userWithRoles = await getUserWithRoles(session.user.id)
+    const effective = userWithRoles ? await getUserEffectiveRoles(userWithRoles) : null
+    const isTeamContext = Boolean(effective && (effective.isTeamAdmin || effective.isTeamMember) && selfie.person.teamId)
+    const enforcedGenerationType: 'personal' | 'team' = isTeamContext ? 'team' : 'personal'
+    const enforcedCreditSource: 'individual' | 'team' = isTeamContext ? 'team' : 'individual'
+
+    // Additional hard checks for ownership by mode
+    if (enforcedGenerationType === 'team') {
+      if (!selfie.person.teamId || !isSameTeam) {
+        return NextResponse.json({ error: 'Not authorized to create team generation for this person' }, { status: 403 })
+      }
+    } else {
+      // personal
+      if (!isOwner) {
+        return NextResponse.json({ error: 'Not authorized to create personal generation for another user' }, { status: 403 })
+      }
+    }
+
     // Validate package ownership
     const requestedPackageId = (styleSettings?.['packageId'] as string) || PRICING_CONFIG.defaultSignupPackage
     
@@ -191,7 +209,7 @@ export async function POST(request: NextRequest) {
       // For team generations, check if team admin owns the package
       // For personal generations, check if user owns the package
       let userIdToCheck = session.user.id
-      if (creditSource === 'team' && selfie.person.teamId) {
+      if (enforcedCreditSource === 'team' && selfie.person.teamId) {
         // Team member using team credits - check team admin's package ownership
         // Fetch team to get adminId if not already loaded
         if (selfie.person.team?.adminId) {
@@ -221,7 +239,7 @@ export async function POST(request: NextRequest) {
         await SecurityLogger.logSuspiciousActivity(
           session.user.id,
           'unauthorized_package_usage',
-          { packageId: requestedPackageId, selfieId: selfie.id, userIdChecked: userIdToCheck, creditSource }
+          { packageId: requestedPackageId, selfieId: selfie.id, userIdChecked: userIdToCheck, creditSource: enforcedCreditSource }
         )
         return NextResponse.json(
           { error: `You don't have access to the ${requestedPackageId} package` },
@@ -255,14 +273,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Determine credit source and check balance
+
+    // Determine credit source and check balance (using enforced values)
     // Regenerations are free, so skip credit checks for regenerations
     const personId: string | null = selfie.personId
     const userId: string | null = selfie.person.userId
     
     if (!isRegeneration) {
       // Only check credits for new generations, not regenerations
-      if (creditSource === 'individual') {
+      if (enforcedCreditSource === 'individual') {
         // For individual credits, use the user's credits
         const hasCredits = await hasSufficientCredits(null, userId, PRICING_CONFIG.credits.perGeneration)
         if (!hasCredits) {
@@ -474,7 +493,7 @@ export async function POST(request: NextRequest) {
       }
       
       // If using team credits, also check if team admin is on free plan
-      if (creditSource === 'team' && selfie.person.teamId) {
+      if (enforcedCreditSource === 'team' && selfie.person.teamId) {
         const team = await prisma.team.findUnique({
           where: { id: selfie.person.teamId },
           include: {
@@ -545,8 +564,8 @@ export async function POST(request: NextRequest) {
         contextId: resolvedContextId,
         uploadedPhotoKey: selfie.key,
         generatedPhotoKeys: [], // Will be populated by worker
-        generationType,
-        creditSource,
+        generationType: enforcedGenerationType,
+        creditSource: enforcedCreditSource,
         status: 'pending',
         creditsUsed: isRegeneration ? 0 : PRICING_CONFIG.credits.perGeneration, // Regenerations are free
         provider: 'gemini',
@@ -564,7 +583,7 @@ export async function POST(request: NextRequest) {
       try {
         // Get teamInviteId for team members
         let teamInviteId: string | undefined
-        if (creditSource === 'team' && selfie.person.inviteToken) {
+        if (enforcedCreditSource === 'team' && selfie.person.inviteToken) {
           const teamInvite = await prisma.teamInvite.findUnique({
             where: { token: selfie.person.inviteToken }
           })
@@ -574,11 +593,11 @@ export async function POST(request: NextRequest) {
         // Debug logging removed for production security
         
         await reserveCreditsForGeneration(
-          creditSource === 'individual' ? null : personId,
-          creditSource === 'individual' ? userId : null,
+          enforcedCreditSource === 'individual' ? null : personId,
+          enforcedCreditSource === 'individual' ? userId : null,
           PRICING_CONFIG.credits.perGeneration,
           `Reserved for generation ${generation.id}`,
-          creditSource === 'team' ? selfie.person.teamId || undefined : undefined,
+          enforcedCreditSource === 'team' ? selfie.person.teamId || undefined : undefined,
           teamInviteId
         )
       } catch (creditError) {
@@ -603,9 +622,9 @@ export async function POST(request: NextRequest) {
         model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
         numVariations: 4,
       },
-      creditSource,
+      creditSource: enforcedCreditSource,
     }, {
-      priority: generationType === 'team' ? 1 : 0, // Higher priority for team generations
+      priority: enforcedGenerationType === 'team' ? 1 : 0, // Higher priority for team generations
       jobId: `gen-${generation.id}`, // Custom ID for easier tracking
     })
 

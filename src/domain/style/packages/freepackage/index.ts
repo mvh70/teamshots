@@ -51,6 +51,19 @@ function buildPrompt(settings: PhotoStyleSettings): string {
 
   // Precompute shot type for downstream logic
   const isFullBody = settings.shotType?.type === 'full-body'
+  const isMidChest = settings.shotType?.type === 'midchest'
+  const shotType = settings.shotType
+  const clothingColors = settings.clothingColors
+  const clothing = settings.clothing
+  const clothingStyle = clothing?.style
+  const clothingDetails = clothing?.details || DEFAULTS.clothing.details
+  const clothingDetailsLower = clothingDetails.toLowerCase()
+  const isBusiness = clothingStyle === 'business'
+  const isBusinessFormal = isBusiness && clothingDetailsLower === 'formal'
+  const isBusinessCasual = isBusiness && clothingDetailsLower === 'casual'
+  const showShoes = isFullBody && clothingColors?.colors?.shoes
+  const showTrousers = (isFullBody || isMidChest) && clothingColors?.colors?.bottom
+  
 
   // Step 1: Background
   const background = settings.background
@@ -59,7 +72,70 @@ function buildPrompt(settings: PhotoStyleSettings): string {
     Object.assign(sceneEnv, bgPrompt)
   }
 
-  // Step 2: Branding
+  // Step 2: Clothing
+  if (clothing && clothing.style) {
+
+    // Encode business attire directly into wardrobe details
+    const derivedDetails = isBusinessFormal
+      ? 'formal suit with dress shirt and tie'
+      : isBusinessCasual
+        ? 'business casual outfit, over an elegant t-shirt as a base layer, no tie'
+        : clothingDetails
+
+    const wardrobe: Record<string, unknown> = {
+      style: clothingStyle,
+      details: derivedDetails
+    }
+ 
+     // Add accessories if provided
+     if (clothing.accessories && Array.isArray(clothing.accessories) && clothing.accessories.length > 0) {
+       wardrobe.accessories = clothing.accessories
+     }
+ 
+
+     // Step 2a: Clothing Colors
+     
+     if (clothingColors && clothingColors.type === 'predefined' && clothingColors.colors) {
+       const colors = clothingColors.colors
+       const colorParts: string[] = []
+    
+       let includeTopCover = Boolean(colors.topCover) && !NO_TOP_COVER_DETAILS.has(clothingDetailsLower)
+       if (!isBusiness) {
+         // Business casual: prefer no top cover layer
+         includeTopCover = false
+       } else {
+         includeTopCover = includeTopCover || Boolean(colors.topCover)
+       }
+       if (includeTopCover && colors.topCover) {
+         colorParts.push(`top cover (jacket, blazer, etc.): ${colors.topCover} color`)
+       }
+ 
+       // Top base color
+       if (colors.topBase) {
+         colorParts.push(`base layer: ${colors.topBase} color`)         
+       }
+ 
+       // Bottom color
+       if (showTrousers) {
+         colorParts.push(`The trousers are in ${colors.bottom} color`)
+       }
+ 
+       // Shoes color (only relevant for full body shots - not visible in headshot/midchest)
+       if (showShoes) {
+         colorParts.push(`The shoes are in ${colors.shoes} color`)
+       }
+ 
+       if (colorParts.length > 0) {
+         wardrobe.color_palette = colorParts
+       }
+     }
+ 
+     subject.wardrobe = wardrobe
+ 
+     // Pose description handled in shot type section
+   }
+
+  // Step 3: Branding
   const branding = settings.branding
   const brandingType = branding?.type
   const brandingPosition = branding?.position
@@ -72,71 +148,22 @@ function buildPrompt(settings: PhotoStyleSettings): string {
       rules = 'Place the provided brand logo once on a plausible scene element only, such as: a coffee mug label, a laptop sticker, a notebook cover, a standing banner flag, a signboard, or a door plaque. The element must be grounded in the scene (on a desk/floor/wall) and the logo must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.'
     } else {
       // Default: clothing
-      rules = 'Place the provided brand logo exactly once on the center chest area of the base garment (e.g., t‑shirt/hoodie/shirt). Do not place the logo on outer layers (jackets/coats), background, walls, floors, signs, accessories, or skin. Do not create patterns or duplicates. Keep original aspect ratio and colors; no stylization or warping. The logo size should be modest and proportional to the garment.'
+      const clothingStyleLower = (settings.clothing?.style || '').toLowerCase()
+
+      rules = 'The base garment features a brand logo from the attached image.'
+      if (isBusinessFormal || clothingStyleLower.includes('black tie')) {
+        rules += 'Put the logo on the visible base shirt only (not on the jacket), positioned on the upper-right chest where a shirt pocket would be. '
+      } else {
+        rules += 'Place the provided brand logo exactly once on the center chest area of the base garment (t-shirt, hoodie, polo, button down).'
+      }
+      rules += ' Do not place the logo on outer layers (jackets/coats), background, walls, floors, signs, accessories, or skin. Do not create patterns or duplicates. Keep original aspect ratio and colors; no stylization or warping. The logo size should be modest and proportional to the garment.'
     }
     subject.branding_rules = rules
   } else if (brandingType === 'exclude') {
     sceneEnv.branding = 'no brand marks'
   }
 
-  // Step 3: Clothing
-  const clothing = settings.clothing
-  if (clothing && clothing.style) {
-    const clothingStyle = clothing.style
-    const clothingDetails = clothing.details || DEFAULTS.clothing.details
-    const clothingDetailsLower = clothingDetails.toLowerCase()
-
-    const wardrobe: Record<string, unknown> = {
-      style: clothingStyle,
-      details: clothingDetails
-    }
-
-    // Add accessories if provided
-    if (clothing.accessories && Array.isArray(clothing.accessories) && clothing.accessories.length > 0) {
-      wardrobe.accessories = clothing.accessories
-    }
-
-    // Step 3a: Clothing Colors
-    const clothingColors = settings.clothingColors
-    if (clothingColors && clothingColors.type === 'predefined' && clothingColors.colors) {
-      const colors = clothingColors.colors
-      const colorParts: string[] = []
-
-      // Top cover color (only if applicable)
-      const includeTopCover = Boolean(colors.topCover) && !NO_TOP_COVER_DETAILS.has(clothingDetailsLower)
-      if (includeTopCover && colors.topCover) {
-        colorParts.push(`top cover (jacket, blazer, etc.): ${colors.topCover} color`)
-      }
-
-      // Top base color
-      if (colors.topBase) {
-        colorParts.push(`base layer: ${colors.topBase} color`)
-        
-        // Add logo instruction if branding is on clothing
-        if (brandingType === 'include' && (!brandingPosition || brandingPosition === 'clothing')) {
-          colorParts.push('the base garment (t-shirt, shirt under jacket, hoodie, polo, button down) features a brand logo from the attached image, positioned prominently on the chest area')
-        }
-      }
-
-      // Bottom color
-      if (colors.bottom) {
-        colorParts.push(`The trousers are in ${colors.bottom} color`)
-      }
-
-      // Shoes color (only relevant for full body shots - not visible in headshot/midchest)
-      if (isFullBody && colors.shoes) {
-        colorParts.push(`The shoes are in ${colors.shoes} color`)
-      }
-
-      if (colorParts.length > 0) {
-        wardrobe.color_palette = colorParts
-      }
-    }
-
-    subject.wardrobe = wardrobe
-
-    // Pose description handled in shot type section
-  }
+ 
 
   // Step 4: Expression
   const expression = settings.expression
@@ -160,12 +187,12 @@ function buildPrompt(settings: PhotoStyleSettings): string {
   }
 
   // Step 5: Shot Type
-  const shotType = settings.shotType
+  
   if (shotType && shotType.type) {
     if (shotType.type === 'headshot') {
       framing_composition.shot_type = 'head-and-shoulders portrait, with ample headroom and negative space above their head, ensuring the top of their head is not cropped'
     } else if (shotType.type === 'midchest') {
-      framing_composition.shot_type = 'mid-chest portrait, showing from chest up with positive space around the subject'
+      framing_composition.shot_type = 'mid-chest portrait, showing from waist up with positive space around the subject'
     } else if (shotType.type === 'full-body') {
       framing_composition.shot_type = 'full body portrait, showing the complete subject from head to toe; include the entire body with feet fully visible, no cropping at ankles or knees; keep a bit of floor visible beneath the shoes'
       camera.lens = { focal_length_mm: 35, type: 'prime', character: 'neutral rendering, low distortion' }
@@ -178,16 +205,17 @@ function buildPrompt(settings: PhotoStyleSettings): string {
     // Pose description based on branding on clothing and clothing style
     if (brandingType === 'include' && (!brandingPosition || brandingPosition === 'clothing')) {
       const clothingStyleLower = (settings.clothing?.style || '').toLowerCase()
-      const poseObj = subject.pose as Record<string, unknown>
+      
+      const poseObj2 = subject.pose as Record<string, unknown>
       if (clothingStyleLower.includes('business') || clothingStyleLower.includes('black tie')) {
         subject.pose = {
-          ...poseObj,
-          description: 'elegantly opening the jacket to reveal the logo on the base garment beneath. The jacket should not open fully, it is stll buttoned closed on the bottom, to tastefully display the logo'
+          ...poseObj2,
+          description: 'Subject is elegantly opening the jacket to proudly reveal the logo on the base garment beneath. The jacket should not open fully, it is stll buttoned closed on the bottom, to tastefully display the logo'
         }
       } else if (clothingStyleLower.includes('startup')) {
         subject.pose = {
-          ...poseObj,
-          description: 'both hands gently pointing towards the logo on the base garment (t-shirt/hoodie/polo/button down) to draw attention in a natural, professional manner'
+          ...poseObj2,
+          description: 'The subject has both hands gently pointing towards the logo on the base garment (t-shirt/hoodie/polo/button down) to proudly draw attention in a natural, professional manner'
         }
       }
     }

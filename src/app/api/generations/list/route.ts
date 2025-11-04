@@ -72,8 +72,9 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100) // Max 100 per page
     const status = searchParams.get('status')
-    const generationType = searchParams.get('type')
-    const scope = searchParams.get('scope') as 'personal' | 'team' | null
+    // Client cannot choose scope/type; server derives from roles
+    const scope = null
+    const generationType = null
     const userId = searchParams.get('userId')
     const offset = (page - 1) * limit
 
@@ -86,24 +87,15 @@ export async function GET(request: NextRequest) {
     const roles = await getUserEffectiveRoles(user)
     const userTeamId = user.person?.teamId
 
-    // Build where clause based on scope
+    // Build where clause based on derived scope (roles)
     let where: Record<string, unknown> = {}
 
-    if (scope === 'personal') {
-      // Personal generations: only user's own personal generations
-      where = {
-        person: {
-          userId: session.user.id
-        },
-        generationType: 'personal'
-      }
-    } else if (scope === 'team') {
+    if (roles.isTeamAdmin || roles.isTeamMember) {
+      // Team context
       if (!userTeamId) {
         return NextResponse.json({ error: 'Not part of a team' }, { status: 403 })
       }
-
       if (roles.isTeamAdmin) {
-        // Pro users (team admins) can see all team generations, optionally filtered by user
         where = {
           person: {
             teamId: userTeamId
@@ -113,9 +105,8 @@ export async function GET(request: NextRequest) {
         if (userId && userId !== 'all') {
           (where.person as Record<string, unknown>).id = userId
         }
-      } else if (roles.isTeamMember) {
-        // Team members (invited) can ONLY see their own photos
-        // They cannot see other team members' photos
+      } else {
+        // team member sees only own team generations
         where = {
           person: {
             userId: session.user.id,
@@ -123,30 +114,14 @@ export async function GET(request: NextRequest) {
           },
           generationType: 'team'
         }
-      } else {
-        // Regular users without team - shouldn't reach here for team scope, but handle gracefully
-        return NextResponse.json({ error: 'Not authorized for team scope' }, { status: 403 })
       }
     } else {
-      // Fallback to original logic for backward compatibility
+      // Individual context
       where = {
-        OR: [
-          // User's own generations
-          {
-            person: {
-              userId: session.user.id
-            }
-          },
-          // Team generations where user is admin
-          {
-            person: {
-              team: {
-                adminId: session.user.id
-              }
-            },
-            generationType: 'team'
-          }
-        ]
+        person: {
+          userId: session.user.id
+        },
+        generationType: 'personal'
       }
     }
 
@@ -160,10 +135,7 @@ export async function GET(request: NextRequest) {
     // Always exclude deleted generations unless explicitly requested
     where.deleted = false
 
-    // Add generation type filter
-    if (generationType) {
-      where.generationType = generationType
-    }
+    // Ignore client-provided type filters; server enforces scope
 
     // Get generations with pagination
     const [generations, totalCount] = await Promise.all([

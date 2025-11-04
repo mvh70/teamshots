@@ -52,7 +52,6 @@ export function useGenerations(
       const url = new URL('/api/generations/list', window.location.origin)
       url.searchParams.set('page', page.toString())
       url.searchParams.set('limit', '50') // Increase limit to 50
-      url.searchParams.set('scope', effectiveScope)
       
       if (effectiveScope === 'team') {
         if (effectiveTeamView) {

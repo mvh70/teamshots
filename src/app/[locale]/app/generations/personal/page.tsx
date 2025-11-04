@@ -23,6 +23,31 @@ export default function PersonalGenerationsPage() {
   const [failureToast, setFailureToast] = useState<string | null>(null)
   const { timeframe, context, setTimeframe, setContext, filterGenerated } = useGenerationFilters()
   const { href: buyCreditsHref } = useBuyCreditsLink()
+  // If the user is in a team context (admin or member), they should not access personal generations – redirect to team
+  useEffect(() => {
+    const redirectIfTeamAdmin = async () => {
+      try {
+        // Quick client check for team membership
+        if (session?.user?.person?.teamId) {
+          window.location.href = '/app/generations/team'
+          return
+        }
+        const response = await fetch('/api/dashboard/stats')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.userRole?.isTeamAdmin) {
+            window.location.href = '/app/generations/team'
+          }
+        }
+      } catch (err) {
+        // Silent fail; if stats endpoint fails, keep current behavior
+      }
+    }
+    // Only check once we have (or likely have) a session
+    if (session?.user?.id) {
+      void redirectIfTeamAdmin()
+    }
+  }, [session?.user?.id])
   const handleGenerationFailed = useCallback(
     ({ errorMessage }: { id: string; errorMessage?: string }) => {
       if (errorMessage) {
