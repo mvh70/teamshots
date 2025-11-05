@@ -258,6 +258,7 @@ CREATE TABLE "SubscriptionChange" (
 CREATE TABLE "TeamInvite" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "firstName" TEXT NOT NULL,
     "teamId" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "expiresAt" TIMESTAMP(3) NOT NULL,
