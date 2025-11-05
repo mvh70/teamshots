@@ -319,6 +319,9 @@ export default function InviteDashboardPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        // Ensure cookies are sent on mobile Safari and avoid cached auth states
+        credentials: 'include',
+        cache: 'no-store',
         body: JSON.stringify(requestBody)
       })
 
