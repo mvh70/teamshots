@@ -71,6 +71,29 @@ export default function SelfiesPage() {
     }
   }
 
+  // Custom uploader that passes the invite token to the proxy so uploads work without a session
+  const onUploadWithToken = async (file: File): Promise<{ key: string; url?: string }> => {
+    const ext = file.name.split('.')?.pop()?.toLowerCase() || ''
+    const res = await fetch(`/api/uploads/proxy?token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      headers: {
+        'x-file-content-type': file.type,
+        'x-file-extension': ext,
+        'x-file-type': 'selfie'
+      },
+      body: file,
+      credentials: 'include'
+    })
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      throw new Error(errorData.error || 'Upload failed')
+    }
+    const { key } = await res.json() as { key: string }
+    // Provide a local preview url for UX
+    const preview = URL.createObjectURL(file)
+    return { key, url: preview }
+  }
+
   const handleApprove = async () => {
     setUploading(true)
     try {
@@ -214,6 +237,7 @@ export default function SelfiesPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload New Selfie</h2>
               <div className="max-w-md">
                 <PhotoUpload 
+                  onUpload={onUploadWithToken}
                   onUploaded={handleUpload}
                   autoOpenCamera={forceCamera}
                   disabled={uploading}

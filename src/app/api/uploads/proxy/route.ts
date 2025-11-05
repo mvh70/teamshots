@@ -12,6 +12,9 @@ const bucket = getS3BucketName()
 export async function POST(req: NextRequest) {
   if (!bucket) return NextResponse.json({ error: 'Missing bucket' }, { status: 500 })
   try {
+    const { searchParams } = new URL(req.url)
+    // Accept invite token via query or header to support token-auth uploads from invite flows
+    const inviteToken = searchParams.get('token') || (await getRequestHeader('x-invite-token')) || undefined
     const contentType = (await getRequestHeader('x-file-content-type')) || 'application/octet-stream'
     const extension = (await getRequestHeader('x-file-extension')) || ''
     const keyHeader = await getRequestHeader('x-upload-key')
@@ -30,21 +33,30 @@ export async function POST(req: NextRequest) {
     // For selfies, include personId-firstName in the path
     let relativeKey: string
     if (fileType === 'selfie' && !keyHeader) {
-      // Get person info for selfie folder structure
-      const session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      // Resolve person via session OR invite token
+      let person: { id: string; firstName: string | null } | null = null
+
+      if (inviteToken) {
+        const invite = await prisma.teamInvite.findFirst({
+          where: { token: inviteToken, usedAt: { not: null } },
+          include: { person: { select: { id: true, firstName: true } } }
+        })
+        person = invite?.person || null
+      } else {
+        const session = await auth()
+        if (!session?.user?.id) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+        person = await prisma.person.findUnique({
+          where: { userId: session.user.id },
+          select: { id: true, firstName: true }
+        })
       }
-      
-      const person = await prisma.person.findUnique({
-        where: { userId: session.user.id },
-        select: { id: true, firstName: true }
-      })
-      
+
       if (!person) {
         return NextResponse.json({ error: 'Person record not found' }, { status: 404 })
       }
-      
+
       const firstName = sanitizeNameForS3(person.firstName || 'unknown')
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}${extension ? `.${extension.replace(/^\./, '')}` : ''}`
       // Format: selfies/{personId}-{firstName}/{filename}

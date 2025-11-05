@@ -194,7 +194,10 @@ export default function InviteDashboardPage() {
 
   const fetchAvailableSelfies = useCallback(async () => {
     try {
-      const response = await fetch(`/api/team/member/selfies?token=${token}`)
+      // Bust caches and ensure cookies are sent (Safari quirk)
+      const response = await fetch(`/api/team/member/selfies?token=${token}&t=${Date.now()}`,
+        { credentials: 'include', cache: 'no-store' as RequestCache }
+      )
       if (response.ok) {
         const data = await response.json()
         setAvailableSelfies(data.selfies)
@@ -232,7 +235,13 @@ export default function InviteDashboardPage() {
   useEffect(() => {
     const pendingGeneration = sessionStorage.getItem('pendingGeneration')
     if (pendingGeneration === 'true') {
+      // Initial fetch
       fetchAvailableSelfies()
+      // Quick one-shot retry to avoid race where DB write/replication lags
+      const retry = setTimeout(() => {
+        fetchAvailableSelfies()
+      }, 800)
+      return () => clearTimeout(retry)
     }
   }, [fetchAvailableSelfies])
 
@@ -467,8 +476,8 @@ export default function InviteDashboardPage() {
                     </button>
                   )}
                   {stats.selfiesUploaded > 0 && (
-                    <button 
-                      onClick={() => router.push(`/invite-dashboard/${token}/selfies?mode=upload`)}
+                  <button 
+                      onClick={() => router.push(`/invite-dashboard/${token}/selfies`)}
                       className="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
                     > 
                       Manage my selfies ({stats.selfiesUploaded})
@@ -537,7 +546,7 @@ export default function InviteDashboardPage() {
                   </div>
                   <div className="flex gap-3">
                     <button
-                      onClick={() => router.push(`/invite-dashboard/${token}/selfies?mode=upload`)}
+                      onClick={() => router.push(`/invite-dashboard/${token}/selfies`)}
                       className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
                     >
                       Upload New Selfie
@@ -725,7 +734,7 @@ export default function InviteDashboardPage() {
                           sessionStorage.setItem('openStartFlow', 'true')
                           sessionStorage.setItem('fromGeneration', 'true')
                         }
-                        router.push(`/invite-dashboard/${token}/selfies?mode=upload`)
+                        router.push(`/invite-dashboard/${token}/selfies`)
                       }}
                       className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
                     >
