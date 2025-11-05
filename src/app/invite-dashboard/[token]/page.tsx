@@ -314,7 +314,8 @@ export default function InviteDashboardPage() {
         prompt: generatePromptFromSettings(photoStyleSettings)
       }
       
-      const response = await fetch('/api/generations/create', {
+      // Use token-authenticated endpoint for invite dashboard flows
+      const response = await fetch(`/api/team/member/generations/create?token=${encodeURIComponent(token)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
