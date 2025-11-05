@@ -6,7 +6,7 @@ import { Telemetry } from '@/lib/telemetry'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { getEffectiveTeamCreditBalance, getPersonCreditBalance, hasSufficientCredits, reserveCreditsForGeneration } from '@/domain/credits/credits'
+import { getEffectiveTeamCreditBalance, getPersonCreditBalance, hasSufficientCredits, reserveCreditsForGeneration, getTeamCreditBalance } from '@/domain/credits/credits'
 import { getPackageConfig } from '@/domain/style/packages'
 import { Env } from '@/lib/env'
 
@@ -77,7 +77,10 @@ export async function POST(request: NextRequest) {
     )
 
     if (!hasTeamCredits) {
-      const available = await getEffectiveTeamCreditBalance(teamUser?.id || null, teamId)
+      const userIdForBalance = teamUser?.id ?? invite.person.team?.adminId ?? null
+      const available = userIdForBalance
+        ? await getEffectiveTeamCreditBalance(userIdForBalance, teamId)
+        : await getTeamCreditBalance(teamId)
       const personAllocation = await getPersonCreditBalance(invite.person.id)
       return NextResponse.json(
         {
@@ -105,7 +108,7 @@ export async function POST(request: NextRequest) {
       data: {
         personId: selfie.personId,
         selfieId: selfie.id,
-        contextId: contextId || invite.person.contextId || null,
+        contextId: contextId ?? invite.person.team?.activeContextId ?? null,
         uploadedPhotoKey: selfie.key,
         generatedPhotoKeys: [],
         generationType: 'team',
