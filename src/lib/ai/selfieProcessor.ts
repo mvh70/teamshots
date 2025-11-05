@@ -4,34 +4,21 @@ import { promisify } from 'util'
 
 const execAsync = promisify(exec)
 import sharp from 'sharp'
-import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
-import { Env } from '@/lib/env'
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
 
-// S3 client configuration (same as worker)
-const BUCKET_NAME = Env.string('HETZNER_S3_BUCKET', 'teamshots')
-const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
-const resolvedEndpoint =
-  endpoint && (endpoint.startsWith('http://') || endpoint.startsWith('https://'))
-    ? endpoint
-    : endpoint
-    ? `https://${endpoint}`
-    : undefined
-
-const s3Client = new S3Client({
-  region: Env.string('HETZNER_S3_REGION', 'eu-central'),
-  endpoint: resolvedEndpoint,
-  credentials: {
-    accessKeyId: Env.string('HETZNER_S3_ACCESS_KEY', ''),
-    secretAccessKey: Env.string('HETZNER_S3_SECRET_KEY', ''),
-  },
-  forcePathStyle: false,
-})
+// S3 client configuration (supports Backblaze B2, Hetzner, AWS S3, etc.)
+const s3Client = createS3Client({ forcePathStyle: false })
+const BUCKET_NAME = getS3BucketName()
 
 // S3 helper functions (same as worker)
+// s3Key is the relative key from database (without folder prefix)
 async function downloadSelfieAsBase64(s3Key: string): Promise<{ mimeType: string; base64: string }> {
   try {
-    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key })
+    // Add folder prefix if configured
+    const fullKey = getS3Key(s3Key)
+    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fullKey })
     const url = await getSignedUrl(s3Client, command, { expiresIn: 300 })
     const res = await fetch(url)
     if (!res.ok) throw new Error(`Failed to fetch selfie: ${res.status}`)
@@ -46,15 +33,19 @@ async function downloadSelfieAsBase64(s3Key: string): Promise<{ mimeType: string
   }
 }
 
+// key is the relative key (without folder prefix) - stored in database
 async function uploadToS3(buffer: Buffer, key: string, contentType: string = 'image/png'): Promise<{ success: boolean; key?: string; error?: string }> {
   try {
+    // Add folder prefix if configured
+    const s3Key = getS3Key(key)
     await s3Client.send(new PutObjectCommand({
       Bucket: BUCKET_NAME,
-      Key: key,
+      Key: s3Key,
       Body: buffer,
       ContentType: contentType,
     }))
     
+    // Return relative key (without folder prefix) for database storage
     return { success: true, key }
   } catch (error) {
     console.error('Failed to upload to S3:', error)
@@ -137,10 +128,10 @@ export async function processSelfieForBackgroundRemoval(
       // Debug logging removed for production security
     }
     
-    // Get selfie record to extract personId for the path
+    // Get selfie record to extract personId and firstName for the path
     const selfie = await prisma.selfie.findUnique({
       where: { id: selfieId },
-      select: { personId: true, key: true }
+      select: { personId: true, key: true, person: { select: { firstName: true } } }
     })
     
     if (!selfie) {
@@ -150,11 +141,15 @@ export async function processSelfieForBackgroundRemoval(
     // Extract extension from original key
     const extension = selfie.key.split('.').pop() || 'png'
     
-    // Generate new S3 key for processed selfie: selfies/{personId}/{selfieId}-processed.{ext}
-    const processedKey = `selfies/${selfie.personId}/${selfieId}-processed.${extension}`
+    // Get firstName for folder structure
+    const firstName = sanitizeNameForS3(selfie.person?.firstName || 'unknown')
     
-    // Upload processed selfie to S3
-    const uploadResult = await uploadToS3(enhancedBuffer, processedKey, 'image/png')
+    // Generate new S3 key for processed selfie: selfies/{personId}-{firstName}/{selfieId}-processed.{ext}
+    // This is the relative key (without folder prefix) - stored in database
+    const relativeKey = `selfies/${selfie.personId}-${firstName}/${selfieId}-processed.${extension}`
+    
+    // Upload processed selfie to S3 (with folder prefix if configured)
+    const uploadResult = await uploadToS3(enhancedBuffer, relativeKey, 'image/png')
     
     if (!uploadResult.success) {
       return { success: false, error: `Failed to upload processed selfie: ${uploadResult.error}` }
@@ -163,14 +158,14 @@ export async function processSelfieForBackgroundRemoval(
     // Update the selfie record with the processed key
     await prisma.selfie.update({
       where: { id: selfieId },
-      data: { processedKey }
+      data: { processedKey: relativeKey }
     })
     
     // Successfully processed selfie
     
     return {
       success: true,
-      processedKey
+      processedKey: relativeKey
     }
     
   } catch (error) {

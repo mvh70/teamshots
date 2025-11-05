@@ -8,6 +8,7 @@ export function useGenerations(
   currentUserId?: string,
   isTeamAdmin?: boolean,
   currentUserName?: string,
+  currentPersonId?: string,
   scope: 'personal' | 'team' = 'personal',
   teamView?: 'mine' | 'team',
   selectedUserId: string = 'all',
@@ -29,7 +30,7 @@ export function useGenerations(
 
   // Mock team users (current + teammate). Replace with real team members later
   const [teamUsers, setTeamUsers] = useState<{id:string; name:string}[]>([
-    { id: currentUserId || 'u_current', name: currentUserName || 'Me' }
+    { id: currentPersonId || currentUserId || 'u_current', name: currentUserName || 'Me' }
   ])
   useEffect(() => {
     const load = async () => {

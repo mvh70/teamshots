@@ -1,32 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
-import { Env } from '@/lib/env'
+import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
-const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
-const bucket = Env.string('HETZNER_S3_BUCKET', '')
-const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY', '')
-const secretAccessKey = Env.string('HETZNER_S3_SECRET_KEY', '')
-const region = Env.string('HETZNER_S3_REGION', 'eu-central')
-
-const resolvedEndpoint = endpoint && (endpoint.startsWith('http://') || endpoint.startsWith('https://'))
-  ? endpoint
-  : endpoint
-    ? `https://${endpoint}`
-    : undefined
-
-const s3 = new S3Client({
-  region,
-  endpoint: resolvedEndpoint,
-  credentials: {
-    accessKeyId: accessKeyId || '',
-    secretAccessKey: secretAccessKey || ''
-  },
-  forcePathStyle: false
-})
+const s3 = createS3Client()
+const bucket = getS3BucketName()
 
 export async function GET(
   request: NextRequest,
@@ -59,9 +40,12 @@ export async function GET(
       return NextResponse.json({ error: 'User person record not found' }, { status: 404 })
     }
 
-    // Extract personId from S3 key (format: folder/personId/filename)
+    // Extract personId from S3 key (format: folder/personId-firstName/filename)
+    // Note: key from URL param is relative (from database), without folder prefix
     const keyParts = key.split('/')
-    const filePersonId = keyParts[1]
+    // Extract personId from format: personId-firstName (e.g., "clx123abc-john")
+    const personIdWithName = keyParts[1]
+    const filePersonId = personIdWithName?.split('-')[0] || keyParts[1] // Fallback to original if no hyphen
 
     if (person.id !== filePersonId) {
       // Check if same team
@@ -80,7 +64,9 @@ export async function GET(
       }
     }
 
-    const command = new GetObjectCommand({ Bucket: bucket, Key: key })
+    // Add folder prefix if configured
+    const s3Key = getS3Key(key)
+    const command = new GetObjectCommand({ Bucket: bucket, Key: s3Key })
     const url = await getSignedUrl(s3, command, { expiresIn: 3600 }) // 1 hour expiry
     
     // Redirect to the signed URL so the browser can fetch/stream directly

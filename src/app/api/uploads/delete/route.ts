@@ -1,28 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
+import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
-const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
-const bucket = Env.string('HETZNER_S3_BUCKET', '')
-const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY_ID', Env.string('HETZNER_S3_ACCESS_KEY', ''))
-const secretAccessKey = Env.string('HETZNER_S3_SECRET_ACCESS_KEY', Env.string('HETZNER_S3_SECRET_KEY', ''))
+const s3 = createS3Client({ forcePathStyle: true })
+const bucket = getS3BucketName()
 
-if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
-  throw new Error('Missing S3 configuration')
+if (!bucket) {
+  throw new Error('Missing S3 bucket configuration')
 }
-
-const s3 = new S3Client({
-  endpoint,
-  region: Env.string('HETZNER_S3_REGION', 'us-east-1'),
-  credentials: {
-    accessKeyId,
-    secretAccessKey,
-  },
-  forcePathStyle: true,
-})
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -38,7 +26,18 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Missing or invalid key parameter' }, { status: 400 })
     }
 
-    // Verify the selfie belongs to the user
+    // Get person to verify ownership
+    const person = await prisma.person.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true }
+    })
+
+    if (!person) {
+      return NextResponse.json({ error: 'Person record not found' }, { status: 404 })
+    }
+
+    // Verify the selfie belongs to the user (if it exists in database)
+    // If not in database, it might be a temporary upload that wasn't approved yet
     const selfie = await prisma.selfie.findFirst({
       where: {
         key: key,
@@ -48,28 +47,43 @@ export async function DELETE(request: NextRequest) {
       },
     })
 
-    if (!selfie) {
-      return NextResponse.json({ error: 'Selfie not found or access denied' }, { status: 404 })
+    // Verify key belongs to this user by checking if personId matches
+    // Extract personId from key format: selfies/{personId}-{firstName}/filename
+    const keyParts = key.split('/')
+    const personIdWithName = keyParts[1]
+    const filePersonId = personIdWithName?.split('-')[0] || keyParts[1]
+    
+    if (filePersonId !== person.id) {
+      return NextResponse.json({ error: 'Unauthorized - selfie does not belong to user' }, { status: 403 })
     }
 
-    // Delete from S3
+    // Delete from S3 (key is relative from database, add folder prefix if configured)
     try {
+      const s3Key = getS3Key(key)
       const command = new DeleteObjectCommand({
         Bucket: bucket,
-        Key: key,
+        Key: s3Key,
       })
       await s3.send(command)
+      Logger.info('Deleted file from S3', { key, s3Key })
     } catch (s3Error) {
-      Logger.error('Failed to delete from S3', { error: s3Error instanceof Error ? s3Error.message : String(s3Error) })
+      Logger.error('Failed to delete from S3', { error: s3Error instanceof Error ? s3Error.message : String(s3Error), key })
       // Continue with database deletion even if S3 deletion fails
     }
 
-    // Delete from database
-    await prisma.selfie.delete({
-      where: {
-        id: selfie.id,
-      },
-    })
+    // Delete from database only if it exists (for approved selfies)
+    if (selfie) {
+      await prisma.selfie.delete({
+        where: {
+          id: selfie.id,
+        },
+      })
+      Logger.info('Deleted selfie from database', { selfieId: selfie.id })
+    } else {
+      // File was uploaded but never approved (no DB record)
+      // S3 deletion already handled above
+      Logger.info('Deleted temporary selfie file (no DB record)', { key })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

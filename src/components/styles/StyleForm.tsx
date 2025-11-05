@@ -66,7 +66,7 @@ export default function StyleForm({
     scope,
     packageId: scope === 'freePackage' ? 'freepackage' : 'headshot1',
     settings: photoStyleSettings,
-    initialContextId: mode === 'edit' ? styleContextId : undefined,
+    initialContextId: mode === 'edit' && styleContextId !== null ? styleContextId : undefined,
     name: autosaveName || name
   })
 

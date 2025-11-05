@@ -69,7 +69,7 @@
 - **Model**: u2net_human_seg (optimized for human subjects with good quality/size balance)
 
 ### Storage
-- **Hetzner S3**: Photo storage (uploaded & generated)
+- **S3 Storage**: Photo storage (uploaded & generated) - Supports Backblaze B2, Hetzner, AWS S3, etc.
 - **Retention**: 30 days default
 
 #### Hetzner S3 CORS (Browser uploads)
@@ -402,7 +402,18 @@ GITHUB_CLIENT_SECRET=
 # AI
 GEMINI_API_KEY=
 
-# Storage
+# Storage (S3-compatible: Backblaze B2, Hetzner, AWS S3, etc.)
+# Use generic S3_* vars (preferred) or legacy HETZNER_S3_* vars for backward compatibility
+S3_ENDPOINT=
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+S3_BUCKET_NAME=
+S3_REGION=
+S3_FOLDER=                    # Optional: Folder prefix (e.g., "localhost", "production", "staging")
+                               # All files will be stored under this prefix if set
+                               # Useful for separating test/production files in the same bucket
+
+# Legacy Hetzner S3 (backward compatibility, will be removed in future)
 HETZNER_S3_ENDPOINT=
 HETZNER_S3_ACCESS_KEY=
 HETZNER_S3_SECRET_KEY=

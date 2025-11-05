@@ -17,7 +17,16 @@ const envSchema = z.object({
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   
-  // Hetzner S3
+  // S3 Storage Configuration (generic, works with any S3-compatible provider)
+  // Supports Backblaze B2, Hetzner, AWS S3, etc.
+  S3_ENDPOINT: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  S3_BUCKET_NAME: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_FOLDER: z.string().optional(), // Optional folder prefix (e.g., "dev", "production", "localhost")
+  
+  // Hetzner S3 (legacy, for backward compatibility)
   HETZNER_S3_ENDPOINT: z.string().optional(),
   HETZNER_S3_BUCKET: z.string().optional(),
   HETZNER_S3_REGION: z.string().optional(),

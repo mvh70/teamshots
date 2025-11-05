@@ -6,9 +6,8 @@ import {
   MultiStepPreprocessingResult 
 } from '@/lib/image-preprocessing'
 import { Logger } from '@/lib/logger'
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { Env } from '@/lib/env'
 import { httpFetch } from '@/lib/http'
 
 /**
@@ -26,30 +25,18 @@ export interface PreprocessorResult {
   intermediateResults?: MultiStepPreprocessingResult['intermediateResults']
 }
 
-// S3 client for downloading assets
-const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
-const resolvedEndpoint =
-  endpoint && (endpoint.startsWith('http://') || endpoint.startsWith('https://'))
-    ? endpoint
-    : endpoint
-    ? `https://${endpoint}`
-    : undefined
+// S3 client for downloading assets (supports Backblaze B2, Hetzner, AWS S3, etc.)
+import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
-const s3Client = new S3Client({
-  region: Env.string('HETZNER_S3_REGION', 'eu-central'),
-  endpoint: resolvedEndpoint,
-  credentials: {
-    accessKeyId: Env.string('HETZNER_S3_ACCESS_KEY', ''),
-    secretAccessKey: Env.string('HETZNER_S3_SECRET_KEY', ''),
-  },
-  forcePathStyle: false,
-})
+const s3Client = createS3Client({ forcePathStyle: false })
+const BUCKET_NAME = getS3BucketName()
 
-const BUCKET_NAME = Env.string('HETZNER_S3_BUCKET')
-
+// s3Key is the relative key from database (without folder prefix)
 async function downloadAssetAsBuffer(s3Key: string): Promise<Buffer | null> {
   try {
-    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key })
+    // Add folder prefix if configured
+    const fullKey = getS3Key(s3Key)
+    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fullKey })
     const url = await getSignedUrl(s3Client, command, { expiresIn: 300 })
     const res = await httpFetch(url)
     if (!res.ok) return null

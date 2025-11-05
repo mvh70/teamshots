@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { SecurityLogger } from '@/lib/security-logger'
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
+import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
-// S3 configuration - this should be centralized
-const s3 = new S3Client({
-  endpoint: Env.string('HETZNER_S3_ENDPOINT', ''),
-  region: Env.string('HETZNER_S3_REGION', 'us-east-1'),
-  credentials: {
-    accessKeyId: Env.string('HETZNER_S3_ACCESS_KEY', ''),
-    secretAccessKey: Env.string('HETZNER_S3_SECRET_KEY', ''),
-  },
-  forcePathStyle: true,
-})
-const bucket = Env.string('HETZNER_S3_BUCKET', '')
+// S3 configuration (supports Backblaze B2, Hetzner, AWS S3, etc.)
+const s3 = createS3Client({ forcePathStyle: true })
+const bucket = getS3BucketName()
 
 export async function DELETE(
   request: NextRequest,
@@ -82,7 +74,9 @@ export async function DELETE(
 
     for (const key of s3KeysToDelete) {
       try {
-        const command = new DeleteObjectCommand({ Bucket: bucket, Key: key })
+        // key is relative from database, add folder prefix if configured
+        const s3Key = getS3Key(key)
+        const command = new DeleteObjectCommand({ Bucket: bucket, Key: s3Key })
         await s3.send(command)
       } catch (s3Error) {
         Logger.error('Failed to delete team S3 file', { key, error: s3Error instanceof Error ? s3Error.message : String(s3Error) })

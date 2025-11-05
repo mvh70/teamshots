@@ -44,6 +44,7 @@ export default function GenerationsPage() {
 
   const [generations, setGenerations] = useState<Generation[]>([])
   const [loading, setLoading] = useState(true)
+  const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedGeneration, setSelectedGeneration] = useState<Generation | null>(null)
   const [autoRefreshing, setAutoRefreshing] = useState(false)
@@ -54,7 +55,10 @@ export default function GenerationsPage() {
 
   const fetchGenerations = useCallback(async () => {
     try {
-      setLoading(true)
+      // Only show the full-page loading state on the first load to avoid flashing during auto-refresh
+      if (!initialLoadDone) {
+        setLoading(true)
+      }
       const response = await fetch(`/api/team/member/generations?token=${token}`)
       
       if (response.ok) {
@@ -67,8 +71,11 @@ export default function GenerationsPage() {
       setError('Failed to fetch generations')
     } finally {
       setLoading(false)
+      if (!initialLoadDone) {
+        setInitialLoadDone(true)
+      }
     }
-  }, [token])
+  }, [token, initialLoadDone])
 
   useEffect(() => {
     fetchGenerations()

@@ -22,8 +22,11 @@ interface UploadCardProps {
 export default function UploadCard({ item, onDelete }: UploadCardProps) {
   const t = useTranslations('generations')
   const [isDeleting, setIsDeleting] = useState(false)
-  const imgSrc = item.uploadedKey && item.uploadedKey !== 'undefined' 
-    ? `/api/files/get?key=${encodeURIComponent(item.uploadedKey)}` 
+  const [imageError, setImageError] = useState(false)
+  
+  // Add cache-busting parameter to force fresh fetch after migration
+  const imgSrc = item.uploadedKey && item.uploadedKey !== 'undefined' && !imageError
+    ? `/api/files/get?key=${encodeURIComponent(item.uploadedKey)}&t=${Date.now()}` 
     : '/placeholder-image.png'
 
   const handleDelete = async () => {
@@ -49,7 +52,18 @@ export default function UploadCard({ item, onDelete }: UploadCardProps) {
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
       <div className="aspect-square bg-gray-50 overflow-hidden">
-        <Image src={imgSrc} alt="upload" width={300} height={300} className="w-full h-full object-cover" unoptimized />
+        <Image 
+          src={imgSrc} 
+          alt="upload" 
+          width={300} 
+          height={300} 
+          className="w-full h-full object-cover" 
+          unoptimized
+          onError={() => {
+            setImageError(true)
+            console.warn('Image failed to load, may not be migrated to Backblaze yet:', item.uploadedKey)
+          }}
+        />
       </div>
       <div className="p-3 space-y-2">
         <div className="flex items-center justify-between">

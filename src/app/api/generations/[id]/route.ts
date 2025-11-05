@@ -7,26 +7,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { SecurityLogger } from '@/lib/security-logger'
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
+import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
-// S3 configuration for Hetzner
-const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
-const bucket = Env.string('HETZNER_S3_BUCKET', '')
-const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY', '')
-const secretAccessKey = Env.string('HETZNER_S3_SECRET_KEY', '')
-
-const s3 = new S3Client({
-  endpoint,
-  region: Env.string('HETZNER_S3_REGION', 'us-east-1'),
-  credentials: {
-    accessKeyId: accessKeyId || '',
-    secretAccessKey: secretAccessKey || '',
-  },
-  forcePathStyle: true,
-})
+// S3 configuration (supports Backblaze B2, Hetzner, AWS S3, etc.)
+const s3 = createS3Client({ forcePathStyle: true })
+const bucket = getS3BucketName()
 
 export async function GET(
   request: NextRequest,
@@ -280,12 +268,14 @@ export async function DELETE(
 
     for (const key of s3KeysToDelete) {
       try {
+        // key is relative from database, add folder prefix if configured
+        const s3Key = getS3Key(key)
         const command = new DeleteObjectCommand({
           Bucket: bucket,
-          Key: key,
+          Key: s3Key,
         })
         await s3.send(command)
-        Logger.info('Deleted S3 file', { key })
+        Logger.info('Deleted S3 file', { key, s3Key })
       } catch (s3Error) {
         Logger.error('Failed to delete S3 file', { key, error: s3Error instanceof Error ? s3Error.message : String(s3Error) })
         // Continue with other deletions even if one fails

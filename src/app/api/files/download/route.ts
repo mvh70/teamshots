@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
+import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
-const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
-const bucket = Env.string('HETZNER_S3_BUCKET', '')
-const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY', '')
-const secretAccessKey = Env.string('HETZNER_S3_SECRET_KEY', '')
-
-const s3 = new S3Client({
-  region: Env.string('HETZNER_S3_REGION', 'eu-central-1'),
-  endpoint,
-  credentials: {
-    accessKeyId: accessKeyId || '',
-    secretAccessKey: secretAccessKey || ''
-  },
-  forcePathStyle: false
-})
+const s3 = createS3Client()
+const bucket = getS3BucketName()
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,7 +13,9 @@ export async function GET(req: NextRequest) {
     const key = searchParams.get('key')
     if (!key) return NextResponse.json({ error: 'Missing key' }, { status: 400 })
 
-    const command = new GetObjectCommand({ Bucket: bucket, Key: key })
+    // key from query param is relative (from database), add folder prefix if configured
+    const s3Key = getS3Key(key)
+    const command = new GetObjectCommand({ Bucket: bucket, Key: s3Key })
     const url = await getSignedUrl(s3, command, { expiresIn: 60 })
     return NextResponse.json({ url })
   } catch (e) {

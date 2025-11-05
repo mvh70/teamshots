@@ -63,6 +63,7 @@ export default function PersonalGenerationsPage() {
     currentUserId,
     false, // isTeamAdmin - not needed for personal
     currentUserName,
+    undefined, // currentPersonId - not needed for personal
     'personal', // scope
     undefined, // teamView - not needed for personal
     'all', // selectedUserId - not needed for personal

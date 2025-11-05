@@ -4,28 +4,20 @@ import { prisma } from '@/lib/prisma'
 import { getSelfieSequence } from '@/domain/access/image-access'
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { Env } from '@/lib/env'
+import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
 
-const s3Client = new S3Client({
-  region: Env.string('HETZNER_S3_REGION', 'eu-central'),
-  endpoint: Env.string('HETZNER_S3_ENDPOINT'),
-  credentials: {
-    accessKeyId: Env.string('HETZNER_S3_ACCESS_KEY'),
-    secretAccessKey: Env.string('HETZNER_S3_SECRET_KEY'),
-  },
-})
-
-const BUCKET_NAME = Env.string('HETZNER_S3_BUCKET')
+const s3Client = createS3Client()
+const BUCKET_NAME = getS3BucketName()
 
 /**
  * S3 Storage Structure:
- * - Selfies: selfies/{personId}/{selfieId}.{ext}
- * - Processed Selfies: selfies/{personId}/{selfieId}-processed.{ext}
- * - Generations: generations/{personId}/{generationId}/variation-{i}.png
+ * - Selfies: selfies/{personId}-{firstName}/{selfieId}.{ext}
+ * - Processed Selfies: selfies/{personId}-{firstName}/{selfieId}-processed.{ext}
+ * - Generations: generations/{personId}-{firstName}/{generationId}/variation-{i}.png
  * - Other uploads: {folder}/{personId}/{uuid}.{ext}
  */
 
@@ -89,6 +81,13 @@ export async function POST(request: NextRequest) {
   let key: string
   
   if (folder === 'selfies') {
+    // Get person's firstName for folder structure
+    const personWithName = await prisma.person.findUnique({
+      where: { id: person.id },
+      select: { firstName: true }
+    })
+    const firstName = sanitizeNameForS3(personWithName?.firstName || 'unknown')
+    
     // Create selfie record first to get the ID
     const selfie = await prisma.selfie.create({
       data: {
@@ -98,19 +97,21 @@ export async function POST(request: NextRequest) {
       },
     })
     
-    // Use selfie ID as filename
-    key = `${folder}/${person.id}/${selfie.id}.${detectedType.ext}`
+    // Use selfie ID as filename (relative key, without folder prefix)
+    // Format: selfies/{personId}-{firstName}/{selfieId}.{ext}
+    const relativeKey = `${folder}/${person.id}-${firstName}/${selfie.id}.${detectedType.ext}`
     
-    // Update the selfie record with the correct key
+    // Update the selfie record with the relative key (without folder prefix)
     await prisma.selfie.update({
       where: { id: selfie.id },
-      data: { key: key },
+      data: { key: relativeKey },
     })
 
-    // Upload WITHOUT public ACL
+    // Upload WITH folder prefix (if configured)
+    const s3Key = getS3Key(relativeKey)
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
-      Key: key,
+      Key: s3Key,
       Body: buffer,
       ContentType: detectedType.mime,
       Metadata: {
@@ -136,12 +137,13 @@ export async function POST(request: NextRequest) {
   
   // For non-selfie uploads (backgrounds, logos, etc.), use UUID
   const fileName = `${randomUUID()}.${detectedType.ext}`
-  key = `${folder}/${person.id}/${fileName}`
+  const relativeKey = `${folder}/${person.id}/${fileName}`
 
-  // Upload WITHOUT public ACL
+  // Upload WITH folder prefix (if configured)
+  const s3Key = getS3Key(relativeKey)
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
-    Key: key,
+    Key: s3Key,
     Body: buffer,
     ContentType: detectedType.mime,
     Metadata: {
@@ -154,8 +156,8 @@ export async function POST(request: NextRequest) {
 
   await s3Client.send(command)
 
-  // For other uploads, return signed URL
-  const getCommand = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key })
+  // For other uploads, return signed URL (use the same s3Key with folder prefix)
+  const getCommand = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key })
   const signedUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 })
 
   return NextResponse.json({

@@ -1,16 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { Env } from '@/lib/env'
+import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
-const s3Client = new S3Client({
-  region: Env.string('HETZNER_S3_REGION', 'eu-central'),
-  endpoint: Env.string('HETZNER_S3_ENDPOINT', ''),
-  credentials: {
-    accessKeyId: Env.string('HETZNER_S3_ACCESS_KEY', ''),
-    secretAccessKey: Env.string('HETZNER_S3_SECRET_KEY', ''),
-  },
-})
+const s3Client = createS3Client()
 
 const SELFIE_ORDER = { createdAt: 'asc' as const }
 const GENERATION_ORDER = { createdAt: 'asc' as const }
@@ -59,13 +52,16 @@ export async function getGenerationSequence(personId: string, generationId: stri
   return index >= 0 ? index + 1 : null
 }
 
+// s3Key is the relative key from database (without folder prefix)
 export async function getPrivateImageUrl(
   s3Key: string,
   expiresIn: number = 3600
 ): Promise<string> {
+  // Add folder prefix if configured
+  const fullKey = getS3Key(s3Key)
   const command = new GetObjectCommand({
-    Bucket: Env.string('HETZNER_S3_BUCKET'),
-    Key: s3Key,
+    Bucket: getS3BucketName(),
+    Key: fullKey,
   })
   return await getSignedUrl(s3Client, command, { expiresIn })
 }

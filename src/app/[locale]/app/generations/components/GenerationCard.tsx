@@ -41,11 +41,15 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const imageKey = item.acceptedKey || item.generatedKey
-  const beforeSrc = (item.selfieKey || item.uploadedKey) && (item.selfieKey || item.uploadedKey) !== 'undefined' 
-    ? `/api/files/get?key=${encodeURIComponent(item.selfieKey || item.uploadedKey)}` 
+  const [beforeImageError, setBeforeImageError] = useState(false)
+  const [afterImageError, setAfterImageError] = useState(false)
+  
+  // Add cache-busting parameter to force fresh fetch after migration
+  const beforeSrc = (item.selfieKey || item.uploadedKey) && (item.selfieKey || item.uploadedKey) !== 'undefined' && !beforeImageError
+    ? `/api/files/get?key=${encodeURIComponent(item.selfieKey || item.uploadedKey)}&t=${Date.now()}` 
     : '/placeholder-image.png'
-  const afterSrc = (item.generatedKey || item.uploadedKey) && (item.generatedKey || item.uploadedKey) !== 'undefined'
-    ? `/api/files/get?key=${encodeURIComponent(item.generatedKey || item.uploadedKey)}`
+  const afterSrc = (item.generatedKey || item.uploadedKey) && (item.generatedKey || item.uploadedKey) !== 'undefined' && !afterImageError
+    ? `/api/files/get?key=${encodeURIComponent(item.generatedKey || item.uploadedKey)}&t=${Date.now()}`
     : '/placeholder-image.png'
   const containerRef = useRef<HTMLDivElement | null>(null)
   // Start fully on Generated side by default (if present)
@@ -171,7 +175,17 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
         onTouchMove={onTouchMove}
       >
         {/* BACKGROUND: Selfie full cover */}
-        <Image src={beforeSrc} alt="selfie" fill className="object-cover" unoptimized />
+        <Image 
+          src={beforeSrc} 
+          alt="selfie" 
+          fill 
+          className="object-cover" 
+          unoptimized
+          onError={() => {
+            setBeforeImageError(true)
+            console.warn('Selfie image failed to load, may not be migrated to Backblaze yet:', item.selfieKey || item.uploadedKey)
+          }}
+        />
 
         {/* FOREGROUND: Generated clipped to handle position OR placeholder */}
         <div className="absolute inset-0">
@@ -196,6 +210,10 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
               className="object-cover"
               unoptimized
               style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
+              onError={() => {
+                setAfterImageError(true)
+                console.warn('Generated image failed to load, may not be migrated to Backblaze yet:', item.generatedKey)
+              }}
             />
           )}
         </div>

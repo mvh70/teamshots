@@ -1,37 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
+import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
-const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
-const bucket = Env.string('HETZNER_S3_BUCKET', '')
-const accessKeyId = Env.string('HETZNER_S3_ACCESS_KEY', '')
-const secretAccessKey = Env.string('HETZNER_S3_SECRET_KEY', '')
-const region = Env.string('HETZNER_S3_REGION', 'eu-central-1')
-
-const resolvedEndpoint = endpoint && (endpoint.startsWith('http://') || endpoint.startsWith('https://'))
-  ? endpoint
-  : endpoint
-    ? `https://${endpoint}`
-    : undefined
-
-const s3 = new S3Client({
-  region,
-  endpoint: resolvedEndpoint,
-  credentials: {
-    accessKeyId: accessKeyId || '',
-    secretAccessKey: secretAccessKey || ''
-  },
-  forcePathStyle: false
-})
+const s3 = createS3Client()
+const bucket = getS3BucketName()
 
 export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const key = searchParams.get('key')
-    if (!key) return NextResponse.json({ error: 'Missing key' }, { status: 400 })
+  const { searchParams } = new URL(req.url)
+  const key = searchParams.get('key')
+  if (!key) return NextResponse.json({ error: 'Missing key' }, { status: 400 })
 
-    const command = new GetObjectCommand({ Bucket: bucket, Key: key })
+  try {
+    // key from query param is relative (from database), add folder prefix if configured
+    const s3Key = getS3Key(key)
+    const command = new GetObjectCommand({ Bucket: bucket, Key: s3Key })
     const response = await s3.send(command)
     
     if (!response.Body) {
@@ -48,6 +31,8 @@ export async function GET(req: NextRequest) {
     const buffer = Buffer.concat(chunks)
     
     // Return the buffer as a response
+    // Note: Cache-Control allows browser caching but we add cache-busting via query params
+    // when files are missing (to allow retry after migration)
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': response.ContentType || 'application/octet-stream',
@@ -56,8 +41,28 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (e) {
-    Logger.error('[files/get] error', { error: e instanceof Error ? e.message : String(e) })
-    return NextResponse.json({ error: 'Failed to get file' }, { status: 500 })
+    const error = e instanceof Error ? e.message : String(e)
+    Logger.error('[files/get] error', { error, key })
+    
+    // Check if it's a "not found" error (file doesn't exist in Backblaze)
+    if (error.includes('NotFound') || error.includes('NoSuchKey') || error.includes('404')) {
+      return NextResponse.json({ 
+        error: 'File not found',
+        message: 'File may not have been migrated to Backblaze yet'
+      }, { 
+        status: 404,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate', // Don't cache 404s
+        }
+      })
+    }
+    
+    return NextResponse.json({ error: 'Failed to get file' }, { 
+      status: 500,
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      }
+    })
   }
 }
 

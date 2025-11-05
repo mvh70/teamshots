@@ -9,7 +9,7 @@ import { ImageGenerationJobData, redis } from '@/queue'
 import { prisma } from '@/lib/prisma'
 import { refundCreditsForFailedGeneration } from '@/domain/credits/credits'
 import { Logger } from '@/lib/logger'
-import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { Telemetry } from '@/lib/telemetry'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import sharp from 'sharp'
@@ -23,6 +23,7 @@ import { getPackageConfig } from '@/domain/style/packages'
 import { PhotoStyleSettings } from '@/types/photo-style'
 import { sendSupportNotificationEmail } from '@/lib/email'
 import { getProgressMessage, formatProgressMessage } from '@/lib/generation-progress-messages'
+import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
 // Background removal processing disabled
 // import { processSelfieForBackgroundRemoval, getBestSelfieKey } from '@/lib/ai/selfieProcessor'
 
@@ -31,26 +32,8 @@ import { VertexAI } from '@google-cloud/vertexai';
 import { Content, GenerateContentResult } from '@google-cloud/vertexai';
 import { Part } from '@google-cloud/vertexai';
 
-// S3 client configuration (Hetzner-compatible, aligned with /api/files/get)
-const endpoint = Env.string('HETZNER_S3_ENDPOINT', '')
-const resolvedEndpoint =
-  endpoint && (endpoint.startsWith('http://') || endpoint.startsWith('https://'))
-    ? endpoint
-    : endpoint
-    ? `https://${endpoint}`
-    : undefined
-
-const s3Client = new S3Client({
-  region: Env.string('HETZNER_S3_REGION', 'eu-central'),
-  endpoint: resolvedEndpoint,
-  credentials: {
-    accessKeyId: Env.string('HETZNER_S3_ACCESS_KEY', ''),
-    secretAccessKey: Env.string('HETZNER_S3_SECRET_KEY', ''),
-  },
-  forcePathStyle: false,
-})
-
-const BUCKET_NAME = Env.string('HETZNER_S3_BUCKET')
+const s3Client = createS3Client({ forcePathStyle: false })
+const BUCKET_NAME = getS3BucketName()
 
 // Create worker
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
@@ -588,9 +571,12 @@ imageGenerationWorker.on('stalled', (jobId) => {
 // Helper functions
 
 // Downloads selfie object from S3 and returns base64 + mime type
+// s3Key is the relative key from database (without folder prefix)
 async function downloadSelfieAsBase64(s3Key: string): Promise<{ mimeType: string; base64: string }> {
   try {
-    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key })
+    // Add folder prefix if configured
+    const fullKey = getS3Key(s3Key)
+    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fullKey })
     const url = await getSignedUrl(s3Client, command, { expiresIn: 300 })
     const res = await httpFetch(url)
     if (!res.ok) throw new Error(`Failed to fetch selfie: ${res.status}`)
@@ -606,9 +592,12 @@ async function downloadSelfieAsBase64(s3Key: string): Promise<{ mimeType: string
 }
 
 // Generic S3 download helper for additional assets (backgrounds, logos)
+// s3Key is the relative key from database (without folder prefix)
 async function downloadAssetAsBase64(s3Key: string): Promise<{ mimeType: string; base64: string } | null> {
   try {
-    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key })
+    // Add folder prefix if configured
+    const fullKey = getS3Key(s3Key)
+    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fullKey })
     const url = await getSignedUrl(s3Client, command, { expiresIn: 300 })
     const res = await httpFetch(url)
     if (!res.ok) return null
@@ -831,21 +820,37 @@ async function generateWithGemini(
   return out;
 }
 
-async function uploadGeneratedImagesToS3(images: Buffer[], personId: string, generationId: string): Promise<string[]> {
+async function uploadGeneratedImagesToS3(images: Buffer[], personId: string, generationId: string, firstName?: string): Promise<string[]> {
   const uploadedKeys: string[] = []
+  
+  // Get person's firstName if not provided
+  let personFirstName = firstName
+  if (!personFirstName) {
+    const person = await prisma.person.findUnique({
+      where: { id: personId },
+      select: { firstName: true }
+    })
+    personFirstName = person?.firstName || 'unknown'
+  }
+  const sanitizedFirstName = sanitizeNameForS3(personFirstName)
   
   for (let i = 0; i < images.length; i++) {
     const image = images[i]
-    const key = `generations/${personId}/${generationId}/variation-${i + 1}.png`
+    // Relative key (without folder prefix) - stored in database
+    // Format: generations/{personId}-{firstName}/{generationId}/variation-{i}.png
+    const relativeKey = `generations/${personId}-${sanitizedFirstName}/${generationId}/variation-${i + 1}.png`
+    // Full S3 key (with folder prefix if configured)
+    const s3Key = getS3Key(relativeKey)
     
     try {
       await s3Client.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: key,
+        Key: s3Key,
         Body: image,
         ContentType: 'image/png',
       }))
-      uploadedKeys.push(key)
+      // Store relative key in database (without folder prefix)
+      uploadedKeys.push(relativeKey)
     } catch (error) {
       Logger.error('Failed to upload image', { index: i + 1, error: error instanceof Error ? error.message : String(error) })
       throw new Error(`Failed to upload generated image ${i + 1}`)

@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
     })
 
     if (!user?.person?.team) {
-      // User is not part of a team, return just current user
-      return NextResponse.json({ users: [{ id: session.user.id, name: session.user.name || session.user.email }] })
+      // User is not part of a team, return just current user (use personId when available)
+      return NextResponse.json({ users: [{ id: user?.person?.id || session.user.id, name: session.user.name || session.user.email, userId: session.user.id }] })
     }
 
     const team = user.person.team
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
         })
 
         return {
-          id: p.userId || p.id,
+          id: p.id, // Always return personId as id
           name: [p.firstName, p.lastName].filter(Boolean).join(' ') || p.email || 'Member',
           email: p.email,
           userId: p.userId,
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
     )
 
     // Ensure current admin is included
-    if (!usersWithCredits.find(u => u.id === session.user.id)) {
+    if (!usersWithCredits.find(u => u.id === (user.person?.id || ''))) {
       const adminCredits = await getUserCreditBalance(session.user.id)
       
       // Get admin's active generation count (excluding deleted and failed)
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
       })
       
       usersWithCredits.unshift({ 
-        id: session.user.id, 
+        id: user.person?.id || session.user.id, // prefer personId
         name: session.user.name || 'Me',
         email: session.user.email,
         userId: session.user.id,

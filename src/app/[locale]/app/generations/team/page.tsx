@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
 import GenerationCard from '../components/GenerationCard'
@@ -20,6 +20,7 @@ export default function TeamGenerationsPage() {
   const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
   const currentUserId = session?.user?.id
+  const currentPersonId = session?.user?.person?.id
   const currentUserName = session?.user?.name || ''
   const [failureToast, setFailureToast] = useState<string | null>(null)
 
@@ -41,6 +42,20 @@ export default function TeamGenerationsPage() {
     fetchRoles()
   }, [session?.user?.id])
   const { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated } = useGenerationFilters()
+  
+  // Default to "All users" for team admins once role is known
+  useEffect(() => {
+    if (!isTeamAdmin) return
+    // Prevent repeatedly forcing the filter after first default
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTeamAdmin])
+  const hasDefaultedRef = useRef(false)
+  useEffect(() => {
+    if (!hasDefaultedRef.current && isTeamAdmin && userFilter !== 'team') {
+      hasDefaultedRef.current = true
+      setUserFilter('team')
+    }
+  }, [isTeamAdmin, userFilter, setUserFilter])
   const { href: buyCreditsHref } = useBuyCreditsLink()
   const [teamView] = useState<'mine' | 'team'>('mine')
   
@@ -65,9 +80,14 @@ export default function TeamGenerationsPage() {
     currentUserId,
     isTeamAdmin,
     currentUserName,
+    currentPersonId,
     'team', // scope
     teamView, // teamView
-    (isTeamAdmin && userFilter === 'team') ? selectedUserId : 'all',
+    (isTeamAdmin && userFilter === 'team')
+      ? selectedUserId
+      : (isTeamAdmin && userFilter === 'me' && currentPersonId)
+        ? currentPersonId
+        : 'all',
     handleGenerationFailed
   )
 
