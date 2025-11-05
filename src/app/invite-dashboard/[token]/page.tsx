@@ -6,7 +6,6 @@ import { useLocale } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { 
   PhotoIcon, 
-  ClockIcon,
   CheckCircleIcon,
   CameraIcon,
 } from '@heroicons/react/24/outline'
@@ -22,7 +21,6 @@ import { getPackageConfig } from '@/domain/style/packages'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
-const PhotoStyleSettings = dynamic(() => import('@/components/customization/PhotoStyleSettings'), { ssr: false })
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
 interface InviteData {
@@ -52,7 +50,6 @@ interface Selfie {
 }
 
 export default function InviteDashboardPage() {
-  const SHOW_RECENT_ACTIVITY = false;
   const SHOW_CONTEXT_SUMMARY = false;
   const params = useParams()
   const router = useRouter()
@@ -367,24 +364,7 @@ export default function InviteDashboardPage() {
     return `Professional headshot with ${promptParts.join(', ')}`
   }
 
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-    
-    if (diffInSeconds < 60) {
-      return 'Just now'
-    } else if (diffInSeconds < 3600) {
-      const minutes = Math.floor(diffInSeconds / 60)
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`
-    } else if (diffInSeconds < 86400) {
-      const hours = Math.floor(diffInSeconds / 3600)
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`
-    } else {
-      const days = Math.floor(diffInSeconds / 86400)
-      return `${days} day${days > 1 ? 's' : ''} ago`
-    }
-  }
+  
 
   // using shared hasUserDefinedFields from domain/style/userChoice
 
@@ -465,7 +445,7 @@ export default function InviteDashboardPage() {
                         {/* Primary CTA and secondary links */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-2">Get started</h3>
-              <p className="text-sm text-gray-600 mb-4">We'll guide you through uploading your selfie and generating your team photo.</p>
+              <p className="text-sm text-gray-600 mb-4">We&#39;ll guide you through uploading your selfie and generating your team photo.</p>
               <div className="space-y-3">
                 <button 
                   onClick={() => {
@@ -512,7 +492,7 @@ export default function InviteDashboardPage() {
                 <div className="flex items-center justify-center h-28 text-center text-sm text-gray-600 bg-gray-50 rounded-md">
                   <div className="flex items-center gap-2">
                     <PhotoIcon className="h-5 w-5 text-gray-400" />
-                    <span>No photos yet. Generate one and they’ll show up here.</span>
+                    <span>No photos yet. Generate one and they&#39;ll show up here.</span>
                   </div>
                 </div>
               ) : (

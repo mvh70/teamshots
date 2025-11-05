@@ -73,8 +73,6 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100) // Max 100 per page
     const status = searchParams.get('status')
     // Client cannot choose scope/type; server derives from roles
-    const scope = null
-    const generationType = null
     const userId = searchParams.get('userId')
     const offset = (page - 1) * limit
 

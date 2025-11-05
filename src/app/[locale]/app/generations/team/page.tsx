@@ -47,7 +47,6 @@ export default function TeamGenerationsPage() {
   useEffect(() => {
     if (!isTeamAdmin) return
     // Prevent repeatedly forcing the filter after first default
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTeamAdmin])
   const hasDefaultedRef = useRef(false)
   useEffect(() => {

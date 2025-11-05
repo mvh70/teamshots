@@ -39,7 +39,7 @@ export default function PersonalGenerationsPage() {
             window.location.href = '/app/generations/team'
           }
         }
-      } catch (err) {
+      } catch {
         // Silent fail; if stats endpoint fails, keep current behavior
       }
     }
@@ -47,7 +47,7 @@ export default function PersonalGenerationsPage() {
     if (session?.user?.id) {
       void redirectIfTeamAdmin()
     }
-  }, [session?.user?.id])
+  }, [session?.user?.id, session?.user?.person?.teamId])
   const handleGenerationFailed = useCallback(
     ({ errorMessage }: { id: string; errorMessage?: string }) => {
       if (errorMessage) {

@@ -39,16 +39,9 @@ interface GenerationContainerElement extends HTMLDivElement {
   generationId?: string
 }
 
-interface InviteInfo {
-  email?: string
-  firstName?: string
-  lastName?: string
-  teamName?: string
-}
+ 
 
-interface DashboardStats {
-  creditsRemaining: number
-}
+ 
 
 export default function GenerationsPage() {
   const params = useParams()
@@ -63,8 +56,7 @@ export default function GenerationsPage() {
   const [regenerating, setRegenerating] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [sliderPositions, setSliderPositions] = useState<Record<string, number>>({})
-  const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null)
-  const [stats, setStats] = useState<DashboardStats | null>(null)
+  
   const draggingRef = useRef<string | null>(null)
 
   const fetchGenerations = useCallback(async () => {
@@ -95,48 +87,7 @@ export default function GenerationsPage() {
     fetchGenerations()
   }, [fetchGenerations])
 
-  useEffect(() => {
-    let isMounted = true
-
-    const fetchHeaderData = async () => {
-      try {
-        const [inviteResponse, statsResponse] = await Promise.all([
-          fetch('/api/team/invites/validate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token })
-          }),
-          fetch(`/api/team/member/stats?token=${token}`)
-        ])
-
-        if (inviteResponse.ok) {
-          const inviteJson = await inviteResponse.json() as { invite?: InviteInfo }
-          if (isMounted && inviteJson?.invite) {
-            setInviteInfo(inviteJson.invite)
-          }
-        }
-
-        if (statsResponse.ok) {
-          const statsJson = await statsResponse.json() as { stats?: DashboardStats }
-          if (isMounted && statsJson?.stats) {
-            setStats(statsJson.stats)
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          console.error('Failed to load invite header data:', err)
-        }
-      }
-    }
-
-    void fetchHeaderData()
-
-    return () => {
-      isMounted = false
-    }
-  }, [token])
+  
 
   // Auto-refresh when there are processing generations
   useEffect(() => {
@@ -282,9 +233,7 @@ export default function GenerationsPage() {
     )
   }
 
-  const nameParts = [inviteInfo?.firstName, inviteInfo?.lastName].filter(Boolean).join(' ').trim()
-  const memberName = nameParts.length > 0 ? nameParts : undefined
-  const memberEmail = inviteInfo?.email
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}

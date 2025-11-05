@@ -78,7 +78,6 @@ export async function POST(request: NextRequest) {
   }
 
   // If selfie, create record first to get the selfie ID for the filename
-  let key: string
   
   if (folder === 'selfies') {
     // Get person's firstName for folder structure

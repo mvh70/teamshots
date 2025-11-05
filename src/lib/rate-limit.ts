@@ -85,7 +85,7 @@ export async function getRateLimitIdentifier(request: NextRequest | unknown, sco
 export async function getRequestIpString(): Promise<string> {
   try {
     return (await getRequestIp()) || 'unknown'
-  } catch (error) {
+  } catch {
     return 'unknown'
   }
 }

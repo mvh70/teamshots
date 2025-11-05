@@ -10,7 +10,6 @@ import { useCredits } from '@/contexts/CreditsContext'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
-import PhotoStyleSettings from '@/components/customization/PhotoStyleSettings'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import PackageSelector from '@/components/packages/PackageSelector'
@@ -240,7 +239,7 @@ export default function StartGenerationPage() {
           window.location.href = '/app/generations/team'
           return
         }
-      } catch (_) {
+      } catch {
         // If account mode fetch fails, fall back to generation type based redirect
       }
       const fallbackRedirect = (session?.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')

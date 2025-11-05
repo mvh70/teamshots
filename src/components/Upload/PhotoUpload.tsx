@@ -47,15 +47,7 @@ export default function PhotoUpload({
     };
   }, [previewUrl, stream]);
 
-  // Auto-open camera if requested
-  useEffect(() => {
-    if (autoOpenCamera && !hasAutoOpenedRef.current) {
-      hasAutoOpenedRef.current = true;
-      setTimeout(() => {
-        openCamera();
-      }, 0);
-    }
-  }, [autoOpenCamera]);
+  // Auto-open camera if requested (moved below openCamera declaration)
 
   const validateFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -326,6 +318,16 @@ export default function PhotoUpload({
     if (stream) stream.getTracks().forEach((t) => t.stop());
     setStream(null);
   };
+
+  // Auto-open camera if requested (placed after openCamera declaration to avoid TDZ)
+  useEffect(() => {
+    if (autoOpenCamera && !hasAutoOpenedRef.current) {
+      hasAutoOpenedRef.current = true;
+      setTimeout(() => {
+        openCamera();
+      }, 0);
+    }
+  }, [autoOpenCamera, openCamera]);
 
   // Attach stream to video after modal renders
   useEffect(() => {

@@ -1,6 +1,5 @@
-// Define Stripe Price IDs here. You can list multiple IDs (e.g., per environment or legacy prices).
-const STRIPE_PRICE_IDS = {
-  //test
+// Define Stripe Price IDs per environment (test vs production)
+const TEST_STRIPE_PRICE_IDS = {
   TRY_ONCE: "price_1SQ5yBENr8odIuXavrO8Mdoj",
   INDIVIDUAL_MONTHLY: "price_1SQ5yCENr8odIuXaSZWd1HmH",
   INDIVIDUAL_ANNUAL_MONTHLY: "price_1SQ5yCENr8odIuXawTDntLGO",
@@ -8,18 +7,35 @@ const STRIPE_PRICE_IDS = {
   PRO_ANNUAL_MONTHLY: "price_1SQ5yEENr8odIuXaUkDMJtjX",
   INDIVIDUAL_TOP_UP: "price_1SQ5yEENr8odIuXa0xQmW0Fj",
   PRO_TOP_UP: "price_1SQ5yFENr8odIuXaaPqPn0mY",
-  TRY_ONCE_TOP_UP: "price_1SQ5yGENr8odIuXaXfKd8zRk"
+  TRY_ONCE_TOP_UP: "price_1SQ5yGENr8odIuXaXfKd8zRk",
+} as const;
 
-  //production
-  /*TRY_ONCE: "price_1SNf1qENr8odIuXaFvdZpbvz",
+const PROD_STRIPE_PRICE_IDS = {
+  TRY_ONCE: "price_1SNf1qENr8odIuXaFvdZpbvz",
   INDIVIDUAL_MONTHLY: "price_1SNf1sENr8odIuXaFh37KBgd",
   INDIVIDUAL_ANNUAL_MONTHLY: "price_1SNf1sENr8odIuXa6Akt2ZyK",
   PRO_MONTHLY: "price_1SNf1tENr8odIuXa2Avo6e3e",
   PRO_ANNUAL_MONTHLY: "price_1SNf1uENr8odIuXaaHbfAHbp",
   INDIVIDUAL_TOP_UP: "price_1SNf1uENr8odIuXaN01qecY0",
   PRO_TOP_UP: "price_1SNf1vENr8odIuXaATPBupuL",
-  TRY_ONCE_TOP_UP: "price_1SNf1wENr8odIuXam77AKOKo",*/
+  TRY_ONCE_TOP_UP: "price_1SNf1wENr8odIuXam77AKOKo",
 } as const;
+
+const IS_PRODUCTION =
+  process.env.NEXT_PUBLIC_APP_ENV === 'production' ||
+  process.env.NODE_ENV === 'production';
+
+type StripePriceIds = {
+  readonly TRY_ONCE: string;
+  readonly INDIVIDUAL_MONTHLY: string;
+  readonly INDIVIDUAL_ANNUAL_MONTHLY: string;
+  readonly PRO_MONTHLY: string;
+  readonly PRO_ANNUAL_MONTHLY: string;
+  readonly INDIVIDUAL_TOP_UP: string;
+  readonly PRO_TOP_UP: string;
+  readonly TRY_ONCE_TOP_UP: string;
+};
+const STRIPE_PRICE_IDS: StripePriceIds = IS_PRODUCTION ? PROD_STRIPE_PRICE_IDS : TEST_STRIPE_PRICE_IDS;
 
 export const PRICING_CONFIG = {
   // Credits system
