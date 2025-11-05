@@ -1015,7 +1015,7 @@
       "whatYouGet": "What you get:",
       "credits": "{photos} professional photos ({variations} variations)",
       "teamBranded": "Team-branded photo generation",
-      "photosDescription": "Get {photos} team-branded {photosText} from just a selfie. Your selfie doesn't need to be perfect. We'll handle the professional polish.",
+      "photosDescription": "You have received {credits} credits, good for {photos} photos. From just a selfie. Your selfie doesn't need to be perfect. We'll handle the professional polish.",
       "noSignup": "No signup required",
       "directAccess": "Direct access to upload your selfie",
       "acceptButton": "Accept invitation",
@@ -1101,6 +1101,13 @@
     "photoStyle": {
       "title": "Photo style settings",
       "subtitle": "Configure each category as predefined or user choice",
+      "legend": {
+        "editable": "Editable sections highlight what you can customize.",
+        "locked": "Locked items use the preset settings.",
+        "editableChip": "Editable",
+        "lockedChip": "Locked by style",
+        "presetChip": "Preset active"
+      },
       "status": {
         "predefined": "Predefined",
         "userChoice": "User choice",
@@ -1114,6 +1121,8 @@
       "sections": {
         "photoStyle": "Photo style settings",
         "photoStyleDesc": "Background, branding, and overall photo style",
+        "composition": "Composition settings",
+        "compositionDesc": "Background, branding, and shot type",
         "userStyle": "User style settings",
         "userStyleDesc": "Clothing, expression, and lighting preferences"
       },

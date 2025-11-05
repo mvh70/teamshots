@@ -87,13 +87,15 @@ export async function GET(request: NextRequest) {
     const jobStatusMap = new Map(processingGenerations.map((g, i) => [g.id, jobStatuses[i]]))
 
     // Transform the data for the frontend
+    const tokenParam = `token=${encodeURIComponent(token)}`
+
     const transformedGenerations = generations.map(generation => ({
       id: generation.id,
       selfieKey: generation.selfie?.key || '',
-      selfieUrl: generation.selfie?.key ? `/api/files/get?key=${encodeURIComponent(generation.selfie.key)}` : '',
+      selfieUrl: generation.selfie?.key ? `/api/files/get?key=${encodeURIComponent(generation.selfie.key)}&${tokenParam}` : '',
       generatedPhotos: generation.generatedPhotoKeys.map((key, index) => ({
         id: `${generation.id}-${index}`,
-        url: `/api/files/get?key=${encodeURIComponent(key)}`,
+        url: `/api/files/get?key=${encodeURIComponent(key)}&${tokenParam}`,
         style: generation.context?.name || 'Freestyle'
       })),
       status: generation.status,

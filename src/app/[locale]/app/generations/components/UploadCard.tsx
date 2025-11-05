@@ -2,7 +2,7 @@
 
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 
 export type UploadListItem = {
@@ -19,14 +19,30 @@ interface UploadCardProps {
   onDelete?: (id: string) => void
 }
 
+const MAX_IMAGE_RETRY_ATTEMPTS = 2
+
+const buildImageUrl = (key: string, retryVersion: number) => {
+  const params = new URLSearchParams({ key })
+  if (retryVersion > 0) {
+    params.set('retry', retryVersion.toString())
+  }
+  return `/api/files/get?${params.toString()}`
+}
+
 export default function UploadCard({ item, onDelete }: UploadCardProps) {
   const t = useTranslations('generations')
   const [isDeleting, setIsDeleting] = useState(false)
   const [imageError, setImageError] = useState(false)
-  
-  // Add cache-busting parameter to force fresh fetch after migration
-  const imgSrc = item.uploadedKey && item.uploadedKey !== 'undefined' && !imageError
-    ? `/api/files/get?key=${encodeURIComponent(item.uploadedKey)}&t=${Date.now()}` 
+  const [retryCount, setRetryCount] = useState(0)
+  const normalizedKey = item.uploadedKey && item.uploadedKey !== 'undefined' ? item.uploadedKey : null
+
+  useEffect(() => {
+    setImageError(false)
+    setRetryCount(0)
+  }, [normalizedKey])
+
+  const imgSrc = normalizedKey && !imageError
+    ? buildImageUrl(normalizedKey, retryCount)
     : '/placeholder-image.png'
 
   const handleDelete = async () => {
@@ -52,16 +68,25 @@ export default function UploadCard({ item, onDelete }: UploadCardProps) {
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
       <div className="aspect-square bg-gray-50 overflow-hidden">
-        <Image 
-          src={imgSrc} 
-          alt="upload" 
-          width={300} 
-          height={300} 
-          className="w-full h-full object-cover" 
+        <Image
+          src={imgSrc}
+          alt="upload"
+          width={300}
+          height={300}
+          className="w-full h-full object-cover"
           unoptimized
           onError={() => {
+            if (retryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
+              setRetryCount(prev => prev + 1)
+              return
+            }
             setImageError(true)
             console.warn('Image failed to load, may not be migrated to Backblaze yet:', item.uploadedKey)
+          }}
+          onLoadingComplete={() => {
+            if (retryCount !== 0) {
+              setRetryCount(0)
+            }
           }}
         />
       </div>

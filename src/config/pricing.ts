@@ -1,14 +1,14 @@
 // Define Stripe Price IDs here. You can list multiple IDs (e.g., per environment or legacy prices).
 const STRIPE_PRICE_IDS = {
   //test
-  TRY_ONCE: "price_1SOIxTENr8odIuXaKzyE8wNZ",
-  INDIVIDUAL_MONTHLY: "price_1SOIxTENr8odIuXak0ZyR0LX",
-  INDIVIDUAL_ANNUAL_MONTHLY: "price_1SOIxUENr8odIuXa7VglkpAh",
-  PRO_MONTHLY: "price_1SOIxVENr8odIuXaSf7bFQHZ",
-  PRO_ANNUAL_MONTHLY: "price_1SOIxVENr8odIuXaUEfnEERn",
-  INDIVIDUAL_TOP_UP: "price_1SOIxWENr8odIuXaJc76b7dM",
-  PRO_TOP_UP: "price_1SOIxXENr8odIuXaEgWCKA6r", 
-  TRY_ONCE_TOP_UP: "price_1SOIxXENr8odIuXaTsZbucqN",
+  TRY_ONCE: "price_1SQ5yBENr8odIuXavrO8Mdoj",
+  INDIVIDUAL_MONTHLY: "price_1SQ5yCENr8odIuXaSZWd1HmH",
+  INDIVIDUAL_ANNUAL_MONTHLY: "price_1SQ5yCENr8odIuXawTDntLGO",
+  PRO_MONTHLY: "price_1SQ5yDENr8odIuXayMnwCrFK",
+  PRO_ANNUAL_MONTHLY: "price_1SQ5yEENr8odIuXaUkDMJtjX",
+  INDIVIDUAL_TOP_UP: "price_1SQ5yEENr8odIuXa0xQmW0Fj",
+  PRO_TOP_UP: "price_1SQ5yFENr8odIuXaaPqPn0mY",
+  TRY_ONCE_TOP_UP: "price_1SQ5yGENr8odIuXaXfKd8zRk"
 
   //production
   /*TRY_ONCE: "price_1SNf1qENr8odIuXaFvdZpbvz",

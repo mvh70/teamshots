@@ -302,7 +302,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
           <div className="p-4 relative group">
             <Link
               href="/app/generate/selfie"
-              className={`flex items-center justify-center space-x-2 bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white rounded-lg px-4 py-3 font-medium hover:from-brand-cta-hover hover:to-brand-cta transition-all duration-200 ${
+              className={`flex items-center justify-center space-x-2 bg-brand-primary text-white rounded-lg px-4 py-3 font-medium hover:bg-brand-primary-hover transition-all duration-200 ${
                 collapsed ? 'px-2' : ''
               }`}
             >
@@ -459,28 +459,14 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                 {collapsed ? (
                   <Link
                     href={planTier === 'free' ? '/app/upgrade' : '/app/top-up'}
-                    className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-white rounded-md transition-colors"
-                    style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
-                    }}
+                    className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-white rounded-md transition-colors bg-brand-cta hover:bg-brand-cta-hover"
                   >
                     <PlusIcon className="h-3 w-3" />
                   </Link>
                 ) : (
                   <Link
                     href={planTier === 'free' ? '/app/upgrade' : '/app/top-up'}
-                    className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-white rounded-md transition-colors"
-                    style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
-                    }}
+                    className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-white rounded-md transition-colors bg-brand-cta hover:bg-brand-cta-hover"
                   >
                     <PlusIcon className="h-3 w-3 mr-1" />
                     {t('credits.buyMore')}

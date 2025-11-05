@@ -50,10 +50,35 @@ export default function BackgroundSelector({
   }, [backgroundFile])
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
-      <h2 className="text-lg font-medium text-gray-900 mb-3">
-        {t('background.title', { default: 'Background' })}
-      </h2>
+    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:ring-1 hover:ring-brand-primary border-brand-primary/30 ${className}`}>
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h2 className="text-lg font-medium text-gray-900">
+            {t('background.title', { default: 'Background' })}
+          </h2>
+          <div className="mt-1">
+            {value?.startsWith('preset-') ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">
+                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a4 4 0 00-4 4v2H5a1 1 0 00-1 1v7a2 2 0 002 2h8a2 2 0 002-2V9a1 1 0 00-1-1h-1V6a4 4 0 00-4-4zm-2 6V6a2 2 0 114 0v2H8z"/></svg>
+                {t('background.presetChip', { default: 'Locked by preset' })}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-brand-primary-light text-brand-primary text-xs">
+                {t('background.customChip', { default: 'Customizable' })}
+              </span>
+            )}
+          </div>
+        </div>
+        {value?.startsWith('preset-') && (
+          <button
+            type="button"
+            onClick={() => onChange('prompt')}
+            className="px-3 py-1.5 text-xs rounded bg-brand-cta text-white hover:bg-brand-cta-hover"
+          >
+            {t('background.customizeCta', { default: 'Customize my own' })}
+          </button>
+        )}
+      </div>
       
       {/* Background Type Selection */}
       <select
@@ -101,7 +126,7 @@ export default function BackgroundSelector({
         </div>
       )}
 
-      {/* Background Prompt - Show for "prompt" option or always for contexts */}
+      {/* Background Prompt - Show for "prompt" option or always when handler provided */}
       {(value === 'prompt' || onBackgroundPromptChange) && (
         <div className="mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">

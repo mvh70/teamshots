@@ -2,9 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { allocateCreditsFromInvite } from '@/domain/credits/credits'
 import { Logger } from '@/lib/logger'
+import { enforceInviteRateLimitWithBlocking } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit + temporary IP block for public invite acceptance
+    const rate = await enforceInviteRateLimitWithBlocking(request, 'invite.accept')
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: rate.blocked ? 'Too many attempts from this IP. Please try again later.' : 'Too many requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } }
+      )
+    }
+
     const { token, firstName, lastName } = await request.json()
 
     if (!token || !firstName || !lastName) {

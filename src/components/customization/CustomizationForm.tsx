@@ -111,12 +111,27 @@ export default function CustomizationForm({
 
   return (
     <div className={`space-y-6 ${className}`}>
+      {/* Legend */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded-full bg-brand-primary-light" />
+            <span className="text-gray-600">{t('legend.editable', { default: 'Editable' })}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-gray-600">
+              <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a4 4 0 00-4 4v2H5a1 1 0 00-1 1v7a2 2 0 002 2h8a2 2 0 002-2V9a1 1 0 00-1-1h-1V6a4 4 0 00-4-4zm-2 6V6a2 2 0 114 0v2H8z"/></svg>
+              {t('legend.locked', { default: 'Locked by preset' })}
+            </span>
+          </div>
+        </div>
+      </div>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h1 className="text-xl font-semibold text-gray-900">
           {t('title', { default: 'Customize Your Photo' })}
         </h1>
         <p className="text-sm text-gray-600 mt-1">
-          {t('subtitle', { default: 'Choose your style, background, and branding options.' })}
+          {t('subtitle', { default: 'Highlighted sections are editable. Locked items are set by your preset.' })}
         </p>
       </div>
 

@@ -36,6 +36,7 @@ export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, 
 
   // Store the preview URL for the approval screen
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [forceCamera, setForceCamera] = useState<boolean>(false)
 
   // Wrapper for handlePhotoUploaded to store preview URL
   const handlePhotoUploadedWrapper = async (result: { key: string; url?: string }) => {
@@ -53,6 +54,7 @@ export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, 
   // Wrapper for handleRetake to call parent callback
   const handleRetakeWrapper = async () => {
     await handleRetake()
+    setForceCamera(true)
     onRetake?.()
   }
 
@@ -106,7 +108,7 @@ export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, 
         </div>
         <p className="text-sm text-gray-600 mb-4" data-testid="upload-description">{t('upload.description')}</p>
         <div className="max-w-md">
-          <PhotoUpload onUpload={handlePhotoUpload} onUploaded={handlePhotoUploadedWrapper} testId="desktop-file-input" />
+          <PhotoUpload onUpload={handlePhotoUpload} onUploaded={handlePhotoUploadedWrapper} testId="desktop-file-input" autoOpenCamera={forceCamera} />
         </div>
       </div>
     </div>

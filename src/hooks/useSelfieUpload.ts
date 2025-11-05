@@ -13,6 +13,7 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
   const [isApproved, setIsApproved] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [tempKey, setTempKey] = useState<string | null>(null)
   const { track } = useAnalytics()
 
   const handlePhotoUpload = async (file: File): Promise<{ key: string; url?: string }> => {
@@ -26,25 +27,39 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
         file_name: file.name
       })
       
-      // Store file locally for later upload
-      setPendingFile(file);
+      // Upload file to local temp storage immediately
+      const ext = file.name.split('.')?.pop()?.toLowerCase()
+      const res = await fetch('/api/uploads/temp', {
+        method: 'POST',
+        headers: {
+          'x-file-content-type': file.type,
+          'x-file-extension': ext || ''
+        },
+        body: file,
+        credentials: 'include'
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Temp upload failed')
+      }
+      const data = await res.json() as { tempKey: string }
+      setTempKey(data.tempKey)
+      setPendingFile(file)
       
-      // Create preview URL
-      const url = URL.createObjectURL(file);
+      // Create preview URL for local display
+      const url = URL.createObjectURL(file)
       
-      // Return a temporary key (we'll upload to S3 later on approval)
-      const tempKey = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      return { key: tempKey, url };
+      // Return temp key as the current uploadedKey surrogate
+      return { key: data.tempKey, url }
     } catch (error) {
-      console.error('File preparation failed:', error);
+      console.error('File preparation failed:', error)
       track('selfie_upload_failed', {
         error: error instanceof Error ? error.message : 'File preparation failed'
       })
-      onError?.(error instanceof Error ? error.message : 'File preparation failed');
-      throw error;
+      onError?.(error instanceof Error ? error.message : 'File preparation failed')
+      throw error
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
 
@@ -63,95 +78,89 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
   }
 
   const handleApprove = async () => {
-    if (!pendingFile) return;
-    
     try {
-      setIsLoading(true);
+      if (!tempKey) return
+      setIsLoading(true)
       
-      // First upload to S3 with timeout
-      const ext = pendingFile.name.split('.')?.pop()?.toLowerCase();
-      const uploadPromise = fetch('/api/uploads/proxy', {
+      // Promote temp file to S3
+      const promoteRes = await fetch('/api/uploads/promote', {
         method: 'POST',
-        headers: {
-          'x-file-content-type': pendingFile.type,
-          'x-file-extension': ext || '',
-          'x-file-type': 'selfie'
-        },
-        body: pendingFile,
-        credentials: 'include' // Required for Safari to send cookies
-      });
-      
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Upload timeout. Please try again.')), 10000);
-      });
-      
-      const uploadResponse = await Promise.race([uploadPromise, timeoutPromise]) as Response;
-      
-      if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Upload failed');
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tempKey }),
+        credentials: 'include'
+      })
+      if (!promoteRes.ok) {
+        const d = await promoteRes.json().catch(() => ({}))
+        throw new Error(d.error || 'Promote failed')
       }
-      
-      const { key } = await uploadResponse.json();
+      const { key } = await promoteRes.json() as { key: string }
       
       // Then create database record using custom endpoint or default
-      let selfieId: string | undefined;
+      let selfieId: string | undefined
       if (saveEndpoint) {
-        await saveEndpoint(key);
+        await saveEndpoint(key)
       } else {
         const createResponse = await jsonFetcher<{ id: string }>('/api/uploads/create', { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' }, 
           body: JSON.stringify({ key }),
           credentials: 'include'
-        });
-        selfieId = createResponse.id;
+        })
+        selfieId = createResponse.id
       }
       
-      // If successful, mark as approved and call success callback
-      setIsApproved(true);
-      setUploadedKey(key);
-      
-      // Track successful upload
+      setIsApproved(true)
+      setUploadedKey(key)
       track('selfie_upload_success', {
-        file_size: pendingFile.size,
-        file_type: pendingFile.type
+        file_size: pendingFile?.size,
+        file_type: pendingFile?.type
       })
-      
-      onSuccess?.(key, selfieId);
+      onSuccess?.(key, selfieId)
+      // Clear temp key now that we have final key
+      setTempKey(null)
+      setPendingFile(null)
     } catch (error) {
-      console.error('Approval failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Approval failed';
-      
-      // Track approval failure
-      track('selfie_approval_failed', {
-        error: errorMessage
-      })
-      
-      onError?.(errorMessage);
+      console.error('Approval failed:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Approval failed'
+      track('selfie_approval_failed', { error: errorMessage })
+      onError?.(errorMessage)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
 
   const handleReject = async () => {
     track('selfie_rejected')
-    if (uploadedKey) {
+    if (uploadedKey?.startsWith('temp:') && tempKey) {
+      await deleteTemp(tempKey)
+    } else if (uploadedKey && !uploadedKey.startsWith('temp:')) {
       await deleteSelfie(uploadedKey)
     }
     setUploadedKey(null)
     setPendingFile(null)
+    setTempKey(null)
     setIsApproved(false)
   }
 
   const handleRetake = async () => {
     track('selfie_retake')
-    if (uploadedKey) {
+    if (uploadedKey?.startsWith('temp:') && tempKey) {
+      await deleteTemp(tempKey)
+    } else if (uploadedKey && !uploadedKey.startsWith('temp:')) {
       await deleteSelfie(uploadedKey)
     }
     setUploadedKey(null)
     setPendingFile(null)
+    setTempKey(null)
     setIsApproved(false)
+  }
+
+  const deleteTemp = async (key: string) => {
+    try {
+      await fetch(`/api/uploads/temp?key=${encodeURIComponent(key)}`, { method: 'DELETE', credentials: 'include' })
+    } catch (error) {
+      console.error('Error deleting temp selfie:', error)
+    }
   }
 
   const deleteSelfie = async (key: string) => {
@@ -159,7 +168,6 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
       console.error('deleteSelfie called with invalid key:', key)
       return
     }
-    
     try {
       await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(key)}`, {
         method: 'DELETE',
@@ -175,6 +183,7 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
     setIsApproved(false)
     setIsLoading(false)
     setPendingFile(null)
+    setTempKey(null)
   }
 
   return {

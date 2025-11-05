@@ -35,11 +35,9 @@ export default function TeamInviteEmail({
         </p>
 
         <p style={{ lineHeight: '1.6', marginBottom: '20px' }}>
-          {getEmailTranslation('teamInvite.photosDescription', locale, { 
-            photos: numberOfPhotos.toString(),
-            photosText: numberOfPhotos === 1 
-              ? (locale === 'es' ? 'foto profesional' : 'professional photo')
-              : (locale === 'es' ? 'fotos profesionales' : 'professional photos')
+          {getEmailTranslation('teamInvite.photosDescription', locale, {
+            credits: creditsAllocated.toString(),
+            photos: numberOfPhotos.toString()
           })}
         </p>
 

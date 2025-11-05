@@ -11,6 +11,7 @@ import { PlusIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import PhotoStyleSettings from '@/components/customization/PhotoStyleSettings'
+import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import PackageSelector from '@/components/packages/PackageSelector'
 import { PhotoStyleSettings as PhotoStyleSettingsType, DEFAULT_PHOTO_STYLE_SETTINGS } from '@/types/photo-style'
@@ -21,6 +22,8 @@ import { loadStyle, loadStyleByContextId } from '@/domain/style/service'
 import { getPackageConfig } from '@/domain/style/packages'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
 import { fetchAccountMode } from '@/domain/account/accountMode'
+import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
+import { hasUserDefinedFields } from '@/domain/style/userChoice'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
@@ -62,6 +65,8 @@ export default function StartGenerationPage() {
   const [photoStyleSettings, setPhotoStyleSettings] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
   const [selectedPackageId, setSelectedPackageId] = useState<string>('')
+
+  // use shared hasUserDefinedFields utility
 
   useEffect(() => {
     // Keep local state in sync if query changes
@@ -265,6 +270,8 @@ export default function StartGenerationPage() {
   // Resolve selected photo style label for display
   const selectedPackage = getPackageConfig(selectedPackageId || PRICING_CONFIG.defaultSignupPackage)
   const selectedPhotoStyleLabel = selectedPackage.label
+  const remainingCreditsForType = generationType === 'team' ? userCredits.team : userCredits.individual
+  const showCustomizeHint = hasUserDefinedFields(photoStyleSettings)
   
   // No client-side choice: server enforces mode
   const shouldShowGenerationTypeSelector = false
@@ -313,12 +320,12 @@ export default function StartGenerationPage() {
               <Link
                 href={buyCreditsHref}
                 className="px-6 py-3 rounded-md text-white font-medium transition-colors"
-                style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
+                style={{ backgroundColor: BRAND_CONFIG.colors.cta }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
+                  e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.ctaHover
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
+                  e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.cta
                 }}
               >
                 {t('buyCredits')}
@@ -377,49 +384,54 @@ export default function StartGenerationPage() {
         />
       ) : (
         <>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-start gap-4">
-              {/* Selfie Thumbnail */}
-              <div className="flex-shrink-0">
-                <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm">
-                  <Image
-                    src={`/api/files/get?key=${encodeURIComponent(key)}`}
-                    alt="Selected selfie"
-                    width={80}
-                    height={80}
-                    className="w-full h-full object-cover"
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+            <h1 className="text-xl font-semibold text-gray-900 mb-4">{t('readyToGenerate')}</h1>
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
+              <div className="flex gap-4 md:gap-6 md:flex-1 min-w-0">
+                {/* Selfie Thumbnail */}
+                <div className="flex-none">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm">
+                    <Image
+                      src={`/api/files/get?key=${encodeURIComponent(key)}`}
+                      alt="Selected selfie"
+                      width={80}
+                      height={80}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 text-center mt-2">{t('yourSelfie')}</p>
+                </div>
+                <div className="min-w-0">
+                  <GenerationSummaryTeam
+                    type={(generationType || 'personal') as 'personal' | 'team'}
+                    styleLabel={selectedPhotoStyleLabel}
+                    remainingCredits={remainingCreditsForType}
+                    perGenCredits={PRICING_CONFIG.credits.perGeneration}
+                    showGenerateButton={false}
+                    showCustomizeHint={showCustomizeHint}
+                    teamName={teamName || undefined}
+                    showTitle={false}
+                    plain
+                    inlineHint
                   />
                 </div>
-                <p className="text-xs text-gray-500 text-center mt-1">{t('yourSelfie')}</p>
               </div>
-              
-              {/* Generation Details */}
-              <div className="flex-1 flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-semibold text-gray-900">{t('readyToGenerate')}</h1>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Generation type: <span className="font-medium text-gray-800">{generationType}</span>
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Photo style: <span className="font-medium text-gray-800">{selectedPhotoStyleLabel}</span>
-                  </p>
+              <div className="md:text-right md:flex-none md:w-60">
+                <div className="text-2xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} credits</div>
+                <div className="text-sm text-gray-900">Cost per generation</div>
+                <div className="mt-3 md:mt-4">
+                  <button
+                    onClick={onProceed}
+                    disabled={!canGenerate}
+                    className={`w-full md:w-auto px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      canGenerate
+                        ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
+                        : 'bg-brand-primary/30 text-white/70 cursor-not-allowed'
+                    }`}
+                  >
+                    {t('generatePhoto')}
+                  </button>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} credits</div>
-                  <div className="text-sm text-gray-500">Cost per generation</div>
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      onClick={onProceed}
-                      disabled={!canGenerate}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                        canGenerate
-                          ? 'bg-brand-cta text-white hover:bg-brand-cta-hover'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
-                    >
-                      {t('generatePhoto')}
-                    </button>
-                  </div>
                 {!hasEnoughCredits && (
                   <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
                     <div className="flex items-center mb-2">
@@ -429,20 +441,20 @@ export default function StartGenerationPage() {
                       <span className="text-sm font-medium text-red-800">{t('insufficientCredits')}</span>
                     </div>
                     <p className="text-xs text-red-700 mb-2">
-                      {t('insufficientCreditsMessage', { 
+                      {t('insufficientCreditsMessage', {
                         required: PRICING_CONFIG.credits.perGeneration,
-                        current: generationType === 'team' ? userCredits.team : userCredits.individual 
+                        current: generationType === 'team' ? userCredits.team : userCredits.individual
                       })}
                     </p>
                     <Link
                       href={buyCreditsHref}
                       className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white rounded-md transition-colors"
-                      style={{ backgroundColor: BRAND_CONFIG.colors.primary }}
+                      style={{ backgroundColor: BRAND_CONFIG.colors.cta }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
+                        e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.ctaHover
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
+                        e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.cta
                       }}
                     >
                       <PlusIcon className="h-3 w-3 mr-1" />
@@ -450,7 +462,6 @@ export default function StartGenerationPage() {
                     </Link>
                   </div>
                 )}
-                </div>
               </div>
             </div>
           </div>
@@ -525,41 +536,26 @@ export default function StartGenerationPage() {
           )}
 
           {/* Photo Style Settings */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Photo Style Settings</h2>
-            <p className="text-sm text-gray-600 mb-6">
-              {isFreePlan || selectedPackageId === 'freepackage' ? (
-                <>Free Package style settings are applied. These settings are fixed for this context.</>
-              ) : activeContext ? (
-                <>Predefined settings from your context are shown below. You can customize user-choice settings for this generation.</>
-              ) : generationType === 'personal' ? (
-                <>Customize your photo style settings for this generation. All options are available since you chose freestyle.</>
-              ) : (
-                <>Customize your photo style settings for this generation.</>
-              )}
-            </p>
-            
-            <PhotoStyleSettings
-              value={photoStyleSettings}
-              onChange={setPhotoStyleSettings}
-              readonlyPredefined={!!activeContext || isFreePlan || selectedPackageId === 'freepackage'}
-              originalContextSettings={originalContextSettings}
-              showToggles={!!activeContext && !isFreePlan && selectedPackageId !== 'freepackage'}
-              packageId={selectedPackageId || PRICING_CONFIG.defaultSignupPackage}
-            />
+          <StyleSettingsSection
+            value={photoStyleSettings}
+            onChange={setPhotoStyleSettings}
+            readonlyPredefined={!!activeContext || isFreePlan || selectedPackageId === 'freepackage'}
+            originalContextSettings={originalContextSettings}
+            showToggles={!!activeContext && !isFreePlan && selectedPackageId !== 'freepackage'}
+            packageId={selectedPackageId || PRICING_CONFIG.defaultSignupPackage}
+          />
 
-            {/* Custom Prompt */}
-            {activeContext?.customPrompt && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
+          {/* Custom Prompt */}
+          {activeContext?.customPrompt && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+              <div className="pt-0">
                 <h3 className="font-medium text-gray-800 mb-2">Custom Prompt</h3>
                 <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
                   {activeContext.customPrompt}
                 </p>
               </div>
-            )}
-
-            {/* Generate Button moved to top summary under credits */}
-          </div>
+            </div>
+          )}
         </>
       )}
     </div>

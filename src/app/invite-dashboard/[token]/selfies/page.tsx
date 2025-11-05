@@ -1,11 +1,12 @@
 'use client'
 
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
 import { formatDate } from '@/lib/format'
 import Image from 'next/image'
 import { CameraIcon, TrashIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
+import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
@@ -21,17 +22,21 @@ interface Selfie {
 export default function SelfiesPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const token = params.token as string
+  const uploadOnly = (searchParams?.get('mode') || '') === 'upload'
 
   const [selfies, setSelfies] = useState<Selfie[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [forceCamera, setForceCamera] = useState(false)
   
   // Validation flow state
   const [uploadKey, setUploadKey] = useState<string>('')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isApproved, setIsApproved] = useState<boolean>(false)
+  // Header resolves invite info internally; no local invite state needed
 
   const fetchSelfies = useCallback(async () => {
     try {
@@ -57,6 +62,8 @@ export default function SelfiesPage() {
     fetchSelfies()
   }, [fetchSelfies])
 
+  // No header-data fetching here; header handles it
+
   const handleUpload = async ({ key, url }: { key: string; url?: string }) => {
     setUploadKey(key)
     if (url) {
@@ -78,27 +85,22 @@ export default function SelfiesPage() {
       })
 
       if (response.ok) {
-        setIsApproved(true)
-        await fetchSelfies() // Refresh the list
-        
-        // Check if this was part of a generation flow
+        // If part of the generation/start-flow, immediately return to dashboard to continue
         const fromGeneration = sessionStorage.getItem('fromGeneration')
-        if (fromGeneration === 'true') {
-          // Set flag for pending generation and redirect back to dashboard
+        if (fromGeneration === 'true' || uploadOnly) {
           sessionStorage.setItem('pendingGeneration', 'true')
           sessionStorage.removeItem('fromGeneration')
-          // Small delay to show success message before redirect
-          setTimeout(() => {
             router.push(`/invite-dashboard/${token}`)
-          }, 1500)
-        } else {
-          // Reset validation state after a delay for normal upload flow
+          return
+        }
+        // Otherwise show success briefly and reset
+        setIsApproved(true)
+        await fetchSelfies()
           setTimeout(() => {
             setUploadKey('')
             setPreviewUrl(null)
             setIsApproved(false)
-          }, 2000)
-        }
+        }, 1500)
       } else {
         console.error('Failed to save selfie')
         setError('Failed to save selfie')
@@ -117,6 +119,7 @@ export default function SelfiesPage() {
 
   const handleRetake = async () => {
     await deleteSelfie()
+    setForceCamera(true)
   }
 
   const deleteSelfie = async () => {
@@ -190,22 +193,12 @@ export default function SelfiesPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div>
-              <button
-                onClick={() => router.push(`/invite-dashboard/${token}`)}
-                className="text-sm text-gray-500 hover:text-gray-700 mb-2"
-              >
-                ← Back to Dashboard
-              </button>
-              <h1 className="text-2xl font-bold text-gray-900">My Selfies</h1>
-              <p className="text-sm text-gray-600">Upload and manage your selfies</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <InviteDashboardHeader
+        // Self-contained header renders the consolidated invite copy
+        showBackToDashboard
+        token={token}
+        title=""
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
@@ -222,6 +215,7 @@ export default function SelfiesPage() {
               <div className="max-w-md">
                 <PhotoUpload 
                   onUploaded={handleUpload}
+                  autoOpenCamera={forceCamera}
                   disabled={uploading}
                 />
                 {uploading && (
@@ -241,6 +235,15 @@ export default function SelfiesPage() {
                 onReject={handleReject}
                 onRetake={handleRetake}
                 onCancel={() => {
+                  // If this page was opened in upload-only mode from the start flow, go back to dashboard and reopen start flow
+                  const fromStartFlow = (typeof window !== 'undefined') && (uploadOnly || sessionStorage.getItem('openStartFlow') === 'true')
+                  if (fromStartFlow) {
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem('openStartFlow', 'true')
+                    }
+                    router.push(`/invite-dashboard/${token}`)
+                    return
+                  }
                   setUploadKey('')
                   setPreviewUrl(null)
                 }}
@@ -263,7 +266,8 @@ export default function SelfiesPage() {
             </div>
           )}
 
-          {/* Selfies Grid */}
+          {/* Selfies Grid (hidden in upload-only mode) */}
+          {!uploadOnly && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Your Selfies</h2>
@@ -321,6 +325,7 @@ export default function SelfiesPage() {
               )}
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

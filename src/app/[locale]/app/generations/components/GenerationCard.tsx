@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatDate } from '@/lib/format'
 
 export type GenerationListItem = {
@@ -36,6 +36,16 @@ export type GenerationListItem = {
   }
 }
 
+const MAX_IMAGE_RETRY_ATTEMPTS = 2
+
+const buildImageUrl = (key: string, retryVersion: number) => {
+  const params = new URLSearchParams({ key })
+  if (retryVersion > 0) {
+    params.set('retry', retryVersion.toString())
+  }
+  return `/api/files/get?${params.toString()}`
+}
+
 export default function GenerationCard({ item, currentUserId }: { item: GenerationListItem; currentUserId?: string }) {
   const t = useTranslations('generations')
   const [isRegenerating, setIsRegenerating] = useState(false)
@@ -43,13 +53,28 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
   const imageKey = item.acceptedKey || item.generatedKey
   const [beforeImageError, setBeforeImageError] = useState(false)
   const [afterImageError, setAfterImageError] = useState(false)
-  
-  // Add cache-busting parameter to force fresh fetch after migration
-  const beforeSrc = (item.selfieKey || item.uploadedKey) && (item.selfieKey || item.uploadedKey) !== 'undefined' && !beforeImageError
-    ? `/api/files/get?key=${encodeURIComponent(item.selfieKey || item.uploadedKey)}&t=${Date.now()}` 
+  const [beforeRetryCount, setBeforeRetryCount] = useState(0)
+  const [afterRetryCount, setAfterRetryCount] = useState(0)
+  const beforeKey = item.selfieKey || item.uploadedKey
+  const afterKey = item.generatedKey || item.uploadedKey
+  const normalizedBeforeKey = beforeKey && beforeKey !== 'undefined' ? beforeKey : null
+  const normalizedAfterKey = afterKey && afterKey !== 'undefined' ? afterKey : null
+
+  useEffect(() => {
+    setBeforeImageError(false)
+    setBeforeRetryCount(0)
+  }, [normalizedBeforeKey])
+
+  useEffect(() => {
+    setAfterImageError(false)
+    setAfterRetryCount(0)
+  }, [normalizedAfterKey])
+
+  const beforeSrc = normalizedBeforeKey && !beforeImageError
+    ? buildImageUrl(normalizedBeforeKey, beforeRetryCount)
     : '/placeholder-image.png'
-  const afterSrc = (item.generatedKey || item.uploadedKey) && (item.generatedKey || item.uploadedKey) !== 'undefined' && !afterImageError
-    ? `/api/files/get?key=${encodeURIComponent(item.generatedKey || item.uploadedKey)}&t=${Date.now()}`
+  const afterSrc = normalizedAfterKey && !afterImageError
+    ? buildImageUrl(normalizedAfterKey, afterRetryCount)
     : '/placeholder-image.png'
   const containerRef = useRef<HTMLDivElement | null>(null)
   // Start fully on Generated side by default (if present)
@@ -175,15 +200,24 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
         onTouchMove={onTouchMove}
       >
         {/* BACKGROUND: Selfie full cover */}
-        <Image 
-          src={beforeSrc} 
-          alt="selfie" 
-          fill 
-          className="object-cover" 
+        <Image
+          src={beforeSrc}
+          alt="selfie"
+          fill
+          className="object-cover"
           unoptimized
           onError={() => {
+            if (beforeRetryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
+              setBeforeRetryCount(prev => prev + 1)
+              return
+            }
             setBeforeImageError(true)
             console.warn('Selfie image failed to load, may not be migrated to Backblaze yet:', item.selfieKey || item.uploadedKey)
+          }}
+          onLoadingComplete={() => {
+            if (beforeRetryCount !== 0) {
+              setBeforeRetryCount(0)
+            }
           }}
         />
 
@@ -211,8 +245,17 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
               unoptimized
               style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
               onError={() => {
+                if (afterRetryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
+                  setAfterRetryCount(prev => prev + 1)
+                  return
+                }
                 setAfterImageError(true)
                 console.warn('Generated image failed to load, may not be migrated to Backblaze yet:', item.generatedKey)
+              }}
+              onLoadingComplete={() => {
+                if (afterRetryCount !== 0) {
+                  setAfterRetryCount(0)
+                }
               }}
             />
           )}

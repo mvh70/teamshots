@@ -11,6 +11,7 @@ type PhotoUploadProps = {
   onUpload?: (file: File) => Promise<{ url?: string; key?: string } | void>;
   onUploaded?: (result: { key: string; url?: string }) => void;
   testId?: string;
+  autoOpenCamera?: boolean;
 };
 
 export default function PhotoUpload({
@@ -20,7 +21,8 @@ export default function PhotoUpload({
   onSelect,
   onUpload,
   onUploaded,
-  testId = "file-input"
+  testId = "file-input",
+  autoOpenCamera = false
 }: PhotoUploadProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -36,6 +38,7 @@ export default function PhotoUpload({
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const hasAutoOpenedRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -43,6 +46,16 @@ export default function PhotoUpload({
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
   }, [previewUrl, stream]);
+
+  // Auto-open camera if requested
+  useEffect(() => {
+    if (autoOpenCamera && !hasAutoOpenedRef.current) {
+      hasAutoOpenedRef.current = true;
+      setTimeout(() => {
+        openCamera();
+      }, 0);
+    }
+  }, [autoOpenCamera]);
 
   const validateFile = (file: File) => {
     if (!file.type.startsWith("image/")) {

@@ -8,7 +8,9 @@ import {
   UserIcon, 
   FaceSmileIcon, 
   LightBulbIcon,
-  CameraIcon
+  CameraIcon,
+  SparklesIcon,
+  LockClosedIcon
 } from '@heroicons/react/24/outline'
 import { 
   PhotoStyleSettings as PhotoStyleSettingsType, 
@@ -227,9 +229,22 @@ export default function PhotoStyleSettings({
     const status = getCategoryStatus(category.key)
     const isPredefined = isCategoryPredefined(category.key)
     const isUserChoice = status === 'user-choice'
+    const isLockedByPreset = readonlyPredefined && isPredefined
+    const chipLabel = isUserChoice
+      ? t('legend.editableChip', { default: 'Editable' })
+      : isLockedByPreset
+        ? t('legend.lockedChip', { default: 'Locked by style' })
+        : t('legend.presetChip', { default: 'Preset active' })
 
     return (
-      <div key={category.key} className="bg-white rounded-lg border border-gray-200">
+      <div
+        key={category.key}
+        className={`rounded-lg border shadow-sm transition ${
+          isUserChoice
+            ? 'bg-brand-primary-light border-brand-primary/50 hover:ring-1 hover:ring-brand-primary/60'
+            : 'bg-white border-gray-200'
+        }`}
+      >
         {/* Category Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -247,46 +262,50 @@ export default function PhotoStyleSettings({
             
             {/* Show status section */}
             <div className="flex items-center gap-3">
-              {readonlyPredefined ? (
-                // Show simple status badge when in readonly mode
-                <div className={`px-3 py-1.5 text-sm font-medium rounded-full ${
-                  isPredefined 
-                    ? 'bg-blue-100 text-blue-800' 
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {isPredefined 
-                    ? t('toggle.predefined', { default: 'Predefined' })
-                    : t('toggle.userChoice', { default: 'User Choice' })
-                  }
-                </div>
-              ) : showToggles ? (
-                  // Show toggle when in edit mode
-                  <button
-                    type="button"
-                    onClick={(e) => handleCategoryToggle(category.key, !isPredefined, e)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
-                  >
-                    <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                      isPredefined ? 'bg-brand-primary' : 'bg-gray-300'
-                    }`}>
-                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        isPredefined ? 'translate-x-5' : 'translate-x-1'
-                      }`} />
-                    </div>
-                    <span className={isPredefined ? 'text-brand-primary' : 'text-gray-600'}>
-                      {isPredefined 
-                        ? t('toggle.predefined', { default: 'Predefined' })
-                        : t('toggle.userChoice', { default: 'User Choice' })
-                      }
-                    </span>
-                  </button>
-                ) : null}
-              </div>
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                  isUserChoice
+                    ? 'bg-brand-primary-light text-brand-primary'
+                    : isLockedByPreset
+                      ? 'bg-red-50 text-red-600 border border-red-200'
+                      : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {isUserChoice ? (
+                  <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <LockClosedIcon className={`h-3.5 w-3.5 ${isLockedByPreset ? 'text-red-600' : ''}`} aria-hidden="true" />
+                )}
+                {chipLabel}
+              </span>
+
+              {showToggles && !readonlyPredefined && (
+                <button
+                  type="button"
+                  onClick={(e) => handleCategoryToggle(category.key, !isPredefined, e)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors border border-gray-200 hover:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1"
+                >
+                  <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    isPredefined ? 'bg-brand-primary' : 'bg-gray-300'
+                  }`}>
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      isPredefined ? 'translate-x-5' : 'translate-x-1'
+                    }`} />
+                  </div>
+                  <span className={isPredefined ? 'text-brand-primary' : 'text-gray-600'}>
+                    {isPredefined 
+                      ? t('toggle.predefined', { default: 'Predefined' })
+                      : t('toggle.userChoice', { default: 'User Choice' })
+                    }
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Category Settings - always expanded */}
-        <div className={`p-4 ${isUserChoice ? 'opacity-60' : ''}`}>
+        <div className={`p-4 ${isLockedByPreset ? 'opacity-60' : ''}`}>
           {category.key === 'background' && (
             <EnhancedBackgroundSelector
               value={value.background || { type: 'user-choice' }}
@@ -354,9 +373,33 @@ export default function PhotoStyleSettings({
 
   return (
     <div className={`space-y-6 ${className}`}>
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          <div className="flex items-center gap-2 animate-pulse">
+            <SparklesIcon className="h-4 w-4 text-brand-primary" aria-hidden="true" />
+            <span className="text-gray-700">
+              {t('legend.editable', { default: 'Editable sections highlight what you can customize.' })}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <LockClosedIcon className="h-4 w-4 text-gray-500" aria-hidden="true" />
+            <span className="text-gray-600">
+              {t('legend.locked', { default: 'Locked items use the preset settings.' })}
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Photo Style Section */}
       <div className="space-y-4">
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            {t('sections.composition', { default: 'Composition settings' })}
+          </h3>
+          <p className="text-sm text-gray-600">
+            {t('sections.compositionDesc', { default: 'Background, branding, and shot type' })}
+          </p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {visiblePhotoCategories.map(renderCategoryCard)}
         </div>

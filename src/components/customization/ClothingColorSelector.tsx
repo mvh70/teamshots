@@ -26,7 +26,8 @@ export default function ClothingColorSelector({
     if (isPredefined) return
     
     onChange({ 
-      type: value.type || 'predefined',
+      // When a user provides any color, this becomes a concrete choice
+      type: 'predefined',
       colors: { 
         ...value.colors, 
         [colorType]: color 

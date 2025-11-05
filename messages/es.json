@@ -1015,7 +1015,7 @@
       "whatYouGet": "Lo que obtienes:",
       "credits": "{photos} fotos profesionales ({variations} variaciones)",
       "teamBranded": "Generación de fotos con marca del equipo",
-      "photosDescription": "Obtén {photos} {photosText} con la marca de tu equipo desde solo un selfie. Tu selfie no tiene que ser perfecto. Nosotros nos encargamos del acabado profesional.",
+      "photosDescription": "Has recibido {credits} créditos, suficientes para {photos} fotos. Desde solo un selfie. Tu selfie no tiene que ser perfecto. Nosotros nos encargamos del acabado profesional.",
       "noSignup": "Sin registro requerido",
       "directAccess": "Acceso directo para subir tu selfie",
       "acceptButton": "Aceptar invitación",
@@ -1101,6 +1101,13 @@
     "photoStyle": {
       "title": "Configuración de Estilo de Foto",
       "subtitle": "Configura cada categoría como predefinida o elección del usuario",
+      "legend": {
+        "editable": "Las secciones editables resaltan lo que puedes personalizar.",
+        "locked": "Los elementos bloqueados usan la configuración del preset.",
+        "editableChip": "Editable",
+        "lockedChip": "Bloqueado por estilo",
+        "presetChip": "Preset activo"
+      },
       "status": {
         "predefined": "Predefinido",
         "userChoice": "Elección del Usuario",
@@ -1114,6 +1121,8 @@
       "sections": {
         "photoStyle": "Configuración de Estilo de Foto",
         "photoStyleDesc": "Fondo, marca y estilo general de foto",
+        "composition": "Configuración de composición",
+        "compositionDesc": "Fondo, marca y tipo de toma",
         "userStyle": "Configuración de Estilo de Usuario",
         "userStyleDesc": "Preferencias de ropa, expresión e iluminación"
       },

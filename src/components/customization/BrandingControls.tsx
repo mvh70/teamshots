@@ -43,10 +43,11 @@ export default function BrandingControls({
   }, [logoFile])
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
-      <h2 className="text-lg font-medium text-gray-900 mb-3">
+    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:ring-1 hover:ring-brand-primary border-brand-primary/30 ${className}`}>
+      <h2 className="text-lg font-medium text-gray-900 mb-1">
         {t('branding.title', { default: 'Branding' })}
       </h2>
+      <p className="text-xs text-gray-500 mb-3">{t('branding.helper', { default: 'Optional: add your logo placement variations.' })}</p>
       <label className="flex items-center gap-2 text-sm cursor-pointer">
         <input
           type="checkbox"
@@ -98,7 +99,7 @@ export default function BrandingControls({
       {onGenerate && (
         <button
           onClick={onGenerate}
-          className="mt-4 px-4 py-2 rounded-md bg-brand-cta text-white hover:bg-brand-cta-hover text-sm"
+          className="mt-4 px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm"
         >
           {generateButtonText} ({creditCost} {t('branding.credits', { default: 'credits' })})
         </button>

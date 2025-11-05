@@ -43,8 +43,10 @@ export async function GET(request: NextRequest) {
     })
 
     // Transform selfies to include URLs and proper field names
+    const tokenParam = `token=${encodeURIComponent(token)}`
+
     const transformedSelfies = selfies.map(selfie => {
-      const url = `/api/files/get?key=${encodeURIComponent(selfie.key)}`
+      const url = `/api/files/get?key=${encodeURIComponent(selfie.key)}&${tokenParam}`
       Logger.info('Generated selfie URL', { url, key: selfie.key })
       return {
         id: selfie.id,

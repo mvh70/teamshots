@@ -5,6 +5,8 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { formatDate } from '@/lib/format'
 import { PhotoIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
+// pricing not needed for header
+import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 
 interface Generation {
   id: string
@@ -37,6 +39,17 @@ interface GenerationContainerElement extends HTMLDivElement {
   generationId?: string
 }
 
+interface InviteInfo {
+  email?: string
+  firstName?: string
+  lastName?: string
+  teamName?: string
+}
+
+interface DashboardStats {
+  creditsRemaining: number
+}
+
 export default function GenerationsPage() {
   const params = useParams()
   const router = useRouter()
@@ -47,10 +60,11 @@ export default function GenerationsPage() {
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedGeneration, setSelectedGeneration] = useState<Generation | null>(null)
-  const [autoRefreshing, setAutoRefreshing] = useState(false)
   const [regenerating, setRegenerating] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [sliderPositions, setSliderPositions] = useState<Record<string, number>>({})
+  const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
   const draggingRef = useRef<string | null>(null)
 
   const fetchGenerations = useCallback(async () => {
@@ -81,22 +95,63 @@ export default function GenerationsPage() {
     fetchGenerations()
   }, [fetchGenerations])
 
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchHeaderData = async () => {
+      try {
+        const [inviteResponse, statsResponse] = await Promise.all([
+          fetch('/api/team/invites/validate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token })
+          }),
+          fetch(`/api/team/member/stats?token=${token}`)
+        ])
+
+        if (inviteResponse.ok) {
+          const inviteJson = await inviteResponse.json() as { invite?: InviteInfo }
+          if (isMounted && inviteJson?.invite) {
+            setInviteInfo(inviteJson.invite)
+          }
+        }
+
+        if (statsResponse.ok) {
+          const statsJson = await statsResponse.json() as { stats?: DashboardStats }
+          if (isMounted && statsJson?.stats) {
+            setStats(statsJson.stats)
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Failed to load invite header data:', err)
+        }
+      }
+    }
+
+    void fetchHeaderData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [token])
+
   // Auto-refresh when there are processing generations
   useEffect(() => {
     const hasProcessingGenerations = generations.some(gen => gen.status === 'processing' || gen.status === 'pending')
-    
-    if (hasProcessingGenerations) {
-      setAutoRefreshing(true)
-      const interval = setInterval(() => {
-        fetchGenerations()
-      }, 3000) // Check every 3 seconds
 
-      return () => {
-        clearInterval(interval)
-        setAutoRefreshing(false)
-      }
-    } else {
-      setAutoRefreshing(false)
+    if (!hasProcessingGenerations) {
+      return
+    }
+
+    const interval = setInterval(() => {
+      fetchGenerations()
+    }, 3000) // Check every 3 seconds
+
+    return () => {
+      clearInterval(interval)
     }
   }, [generations, fetchGenerations])
 
@@ -227,33 +282,13 @@ export default function GenerationsPage() {
     )
   }
 
+  const nameParts = [inviteInfo?.firstName, inviteInfo?.lastName].filter(Boolean).join(' ').trim()
+  const memberName = nameParts.length > 0 ? nameParts : undefined
+  const memberEmail = inviteInfo?.email
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div>
-              <button
-                onClick={() => router.push(`/invite-dashboard/${token}`)}
-                className="text-sm text-gray-500 hover:text-gray-700 mb-2"
-              >
-                ← Back to Dashboard
-              </button>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900">Team Photos</h1>
-                {autoRefreshing && (
-                  <div className="flex items-center gap-2 text-sm text-blue-600">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <span>Auto-refreshing...</span>
-                  </div>
-                )}
-              </div>
-              <p className="text-sm text-gray-600">View and download your generated team photos</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <InviteDashboardHeader showBackToDashboard token={token} title="" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
