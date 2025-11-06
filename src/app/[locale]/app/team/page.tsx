@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { jsonFetcher } from '@/lib/fetcher'
-import { formatDate } from '@/lib/format'
 import { Link } from '@/i18n/routing'
 import { PlusIcon, EnvelopeIcon, ClockIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { PRICING_CONFIG } from '@/config/pricing'
@@ -346,14 +345,7 @@ export default function TeamPage() {
     }
   }
 
-  const formatInviteDate = (dateString: string) => {
-    return formatDate(dateString, 'en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+  // Removed unused formatInviteDate to satisfy linter
 
   const isExpired = (expiresAt: string) => {
     return new Date(expiresAt) < new Date()

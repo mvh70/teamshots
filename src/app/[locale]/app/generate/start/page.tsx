@@ -33,6 +33,7 @@ export default function StartGenerationPage() {
   const t = useTranslations('app.sidebar.generate')
   const { isFreePlan } = usePlanInfo()
   const keyFromQuery = useMemo(() => searchParams.get('key') || '', [searchParams])
+  const skipUpload = useMemo(() => searchParams.get('skipUpload') === '1', [searchParams])
   const typeFromQuery = useMemo(() => searchParams.get('type') as 'personal' | 'team' | null, [searchParams])
   const [key, setKey] = useState<string>('')
   const [selfieId, setSelfieId] = useState<string | null>(null)
@@ -64,6 +65,12 @@ export default function StartGenerationPage() {
   const [photoStyleSettings, setPhotoStyleSettings] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
   const [selectedPackageId, setSelectedPackageId] = useState<string>('')
+  const [selectedSelfies, setSelectedSelfies] = useState<Array<{ id: string; key: string }>>([])
+  const [allSelfies, setAllSelfies] = useState<Array<{ id: string; key: string }>>([])
+  const headerThumbs = useMemo(() => {
+    const items = selectedSelfies.length > 0 ? selectedSelfies : (key ? [{ id: 'legacy', key }] : [])
+    return items
+  }, [selectedSelfies, key])
 
   // use shared hasUserDefinedFields utility
 
@@ -77,6 +84,13 @@ export default function StartGenerationPage() {
       findSelfieByKey(keyFromQuery)
     }
   }, [keyFromQuery, key])
+
+  useEffect(() => {
+    // If coming from selection step, treat selfie step as approved
+    if (skipUpload && !isApproved) {
+      setIsApproved(true)
+    }
+  }, [skipUpload, isApproved])
 
   const findSelfieByKey = async (key: string) => {
     try {
@@ -107,6 +121,48 @@ export default function StartGenerationPage() {
     fetchData()
   }, [session?.user?.id])
 
+  useEffect(() => {
+    const fetchSelected = async () => {
+      try {
+        const res = await jsonFetcher<{ selfies: { id: string; key: string }[] }>('/api/selfies/selected', { credentials: 'include' })
+        setSelectedSelfies(res.selfies || [])
+      } catch {
+        setSelectedSelfies([])
+      }
+    }
+    const fetchAll = async () => {
+      try {
+        const data = await jsonFetcher<{ items?: { id: string; uploadedKey: string }[] }>('/api/uploads/list', { credentials: 'include' })
+        const items = (data.items || []).filter(i => i.uploadedKey && i.uploadedKey !== 'undefined')
+        setAllSelfies(items.map(i => ({ id: i.id, key: i.uploadedKey })))
+      } catch {
+        setAllSelfies([])
+      }
+    }
+    if (session?.user?.id) {
+      fetchSelected()
+      fetchAll()
+    }
+  }, [session?.user?.id])
+
+  const toggleSelectSelfie = async (id: string, currentSelected: boolean) => {
+    try {
+      if (currentSelected) {
+        setSelectedSelfies(prev => prev.filter(s => s.id !== id))
+      } else {
+        const found = allSelfies.find(s => s.id === id)
+        if (found) setSelectedSelfies(prev => [...prev, found])
+      }
+      await jsonFetcher(`/api/selfies/${id}/select`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selected: !currentSelected }),
+        credentials: 'include'
+      })
+    } catch {
+      // no-op
+    }
+  }
 
   // Fetch contexts when generation type is determined
   useEffect(() => {
@@ -209,7 +265,8 @@ export default function StartGenerationPage() {
   }
 
   const onProceed = async () => {
-    if (!selfieId || !generationType) {
+    const hasMulti = selectedSelfies.length >= 2
+    if ((!selfieId && !hasMulti) || !generationType) {
       console.error('Missing required data for generation')
       return
     }
@@ -218,18 +275,24 @@ export default function StartGenerationPage() {
       // Ensure packageId is set (default to headshot1 if not selected)
       const packageId = selectedPackageId || PRICING_CONFIG.defaultSignupPackage
       
+      const payload: Record<string, unknown> = {
+        contextId: activeContext?.id,
+        styleSettings: { ...photoStyleSettings, packageId },
+        prompt: activeContext?.customPrompt || 'Professional headshot',
+      }
+      if (selfieId) {
+        payload.selfieId = selfieId
+      } else if (hasMulti) {
+        payload.selfieIds = selectedSelfies.map(s => s.id)
+      }
+      
       // Create generation request (server decides mode and credits)
       await jsonFetcher<{ success?: boolean; error?: string }>('/api/generations/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          selfieId: selfieId,
-          contextId: activeContext?.id,
-          styleSettings: { ...photoStyleSettings, packageId },
-          prompt: activeContext?.customPrompt || 'Professional headshot',
-        }),
+        body: JSON.stringify(payload),
       })
 
       // Redirect: team managers (pro accounts) should land on team generations
@@ -259,13 +322,12 @@ export default function StartGenerationPage() {
   // Check if user has enough credits for generation
   const hasEnoughCredits = (generationType === 'team' && userCredits.team >= PRICING_CONFIG.credits.perGeneration) || 
                           (generationType === 'personal' && userCredits.individual >= PRICING_CONFIG.credits.perGeneration)
+  const hasRequiredSelfies = Boolean(selfieId) || selectedSelfies.length >= 2
+  const canGenerate = hasEnoughCredits && hasRequiredSelfies && generationType
   
   // Check if user has any credits at all
   const hasAnyCredits = userCredits.team > 0 || userCredits.individual > 0
   
-  // Check if we have all required data
-  const canGenerate = hasEnoughCredits && selfieId && generationType
-
   // Resolve selected photo style label for display
   const selectedPackage = getPackageConfig(selectedPackageId || PRICING_CONFIG.defaultSignupPackage)
   const selectedPhotoStyleLabel = selectedPackage.label
@@ -344,15 +406,21 @@ export default function StartGenerationPage() {
 
   return (
     <div className="space-y-6">
-      {!key ? (
-        <SelfieUploadFlow
-          onSelfieApproved={onSelfieApproved}
-          onCancel={onSelfieUploadCancel}
-          onError={(error) => {
-            console.error('Selfie upload error:', error)
-            alert(error)
-          }}
-        />
+      {!isApproved ? (
+        skipUpload ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <p className="text-sm text-gray-700">Selfies selected. Continue by customizing your style below.</p>
+          </div>
+        ) : (
+          <SelfieUploadFlow
+            onSelfieApproved={onSelfieApproved}
+            onCancel={onSelfieUploadCancel}
+            onError={(error) => {
+              console.error('Selfie upload error:', error)
+              alert(error)
+            }}
+          />
+        )
       ) : creditsLoading || !contextLoaded ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
@@ -387,18 +455,21 @@ export default function StartGenerationPage() {
             <h1 className="text-xl font-semibold text-gray-900 mb-4">{t('readyToGenerate')}</h1>
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
               <div className="flex gap-4 md:gap-6 md:flex-1 min-w-0">
-                {/* Selfie Thumbnail */}
+                {/* Selected Selfie Thumbnails */}
                 <div className="flex-none">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm">
-                    <Image
-                      src={`/api/files/get?key=${encodeURIComponent(key)}`}
-                      alt="Selected selfie"
-                      width={80}
-                      height={80}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className={`grid ${headerThumbs.length <= 2 ? 'grid-flow-col auto-cols-max grid-rows-1' : 'grid-rows-2 grid-flow-col'} gap-2 max-w-[220px]`}>
+                    {headerThumbs.map((s) => (
+                      <div key={s.id} className="w-10 h-10 sm:w-12 sm:h-12 rounded-md overflow-hidden border border-gray-200 shadow-sm">
+                        <Image
+                          src={`/api/files/get?key=${encodeURIComponent(s.key)}`}
+                          alt="Selected selfie"
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-xs text-gray-500 text-center mt-2">{t('yourSelfie')}</p>
                 </div>
                 <div className="min-w-0">
                   <GenerationSummaryTeam
@@ -555,6 +626,8 @@ export default function StartGenerationPage() {
               </div>
             </div>
           )}
+
+          {/* Selfie selection UI removed here; thumbnails are shown in header */}
         </>
       )}
     </div>

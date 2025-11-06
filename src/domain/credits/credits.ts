@@ -299,7 +299,6 @@ export async function reserveCreditsForGeneration(
     // OPTIMIZATION: Start team balance check in parallel with person lookup
     // This reduces sequential query steps from 3 to 2
     let userIdForBalance: string | null = userId
-    let personWithTeam: { userId: string | null; team: { adminId: string } | null } | null = null
     
     // If userId is not provided, fetch person in parallel with team balance
     if (!userIdForBalance) {
@@ -320,7 +319,6 @@ export async function reserveCreditsForGeneration(
         getTeamCreditBalance(teamId)
       ])
       
-      personWithTeam = personResult
       userIdForBalance = personResult?.userId || personResult?.team?.adminId || null
       
       // If we have userIdForBalance, we need to check for unmigrated pro credits

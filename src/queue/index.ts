@@ -36,6 +36,7 @@ export interface ImageGenerationJobData {
   userId?: string
   selfieId: string
   selfieS3Key: string
+  selfieS3Keys?: string[] // Optional array of multiple selfies for multi-selfie generation
   styleSettings: Record<string, unknown>
   prompt: string
   providerOptions?: Record<string, unknown>

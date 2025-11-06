@@ -223,10 +223,10 @@ export function useGenerations(
   return { generated, teamUsers, pagination, loading, loadMore }
 }
 
-export function useGenerationFilters() {
+export function useGenerationFilters(initialUserFilter: string = 'me') {
   const [timeframe, setTimeframe] = useState<'all'|'7d'|'30d'>('all')
   const [context, setContext] = useState<string>('all')
-  const [userFilter, setUserFilter] = useState<string>('me')
+  const [userFilter, setUserFilter] = useState<string>(initialUserFilter)
   const [selectedUserId, setSelectedUserId] = useState<string>('all')
 
   const filterGenerated = (items: GenerationListItem[]) => {

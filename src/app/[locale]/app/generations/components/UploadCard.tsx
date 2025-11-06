@@ -12,11 +12,14 @@ export type UploadListItem = {
   createdAt: string
   usedInGenerationId?: string
   hasGenerations?: boolean // New field to indicate if selfie has any generations
+  selected?: boolean // Selection state
 }
 
 interface UploadCardProps {
   item: UploadListItem
   onDelete?: (id: string) => void
+  onToggleSelect?: (id: string, selected: boolean) => void
+  hideGenerateCta?: boolean
 }
 
 const MAX_IMAGE_RETRY_ATTEMPTS = 2
@@ -29,7 +32,7 @@ const buildImageUrl = (key: string, retryVersion: number) => {
   return `/api/files/get?${params.toString()}`
 }
 
-export default function UploadCard({ item, onDelete }: UploadCardProps) {
+export default function UploadCard({ item, onDelete, onToggleSelect, hideGenerateCta = false }: UploadCardProps) {
   const t = useTranslations('generations')
   const [isDeleting, setIsDeleting] = useState(false)
   const [imageError, setImageError] = useState(false)
@@ -65,9 +68,27 @@ export default function UploadCard({ item, onDelete }: UploadCardProps) {
     }
   }
 
+  const handleToggle = () => {
+    if (onToggleSelect) {
+      onToggleSelect(item.id, !Boolean(item.selected))
+    }
+  }
+
   return (
-    <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
-      <div className="aspect-square bg-gray-50 overflow-hidden">
+    <div className={`rounded-lg border overflow-hidden bg-white ${item.selected ? 'border-brand-secondary' : 'border-gray-200'}`}>
+      <div className="relative aspect-square bg-gray-50 overflow-hidden">
+        <button
+          type="button"
+          className={`absolute top-2 left-2 z-10 inline-flex items-center justify-center w-7 h-7 rounded-md border ${item.selected ? 'bg-brand-secondary text-white border-brand-secondary' : 'bg-white text-gray-600 border-gray-300'} shadow-sm`}
+          aria-pressed={item.selected ? 'true' : 'false'}
+          onClick={handleToggle}
+        >
+          {item.selected ? (
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0L4 11.414a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+          ) : (
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"><rect x="3" y="3" width="14" height="14" rx="2" ry="2" strokeWidth="2" /></svg>
+          )}
+        </button>
         <Image
           src={imgSrc}
           alt="upload"
@@ -93,25 +114,27 @@ export default function UploadCard({ item, onDelete }: UploadCardProps) {
       <div className="p-3 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 relative">
-            <Link 
-              href={`/app/generate/start?key=${encodeURIComponent(item.uploadedKey)}`} 
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-brand-cta border border-brand-cta rounded-md hover:bg-brand-cta-hover hover:border-brand-cta-hover transition-colors"
-            >
-              <svg 
-                className="w-4 h-4" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
+            {!hideGenerateCta && (
+              <Link 
+                href={`/app/generate/start?key=${encodeURIComponent(item.uploadedKey)}`} 
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-brand-cta border border-brand-cta rounded-md hover:bg-brand-cta-hover hover:border-brand-cta-hover transition-colors"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M13 10V3L4 14h7v7l9-11h-7z" 
-                />
-              </svg>
-              {t('actions.generate')}
-            </Link>
+                <svg 
+                  className="w-4 h-4" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M13 10V3L4 14h7v7l9-11h-7z" 
+                  />
+                </svg>
+                {t('actions.generate')}
+              </Link>
+            )}
           </div>
           <div className="flex items-center gap-1">
             {item.hasGenerations && (

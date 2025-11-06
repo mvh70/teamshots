@@ -41,18 +41,14 @@ export default function TeamGenerationsPage() {
     }
     fetchRoles()
   }, [session?.user?.id])
-  const { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated } = useGenerationFilters()
+  // Initialize filter to 'team' by default for team pages (optimistic for team admins)
+  // This prevents the delay of showing "me" first, then switching to "team"
+  const { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated } = useGenerationFilters('team')
   
-  // Default to "All users" for team admins once role is known
+  // Adjust filter if user is not a team admin (they should only see their own)
   useEffect(() => {
-    if (!isTeamAdmin) return
-    // Prevent repeatedly forcing the filter after first default
-  }, [isTeamAdmin])
-  const hasDefaultedRef = useRef(false)
-  useEffect(() => {
-    if (!hasDefaultedRef.current && isTeamAdmin && userFilter !== 'team') {
-      hasDefaultedRef.current = true
-      setUserFilter('team')
+    if (isTeamAdmin === false && userFilter === 'team') {
+      setUserFilter('me')
     }
   }, [isTeamAdmin, userFilter, setUserFilter])
   const { href: buyCreditsHref } = useBuyCreditsLink()

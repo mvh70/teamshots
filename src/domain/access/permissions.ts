@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { createPermissionContext, requirePermission, Permission, getUserWithRoles } from '@/domain/access/roles'
 import { getUserSubscription } from '@/domain/subscription/subscription'
-import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
 
 export async function withPermission(

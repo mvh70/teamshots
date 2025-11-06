@@ -16,6 +16,7 @@ interface UploadListItem {
   validated: boolean
   createdAt: string
   hasGenerations: boolean
+  selected?: boolean
 }
 
 export default function SelfieSelectionPage() {
@@ -29,8 +30,13 @@ export default function SelfieSelectionPage() {
   const loadUploads = async () => {
     setLoading(true)
     try {
-      const data = await jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list')
-      setUploads(data.items || [])
+      const [data, selectedRes] = await Promise.all([
+        jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list', { credentials: 'include' }),
+        jsonFetcher<{ selfies: { id: string }[] }>('\/api\/selfies\/selected', { credentials: 'include' }).catch(() => ({ selfies: [] as { id: string }[] }))
+      ])
+      const selectedSet = new Set((selectedRes.selfies || []).map(s => s.id))
+      const items = (data.items || []).map(it => ({ ...it, selected: selectedSet.has(it.id) }))
+      setUploads(items)
     } catch (error) {
       console.error('Failed to load uploads:', error)
     } finally {
@@ -67,6 +73,20 @@ export default function SelfieSelectionPage() {
     window.location.href = `/app/generate/start?key=${encodeURIComponent(selfieKey)}&type=${generationType}`
   }
 
+  const toggleSelect = async (id: string, selected: boolean) => {
+    try {
+      setUploads(prev => prev.map(u => u.id === id ? { ...u, selected } : u))
+      await jsonFetcher(`/api/selfies/${id}/select`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selected }),
+        credentials: 'include'
+      })
+    } catch (e) {
+      setUploads(prev => prev.map(u => u.id === id ? { ...u, selected: !selected } : u))
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -74,12 +94,18 @@ export default function SelfieSelectionPage() {
           <h1 className="text-2xl font-semibold text-gray-900">{t('title')}</h1>
           <p className="text-sm text-gray-600 mt-1">{t('subtitle')}</p>
         </div>
-        <Link 
-          href="/app/dashboard"
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
-        >
-          Cancel
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link 
+            href="/app/generate/start?skipUpload=1"
+            className="px-4 py-2 text-sm font-medium text-white bg-brand-primary rounded-md hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+          >
+            Continue
+          </Link>
+        </div>
+      </div>
+      <div className="rounded-md border border-brand-primary/30 bg-indigo-50 text-gray-800 px-4 py-3 text-sm">
+        <p className="mb-1">Select or deselect the selfies you want to use. You can upload a new one if needed.</p>
+        <p>When you’re ready, click Continue to review the style and generate.</p>
       </div>
 
       {showUpload && (
@@ -97,12 +123,13 @@ export default function SelfieSelectionPage() {
         <>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">{t('select.title')}</h2>
-            <button 
+            {/* Hide upload new selfie for now */}
+            {/* <button 
               onClick={() => setShowUpload(true)}
               className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm"
             >
               {t('select.newSelfie')}
-            </button>
+            </button> */}
           </div>
 
           {loading ? (
@@ -119,15 +146,7 @@ export default function SelfieSelectionPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {uploads.map(item => (
                 <div key={item.id} className="relative group">
-                  <UploadCard item={item} />
-                  <button
-                    onClick={() => handleSelfieSelect(item.uploadedKey)}
-                    className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100"
-                  >
-                    <span className="bg-white text-gray-900 px-4 py-2 rounded-md text-sm font-medium shadow-lg">
-                      {t('select.useThis')}
-                    </span>
-                  </button>
+                  <UploadCard item={item} hideGenerateCta onToggleSelect={(id, sel) => toggleSelect(id, sel)} />
                 </div>
               ))}
             </div>

@@ -162,6 +162,7 @@ model Selfie {
   key                String
   validated          Boolean      @default(false)
   usedInGenerationId String?
+  selected           Boolean      @default(false)
   createdAt          DateTime     @default(now())
   fitnessApproved    Boolean      @default(false)
   moderationDate     DateTime?
@@ -180,6 +181,7 @@ model Selfie {
   @@index([createdAt])
   @@index([isPublic])
   @@index([personId, createdAt])
+  @@index([selected])
 }
 
 model Transaction {

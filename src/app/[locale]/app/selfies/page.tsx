@@ -14,6 +14,7 @@ interface UploadListItem {
   validated: boolean
   createdAt: string
   hasGenerations: boolean
+  selected?: boolean
 }
 
 export default function SelfiesPage() {
@@ -31,7 +32,14 @@ export default function SelfiesPage() {
       const data = await jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list', {
         credentials: 'include' // Required for Safari to send cookies
       })
-      setUploads(data.items || [])
+      let items = data.items || []
+      // Fetch selected selfie IDs and merge selection state
+      const selectedRes = await jsonFetcher<{ selfies: { id: string }[] }>('/api/selfies/selected', {
+        credentials: 'include'
+      }).catch(() => ({ selfies: [] as { id: string }[] }))
+      const selectedSet = new Set((selectedRes.selfies || []).map(s => s.id))
+      items = items.map(it => ({ ...it, selected: selectedSet.has(it.id) }))
+      setUploads(items)
     } catch (error) {
       console.error('Failed to load uploads:', error)
     } finally {
@@ -92,6 +100,21 @@ export default function SelfiesPage() {
     setError(null)
   }
 
+  const handleToggleSelect = async (id: string, selected: boolean) => {
+    try {
+      setUploads(prev => prev.map(u => u.id === id ? { ...u, selected } : u))
+      await jsonFetcher(`/api/selfies/${id}/select`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selected }),
+        credentials: 'include'
+      })
+    } catch {
+      // rollback on failure
+      setUploads(prev => prev.map(u => u.id === id ? { ...u, selected: !selected } : u))
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -107,6 +130,17 @@ export default function SelfiesPage() {
           </PrimaryButton>
         )}
       </div>
+
+      {!showUploadFlow && (
+        <div className="rounded-md border border-brand-secondary/30 bg-green-50 text-gray-800 px-4 py-3 text-sm">
+          <p className="mb-1">
+            Selfies with a green check are included in your next generation.
+          </p>
+          <p>
+            For the most realistic results, select at least 3 selfies in different lighting and angles. More variety usually improves quality.
+          </p>
+        </div>
+      )}
 
       {showUploadFlow && (
         <SelfieUploadFlow
@@ -159,7 +193,7 @@ export default function SelfiesPage() {
         <UploadGrid data-testid="upload-grid">
           {uploads.map(item => (
             <div key={item.id} data-testid="selfie-card">
-              <UploadCard item={item} onDelete={deleteUpload} />
+              <UploadCard item={item} onDelete={deleteUpload} onToggleSelect={handleToggleSelect} />
             </div>
           ))}
         </UploadGrid>

@@ -39,7 +39,7 @@ const BUCKET_NAME = getS3BucketName()
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
   'image-generation',
   async (job: Job<ImageGenerationJobData>) => {
-    const { generationId, personId, userId, selfieS3Key, styleSettings, prompt, creditSource } = job.data
+    const { generationId, personId, userId, selfieS3Key, selfieS3Keys, styleSettings, prompt, creditSource } = job.data
     
     // Get attempt info for inclusion in all progress messages
     const maxAttempts = job.opts?.attempts || 3
@@ -271,25 +271,34 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         builtPrompt = JSON.stringify(builtPromptRaw)
       }
       
-      // Create composite image with labeled sections (using processed selfie if available)
+      // Build prompt and composite
+      const providedKeys = Array.isArray(selfieS3Keys) && selfieS3Keys.length > 0
+        ? selfieS3Keys
+        : (selfieS3Key ? [selfieS3Key] : [])
+      if (providedKeys.length === 0) {
+        throw new Error('At least one selfieS3Key is required')
+      }
+      
+      // Create composite image with labeled sections (supports multiple selfies)
       const compositeImage = await createCompositeImage(mergedStyleSettings as {
         background?: { type?: string; key?: string; prompt?: string; color?: string }
         branding?: { type?: string; logoKey?: string; position?: string }
         clothing?: { style?: string; details?: string; accessories?: string[]; colors?: { topCover?: string; topBase?: string; bottom?: string } }
         expression?: { type?: string }
         lighting?: { type?: string }
-      }, selfieS3Key, processedSelfieBuffer)
-      
-      // Debug code removed for production security
+      }, providedKeys, [processedSelfieBuffer])
       
       // Update prompt to reference the labeled sections in the composite image
       const shotTypeForText = (mergedStyleSettings?.shotType?.type || '').toString()
-      const shotText = shotTypeForText === 'full-body'
-        ? 'full-body portrait'
-        : shotTypeForText === 'midchest'
-          ? 'mid-chest portrait'
-          : 'headshot'
-      builtPrompt += `\n\nUse the labeled sections in the composite image: "SUBJECT" for the person, "BACKGROUND" for the background, and "LOGO" for the brand logo if present. Generate a professional photo using the subject and the specified style settings. STRICTLY follow \"framing_composition.shot_type\" (requested: ${shotText}) and \"orientation\". Do not change the requested shot type; avoid cropping that contradicts it.`
+      const shotText = shotTypeForText === 'full-body' ? 'full-body portrait' : shotTypeForText === 'midchest' ? 'mid-chest portrait' : 'headshot'
+      let labelInstruction = 'Use the labeled sections in the composite image: '
+      if (providedKeys.length === 1) {
+        labelInstruction += '"SUBJECT1-SELFIE1" for the person'
+      } else {
+        const labels = providedKeys.map((_, i) => `"SUBJECT1-SELFIE${i + 1}"`).join(', ')
+        labelInstruction += `${labels} for the person from different angles. All subject-selfie images show the same person.`
+      }
+      builtPrompt += `\n\n${labelInstruction}. Generate a professional photo using the subject and the specified style settings. STRICTLY follow \"framing_composition.shot_type\" (requested: ${shotText}) and \"orientation\". Do not change the requested shot type; avoid cropping that contradicts it.`
       
       await job.updateProgress({ progress: 20, message: formatProgressWithAttempt(getProgressMessage()) })
 
@@ -306,7 +315,6 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
       // Determine aspect ratio from shot type (enforce tall canvas for full body)
       const aspectRatio = shotTypeForText === 'full-body' ? '9:16' : shotTypeForText === 'midchest' ? '3:4' : '1:1'
-      // Call Gemini image generation API with composite image only
       const imageBuffers = await generateWithGemini(builtPrompt, [compositeImage], aspectRatio)
 
       await job.updateProgress({ progress: 60, message: formatProgressWithAttempt(getProgressMessage()) })
@@ -610,7 +618,7 @@ async function downloadAssetAsBase64(s3Key: string): Promise<{ mimeType: string;
   }
 }
 
-// Create composite image with labeled sections
+// Create composite image with labeled sections (updated to support multiple selfies)
 async function createCompositeImage(
   styleSettings: {
     background?: { type?: string; key?: string; prompt?: string; color?: string }
@@ -619,53 +627,52 @@ async function createCompositeImage(
     expression?: { type?: string }
     lighting?: { type?: string }
   },
-  selfieS3Key: string,
-  preprocessedSelfieBuffer?: Buffer
+  selfieS3Keys: string[],
+  preprocessedSelfieBuffers?: Buffer[]
 ): Promise<{ mimeType: string; base64: string }> {
-  Logger.debug('Creating composite image for selfie', { selfieS3Key, hasPreprocessed: !!preprocessedSelfieBuffer })
+  Logger.debug('Creating composite image for selfies', { count: selfieS3Keys.length, hasPreprocessed: Array.isArray(preprocessedSelfieBuffers) && preprocessedSelfieBuffers.length > 0 })
   
-  // Use preprocessed buffer if provided, otherwise download from S3
-  let selfieBuffer: Buffer
-  if (preprocessedSelfieBuffer) {
-    selfieBuffer = preprocessedSelfieBuffer
-    Logger.debug('Using preprocessed selfie buffer', { bytes: selfieBuffer.length })
-  } else {
-    const selfie = await downloadSelfieAsBase64(selfieS3Key)
-    Logger.debug('Selfie downloaded', { sizeChars: selfie.base64.length })
-    selfieBuffer = Buffer.from(selfie.base64, 'base64')
-  }
-  
-  // Simple vertical stacking approach with more spacing
   const margin = 20
   const labelHeight = 50
-  const spacing = 100  // Increased spacing between images
-  
-  // Prepare all composite elements
+  const spacing = 100
   const compositeElements: Array<Record<string, unknown>> = []
   let currentY = margin
   let maxWidth = 0
-  
-  // Load selfie and get original dimensions
-  Logger.debug('Selfie buffer size', { bytes: selfieBuffer.length })
-  
-  const selfieSharp = sharp(selfieBuffer)
-  const selfieMetadata = await selfieSharp.metadata()
-  Logger.debug('Selfie original dimensions', { width: selfieMetadata.width, height: selfieMetadata.height })
-  
-  // Use selfie buffer (either preprocessed or original)
-  const selfieProcessed = selfieBuffer
-  Logger.debug('Using selfie buffer size', { bytes: selfieProcessed.length, preprocessed: !!preprocessedSelfieBuffer })
-  
-  // Add selfie at top
-  const subjectText = await createTextOverlay('SUBJECT', 24, '#000000')
-  compositeElements.push(
-    { input: selfieProcessed, left: margin, top: currentY },
-    { input: subjectText, left: margin, top: currentY + (selfieMetadata.height || 0) + 10 }
-  )
-  currentY += (selfieMetadata.height || 0) + labelHeight + spacing
-  maxWidth = Math.max(maxWidth, (selfieMetadata.width || 0) + margin * 2)
-  Logger.debug('Added SUBJECT position', { y: currentY - (selfieMetadata.height || 0) - labelHeight - spacing })
-  
+
+  // Add all selfies stacked with SUBJECT1-SELFIE{n} labels
+  for (let i = 0; i < selfieS3Keys.length; i++) {
+    const key = selfieS3Keys[i]
+    let selfieBuffer: Buffer
+    if (preprocessedSelfieBuffers && preprocessedSelfieBuffers[i]) {
+      selfieBuffer = preprocessedSelfieBuffers[i]
+    } else {
+      const selfie = await downloadSelfieAsBase64(key)
+      selfieBuffer = Buffer.from(selfie.base64, 'base64')
+    }
+
+    // DEBUG: write each selfie used in composite to /tmp
+    try {
+      const dbgSelfiePath = `/tmp/composite-input-selfie-${i + 1}.png`
+      const pngBuf = await sharp(selfieBuffer).png().toBuffer()
+      await fsWriteFile(dbgSelfiePath, pngBuf)
+      Logger.debug('Wrote composite input selfie', { index: i + 1, path: dbgSelfiePath })
+    } catch (e) {
+      Logger.warn('Failed writing debug selfie to /tmp', { index: i + 1, error: e instanceof Error ? e.message : String(e) })
+    }
+
+    const selfieSharp = sharp(selfieBuffer)
+    const selfieMetadata = await selfieSharp.metadata()
+
+    const subjectText = await createTextOverlayDynamic(`SUBJECT1-SELFIE${i + 1}`, 24, '#000000', 8)
+    compositeElements.push(
+      { input: selfieBuffer, left: margin, top: currentY },
+      { input: subjectText, left: margin + 8, top: currentY + (selfieMetadata.height || 0) + 10 }
+    )
+    currentY += (selfieMetadata.height || 0) + labelHeight + spacing
+    maxWidth = Math.max(maxWidth, (selfieMetadata.width || 0) + margin * 2)
+    Logger.debug('Added SUBJECT1-SELFIE element', { index: i + 1 })
+  }
+
   // Add background section if custom
   if (styleSettings?.background?.type === 'custom' && styleSettings?.background?.key) {
     Logger.debug('Adding custom background section')
@@ -676,11 +683,21 @@ async function createCompositeImage(
       const bgMetadata = await bgSharp.metadata()
       Logger.debug('Background original dimensions', { width: bgMetadata.width, height: bgMetadata.height })
       
-      const bgText = await createTextOverlay('BACKGROUND', 24, '#000000')
+      const bgText = await createTextOverlayDynamic('BACKGROUND', 24, '#000000', 8)
+      
+      // DEBUG: write background to /tmp
+      try {
+        const dbgBgPath = `/tmp/composite-input-background.png`
+        const pngBuf = await bgSharp.png().toBuffer()
+        await fsWriteFile(dbgBgPath, pngBuf)
+        Logger.debug('Wrote composite input background', { path: dbgBgPath })
+      } catch (e) {
+        Logger.warn('Failed writing debug background to /tmp', { error: e instanceof Error ? e.message : String(e) })
+      }
       
       compositeElements.push(
         { input: await bgSharp.png().toBuffer(), left: margin, top: currentY },
-        { input: bgText, left: margin, top: currentY + (bgMetadata.height || 0) + 10 }
+        { input: bgText, left: margin + 8, top: currentY + (bgMetadata.height || 0) + 10 }
       )
       currentY += (bgMetadata.height || 0) + labelHeight + spacing
       maxWidth = Math.max(maxWidth, (bgMetadata.width || 0) + margin * 2)
@@ -698,11 +715,21 @@ async function createCompositeImage(
       const logoMetadata = await logoSharp.metadata()
       Logger.debug('Logo original dimensions', { width: logoMetadata.width, height: logoMetadata.height })
       
-      const logoText = await createTextOverlay('LOGO', 24, '#000000')
+      const logoText = await createTextOverlayDynamic('LOGO', 24, '#000000', 8)
+      
+      // DEBUG: write logo to /tmp
+      try {
+        const dbgLogoPath = `/tmp/composite-input-logo.png`
+        const pngBuf = await logoSharp.png().toBuffer()
+        await fsWriteFile(dbgLogoPath, pngBuf)
+        Logger.debug('Wrote composite input logo', { path: dbgLogoPath })
+      } catch (e) {
+        Logger.warn('Failed writing debug logo to /tmp', { error: e instanceof Error ? e.message : String(e) })
+      }
       
       compositeElements.push(
         { input: await logoSharp.png().toBuffer(), left: margin, top: currentY },
-        { input: logoText, left: margin, top: currentY + (logoMetadata.height || 0) + 10 }
+        { input: logoText, left: margin + 8, top: currentY + (logoMetadata.height || 0) + 10 }
       )
       currentY += (logoMetadata.height || 0) + labelHeight + spacing
       maxWidth = Math.max(maxWidth, (logoMetadata.width || 0) + margin * 2)
@@ -721,8 +748,8 @@ async function createCompositeImage(
     create: {
       width: compositeWidth,
       height: compositeHeight,
-      channels: 3,
-      background: { r: 255, g: 255, b: 255 }
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 1 }
     }
   }).png().composite(compositeElements)
   
@@ -739,19 +766,22 @@ async function createCompositeImage(
   }
 }
 
-// Helper function to create text overlay using Sharp
-async function createTextOverlay(text: string, fontSize: number, color: string): Promise<Buffer> {
-  // Create a simple text overlay using SVG
+// Helper to create a padded text overlay using an SVG with dynamic width
+async function createTextOverlayDynamic(text: string, fontSize: number, color: string, padX = 8): Promise<Buffer> {
+  // Rough text width estimate: characters * fontSize * factor
+  const factor = 0.6
+  const textWidth = Math.max(100, Math.ceil(text.length * fontSize * factor))
+  const width = textWidth + padX * 2
+  const height = Math.max(28, Math.ceil(fontSize + 16))
+  const cx = Math.floor(width / 2)
+  const cy = Math.floor(height / 2)
   const svg = `
-    <svg width="200" height="40" xmlns="http://www.w3.org/2000/svg">
-      <rect width="200" height="40" fill="rgba(255,255,255,0.8)" stroke="${color}" stroke-width="2" rx="5"/>
-      <text x="100" y="25" font-family="Arial, sans-serif" font-size="${fontSize}" fill="${color}" text-anchor="middle" dominant-baseline="middle">${text}</text>
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="${width}" height="${height}" fill="rgba(255,255,255,0.9)" stroke="${color}" stroke-width="2" rx="5"/>
+      <text x="${cx}" y="${cy}" font-family="Arial, sans-serif" font-size="${fontSize}" fill="${color}" text-anchor="middle" dominant-baseline="middle">${text}</text>
     </svg>
   `
-  
-  return await sharp(Buffer.from(svg))
-    .png()
-    .toBuffer()
+  return await sharp(Buffer.from(svg)).png().toBuffer()
 }
 
 // moved to '@/lib/ai/promptBuilder'

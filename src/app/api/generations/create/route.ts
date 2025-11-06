@@ -42,8 +42,10 @@ function deepMerge(base: Record<string, unknown>, override: Record<string, unkno
 
 // Request validation schema
 const createGenerationSchema = z.object({
-  selfieId: z.string().optional(), // Database ID for selfie
-  selfieKey: z.string().optional(), // Alternative: S3 key for selfie
+  selfieId: z.string().optional(), // Database ID for selfie (single)
+  selfieKey: z.string().optional(), // Alternative: S3 key for selfie (single)
+  selfieIds: z.array(z.string()).optional(), // NEW: multiple selfies by ID
+  selfieKeys: z.array(z.string()).optional(), // NEW: multiple selfies by S3 key
   contextId: z.string().optional(),
   styleSettings: z.object({
     packageId: z.string().optional(), // Package folder name (e.g., 'headshot1', 'freepackage')
@@ -88,108 +90,96 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createGenerationSchema.parse(body)
     
-    const { selfieId, selfieKey, contextId, styleSettings, prompt, isRegeneration, originalGenerationId } = validatedData
+    const { selfieId, selfieKey, selfieIds, selfieKeys, contextId, styleSettings, prompt, isRegeneration, originalGenerationId } = validatedData
 
-    // Debug logging removed for production security
+    // Determine requested selfies (multiple preferred)
+    const requestedIds = Array.isArray(selfieIds) ? selfieIds : (selfieId ? [selfieId] : [])
+    const requestedKeys = Array.isArray(selfieKeys) ? selfieKeys : (selfieKey ? [selfieKey] : [])
 
-    // Validate that at least one selfie identifier is provided
-    if (!selfieId && !selfieKey) {
+    if (requestedIds.length === 0 && requestedKeys.length === 0) {
       return NextResponse.json(
-        { error: 'Either selfieId or selfieKey is required' },
+        { error: 'At least one selfie is required' },
         { status: 400 }
       )
     }
 
-    // Get selfie and person information
-    let selfie
-    if (selfieId) {
-      // Try to find by database ID first
-      selfie = await prisma.selfie.findUnique({
-        where: { id: selfieId },
-        include: { 
-          person: {
-            include: { team: true }
-          }
-        }
+    // Resolve selfies by IDs first, then keys
+    let selfies = [] as Array<{ id: string; key: string; personId: string; person: { userId: string | null; teamId: string | null } }>
+    if (requestedIds.length > 0) {
+      const found = await prisma.selfie.findMany({
+        where: { id: { in: requestedIds } },
+        include: { person: { select: { userId: true, teamId: true } } }
       })
+      selfies = found.map(s => ({ id: s.id, key: s.key, personId: s.personId, person: { userId: s.person?.userId || null, teamId: s.person?.teamId || null } }))
     }
-    
-    if (!selfie && selfieKey) {
-      // Fallback: try to find by S3 key (this might be the uploadedPhotoKey from generation)
-      selfie = await prisma.selfie.findFirst({
-        where: { key: selfieKey },
-        include: { 
-          person: {
-            include: { team: true }
-          }
-        }
+    if (requestedKeys.length > 0) {
+      const foundByKey = await prisma.selfie.findMany({
+        where: { key: { in: requestedKeys } },
+        include: { person: { select: { userId: true, teamId: true } } }
       })
-      
-      // If still not found, try to find by looking for a generation with this uploadedPhotoKey
-      if (!selfie) {
-        Logger.debug('Trying to find selfie through generation with uploadedPhotoKey', { selfieKey })
-        const generationWithSelfie = await prisma.generation.findFirst({
-          where: { uploadedPhotoKey: selfieKey },
-          include: { 
-            selfie: {
-              include: { 
-                person: {
-                  include: { team: true }
-                }
-              }
-            }
-          }
-        })
-        if (generationWithSelfie?.selfie) {
-          selfie = generationWithSelfie.selfie
+      // Merge unique by id
+      const existingIds = new Set(selfies.map(s => s.id))
+      for (const s of foundByKey) {
+        if (!existingIds.has(s.id)) {
+          selfies.push({ id: s.id, key: s.key, personId: s.personId, person: { userId: s.person?.userId || null, teamId: s.person?.teamId || null } })
         }
       }
     }
 
-    if (!selfie) {
-      return NextResponse.json(
-        { error: 'Selfie not found' },
-        { status: 404 }
-      )
+    if (selfies.length === 0) {
+      return NextResponse.json({ error: 'Selfies not found' }, { status: 404 })
     }
 
-    // SECURITY: Verify user owns the selfie or is part of the same team
-    const userPerson = await prisma.person.findUnique({
-      where: { userId: session.user.id },
-      select: { id: true, teamId: true }
-    })
+    // Enforce same person and ownership/team authorization
+    const firstPersonId = selfies[0].personId
+    const allSamePerson = selfies.every(s => s.personId === firstPersonId)
+    if (!allSamePerson) {
+      return NextResponse.json({ error: 'All selected selfies must belong to the same person' }, { status: 400 })
+    }
 
+    // Fetch full owner person (inviteToken, team admin, etc.)
+    const ownerPerson = await prisma.person.findUnique({
+      where: { id: firstPersonId },
+      select: { userId: true, teamId: true, inviteToken: true, team: { select: { adminId: true } } }
+    })
+    if (!ownerPerson) {
+      return NextResponse.json({ error: 'Person not found for selected selfies' }, { status: 404 })
+    }
+
+    // Authorization check for current user against the selfies' person
+    const userPerson = await prisma.person.findUnique({ where: { userId: session.user.id }, select: { id: true, teamId: true } })
     if (!userPerson) {
       return NextResponse.json({ error: 'User person record not found' }, { status: 404 })
     }
-
-    // Check ownership: user must own the selfie OR be in the same team
-    const isOwner = selfie.personId === userPerson.id
-    const isSameTeam = userPerson.teamId && selfie.person.teamId === userPerson.teamId
-
+    const isOwner = firstPersonId === userPerson.id
+    const isSameTeam = Boolean(userPerson.teamId && ownerPerson.teamId && userPerson.teamId === ownerPerson.teamId)
     if (!isOwner && !isSameTeam) {
-      await SecurityLogger.logSuspiciousActivity(
-        session.user.id,
-        'unauthorized_generation_attempt',
-        { selfieId: selfie.id, selfieOwnerId: selfie.personId }
-      )
+      await SecurityLogger.logSuspiciousActivity(session.user.id, 'unauthorized_generation_attempt', { selfiePersonId: firstPersonId })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
+    // Multi-selfie recommendation: enforce minimum of 2 if multiple provided
+    if (requestedIds.length + requestedKeys.length > 1 && selfies.length < 2) {
+      return NextResponse.json({ error: 'Please select at least 2 selfies for generation' }, { status: 400 })
+    }
+
+    // Choose primary selfie (first) for legacy fields and relations
+    const primarySelfie = selfies[0]
+    const selfieS3Keys = selfies.map(s => s.key)
+
+    // Debug logging removed for production security
+
     // Determine enforced generation type and credit source (server-side only)
-    // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
-    const [userWithRoles, subscription] = await Promise.all([
-      getUserWithRoles(session.user.id),
-      getUserSubscription(session.user.id)
-    ])
+    const userWithRoles = await getUserWithRoles(session.user.id)
+    const subscription = await getUserSubscription(session.user.id)
     const effective = userWithRoles ? await getUserEffectiveRoles(userWithRoles, subscription) : null
-    const isTeamContext = Boolean(effective && (effective.isTeamAdmin || effective.isTeamMember) && selfie.person.teamId)
+    const isTeamContext = Boolean(effective && (effective.isTeamAdmin || effective.isTeamMember) && ownerPerson.teamId)
     const enforcedGenerationType: 'personal' | 'team' = isTeamContext ? 'team' : 'personal'
     const enforcedCreditSource: 'individual' | 'team' = isTeamContext ? 'team' : 'individual'
 
     // Additional hard checks for ownership by mode
     if (enforcedGenerationType === 'team') {
-      if (!selfie.person.teamId || !isSameTeam) {
+      if (!ownerPerson.teamId || !isSameTeam) {
         return NextResponse.json({ error: 'Not authorized to create team generation for this person' }, { status: 403 })
       }
     } else {
@@ -214,40 +204,33 @@ export async function POST(request: NextRequest) {
       // For team generations, check if team admin owns the package
       // For personal generations, check if user owns the package
       let userIdToCheck = session.user.id
-      if (enforcedCreditSource === 'team' && selfie.person.teamId) {
+      if (enforcedCreditSource === 'team' && ownerPerson.teamId) {
         // Team member using team credits - check team admin's package ownership
-        // Fetch team to get adminId if not already loaded
-        if (selfie.person.team?.adminId) {
-          userIdToCheck = selfie.person.team.adminId
-        } else {
-          const team = await prisma.team.findUnique({
-            where: { id: selfie.person.teamId },
-            select: { adminId: true }
-          })
-          if (team?.adminId) {
-            userIdToCheck = team.adminId
-          } else {
-            // Team not found or has no admin - this shouldn't happen but handle gracefully
-            return NextResponse.json(
-              { error: 'Team not found or invalid' },
-              { status: 404 }
-            )
-          }
+        // Fetch team to get adminId
+        const team = await prisma.team.findUnique({
+          where: { id: ownerPerson.teamId },
+          select: { adminId: true }
+        })
+        if (team?.adminId) {
+          userIdToCheck = team.adminId
         }
       }
       
-      const ownsPackage = await prismaEx.userPackage.findFirst({
-        where: { userId: userIdToCheck, packageId: requestedPackageId }
+      const hasPackage = await prismaEx.userPackage.findFirst({
+        where: {
+          userId: userIdToCheck,
+          packageId: requestedPackageId
+        }
       })
 
-      if (!ownsPackage) {
+      if (!hasPackage) {
         await SecurityLogger.logSuspiciousActivity(
           session.user.id,
           'unauthorized_package_usage',
-          { packageId: requestedPackageId, selfieId: selfie.id, userIdChecked: userIdToCheck, creditSource: enforcedCreditSource }
+          { packageId: requestedPackageId, selfieId: primarySelfie.id, userIdChecked: userIdToCheck, creditSource: enforcedCreditSource }
         )
         return NextResponse.json(
-          { error: `You don't have access to the ${requestedPackageId} package` },
+          { error: 'You do not have access to this style package.' },
           { status: 403 }
         )
       }
@@ -281,8 +264,8 @@ export async function POST(request: NextRequest) {
 
     // Determine credit source and check balance (using enforced values)
     // Regenerations are free, so skip credit checks for regenerations
-    const personId: string | null = selfie.personId
-    const userId: string | null = selfie.person.userId
+    const personId: string | null = primarySelfie.personId
+    const userId: string | null = ownerPerson.userId
     
     if (!isRegeneration) {
       // Only check credits for new generations, not regenerations
@@ -303,7 +286,7 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // For team credits, use the team's credits
-        if (!selfie.person.teamId) {
+        if (!ownerPerson.teamId) {
           return NextResponse.json(
             { error: 'Person must be part of a team to use team credits' },
             { status: 400 }
@@ -314,7 +297,7 @@ export async function POST(request: NextRequest) {
         const teamUser = await prisma.user.findFirst({
           where: {
             person: {
-              teamId: selfie.person.teamId
+              teamId: ownerPerson.teamId
             }
           },
           select: { id: true }
@@ -324,13 +307,13 @@ export async function POST(request: NextRequest) {
           null, 
           teamUser?.id || null, 
           PRICING_CONFIG.credits.perGeneration, 
-          selfie.person.teamId
+          ownerPerson.teamId
         )
         
         if (!hasCredits) {
           const available = await getEffectiveTeamCreditBalance(
             teamUser?.id || session.user.id, 
-            selfie.person.teamId
+            ownerPerson.teamId
           )
           
           // Check if the person still has allocation left
@@ -409,7 +392,7 @@ export async function POST(request: NextRequest) {
       }
       
       // Check if person was invited (has inviteToken)
-      if (selfie.person.inviteToken) {
+      if (ownerPerson.inviteToken) {
         userType = 'invited'
       }
       
@@ -498,9 +481,9 @@ export async function POST(request: NextRequest) {
       }
       
       // If using team credits, also check if team admin is on free plan
-      if (enforcedCreditSource === 'team' && selfie.person.teamId) {
+      if (enforcedCreditSource === 'team' && ownerPerson.teamId) {
         const team = await prisma.team.findUnique({
-          where: { id: selfie.person.teamId },
+          where: { id: ownerPerson.teamId },
           include: {
             admin: true
           }
@@ -564,10 +547,10 @@ export async function POST(request: NextRequest) {
     // Create generation record
     const generation = await prisma.generation.create({
       data: {
-        personId: selfie.personId,
-        selfieId: selfie.id,
+        personId: primarySelfie.personId,
+        selfieId: primarySelfie.id,
         contextId: resolvedContextId,
-        uploadedPhotoKey: selfie.key,
+        uploadedPhotoKey: primarySelfie.key,
         generatedPhotoKeys: [], // Will be populated by worker
         generationType: enforcedGenerationType,
         creditSource: enforcedCreditSource,
@@ -588,9 +571,9 @@ export async function POST(request: NextRequest) {
       try {
         // Get teamInviteId for team members
         let teamInviteId: string | undefined
-        if (enforcedCreditSource === 'team' && selfie.person.inviteToken) {
+        if (enforcedCreditSource === 'team' && ownerPerson.inviteToken) {
           const teamInvite = await prisma.teamInvite.findUnique({
-            where: { token: selfie.person.inviteToken }
+            where: { token: ownerPerson.inviteToken as string }
           })
           teamInviteId = teamInvite?.id
         }
@@ -602,7 +585,7 @@ export async function POST(request: NextRequest) {
           enforcedCreditSource === 'individual' ? userId : null,
           PRICING_CONFIG.credits.perGeneration,
           `Reserved for generation ${generation.id}`,
-          enforcedCreditSource === 'team' ? selfie.person.teamId || undefined : undefined,
+          enforcedCreditSource === 'team' ? ownerPerson.teamId || undefined : undefined,
           teamInviteId
         )
       } catch (creditError) {
@@ -617,10 +600,11 @@ export async function POST(request: NextRequest) {
     
     const job = await imageGenerationQueue.add('generate', {
       generationId: generation.id,
-      personId: selfie.personId,
-      userId: selfie.person.userId || undefined,
-      selfieId: selfie.id,
-      selfieS3Key: selfie.key,
+      personId: primarySelfie.personId,
+      userId: primarySelfie.person.userId || undefined,
+      selfieId: primarySelfie.id,
+      selfieS3Key: primarySelfie.key,
+      selfieS3Keys: selfieS3Keys,
       styleSettings: serializedStyleSettings,
       prompt,
       providerOptions: {
