@@ -67,10 +67,10 @@ export async function POST(request: NextRequest) {
     }, { status: 400 })
   }
 
-  // Get user's person record
+  // OPTIMIZATION: Get person record with firstName in a single query
   const person = await prisma.person.findUnique({
     where: { userId: session.user.id },
-    select: { id: true },
+    select: { id: true, firstName: true },
   })
 
   if (!person) {
@@ -80,12 +80,8 @@ export async function POST(request: NextRequest) {
   // If selfie, create record first to get the selfie ID for the filename
   
   if (folder === 'selfies') {
-    // Get person's firstName for folder structure
-    const personWithName = await prisma.person.findUnique({
-      where: { id: person.id },
-      select: { firstName: true }
-    })
-    const firstName = sanitizeNameForS3(personWithName?.firstName || 'unknown')
+    // Use firstName from the initial query (no need for second query)
+    const firstName = sanitizeNameForS3(person.firstName || 'unknown')
     
     // Create selfie record first to get the ID
     const selfie = await prisma.selfie.create({

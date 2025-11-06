@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { getUserSubscription } from '@/domain/subscription/subscription'
+import { getUserSubscription, SubscriptionInfo } from '@/domain/subscription/subscription'
 
 export type UserRole = 'user' | 'team_admin' | 'team_member'
 
@@ -28,8 +28,14 @@ export interface PermissionContext {
 /**
  * Determine the effective role of a user based on their User role, subscription tier, and team relationships
  * Pro users are by definition team admins
+ * 
+ * @param user - User with roles information
+ * @param subscription - Optional subscription info to avoid duplicate queries. If not provided, will fetch it.
  */
-export async function getUserEffectiveRoles(user: UserWithRoles): Promise<{
+export async function getUserEffectiveRoles(
+  user: UserWithRoles,
+  subscription?: SubscriptionInfo | null
+): Promise<{
   platformRole: 'user' | 'team_admin' | 'team_member'
   teamRole: 'team_admin' | 'team_member' | null
   isTeamAdmin: boolean
@@ -40,8 +46,9 @@ export async function getUserEffectiveRoles(user: UserWithRoles): Promise<{
   const isPlatformAdmin = user.isAdmin
   
   // Check if user has pro subscription - pro users are team admins by definition
-  const subscription = await getUserSubscription(user.id)
-  const hasProTier = subscription?.tier === 'pro'
+  // Only fetch subscription if not provided (optimization to avoid duplicate queries)
+  const subscriptionData = subscription ?? await getUserSubscription(user.id)
+  const hasProTier = subscriptionData?.tier === 'pro'
   
   // User is team admin if:
   // 1. They have the 'team_admin' role in the database, OR
@@ -208,19 +215,26 @@ export async function requirePermission(
 
 /**
  * Middleware helper to create permission context from session
+ * 
+ * @param session - Session object with user info
+ * @param teamId - Optional team ID
+ * @param personId - Optional person ID
+ * @param user - Optional user with roles to avoid duplicate queries. If not provided, will fetch it.
  */
 export async function createPermissionContext(
   session: { user?: { id?: string } } | null,
   teamId?: string,
-  personId?: string
+  personId?: string,
+  user?: UserWithRoles | null
 ): Promise<PermissionContext | null> {
   if (!session?.user?.id) return null
 
-  const user = await getUserWithRoles(session.user.id)
-  if (!user) return null
+  // OPTIMIZATION: Only fetch user if not provided (avoids duplicate queries)
+  const userWithRoles = user ?? await getUserWithRoles(session.user.id)
+  if (!userWithRoles) return null
 
   return {
-    user,
+    user: userWithRoles,
     teamId,
     personId
   }

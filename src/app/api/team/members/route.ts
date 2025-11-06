@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getPersonCreditBalance, getUserCreditBalance } from '@/domain/credits/credits'
 import { withTeamPermission } from '@/domain/access/permissions'
 import { Logger } from '@/lib/logger'
 
@@ -18,29 +17,19 @@ export async function GET(request: NextRequest) {
     
     const { session } = permissionCheck
 
-    // Get current user's stats
-    const currentUser = await prisma.user.findUnique({
+    // OPTIMIZATION: Single query to get user with all needed data (combines previous two queries)
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: {
+      include: {
         person: {
           select: {
+            id: true,
             _count: {
               select: {
                 selfies: true,
                 generations: true
               }
-            }
-          }
-        }
-      }
-    })
-
-    // Get user's team information
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: {
-        person: {
-          include: {
+            },
             team: {
               select: {
                 id: true,
@@ -73,63 +62,150 @@ export async function GET(request: NextRequest) {
     }
 
     const team = user.person.team
+    const allPersonIds = team.teamMembers.map(p => p.id)
+    // Include current user's personId if not in team members
+    if (user.person.id && !allPersonIds.includes(user.person.id)) {
+      allPersonIds.push(user.person.id)
+    }
 
-    // Get credit balances for all team members
-    const usersWithCredits = await Promise.all(
-      team.teamMembers.map(async (p) => {
-        let individualCredits = 0
-        let teamCredits = 0
-        
-        if (p.userId) {
-          // User has account, get their credit balance
-          individualCredits = await getUserCreditBalance(p.userId)
-        } else {
-          // Person without account, get their credit balance
-          teamCredits = await getPersonCreditBalance(p.id)
+    // OPTIMIZATION: Batch fetch all credit transactions for all users and persons
+    const userIds = team.teamMembers.filter(p => p.userId).map(p => p.userId as string)
+    // Include current user's userId
+    if (session.user.id && !userIds.includes(session.user.id)) {
+      userIds.push(session.user.id)
+    }
+
+    // OPTIMIZATION: Run all independent queries in parallel
+    const [
+      allGenerations,
+      userCreditTransactions,
+      personCreditTransactions,
+      teamInvites
+    ] = await Promise.all([
+      // Batch fetch all generation counts in a single query
+      prisma.generation.findMany({
+        where: {
+          personId: { in: allPersonIds },
+          deleted: false,
+          status: { not: 'failed' }
+        },
+        select: {
+          personId: true
         }
-
-        // Get active generation count (excluding deleted and failed)
-        const activeGenerations = await prisma.generation.count({
-          where: {
-            personId: p.id,
-            deleted: false,
-            status: {
-              not: 'failed'
+      }),
+      // Fetch all credit transactions for users
+      userIds.length > 0 ? prisma.creditTransaction.findMany({
+        where: {
+          userId: { in: userIds }
+        },
+        select: {
+          userId: true,
+          credits: true
+        }
+      }) : Promise.resolve([]),
+      // Fetch all credit transactions for persons
+      allPersonIds.length > 0 ? prisma.creditTransaction.findMany({
+        where: {
+          personId: { in: allPersonIds }
+        },
+        select: {
+          personId: true,
+          credits: true,
+          type: true
+        }
+      }) : Promise.resolve([]),
+      // Fetch all team invites for persons (needed for getPersonCreditBalance logic)
+      allPersonIds.length > 0 ? prisma.teamInvite.findMany({
+        where: {
+          personId: { in: allPersonIds }
+        },
+        select: {
+          personId: true,
+          creditsAllocated: true,
+          creditTransactions: {
+            where: {
+              type: 'generation'
+            },
+            select: {
+              credits: true
             }
           }
-        })
-
-        return {
-          id: p.id, // Always return personId as id
-          name: [p.firstName, p.lastName].filter(Boolean).join(' ') || p.email || 'Member',
-          email: p.email,
-          userId: p.userId,
-          isAdmin: p.userId === team.adminId,
-          isCurrentUser: p.userId === session.user.id,
-          stats: {
-            selfies: p._count.selfies,
-            generations: activeGenerations,
-            individualCredits,
-            teamCredits
-          }
         }
-      })
-    )
+      }) : Promise.resolve([])
+    ])
+
+    // Count generations per personId in memory
+    const generationCounts = new Map<string, number>()
+    allGenerations.forEach(gen => {
+      generationCounts.set(gen.personId, (generationCounts.get(gen.personId) || 0) + 1)
+    })
+
+    // Create maps for quick lookup
+    const userCreditsMap = new Map<string, number>()
+    userCreditTransactions.forEach(tx => {
+      if (tx.userId) {
+        userCreditsMap.set(tx.userId, (userCreditsMap.get(tx.userId) || 0) + tx.credits)
+      }
+    })
+
+    const teamInvitesMap = new Map<string, typeof teamInvites[0]>()
+    teamInvites.forEach(invite => {
+      if (invite.personId) {
+        teamInvitesMap.set(invite.personId, invite)
+      }
+    })
+
+    // Calculate person credits (handling invite allocation logic)
+    const personCreditsMap = new Map<string, number>()
+    teamInvitesMap.forEach((invite, personId) => {
+      // If person has invite, calculate remaining allocation
+      const usedCredits = invite.creditTransactions.reduce((sum, tx) => sum + Math.abs(tx.credits), 0)
+      const remaining = Math.max(0, (invite.creditsAllocated ?? 0) - usedCredits)
+      personCreditsMap.set(personId, remaining)
+    })
+
+    // For persons without invites, calculate from transactions
+    personCreditTransactions.forEach(tx => {
+      if (tx.personId && !personCreditsMap.has(tx.personId)) {
+        personCreditsMap.set(tx.personId, (personCreditsMap.get(tx.personId) || 0) + tx.credits)
+      }
+    })
+
+    // Build response for all team members
+    const usersWithCredits = team.teamMembers.map((p) => {
+      let individualCredits = 0
+      let teamCredits = 0
+      
+      if (p.userId) {
+        // User has account, get their credit balance from map
+        individualCredits = userCreditsMap.get(p.userId) || 0
+      } else {
+        // Person without account, get their credit balance from map
+        teamCredits = personCreditsMap.get(p.id) || 0
+      }
+
+      const activeGenerations = generationCounts.get(p.id) || 0
+
+      return {
+        id: p.id, // Always return personId as id
+        name: [p.firstName, p.lastName].filter(Boolean).join(' ') || p.email || 'Member',
+        email: p.email,
+        userId: p.userId,
+        isAdmin: p.userId === team.adminId,
+        isCurrentUser: p.userId === session.user.id,
+        stats: {
+          selfies: p._count.selfies,
+          generations: activeGenerations,
+          individualCredits,
+          teamCredits
+        }
+      }
+    })
 
     // Ensure current admin is included
     if (!usersWithCredits.find(u => u.id === (user.person?.id || ''))) {
-      const adminCredits = await getUserCreditBalance(session.user.id)
-      
-      // Get admin's active generation count (excluding deleted and failed)
-      const adminActiveGenerations = await prisma.generation.count({
-        where: {
-          personId: user.person.id,
-          deleted: false,
-          status: {
-            not: 'failed'
-          }
-        }
-      })
+      const adminCredits = userCreditsMap.get(session.user.id) || 0
+      const adminActiveGenerations = generationCounts.get(user.person.id) || 0
       
       usersWithCredits.unshift({ 
         id: user.person?.id || session.user.id, // prefer personId
@@ -139,7 +215,7 @@ export async function GET(request: NextRequest) {
         isAdmin: true,
         isCurrentUser: true,
         stats: {
-          selfies: currentUser?.person?._count.selfies || 0,
+          selfies: user.person?._count.selfies || 0,
           generations: adminActiveGenerations,
           individualCredits: adminCredits,
           teamCredits: 0

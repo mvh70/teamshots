@@ -41,7 +41,7 @@ function buildPrompt(settings: PhotoStyleSettings): string {
   const sceneEnv: Record<string, unknown> = {}
   const scene: Record<string, unknown> = { environment: sceneEnv }
   const subject: Record<string, unknown> = {
-    type: 'subject from the attached image, maintaining the facial structure, identity, and key features of the input image.',
+    type: 'subject from the attached image, maintaining the facial structure, identity, and key features of the input image. There are multiple images attached from the same subject from different positions.  Pls keep as much as possible specific characteristics of the subject, like spots, wrinkles, pores, etc. Optimise for a realistic representation based on the selfies.',
     pose: {}
   }
   const framing_composition: Record<string, unknown> = {}

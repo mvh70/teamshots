@@ -64,14 +64,13 @@ export async function getTeamCreditBalance(teamId: string): Promise<number> {
  * to get the "total available team credits" for a user.
  */
 export async function getEffectiveTeamCreditBalance(userId: string, teamId?: string | null): Promise<number> {
-  // Get base team balance if team exists
-  let teamBalance = 0
-  if (teamId) {
-    teamBalance = await getTeamCreditBalance(teamId)
-  }
+  // OPTIMIZATION: Run independent queries in parallel
+  // Team balance and subscription are independent, so fetch them simultaneously
+  const [teamBalance, subscription] = await Promise.all([
+    teamId ? getTeamCreditBalance(teamId) : Promise.resolve(0),
+    getUserSubscription(userId)
+  ])
   
-  // Check if user has pro tier
-  const subscription = await getUserSubscription(userId)
   const hasProTier = subscription?.tier === 'pro'
   
   // If user has pro tier, also check for unmigrated pro credits on userId
@@ -300,21 +299,23 @@ export async function reserveCreditsForGeneration(
     // Get team admin's userId to check for unmigrated pro credits
     let userIdForBalance: string | null = userId
     if (!userIdForBalance) {
-      // Try to get userId from person (for team admin generating their own photos)
-      const person = await prisma.person.findUnique({
+      // OPTIMIZATION: Combine person and team lookup into single query
+      // This eliminates sequential queries and reduces database round-trips
+      const personWithTeam = await prisma.person.findUnique({
         where: { id: personId },
-        select: { userId: true }
+        select: {
+          userId: true,
+          team: {
+            select: {
+              adminId: true
+            }
+          }
+        }
       })
-      userIdForBalance = person?.userId || null
       
-      // If person doesn't have userId (team member), get team admin's userId
-      if (!userIdForBalance) {
-        const team = await prisma.team.findUnique({
-          where: { id: teamId },
-          select: { adminId: true }
-        })
-        userIdForBalance = team?.adminId || null
-      }
+      // Extract userId from person, or fallback to team admin
+      // This handles both cases: team admin generating own photos, and team members
+      userIdForBalance = personWithTeam?.userId || personWithTeam?.team?.adminId || null
     }
     
     // Use effective team balance (includes unmigrated pro credits)

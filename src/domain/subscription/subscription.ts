@@ -42,14 +42,28 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
 
   if (!user) return null
 
-  // Find upcoming change (effective in the future)
-  const upcoming = await (prisma as unknown as { subscriptionChange: { findFirst: (args: unknown) => Promise<unknown> } }).subscriptionChange.findFirst({
-    where: {
-      userId,
-      effectiveDate: { gt: new Date() },
-    },
-    orderBy: { effectiveDate: 'asc' },
-  }) as unknown as { action: 'start'|'change'|'cancel'|'schedule'; planTier: string; planPeriod: string; effectiveDate: Date } | null
+  // OPTIMIZATION: Run subscriptionChange queries in parallel
+  // Both queries are independent and can execute simultaneously
+  const subscriptionChangeClient = prisma as unknown as { subscriptionChange: { findFirst: (args: unknown) => Promise<unknown> } }
+  const [upcoming, latestEffective] = await Promise.all([
+    // Find upcoming change (effective in the future)
+    subscriptionChangeClient.subscriptionChange.findFirst({
+      where: {
+        userId,
+        effectiveDate: { gt: new Date() },
+      },
+      orderBy: { effectiveDate: 'asc' },
+    }) as Promise<{ action: 'start'|'change'|'cancel'|'schedule'; planTier: string; planPeriod: string; effectiveDate: Date } | null>,
+    // Find latest effective change (in the past) - prepare query but conditionally use result
+    subscriptionChangeClient.subscriptionChange.findFirst({
+      where: {
+        userId,
+        effectiveDate: { lte: new Date() },
+        action: { in: ['start', 'change'] },
+      },
+      orderBy: { effectiveDate: 'desc' },
+    }) as Promise<{ effectiveDate?: Date } | null>
+  ])
 
   // Derive effective tier: a try_once purchase is represented as planPeriod 'try_once'
   // even though planTier may remain 'individual'. Surface 'try_once' in API to drive UI correctly.
@@ -66,16 +80,7 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
   // Compute next renewal date when applicable
   let nextRenewal: Date | null = null
   if (user.subscriptionStatus === 'active' && (period === 'monthly' || period === 'annual')) {
-    // Try to compute from latest effective change (<= now)
-    const latestEffective = await (prisma as unknown as { subscriptionChange: { findFirst: (args: unknown) => Promise<unknown> } }).subscriptionChange.findFirst({
-      where: {
-        userId,
-        effectiveDate: { lte: new Date() },
-        action: { in: ['start', 'change'] },
-      },
-      orderBy: { effectiveDate: 'desc' },
-    }) as unknown as { effectiveDate?: Date } | null
-
+    // Use the latestEffective result from parallel query (already fetched above)
     if (latestEffective?.effectiveDate) {
       const base = new Date(latestEffective.effectiveDate)
       if (period === 'monthly') {

@@ -7,7 +7,7 @@ const NO_TOP_COVER_DETAILS = new Set(['t-shirt', 'hoodie', 'polo', 'button-down'
 // Local reference to builder (currently in roDelete)
 function localBuild(style: Record<string, unknown>, basePrompt?: string): string {
   const scene: Record<string, unknown> = { environment: {} as Record<string, unknown> }
-  const subject: Record<string, unknown> = { type: 'subject from the attached image, maintaining the facial structure, identity, and key features of the input image.' }
+  const subject: Record<string, unknown> = { type: 'subject from the attached image, maintaining the facial structure, identity, and key features of the input image. There are multiple images attached from the same subject from different positions.  Pls keep as much as possible specific characteristics of the subject, like spots, wrinkles, pores, etc. Optimise for a realistic representation based on the selfies.' }
   const framing_composition: Record<string, unknown> = {}
   const camera: Record<string, unknown> = {}
   const lighting: Record<string, unknown> = {}

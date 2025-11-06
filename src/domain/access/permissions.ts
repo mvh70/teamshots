@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { createPermissionContext, requirePermission, Permission } from '@/domain/access/roles'
+import { createPermissionContext, requirePermission, Permission, getUserWithRoles } from '@/domain/access/roles'
 import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
 
@@ -48,18 +48,14 @@ export async function withTeamPermission(
   }
 
   let teamId = session.user.person?.teamId
+  let userWithRoles = null
   
+  // OPTIMIZATION: Fetch user with full roles data once if needed
+  // This avoids duplicate queries in createPermissionContext
   if (!teamId) {
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: {
-        person: {
-          select: { teamId: true }
-        }
-      }
-    })
-    
-    teamId = user?.person?.teamId || null
+    // Fetch user with full roles data (we'll need it for createPermissionContext anyway)
+    userWithRoles = await getUserWithRoles(session.user.id)
+    teamId = userWithRoles?.person?.teamId || null
   }
 
   if (!teamId) {
@@ -69,9 +65,13 @@ export async function withTeamPermission(
     )
   }
 
+  // Pass userWithRoles to avoid re-fetching in createPermissionContext
+  // If userWithRoles is null, createPermissionContext will fetch it (backward compatible)
   const context = await createPermissionContext(
     session, 
-    teamId
+    teamId,
+    undefined,
+    userWithRoles ?? undefined
   )
   if (!context) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -149,11 +149,17 @@ export async function getUserRoles(session: { user?: { id?: string } } | null) {
   if (!context) return null
 
   // Use getUserEffectiveRoles to check pro subscription (pro users are team admins)
+  // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
   const { getUserWithRoles, getUserEffectiveRoles } = await import('@/domain/access/roles')
-  const user = await getUserWithRoles(session.user.id)
+  const { getUserSubscription } = await import('@/domain/subscription/subscription')
+  const [user, subscription] = await Promise.all([
+    getUserWithRoles(session.user.id),
+    getUserSubscription(session.user.id)
+  ])
   if (!user) return null
   
-  const effective = await getUserEffectiveRoles(user)
+  // Pass subscription to avoid duplicate query
+  const effective = await getUserEffectiveRoles(user, subscription)
 
   return {
     platformRole: effective.platformRole,

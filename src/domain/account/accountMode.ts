@@ -7,7 +7,7 @@
  * - 'team_member': Invited members accessing through token (no sidebar)
  */
 
-import { getUserSubscription } from '@/domain/subscription/subscription'
+import { getUserSubscription, SubscriptionInfo } from '@/domain/subscription/subscription'
 import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
 
 export type AccountMode = 'pro' | 'individual' | 'team_member'
@@ -23,8 +23,14 @@ export interface AccountModeResult {
 
 /**
  * Determine account mode server-side
+ * 
+ * @param userId - User ID to get account mode for
+ * @param subscription - Optional subscription info to avoid duplicate queries. If not provided, will fetch it.
  */
-export async function getAccountMode(userId: string | null | undefined): Promise<AccountModeResult> {
+export async function getAccountMode(
+  userId: string | null | undefined,
+  subscription?: SubscriptionInfo | null
+): Promise<AccountModeResult> {
   // Default to individual if no user
   if (!userId) {
     return {
@@ -37,14 +43,20 @@ export async function getAccountMode(userId: string | null | undefined): Promise
     }
   }
 
-  // Check subscription tier
-  const subscription = await getUserSubscription(userId)
-  const subscriptionTier = subscription?.tier ?? null
+  // OPTIMIZATION: Run independent queries in parallel
+  // Only fetch subscription if not provided (optimization to avoid duplicate queries)
+  const [subscriptionData, user] = await Promise.all([
+    subscription ?? getUserSubscription(userId),
+    getUserWithRoles(userId)
+  ])
+
+  const subscriptionTier = subscriptionData?.tier ?? null
   const hasProTier = subscriptionTier === 'pro'
 
   // Check user roles (pro users are team admins by definition)
-  const user = await getUserWithRoles(userId)
-  const effective = user ? await getUserEffectiveRoles(user) : null
+  // This depends on the user result, so it runs after the parallel queries
+  // Pass subscription to avoid duplicate query
+  const effective = user ? await getUserEffectiveRoles(user, subscriptionData) : null
 
   // Determine mode:
   // - If user has pro tier, they're in pro mode (and are team admins by definition)
