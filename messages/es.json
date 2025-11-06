@@ -1272,6 +1272,7 @@
         "personalCredits": "Créditos personales",
         "team": "Equipo",
         "teamCredits": "Créditos del equipo",
+        "availableCredits": "Créditos disponibles",
         "status": "Estado",
         "actions": "Acciones"
       },
@@ -1437,7 +1438,7 @@
         "notPartOfTeam": "No eres parte de un equipo. Pide a tu administrador del equipo que te invite.",
         "noActiveContext": "Necesitas crear y establecer un estilo de foto activo antes de invitar miembros del equipo. Configúralo primero, ¡luego vuelve!",
         "insufficientTeamCredits": "No hay suficientes créditos del equipo. Tienes {available} disponibles, pero necesitas {required}. ¡Es hora de recargar!",
-        "invalidCreditAllocation": "Los créditos deben asignarse en múltiplos de {credits} (porque matemáticas, por eso)"
+        "invalidCreditAllocation": "Los créditos deben asignarse en múltiplos de {credits} (el costo por generación de foto). Por ejemplo: {credits}, {credits2}, {credits3}, etc."
       },
       "credits": {
         "invalidType": "Parámetro de tipo inválido"

@@ -148,7 +148,7 @@ export default function PersonalPhotoStylesPage() {
             <h1 className="text-2xl font-bold text-gray-900">
               Personal Photo Styles
             </h1>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-brand-premium/10 text-brand-premium">
               Personal Styles
             </span>
           </div>
@@ -169,8 +169,8 @@ export default function PersonalPhotoStylesPage() {
 
       {/* Success Message */}
       {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-green-800">{success}</p>
+        <div className="bg-brand-secondary/10 border border-brand-secondary/20 rounded-lg p-4">
+          <p className="text-brand-secondary">{success}</p>
         </div>
       )}
 
@@ -178,18 +178,18 @@ export default function PersonalPhotoStylesPage() {
       {isFreePlan ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <FreePlanBanner variant="personal" className="col-span-1 md:col-span-2 lg:col-span-3" />
-          <div className="rounded-lg border-2 p-6 border-green-500 bg-white">
+          <div className="rounded-lg border-2 p-6 border-brand-secondary bg-white">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-900">Free Package Style</h3>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-premium/10 text-brand-premium">
                   Personal
                 </span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-secondary/10 text-brand-secondary">
                   Default
                 </span>
               </div>
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold border border-yellow-300 bg-yellow-50 text-yellow-800 uppercase tracking-wide">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold border border-brand-cta/30 bg-brand-cta-light text-brand-cta uppercase tracking-wide">
                 {t('freePlan.stamp')}
               </span>
             </div>
@@ -206,18 +206,18 @@ export default function PersonalPhotoStylesPage() {
             key={context.id}
             className={`rounded-lg border-2 p-6 ${
               contextsData.activeContext?.id === context.id
-                ? 'border-green-500 bg-white'
+                ? 'border-brand-secondary bg-white'
                 : 'border-gray-200 bg-white'
             }`}
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-900">{context.name}</h3>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-premium/10 text-brand-premium">
                   Personal
                 </span>
                 {contextsData.activeContext?.id === context.id && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-secondary/10 text-brand-secondary">
                     Default
                   </span>
                 )}

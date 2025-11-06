@@ -10,7 +10,7 @@ import {
   Section,
   Text,
 } from '@react-email/components';
-import { BRAND_CONFIG } from '@/config/brand';
+import { BRAND_CONFIG, getBrandName, getBrandLogo } from '@/config/brand';
 import { getEmailTranslation } from '@/lib/translations';
 import { Env } from '@/lib/env'
 
@@ -32,10 +32,10 @@ export default function WaitlistWelcomeEmail({
           {/* Logo */}
           <Section style={logoSection}>
             <Img
-              src={`${baseUrl}/branding/logo-dark.png`}
+              src={`${baseUrl}${getBrandLogo('dark')}`}
               width="180"
               height="40"
-              alt="TeamShots"
+              alt={getBrandName()}
               style={logo}
             />
           </Section>

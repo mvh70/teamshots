@@ -86,7 +86,7 @@ export default function CreditCostDisplay({
             <span className="text-gray-600">
               {t('remaining', { default: 'Remaining' })}:
             </span>
-            <span className={`font-medium ${hasEnoughCredits ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={`font-medium ${hasEnoughCredits ? 'text-brand-secondary' : 'text-red-600'}`}>
               {credits} {t('credits', { default: 'credits' })}
             </span>
           </div>

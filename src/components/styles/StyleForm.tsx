@@ -225,7 +225,7 @@ export default function StyleForm({
             Photo Style Settings
           </label>
           <span className={`text-xs font-medium ${
-            styleStatus === 'error' ? 'text-red-600' : styleStatus === 'saved' ? 'text-green-600' : 'text-gray-500'
+            styleStatus === 'error' ? 'text-red-600' : styleStatus === 'saved' ? 'text-brand-secondary' : 'text-gray-500'
           }`}>
             {styleStatus === 'error' ? 'Not saved' : styleStatus === 'saving' ? 'Saving…' : styleStatus === 'saved' ? 'Saved' : 'Autosave on'}
           </span>
@@ -296,8 +296,8 @@ export default function StyleForm({
     <>
       {/* Success Message */}
       {!hideMessages && success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-green-800">{success}</p>
+        <div className="bg-brand-secondary/10 border border-brand-secondary/20 rounded-lg p-4">
+          <p className="text-brand-secondary">{success}</p>
         </div>
       )}
 

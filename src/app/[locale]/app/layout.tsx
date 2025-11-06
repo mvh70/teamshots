@@ -44,12 +44,24 @@ export default async function AppLayout({
     needsTeamSetup: false
   }
 
+  // OPTIMIZATION: Serialize subscription for client-side (convert Date objects to ISO strings)
+  // Pass subscription to Sidebar to avoid redundant API calls
+  const initialSubscription = subscription ? {
+    ...subscription,
+    nextRenewal: subscription.nextRenewal ? subscription.nextRenewal.toISOString() : null,
+    nextChange: subscription.nextChange ? {
+      ...subscription.nextChange,
+      effectiveDate: subscription.nextChange.effectiveDate.toISOString()
+    } : null
+  } : null
+
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <CreditsProvider>
         <AppShell 
           initialAccountMode={accountModeResult.mode} 
           initialRole={initialRole}
+          initialSubscription={initialSubscription}
         >
           {children}
         </AppShell>

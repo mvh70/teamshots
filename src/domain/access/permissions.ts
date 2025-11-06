@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { createPermissionContext, requirePermission, Permission, getUserWithRoles } from '@/domain/access/roles'
+import { getUserSubscription } from '@/domain/subscription/subscription'
 import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
 
@@ -16,7 +17,19 @@ export async function withPermission(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const context = await createPermissionContext(session, teamId, personId)
+  // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
+  const [userWithRoles, subscription] = await Promise.all([
+    getUserWithRoles(session.user.id),
+    getUserSubscription(session.user.id)
+  ])
+
+  const context = await createPermissionContext(
+    session,
+    teamId,
+    personId,
+    userWithRoles ?? undefined,
+    subscription ?? undefined
+  )
   if (!context) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
@@ -48,13 +61,17 @@ export async function withTeamPermission(
   }
 
   let teamId = session.user.person?.teamId
-  let userWithRoles = null
   
-  // OPTIMIZATION: Fetch user with full roles data once if needed
-  // This avoids duplicate queries in createPermissionContext
+  // OPTIMIZATION: Always fetch user and subscription in parallel
+  // This avoids duplicate queries in createPermissionContext and getUserEffectiveRoles
+  // Even if teamId is available, we need user and subscription for permission checks
+  const [userWithRoles, subscription] = await Promise.all([
+    getUserWithRoles(session.user.id),
+    getUserSubscription(session.user.id)
+  ])
+  
+  // Use teamId from user data if not available from session
   if (!teamId) {
-    // Fetch user with full roles data (we'll need it for createPermissionContext anyway)
-    userWithRoles = await getUserWithRoles(session.user.id)
     teamId = userWithRoles?.person?.teamId || null
   }
 
@@ -65,13 +82,14 @@ export async function withTeamPermission(
     )
   }
 
-  // Pass userWithRoles to avoid re-fetching in createPermissionContext
+  // Pass userWithRoles and subscription to avoid re-fetching
   // If userWithRoles is null, createPermissionContext will fetch it (backward compatible)
   const context = await createPermissionContext(
     session, 
     teamId,
     undefined,
-    userWithRoles ?? undefined
+    userWithRoles ?? undefined,
+    subscription ?? undefined
   )
   if (!context) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -99,7 +117,19 @@ export async function withAdminPermission(request?: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const context = await createPermissionContext(session)
+  // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
+  const [userWithRoles, subscription] = await Promise.all([
+    getUserWithRoles(session.user.id),
+    getUserSubscription(session.user.id)
+  ])
+
+  const context = await createPermissionContext(
+    session,
+    undefined,
+    undefined,
+    userWithRoles ?? undefined,
+    subscription ?? undefined
+  )
   if (!context) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
@@ -131,7 +161,19 @@ export async function checkPermission(
 ): Promise<boolean> {
   if (!session?.user?.id) return false
 
-  const context = await createPermissionContext(session, teamId, personId)
+  // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
+  const [userWithRoles, subscription] = await Promise.all([
+    getUserWithRoles(session.user.id),
+    getUserSubscription(session.user.id)
+  ])
+
+  const context = await createPermissionContext(
+    session,
+    teamId,
+    personId,
+    userWithRoles ?? undefined,
+    subscription ?? undefined
+  )
   if (!context) return false
 
   try {

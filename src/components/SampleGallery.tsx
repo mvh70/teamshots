@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getBrandName } from '@/config/brand';
 
 interface SamplePhoto {
   id: string;
@@ -49,7 +50,7 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
     attribution: {
       name: 'Matthieu van Haperen',
       role: 'Founder',
-      team: 'TeamShots'
+                      team: getBrandName()
     }
   }
 ];

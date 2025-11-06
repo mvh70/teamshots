@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { jsonFetcher } from '@/lib/fetcher'
@@ -10,12 +10,12 @@ import { PlusIcon, EnvelopeIcon, ClockIcon, CheckIcon, XMarkIcon } from '@heroic
 import { PRICING_CONFIG } from '@/config/pricing'
 import { useCredits } from '@/contexts/CreditsContext'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
-import StyleCard from '@/components/styles/StyleCard'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
 
 interface TeamInvite {
   id: string
   email: string
+  firstName?: string
   token: string
   expiresAt: string
   usedAt?: string
@@ -81,7 +81,8 @@ export default function TeamPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [allocatedCredits, setAllocatedCredits] = useState<number>(PRICING_CONFIG.team.defaultInviteCredits)
   const [creditsInputValue, setCreditsInputValue] = useState(PRICING_CONFIG.team.defaultInviteCredits.toString())
-  const [freePackageContext, setFreePackageContext] = useState<{ id: string; settings?: unknown; stylePreset?: string } | null>(null)
+  const [emailValue, setEmailValue] = useState('')
+  const [firstNameValue, setFirstNameValue] = useState('')
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -144,22 +145,6 @@ export default function TeamPage() {
     }
   }
 
-  // Fetch free package context for free plan users
-  useEffect(() => {
-    ;(async () => {
-      if (!session?.user) return
-      try {
-        if (isFreePlan) {
-          const freeData = await jsonFetcher<{ context: { id: string; settings?: unknown; stylePreset?: string } | null }>(
-            '/api/styles/get?scope=freePackage'
-          )
-          setFreePackageContext(freeData.context || null)
-        }
-      } catch {
-        // Silently fail - free package context fetch is optional
-      }
-    })()
-  }, [session?.user, isFreePlan])
 
   const handleCreateTeam = async (formData: FormData) => {
     setLoading(true)
@@ -188,14 +173,23 @@ export default function TeamPage() {
     }
   }
 
-  const handleInviteTeamMember = async (formData: FormData) => {
+  const handleInviteTeamMember = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
     setError(null)
     setInviteError(null)
     setSuccessMessage(null)
     setInviting(true)
 
-    const email = formData.get('email') as string
-    const firstName = formData.get('firstName') as string
+    // Get values from controlled state, not FormData
+    const email = emailValue.trim()
+    const firstName = firstNameValue.trim()
+
+    // Validate required fields
+    if (!email || !firstName) {
+      setInviteError('Email and first name are required')
+      setInviting(false)
+      return
+    }
 
     if (credits.team < allocatedCredits) {
       setInviteError(t('invites.insufficientCredits'))
@@ -220,18 +214,27 @@ export default function TeamPage() {
         await fetchTeamData()
         setShowInviteForm(false)
         setError(null)
+        setInviteError(null)
+        // Clear form values on success
+        setEmailValue('')
+        setFirstNameValue('')
+        setCreditsInputValue(PRICING_CONFIG.team.defaultInviteCredits.toString())
+        setAllocatedCredits(PRICING_CONFIG.team.defaultInviteCredits)
         setSuccessMessage(t('inviteForm.success', { email }))
         // Clear success message after 5 seconds
         setTimeout(() => setSuccessMessage(null), 5000)
       } else {
-        if (data.errorCode === 'NO_ACTIVE_CONTEXT') {
+        // Show form-specific errors in the modal, not as page-level errors
+        if (data.errorCode === 'INVALID_CREDIT_ALLOCATION' || data.errorCode === 'INSUFFICIENT_TEAM_CREDITS') {
+          setInviteError(data.error)
+        } else if (data.errorCode === 'NO_ACTIVE_CONTEXT') {
           setError(`${data.error} Click here to set up a context.`)
         } else {
-          setError(data.error)
+          setInviteError(data.error)
         }
       }
     } catch {
-      setError('Failed to send invite')
+      setInviteError('Failed to send invite')
     } finally {
       setInviting(false)
     }
@@ -356,6 +359,29 @@ export default function TeamPage() {
     return new Date(expiresAt) < new Date()
   }
 
+  // Filter out accepted invites (they should only appear as team members)
+  const pendingInvites = useMemo(() => invites.filter(invite => !invite.usedAt), [invites])
+  
+  // Sort team members: admins first, then non-admins
+  const sortedTeamMembers = useMemo(() => {
+    return [...teamMembers].sort((a, b) => {
+      // Admins first
+      if (a.isAdmin && !b.isAdmin) return -1
+      if (!a.isAdmin && b.isAdmin) return 1
+      // Otherwise maintain original order
+      return 0
+    })
+  }, [teamMembers])
+  
+  // Create a map of invites by email for easy lookup
+  const invitesByEmail = useMemo(() => {
+    const map = new Map<string, TeamInvite>()
+    invites.forEach(invite => {
+      map.set(invite.email.toLowerCase(), invite)
+    })
+    return map
+  }, [invites])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -444,24 +470,33 @@ export default function TeamPage() {
       {/* Success Message */}
       {successMessage && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-          <CheckIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
+          <CheckIcon className="h-5 w-5 text-brand-secondary flex-shrink-0" />
           <p className="text-green-800">{successMessage}</p>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{teamData?.name || t('title')}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{teamData?.name || t('title')}</h1>
           <p className="text-gray-600 mt-1">
             {t('subtitle')}
           </p>
         </div>
         {userRoles.isTeamAdmin && (
           <button
-            onClick={() => setShowInviteForm(true)}
+            onClick={() => {
+              setInviteError(null)
+              setError(null)
+              // Reset form values when opening
+              setEmailValue('')
+              setFirstNameValue('')
+              setCreditsInputValue(PRICING_CONFIG.team.defaultInviteCredits.toString())
+              setAllocatedCredits(PRICING_CONFIG.team.defaultInviteCredits)
+              setShowInviteForm(true)
+            }}
             disabled={(!teamData?.activeContext && !isFreePlan) || credits.team === 0}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg w-full sm:w-auto ${
               (teamData?.activeContext || isFreePlan) && credits.team > 0
                 ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
                 : 'bg-gray-200 text-gray-500 cursor-not-allowed'
@@ -477,23 +512,6 @@ export default function TeamPage() {
       {isFreePlan && !teamData?.activeContext ? (
         <div className="space-y-4">
           <FreePlanBanner variant="team" />
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <CheckIcon className="h-5 w-5 text-green-600" />
-              <span className="text-green-800 font-medium">
-                Free Package Style Active
-              </span>
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                Active
-              </span>
-            </div>
-            <div className="rounded-lg border border-green-300 bg-white p-4">
-              <StyleCard
-                settings={freePackageContext?.settings}
-                stylePreset={freePackageContext?.stylePreset || 'corporate'}
-              />
-            </div>
-          </div>
         </div>
       ) : !teamData?.activeContext ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -518,180 +536,24 @@ export default function TeamPage() {
       ) : (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <CheckIcon className="h-5 w-5 text-green-600" />
+            <CheckIcon className="h-5 w-5 text-brand-secondary" />
             <span className="text-green-800 font-medium">
               {t('readyToInvite.title')}
             </span>
           </div>
           <p className="text-green-700 text-sm mt-1">
-            {t('readyToInvite.activeStyle', { name: teamData.activeContext.name })}
+            {t('readyToInvite.activeStyle', { 
+              name: (isFreePlan && (!teamData.activeContext.name || teamData.activeContext.name === 'unnamed')) 
+                ? 'Free Package Style' 
+                : teamData.activeContext.name 
+            })}
           </p>
         </div>
       )}
 
-      {/* Team Members */}
+      {/* Team Members & Invites */}
       <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">{t('teamMembers.title')}</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            {t('teamMembers.subtitle')}
-          </p>
-        </div>
-
-        {teamMembers.length === 0 ? (
-          <div className="p-6 text-center">
-            <svg className="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-            </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('teamMembers.noMembers.title')}</h3>
-            <p className="text-gray-600 mb-4">
-              {t('teamMembers.noMembers.subtitle')}
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {/* Header row for stats */}
-            <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="w-[200px] text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  {t('teamMembers.headers.member')}
-                </div>
-                <div className="flex items-center gap-6 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  <div className="flex justify-center min-w-[60px]">{t('teamMembers.headers.selfies')}</div>
-                  <div className="flex justify-center min-w-[60px]">{t('teamMembers.headers.generations')}</div>
-                  <div className="flex justify-center min-w-[80px]">{t('teamMembers.headers.personalCredits')}</div>
-                  <div className="flex justify-center min-w-[80px]">{t('teamMembers.headers.teamCredits')}</div>
-                  <div className="flex justify-center min-w-[100px]">{t('teamMembers.headers.status')}</div>
-                  {userRoles.isTeamAdmin && (
-                    <div className="flex justify-center min-w-[120px]">{t('teamMembers.headers.actions')}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {teamMembers.map((member) => (
-              <div key={member.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center justify-between">
-                  {/* Member Info */}
-                  <div className="flex items-center gap-3 w-[200px]">
-                    <div className="w-10 h-10 bg-brand-primary-light rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-brand-primary">
-                        {member.isCurrentUser 
-                          ? t('teamMembers.you') 
-                          : member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                        }
-                      </span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {member.isCurrentUser ? 'You' : member.name}
-                        </p>
-                        {member.isAdmin && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 flex-shrink-0">
-                            {t('teamMembers.roles.teamAdmin')}
-                          </span>
-                        )}
-                        {!member.isAdmin && member.userId && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0">
-                            {t('teamMembers.roles.teamMember')}
-                          </span>
-                        )}
-                        {!member.userId && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 flex-shrink-0">
-                            {t('teamMembers.roles.guest')}
-                          </span>
-                        )}
-                      </div>
-                      {member.email && (
-                        <p className="text-xs text-gray-500 truncate">{member.email}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Stats and Status */}
-                  <div className="flex items-center gap-6">
-                    {/* Stats */}
-                    {member.stats && (
-                      <>
-                        <div className="flex justify-center min-w-[60px]">
-                          <span className="font-semibold text-gray-900">{member.stats.selfies}</span>
-                        </div>
-                        <div className="flex justify-center min-w-[60px]">
-                          <span className="font-semibold text-gray-900">{member.stats.generations}</span>
-                        </div>
-                        <div className="flex justify-center min-w-[80px]">
-                          <span className="font-semibold text-gray-900">{member.stats.individualCredits}</span>
-                        </div>
-                        <div className="flex justify-center min-w-[80px]">
-                          <span className="font-semibold text-gray-900">{member.stats.teamCredits}</span>
-                        </div>
-                      </>
-                    )}
-                    
-                    {/* Status */}
-                    <div className="text-center min-w-[100px]">
-                      {member.userId ? (
-                        <div className="flex items-center justify-center gap-1.5 text-green-600">
-                          <CheckIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('teamMembers.status.registered')}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center gap-1.5 text-blue-600">
-                          <ClockIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('teamMembers.status.guest')}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Admin Actions */}
-                    {userRoles.isTeamAdmin && !member.isCurrentUser && member.userId && (
-                      <div className="flex items-center gap-2 min-w-[120px]">
-                        {!member.isAdmin && (
-                          <button
-                            onClick={() => handleChangeMemberRole(member.id, 'team_admin')}
-                            disabled={changingRole === member.id}
-                            className="text-xs px-2 py-1 text-purple-600 hover:text-purple-800 disabled:opacity-50"
-                          >
-                            {changingRole === member.id ? t('teamMembers.actions.promoting') : t('teamMembers.actions.makeAdmin')}
-                          </button>
-                        )}
-                        {member.isAdmin && (
-                          <button
-                            onClick={() => handleChangeMemberRole(member.id, 'team_member')}
-                            disabled={changingRole === member.id}
-                            className="text-xs px-2 py-1 text-orange-600 hover:text-orange-800 disabled:opacity-50"
-                          >
-                            {changingRole === member.id ? t('teamMembers.actions.demoting') : t('teamMembers.actions.demote')}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleRemoveMember(member.id)}
-                          disabled={removing === member.id}
-                          className="text-xs px-2 py-1 text-red-600 hover:text-red-800 disabled:opacity-50"
-                        >
-                          {removing === member.id ? t('teamMembers.actions.removing') : t('teamMembers.actions.remove')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Team Invites */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">{t('teamInvites.title')}</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            {t('teamInvites.subtitle')}
-          </p>
-        </div>
-
-        {invites.length === 0 ? (
+        {teamMembers.length === 0 && pendingInvites.length === 0 ? (
           <div className="p-6 text-center">
             {credits.team === 0 ? (
               <>
@@ -713,124 +575,554 @@ export default function TeamPage() {
               </>
             ) : (
               <>
-                <EnvelopeIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">{t('teamInvites.noInvites.title')}</h3>
+                <svg className="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">{t('teamMembers.noMembers.title')}</h3>
                 <p className="text-gray-600 mb-4">
-                  {t('teamInvites.noInvites.subtitle')}
+                  {t('teamMembers.noMembers.subtitle')}
                 </p>
-                {userRoles.isTeamAdmin && (
-                  <button
-                    onClick={() => setShowInviteForm(true)}
-                    disabled={(!teamData?.activeContext && !isFreePlan) || credits.team === 0}
-                    className={`px-4 py-2 rounded-md ${
-                      (teamData?.activeContext || isFreePlan) && credits.team > 0
-                        ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
-                        : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {t('teamInvites.noInvites.button')}
-                  </button>
-                )}
               </>
             )}
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
-            {invites.map((invite) => (
-              <div key={invite.id} className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+          <>
+            {/* Desktop: Table Layout */}
+            <div className="hidden md:block divide-y divide-gray-200">
+                {/* Header row */}
+                <div className="px-6 py-4 bg-white border-b border-gray-200">
+                  <div 
+                    className={`grid gap-6 text-sm font-bold text-gray-900 ${
+                      userRoles.isTeamAdmin 
+                        ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
+                        : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                    }`}
+                  >
+                    <div>{t('teamMembers.headers.member')}</div>
+                    <div className="flex justify-center">{t('teamMembers.headers.selfies')}</div>
+                    <div className="flex justify-center">{t('teamMembers.headers.generations')}</div>
+                    <div className="flex justify-center">{t('teamMembers.headers.availableCredits')}</div>
+                    <div className="flex justify-center">{t('teamMembers.headers.status')}</div>
+                    {userRoles.isTeamAdmin && (
+                      <div className="flex justify-center">{t('teamMembers.headers.actions')}</div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Team Members - Admins first, then non-admins */}
+                {sortedTeamMembers.map((member) => {
+                  // Find corresponding invite for this member
+                  const memberInvite = member.email ? invitesByEmail.get(member.email.toLowerCase()) : null
+                  const creditsAllocated = memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
+                  // For team admins, don't show individual credits used (they use company credits)
+                  // For regular members, use invite credits used or 0
+                  const creditsUsed = member.isAdmin ? 0 : (memberInvite?.creditsUsed ?? 0)
+                  const photoStyle = memberInvite?.contextName ?? teamData?.activeContext?.name
+                  
+                  return (
+                <div key={`member-${member.id}`} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <div 
+                    className={`grid gap-6 items-center ${
+                      userRoles.isTeamAdmin 
+                        ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
+                        : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                    }`}
+                  >
+                    {/* Member Info */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 bg-brand-primary-light rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-medium text-brand-primary">
+                          {member.isCurrentUser 
+                            ? t('teamMembers.you') 
+                            : member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                          }
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {member.isCurrentUser ? 'You' : member.name}
+                          </p>
+                          {member.isAdmin && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-premium/10 text-brand-premium flex-shrink-0">
+                              {t('teamMembers.roles.teamAdmin')}
+                            </span>
+                          )}
+                          {!member.isAdmin && member.userId && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-primary-light text-brand-primary flex-shrink-0">
+                              {t('teamMembers.roles.teamMember')}
+                            </span>
+                          )}
+                          {!member.userId && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 flex-shrink-0">
+                              {t('teamMembers.roles.guest')}
+                            </span>
+                          )}
+                        </div>
+                        {member.email && (
+                          <p className="text-xs text-gray-500 truncate">{member.email}</p>
+                        )}
+                        {!member.isAdmin && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {t('teamInvites.creditsAllocated', { count: creditsAllocated })}
+                            {creditsUsed > 0 && (
+                              <span className="ml-2 text-brand-cta">
+                                • {t('teamInvites.creditsUsed', { count: creditsUsed })}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                        {/* Team admins don't show photo style or credits used - they use company credits */}
+                        {photoStyle && !member.isAdmin && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Photo style:{' '}
+                            <Link 
+                              href="/app/styles/team"
+                              className="text-brand-primary hover:text-brand-primary-hover underline"
+                            >
+                              {photoStyle}
+                            </Link>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Selfies */}
+                    <div className="flex justify-center">
+                      {member.stats ? (
+                        <span className="text-sm font-semibold text-gray-900">{member.stats.selfies}</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </div>
+                    
+                    {/* Generations */}
+                    <div className="flex justify-center">
+                      {member.stats ? (
+                        <span className="text-sm font-semibold text-gray-900">{member.stats.generations}</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </div>
+                    
+                    {/* Available Credits */}
+                    <div className="flex justify-center">
+                      {member.stats ? (
+                        <span className="text-sm font-semibold text-gray-900">
+                          {member.isAdmin ? credits.team : (member.stats.teamCredits ?? 0)}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </div>
+                    
+                    {/* Status */}
+                    <div className="flex justify-center">
+                      {member.userId ? (
+                        <div className="flex items-center justify-center gap-1.5 text-brand-secondary">
+                          <CheckIcon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{t('teamMembers.status.registered')}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-1.5 text-brand-secondary">
+                          <CheckIcon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{t('teamMembers.status.guest')}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Admin Actions */}
+                    {userRoles.isTeamAdmin && (
+                      <div className="flex items-center justify-center gap-2">
+                        {!member.isCurrentUser && member.userId && (
+                          <>
+                            {!member.isAdmin && (
+                              <button
+                                onClick={() => handleChangeMemberRole(member.id, 'team_admin')}
+                                disabled={changingRole === member.id}
+                                className="text-xs px-3 py-1.5 rounded-md text-brand-premium border border-brand-premium hover:bg-brand-premium/10 disabled:opacity-50"
+                              >
+                                {changingRole === member.id ? t('teamMembers.actions.promoting') : t('teamMembers.actions.makeAdmin')}
+                              </button>
+                            )}
+                            {member.isAdmin && (
+                              <button
+                                onClick={() => handleChangeMemberRole(member.id, 'team_member')}
+                                disabled={changingRole === member.id}
+                                className="text-xs px-3 py-1.5 rounded-md text-brand-cta border border-brand-cta hover:bg-brand-cta/10 disabled:opacity-50"
+                              >
+                                {changingRole === member.id ? t('teamMembers.actions.demoting') : t('teamMembers.actions.demote')}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleRemoveMember(member.id)}
+                              disabled={removing === member.id}
+                              className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              {removing === member.id ? t('teamMembers.actions.removing') : t('teamMembers.actions.remove')}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                  )
+                })}
+
+                {/* Team Invites - only show pending invites */}
+                {pendingInvites.map((invite) => (
+                <div key={`invite-${invite.id}`} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <div 
+                    className={`grid gap-6 items-center ${
+                      userRoles.isTeamAdmin 
+                        ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
+                        : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                    }`}
+                  >
+                    {/* Invite Info */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <EnvelopeIcon className="h-5 w-5 text-gray-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {invite.firstName || invite.email}
+                        </p>
+                        {invite.firstName && invite.email && (
+                          <p className="text-xs text-gray-500 truncate">{invite.email}</p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">
+                          {t('teamInvites.creditsAllocated', { count: invite.creditsAllocated })}
+                          {invite.creditsUsed !== undefined && invite.creditsUsed > 0 && (
+                            <span className="ml-2 text-brand-cta">
+                              • {t('teamInvites.creditsUsed', { count: invite.creditsUsed })}
+                            </span>
+                          )}
+                        </p>
+                        {invite.contextName && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Photo style:{' '}
+                            <Link 
+                              href="/app/styles/team"
+                              className="text-brand-primary hover:text-brand-primary-hover underline"
+                            >
+                              {invite.contextName}
+                            </Link>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Selfies - empty for pending invites */}
+                    <div className="flex justify-center">
+                      {/* Empty - invite not accepted yet */}
+                    </div>
+                    
+                    {/* Generations - empty for pending invites */}
+                    <div className="flex justify-center">
+                      {/* Empty - invite not accepted yet */}
+                    </div>
+                    
+                    {/* Available Credits */}
+                    <div className="flex justify-center">
+                      <span className="text-sm font-semibold text-gray-900">{invite.creditsAllocated}</span>
+                    </div>
+                    
+                    {/* Status */}
+                    <div className="flex justify-center">
+                      {invite.usedAt ? (
+                        <div className="flex items-center justify-center gap-1.5 text-brand-secondary">
+                          <CheckIcon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{t('teamInvites.status.accepted')}</span>
+                        </div>
+                      ) : isExpired(invite.expiresAt) ? (
+                        <div className="flex items-center justify-center gap-1.5 text-red-600">
+                          <XMarkIcon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{t('teamInvites.status.expired')}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-1.5 text-yellow-600">
+                          <ClockIcon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{t('teamInvites.status.pending')}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Admin Actions */}
+                    {userRoles.isTeamAdmin && (
+                      <div className="flex items-center justify-center gap-2">
+                        {!invite.usedAt && (
+                          <>
+                            {!isExpired(invite.expiresAt) && (
+                              <button
+                                onClick={() => handleResendInvite(invite.id)}
+                                disabled={resending === invite.id}
+                                className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50"
+                              >
+                                {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleRevokeInvite(invite.id)}
+                              disabled={revoking === invite.id}
+                              className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              {revoking === invite.id ? t('teamInvites.actions.revoking') : t('teamInvites.actions.revoke')}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+              {/* Mobile: Card Layout */}
+              <div className="md:hidden divide-y divide-gray-200">
+                {/* Team Members - Admins first, then non-admins */}
+                {sortedTeamMembers.map((member) => {
+                  // Find corresponding invite for this member
+                  const memberInvite = member.email ? invitesByEmail.get(member.email.toLowerCase()) : null
+                  const creditsAllocated = memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
+                  // For team admins, don't show individual credits used (they use company credits)
+                  // For regular members, use invite credits used or 0
+                  const creditsUsed = member.isAdmin ? 0 : (memberInvite?.creditsUsed ?? 0)
+                  const photoStyle = memberInvite?.contextName ?? teamData?.activeContext?.name
+                  
+                  return (
+                <div key={`member-${member.id}`} className="p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-10 h-10 bg-brand-primary-light rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-medium text-brand-primary">
+                        {member.isCurrentUser 
+                          ? t('teamMembers.you') 
+                          : member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                        }
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {member.isCurrentUser ? 'You' : member.name}
+                        </p>
+                        {member.isAdmin && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-premium/10 text-brand-premium">
+                            {t('teamMembers.roles.teamAdmin')}
+                          </span>
+                        )}
+                        {!member.isAdmin && member.userId && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-primary-light text-brand-primary">
+                            {t('teamMembers.roles.teamMember')}
+                          </span>
+                        )}
+                        {!member.userId && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                            {t('teamMembers.roles.guest')}
+                          </span>
+                        )}
+                      </div>
+                      {member.email && (
+                        <p className="text-xs text-gray-500">{member.email}</p>
+                      )}
+                      {!member.isAdmin && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {t('teamInvites.creditsAllocated', { count: creditsAllocated })}
+                          {creditsUsed > 0 && (
+                            <span className="ml-2 text-brand-cta">
+                              • {t('teamInvites.creditsUsed', { count: creditsUsed })}
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      {/* Team admins don't show credits used - they use company credits */}
+                      {photoStyle && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Photo style:{' '}
+                          <Link 
+                            href="/app/styles/team"
+                            className="text-brand-primary hover:text-brand-primary-hover underline"
+                          >
+                            {photoStyle}
+                          </Link>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Stats Grid */}
+                  {member.stats && (
+                    <div className="grid grid-cols-2 gap-3 mb-4 pl-[52px]">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('teamMembers.headers.selfies')}</p>
+                        <p className="text-sm font-semibold text-gray-900">{member.stats.selfies}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('teamMembers.headers.generations')}</p>
+                        <p className="text-sm font-semibold text-gray-900">{member.stats.generations}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('teamMembers.headers.availableCredits')}</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {member.isAdmin ? credits.team : (member.stats.teamCredits ?? 0)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status */}
+                  <div className="mb-4 pl-[52px]">
+                    {member.userId ? (
+                      <div className="flex items-center gap-1.5 text-brand-secondary">
+                        <CheckIcon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('teamMembers.status.registered')}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-brand-secondary">
+                        <CheckIcon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('teamMembers.status.guest')}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Admin Actions */}
+                  {userRoles.isTeamAdmin && !member.isCurrentUser && member.userId && (
+                    <div className="flex flex-wrap gap-2 pl-[52px]">
+                      {!member.isAdmin && (
+                        <button
+                          onClick={() => handleChangeMemberRole(member.id, 'team_admin')}
+                          disabled={changingRole === member.id}
+                          className="text-xs px-3 py-1.5 rounded-md text-brand-premium border border-brand-premium hover:bg-brand-premium/10 disabled:opacity-50 min-h-[44px]"
+                        >
+                          {changingRole === member.id ? t('teamMembers.actions.promoting') : t('teamMembers.actions.makeAdmin')}
+                        </button>
+                      )}
+                      {member.isAdmin && (
+                        <button
+                          onClick={() => handleChangeMemberRole(member.id, 'team_member')}
+                          disabled={changingRole === member.id}
+                          className="text-xs px-3 py-1.5 rounded-md text-brand-cta border border-brand-cta hover:bg-brand-cta/10 disabled:opacity-50 min-h-[44px]"
+                        >
+                          {changingRole === member.id ? t('teamMembers.actions.demoting') : t('teamMembers.actions.demote')}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleRemoveMember(member.id)}
+                        disabled={removing === member.id}
+                        className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50 min-h-[44px]"
+                      >
+                        {removing === member.id ? t('teamMembers.actions.removing') : t('teamMembers.actions.remove')}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                  )
+                })}
+
+                {/* Team Invites - only show pending invites */}
+                {pendingInvites.map((invite) => (
+                <div key={`invite-${invite.id}`} className="p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
                       <EnvelopeIcon className="h-5 w-5 text-gray-600" />
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{invite.email}</p>
-                      <p className="text-xs text-gray-500">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 break-words">
+                        {invite.firstName || invite.email}
+                      </p>
+                      {invite.firstName && invite.email && (
+                        <p className="text-xs text-gray-500">{invite.email}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
                         {t('teamInvites.creditsAllocated', { count: invite.creditsAllocated })}
                         {invite.creditsUsed !== undefined && invite.creditsUsed > 0 && (
-                          <span className="ml-2 text-orange-600">
+                          <span className="ml-2 text-brand-cta">
                             • {t('teamInvites.creditsUsed', { count: invite.creditsUsed })}
                           </span>
                         )}
                       </p>
                       {invite.contextName && (
                         <p className="text-xs text-gray-400 mt-1">
-                          Photo style: {invite.contextName}
+                          Photo style:{' '}
+                          {invite.contextId ? (
+                            <Link 
+                              href={`/app/styles/team/${invite.contextId}/edit`}
+                              className="text-brand-primary hover:text-brand-primary-hover underline"
+                            >
+                              {invite.contextName}
+                            </Link>
+                          ) : (
+                            <Link 
+                              href="/app/styles/team"
+                              className="text-brand-primary hover:text-brand-primary-hover underline"
+                            >
+                              {invite.contextName}
+                            </Link>
+                          )}
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      {invite.usedAt ? (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <CheckIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('teamInvites.status.accepted')}</span>
-                        </div>
-                      ) : isExpired(invite.expiresAt) ? (
-                        <div className="flex items-center gap-1 text-red-600">
-                          <XMarkIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('teamInvites.status.expired')}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 text-yellow-600">
-                          <ClockIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('teamInvites.status.pending')}</span>
-                        </div>
-                      )}
-                      <p className="text-xs text-gray-500">
-                        {invite.usedAt 
-                          ? t('teamInvites.dates.used', { date: formatInviteDate(invite.usedAt) })
-                          : t('teamInvites.dates.expires', { date: formatInviteDate(invite.expiresAt) })
-                        }
-                      </p>
-                    </div>
-                    
-                    {/* Action buttons for admins */}
-                    {userRoles.isTeamAdmin && !invite.usedAt && (
-                      <div className="flex items-center gap-2">
-                        {!isExpired(invite.expiresAt) && (
-                          <button
-                            onClick={() => handleResendInvite(invite.id)}
-                            disabled={resending === invite.id}
-                            className="text-xs px-2 py-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                          >
-                            {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleRevokeInvite(invite.id)}
-                          disabled={revoking === invite.id}
-                          className="text-xs px-2 py-1 text-red-600 hover:text-red-800 disabled:opacity-50"
-                        >
-                          {revoking === invite.id ? t('teamInvites.actions.revoking') : t('teamInvites.actions.revoke')}
-                        </button>
+
+                  {/* Status */}
+                  <div className="mb-4 pl-[52px]">
+                    {invite.usedAt ? (
+                      <div className="flex items-center gap-1.5 text-brand-secondary">
+                        <CheckIcon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('teamInvites.status.accepted')}</span>
+                      </div>
+                    ) : isExpired(invite.expiresAt) ? (
+                      <div className="flex items-center gap-1.5 text-red-600">
+                        <XMarkIcon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('teamInvites.status.expired')}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-yellow-600">
+                        <ClockIcon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('teamInvites.status.pending')}</span>
                       </div>
                     )}
-                    
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500 font-mono">
-                        {invite.token.substring(0, 8)}...
-                      </p>
-                    </div>
                   </div>
+
+                  {/* Admin Actions */}
+                  {userRoles.isTeamAdmin && !invite.usedAt && (
+                    <div className="flex flex-wrap gap-2 pl-[52px]">
+                      {!isExpired(invite.expiresAt) && (
+                        <button
+                          onClick={() => handleResendInvite(invite.id)}
+                          disabled={resending === invite.id}
+                          className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50 min-h-[44px]"
+                        >
+                          {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleRevokeInvite(invite.id)}
+                        disabled={revoking === invite.id}
+                        className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50 min-h-[44px]"
+                      >
+                        {revoking === invite.id ? t('teamInvites.actions.revoking') : t('teamInvites.actions.revoke')}
+                      </button>
+                    </div>
+                  )}
                 </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            </>
+          )}
       </div>
 
       {/* Invite Form Modal */}
       {showInviteForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-md w-full my-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
+            <div className="p-4 sm:p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 {t('inviteForm.title')}
               </h2>
 
-              <form action={handleInviteTeamMember} className="space-y-4">
+              <form onSubmit={handleInviteTeamMember} className="space-y-4" noValidate>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t('inviteForm.email.label')} *
@@ -839,6 +1131,8 @@ export default function TeamPage() {
                     type="email"
                     name="email"
                     required
+                    value={emailValue}
+                    onChange={(e) => setEmailValue(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                     placeholder={t('inviteForm.email.placeholder')}
                   />
@@ -852,6 +1146,8 @@ export default function TeamPage() {
                     type="text"
                     name="firstName"
                     required
+                    value={firstNameValue}
+                    onChange={(e) => setFirstNameValue(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                     placeholder={t('inviteForm.firstName.placeholder')}
                   />
@@ -873,6 +1169,10 @@ export default function TeamPage() {
                     onChange={(e) => {
                       const value = e.target.value
                       setCreditsInputValue(value)
+                      // Clear error when user starts typing
+                      if (inviteError) {
+                        setInviteError(null)
+                      }
                       
                       if (value === '') {
                         setAllocatedCredits(0)
@@ -886,14 +1186,20 @@ export default function TeamPage() {
                     onFocus={(e) => {
                       e.target.select()
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent ${
+                      inviteError ? 'border-red-300' : 'border-gray-300'
+                    }`}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {t('inviteForm.credits.hint', { 
-                      credits: PRICING_CONFIG.credits.perGeneration,
-                      default: `Each photo generation uses ${PRICING_CONFIG.credits.perGeneration} credits`
-                    })}
-                  </p>
+                  {inviteError ? (
+                    <p className="text-red-600 text-sm mt-1 font-medium">{inviteError}</p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('inviteForm.credits.hint', { 
+                        credits: PRICING_CONFIG.credits.perGeneration,
+                        default: `Each photo generation uses ${PRICING_CONFIG.credits.perGeneration} credits`
+                      })}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -962,9 +1268,9 @@ export default function TeamPage() {
                   )}
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <h4 className="text-sm font-medium text-blue-900 mb-1">{t('inviteForm.whatHappensNext.title')}</h4>
-                  <ul className="text-xs text-blue-800 space-y-1">
+                <div className="bg-brand-primary-light border border-brand-primary/20 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-brand-primary mb-1">{t('inviteForm.whatHappensNext.title')}</h4>
+                  <ul className="text-xs text-brand-primary space-y-1">
                     <li>• {t('inviteForm.whatHappensNext.step1')}</li>
                     <li>• {t('inviteForm.whatHappensNext.step2')}</li>
                     <li>• {t('inviteForm.whatHappensNext.step3')}</li>
@@ -987,11 +1293,11 @@ export default function TeamPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-4">
                   <button
                     type="submit"
                     disabled={inviting || allocatedCredits > credits.team}
-                    className={`flex-1 px-4 py-2 rounded-md ${
+                    className={`flex-1 px-4 py-2.5 rounded-md min-h-[44px] ${
                       allocatedCredits > credits.team
                         ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                         : 'bg-brand-primary text-white hover:bg-brand-primary-hover disabled:opacity-50'
@@ -1001,13 +1307,20 @@ export default function TeamPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowInviteForm(false)}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                    onClick={() => {
+                      setInviteError(null)
+                      // Clear form values when canceling
+                      setEmailValue('')
+                      setFirstNameValue('')
+                      setCreditsInputValue(PRICING_CONFIG.team.defaultInviteCredits.toString())
+                      setAllocatedCredits(PRICING_CONFIG.team.defaultInviteCredits)
+                      setShowInviteForm(false)
+                    }}
+                    className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 min-h-[44px] sm:w-auto"
                   >
                     {t('inviteForm.buttons.cancel')}
                   </button>
                 </div>
-                {inviteError && <p className="text-red-500 text-sm mt-2">{inviteError}</p>}
               </form>
             </div>
           </div>

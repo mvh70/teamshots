@@ -34,7 +34,7 @@ export default function LandingPage() {
           {/* Urgency Badge - Time-based pain */}
           <div className="flex justify-center mb-4">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-              <span className="w-1.5 h-1.5 bg-orange-600 rounded-full mr-2"></span>
+              <span className="w-1.5 h-1.5 bg-brand-cta rounded-full mr-2"></span>
               {t('urgency')}
             </span>
           </div>

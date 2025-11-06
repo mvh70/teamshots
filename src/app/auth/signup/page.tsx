@@ -316,7 +316,7 @@ export default function SignUpPage() {
                 <span className="text-gray-500">{t('otpHelp')}</span>
               </div>
               {error === 'auth.signup.newCodeSent' && (
-                <div className="text-green-600 text-sm text-center">{t('newCodeSent')}</div>
+                <div className="text-brand-secondary text-sm text-center">{t('newCodeSent')}</div>
               )}
               <AuthButton
                 type="button"

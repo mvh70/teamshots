@@ -31,7 +31,7 @@ export function Toast({ message, type = 'info', duration = 6000, onDismiss }: To
     type === 'error'
       ? 'bg-red-600'
       : type === 'success'
-        ? 'bg-green-600'
+        ? 'bg-brand-secondary'
         : 'bg-gray-900'
   const ariaLive = type === 'error' ? 'assertive' : 'polite'
 

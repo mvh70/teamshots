@@ -3,13 +3,14 @@ import { PostHogProvider } from '@/components/PostHogProvider'
 import { auth } from '@/auth'
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
+import { BRAND_CONFIG } from '@/config/brand'
 import './globals.css'
 
 export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/favicon.ico' },
-      { url: '/icon.png', type: 'image/png' },
+      { url: BRAND_CONFIG.logo.icon, type: 'image/png' },
     ],
     apple: '/apple-icon.png',
     shortcut: '/favicon.ico',

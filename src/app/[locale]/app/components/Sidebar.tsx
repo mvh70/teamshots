@@ -23,6 +23,18 @@ import {useTranslations} from 'next-intl'
 import { BRAND_CONFIG } from '@/config/brand'
 import { normalizePlanTierForUI, isFreePlan, type PlanPeriod } from '@/domain/subscription/utils'
 import { AccountMode, fetchAccountMode } from '@/domain/account/accountMode'
+import { SubscriptionInfo } from '@/domain/subscription/subscription'
+
+// Serialized subscription type for client-side (Date objects are ISO strings)
+type SerializedSubscription = Omit<SubscriptionInfo, 'nextRenewal' | 'nextChange'> & {
+  nextRenewal?: string | null
+  nextChange?: {
+    action: 'start' | 'change' | 'cancel' | 'schedule'
+    planTier: Exclude<SubscriptionInfo['tier'], null>
+    planPeriod: Exclude<SubscriptionInfo['period'], null>
+    effectiveDate: string
+  } | null
+}
 import { 
   HomeIcon as HomeIconSolid,
   UsersIcon as UsersIconSolid,
@@ -36,9 +48,10 @@ interface SidebarProps {
   onToggle: () => void
   initialRole?: { isTeamAdmin: boolean; isTeamMember: boolean; needsTeamSetup: boolean }
   initialAccountMode?: AccountMode
+  initialSubscription?: SerializedSubscription | null
 }
 
-export default function Sidebar({ collapsed, onToggle, initialRole, initialAccountMode }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, initialRole, initialAccountMode, initialSubscription }: SidebarProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const t = useTranslations('app.sidebar')
@@ -53,11 +66,49 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
   const [planLabel, setPlanLabel] = useState<string | null>(null)
   const { credits } = useCredits()
 
-  // Fetch account mode from centralized API and team membership
+  // Initialize subscription data from props if available
+  useEffect(() => {
+    if (initialSubscription) {
+      const tierRaw = initialSubscription.tier ?? null
+      const period = initialSubscription.period ?? null
+
+      // Normalize tier for UI (checks period first to determine free plan)
+      const normalized = normalizePlanTierForUI(tierRaw, period)
+      setPlanTier(normalized)
+
+      // Compute human-readable label based on tier + period
+      let label = 'Individual Free package'
+      if (isFreePlan(period)) {
+        label = tierRaw === 'pro' ? 'Pro Free package' : 'Individual Free package'
+      } else if (period === 'try_once') {
+        label = tierRaw === 'pro' ? 'Pro try-once' : 'Individual try-once'
+      } else if (period === 'monthly') {
+        label = tierRaw === 'pro' ? 'Pro monthly' : 'Individual monthly'
+      } else if (period === 'annual') {
+        label = tierRaw === 'pro' ? 'Pro annual' : 'Individual annual'
+      }
+      setPlanLabel(label)
+    }
+  }, [initialSubscription])
+
+  // OPTIMIZATION: Only fetch account mode and team data if not provided as props
+  // This eliminates redundant queries when data is already available from server
   useEffect(() => {
     const loadAccountData = async () => {
       if (!session?.user?.id) return
 
+      // If we already have initial data, skip fetching (but still mark as ready)
+      if (initialRole && initialAccountMode) {
+        // Use initial data directly
+        setIsTeamMember(initialRole.isTeamMember)
+        setIsTeamAdmin(initialRole.isTeamAdmin)
+        setNeedsTeamSetup(initialRole.needsTeamSetup)
+        setAccountMode(initialAccountMode)
+        setNavReady(true)
+        return
+      }
+
+      // Fallback: Only fetch if initial data is missing
       try {
         // Fetch account mode and team membership in parallel
         const [accountModeResult, teamData] = await Promise.all([
@@ -66,7 +117,6 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
         ])
 
         // Update account mode from centralized utility
-        // This should match initialAccountMode from server-side, but update if subscription changed
         if (accountModeResult.mode) {
           setAccountMode(accountModeResult.mode)
         }
@@ -78,7 +128,6 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
           setNeedsTeamSetup(teamData.userRole.needsTeamSetup || false)
         } else if (session?.user?.role) {
           // Fallback: Use session role, but note this doesn't account for pro subscription
-          // This is a fallback only - the API should normally provide correct roles
           const role = session.user.role
           setIsTeamAdmin(role === 'team_admin')
           setIsTeamMember(role === 'team_member')
@@ -91,11 +140,10 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
       }
     }
 
-    // Only fetch if we don't have initial data, or refresh periodically
     if (session?.user?.id) {
       loadAccountData()
     }
-  }, [session?.user?.id, session?.user?.role, initialAccountMode])
+  }, [session?.user?.id, session?.user?.role, initialRole, initialAccountMode])
 
   // Fetch allocated credits only for team admins
   useEffect(() => {
@@ -115,8 +163,14 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
   }, [session?.user?.id, isTeamAdmin])
 
 
-  // Fetch subscription info for plan badge
+  // OPTIMIZATION: Only fetch subscription if not provided as prop
+  // This eliminates redundant query when subscription is already available from server
   useEffect(() => {
+    // Skip fetching if we already have subscription data from props
+    if (initialSubscription) {
+      return
+    }
+
     const fetchSubscription = async () => {
       try {
         const data = await jsonFetcher<{ subscription: { tier: string | null; period?: PlanPeriod } | null }>('/api/user/subscription')
@@ -132,7 +186,6 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
         if (isFreePlan(period)) {
           label = tierRaw === 'pro' ? 'Pro Free package' : 'Individual Free package'
         } else if (period === 'try_once') {
-          // If API surfaces tier as try_once, default to Individual wording
           label = tierRaw === 'pro' ? 'Pro try-once' : 'Individual try-once'
         } else if (period === 'monthly') {
           label = tierRaw === 'pro' ? 'Pro monthly' : 'Individual monthly'
@@ -146,7 +199,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
       }
     }
     if (session?.user?.id) fetchSubscription()
-  }, [session?.user?.id])
+  }, [session?.user?.id, initialSubscription])
 
 
   const allNavigation = [
@@ -284,7 +337,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
               <button
                 onClick={onToggle}
                 aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                className="p-2 md:p-1.5 rounded-md hover:bg-gray-100 transition-colors min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center"
               >
                 {collapsed ? (
                   <ChevronRightIcon className="h-6 w-6 text-gray-500" />
@@ -302,12 +355,12 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
           <div className="p-4 relative group">
             <Link
               href="/app/generate/selfie"
-              className={`flex items-center justify-center space-x-2 bg-brand-primary text-white rounded-lg px-4 py-3 font-medium hover:bg-brand-primary-hover transition-all duration-200 ${
+              className={`flex items-center justify-center space-x-2 bg-brand-primary text-white rounded-lg px-4 py-3 md:py-3 font-medium hover:bg-brand-primary-hover transition-all duration-200 min-h-[44px] md:min-h-0 ${
                 collapsed ? 'px-2' : ''
               }`}
             >
-              <PlusIcon className="h-8 w-8" />
-              {!collapsed && <span>{t('primary.generate')}</span>}
+              <PlusIcon className="h-6 w-6 md:h-8 md:w-8" />
+              {!collapsed && <span className="text-sm md:text-base">{t('primary.generate')}</span>}
             </Link>
             {collapsed && (
               <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
@@ -327,13 +380,13 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors relative ${
+                    className={`group flex items-center px-3 py-2.5 md:py-2 text-sm md:text-sm font-medium rounded-lg transition-colors relative min-h-[44px] md:min-h-0 ${
                       item.current
                         ? 'bg-brand-primary-light text-brand-primary'
                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <Icon className="h-5 w-5 mr-3" />
+                    <Icon className="h-5 w-5 md:h-5 md:w-5 mr-3 flex-shrink-0" />
                     <span>{item.name}</span>
                     {item.badge && (
                       <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
@@ -352,13 +405,13 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`group flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg transition-colors relative ${
+                    className={`group flex items-center justify-center px-3 py-2.5 md:py-2 text-sm font-medium rounded-lg transition-colors relative min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 ${
                       item.current
                         ? 'bg-brand-primary-light text-brand-primary'
                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <Icon className="h-5 w-5" />
+                    <Icon className="h-5 w-5 md:h-5 md:w-5" />
                     {item.badge && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                         {item.badge}
@@ -385,9 +438,9 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                   <span
                     className={`inline-block rotate-[-3deg] px-3 py-1 text-[10px] uppercase tracking-widest font-semibold rounded-md border-2 border-dashed shadow-sm ${
                       planTier === 'pro'
-                        ? 'bg-purple-50 text-purple-700 border-purple-500'
+                        ? 'bg-brand-premium/10 text-brand-premium border-brand-premium'
                         : planTier === 'individual'
-                        ? 'bg-blue-50 text-blue-700 border-blue-500'
+                        ? 'bg-brand-primary-light text-brand-primary border-brand-primary'
                         : 'bg-gray-50 text-gray-700 border-gray-400'
                     }`}
                   >
@@ -437,7 +490,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                         <span className={`text-xs font-medium text-gray-500 ${collapsed ? 'text-center' : ''}`}>
                           {t('credits.allocated')}
                         </span>
-                        <span className={`text-sm font-semibold ${collapsed ? 'text-lg' : ''} text-orange-600`}>
+                        <span className={`text-sm font-semibold ${collapsed ? 'text-lg' : ''} text-brand-cta`}>
                           {allocatedCredits}
                         </span>
                         {collapsed && (
@@ -459,16 +512,16 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                 {collapsed ? (
                   <Link
                     href={planTier === 'free' ? '/app/upgrade' : '/app/top-up'}
-                    className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-white rounded-md transition-colors bg-brand-cta hover:bg-brand-cta-hover"
+                    className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs font-medium text-white rounded-md transition-colors bg-brand-cta hover:bg-brand-cta-hover min-h-[44px] md:min-h-0"
                   >
-                    <PlusIcon className="h-3 w-3" />
+                    <PlusIcon className="h-4 w-4 md:h-3 md:w-3" />
                   </Link>
                 ) : (
                   <Link
                     href={planTier === 'free' ? '/app/upgrade' : '/app/top-up'}
-                    className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-white rounded-md transition-colors bg-brand-cta hover:bg-brand-cta-hover"
+                    className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs md:text-xs font-medium text-white rounded-md transition-colors bg-brand-cta hover:bg-brand-cta-hover min-h-[44px] md:min-h-0"
                   >
-                    <PlusIcon className="h-3 w-3 mr-1" />
+                    <PlusIcon className="h-4 w-4 md:h-3 md:w-3 mr-1" />
                     {t('credits.buyMore')}
                   </Link>
                 )}

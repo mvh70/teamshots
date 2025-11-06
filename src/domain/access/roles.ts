@@ -8,6 +8,7 @@ export interface UserWithRoles {
   email: string
   role: UserRole
   isAdmin: boolean
+  createdAt: Date
   person?: {
     id: string
     teamId?: string | null
@@ -23,6 +24,7 @@ export interface PermissionContext {
   user: UserWithRoles
   teamId?: string
   personId?: string
+  subscription?: SubscriptionInfo | null
 }
 
 /**
@@ -77,7 +79,8 @@ export async function hasPermission(
   action: Permission,
   resource?: unknown
 ): Promise<boolean> {
-  const roles = await getUserEffectiveRoles(context.user)
+  // OPTIMIZATION: Pass subscription from context to avoid duplicate query
+  const roles = await getUserEffectiveRoles(context.user, context.subscription)
   
   switch (action) {
     case 'platform.admin':
@@ -187,6 +190,7 @@ export async function getUserWithRoles(userId: string): Promise<UserWithRoles | 
     email: user.email,
     role: user.role as UserRole,
     isAdmin: user.isAdmin,
+    createdAt: user.createdAt,
     person: user.person ? {
       id: user.person.id,
       teamId: user.person.teamId,
@@ -220,12 +224,14 @@ export async function requirePermission(
  * @param teamId - Optional team ID
  * @param personId - Optional person ID
  * @param user - Optional user with roles to avoid duplicate queries. If not provided, will fetch it.
+ * @param subscription - Optional subscription info to avoid duplicate queries. If not provided, will fetch it.
  */
 export async function createPermissionContext(
   session: { user?: { id?: string } } | null,
   teamId?: string,
   personId?: string,
-  user?: UserWithRoles | null
+  user?: UserWithRoles | null,
+  subscription?: SubscriptionInfo | null
 ): Promise<PermissionContext | null> {
   if (!session?.user?.id) return null
 
@@ -233,10 +239,14 @@ export async function createPermissionContext(
   const userWithRoles = user ?? await getUserWithRoles(session.user.id)
   if (!userWithRoles) return null
 
+  // OPTIMIZATION: Only fetch subscription if not provided (avoids duplicate queries)
+  const subscriptionData = subscription ?? await getUserSubscription(session.user.id)
+
   return {
     user: userWithRoles,
     teamId,
-    personId
+    personId,
+    subscription: subscriptionData
   }
 }
 

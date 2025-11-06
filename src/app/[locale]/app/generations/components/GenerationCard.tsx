@@ -276,7 +276,7 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
 
         {/* Labels: switch based on handle position or show processing */}
         {isIncomplete ? (
-          <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded bg-yellow-500 text-white">Processing</span>
+          <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded bg-brand-cta text-white">Processing</span>
         ) : pos <= 50 ? (
           <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded bg-gray-900/80 text-white">Selfie</span>
         ) : (
@@ -307,7 +307,7 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
           <div className="text-xs text-gray-500">
             {item.isOriginal && `${item.costCredits} credits`}
             {item.remainingRegenerations > 0 && (
-              <span className="ml-2 text-green-600">
+              <span className="ml-2 text-brand-secondary">
                 • {item.remainingRegenerations} regenerations left
               </span>
             )}
@@ -341,7 +341,7 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
                       alert('Download failed. Please try again.')
                     }
                   }}
-                  className="relative group text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-blue-50 transition-colors"
+                  className="relative group text-sm text-brand-primary hover:text-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-brand-primary-light transition-colors"
                 >
                   <svg 
                     className="w-4 h-4" 
@@ -366,11 +366,11 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
                   <button 
                     onClick={handleRegenerate}
                     disabled={isRegenerating}
-                    className="relative group text-sm text-green-600 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-green-50 transition-colors"
+                    className="relative group text-sm text-brand-secondary hover:text-brand-secondary-hover disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-brand-secondary/10 transition-colors"
                   >
                     {isRegenerating ? (
                       <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-3 w-3 border-b border-green-600"></div>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b border-brand-secondary"></div>
                       </div>
                     ) : (
                       <svg 

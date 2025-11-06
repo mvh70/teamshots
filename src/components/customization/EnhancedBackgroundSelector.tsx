@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { PhotoIcon, SwatchIcon, PaintBrushIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
 import { BackgroundSettings } from '@/types/photo-style'
+import { BRAND_CONFIG } from '@/config/brand'
 
 interface EnhancedBackgroundSelectorProps {
   value: BackgroundSettings
@@ -35,12 +36,12 @@ const NEUTRAL_COLORS = [
 const GRADIENT_COLORS = [
   // Blues & Teals
   '#3b82f6', '#2563eb', '#1d4ed8', '#06b6d4', '#0ea5e9',
-  // Greens
-  '#10b981', '#059669', '#16a34a',
+  // Greens (using brand config)
+  BRAND_CONFIG.colors.secondary, BRAND_CONFIG.colors.secondaryHover, '#16a34a',
   // Purples & Pinks
   '#8b5cf6', '#7c3aed', '#ec4899', '#db2777',
-  // Oranges & Yellows
-  '#f59e0b', '#d97706', '#ea580c', '#ef4444',
+  // Oranges & Yellows (using brand config for CTA)
+  '#f59e0b', '#d97706', BRAND_CONFIG.colors.cta, '#ef4444',
   // Browns
   '#8b5e34', '#7c4a2d', '#6d4c41', '#5d4037', '#4e342e',
   // Greys

@@ -252,7 +252,7 @@ export default function DashboardPage() {
                   <div className="flex items-baseline">
                     <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
                     <p className={`ml-2 text-sm font-medium ${
-                      stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
+                      stat.changeType === 'increase' ? 'text-brand-secondary' : 'text-red-600'
                     }`}>
                       {stat.change}
                     </p>

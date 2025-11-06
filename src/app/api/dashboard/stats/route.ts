@@ -27,15 +27,10 @@ export async function GET() {
     const teamId = user.person?.teamId
     const teamName = user.person?.team?.name || null
 
-    // Get user's creation date to determine if this is their first visit
-    const userRecord = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { createdAt: true }
-    })
-    
+    // OPTIMIZATION: Use createdAt from user object (already fetched) instead of separate query
     // Consider it a first visit if account was created within the last 2 hours
-    const isFirstVisit = userRecord?.createdAt 
-      ? new Date().getTime() - userRecord.createdAt.getTime() < 2 * 60 * 60 * 1000
+    const isFirstVisit = user.createdAt 
+      ? new Date().getTime() - user.createdAt.getTime() < 2 * 60 * 60 * 1000
       : false
 
     // Base stats for all users

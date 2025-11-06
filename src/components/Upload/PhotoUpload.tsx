@@ -473,7 +473,7 @@ export default function PhotoUpload({
 
       {toast && (
         <div className="fixed bottom-4 right-4 z-50">
-          <div className="bg-green-600 text-white text-sm px-4 py-2 rounded shadow">
+          <div className="bg-brand-secondary text-white text-sm px-4 py-2 rounded shadow">
             {toast}
           </div>
         </div>

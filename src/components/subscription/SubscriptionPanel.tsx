@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl"
 import { getPricingDisplay, formatPrice } from "@/domain/pricing/utils"
 import SubscriptionStatusBanner from "@/components/subscription/SubscriptionStatusBanner"
 import { isFreePlan } from "@/domain/subscription/utils"
+import { BRAND_CONFIG } from "@/config/brand"
 
 type PlanPeriod = "free" | "try_once" | "monthly" | "annual" | null
 
@@ -150,7 +151,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
           />
 
           {isCancelling && (
-            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-6">
+            <div className="bg-gradient-to-br from-brand-cta-light to-brand-cta-light border border-brand-cta/20 rounded-xl p-6">
               <div className="space-y-4">
                 <p className="text-base leading-relaxed text-gray-800 font-medium">
                   {t('cancelling.sorryMessage', { default: "😭 We're sorry to see you go! Your benefits will remain active until the end of your billing period." })}
@@ -161,7 +162,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
                 <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ 
                   __html: t('cancelling.changedMind', { 
                     default: "Changed your mind? {supportLink} keep your photos looking perfect!",
-                    supportLink: `<a href="mailto:support@teamshots.com" class="text-blue-600 hover:text-blue-700 font-semibold underline transition-colors">${t('cancelling.supportLinkText', { default: "We're here to help" })}</a>`
+                    supportLink: `<a href="mailto:${BRAND_CONFIG.contact.support}" class="text-brand-primary hover:text-brand-primary-hover font-semibold underline transition-colors">${t('cancelling.supportLinkText', { default: "We're here to help" })}</a>`
                   })
                 }} />
               </div>
@@ -169,7 +170,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
           )}
 
           {pendingPeriodChangeToMonthly && (
-            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-6">
+            <div className="bg-gradient-to-br from-brand-cta-light to-brand-cta-light border border-brand-cta/20 rounded-xl p-6">
               <div className="space-y-3">
                 <p className="text-base leading-relaxed text-gray-800 font-medium">
                   {t('downgrading.note', { default: "📉 Switching to monthly? Your benefits remain active until the end of your annual period." })}
@@ -178,7 +179,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
                   {t('downgrading.noSavings', { default: "We won't judge (but we did try to warn you about missing out on those sweet savings 🍯)." })}
                 </p>
                 <p className="text-sm text-gray-600">
-                  {t('downgrading.supportLinkText', { default: "Still wanna switch?" })} <a href="mailto:support@teamshots.com" className="text-blue-600 hover:text-blue-700 font-semibold underline transition-colors">{t('cancelling.supportLinkText', { default: "We're here to help" })}</a>
+                  {t('downgrading.supportLinkText', { default: "Still wanna switch?" })} <a href={`mailto:${BRAND_CONFIG.contact.support}`} className="text-brand-primary hover:text-brand-primary-hover font-semibold underline transition-colors">{t('cancelling.supportLinkText', { default: "We're here to help" })}</a>
                 </p>
               </div>
             </div>
@@ -271,8 +272,8 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-3">
-            <InformationCircleIcon className="h-5 w-5 mt-0.5 text-amber-600" />
+          <div className="flex items-start gap-3 bg-brand-cta-light border border-brand-cta/20 text-brand-cta rounded-lg p-3">
+            <InformationCircleIcon className="h-5 w-5 mt-0.5 text-brand-cta" />
             <p className="text-sm">{t("noSubscription", { default: "You don't have an active subscription" })}</p>
           </div>
 

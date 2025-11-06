@@ -330,7 +330,7 @@ export default function GenerationsPage() {
                             </p>
                           </div>
                         </div>
-                        <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded bg-yellow-500 text-white">Processing</span>
+                        <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded bg-brand-cta text-white">Processing</span>
                       </div>
                     ) : null}
 
@@ -350,7 +350,7 @@ export default function GenerationsPage() {
                         <div className="text-xs text-gray-500">
                           {generation.isOriginal && `${generation.creditsUsed} credits`}
                           {generation.remainingRegenerations > 0 && (
-                            <span className="ml-2 text-green-600">
+                            <span className="ml-2 text-brand-secondary">
                               • {generation.remainingRegenerations} regenerations left
                             </span>
                           )}
@@ -383,7 +383,7 @@ export default function GenerationsPage() {
                                     }
                                   }
                                 }}
-                                className="relative group text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-blue-50 transition-colors"
+                                className="relative group text-sm text-brand-primary hover:text-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-brand-primary-light transition-colors"
                               >
                                 <svg 
                                   className="w-4 h-4" 
@@ -408,11 +408,11 @@ export default function GenerationsPage() {
                                 <button 
                                   onClick={() => handleRegenerate(generation.id)}
                                   disabled={regenerating === generation.id}
-                                  className="relative group text-sm text-green-600 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-green-50 transition-colors"
+                                  className="relative group text-sm text-brand-secondary hover:text-brand-secondary-hover disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-brand-secondary/10 transition-colors"
                                 >
                                   {regenerating === generation.id ? (
                                     <div className="flex items-center">
-                                      <div className="animate-spin rounded-full h-3 w-3 border-b border-green-600"></div>
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b border-brand-secondary"></div>
                                     </div>
                                   ) : (
                                     <svg 

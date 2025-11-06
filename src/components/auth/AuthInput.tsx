@@ -57,7 +57,7 @@ export default function AuthInput({ label, hint, id, className = '', strengthMet
           <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
             <div
               className={`h-1.5 rounded-full ${
-                strength.level === 0 ? 'w-1/4 bg-red-500' : strength.level === 1 ? 'w-1/2 bg-yellow-500' : strength.level === 2 ? 'w-3/4 bg-green-500' : 'w-full bg-green-600'
+                strength.level === 0 ? 'w-1/4 bg-red-500' : strength.level === 1 ? 'w-1/2 bg-yellow-500' : strength.level === 2 ? 'w-3/4 bg-brand-secondary' : 'w-full bg-brand-secondary-hover'
               }`}
             />
           </div>

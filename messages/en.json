@@ -1272,6 +1272,7 @@
         "personalCredits": "Personal credits",
         "team": "Team",
         "teamCredits": "Team credits",
+        "availableCredits": "Available credits",
         "status": "Status",
         "actions": "Actions"
       },
@@ -1437,7 +1438,7 @@
         "notPartOfTeam": "You're not part of a team. Ask your team admin to invite you.",
         "noActiveContext": "You need to create and set an active photo style before inviting team members. Set it up first, then come back!",
         "insufficientTeamCredits": "Not enough team credits. You have {available} available, but need {required}. Time to top up!",
-        "invalidCreditAllocation": "Credits must be allocated in multiples of {credits} (because math, that's why)"
+        "invalidCreditAllocation": "Credits must be allocated in multiples of {credits} (the cost per photo generation). For example: {credits}, {credits2}, {credits3}, etc."
       },
       "credits": {
         "invalidType": "Invalid type parameter"

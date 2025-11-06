@@ -7,8 +7,30 @@ import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 
 import { AccountMode } from '@/domain/account/accountMode'
+import { SubscriptionInfo } from '@/domain/subscription/subscription'
 
-export default function AppShell({ children, initialRole, initialAccountMode }: { children: React.ReactNode, initialRole?: { isTeamAdmin: boolean, isTeamMember: boolean, needsTeamSetup: boolean }, initialAccountMode?: AccountMode }) {
+// Serialized subscription type for client-side (Date objects are ISO strings)
+type SerializedSubscription = Omit<SubscriptionInfo, 'nextRenewal' | 'nextChange'> & {
+  nextRenewal?: string | null
+  nextChange?: {
+    action: 'start' | 'change' | 'cancel' | 'schedule'
+    planTier: Exclude<SubscriptionInfo['tier'], null>
+    planPeriod: Exclude<SubscriptionInfo['period'], null>
+    effectiveDate: string
+  } | null
+}
+
+export default function AppShell({ 
+  children, 
+  initialRole, 
+  initialAccountMode,
+  initialSubscription 
+}: { 
+  children: React.ReactNode
+  initialRole?: { isTeamAdmin: boolean, isTeamMember: boolean, needsTeamSetup: boolean }
+  initialAccountMode?: AccountMode
+  initialSubscription?: SerializedSubscription | null
+}) {
   const { status } = useSession()
   const router = useRouter()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -72,6 +94,7 @@ export default function AppShell({ children, initialRole, initialAccountMode }: 
           collapsed={sidebarCollapsed} 
           initialRole={initialRole}
           initialAccountMode={initialAccountMode}
+          initialSubscription={initialSubscription}
           onToggle={() => {
             setSidebarCollapsed(!sidebarCollapsed)
           }}
@@ -83,7 +106,7 @@ export default function AppShell({ children, initialRole, initialAccountMode }: 
           <Header onMenuClick={() => {
             setSidebarCollapsed(!sidebarCollapsed)
           }} />
-          <main className="flex-1 p-6">{children}</main>
+          <main className="flex-1 p-4 sm:p-6">{children}</main>
         </div>
       </div>
     </div>

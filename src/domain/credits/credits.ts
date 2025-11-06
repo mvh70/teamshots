@@ -296,36 +296,73 @@ export async function reserveCreditsForGeneration(
 
   // For team members (personId exists), deduct from team AND track person usage
   if (personId && teamId) {
-    // Get team admin's userId to check for unmigrated pro credits
+    // OPTIMIZATION: Start team balance check in parallel with person lookup
+    // This reduces sequential query steps from 3 to 2
     let userIdForBalance: string | null = userId
+    let personWithTeam: { userId: string | null; team: { adminId: string } | null } | null = null
+    
+    // If userId is not provided, fetch person in parallel with team balance
     if (!userIdForBalance) {
-      // OPTIMIZATION: Combine person and team lookup into single query
-      // This eliminates sequential queries and reduces database round-trips
-      const personWithTeam = await prisma.person.findUnique({
-        where: { id: personId },
-        select: {
-          userId: true,
-          team: {
-            select: {
-              adminId: true
+      const [personResult, teamBalance] = await Promise.all([
+        // Fetch person with team to get userIdForBalance
+        prisma.person.findUnique({
+          where: { id: personId },
+          select: {
+            userId: true,
+            team: {
+              select: {
+                adminId: true
+              }
             }
           }
-        }
-      })
+        }),
+        // Start team balance check in parallel (we'll use it regardless)
+        getTeamCreditBalance(teamId)
+      ])
       
-      // Extract userId from person, or fallback to team admin
-      // This handles both cases: team admin generating own photos, and team members
-      userIdForBalance = personWithTeam?.userId || personWithTeam?.team?.adminId || null
-    }
-    
-    // Use effective team balance (includes unmigrated pro credits)
-    const teamBalance = userIdForBalance 
-      ? await getEffectiveTeamCreditBalance(userIdForBalance, teamId)
-      : await getTeamCreditBalance(teamId)
-    
-    Logger.debug('Credit validation', { teamId, userId: userIdForBalance, balance: teamBalance, required: amount })
-    if (teamBalance < amount) {
-      throw new Error(`Insufficient team credits. Available: ${teamBalance}, Required: ${amount}`)
+      personWithTeam = personResult
+      userIdForBalance = personResult?.userId || personResult?.team?.adminId || null
+      
+      // If we have userIdForBalance, we need to check for unmigrated pro credits
+      // Otherwise, we already have teamBalance from the parallel query
+      if (userIdForBalance) {
+        // Check subscription and unmigrated pro credits if needed
+        const subscription = await getUserSubscription(userIdForBalance)
+        const hasProTier = subscription?.tier === 'pro'
+        
+        let totalBalance = teamBalance
+        if (hasProTier) {
+          const userProBalance = await prisma.creditTransaction.aggregate({
+            where: {
+              userId: userIdForBalance,
+              planTier: 'pro',
+              teamId: null,
+              credits: { gt: 0 }
+            },
+            _sum: { credits: true }
+          })
+          const unmigratedCredits = userProBalance._sum.credits || 0
+          totalBalance = teamBalance + unmigratedCredits
+        }
+        
+        Logger.debug('Credit validation', { teamId, userId: userIdForBalance, balance: totalBalance, required: amount })
+        if (totalBalance < amount) {
+          throw new Error(`Insufficient team credits. Available: ${totalBalance}, Required: ${amount}`)
+        }
+      } else {
+        // No userIdForBalance, use team balance only
+        Logger.debug('Credit validation', { teamId, userId: null, balance: teamBalance, required: amount })
+        if (teamBalance < amount) {
+          throw new Error(`Insufficient team credits. Available: ${teamBalance}, Required: ${amount}`)
+        }
+      }
+    } else {
+      // userId is provided, use effective team balance (already optimized internally)
+      const teamBalance = await getEffectiveTeamCreditBalance(userIdForBalance, teamId)
+      Logger.debug('Credit validation', { teamId, userId: userIdForBalance, balance: teamBalance, required: amount })
+      if (teamBalance < amount) {
+        throw new Error(`Insufficient team credits. Available: ${teamBalance}, Required: ${amount}`)
+      }
     }
 
     // Create transaction that deducts from team AND tracks person usage

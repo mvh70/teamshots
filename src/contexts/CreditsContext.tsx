@@ -30,15 +30,14 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true)
       
-      // Fetch both credit types in parallel
-      const [individualCredits, teamCredits] = await Promise.all([
-        jsonFetcher<{ balance: number }>('/api/credits/balance?type=individual').catch(() => ({ balance: 0 })),
-        jsonFetcher<{ balance: number }>('/api/credits/balance?type=team').catch(() => ({ balance: 0 }))
-      ])
+      // OPTIMIZATION: Fetch both credit types in a single API call
+      // This reduces from 2 HTTP requests + 4+ queries to 1 HTTP request + 2-3 queries
+      const creditsData = await jsonFetcher<{ individual: number; team: number }>('/api/credits/balance?type=both')
+        .catch(() => ({ individual: 0, team: 0 }))
 
       setCredits({
-        individual: individualCredits.balance || 0,
-        team: teamCredits.balance || 0
+        individual: creditsData.individual || 0,
+        team: creditsData.team || 0
       })
     } catch (err) {
       console.error('Failed to fetch credits:', err)

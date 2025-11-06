@@ -36,16 +36,14 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
     return cached.data;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  })
-
-  if (!user) return null
-
-  // OPTIMIZATION: Run subscriptionChange queries in parallel
-  // Both queries are independent and can execute simultaneously
+  // OPTIMIZATION: Run all queries in parallel
+  // User query and subscriptionChange queries are independent and can execute simultaneously
   const subscriptionChangeClient = prisma as unknown as { subscriptionChange: { findFirst: (args: unknown) => Promise<unknown> } }
-  const [upcoming, latestEffective] = await Promise.all([
+  const [user, upcoming, latestEffective] = await Promise.all([
+    // Fetch user data
+    prisma.user.findUnique({
+      where: { id: userId },
+    }),
     // Find upcoming change (effective in the future)
     subscriptionChangeClient.subscriptionChange.findFirst({
       where: {
@@ -64,6 +62,8 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
       orderBy: { effectiveDate: 'desc' },
     }) as Promise<{ effectiveDate?: Date } | null>
   ])
+
+  if (!user) return null
 
   // Derive effective tier: a try_once purchase is represented as planPeriod 'try_once'
   // even though planTier may remain 'individual'. Surface 'try_once' in API to drive UI correctly.

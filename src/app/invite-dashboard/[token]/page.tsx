@@ -496,7 +496,7 @@ export default function InviteDashboardPage() {
                 <h3 className="text-lg font-medium text-gray-900">Recent photos</h3>
                 <button
                   onClick={() => router.push(`/invite-dashboard/${token}/generations`)}
-                  className="text-sm text-blue-600 hover:text-blue-700"
+                  className="text-sm text-brand-primary hover:text-brand-primary-hover"
                 >
                   View all
                 </button>

@@ -28,10 +28,11 @@ export function getTranslation(key: string, locale: 'en' | 'es' = 'en', params?:
     return key // Return the key if no translation found
   }
   
-  // Replace parameters in the translation
+  // Replace parameters in the translation (replace all occurrences)
   if (params) {
     for (const [param, replacement] of Object.entries(params)) {
-      value = (value as string).replace(`{${param}}`, replacement)
+      const regex = new RegExp(`\\{${param}\\}`, 'g')
+      value = (value as string).replace(regex, replacement)
     }
   }
   

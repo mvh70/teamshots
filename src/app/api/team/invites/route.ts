@@ -39,7 +39,11 @@ export async function POST(request: NextRequest) {
     // Validate credits allocation
     const creditsPerGeneration = PRICING_CONFIG.credits.perGeneration
     if (creditsAllocated % creditsPerGeneration !== 0) {
-      const error = getTranslation('api.errors.teamInvites.invalidCreditAllocation', locale, { credits: creditsPerGeneration.toString() })
+      const error = getTranslation('api.errors.teamInvites.invalidCreditAllocation', locale, { 
+        credits: creditsPerGeneration.toString(),
+        credits2: (creditsPerGeneration * 2).toString(),
+        credits3: (creditsPerGeneration * 3).toString()
+      })
       return NextResponse.json({ 
         error,
         errorCode: 'INVALID_CREDIT_ALLOCATION'
