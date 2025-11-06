@@ -77,12 +77,18 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
 
     // Get user with roles to determine permissions
+    // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
     const { getUserWithRoles, getUserEffectiveRoles } = await import('@/domain/access/roles')
-    const user = await getUserWithRoles(session.user.id)
+    const { getUserSubscription } = await import('@/domain/subscription/subscription')
+    const [user, subscription] = await Promise.all([
+      getUserWithRoles(session.user.id),
+      getUserSubscription(session.user.id)
+    ])
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
-    const roles = await getUserEffectiveRoles(user)
+    // Pass subscription to avoid duplicate query
+    const roles = await getUserEffectiveRoles(user, subscription)
     const userTeamId = user.person?.teamId
 
     // Build where clause based on derived scope (roles)

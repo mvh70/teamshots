@@ -66,3 +66,7 @@ certificates
 # Task files
 # tasks.json
 # tasks/ 
+
+#admin docs
+.cursor-generated-docs
+.docs

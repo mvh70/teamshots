@@ -20,6 +20,7 @@ import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { getPackageConfig } from '@/domain/style/packages'
 import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
+import { getUserSubscription } from '@/domain/subscription/subscription'
 
 const cloneDeep = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
@@ -176,8 +177,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine enforced generation type and credit source (server-side only)
-    const userWithRoles = await getUserWithRoles(session.user.id)
-    const effective = userWithRoles ? await getUserEffectiveRoles(userWithRoles) : null
+    // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
+    const [userWithRoles, subscription] = await Promise.all([
+      getUserWithRoles(session.user.id),
+      getUserSubscription(session.user.id)
+    ])
+    const effective = userWithRoles ? await getUserEffectiveRoles(userWithRoles, subscription) : null
     const isTeamContext = Boolean(effective && (effective.isTeamAdmin || effective.isTeamMember) && selfie.person.teamId)
     const enforcedGenerationType: 'personal' | 'team' = isTeamContext ? 'team' : 'personal'
     const enforcedCreditSource: 'individual' | 'team' = isTeamContext ? 'team' : 'individual'

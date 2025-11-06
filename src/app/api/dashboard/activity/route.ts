@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
+import { getUserSubscription } from '@/domain/subscription/subscription'
 import { Logger } from '@/lib/logger'
 
 export async function GET() {
@@ -11,12 +12,17 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await getUserWithRoles(session.user.id)
+    // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
+    const [user, subscription] = await Promise.all([
+      getUserWithRoles(session.user.id),
+      getUserSubscription(session.user.id)
+    ])
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const roles = await getUserEffectiveRoles(user)
+    // Pass subscription to avoid duplicate query
+    const roles = await getUserEffectiveRoles(user, subscription)
     
     // Only show activity for team admins
     if (!roles.isTeamAdmin) {

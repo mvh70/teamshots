@@ -9,6 +9,7 @@ import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit'
 import { getUserEffectiveRoles, getUserWithRoles } from '@/domain/access/roles'
+import { getUserSubscription } from '@/domain/subscription/subscription'
 
 const s3 = createS3Client()
 const bucket = getS3BucketName()
@@ -54,34 +55,37 @@ export async function GET(req: NextRequest) {
       const trimmedKey = downloadKey.trim()
       if (!trimmedKey) return null
 
-      const selfie = await prisma.selfie.findFirst({
-        where: { OR: [{ key: trimmedKey }, { processedKey: trimmedKey }] },
-        select: { personId: true, person: { select: { userId: true, teamId: true } } }
-      })
+      // OPTIMIZATION: Run all three ownership queries in parallel
+      const [selfie, generation, context] = await Promise.all([
+        prisma.selfie.findFirst({
+          where: { OR: [{ key: trimmedKey }, { processedKey: trimmedKey }] },
+          select: { personId: true, person: { select: { userId: true, teamId: true } } }
+        }),
+        prisma.generation.findFirst({
+          where: {
+            OR: [
+              { uploadedPhotoKey: trimmedKey },
+              { acceptedPhotoKey: trimmedKey },
+              { generatedPhotoKeys: { has: trimmedKey } }
+            ],
+            deleted: false,
+          },
+          select: { personId: true, person: { select: { userId: true, teamId: true } } }
+        }),
+        prisma.context.findFirst({
+          where: {
+            OR: [
+              { settings: { path: ['branding', 'logoKey'], equals: trimmedKey } },
+              { settings: { path: ['background', 'key'], equals: trimmedKey } }
+            ]
+          },
+          select: { userId: true, teamId: true }
+        })
+      ])
+
+      // Return results in priority order: selfie > generation > context
       if (selfie) return { type: 'selfie', personId: selfie.personId, userId: selfie.person?.userId ?? null, teamId: selfie.person?.teamId ?? null }
-
-      const generation = await prisma.generation.findFirst({
-        where: {
-          OR: [
-            { uploadedPhotoKey: trimmedKey },
-            { acceptedPhotoKey: trimmedKey },
-            { generatedPhotoKeys: { has: trimmedKey } }
-          ],
-          deleted: false,
-        },
-        select: { personId: true, person: { select: { userId: true, teamId: true } } }
-      })
       if (generation) return { type: 'generation', personId: generation.personId, userId: generation.person?.userId ?? null, teamId: generation.person?.teamId ?? null }
-
-      const context = await prisma.context.findFirst({
-        where: {
-          OR: [
-            { settings: { path: ['branding', 'logoKey'], equals: trimmedKey } },
-            { settings: { path: ['background', 'key'], equals: trimmedKey } }
-          ]
-        },
-        select: { userId: true, teamId: true }
-      })
       if (context) return { type: 'context', personId: null, userId: context.userId ?? null, teamId: context.teamId ?? null }
 
       return null
@@ -136,9 +140,15 @@ export async function GET(req: NextRequest) {
     let userWithRoles = null
     let roles = null
     if (session?.user?.id) {
-      userWithRoles = await getUserWithRoles(session.user.id)
-      if (!userWithRoles) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      roles = await getUserEffectiveRoles(userWithRoles)
+      // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
+      const [user, subscription] = await Promise.all([
+        getUserWithRoles(session.user.id),
+        getUserSubscription(session.user.id)
+      ])
+      if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      userWithRoles = user
+      // Pass subscription to avoid duplicate query
+      roles = await getUserEffectiveRoles(user, subscription)
     }
 
     const authorized = isAuthorized(ownership, userWithRoles, roles, invitePersonId)

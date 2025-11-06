@@ -50,24 +50,35 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { selfieKey, contextId, styleSettings, prompt } = createSchema.parse(body)
 
-    // Find selfie by key for this person
-    const selfie = await prisma.selfie.findFirst({
-      where: { key: selfieKey, personId: invite.person.id },
-      include: { person: { include: { team: true } } },
-    })
+    // Enforce team credits for invite flow
+    const teamId = invite.person.teamId
+
+    // OPTIMIZATION: Run independent queries in parallel
+    const [selfie, teamUser] = await Promise.all([
+      // Find selfie by key for this person (only need userId, not full team - already have it from invite)
+      prisma.selfie.findFirst({
+        where: { key: selfieKey, personId: invite.person.id },
+        select: {
+          id: true,
+          key: true,
+          personId: true,
+          person: {
+            select: {
+              userId: true
+            }
+          }
+        },
+      }),
+      // Check team credits (invitees may have personal allocation tracked separately)
+      prisma.user.findFirst({
+        where: { person: { teamId } },
+        select: { id: true },
+      })
+    ])
 
     if (!selfie) {
       return NextResponse.json({ error: 'Selfie not found' }, { status: 404 })
     }
-
-    // Enforce team credits for invite flow
-    const teamId = invite.person.teamId
-
-    // Check team credits (invitees may have personal allocation tracked separately)
-    const teamUser = await prisma.user.findFirst({
-      where: { person: { teamId } },
-      select: { id: true },
-    })
 
     const hasTeamCredits = await hasSufficientCredits(
       null,
@@ -78,10 +89,13 @@ export async function POST(request: NextRequest) {
 
     if (!hasTeamCredits) {
       const userIdForBalance = teamUser?.id ?? invite.person.team?.adminId ?? null
-      const available = userIdForBalance
-        ? await getEffectiveTeamCreditBalance(userIdForBalance, teamId)
-        : await getTeamCreditBalance(teamId)
-      const personAllocation = await getPersonCreditBalance(invite.person.id)
+      // OPTIMIZATION: Run credit balance queries in parallel
+      const [available, personAllocation] = await Promise.all([
+        userIdForBalance
+          ? getEffectiveTeamCreditBalance(userIdForBalance, teamId)
+          : getTeamCreditBalance(teamId),
+        getPersonCreditBalance(invite.person.id)
+      ])
       return NextResponse.json(
         {
           error: 'Insufficient team credits',

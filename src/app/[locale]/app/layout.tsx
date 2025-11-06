@@ -5,6 +5,7 @@ import AppShell from './AppShell'
 import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
 import { CreditsProvider } from '@/contexts/CreditsContext'
 import { getAccountMode } from '@/domain/account/accountMode'
+import { getUserSubscription } from '@/domain/subscription/subscription'
 
 export default async function AppLayout({
   children,
@@ -22,12 +23,16 @@ export default async function AppLayout({
   
   const messages = await getMessages({ locale })
   
-  // Get account mode using centralized utility
-  const accountModeResult = await getAccountMode(session?.user?.id)
+  // OPTIMIZATION: Fetch subscription once and pass it to both functions to avoid duplicate queries
+  const subscription = session?.user?.id ? await getUserSubscription(session.user.id) : null
+  
+  // Get account mode using centralized utility (pass subscription to avoid duplicate query)
+  const accountModeResult = await getAccountMode(session?.user?.id, subscription)
   
   // Derive initial role server-side (pro users are team admins by definition)
+  // Pass subscription to avoid duplicate query
   const user = session?.user?.id ? await getUserWithRoles(session.user.id) : null
-  const effective = user ? await getUserEffectiveRoles(user) : null
+  const effective = user ? await getUserEffectiveRoles(user, subscription) : null
   
   const initialRole = effective ? {
     isTeamAdmin: effective.isTeamAdmin,

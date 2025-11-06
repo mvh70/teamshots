@@ -39,20 +39,28 @@ export async function GET(
       )
     }
 
-    // Get generation with related data
-    const generation = await prisma.generation.findUnique({
-      where: { id: generationId },
-      include: {
-        person: {
-          include: {
-            user: true,
-            team: true
-          }
-        },
-        context: true,
-        selfie: true
-      }
-    })
+    // OPTIMIZATION: Run independent queries in parallel
+    const [generation, userPerson] = await Promise.all([
+      // Get generation with related data
+      prisma.generation.findUnique({
+        where: { id: generationId },
+        include: {
+          person: {
+            include: {
+              user: true,
+              team: true
+            }
+          },
+          context: true,
+          selfie: true
+        }
+      }),
+      // SECURITY: Get user person for access verification
+      prisma.person.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true, teamId: true }
+      })
+    ])
 
     if (!generation) {
       return NextResponse.json(
@@ -60,12 +68,6 @@ export async function GET(
         { status: 404 }
       )
     }
-
-    // SECURITY: Verify user has access to this generation
-    const userPerson = await prisma.person.findUnique({
-      where: { userId: session.user.id },
-      select: { id: true, teamId: true }
-    })
 
     if (!userPerson) {
       return NextResponse.json({ error: 'User person record not found' }, { status: 404 })
