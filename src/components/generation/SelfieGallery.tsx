@@ -1,8 +1,9 @@
 "use client"
 import Image from 'next/image'
-import { TrashIcon, CameraIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, CameraIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 import { useCallback, useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 export interface GallerySelfieItem {
   id: string
@@ -31,8 +32,10 @@ export default function SelfieGallery({
   onAfterChange,
   onDeleted,
 }: SelfieGalleryProps) {
+  const t = useTranslations('selfies.gallery')
   const { selectedSet, toggleSelect, selectedIds } = useSelfieSelection({ token })
   const [loadedSet, setLoadedSet] = useState<Set<string>>(new Set())
+  const [hoveredDeleteId, setHoveredDeleteId] = useState<string | null>(null)
 
   const handleToggle = useCallback(async (id: string, next: boolean) => {
     await toggleSelect(id, next)
@@ -95,18 +98,33 @@ export default function SelfieGallery({
                 onLoad={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
                 onError={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
               />
+              {selfie.used && hoveredDeleteId === selfie.id && (
+                <div className="absolute inset-x-0 bottom-0 bg-black/70 text-white text-[11px] leading-tight px-2 py-1 flex items-center gap-1">
+                  <InformationCircleIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span>{t('deleteDisabledMessage')}</span>
+                </div>
+              )}
             </div>
             {allowDelete && (
-              <button
-                onClick={selfie.used ? undefined : () => handleDelete(selfie.id, selfie.key)}
-                disabled={Boolean(selfie.used)}
-                aria-disabled={selfie.used ? 'true' : 'false'}
-                title={selfie.used ? 'This selfie is used in a generation and cannot be deleted' : 'Delete selfie'}
-                className={`absolute top-2 right-2 p-1 rounded-full transition-opacity ${selfie.used ? 'bg-gray-300 text-white cursor-not-allowed opacity-70' : 'bg-red-500 text-white opacity-0 group-hover:opacity-100'}`}
-                aria-label={selfie.used ? 'Delete disabled - used in a generation' : 'Delete selfie'}
+              <div
+                className={`absolute top-2 right-2 inline-flex items-center justify-center rounded-full transition-opacity ${selfie.used ? 'bg-gray-300 text-white cursor-not-allowed opacity-70' : 'bg-red-500 text-white opacity-0 group-hover:opacity-100 hover:opacity-100'}`}
+                onMouseEnter={selfie.used ? () => setHoveredDeleteId(selfie.id) : undefined}
+                onMouseLeave={selfie.used ? () => setHoveredDeleteId((current) => current === selfie.id ? null : current) : undefined}
+                onFocusCapture={selfie.used ? () => setHoveredDeleteId(selfie.id) : undefined}
+                onBlurCapture={selfie.used ? () => setHoveredDeleteId((current) => current === selfie.id ? null : current) : undefined}
+                title={selfie.used ? t('deleteDisabledTooltip') : t('deleteTooltip')}
               >
-                <TrashIcon className="h-4 w-4" />
-              </button>
+                <button
+                  type="button"
+                  onClick={selfie.used ? undefined : () => handleDelete(selfie.id, selfie.key)}
+                  disabled={Boolean(selfie.used)}
+                  aria-disabled={selfie.used ? 'true' : 'false'}
+                  aria-label={selfie.used ? t('deleteDisabledAria') : t('deleteAria')}
+                  className="p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
             )}
           </div>
         )

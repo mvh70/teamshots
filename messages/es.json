@@ -872,6 +872,13 @@
     },
     "selectionHint": {
       "text": "Selecciona al menos 2 selfies para mejores resultados."
+    },
+    "gallery": {
+      "deleteTooltip": "Eliminar selfie",
+      "deleteAria": "Eliminar selfie",
+      "deleteDisabledTooltip": "Esta selfie se usa en una generación y no se puede eliminar.",
+      "deleteDisabledAria": "Eliminación deshabilitada. Esta selfie se usa en una generación y no se puede eliminar.",
+      "deleteDisabledMessage": "Se usa en una generación y no se puede eliminar."
     }
   },
   "generate": {
