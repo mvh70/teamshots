@@ -82,7 +82,7 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
       if (!tempKey) return
       setIsLoading(true)
       
-      // Promote temp file to S3
+      // Promote temp file to S3 and create database record
       const promoteRes = await fetch('/api/uploads/promote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,20 +93,11 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
         const d = await promoteRes.json().catch(() => ({}))
         throw new Error(d.error || 'Promote failed')
       }
-      const { key } = await promoteRes.json() as { key: string }
-      
-      // Then create database record using custom endpoint or default
-      let selfieId: string | undefined
+      const { key, selfieId } = await promoteRes.json() as { key: string; selfieId?: string }
+
+      // For custom endpoints, pass the key for additional processing
       if (saveEndpoint) {
         await saveEndpoint(key)
-      } else {
-        const createResponse = await jsonFetcher<{ id: string }>('/api/uploads/create', { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ key }),
-          credentials: 'include'
-        })
-        selfieId = createResponse.id
       }
       
       setIsApproved(true)

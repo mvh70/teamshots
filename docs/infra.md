@@ -295,7 +295,6 @@ await prisma.generation.create({
 
 ### Core (Current)
 - `POST /api/uploads/proxy` - Server-side proxy upload to Hetzner S3 (validated, 10MB max)
-- `POST /api/uploads/create` - Persist a `Selfie` record after successful upload
 - `GET /api/uploads/list` - List current user's selfies
 - `GET /api/files/get?key=<s3-key>` - Signed GET URL for displaying an S3 image
 - `GET /api/files/download?key=<s3-key>` - Signed GET URL intended for downloads

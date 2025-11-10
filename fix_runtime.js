@@ -16,7 +16,6 @@ const authFiles = [
   'src/app/api/uploads/delete/route.ts',
   'src/app/api/uploads/[key]/route.ts',
   'src/app/api/uploads/list/route.ts',
-  'src/app/api/uploads/create/route.ts',
   'src/app/api/user/settings/route.ts',
   'src/app/api/user/refresh-session/route.ts',
   'src/app/api/user/subscription/route.ts',

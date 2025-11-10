@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     })
     await s3.send(command)
 
-    // Note: Database record creation is handled by /api/uploads/create endpoint
+    // Note: Database record creation is handled by calling endpoints (e.g., /api/team/member/selfies for invite flows)
     // This keeps the proxy focused on S3 upload only
     // Return relative key (without folder prefix) for database storage
     return NextResponse.json({ key: relativeKey })

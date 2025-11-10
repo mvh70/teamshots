@@ -792,8 +792,8 @@ test.describe('Selfie Flow - Complete Tests', () => {
     await page.goto('https://localhost:3000/app/selfies');
     await page.waitForLoadState('networkidle');
 
-    // Mock database creation API error
-    await page.route('/api/uploads/create', route => {
+    // Mock database creation API error (now handled by promote endpoint)
+    await page.route('/api/uploads/promote', route => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
