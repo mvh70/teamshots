@@ -94,7 +94,7 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
         throw new Error(d.error || 'Promote failed')
       }
       const { key, selfieId } = await promoteRes.json() as { key: string; selfieId?: string }
-
+      
       // For custom endpoints, pass the key for additional processing
       if (saveEndpoint) {
         await saveEndpoint(key)
