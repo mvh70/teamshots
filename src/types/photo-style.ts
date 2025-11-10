@@ -37,9 +37,69 @@ export interface ClothingColorSettings {
   }
 }
 
+export type ShotTypeValue =
+  | 'extreme-close-up'
+  | 'close-up'
+  | 'medium-close-up'
+  | 'medium-shot'
+  | 'three-quarter'
+  | 'full-length'
+  | 'wide-shot'
+  | 'headshot'
+  | 'midchest'
+  | 'full-body'
+  | 'user-choice'
+
 export interface ShotTypeSettings {
-  type: 'headshot' | 'midchest' | 'full-body' | 'user-choice'
+  type: ShotTypeValue
 }
+
+export type FocalLengthSetting =
+  | '24mm'
+  | '35mm'
+  | '50mm'
+  | '70mm'
+  | '85mm'
+  | '105mm'
+  | '135mm'
+  | '70-200mm'
+  | 'user-choice'
+
+export type ApertureSetting =
+  | 'f/1.2'
+  | 'f/1.4'
+  | 'f/1.8'
+  | 'f/2.0'
+  | 'f/2.8'
+  | 'f/4.0'
+  | 'f/5.6'
+  | 'f/8.0'
+  | 'f/11'
+  | 'user-choice'
+
+export type LightingQualitySetting =
+  | 'soft-diffused'
+  | 'hard-direct'
+  | 'natural-golden-hour'
+  | 'natural-overcast'
+  | 'studio-softbox'
+  | 'rembrandt'
+  | 'butterfly'
+  | 'split'
+  | 'rim-backlight'
+  | 'loop'
+  | 'user-choice'
+
+export type ShutterSpeedSetting =
+  | '1/100'
+  | '1/125'
+  | '1/160'
+  | '1/200'
+  | '1/250'
+  | '1/320'
+  | '1/500'
+  | '1/1000+'
+  | 'user-choice'
 
 export interface StyleSettings {
   type: 'preset' | 'user-choice'
@@ -63,19 +123,69 @@ export interface LightingSettings {
   type: 'natural' | 'studio' | 'soft' | 'dramatic' | 'user-choice'
 }
 
+export type BodyAngleSetting = 'square' | 'slight-angle' | 'angle-45' | 'user-choice'
+export type HeadPositionSetting = 'straight-level' | 'slight-tilt' | 'face-turn' | 'user-choice'
+export type ShoulderPositionSetting = 'front-shoulder-dropped' | 'both-relaxed' | 'level' | 'user-choice'
+export type WeightDistributionSetting = 'back-foot-70' | 'even' | 'hip-shift' | 'user-choice'
+export type ArmPositionSetting =
+  | 'not-visible'
+  | 'arms-crossed'
+  | 'one-hand-pocket'
+  | 'adjusting-jacket'
+  | 'relaxed-sides'
+  | 'user-choice'
+export type SittingPoseSetting = 'upright-lean-forward' | 'relaxed-back' | 'perched-edge' | 'user-choice'
+
+export type SubjectCountSetting = '1' | '2-3' | '4-8' | '9+'
+
+export type UsageContextSetting = 'general' | 'social-media'
+
 export interface PhotoStyleSettings {
+  presetId?: string
   background?: BackgroundSettings
   branding?: BrandingSettings
   clothing?: ClothingSettings
   clothingColors?: ClothingColorSettings
   shotType?: ShotTypeSettings
+  aspectRatio?: string
+  focalLength?: FocalLengthSetting
+  aperture?: ApertureSetting
+  lightingQuality?: LightingQualitySetting
+  shutterSpeed?: ShutterSpeedSetting
+  bodyAngle?: BodyAngleSetting
+  headPosition?: HeadPositionSetting
+  shoulderPosition?: ShoulderPositionSetting
+  weightDistribution?: WeightDistributionSetting
+  armPosition?: ArmPositionSetting
+  sittingPose?: SittingPoseSetting
   style?: StyleSettings
   expression?: ExpressionSettings
   lighting?: LightingSettings
+  subjectCount?: SubjectCountSetting
+  usageContext?: UsageContextSetting
 }
 
 // Helper types for form handling
-export type CategoryType = 'background' | 'branding' | 'clothing' | 'clothingColors' | 'shotType' | 'style' | 'expression' | 'lighting'
+export type CategoryType =
+  | 'background'
+  | 'branding'
+  | 'clothing'
+  | 'clothingColors'
+  | 'shotType'
+  | 'aspectRatio'
+  | 'focalLength'
+  | 'aperture'
+  | 'lightingQuality'
+  | 'shutterSpeed'
+  | 'bodyAngle'
+  | 'headPosition'
+  | 'shoulderPosition'
+  | 'weightDistribution'
+  | 'armPosition'
+  | 'sittingPose'
+  | 'style'
+  | 'expression'
+  | 'lighting'
 
 export interface CategoryToggle {
   category: CategoryType
@@ -84,6 +194,7 @@ export interface CategoryToggle {
 
 // Default settings for new contexts
 export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
+  presetId: undefined,
   background: {
     type: 'user-choice'
   },
@@ -99,6 +210,17 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
   shotType: {
     type: 'user-choice'
   },
+  aspectRatio: '1:1',
+  focalLength: 'user-choice',
+  aperture: 'user-choice',
+  lightingQuality: 'user-choice',
+  shutterSpeed: 'user-choice',
+  bodyAngle: 'user-choice',
+  headPosition: 'user-choice',
+  shoulderPosition: 'user-choice',
+  weightDistribution: 'user-choice',
+  armPosition: 'user-choice',
+  sittingPose: 'user-choice',
   style: {
     type: 'preset',
     preset: 'corporate'
@@ -108,7 +230,9 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
   },
   lighting: {
     type: 'user-choice'
-  }
+  },
+  subjectCount: '1',
+  usageContext: 'general'
 }
 
 // Available options for each category
@@ -186,8 +310,15 @@ export const LIGHTING_OPTIONS = {
 } as const
 
 export const SHOT_TYPE_OPTIONS = {
-  headshot: 'Headshot',
-  midchest: 'Mid-Chest Shot',
-  'full-body': 'Full Body',
+  'extreme-close-up': 'Extreme Close-Up',
+  'close-up': 'Close-Up (Tight Headshot)',
+  'medium-close-up': 'Medium Close-Up (Standard Headshot)',
+  'medium-shot': 'Medium Shot (Bust)',
+  'three-quarter': '3/4 Shot (American)',
+  'full-length': 'Full-Length',
+  'wide-shot': 'Wide Shot (Environmental)',
+  headshot: 'Headshot (Legacy)',
+  midchest: 'Mid-Chest (Legacy)',
+  'full-body': 'Full Body (Legacy)',
   'user-choice': 'User Choice'
 } as const

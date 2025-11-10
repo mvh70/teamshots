@@ -22,13 +22,17 @@ export async function POST(request: NextRequest) {
       { prisma },
       { verifyOTP },
       { createTeamVerificationRequest },
-      { registrationSchema }
+      { registrationSchema },
+      { captureServerEvent },
+      { sendAdminSignupNotificationEmail }
     ] = await Promise.all([
       import('bcryptjs').then(m => { Logger.debug('  - bcrypt loaded'); return m.default; }),
       import('@/lib/prisma').then(m => { Logger.debug('  - prisma loaded'); return m; }),
       import('@/domain/auth/otp').then(m => { Logger.debug('  - otp loaded'); return m; }),
       import('@/domain/auth/team-verification').then(m => { Logger.debug('  - team-verification loaded'); return m; }),
-      import('@/lib/validation').then(m => { Logger.debug('  - validation loaded'); return m; })
+      import('@/lib/validation').then(m => { Logger.debug('  - validation loaded'); return m; }),
+      import('@/lib/analytics/server').then(m => { Logger.debug('  - analytics loaded'); return m; }),
+      import('@/lib/email').then(m => { Logger.debug('  - email helpers loaded'); return m; })
     ])
     Logger.info('6. All dependencies loaded')
 
@@ -297,6 +301,45 @@ export async function POST(request: NextRequest) {
     }
 
     Logger.info('23. Registration complete!')
+    const emailDomain = email.split('@')[1] ?? null
+
+    const [analyticsResult, adminEmailResult] = await Promise.allSettled([
+      captureServerEvent({
+        event: 'user_signup',
+        distinctId: user.id,
+        properties: {
+          user_type: userType,
+          locale,
+          has_team: Boolean(teamId),
+          team_id: teamId,
+          team_website: teamWebsite ?? null,
+          email_domain: emailDomain,
+          created_via_invite: Boolean(existingPerson),
+        },
+      }),
+      sendAdminSignupNotificationEmail({
+        email,
+        firstName,
+        lastName,
+        userType,
+        locale,
+        teamId,
+        teamWebsite: teamWebsite ?? null,
+      })
+    ])
+
+    if (analyticsResult.status === 'rejected') {
+      Logger.error('PostHog signup capture failed', {
+        error: analyticsResult.reason instanceof Error ? analyticsResult.reason.message : String(analyticsResult.reason)
+      })
+    }
+
+    if (adminEmailResult.status === 'rejected') {
+      Logger.error('Admin signup email failed', {
+        error: adminEmailResult.reason instanceof Error ? adminEmailResult.reason.message : String(adminEmailResult.reason)
+      })
+    }
+
     return NextResponse.json({
       success: true,
       user: {

@@ -4,6 +4,8 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { Env } from '@/lib/env'
 
+
+export const runtime = 'nodejs'
 const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
   apiVersion: '2025-10-29.clover',
 })

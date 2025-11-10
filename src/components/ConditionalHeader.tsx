@@ -8,12 +8,14 @@ import LanguageSwitcher from './LanguageSwitcher'
 import { BRAND_CONFIG } from '@/config/brand'
 import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
+import { useAnalytics } from '@/hooks/useAnalytics'
 
 export default function ConditionalHeader() {
   const pathname = usePathname()
   const t = useTranslations('nav')
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { track } = useAnalytics()
   
   // Don't show header on app routes
   const isAppRoute = pathname.includes('/app/')
@@ -66,6 +68,13 @@ export default function ConditionalHeader() {
           </Link>
           <Link
             href="/auth/signup"
+            onClick={() =>
+              track('cta_clicked', {
+                placement: 'header',
+                action: 'signup',
+                viewport: 'desktop',
+              })
+            }
             className="px-4 py-2 bg-brand-cta text-white rounded-lg hover:bg-brand-cta-hover transition-colors duration-200 font-semibold shadow-sm hover:shadow-md"
           >
             {t('getStarted')}
@@ -121,7 +130,14 @@ export default function ConditionalHeader() {
             </Link>
             <Link
               href="/auth/signup"
-              onClick={toggleMobileMenu}
+              onClick={() => {
+                toggleMobileMenu()
+                track('cta_clicked', {
+                  placement: 'header',
+                  action: 'signup',
+                  viewport: 'mobile',
+                })
+              }}
               className="block w-full text-center px-4 py-2 bg-brand-cta text-white rounded-lg hover:bg-brand-cta-hover transition-colors duration-200 font-semibold shadow-sm"
             >
               {t('getStarted')}

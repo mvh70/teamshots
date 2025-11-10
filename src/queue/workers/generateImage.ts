@@ -5,35 +5,42 @@
  */
 
 import { Worker, Job } from 'bullmq'
+import sharp from 'sharp'
+
 import { ImageGenerationJobData, redis } from '@/queue'
 import { prisma } from '@/lib/prisma'
 import { refundCreditsForFailedGeneration } from '@/domain/credits/credits'
 import { Logger } from '@/lib/logger'
-import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { Telemetry } from '@/lib/telemetry'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import sharp from 'sharp'
-import { httpFetch } from '@/lib/http'
 import { Env } from '@/lib/env'
-import { writeFile as fsWriteFile, readFile as fsReadFile } from 'node:fs/promises'
-// Gemini SDK per docs: https://ai.google.dev/gemini-api/docs/image-generation#javascript_8
-// Ensure dependency '@google/genai' is installed in package.json
-// Fallback: type-only import to avoid runtime errors until installed
-import { getPackageConfig } from '@/domain/style/packages'
-import { PhotoStyleSettings } from '@/types/photo-style'
 import { sendSupportNotificationEmail } from '@/lib/email'
+import type { SupportNotificationAttachment } from '@/lib/email'
 import { getProgressMessage, formatProgressMessage } from '@/lib/generation-progress-messages'
-import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
-// Background removal processing disabled
-// import { processSelfieForBackgroundRemoval, getBestSelfieKey } from '@/lib/ai/selfieProcessor'
+import { createS3Client, getS3BucketName } from '@/lib/s3-client'
+import { PhotoStyleSettings } from '@/types/photo-style'
 
-// New import for Vertex AI (after other imports, e.g., around line 25)
-import { VertexAI } from '@google-cloud/vertexai';
-import { Content, GenerateContentResult } from '@google-cloud/vertexai';
-import { Part } from '@google-cloud/vertexai';
+import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/domain/style/packages/aspect-ratios'
+import type { AspectRatioId } from '@/domain/style/packages/aspect-ratios'
+import { resolveShotType } from '@/domain/style/packages/camera-presets'
+import { resolveStyleSettings } from './generate-image/style-settings'
+import { preprocessSelfie } from './generate-image/preprocessing'
+import { generateWithGemini } from './generate-image/gemini'
+import { evaluateGeneratedImage } from './generate-image/evaluator'
+import type { ImageEvaluationResult, SelfieReference } from './generate-image/evaluator'
+import {
+  downloadAssetAsBase64,
+  downloadSelfieAsBase64,
+  uploadGeneratedImagesToS3
+} from './generate-image/s3-utils'
+import type { DownloadAssetFn, DownloadSelfieFn } from '@/types/generation'
+
+const USE_COMPOSITE_REFERENCE = Env.boolean('USE_COMPOSITE_REFERENCE', true)
+const SKIP_GEMINI_PROMPT = Env.boolean('SKIP_GEMINI_PROMPT', false)
 
 const s3Client = createS3Client({ forcePathStyle: false })
 const BUCKET_NAME = getS3BucketName()
+const RATE_LIMIT_SLEEP_MS = 60_000
+const MAX_RATE_LIMIT_RETRIES = 3
 
 // Create worker
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
@@ -60,6 +67,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
     
     try {
       Logger.info(`Starting image generation for job ${job.id}, generation ${generationId}, attempt ${currentAttempt}/${maxAttempts}`)
+      Logger.debug('Reference mode selected', { useCompositeReference: USE_COMPOSITE_REFERENCE })
       
       // Update generation status to processing
       await prisma.generation.update({
@@ -77,11 +85,10 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       // Background removal processing disabled - using original selfie
       Logger.debug('Using original selfie without background removal processing')
       
-      // Fetch the generation record to get the saved style settings and context
       const generation = await prisma.generation.findUnique({
         where: { id: generationId },
-        select: { 
-          styleSettings: true, 
+        select: {
+          styleSettings: true,
           context: {
             select: {
               name: true,
@@ -90,240 +97,364 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           }
         }
       })
-      
+
       if (!generation) {
         throw new Error('Generation not found')
       }
-      
-      // Use saved styleSettings from generation record if available, otherwise fall back to context or job
-      const savedStyleSettings = generation.styleSettings
-      const contextSettings = generation.context?.settings
-      
-      let rawStyleSettings: Record<string, unknown> = {}
-      if (savedStyleSettings && typeof savedStyleSettings === 'object' && !Array.isArray(savedStyleSettings)) {
-        // Use saved styleSettings from generation record (most accurate)
-        rawStyleSettings = savedStyleSettings as Record<string, unknown>
-        Logger.debug('Using saved styleSettings from generation record')
-      } else if (contextSettings && typeof contextSettings === 'object' && !Array.isArray(contextSettings)) {
-        // Fall back to context settings
-        rawStyleSettings = contextSettings as Record<string, unknown>
-        Logger.debug('Using context settings')
-      } else {
-        // Finally fall back to job styleSettings
-        rawStyleSettings = (styleSettings as Record<string, unknown>) || {}
-        Logger.debug('Using job styleSettings')
-      }
-      
-      // Determine packageId - check multiple sources if not present
-      let packageId = rawStyleSettings['packageId'] as string | undefined
-      if (!packageId && savedStyleSettings && typeof savedStyleSettings === 'object' && !Array.isArray(savedStyleSettings)) {
-        packageId = (savedStyleSettings as Record<string, unknown>)['packageId'] as string | undefined
-      }
-      if (!packageId && styleSettings && typeof styleSettings === 'object' && !Array.isArray(styleSettings)) {
-        packageId = (styleSettings as Record<string, unknown>)['packageId'] as string | undefined
-      }
-      packageId = packageId || 'headshot1'
-      
-      const pkg = getPackageConfig(packageId)
-      const finalStyleSettings = pkg.persistenceAdapter.deserialize(rawStyleSettings)
 
-      // Merge explicit overrides from the job payload to ensure latest UI choices are honored
-      // Particularly important when context saved values were null (user-choice) but the user
-      // provided concrete selections (e.g., clothingColors, branding.position) at generation time
-      const jobStyleSettings = (styleSettings && typeof styleSettings === 'object' && !Array.isArray(styleSettings))
-        ? (styleSettings as Record<string, unknown>)
-        : {}
-      const fs = finalStyleSettings as Record<string, unknown>
-      const jsBranding = jobStyleSettings['branding'] as { type?: string; logoKey?: string; position?: string } | undefined
-      const jsClothingColors = jobStyleSettings['clothingColors'] as { colors?: { topCover?: string; topBase?: string; bottom?: string; shoes?: string } } | undefined
-      const jsClothing = jobStyleSettings['clothing'] as { style?: string; details?: string; accessories?: string[] } | undefined
-      const jsExpression = jobStyleSettings['expression'] as { type?: string } | undefined
-      const jsBackground = jobStyleSettings['background'] as { type?: string; key?: string; prompt?: string; color?: string } | undefined
+      const savedStyleSettings = asRecord(generation.styleSettings)
+      const contextSettings = asRecord(generation.context?.settings)
+      const jobStyleSettingsRecord = asRecord(styleSettings)
 
-      if (jsClothingColors && Object.keys(jsClothingColors).length > 0) {
-        fs['clothingColors'] = jsClothingColors
-      }
-      if (jsBranding && Object.keys(jsBranding).length > 0) {
-        const currentBranding = (fs['branding'] as Record<string, unknown>) || {}
-        fs['branding'] = {
-          ...currentBranding,
-          ...(jsBranding.type ? { type: jsBranding.type } : {}),
-          ...(jsBranding.logoKey ? { logoKey: jsBranding.logoKey } : {}),
-          ...(jsBranding.position ? { position: jsBranding.position } : {})
-        }
-      }
-      if (jsClothing && Object.keys(jsClothing).length > 0) {
-        const currentClothing = (fs['clothing'] as Record<string, unknown>) || {}
-        fs['clothing'] = { ...currentClothing, ...jsClothing }
-      }
-      if (jsExpression && Object.keys(jsExpression).length > 0) {
-        const currentExpression = (fs['expression'] as Record<string, unknown>) || {}
-        fs['expression'] = { ...currentExpression, ...jsExpression }
-      }
-      if (jsBackground && Object.keys(jsBackground).length > 0) {
-        const currentBackground = (fs['background'] as Record<string, unknown>) || {}
-        fs['background'] = { ...currentBackground, ...jsBackground }
-      }
+      const styleResolution = resolveStyleSettings({
+        savedStyleSettings,
+        contextSettings,
+        jobStyleSettings: jobStyleSettingsRecord
+      })
 
-      // Prefer explicit shotType from the job payload if provided (and not user-choice)
-      // This prevents stale context defaults (e.g., headshot) from overriding a user's current selection (e.g., full-body)
-      const jobShotType = (styleSettings as { shotType?: { type?: string } } | undefined)?.shotType?.type
-      const jobHasExplicitShotType = jobShotType && jobShotType !== 'user-choice'
-      const mergedStyleSettings: PhotoStyleSettings = jobHasExplicitShotType
-        ? { ...(finalStyleSettings as PhotoStyleSettings), shotType: { type: jobShotType as 'headshot' | 'midchest' | 'full-body' | 'user-choice' } }
-        : (finalStyleSettings as PhotoStyleSettings)
-      
-      // Debug logging
+      const { packageId, stylePackage, mergedStyleSettings } = styleResolution
+
+      const shotTypeInput =
+        typeof mergedStyleSettings.shotType?.type === 'string'
+          ? mergedStyleSettings.shotType.type
+          : undefined
+      const shotTypeConfig = resolveShotType(shotTypeInput)
+      const shotLabel = shotTypeConfig.label
+      const shotDescription = shotTypeConfig.framingDescription
+
       Logger.debug('Generation context', { name: generation.context?.name })
       Logger.debug('Raw saved styleSettings', { savedStyleSettings })
       Logger.debug('Raw context settings', { settings: generation.context?.settings })
       Logger.debug('Raw job styleSettings', { styleSettings })
-      Logger.debug('Deserialized finalStyleSettings', { finalStyleSettings })
-      if (jobHasExplicitShotType) {
-        Logger.debug('Overriding shotType from job payload', { jobShotType })
-      }
       Logger.debug('Package ID', { packageId })
-      Logger.debug('ShotType in finalStyleSettings', { shotType: finalStyleSettings.shotType })
+      Logger.debug('ShotType in mergedStyleSettings', { shotType: mergedStyleSettings.shotType })
       
-      // Package-specific image preprocessing
-      let processedSelfieBuffer: Buffer
-      try {
-        // Dynamically import package-specific preprocessor
-        let preprocessor
-        try {
-          if (packageId === 'headshot1') {
-            const headshot1Module = await import('@/domain/style/packages/headshot1/preprocessor')
-            preprocessor = headshot1Module.preprocessHeadshot1
-          } else if (packageId === 'freepackage') {
-            const freepackageModule = await import('@/domain/style/packages/freepackage/preprocessor')
-            preprocessor = freepackageModule.preprocessFreepackage
-          }
-        } catch (importError) {
-          Logger.warn('Could not load package preprocessor, using default', { 
-            packageId, 
-            error: importError instanceof Error ? importError.message : String(importError) 
-          })
-        }
-        
-        if (preprocessor) {
-          // Download selfie and process with package-specific preprocessor
-          const selfieBuffer = await downloadSelfieAsBase64(selfieS3Key).then(res => Buffer.from(res.base64, 'base64'))
-          
-          // Prepare additional context for multi-step preprocessing
-          const backgroundS3Key = (finalStyleSettings as { background?: { key?: string } })?.background?.key
-          const logoS3Key = (finalStyleSettings as { branding?: { logoKey?: string } })?.branding?.logoKey
-          
-          // Progress callback for preprocessing steps
-          const onStepProgress = (stepName: string) => {
-            const progressMsg = getProgressMessage(stepName)
-            const formattedMsg = formatProgressWithAttempt(progressMsg)
-            // Update progress with step message (keep progress percentage at 15% during preprocessing)
-            job.updateProgress({ progress: 15, message: formattedMsg }).catch(err => {
-              Logger.warn('Failed to update progress', { error: err instanceof Error ? err.message : String(err) })
-            })
-          }
-          
-          // Call preprocessor - handle both old signature (2 args) and new signature (3 args with context)
-          let preprocessResult
-          if (preprocessor.length > 2) {
-            // New signature with additional context
-            preprocessResult = await (preprocessor as (
-              selfieBuffer: Buffer,
-              styleSettings: PhotoStyleSettings,
-              additionalContext?: { backgroundS3Key?: string; logoS3Key?: string; onStepProgress?: (stepName: string) => void }
-            ) => Promise<{ processedBuffer: Buffer; metadata?: Record<string, unknown> }>)(
-              selfieBuffer,
-              finalStyleSettings as unknown as PhotoStyleSettings,
-              { backgroundS3Key, logoS3Key, onStepProgress }
-            )
-          } else {
-            // Old signature (backward compatibility)
-            preprocessResult = await preprocessor(selfieBuffer, finalStyleSettings as unknown as PhotoStyleSettings)
-          }
-          
-          processedSelfieBuffer = preprocessResult.processedBuffer
-          Logger.debug('Applied package-specific preprocessing', { 
-            packageId, 
-            metadata: preprocessResult.metadata 
-          })
-        } else {
-          // No preprocessor - use original selfie buffer
-          const selfieBase64 = await downloadSelfieAsBase64(selfieS3Key)
-          processedSelfieBuffer = Buffer.from(selfieBase64.base64, 'base64')
-        }
-      } catch (preprocessError) {
-        Logger.error('Preprocessing failed, using original image', { 
-          packageId, 
-          error: preprocessError instanceof Error ? preprocessError.message : String(preprocessError) 
-        })
-        // Fallback to original selfie
-        const selfieBase64 = await downloadSelfieAsBase64(selfieS3Key)
-        processedSelfieBuffer = Buffer.from(selfieBase64.base64, 'base64')
-      }
-      
-      // Build prompt from style settings using the style package's prompt builder
-      const builtPromptRaw = pkg.promptBuilder(mergedStyleSettings as unknown as PhotoStyleSettings, { prompt })
-      let builtPrompt: string
-      if (typeof builtPromptRaw === 'string') {
-        builtPrompt = builtPromptRaw
-      } else {
-        // If it returns an object, convert to string
-        builtPrompt = JSON.stringify(builtPromptRaw)
-      }
-      
-      // Build prompt and composite
+      const downloadSelfie: DownloadSelfieFn = (key) =>
+        downloadSelfieAsBase64({ bucketName: BUCKET_NAME, s3Client, key })
+
+      const downloadAsset: DownloadAssetFn = (key) =>
+        downloadAssetAsBase64({ bucketName: BUCKET_NAME, s3Client, key })
+
       const providedKeys = Array.isArray(selfieS3Keys) && selfieS3Keys.length > 0
         ? selfieS3Keys
         : (selfieS3Key ? [selfieS3Key] : [])
+
       if (providedKeys.length === 0) {
         throw new Error('At least one selfieS3Key is required')
       }
-      
-      // Create composite image with labeled sections (supports multiple selfies)
-      const compositeImage = await createCompositeImage(mergedStyleSettings as {
-        background?: { type?: string; key?: string; prompt?: string; color?: string }
-        branding?: { type?: string; logoKey?: string; position?: string }
-        clothing?: { style?: string; details?: string; accessories?: string[]; colors?: { topCover?: string; topBase?: string; bottom?: string } }
-        expression?: { type?: string }
-        lighting?: { type?: string }
-      }, providedKeys, [processedSelfieBuffer])
-      
-      // Update prompt to reference the labeled sections in the composite image
-      const shotTypeForText = (mergedStyleSettings?.shotType?.type || '').toString()
-      const shotText = shotTypeForText === 'full-body' ? 'full-body portrait' : shotTypeForText === 'midchest' ? 'mid-chest portrait' : 'headshot'
-      let labelInstruction = 'Use the labeled sections in the composite image: '
-      if (providedKeys.length === 1) {
-        labelInstruction += '"SUBJECT1-SELFIE1" for the person'
-      } else {
-        const labels = providedKeys.map((_, i) => `"SUBJECT1-SELFIE${i + 1}"`).join(', ')
-        labelInstruction += `${labels} for the person from different angles. All subject-selfie images show the same person.`
+
+      const primarySelfieKey = selfieS3Key ?? providedKeys[0]
+
+      const processedSelfies: Record<string, Buffer> = {}
+
+      const preprocessWithProgress = async (key: string): Promise<Buffer> => {
+        if (processedSelfies[key]) {
+          return processedSelfies[key]
+        }
+        const buffer = await preprocessSelfie({
+          packageId,
+          selfieKey: key,
+          styleSettings: mergedStyleSettings,
+          downloadSelfie,
+          onStepProgress: (stepName) => {
+            const progressMsg = getProgressMessage(stepName)
+            const formattedMsg = formatProgressWithAttempt(progressMsg)
+            job.updateProgress({ progress: 15, message: formattedMsg }).catch((err: unknown) => {
+              Logger.warn('Failed to update progress', {
+                error: err instanceof Error ? err.message : String(err)
+              })
+            })
+          }
+        })
+        processedSelfies[key] = buffer
+        return buffer
       }
-      builtPrompt += `\n\n${labelInstruction}. Generate a professional photo using the subject and the specified style settings. STRICTLY follow \"framing_composition.shot_type\" (requested: ${shotText}) and \"orientation\". Do not change the requested shot type; avoid cropping that contradicts it.`
-      
+
+      await preprocessWithProgress(primarySelfieKey)
+
+      const selfieReferences: SelfieReference[] = []
+      for (let index = 0; index < providedKeys.length; index += 1) {
+        const key = providedKeys[index]
+        const processedBuffer = await preprocessWithProgress(key)
+        const pngBuffer = await sharp(processedBuffer).png().toBuffer()
+        selfieReferences.push({
+          label: `SELFIE${index + 1}`,
+          base64: pngBuffer.toString('base64'),
+          mimeType: 'image/png'
+        })
+      }
+
+      const generationPayload = await stylePackage.buildGenerationPayload({
+        generationId,
+        personId,
+        userId,
+        prompt,
+        styleSettings: mergedStyleSettings as PhotoStyleSettings,
+        selfieKeys: providedKeys,
+        primarySelfieKey,
+        processedSelfies,
+        options: {
+          useCompositeReference: USE_COMPOSITE_REFERENCE
+        },
+        assets: {
+          downloadSelfie,
+          downloadAsset,
+          preprocessSelfie: preprocessWithProgress
+        }
+      })
+
+      const {
+        prompt: basePrompt,
+        referenceImages,
+        labelInstruction,
+        aspectRatio,
+        aspectRatioDescription
+      } = generationPayload
+
+      const finalPrompt = labelInstruction ? `${basePrompt}\n\n${labelInstruction}` : basePrompt
+
       await job.updateProgress({ progress: 20, message: formatProgressWithAttempt(getProgressMessage()) })
 
-      // Debug: write composite image to /tmp for inspection
-      try {
-        const compositePath = `/tmp/composite-${generationId}.png`
-        await fsWriteFile(compositePath, Buffer.from(compositeImage.base64, 'base64'))
-        Logger.debug('Wrote composite image to /tmp', { path: compositePath })
-      } catch (e) {
-        Logger.warn('Failed to write composite image to /tmp', { error: e instanceof Error ? e.message : String(e) })
+      Logger.info('Generated Prompt for Gemini', { prompt: finalPrompt })
+
+      if (SKIP_GEMINI_PROMPT) {
+        Logger.warn('SKIP_GEMINI_PROMPT enabled – skipping Gemini call and returning prompt only')
+
+        await prisma.generation.update({
+          where: { id: generationId },
+          data: {
+            status: 'completed',
+            generatedPhotoKeys: [],
+            actualCost: undefined,
+            provider: 'debug-skip',
+            completedAt: new Date(),
+            updatedAt: new Date()
+          }
+        })
+
+        await job.updateProgress({
+          progress: 100,
+          message: `📝 Prompt logged for inspection${attemptSuffix}`
+        })
+
+        return {
+          success: true,
+          generationId,
+          imageKeys: [],
+          cost: undefined
+        }
       }
 
-      Logger.info('Generated Prompt for Gemini', { prompt: builtPrompt })
+      const resolvedAspectRatioId =
+        (aspectRatio as AspectRatioId | undefined) ?? (DEFAULT_ASPECT_RATIO.id as AspectRatioId)
+      const aspectRatioConfig =
+        ASPECT_RATIOS[resolvedAspectRatioId] ?? DEFAULT_ASPECT_RATIO
 
-      // Determine aspect ratio from shot type (enforce tall canvas for full body)
-      const aspectRatio = shotTypeForText === 'full-body' ? '9:16' : shotTypeForText === 'midchest' ? '3:4' : '1:1'
-      const imageBuffers = await generateWithGemini(builtPrompt, [compositeImage], aspectRatio)
+      const MAX_LOCAL_GENERATION_ATTEMPTS = 2
+      let localAttempt = 0
+      let approvedImageBuffers: Buffer[] | null = null
+      const compositeReference = referenceImages.find((reference) =>
+        reference.description?.toLowerCase().includes('composite')
+      )
+      const logoReference = referenceImages.find((reference) =>
+        reference.description?.toLowerCase().includes('logo')
+      )
 
-      await job.updateProgress({ progress: 60, message: formatProgressWithAttempt(getProgressMessage()) })
-      if (!imageBuffers.length) {
-        throw new Error('AI generation returned no images')
+      while (localAttempt < MAX_LOCAL_GENERATION_ATTEMPTS) {
+        let generatedBuffers: Buffer[] = []
+
+        let rateLimitRetries = 0
+        while (true) {
+          try {
+            generatedBuffers = await generateWithGemini(finalPrompt, referenceImages, aspectRatio)
+            break
+          } catch (error) {
+            if (isModelNotFoundError(error)) {
+              Logger.error('Gemini model not found for generation', {
+                generationId,
+                model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
+              })
+              await job.updateProgress({
+                progress: 55,
+                message: formatProgressWithAttempt({
+                  message:
+                    'Gemini model configuration error. Please verify GEMINI_IMAGE_MODEL or Vertex AI access.',
+                  emoji: '⚠️'
+                })
+              })
+              throw error
+            }
+
+            if (isRateLimitError(error)) {
+              rateLimitRetries += 1
+              if (rateLimitRetries > MAX_RATE_LIMIT_RETRIES) {
+                Logger.error('Exceeded Gemini rate-limit retries', {
+                  generationId,
+                  rateLimitRetries
+                })
+                throw error
+              }
+
+              const waitSeconds = Math.round(RATE_LIMIT_SLEEP_MS / 1000)
+              Logger.warn('Gemini request rate limited; waiting before retry', {
+                generationId,
+                waitSeconds,
+                rateLimitRetries
+              })
+
+              await job.updateProgress({
+                progress: 55,
+                message: formatProgressWithAttempt({
+                  message: `Gemini is busy (rate limited). Trying again in ${waitSeconds} seconds...`,
+                  emoji: '⏳'
+                })
+              })
+
+              await delay(RATE_LIMIT_SLEEP_MS)
+              continue
+            }
+
+            throw error
+          }
+        }
+
+        await job.updateProgress({
+          progress: 60,
+          message: formatProgressWithAttempt(getProgressMessage())
+        })
+
+        if (!generatedBuffers.length) {
+          throw new Error('AI generation returned no images')
+        }
+
+        const processedVariants = await Promise.all(
+          generatedBuffers.map(async (buffer) => {
+            const metadata = await sharp(buffer).metadata()
+            const pngBuffer = await sharp(buffer).png().toBuffer()
+            return {
+              buffer: pngBuffer,
+              base64: pngBuffer.toString('base64'),
+              width: metadata.width ?? null,
+              height: metadata.height ?? null
+            }
+          })
+        )
+
+        const attemptIndex = localAttempt + 1
+        const evaluations: ImageEvaluationResult[] = []
+        let allApproved = true
+
+        await job.updateProgress({
+          progress: 65,
+          message: formatProgressWithAttempt({
+            message: `Running automated quality checks for variation set ${attemptIndex}`,
+            emoji: '🔍'
+          })
+        })
+
+        for (let index = 0; index < processedVariants.length; index += 1) {
+          const variant = processedVariants[index]
+          const evaluation = await evaluateGeneratedImage({
+            imageBase64: variant.base64,
+            imageIndex: index,
+            actualWidth: variant.width,
+            actualHeight: variant.height,
+            expectedWidth: aspectRatioConfig.width,
+            expectedHeight: aspectRatioConfig.height,
+            aspectRatioId: aspectRatioConfig.id,
+            aspectRatioDescription,
+            shotLabel,
+            shotDescription,
+            generationPrompt: finalPrompt,
+            labelInstruction,
+            selfieReferences,
+            compositeReference: compositeReference
+              ? {
+                  base64: compositeReference.base64,
+                  mimeType: compositeReference.mimeType,
+                  description: compositeReference.description
+                }
+              : undefined,
+            logoReference: logoReference
+              ? {
+                  base64: logoReference.base64,
+                  mimeType: logoReference.mimeType,
+                  description: logoReference.description
+                }
+              : undefined
+          })
+          evaluations.push(evaluation)
+          if (evaluation.status !== 'Approved') {
+            allApproved = false
+          }
+        }
+
+        Logger.info('Gemini evaluation results', {
+          generationId,
+          attempt: attemptIndex,
+          evaluations: evaluations.map((result, idx) => ({
+            variation: idx + 1,
+            status: result.status,
+            reasonPreview: result.reason.slice(0, 200),
+            details: result.details
+          }))
+        })
+
+        if (allApproved) {
+          await job.updateProgress({
+            progress: 70,
+            message: formatProgressWithAttempt({
+              message: 'Image approved! Finalizing delivery',
+              emoji: '✅'
+            })
+          })
+          approvedImageBuffers = processedVariants.map((item) => item.buffer)
+          break
+        }
+
+        await notifyEvaluationFailure({
+          generationId,
+          personId,
+          userId,
+          jobId: job.id,
+          attempt: attemptIndex,
+          evaluations,
+          aspectRatioDescription,
+          shotLabel,
+          imageBase64: processedVariants.map((item) => item.base64)
+        })
+
+        localAttempt += 1
+        if (localAttempt >= MAX_LOCAL_GENERATION_ATTEMPTS) {
+          throw new Error('Generated images failed automated evaluation')
+        }
+
+        await job.updateProgress({
+          progress: 60,
+          message: formatProgressWithAttempt({
+            message: 'Image not approved. Regenerating another version for free...',
+            emoji: '♻️'
+          })
+        })
+
+        Logger.warn('Retrying Gemini image generation after QA rejection', {
+          generationId,
+          nextAttempt: localAttempt + 1
+        })
+      }
+
+      if (!approvedImageBuffers) {
+        throw new Error('Generated images could not be approved after evaluation retries')
       }
 
       // Upload generated images to S3
-      const generatedImageKeys = await uploadGeneratedImagesToS3(imageBuffers, personId, generationId)
+      const generatedImageKeys = await uploadGeneratedImagesToS3({
+        images: approvedImageBuffers,
+        bucketName: BUCKET_NAME,
+        s3Client,
+        personId,
+        generationId
+      })
       await job.updateProgress({ progress: 80, message: formatProgressWithAttempt(getProgressMessage()) })
       
       // Update generation record with results
@@ -576,318 +707,221 @@ imageGenerationWorker.on('stalled', (jobId) => {
   Logger.warn('Job stalled', { jobId })
 })
 
-// Helper functions
-
-// Downloads selfie object from S3 and returns base64 + mime type
-// s3Key is the relative key from database (without folder prefix)
-async function downloadSelfieAsBase64(s3Key: string): Promise<{ mimeType: string; base64: string }> {
+async function notifyEvaluationFailure({
+  generationId,
+  personId,
+  userId,
+  jobId,
+  attempt,
+  evaluations,
+  aspectRatioDescription,
+  shotLabel,
+  imageBase64
+}: {
+  generationId: string
+  personId: string
+  userId?: string
+  jobId?: string | number
+  attempt: number
+  evaluations: ImageEvaluationResult[]
+  aspectRatioDescription: string
+  shotLabel: string
+  imageBase64: string[]
+}): Promise<void> {
   try {
-    // Add folder prefix if configured
-    const fullKey = getS3Key(s3Key)
-    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fullKey })
-    const url = await getSignedUrl(s3Client, command, { expiresIn: 300 })
-    const res = await httpFetch(url)
-    if (!res.ok) throw new Error(`Failed to fetch selfie: ${res.status}`)
-    const arrayBuf = await res.arrayBuffer()
-    const base64 = Buffer.from(arrayBuf).toString('base64')
-    // naive mime detection from key; ideally store mime on upload
-    const mimeType = s3Key.endsWith('.png') ? 'image/png' : 'image/jpeg'
-    return { mimeType, base64 }
-  } catch (e) {
-    Logger.error('Failed to download selfie as base64', { error: e instanceof Error ? e.message : String(e) })
-    throw new Error('Failed to access selfie image')
+    const userEmail =
+      userId && typeof userId === 'string'
+        ? await prisma.user
+            .findUnique({
+              where: { id: userId },
+              select: { email: true }
+            })
+            .then((user) => user?.email ?? undefined)
+        : undefined
+
+    const resolvedJobId = jobId ?? 'N/A'
+
+    let message = `Automated evaluation rejected generated images for generation ${generationId} (attempt ${attempt}).\n`
+    message += `Shot guidance: ${shotLabel}\nAspect ratio: ${aspectRatioDescription}\nPerson ID: ${personId}\nUser ID: ${
+      userId ?? 'N/A'
+    }\nUser Email: ${userEmail ?? 'N/A'}\nJob ID: ${resolvedJobId}\n\n`
+
+    evaluations.forEach((evaluation, index) => {
+      const variationNumber = index + 1
+      message += `Variation ${variationNumber}: ${evaluation.status}\n`
+      message += `Reason: ${evaluation.reason}\n`
+      const { actualWidth, actualHeight } = evaluation.details
+      message += `Detected dimensions: ${actualWidth ?? 'unknown'}x${
+        actualHeight ?? 'unknown'
+      }px\n`
+      if (evaluation.details.selfieDuplicate) {
+        message += `Flagged duplicate of reference ${evaluation.details.matchingReferenceLabel ?? 'unknown'}.\n`
+      }
+      if (evaluation.status !== 'Approved' && imageBase64[index]) {
+        message += `<img src="data:image/png;base64,${
+          imageBase64[index]
+        }" alt="Variation ${variationNumber} QA snapshot" style="max-width:100%;height:auto;" />\n`
+      }
+      message += '\n'
+    })
+
+    const metadata = {
+      generationId,
+      attempt,
+      personId,
+      userId,
+      userEmail,
+      jobId: resolvedJobId === 'N/A' ? null : String(resolvedJobId),
+      aspectRatioDescription,
+      shotLabel,
+      evaluations: evaluations.map((evaluation, index) => ({
+        variation: index + 1,
+        status: evaluation.status,
+        reason: evaluation.reason,
+        details: evaluation.details
+      }))
+    }
+
+    const attachments: SupportNotificationAttachment[] = []
+    evaluations.forEach((evaluation, index) => {
+      if (evaluation.status === 'Approved') {
+        return
+      }
+      const base64 = imageBase64[index]
+      if (!base64) {
+        return
+      }
+      attachments.push({
+        filename: `${generationId}-attempt-${attempt}-variation-${index + 1}.png`,
+        base64,
+        mimeType: 'image/png'
+      })
+    })
+
+    await sendSupportNotificationEmail({
+      subject: `Image QA Rejection - Generation ${generationId}`,
+      message,
+      metadata,
+      attachments
+    })
+    Logger.info('Sent QA rejection notification to support', {
+      generationId,
+      attempt,
+      jobId: resolvedJobId
+    })
+  } catch (error) {
+    Logger.error('Failed to send QA rejection notification', {
+      error: error instanceof Error ? error.message : String(error),
+      generationId,
+      attempt
+    })
   }
 }
 
-// Generic S3 download helper for additional assets (backgrounds, logos)
-// s3Key is the relative key from database (without folder prefix)
-async function downloadAssetAsBase64(s3Key: string): Promise<{ mimeType: string; base64: string } | null> {
-  try {
-    // Add folder prefix if configured
-    const fullKey = getS3Key(s3Key)
-    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: fullKey })
-    const url = await getSignedUrl(s3Client, command, { expiresIn: 300 })
-    const res = await httpFetch(url)
-    if (!res.ok) return null
-    const arrayBuf = await res.arrayBuffer()
-    const base64 = Buffer.from(arrayBuf).toString('base64')
-    const mimeType = s3Key.endsWith('.png') ? 'image/png' : 'image/jpeg'
-    return { mimeType, base64 }
-  } catch {
+function isRateLimitError(error: unknown): boolean {
+  const metadata = collectErrorMetadata(error)
+  if (metadata.statusCodes.includes(429)) {
+    return true
+  }
+
+  return metadata.messages.some((message) => {
+    const normalized = message.toLowerCase()
+    return normalized.includes('too many requests') || normalized.includes('resource exhausted')
+  })
+}
+
+function isModelNotFoundError(error: unknown): boolean {
+  const metadata = collectErrorMetadata(error)
+  if (metadata.statusCodes.includes(404)) {
+    return true
+  }
+
+  return metadata.messages.some((message) => {
+    const normalized = message.toLowerCase()
+    return normalized.includes('not found') && normalized.includes('model')
+  })
+}
+
+function collectErrorMetadata(error: unknown): { statusCodes: number[]; messages: string[] } {
+  const statusCodes: number[] = []
+  const messages: string[] = []
+  const seen = new Set<unknown>()
+  const queue: unknown[] = [error]
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+    if (!current || seen.has(current)) {
+      continue
+    }
+    seen.add(current)
+
+    if (typeof current === 'string') {
+      messages.push(current)
+      try {
+        const parsed = JSON.parse(current) as unknown
+        queue.push(parsed)
+      } catch {
+        // ignore parse errors
+      }
+      continue
+    }
+
+    if (typeof current !== 'object') {
+      continue
+    }
+
+    const maybeStatus = (current as { status?: unknown }).status
+    if (typeof maybeStatus === 'number') {
+      statusCodes.push(maybeStatus)
+    }
+
+    const maybeCode = (current as { code?: unknown }).code
+    if (typeof maybeCode === 'number') {
+      statusCodes.push(maybeCode)
+    }
+
+    const maybeMessage = (current as { message?: unknown }).message
+    if (typeof maybeMessage === 'string') {
+      messages.push(maybeMessage)
+    }
+
+    const nestedCandidates: unknown[] = []
+    const maybeResponse = (current as { response?: unknown }).response
+    if (maybeResponse) nestedCandidates.push(maybeResponse)
+
+    const maybeError = (current as { error?: unknown }).error
+    if (maybeError) nestedCandidates.push(maybeError)
+
+    const maybeDetails = (current as { details?: unknown }).details
+    if (maybeDetails) nestedCandidates.push(maybeDetails)
+
+    const maybeCause = (current as { cause?: unknown }).cause
+    if (maybeCause) nestedCandidates.push(maybeCause)
+
+    for (const candidate of nestedCandidates) {
+      if (candidate !== undefined && candidate !== null) {
+        queue.push(candidate)
+      }
+    }
+  }
+
+  return {
+    statusCodes,
+    messages
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null
   }
-}
-
-// Create composite image with labeled sections (updated to support multiple selfies)
-async function createCompositeImage(
-  styleSettings: {
-    background?: { type?: string; key?: string; prompt?: string; color?: string }
-    branding?: { type?: string; logoKey?: string; position?: string }
-    clothing?: { style?: string; details?: string; accessories?: string[]; colors?: { topCover?: string; topBase?: string; bottom?: string } }
-    expression?: { type?: string }
-    lighting?: { type?: string }
-  },
-  selfieS3Keys: string[],
-  preprocessedSelfieBuffers?: Buffer[]
-): Promise<{ mimeType: string; base64: string }> {
-  Logger.debug('Creating composite image for selfies', { count: selfieS3Keys.length, hasPreprocessed: Array.isArray(preprocessedSelfieBuffers) && preprocessedSelfieBuffers.length > 0 })
-  
-  const margin = 20
-  const labelHeight = 50
-  const spacing = 100
-  const compositeElements: Array<Record<string, unknown>> = []
-  let currentY = margin
-  let maxWidth = 0
-
-  // Add all selfies stacked with SUBJECT1-SELFIE{n} labels
-  for (let i = 0; i < selfieS3Keys.length; i++) {
-    const key = selfieS3Keys[i]
-    let selfieBuffer: Buffer
-    if (preprocessedSelfieBuffers && preprocessedSelfieBuffers[i]) {
-      selfieBuffer = preprocessedSelfieBuffers[i]
-    } else {
-      const selfie = await downloadSelfieAsBase64(key)
-      selfieBuffer = Buffer.from(selfie.base64, 'base64')
-    }
-
-    // DEBUG: write each selfie used in composite to /tmp
-    try {
-      const dbgSelfiePath = `/tmp/composite-input-selfie-${i + 1}.png`
-      const pngBuf = await sharp(selfieBuffer).png().toBuffer()
-      await fsWriteFile(dbgSelfiePath, pngBuf)
-      Logger.debug('Wrote composite input selfie', { index: i + 1, path: dbgSelfiePath })
-    } catch (e) {
-      Logger.warn('Failed writing debug selfie to /tmp', { index: i + 1, error: e instanceof Error ? e.message : String(e) })
-    }
-
-    const selfieSharp = sharp(selfieBuffer)
-    const selfieMetadata = await selfieSharp.metadata()
-
-    const subjectText = await createTextOverlayDynamic(`SUBJECT1-SELFIE${i + 1}`, 24, '#000000', 8)
-    compositeElements.push(
-      { input: selfieBuffer, left: margin, top: currentY },
-      { input: subjectText, left: margin + 8, top: currentY + (selfieMetadata.height || 0) + 10 }
-    )
-    currentY += (selfieMetadata.height || 0) + labelHeight + spacing
-    maxWidth = Math.max(maxWidth, (selfieMetadata.width || 0) + margin * 2)
-    Logger.debug('Added SUBJECT1-SELFIE element', { index: i + 1 })
-  }
-
-  // Add background section if custom
-  if (styleSettings?.background?.type === 'custom' && styleSettings?.background?.key) {
-    Logger.debug('Adding custom background section')
-    const bg = await downloadAssetAsBase64(styleSettings.background.key)
-    if (bg) {
-      const bgBuffer = Buffer.from(bg.base64, 'base64')
-      const bgSharp = sharp(bgBuffer)
-      const bgMetadata = await bgSharp.metadata()
-      Logger.debug('Background original dimensions', { width: bgMetadata.width, height: bgMetadata.height })
-      
-      const bgText = await createTextOverlayDynamic('BACKGROUND', 24, '#000000', 8)
-      
-      // DEBUG: write background to /tmp
-      try {
-        const dbgBgPath = `/tmp/composite-input-background.png`
-        const pngBuf = await bgSharp.png().toBuffer()
-        await fsWriteFile(dbgBgPath, pngBuf)
-        Logger.debug('Wrote composite input background', { path: dbgBgPath })
-      } catch (e) {
-        Logger.warn('Failed writing debug background to /tmp', { error: e instanceof Error ? e.message : String(e) })
-      }
-      
-      compositeElements.push(
-        { input: await bgSharp.png().toBuffer(), left: margin, top: currentY },
-        { input: bgText, left: margin + 8, top: currentY + (bgMetadata.height || 0) + 10 }
-      )
-      currentY += (bgMetadata.height || 0) + labelHeight + spacing
-      maxWidth = Math.max(maxWidth, (bgMetadata.width || 0) + margin * 2)
-      Logger.debug('Added BACKGROUND position', { y: currentY - (bgMetadata.height || 0) - labelHeight - spacing })
-    }
-  }
-  
-  // Add logo section if included
-  if (styleSettings?.branding?.type === 'include' && styleSettings?.branding?.logoKey) {
-    Logger.debug('Adding logo section')
-    const logo = await downloadAssetAsBase64(styleSettings.branding.logoKey)
-    if (logo) {
-      const logoBuffer = Buffer.from(logo.base64, 'base64')
-      const logoSharp = sharp(logoBuffer)
-      const logoMetadata = await logoSharp.metadata()
-      Logger.debug('Logo original dimensions', { width: logoMetadata.width, height: logoMetadata.height })
-      
-      const logoText = await createTextOverlayDynamic('LOGO', 24, '#000000', 8)
-      
-      // DEBUG: write logo to /tmp
-      try {
-        const dbgLogoPath = `/tmp/composite-input-logo.png`
-        const pngBuf = await logoSharp.png().toBuffer()
-        await fsWriteFile(dbgLogoPath, pngBuf)
-        Logger.debug('Wrote composite input logo', { path: dbgLogoPath })
-      } catch (e) {
-        Logger.warn('Failed writing debug logo to /tmp', { error: e instanceof Error ? e.message : String(e) })
-      }
-      
-      compositeElements.push(
-        { input: await logoSharp.png().toBuffer(), left: margin, top: currentY },
-        { input: logoText, left: margin + 8, top: currentY + (logoMetadata.height || 0) + 10 }
-      )
-      currentY += (logoMetadata.height || 0) + labelHeight + spacing
-      maxWidth = Math.max(maxWidth, (logoMetadata.width || 0) + margin * 2)
-      Logger.debug('Added LOGO position', { y: currentY - (logoMetadata.height || 0) - labelHeight - spacing })
-    }
-  }
-  
-  // Calculate final canvas size
-  const compositeWidth = maxWidth
-  const compositeHeight = currentY + margin
-  
-  Logger.debug('Calculated canvas size', { width: compositeWidth, height: compositeHeight })
-  Logger.debug('Creating composite', { elements: compositeElements.length })
-  
-  const composite = sharp({
-    create: {
-      width: compositeWidth,
-      height: compositeHeight,
-      channels: 4,
-      background: { r: 255, g: 255, b: 255, alpha: 1 }
-    }
-  }).png().composite(compositeElements)
-  
-  // Generate final composite
-  const compositeBuffer = await composite.toBuffer()
-  const compositeBase64 = compositeBuffer.toString('base64')
-  
-  Logger.debug('Composite image created', { sizeChars: compositeBase64.length })
-  Logger.debug('Composite buffer size', { bytes: compositeBuffer.length })
-  
-  return {
-    mimeType: 'image/png',
-    base64: compositeBase64
-  }
-}
-
-// Helper to create a padded text overlay using an SVG with dynamic width
-async function createTextOverlayDynamic(text: string, fontSize: number, color: string, padX = 8): Promise<Buffer> {
-  // Rough text width estimate: characters * fontSize * factor
-  const factor = 0.6
-  const textWidth = Math.max(100, Math.ceil(text.length * fontSize * factor))
-  const width = textWidth + padX * 2
-  const height = Math.max(28, Math.ceil(fontSize + 16))
-  const cx = Math.floor(width / 2)
-  const cy = Math.floor(height / 2)
-  const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="${width}" height="${height}" fill="rgba(255,255,255,0.9)" stroke="${color}" stroke-width="2" rx="5"/>
-      <text x="${cx}" y="${cy}" font-family="Arial, sans-serif" font-size="${fontSize}" fill="${color}" text-anchor="middle" dominant-baseline="middle">${text}</text>
-    </svg>
-  `
-  return await sharp(Buffer.from(svg)).png().toBuffer()
-}
-
-// moved to '@/lib/ai/promptBuilder'
-
-async function generateWithGemini(
-  prompt: string,
-  images: Array<{ mimeType: string; base64: string }>,
-  aspectRatio?: string
-): Promise<Buffer[]> {
-  void aspectRatio
-  let projectId = Env.string('GOOGLE_PROJECT_ID', '')
-  const location = Env.string('GOOGLE_LOCATION', 'us-central1') // Default to US for reliability
-
-  // If project ID not explicitly set, try to extract it from service account JSON
-  if (!projectId) {
-    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
-    if (credentialsPath) {
-      try {
-        const credentialsContent = await fsReadFile(credentialsPath, 'utf-8')
-        const credentials = JSON.parse(credentialsContent) as { project_id?: string }
-        if (credentials.project_id) {
-          projectId = credentials.project_id
-          Logger.debug('Extracted project ID from service account credentials', { projectId, credentialsPath })
-        }
-      } catch (error) {
-        Logger.warn('Failed to read project ID from service account credentials', { 
-          credentialsPath, 
-          error: error instanceof Error ? error.message : String(error) 
-        })
-      }
-    }
-  }
-
-  if (!projectId) {
-    throw new Error('GOOGLE_PROJECT_ID is not set in environment and could not be extracted from GOOGLE_APPLICATION_CREDENTIALS. Please set GOOGLE_PROJECT_ID in your .env file or deployment environment variables.')
-  }
-
-  const vertexAI = new VertexAI({ project: projectId, location });
-
-  const model = vertexAI.getGenerativeModel({
-    model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash'),
-  });
-
-  // Prepare contents with explicit types
-  const contents: Content[] = [{
-    role: 'user',
-    parts: [
-      { text: prompt },
-      ...images.map((img): Part => ({
-        inlineData: { mimeType: img.mimeType, data: img.base64 }
-      }))
-    ]
-  }];
-
-  // Generate without generationConfig if no params
-  const response: GenerateContentResult = await model.generateContent({ contents });
-
-  // Access candidates safely
-  const parts = response.response.candidates?.[0]?.content?.parts ?? [];
-  const out: Buffer[] = [];
-  for (const part of parts) {
-    if (part.inlineData?.data) {
-      out.push(Buffer.from(part.inlineData.data, 'base64'));
-    }
-  }
-  return out;
-}
-
-async function uploadGeneratedImagesToS3(images: Buffer[], personId: string, generationId: string, firstName?: string): Promise<string[]> {
-  const uploadedKeys: string[] = []
-  
-  // Get person's firstName if not provided
-  let personFirstName = firstName
-  if (!personFirstName) {
-    const person = await prisma.person.findUnique({
-      where: { id: personId },
-      select: { firstName: true }
-    })
-    personFirstName = person?.firstName || 'unknown'
-  }
-  const sanitizedFirstName = sanitizeNameForS3(personFirstName)
-  
-  for (let i = 0; i < images.length; i++) {
-    const image = images[i]
-    // Relative key (without folder prefix) - stored in database
-    // Format: generations/{personId}-{firstName}/{generationId}/variation-{i}.png
-    const relativeKey = `generations/${personId}-${sanitizedFirstName}/${generationId}/variation-${i + 1}.png`
-    // Full S3 key (with folder prefix if configured)
-    const s3Key = getS3Key(relativeKey)
-    
-    try {
-      await s3Client.send(new PutObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: s3Key,
-        Body: image,
-        ContentType: 'image/png',
-      }))
-      // Store relative key in database (without folder prefix)
-      uploadedKeys.push(relativeKey)
-    } catch (error) {
-      Logger.error('Failed to upload image', { index: i + 1, error: error instanceof Error ? error.message : String(error) })
-      throw new Error(`Failed to upload generated image ${i + 1}`)
-    }
-  }
-  
-  return uploadedKeys
+  return value as Record<string, unknown>
 }
 
 export default imageGenerationWorker

@@ -1,11 +1,32 @@
 import { PhotoStyleSettings } from '@/types/photo-style'
-import type { StylePackage } from '../index'
+import type { ClientStylePackage } from '../index'
 import { generateBackgroundPrompt } from '../../backgrounds'
+import {
+  resolveShotType,
+  resolveFocalLength,
+  resolveAperture,
+  resolveLightingQuality,
+  resolveShutterSpeed,
+  getLightingDirectionLabel
+} from '../camera-presets'
+import { computeCriticalOverrides } from '../critical-overrides'
+import {
+  resolveBodyAngle,
+  resolveHeadPosition,
+  resolveShoulderPosition,
+  resolveWeightDistribution,
+  resolveArmPosition,
+  resolveSittingPose,
+  CHIN_TECHNIQUE_NOTE,
+  getExpressionLabel
+} from '../pose-presets'
+import { applyStandardPreset, getDefaultPresetSettings } from '../standard-settings'
 
-const NO_TOP_COVER_DETAILS = new Set(['t-shirt', 'hoodie', 'polo', 'button-down'])
+const FREE_PRESET_ID = 'corporate-headshot' as const
+const FREE_PRESET_DEFAULTS = getDefaultPresetSettings(FREE_PRESET_ID)
 
-// Default settings
 const DEFAULTS = {
+  ...FREE_PRESET_DEFAULTS,
   background: { type: 'neutral' as const, color: '#f2f2f2' },
   branding: { type: 'exclude' as const },
   clothing: { style: 'startup' as const, details: 't-shirt' },
@@ -18,304 +39,421 @@ const DEFAULTS = {
       bottom: '#ea1010'
     }
   },
-  shotType: { type: 'headshot' as const },
-  expression: { type: 'happy' as const }
+  expression: { type: 'happy' as const },
+  subjectCount: '1' as const,
+  usageContext: 'general' as const
 }
 
-/**
- * Helper to get value or default, handling 'user-choice' as undefined
- * Used only in promptBuilder to resolve settings before building prompt
- */
+type NestedRecord = Record<string, unknown>;
+
+const isNestedRecord = (value: unknown): value is NestedRecord =>
+  typeof value === 'object' && value !== null;
+
+const setPath = (obj: NestedRecord, path: string, value: unknown): void => {
+  const segments = path.split('.')
+  let current: NestedRecord = obj
+  for (let i = 0; i < segments.length - 1; i += 1) {
+    const segment = segments[i]
+    const next = current[segment]
+    if (!isNestedRecord(next)) {
+      const child: NestedRecord = {}
+      current[segment] = child
+      current = child
+    } else {
+      current = next
+    }
+  }
+  current[segments[segments.length - 1]] = value
+}
+
+const valuesEqual = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b)
+
 function getValueOrDefault<T>(value: T | undefined | { type?: string }, defaultValue: T): T {
   if (!value) return defaultValue
-  
   return value as T
 }
 
-/**
- * Build the prompt step by step based on settings
- * Assumes all values are already resolved (no user-choice, defaults applied)
- */
 function buildPrompt(settings: PhotoStyleSettings): string {
-  // Initialize prompt structure
-  const sceneEnv: Record<string, unknown> = {}
-  const scene: Record<string, unknown> = { environment: sceneEnv }
-  const subject: Record<string, unknown> = {
-    type: 'subject from the attached selfies. There are multiple selfies attached from the same subject from different positions. The selfies are labeled subject1-selfiex, where x is the sequence number. Keep as much as possible specific characteristics of the subject, like spots, wrinkles, pores, etc. Optimise for a realistic representation based on the selfies, maintaining the facial structure, identity, and key features of the input images.',
-    pose: {}
-  }
-  const framing_composition: Record<string, unknown> = {}
-  const camera: Record<string, unknown> = {}
-  const lighting: Record<string, unknown> = {}
-  const rendering_intent: Record<string, unknown> = {}
+  const { preset, settings: effectiveSettings } = applyStandardPreset(
+    settings.presetId || freepackage.defaultPresetId,
+    settings
+  )
+  const presetDefaults = getDefaultPresetSettings(preset.id)
 
-  // Precompute shot type for downstream logic
-  const isFullBody = settings.shotType?.type === 'full-body'
-  const isMidChest = settings.shotType?.type === 'midchest'
-  const shotType = settings.shotType
-  const clothingColors = settings.clothingColors
-  const clothing = settings.clothing
-  const clothingStyle = clothing?.style
-  const clothingDetails = clothing?.details || DEFAULTS.clothing.details
-  const clothingDetailsLower = clothingDetails.toLowerCase()
-  const isBusiness = clothingStyle === 'business'
-  const isBusinessFormal = isBusiness && clothingDetailsLower === 'formal'
-  const isBusinessCasual = isBusiness && clothingDetailsLower === 'casual'
-  const showShoes = isFullBody && clothingColors?.colors?.shoes
-  const showTrousers = (isFullBody || isMidChest) && clothingColors?.colors?.bottom
-  
-
-  // Step 1: Background
-  const background = settings.background
-  if (background && background.type) {
-    const bgPrompt = generateBackgroundPrompt(background)
-    Object.assign(sceneEnv, bgPrompt)
-  }
-
-  // Step 2: Clothing
-  if (clothing && clothing.style) {
-
-    // Encode business attire directly into wardrobe details
-    const derivedDetails = isBusinessFormal
-      ? 'formal suit with dress shirt and tie'
-      : isBusinessCasual
-        ? 'business casual outfit, over an elegant t-shirt as a base layer, no tie'
-        : clothingDetails
-
-    const wardrobe: Record<string, unknown> = {
-      style: clothingStyle,
-      details: derivedDetails
-    }
- 
-     // Add accessories if provided
-     if (clothing.accessories && Array.isArray(clothing.accessories) && clothing.accessories.length > 0) {
-       wardrobe.accessories = clothing.accessories
-     }
- 
-
-     // Step 2a: Clothing Colors
-     
-     if (clothingColors && clothingColors.type === 'predefined' && clothingColors.colors) {
-       const colors = clothingColors.colors
-       const colorParts: string[] = []
-    
-       let includeTopCover = Boolean(colors.topCover) && !NO_TOP_COVER_DETAILS.has(clothingDetailsLower)
-       if (!isBusiness) {
-         // Business casual: prefer no top cover layer
-         includeTopCover = false
-       } else {
-         includeTopCover = includeTopCover || Boolean(colors.topCover)
-       }
-       if (includeTopCover && colors.topCover) {
-         colorParts.push(`top cover (jacket, blazer, etc.): ${colors.topCover} color`)
-       }
- 
-       // Top base color
-       if (colors.topBase) {
-         colorParts.push(`base layer: ${colors.topBase} color`)         
-       }
- 
-       // Bottom color
-       if (showTrousers) {
-         colorParts.push(`The trousers are in ${colors.bottom} color`)
-       }
- 
-       // Shoes color (only relevant for full body shots - not visible in headshot/midchest)
-       if (showShoes) {
-         colorParts.push(`The shoes are in ${colors.shoes} color`)
-       }
- 
-       if (colorParts.length > 0) {
-         wardrobe.color_palette = colorParts
-       }
-     }
- 
-     subject.wardrobe = wardrobe
- 
-     // Pose description handled in shot type section
-   }
-
-  // Step 3: Branding
-  const branding = settings.branding
-  const brandingType = branding?.type
-  const brandingPosition = branding?.position
-
-  if (brandingType === 'include') {
-    let rules: string
-    if (brandingPosition === 'background') {
-      rules = 'Place the provided brand logo once as a framed element on a background wall only, aligned with the wall perspective. Do not place on the subject, floors, windows, or floating in space. Keep original colors and aspect ratio.'
-    } else if (brandingPosition === 'elements') {
-      rules = 'Place the provided brand logo once on a plausible scene element only, such as: a coffee mug label, a laptop sticker, a notebook cover, a standing banner flag, a signboard, or a door plaque. The element must be grounded in the scene (on a desk/floor/wall) and the logo must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.'
-    } else {
-      // Default: clothing
-      const clothingStyleLower = (settings.clothing?.style || '').toLowerCase()
-
-      rules = 'The base garment features a brand logo from the attached image.'
-      if (isBusinessFormal || clothingStyleLower.includes('black tie')) {
-        rules += 'Put the logo on the visible base shirt only (not on the jacket), positioned on the upper-right chest where a shirt pocket would be. '
-      } else {
-        rules += 'Place the provided brand logo exactly once on the center chest area of the base garment (t-shirt, hoodie, polo, button down).'
+  const overrides: Record<string, unknown> = {}
+  const payload: NestedRecord = {
+    scene: {
+      environment: {
+        location_type: preset.defaults.environment.description,
+        distance_from_background_ft: preset.defaults.environment.distanceFromSubjectFt ?? 6,
+        notes: preset.defaults.environment.notes ?? []
       }
-      rules += ' Do not place the logo on outer layers (jackets/coats), background, walls, floors, signs, accessories, or skin. Do not create patterns or duplicates. Keep original aspect ratio and colors; no stylization or warping. The logo size should be modest and proportional to the garment.'
-    }
-    subject.branding_rules = rules
-  } else if (brandingType === 'exclude') {
-    sceneEnv.branding = 'no brand marks'
-  }
-
- 
-
-  // Step 4: Expression
-  const expression = settings.expression
-  if (expression && expression.type) {
-    const expressionMap: Record<string, string> = {
-      professional: 'professional, approachable expression with a subtle smile',
-      friendly: 'friendly warm smile',
-      serious: 'serious neutral expression',
-      confident: 'confident slight smile',
-      happy: 'happy smile',
-      sad: 'subtle sad expression',
-      neutral: 'neutral expression',
-      thoughtful: 'thoughtful look'
-    }
-    const expressionDesc = expressionMap[expression.type] || 'neutral expression'
-    const poseObj = subject.pose as Record<string, unknown>
-    subject.pose = {
-      ...poseObj,
-      expression: expressionDesc
-    }
-  }
-
-  // Step 5: Shot Type
-  
-  if (shotType && shotType.type) {
-    if (shotType.type === 'headshot') {
-      framing_composition.shot_type = 'head-and-shoulders portrait, with ample headroom and negative space above their head, ensuring the top of their head is not cropped'
-    } else if (shotType.type === 'midchest') {
-      framing_composition.shot_type = 'mid-chest portrait, showing from waist up with positive space around the subject'
-    } else if (shotType.type === 'full-body') {
-      framing_composition.shot_type = 'full body portrait, showing the complete subject from head to toe; include the entire body with feet fully visible, no cropping at ankles or knees; keep a bit of floor visible beneath the shoes'
-      camera.lens = { focal_length_mm: 35, type: 'prime', character: 'neutral rendering, low distortion' }
-      framing_composition.composition_rules = 'Frame the subject head-to-toe within a vertical canvas; maintain comfortable headroom and footroom; do not crop any part of the body; step back to capture the entire person if needed.'
-    } else {
-      // Default fallback
-      framing_composition.shot_type = 'head-and-shoulders portrait, with ample headroom and negative space above their head, ensuring the top of their head is not cropped'
-    }
-
-    // Pose description based on branding on clothing and clothing style
-    if (brandingType === 'include' && (!brandingPosition || brandingPosition === 'clothing')) {
-      const clothingStyleLower = (settings.clothing?.style || '').toLowerCase()
-      
-      const poseObj2 = subject.pose as Record<string, unknown>
-      if (clothingStyleLower.includes('business') || clothingStyleLower.includes('black tie')) {
-        subject.pose = {
-          ...poseObj2,
-          description: 'Subject is elegantly opening the jacket to proudly reveal the logo on the base garment beneath. The jacket should not open fully, it is stll buttoned closed on the bottom, to tastefully display the logo'
-        }
-      } else if (clothingStyleLower.includes('startup')) {
-        subject.pose = {
-          ...poseObj2,
-          description: 'The subject has both hands gently pointing towards the logo on the base garment (t-shirt/hoodie/polo/button down) to proudly draw attention in a natural, professional manner'
-        }
+    },
+    subject: {
+      identity: {
+        source: 'composite selfies',
+        immutable_features: 'The images in the selfies show the exact same individual. Your primary task is to synthesize a single, photorealistic, and coherent identity from these images. Do not average or blend features in a way that creates a new person. Pay special attention to facial features, and skin tone. Use the selfies to understand the 3D structure of the face from different angles. The final generated person must be clearly identifiable as the person. Do not alter the fundamental facial structure, eye color, eye shape, nose shape, or unique skin details like moles, scars, or freckles visible in the source selfies.'
+      },
+      pose: {
+        body_angle: '',
+        head_position: '',
+        chin_technique: CHIN_TECHNIQUE_NOTE,
+        shoulder_position: '',
+        weight_distribution: '',
+        arms: '',
+        sitting_position: undefined,
+        expression: getExpressionLabel(presetDefaults.expression?.type)
+      },
+      wardrobe: {},
+      branding: {}
+    },
+    framing: {
+      shot_type: '',
+      crop_points: '',
+      orientation: 'vertical',
+      composition: preset.defaults.composition.framingNotes?.[0] ?? 'centered',
+      headroom_percent: preset.defaults.composition.headroomPercent ?? 12,
+      shows: ''
+    },
+    camera: {
+      sensor: 'full-frame mirrorless',
+      lens: {
+        focal_length_mm: 85,
+        type: 'prime',
+        character: 'Portrait standard focal length with flattering compression and separation.'
+      },
+      settings: {
+        aperture: 'f/4.0',
+        shutter_speed: '1/200',
+        iso: preset.defaults.iso ?? 100,
+        white_balance: '5500K',
+        focus: 'eye-AF'
       }
+    },
+    lighting: {
+      quality: 'Soft Diffused',
+      direction: getLightingDirectionLabel(preset.defaults.lighting.direction),
+      setup: preset.defaults.lighting.setupNotes ?? ['Softbox (3x4ft or larger) + reflector opposite'],
+      color_temperature: preset.defaults.lighting.colorTempKelvin
+        ? `${preset.defaults.lighting.colorTempKelvin}K`
+        : '5500K',
+      description: 'Flattering professional lighting with gentle transitions and minimal harsh shadows.'
+    },
+    rendering: {
+      texture: 'retain fabric weave and hair detail and facial features like wrinkles, freckles, moles, etc.',
+      cleanliness: 'no text, labels, borders, or UI artifacts',
+      framing: 'the original selfies of the subject should not be shown in the final image',
+      quality: 'high resolution, print-ready'
     }
+  }
+
+  setPath(payload, 'subject.identity.reference_roles', [
+    {
+      reference: 'subject1-selfie2',
+      label: 'Reference – Main Likeness',
+      instructions: [
+        'From all provided selfies, choose the shot that best matches the requested pose and lighting as the primary likeness. Use the remaining selfies only to reinforce 3D structure and facial detail, and do not display the raw selfies in the final image.'
+      ]
+    },
+    { reference: 'subject1-selfie4', label: 'Reference – Supporting Angle', instructions: [] },
+    { reference: 'subject1-selfie3', label: 'Reference – Supporting Angle', instructions: [] },
+    { reference: 'subject1-selfie5', label: 'Reference – Supporting Expression', instructions: [] },
+    { reference: 'subject1-selfie1', label: 'Reference – Supporting Frontal', instructions: [] }
+  ])
+
+  setPath(payload, 'subject.identity.glasses_guidance', {
+    reflections: 'Study subject1-selfie2 and subject1-selfie3 for realistic lens reflections. Maintain visibility of the eyes while reproducing believable light behaviour on the glasses.'
+  })
+
+  setPath(payload, 'subject.identity.identity_guidelines', [
+    'All generated results must clearly depict the same individual from the provided selfies.',
+    'Prioritize natural, photorealistic rendering quality matching the supplied source imagery.',
+    'Integrate expression and lighting cues from supporting references without deviating from the core identity.'
+  ])
+
+  const presetShotConfig = resolveShotType(presetDefaults.shotType?.type)
+  const presetFocalConfig = resolveFocalLength(presetDefaults.focalLength as string | undefined)
+  const presetApertureConfig = resolveAperture(presetDefaults.aperture as string | undefined)
+  const presetLightingConfig = resolveLightingQuality(presetDefaults.lightingQuality as string | undefined)
+  const presetShutterConfig = resolveShutterSpeed(presetDefaults.shutterSpeed as string | undefined)
+  const presetHeadroomPercent = preset.defaults.composition.headroomPercent ?? 12
+  const presetBackgroundDistanceFt = preset.defaults.environment.distanceFromSubjectFt ?? 6
+  const shotTypeConfig = resolveShotType(effectiveSettings.shotType?.type)
+  const focalConfig = resolveFocalLength(effectiveSettings.focalLength as string | undefined)
+  const apertureConfig = resolveAperture(effectiveSettings.aperture as string | undefined)
+  const lightingConfig = resolveLightingQuality(effectiveSettings.lightingQuality as string | undefined)
+  const shutterConfig = resolveShutterSpeed(effectiveSettings.shutterSpeed as string | undefined)
+  const presetBodyConfig = resolveBodyAngle(presetDefaults.bodyAngle as string | undefined)
+  const presetHeadConfig = resolveHeadPosition(presetDefaults.headPosition as string | undefined)
+  const presetShoulderConfig = resolveShoulderPosition(presetDefaults.shoulderPosition as string | undefined)
+  const presetWeightConfig = resolveWeightDistribution(presetDefaults.weightDistribution as string | undefined)
+  const presetArmConfig = resolveArmPosition(presetDefaults.armPosition as string | undefined)
+  const presetSittingConfig =
+    presetDefaults.sittingPose && presetDefaults.sittingPose !== 'user-choice'
+      ? resolveSittingPose(presetDefaults.sittingPose as string | undefined)
+      : undefined
+
+  const activeBodyConfig = resolveBodyAngle(effectiveSettings.bodyAngle as string | undefined)
+  const activeHeadConfig = resolveHeadPosition(effectiveSettings.headPosition as string | undefined)
+  const activeShoulderConfig = resolveShoulderPosition(effectiveSettings.shoulderPosition as string | undefined)
+  const activeWeightConfig = resolveWeightDistribution(effectiveSettings.weightDistribution as string | undefined)
+  const hasActiveSitting =
+    effectiveSettings.sittingPose && effectiveSettings.sittingPose !== 'user-choice'
+  const activeSittingConfig = hasActiveSitting
+    ? resolveSittingPose(effectiveSettings.sittingPose as string | undefined)
+    : undefined
+
+  setPath(payload, 'subject.pose.body_angle', presetBodyConfig.description)
+  setPath(payload, 'subject.pose.head_position', presetHeadConfig.description)
+  setPath(payload, 'subject.pose.shoulder_position', presetShoulderConfig.description)
+  setPath(payload, 'subject.pose.weight_distribution', presetWeightConfig.description)
+  setPath(payload, 'subject.pose.arms', presetArmConfig.description)
+  setPath(payload, 'subject.pose.sitting_position', presetSittingConfig?.description)
+  setPath(payload, 'framing.shot_type', presetShotConfig.label)
+  setPath(payload, 'framing.crop_points', presetShotConfig.framingDescription)
+  setPath(payload, 'framing.shows', presetShotConfig.framingDescription)
+  setPath(payload, 'camera.lens', {
+    focal_length_mm: presetFocalConfig.mm,
+    type: presetFocalConfig.lensType,
+    character: presetFocalConfig.description
+  })
+  setPath(payload, 'camera.settings.aperture', presetApertureConfig.value)
+  setPath(payload, 'camera.settings.shutter_speed', presetShutterConfig.value)
+  setPath(payload, 'camera.settings.iso', preset.defaults.iso ?? 100)
+  setPath(payload, 'lighting.quality', presetLightingConfig.label)
+  setPath(payload, 'lighting.description', presetLightingConfig.description)
+
+  const applyOverride = (key: string, path: string, value: unknown, defaultValue: unknown) => {
+    setPath(payload, path, value)
+    if (!valuesEqual(value, defaultValue)) {
+      overrides[key] = value
+    }
+  }
+
+  applyOverride('shot_type', 'framing.shot_type', shotTypeConfig.label, presetShotConfig.label)
+  setPath(payload, 'framing.crop_points', shotTypeConfig.framingDescription)
+  setPath(payload, 'framing.shows', shotTypeConfig.framingDescription)
+  setPath(payload, 'subject.pose.body_angle', activeBodyConfig.description)
+  setPath(payload, 'subject.pose.head_position', activeHeadConfig.description)
+  setPath(payload, 'subject.pose.shoulder_position', activeShoulderConfig.description)
+  setPath(payload, 'subject.pose.weight_distribution', activeWeightConfig.description)
+  setPath(payload, 'subject.pose.arms', 'opening jacket to reveal logo on base shirt')
+  setPath(payload, 'subject.pose.sitting_position', activeSittingConfig?.description)
+  setPath(payload, 'subject.pose.expression', getExpressionLabel(effectiveSettings.expression?.type))
+  setPath(payload, 'subject.pose.description', 'Subject is elegantly opening the jacket to proudly reveal the logo on the base garment beneath.')
+
+  const clothing = effectiveSettings.clothing
+  const clothingStyle = clothing?.style || DEFAULTS.clothing.style
+  const clothingColors = effectiveSettings.clothingColors
+  const wardrobe: Record<string, unknown> = {
+    style: clothingStyle,
+    outer_layer: 'blazer or jacket (partially open)',
+    base_layer: 'elegant t-shirt with brand logo',
+    notes: 'no tie, logo visible on base shirt'
+  }
+  if (clothing?.accessories && Array.isArray(clothing.accessories) && clothing.accessories.length > 0) {
+    wardrobe.accessories = clothing.accessories
+  }
+  if (clothingColors && clothingColors.type === 'predefined' && clothingColors.colors) {
+    const palette: Record<string, string> = {}
+    if (clothingColors.colors.topBase) palette.top_base = clothingColors.colors.topBase
+    if (clothingColors.colors.topCover) palette.top_cover = clothingColors.colors.topCover
+    if (clothingColors.colors.bottom) palette.bottom = clothingColors.colors.bottom
+    if (clothingColors.colors.shoes) palette.shoes = clothingColors.colors.shoes
+    if (Object.keys(palette).length > 0) {
+      wardrobe.color_palette = palette
+    }
+  }
+  setPath(payload, 'subject.wardrobe', wardrobe)
+
+  const branding = effectiveSettings.branding
+  if (branding?.type === 'include' && branding.logoKey) {
+    setPath(payload, 'subject.branding', {
+      logo_source: 'attached brand image',
+      placement: 'centrally on the base shirt, on the chest area',
+      size: 'modest, proportional to garment',
+      rules: [
+        'Base shirt only - not on jacket',
+        'No duplication or patterns',
+        'Maintain original aspect ratio and colors',
+        'No stylization or warping'
+      ]
+    })
   } else {
-    // Default when missing
-    framing_composition.shot_type = 'head-and-shoulders portrait, with ample headroom and negative space above their head, ensuring the top of their head is not cropped'
+    setPath(payload, 'subject.branding', {
+      rules: ['no brand marks visible']
+    })
   }
 
-  // Step 6: Framing defaults
-  framing_composition.orientation = 'vertical'
-  framing_composition.background_separation = 'soft'
+  const defaultEnvironmentLocation = preset.defaults.environment.description
+  let environmentLocation = defaultEnvironmentLocation
+  let environmentDistance = presetBackgroundDistanceFt
+  let lightingContext = 'soft diffused studio lighting with reflector fill'
+  let isoValue = preset.defaults.iso ?? 100
+  let lightingSetup = preset.defaults.lighting.setupNotes ?? ['Softbox (3x4ft or larger) + reflector opposite']
+  let lightingFill: string | undefined
+  let whiteBalance = '5500K'
 
-  // Step 7: Camera settings
-  camera.sensor = 'full-frame mirrorless'
-  if (!camera.lens) {
-    camera.lens = { focal_length_mm: 85, type: 'prime', character: 'neutral rendering, low distortion' }
-  }
-  camera.settings = { 
-    aperture: 'f/2.8', 
-    shutter_speed: '1/200', 
-    iso: 200, 
-    white_balance: 'auto', 
-    focus: 'eye-AF' 
-  }
-
-  // Step 8: Lighting
-  lighting.quality = 'soft, natural'
-
-  // Step 9: Rendering intent
-  rendering_intent.texture = 'retain fabric weave and hair strands'
-  rendering_intent.cleanliness = 'Do not include any interface overlays, labels, or text such as "BACKGROUND", "SUBJECT", or "LOGO" from the reference composites. The final image must look natural with no UI markings.'
-
-  // Step 10: Build final structured object
-  const structured: Record<string, unknown> = {}
-  
-  const hasKeys = (obj: unknown): boolean => 
-    typeof obj === 'object' && obj !== null && Object.keys(obj).length > 0
-
-  if (hasKeys(scene.environment) || hasKeys(scene)) {
-    structured.scene = { ...scene }
-  }
-  if (hasKeys(subject)) {
-    structured.subject = { ...subject }
-  }
-  if (hasKeys(framing_composition)) {
-    structured.framing_composition = { ...framing_composition }
-  }
-  if (hasKeys(camera)) {
-    structured.camera = { ...camera }
-  }
-  if (hasKeys(lighting)) {
-    structured.lighting = { ...lighting }
-  }
-  if (hasKeys(rendering_intent)) {
-    structured.rendering_intent = { ...rendering_intent }
+  const background = effectiveSettings.background
+  if (background) {
+    const bgPrompt = generateBackgroundPrompt(background)
+    if (bgPrompt.location_type) {
+      environmentLocation = bgPrompt.location_type
+    }
+    if (bgPrompt.description) {
+      setPath(payload, 'scene.environment.description', bgPrompt.description)
+    }
+    if (bgPrompt.color_palette) {
+      setPath(payload, 'scene.environment.color_palette', bgPrompt.color_palette)
+    }
+    if (bgPrompt.branding) {
+      setPath(payload, 'scene.environment.branding', bgPrompt.branding)
+    }
   }
 
-  // Step 11: Build final prompt string
-  const preface = 'Follow the JSON below to generate a professional photo. Only use specified fields; otherwise use sensible defaults.'
-  return preface + '\n' + JSON.stringify(structured, null, 2) + '\n[PACKAGE: freepackage]'
+  if (
+    background?.type === 'tropical-beach' ||
+    (typeof background?.prompt === 'string' && background.prompt.toLowerCase().includes('tropical'))
+  ) {
+    environmentDistance = 8
+    lightingContext = 'natural golden hour light mimicking studio quality'
+    isoValue = 200
+    lightingSetup = ['natural golden hour mimicking studio softbox']
+    lightingFill = 'natural reflector (sand/water)'
+    whiteBalance = '5500K'
+  }
+
+  applyOverride('environment', 'scene.environment.location_type', environmentLocation, defaultEnvironmentLocation)
+  setPath(payload, 'scene.environment.lighting_context', lightingContext)
+
+  const criticalOverrides = computeCriticalOverrides({
+    presetId: preset.id,
+    shotType: shotTypeConfig.id,
+    subjectCount: effectiveSettings.subjectCount,
+    usageContext: effectiveSettings.usageContext,
+    baseBackgroundDistanceFt: environmentDistance
+  })
+
+  const finalFocalConfig = criticalOverrides.focalLength ?? focalConfig
+  setPath(payload, 'camera.lens', {
+    focal_length_mm: finalFocalConfig.mm,
+    type: finalFocalConfig.lensType,
+    character: finalFocalConfig.description
+  })
+  if (criticalOverrides.focalLength && criticalOverrides.focalLength.mm !== focalConfig.mm) {
+    overrides.focal_length_mm = criticalOverrides.focalLength.mm
+  }
+
+  const finalApertureConfig = criticalOverrides.aperture ?? apertureConfig
+  setPath(payload, 'camera.settings.aperture', finalApertureConfig.value)
+  if (criticalOverrides.aperture && criticalOverrides.aperture.value !== apertureConfig.value) {
+    overrides.aperture = criticalOverrides.aperture.value
+  }
+  setPath(payload, 'camera.settings.shutter_speed', shutterConfig.value)
+
+  if (criticalOverrides.subjectScalePercent !== undefined) {
+    setPath(payload, 'framing.subject_scale_percent', criticalOverrides.subjectScalePercent)
+    overrides.subject_scale_percent = criticalOverrides.subjectScalePercent
+  }
+
+  const finalHeadroomPercent = criticalOverrides.headroomPercent ?? presetHeadroomPercent
+  applyOverride('headroom_percent', 'framing.headroom_percent', finalHeadroomPercent, presetHeadroomPercent)
+
+  environmentDistance = criticalOverrides.backgroundDistanceFt ?? environmentDistance
+  applyOverride(
+    'background_distance_ft',
+    'scene.environment.distance_from_background_ft',
+    environmentDistance,
+    presetBackgroundDistanceFt
+  )
+
+  if (lightingFill) {
+    setPath(payload, 'lighting.fill', lightingFill)
+  }
+  setPath(payload, 'lighting.setup', lightingSetup)
+  setPath(payload, 'lighting.color_temperature', whiteBalance)
+  setPath(payload, 'lighting.description', 'flattering with gentle transitions, minimal harsh shadows')
+  setPath(payload, 'lighting.quality', lightingConfig.label)
+  setPath(payload, 'lighting.direction', getLightingDirectionLabel(preset.defaults.lighting.direction))
+
+  setPath(payload, 'camera.settings.iso', isoValue)
+  setPath(payload, 'camera.settings.white_balance', whiteBalance)
+
+  setPath(payload, 'framing.composition', 'centered')
+  setPath(payload, 'framing.aspect_ratio', preset.defaults.aspectRatio)
+
+  return JSON.stringify(payload, null, 2)
 }
 
-export const freepackage: StylePackage = {
+export const freepackage: ClientStylePackage = {
   id: 'freepackage',
   label: 'Free Package',
   version: 1,
-  visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'shotType', 'expression'],
+  visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'shotType', 'aspectRatio', 'focalLength', 'aperture', 'lightingQuality', 'shutterSpeed', 'bodyAngle', 'headPosition', 'shoulderPosition', 'weightDistribution', 'armPosition', 'sittingPose', 'expression'],
   availableBackgrounds: ['office', 'tropical-beach', 'busy-city', 'neutral', 'gradient', 'custom'],
   defaultSettings: DEFAULTS,
+  defaultPresetId: FREE_PRESET_ID,
   promptBuilder: (settings, _ctx) => {
     void _ctx
-    // Apply defaults to any missing values
-    const resolvedSettings: PhotoStyleSettings = {
+  const resolvedSittingPose =
+    settings.sittingPose && settings.sittingPose !== 'user-choice'
+      ? resolveSittingPose(settings.sittingPose as string | undefined).id
+      : undefined
+
+  const resolvedSettingsBase: PhotoStyleSettings = {
+      presetId: settings.presetId || freepackage.defaultPresetId,
       background: getValueOrDefault(settings.background, DEFAULTS.background),
       branding: getValueOrDefault(settings.branding, DEFAULTS.branding),
       clothing: getValueOrDefault(settings.clothing, DEFAULTS.clothing),
       clothingColors: getValueOrDefault(settings.clothingColors, DEFAULTS.clothingColors),
       shotType: getValueOrDefault(settings.shotType, DEFAULTS.shotType),
-      expression: getValueOrDefault(settings.expression, DEFAULTS.expression)
+      aspectRatio: settings.aspectRatio || DEFAULTS.aspectRatio,
+      focalLength: resolveFocalLength(settings.focalLength as string | undefined).id,
+      aperture: resolveAperture(settings.aperture as string | undefined).id,
+      lightingQuality: resolveLightingQuality(settings.lightingQuality as string | undefined).id,
+      shutterSpeed: resolveShutterSpeed(settings.shutterSpeed as string | undefined).id,
+      bodyAngle: resolveBodyAngle(settings.bodyAngle as string | undefined).id,
+      headPosition: resolveHeadPosition(settings.headPosition as string | undefined).id,
+      shoulderPosition: resolveShoulderPosition(settings.shoulderPosition as string | undefined).id,
+      weightDistribution: resolveWeightDistribution(settings.weightDistribution as string | undefined).id,
+    armPosition: resolveArmPosition(settings.armPosition as string | undefined).id,
+      expression: getValueOrDefault(settings.expression, DEFAULTS.expression),
+      subjectCount: settings.subjectCount ?? DEFAULTS.subjectCount,
+      usageContext: settings.usageContext ?? DEFAULTS.usageContext
     }
 
-    // clothingColors are expected to be complete at this point
-
+  const resolvedSettings: PhotoStyleSettings = resolvedSittingPose
+    ? { ...resolvedSettingsBase, sittingPose: resolvedSittingPose }
+    : { ...resolvedSettingsBase }
     return buildPrompt(resolvedSettings)
   },
   persistenceAdapter: {
     serialize: (ui) => ({
       packageId: 'freepackage',
       version: 1,
+      presetId: ui.presetId ?? freepackage.defaultPresetId,
       background: ui.background,
       branding: ui.branding,
       clothing: ui.clothing,
       clothingColors: ui.clothingColors || { type: 'user-choice' },
       shotType: ui.shotType,
-      expression: ui.expression
+      aspectRatio: ui.aspectRatio ?? DEFAULTS.aspectRatio,
+      focalLength: ui.focalLength ?? DEFAULTS.focalLength,
+      aperture: ui.aperture ?? DEFAULTS.aperture,
+      lightingQuality: ui.lightingQuality ?? DEFAULTS.lightingQuality,
+      shutterSpeed: ui.shutterSpeed ?? DEFAULTS.shutterSpeed,
+      bodyAngle: ui.bodyAngle ?? DEFAULTS.bodyAngle,
+      headPosition: ui.headPosition ?? DEFAULTS.headPosition,
+      shoulderPosition: ui.shoulderPosition ?? DEFAULTS.shoulderPosition,
+      weightDistribution: ui.weightDistribution ?? DEFAULTS.weightDistribution,
+      armPosition: ui.armPosition ?? DEFAULTS.armPosition,
+      sittingPose: ui.sittingPose ?? DEFAULTS.sittingPose,
+      expression: ui.expression,
+      subjectCount: ui.subjectCount ?? DEFAULTS.subjectCount,
+      usageContext: ui.usageContext ?? DEFAULTS.usageContext
     }),
     deserialize: (raw) => {
       const r = raw as Record<string, unknown>
-
-      // Background
       const rawBg = r.background as unknown
       let background: PhotoStyleSettings['background']
       if (rawBg && typeof rawBg === 'object') {
@@ -327,7 +465,6 @@ export const freepackage: StylePackage = {
         background = { type: bgType, prompt: (r['backgroundPrompt'] as string) || undefined }
       }
 
-      // Branding
       const rb = r.branding as PhotoStyleSettings['branding'] | undefined
       const hasLogoKey = (b: unknown): b is { logoKey: string } =>
         typeof b === 'object' && b !== null && 'logoKey' in (b as Record<string, unknown>)
@@ -343,7 +480,6 @@ export const freepackage: StylePackage = {
         ? { type: brandingType, logoKey: rb.logoKey, position: rb.position }
         : { type: 'user-choice' }
 
-      // Clothing
       const rawClothing = r.clothing as PhotoStyleSettings['clothing'] | undefined
       const clothing: PhotoStyleSettings['clothing'] = rawClothing
         ? rawClothing.style === 'user-choice'
@@ -351,7 +487,6 @@ export const freepackage: StylePackage = {
           : rawClothing
         : DEFAULTS.clothing
 
-      // Clothing colors
       const rawClothingColors = r.clothingColors as PhotoStyleSettings['clothingColors'] | null | undefined
       let clothingColors: PhotoStyleSettings['clothingColors']
       if (rawClothingColors === null || rawClothingColors === undefined || !('clothingColors' in r)) {
@@ -370,11 +505,9 @@ export const freepackage: StylePackage = {
         }
       }
 
-      // Shot type
-      const shotType: PhotoStyleSettings['shotType'] = 
+      const shotType: PhotoStyleSettings['shotType'] =
         (r.shotType as PhotoStyleSettings['shotType']) || DEFAULTS.shotType
 
-      // Expression - migrate legacy 'professional' to 'neutral'
       const rawExpression = r.expression as PhotoStyleSettings['expression'] | undefined
       let expression: PhotoStyleSettings['expression']
       if (!rawExpression) {
@@ -391,7 +524,22 @@ export const freepackage: StylePackage = {
         clothing,
         clothingColors,
         shotType,
-        expression
+        presetId: (r.presetId as string) || freepackage.defaultPresetId,
+        aspectRatio: (r.aspectRatio as string) || DEFAULTS.aspectRatio,
+        focalLength: resolveFocalLength(r.focalLength as string | undefined).id,
+        aperture: resolveAperture(r.aperture as string | undefined).id,
+        lightingQuality: resolveLightingQuality(r.lightingQuality as string | undefined).id,
+        shutterSpeed: resolveShutterSpeed(r.shutterSpeed as string | undefined).id,
+        expression,
+        subjectCount:
+          typeof r.subjectCount === 'string' &&
+          ['1', '2-3', '4-8', '9+'].includes(r.subjectCount)
+            ? (r.subjectCount as PhotoStyleSettings['subjectCount'])
+            : DEFAULTS.subjectCount,
+        usageContext:
+          typeof r.usageContext === 'string' && ['general', 'social-media'].includes(r.usageContext)
+            ? (r.usageContext as PhotoStyleSettings['usageContext'])
+            : DEFAULTS.usageContext
       }
     }
   }

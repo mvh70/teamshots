@@ -6,6 +6,8 @@ import { sendWaitlistWelcomeEmail } from '@/lib/email';
 import { ok, badRequest, unauthorized, internal } from '@/lib/api-response';
 import { Logger } from '@/lib/logger';
 
+
+export const runtime = 'nodejs'
 const emailSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
   locale: z.enum(['en', 'es']).optional().default('en'),

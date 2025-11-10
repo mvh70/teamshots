@@ -863,6 +863,14 @@
     },
     "actions": {
       "uploadNew": "Take or Upload Selfie"
+    },
+    "infoBanner": {
+      "selected": "Selfies with a green check are included in your next generation.",
+      "recommendation": "For best results, select at least 3 selfies in different lighting and angles.",
+      "recommendationDetailed": "For the most realistic results, select at least 3 selfies in different lighting and angles. More variety usually improves quality."
+    },
+    "selectionHint": {
+      "text": "Select at least 2 selfies for best results."
     }
   },
   "generate": {
@@ -1103,9 +1111,10 @@
       "subtitle": "Configure each category as predefined or user choice",
       "legend": {
         "editable": "Editable sections highlight what you can customize.",
-        "locked": "Locked items use the preset settings.",
+        "locked": "Locked by the photo style settings.",
+        "lockedTeamSuffix": " as set by your team admin.",
         "editableChip": "Editable",
-        "lockedChip": "Locked by style",
+        "lockedChip": "Locked",
         "presetChip": "Preset active"
       },
       "status": {

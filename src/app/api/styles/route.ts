@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { createOrUpdateStyleServer, setActiveStyleServer } from './_service'
 
+
+export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()

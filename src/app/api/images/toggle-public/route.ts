@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { getSelfieBySequence, getGenerationBySequence } from '@/domain/access/image-access'
 import { prisma } from '@/lib/prisma'
 
+
+export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) {

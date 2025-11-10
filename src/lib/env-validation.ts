@@ -34,12 +34,9 @@ const envSchema = z.object({
   HETZNER_S3_SECRET_KEY: z.string().optional(),
   
   // Gemini AI
-  GEMINI_API_KEY: z.string().optional(),
-  AI_PROVIDER: z.string().optional(),
-  AI_MODEL: z.string().optional(),
   GEMINI_IMAGE_MODEL: z.string().optional(),
-  AI_TIMEOUT: z.string().optional(),
-  AI_MAX_RETRIES: z.string().optional(),
+  GEMINI_EVAL_MODEL: z.string().optional(),
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   
   // Stripe
   STRIPE_SECRET_KEY: z.string().optional(),

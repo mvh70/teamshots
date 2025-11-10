@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { migrateProCreditsToTeam } from '@/domain/credits/credits'
 
+
+export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()

@@ -10,6 +10,8 @@ import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
 
+
+export const runtime = 'nodejs'
 const s3Client = createS3Client()
 const BUCKET_NAME = getS3BucketName()
 

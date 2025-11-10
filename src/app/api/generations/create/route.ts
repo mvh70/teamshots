@@ -6,6 +6,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
+
+export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
 import { Env } from '@/lib/env'
 import { hasSufficientCredits, reserveCreditsForGeneration, getUserCreditBalance, getPersonCreditBalance, getEffectiveTeamCreditBalance } from '@/domain/credits/credits'
@@ -130,6 +132,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Selfies not found' }, { status: 404 })
     }
 
+    // Server-side fallback: if only one selfie resolved but the user has multiple selected selfies,
+    // merge them in so multi-selfie generations work even if client payload missed IDs
+    if (selfies.length === 1) {
+      try {
+        const moreSelected = await prisma.selfie.findMany({
+          where: { personId: selfies[0].personId, selected: true },
+          select: { id: true, key: true }
+        })
+        if (moreSelected.length > 1) {
+          const existingIds = new Set(selfies.map(s => s.id))
+          for (const s of moreSelected) {
+            if (!existingIds.has(s.id)) {
+              // Use the same person as the already-resolved selfie to avoid early references
+              selfies.push({ id: s.id, key: s.key, personId: selfies[0].personId, person: selfies[0].person })
+            }
+          }
+        }
+      } catch {}
+    }
+
     // Enforce same person and ownership/team authorization
     const firstPersonId = selfies[0].personId
     const allSamePerson = selfies.every(s => s.personId === firstPersonId)
@@ -207,12 +229,12 @@ export async function POST(request: NextRequest) {
       if (enforcedCreditSource === 'team' && ownerPerson.teamId) {
         // Team member using team credits - check team admin's package ownership
         // Fetch team to get adminId
-        const team = await prisma.team.findUnique({
+          const team = await prisma.team.findUnique({
           where: { id: ownerPerson.teamId },
-          select: { adminId: true }
-        })
-        if (team?.adminId) {
-          userIdToCheck = team.adminId
+            select: { adminId: true }
+          })
+          if (team?.adminId) {
+            userIdToCheck = team.adminId
         }
       }
       
@@ -542,7 +564,12 @@ export async function POST(request: NextRequest) {
     // Serialize style settings with package info
     const finalPackageId = (finalStyleSettings?.['packageId'] as string) || requestedPackageId || 'headshot1'
     const pkg = getPackageConfig(finalPackageId)
-    const serializedStyleSettings = pkg.persistenceAdapter.serialize(finalStyleSettings)
+    // Persist style settings and also embed selected selfie keys for future regenerations
+    const serializedStyleSettingsBase = pkg.persistenceAdapter.serialize(finalStyleSettings)
+    const serializedStyleSettings = {
+      ...serializedStyleSettingsBase,
+      inputSelfies: { keys: selfieS3Keys }
+    } as Record<string, unknown>
 
     // Create generation record
     const generation = await prisma.generation.create({
@@ -598,13 +625,27 @@ export async function POST(request: NextRequest) {
     // Lazy import to avoid build-time issues
     const { imageGenerationQueue } = await import('@/queue')
     
+    // Default to the keys from the current selection
+    let jobSelfieS3Keys = selfieS3Keys
+
+    // If this is a regeneration and the request did not carry multiple selfies, try to reuse stored keys from the original
+    if (isRegeneration && originalGenerationId && (!Array.isArray(jobSelfieS3Keys) || jobSelfieS3Keys.length <= 1)) {
+      try {
+        const originalGen = await prisma.generation.findUnique({ where: { id: originalGenerationId }, select: { styleSettings: true } })
+        const storedKeys = (originalGen?.styleSettings as unknown as { inputSelfies?: { keys?: string[] } } | null)?.inputSelfies?.keys
+        if (Array.isArray(storedKeys) && storedKeys.length > 1) {
+          jobSelfieS3Keys = storedKeys
+        }
+      } catch {}
+    }
+
     const job = await imageGenerationQueue.add('generate', {
       generationId: generation.id,
       personId: primarySelfie.personId,
       userId: primarySelfie.person.userId || undefined,
       selfieId: primarySelfie.id,
       selfieS3Key: primarySelfie.key,
-      selfieS3Keys: selfieS3Keys,
+      selfieS3Keys: jobSelfieS3Keys,
       styleSettings: serializedStyleSettings,
       prompt,
       providerOptions: {

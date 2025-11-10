@@ -4,6 +4,8 @@ import { SecurityLogger } from '@/lib/security-logger'
 import { auth } from '@/auth'
 import { Logger } from '@/lib/logger'
 
+
+export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     // Check if user is authenticated

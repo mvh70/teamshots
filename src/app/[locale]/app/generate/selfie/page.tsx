@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { Link } from '@/i18n/routing'
 import dynamic from 'next/dynamic'
-import UploadCard from '../../generations/components/UploadCard'
+import SelfieGallery from '@/components/generation/SelfieGallery'
+import SelfieSelectionBanner from '@/components/generation/SelfieSelectionBanner'
 import { jsonFetcher } from '@/lib/fetcher'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
@@ -64,29 +65,6 @@ export default function SelfieSelectionPage() {
     window.location.href = `/app/generate/start?key=${encodeURIComponent(selfieKey)}&type=${generationType}`
   }
 
-  const handleSelfieSelect = (selfieKey: string) => {
-    // Get generation type from URL parameters
-    const urlParams = new URLSearchParams(window.location.search)
-    const generationType = urlParams.get('type') || 'personal'
-    
-    // Navigate to the generation start page with the selected selfie and generation type
-    window.location.href = `/app/generate/start?key=${encodeURIComponent(selfieKey)}&type=${generationType}`
-  }
-
-  const toggleSelect = async (id: string, selected: boolean) => {
-    try {
-      setUploads(prev => prev.map(u => u.id === id ? { ...u, selected } : u))
-      await jsonFetcher(`/api/selfies/${id}/select`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selected }),
-        credentials: 'include'
-      })
-    } catch (e) {
-      setUploads(prev => prev.map(u => u.id === id ? { ...u, selected: !selected } : u))
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -95,18 +73,15 @@ export default function SelfieSelectionPage() {
           <p className="text-sm text-gray-600 mt-1">{t('subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link 
+        <Link 
             href="/app/generate/start?skipUpload=1"
             className="px-4 py-2 text-sm font-medium text-white bg-brand-primary rounded-md hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
-          >
+        >
             Continue
-          </Link>
+        </Link>
         </div>
       </div>
-      <div className="rounded-md border border-brand-primary/30 bg-indigo-50 text-gray-800 px-4 py-3 text-sm">
-        <p className="mb-1">Select or deselect the selfies you want to use. You can upload a new one if needed.</p>
-        <p>When you’re ready, click Continue to review the style and generate.</p>
-      </div>
+      <SelfieSelectionBanner />
 
       {showUpload && (
         <SelfieUploadFlow
@@ -121,16 +96,6 @@ export default function SelfieSelectionPage() {
 
       {!showUpload && (
         <>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">{t('select.title')}</h2>
-            {/* Hide upload new selfie for now */}
-            {/* <button 
-              onClick={() => setShowUpload(true)}
-              className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm"
-            >
-              {t('select.newSelfie')}
-            </button> */}
-          </div>
 
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -143,13 +108,12 @@ export default function SelfieSelectionPage() {
               ))}
             </div>
           ) : uploads.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {uploads.map(item => (
-                <div key={item.id} className="relative group">
-                  <UploadCard item={item} hideGenerateCta onToggleSelect={(id, sel) => toggleSelect(id, sel)} />
-                </div>
-              ))}
-            </div>
+            <SelfieGallery
+              selfies={uploads.map(u => ({ id: u.id, key: u.uploadedKey, url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`, uploadedAt: u.createdAt, used: u.hasGenerations }))}
+              allowDelete={false}
+              showUploadTile
+              onUploadClick={() => setShowUpload(true)}
+            />
           ) : (
             <div className="text-center py-16 bg-white rounded-lg border">
               <p className="text-gray-700 mb-2">{t('empty.title')}</p>

@@ -4,6 +4,8 @@ import { Logger } from '@/lib/logger';
 import { Env } from '@/lib/env'
 import { getRequestHeader } from '@/lib/server-headers'
 
+
+export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();

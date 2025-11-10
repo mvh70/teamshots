@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
 import { Logger } from '@/lib/logger'
 
+
+export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()

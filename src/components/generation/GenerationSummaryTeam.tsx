@@ -1,4 +1,5 @@
 import React from 'react'
+import { SparklesIcon } from '@heroicons/react/24/outline'
 
 interface GenerationSummaryTeamProps {
   type?: 'team' | 'personal'
@@ -45,11 +46,9 @@ export default function GenerationSummaryTeam({
       role="note"
       className="w-full md:min-w-[280px] flex items-start gap-3 rounded-md border border-brand-cta/40 bg-brand-cta-light p-3"
     >
-      <span className="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-brand-cta text-white text-xs font-bold">
-        i
-      </span>
+      <SparklesIcon className="h-5 w-5 text-brand-primary mt-0.5" aria-hidden="true" />
       <p className="text-[13px] leading-snug text-text-body">
-        <span className="font-medium text-brand-cta">Heads up:</span> Some settings are your choice. Review and customize the style below before generating.
+        <span className="font-medium text-brand-primary">Heads up:</span> Customize your photo in the <span className="text-brand-primary font-medium inline-flex items-center gap-1"><SparklesIcon className="h-4 w-4" aria-hidden="true" />editable</span> sections below before generating.
       </p>
     </div>
   ) : null

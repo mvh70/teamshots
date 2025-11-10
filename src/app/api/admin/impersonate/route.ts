@@ -4,6 +4,8 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
 
+
+export const runtime = 'nodejs'
 /**
  * GET /api/admin/impersonate?userId=xxx
  * Start impersonating a user

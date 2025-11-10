@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getBrandName } from '@/config/brand';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 interface SamplePhoto {
   id: string;
@@ -58,6 +59,7 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
 export default function SampleGallery() {
   const t = useTranslations('gallery');
   const tHero = useTranslations('hero');
+  const { track } = useAnalytics();
   const [sliderPositions, setSliderPositions] = useState<Record<string, number>>({});
   const galleryRef = useRef<HTMLDivElement>(null);
 
@@ -234,6 +236,12 @@ export default function SampleGallery() {
           <div className="text-center mt-12">
             <Link
               href="/auth/signup"
+              onClick={() =>
+                track('cta_clicked', {
+                  placement: 'sample_gallery',
+                  action: 'signup',
+                })
+              }
               className="bg-brand-cta text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-brand-cta-hover transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               {tHero('getStarted')}

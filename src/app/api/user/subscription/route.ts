@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { getUserSubscription } from '@/domain/subscription/subscription'
 import { Logger } from '@/lib/logger'
 
+
+export const runtime = 'nodejs'
 export async function GET() {
   const session = await auth()
 

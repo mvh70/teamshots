@@ -1,11 +1,12 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import UploadCard from '../generations/components/UploadCard'
+import SelfieGallery from '@/components/generation/SelfieGallery'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import SelfieUploadFlow from '@/components/Upload/SelfieUploadFlow'
 import { PrimaryButton, UploadGrid } from '@/components/ui'
+import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
 import { jsonFetcher } from '@/lib/fetcher'
 
 interface UploadListItem {
@@ -53,31 +54,6 @@ export default function SelfiesPage() {
     }
   }, [session?.user?.id])
 
-  const deleteUpload = async (uploadId: string) => {
-    try {
-      // Find the upload to get its key
-      const upload = uploads.find(u => u.id === uploadId)
-      if (!upload) {
-        throw new Error('Upload not found')
-      }
-
-      if (!upload.uploadedKey || upload.uploadedKey === 'undefined') {
-        throw new Error('Upload key is missing or invalid')
-      }
-      
-      await jsonFetcher(`/api/uploads/delete?key=${encodeURIComponent(upload.uploadedKey)}`, {
-        method: 'DELETE',
-        credentials: 'include' // Required for Safari to send cookies
-      })
-
-      // Remove from local state
-      setUploads(prev => prev.filter(upload => upload.id !== uploadId))
-    } catch (error) {
-      console.error('Failed to delete upload:', error)
-      throw error // Re-throw so UploadCard can handle the error
-    }
-  }
-
   const handleSelfieApproved = async () => {
     // Reload uploads to show the new selfie
     await loadUploads()
@@ -100,46 +76,15 @@ export default function SelfiesPage() {
     setError(null)
   }
 
-  const handleToggleSelect = async (id: string, selected: boolean) => {
-    try {
-      setUploads(prev => prev.map(u => u.id === id ? { ...u, selected } : u))
-      await jsonFetcher(`/api/selfies/${id}/select`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selected }),
-        credentials: 'include'
-      })
-    } catch {
-      // rollback on failure
-      setUploads(prev => prev.map(u => u.id === id ? { ...u, selected: !selected } : u))
-    }
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between relative z-10">
         <h1 className="text-2xl font-semibold text-gray-900" data-testid="selfies-title">{t('title')}</h1>
-        {!showUploadFlow && (
-          <PrimaryButton
-            onClick={() => setShowUploadFlow(true)}
-            data-testid="upload-cta"
-            className="relative z-50 pointer-events-auto"
-          >
-            {t('empty.cta')}
-          </PrimaryButton>
-        )}
       </div>
 
       {!showUploadFlow && (
-        <div className="rounded-md border border-brand-secondary/30 bg-green-50 text-gray-800 px-4 py-3 text-sm">
-          <p className="mb-1">
-            Selfies with a green check are included in your next generation.
-          </p>
-          <p>
-            For the most realistic results, select at least 3 selfies in different lighting and angles. More variety usually improves quality.
-          </p>
-        </div>
+        <SelfieInfoBanner variant="detailed" />
       )}
 
       {showUploadFlow && (
@@ -190,13 +135,15 @@ export default function SelfiesPage() {
           ))}
         </UploadGrid>
       ) : !showUploadFlow && uploads.length > 0 ? (
-        <UploadGrid data-testid="upload-grid">
-          {uploads.map(item => (
-            <div key={item.id} data-testid="selfie-card">
-              <UploadCard item={item} onDelete={deleteUpload} onToggleSelect={handleToggleSelect} />
-            </div>
-          ))}
-        </UploadGrid>
+        <div>
+          <SelfieGallery
+            selfies={uploads.map(u => ({ id: u.id, key: u.uploadedKey, url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`, uploadedAt: u.createdAt, used: u.hasGenerations }))}
+            allowDelete
+            showUploadTile
+            onUploadClick={() => setShowUploadFlow(true)}
+            onDeleted={() => { void loadUploads() }}
+          />
+        </div>
       ) : !showUploadFlow && (
         <div className="text-center py-16 bg-white rounded-lg border" data-testid="empty-state">
           <p className="text-gray-700 mb-2" data-testid="empty-title">{t('empty.title')}</p>

@@ -1,6 +1,5 @@
 import { useTranslations } from 'next-intl';
 import { routing } from '@/i18n/routing';
-import Link from 'next/link';
 import SampleGallery from '@/components/SampleGallery';
 import HeroGallery from '@/components/HeroGallery';
 import TrustIndicators from '@/components/TrustIndicators';
@@ -8,6 +7,7 @@ import SocialProof from '@/components/SocialProof';
 import HowItWorks from '@/components/HowItWorks';
 import FAQ from '@/components/FAQ';
 import PricingPreview from '@/components/PricingPreview';
+import { TrackedLink } from '@/components/TrackedLink';
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -64,13 +64,18 @@ export default function LandingPage() {
 
           {/* Mobile-First CTA - Visible Above Fold (Mobile Only) */}
           <div className="mb-12 md:hidden flex flex-col items-center">
-            <Link
+            <TrackedLink
               href="/auth/signup"
               aria-label={t('freeCtaAria')}
+              event="cta_clicked"
+              eventProperties={{
+                placement: 'landing_hero_mobile',
+                action: 'signup',
+              }}
               className="w-full inline-block px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-center"
             >
               {t('joinWaitlist')}
-            </Link>
+            </TrackedLink>
             <p className="mt-3 text-sm text-gray-600 text-center max-w-md">
               {t('freeCtaSubtext')}
             </p>
@@ -108,19 +113,29 @@ export default function LandingPage() {
           {/* CTA Buttons below first transformation (Desktop Only) */}
           <div className="mt-8 hidden md:block">
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link
+              <TrackedLink
                 href="/auth/signup"
                 aria-label={t('freeCtaAria')}
+                event="cta_clicked"
+                eventProperties={{
+                  placement: 'landing_hero_desktop',
+                  action: 'signup',
+                }}
                 className="inline-block px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 {t('joinWaitlist')}
-              </Link>
-              <Link
+              </TrackedLink>
+              <TrackedLink
                 href="/pricing"
+                event="cta_clicked"
+                eventProperties={{
+                  placement: 'landing_hero_desktop',
+                  action: 'view_pricing',
+                }}
                 className="inline-block px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
               >
                 {t('viewPricing')}
-              </Link>
+              </TrackedLink>
             </div>
             {/* Trust Signal - Desktop */}
             <p className="mt-2 text-xs text-gray-500 text-center w-full">

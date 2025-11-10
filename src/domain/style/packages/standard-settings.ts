@@ -1,0 +1,119 @@
+import { PhotoStyleSettings } from '@/types/photo-style'
+import { StandardPresetConfig, getStandardPreset } from './standard-presets'
+
+function cloneSettings(settings: PhotoStyleSettings): PhotoStyleSettings {
+  return JSON.parse(JSON.stringify(settings)) as PhotoStyleSettings
+}
+
+export interface AppliedStandardPreset {
+  preset: StandardPresetConfig
+  settings: PhotoStyleSettings
+}
+
+export function getDefaultPresetSettings(presetId: string): PhotoStyleSettings {
+  const preset = getStandardPreset(presetId)
+
+  const defaults: PhotoStyleSettings = {
+    presetId: preset.id,
+    shotType: { type: preset.defaults.shotType },
+    focalLength: preset.defaults.focalLength,
+    aperture: preset.defaults.aperture,
+    lightingQuality: preset.defaults.lighting.quality,
+    shutterSpeed: preset.defaults.shutterSpeed,
+    bodyAngle: preset.defaults.pose.bodyAngle,
+    headPosition: preset.defaults.pose.headPosition,
+    shoulderPosition: preset.defaults.pose.shoulderPosition,
+    weightDistribution: preset.defaults.pose.weightDistribution,
+    armPosition: preset.defaults.pose.armPosition,
+    expression: { type: preset.defaults.pose.expression }
+  }
+
+  if (preset.defaults.aspectRatio) {
+    defaults.aspectRatio = preset.defaults.aspectRatio
+  }
+
+  if (preset.defaults.pose.sittingPose) {
+    defaults.sittingPose = preset.defaults.pose.sittingPose
+  }
+
+  return defaults
+}
+
+export function applyStandardPreset(
+  presetId: string | undefined,
+  styleSettings: PhotoStyleSettings
+): AppliedStandardPreset {
+  const preset = getStandardPreset(presetId)
+  const settings = cloneSettings(styleSettings)
+
+  if (!settings.presetId) {
+    settings.presetId = preset.id
+  }
+
+  // Shot type
+  if (!settings.shotType || settings.shotType.type === 'user-choice') {
+    settings.shotType = { type: preset.defaults.shotType }
+  }
+
+  // Camera defaults
+  if (!settings.aspectRatio || settings.aspectRatio === 'user-choice') {
+    if (preset.defaults.aspectRatio) {
+      settings.aspectRatio = preset.defaults.aspectRatio
+    }
+  }
+
+  if (!settings.focalLength || settings.focalLength === 'user-choice') {
+    settings.focalLength = preset.defaults.focalLength
+  }
+
+  if (!settings.aperture || settings.aperture === 'user-choice') {
+    settings.aperture = preset.defaults.aperture
+  }
+
+  if (!settings.lightingQuality || settings.lightingQuality === 'user-choice') {
+    settings.lightingQuality = preset.defaults.lighting.quality
+  }
+
+  if (!settings.shutterSpeed || settings.shutterSpeed === 'user-choice') {
+    settings.shutterSpeed = preset.defaults.shutterSpeed
+  }
+
+  // Pose defaults
+  if (!settings.bodyAngle || settings.bodyAngle === 'user-choice') {
+    settings.bodyAngle = preset.defaults.pose.bodyAngle
+  }
+
+  if (!settings.headPosition || settings.headPosition === 'user-choice') {
+    settings.headPosition = preset.defaults.pose.headPosition
+  }
+
+  if (!settings.shoulderPosition || settings.shoulderPosition === 'user-choice') {
+    settings.shoulderPosition = preset.defaults.pose.shoulderPosition
+  }
+
+  if (!settings.weightDistribution || settings.weightDistribution === 'user-choice') {
+    settings.weightDistribution = preset.defaults.pose.weightDistribution
+  }
+
+  if (!settings.armPosition || settings.armPosition === 'user-choice') {
+    settings.armPosition = preset.defaults.pose.armPosition
+  }
+
+  if (
+    (!settings.sittingPose || settings.sittingPose === 'user-choice') &&
+    preset.defaults.pose.sittingPose
+  ) {
+    settings.sittingPose = preset.defaults.pose.sittingPose
+  }
+
+  if (
+    !settings.expression ||
+    settings.expression.type === 'user-choice' ||
+    !settings.expression.type
+  ) {
+    settings.expression = { type: preset.defaults.pose.expression }
+  }
+
+  return { preset, settings }
+}
+

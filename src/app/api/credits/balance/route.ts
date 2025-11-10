@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
+
+export const runtime = 'nodejs'
 import { getEffectiveTeamCreditBalance } from '@/domain/credits/credits'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'

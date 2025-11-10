@@ -33,6 +33,7 @@ interface PhotoStyleSettingsProps {
   originalContextSettings?: PhotoStyleSettingsType // Original context settings to determine what was predefined
   showToggles?: boolean // If false, hide toggles entirely (for direct photo definition)
   packageId?: string // Optional package to control visible categories/overrides
+  teamContext?: boolean
 }
 
 type CategoryConfig = {
@@ -97,7 +98,8 @@ export default function PhotoStyleSettings({
   readonlyPredefined = false,
   originalContextSettings,
   showToggles = true,
-  packageId
+  packageId,
+  teamContext = false
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   // All categories are always expanded per UX requirement
@@ -199,17 +201,25 @@ export default function PhotoStyleSettings({
     if (originalContextSettings) {
       const originalSettings = originalContextSettings[category]
       if (category === 'clothing') {
-        return originalSettings && (originalSettings as { style?: string }).style !== 'user-choice'
+        return !!(
+          originalSettings && (originalSettings as { style?: string }).style !== 'user-choice'
+        )
       }
-      return originalSettings && (originalSettings as { type?: string }).type !== 'user-choice'
+      return !!(
+        originalSettings && (originalSettings as { type?: string }).type !== 'user-choice'
+      )
     }
-    
+
     // Fallback to current value logic
     const categorySettings = value[category]
     if (category === 'clothing') {
-      return categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
+      return !!(
+        categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
+      )
     }
-    return categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
+    return !!(
+      categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
+    )
   }
 
   const getCategoryStatus = (category: CategoryType) => {
@@ -233,7 +243,7 @@ export default function PhotoStyleSettings({
     const chipLabel = isUserChoice
       ? t('legend.editableChip', { default: 'Editable' })
       : isLockedByPreset
-        ? t('legend.lockedChip', { default: 'Locked by style' })
+        ? t('legend.lockedChip', { default: 'Locked' })
         : t('legend.presetChip', { default: 'Preset active' })
 
     return (
@@ -373,32 +383,32 @@ export default function PhotoStyleSettings({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-        <div className="flex flex-wrap items-center gap-4 text-sm">
-          <div className="flex items-center gap-2 animate-pulse">
-            <SparklesIcon className="h-4 w-4 text-brand-primary" aria-hidden="true" />
-            <span className="text-gray-700">
-              {t('legend.editable', { default: 'Editable sections highlight what you can customize.' })}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <LockClosedIcon className="h-4 w-4 text-gray-500" aria-hidden="true" />
-            <span className="text-gray-600">
-              {t('legend.locked', { default: 'Locked items use the preset settings.' })}
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Photo Style Section */}
       <div className="space-y-4">
         <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {t('sections.composition', { default: 'Composition settings' })}
-          </h3>
-          <p className="text-sm text-gray-600">
-            {t('sections.compositionDesc', { default: 'Background, branding, and shot type' })}
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                {t('sections.composition', { default: 'Composition settings' })}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {t('sections.compositionDesc', { default: 'Background, branding, and shot type' })}
+              </p>
+            </div>
+            <div className="text-sm text-right">
+              <div className="flex items-center justify-end gap-2 text-brand-primary">
+                <SparklesIcon className="h-4 w-4 text-brand-primary" aria-hidden="true" />
+                <span className="text-brand-primary">{t('legend.editable', { default: 'Editable sections highlight what you can customize.' })}</span>
+              </div>
+              <div className="flex items-center justify-end gap-2 mt-1">
+                <LockClosedIcon className="h-4 w-4 text-red-600" aria-hidden="true" />
+                <span className="text-red-600">
+                  {t('legend.locked', { default: 'Locked by the photo style settings.' })}
+                  {teamContext ? t('legend.lockedTeamSuffix', { default: ' as set by your team admin.' }) : ''}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {visiblePhotoCategories.map(renderCategoryCard)}

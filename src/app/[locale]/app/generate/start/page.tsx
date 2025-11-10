@@ -66,7 +66,6 @@ export default function StartGenerationPage() {
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
   const [selectedPackageId, setSelectedPackageId] = useState<string>('')
   const [selectedSelfies, setSelectedSelfies] = useState<Array<{ id: string; key: string }>>([])
-  const [allSelfies, setAllSelfies] = useState<Array<{ id: string; key: string }>>([])
   const headerThumbs = useMemo(() => {
     const items = selectedSelfies.length > 0 ? selectedSelfies : (key ? [{ id: 'legacy', key }] : [])
     return items
@@ -130,39 +129,10 @@ export default function StartGenerationPage() {
         setSelectedSelfies([])
       }
     }
-    const fetchAll = async () => {
-      try {
-        const data = await jsonFetcher<{ items?: { id: string; uploadedKey: string }[] }>('/api/uploads/list', { credentials: 'include' })
-        const items = (data.items || []).filter(i => i.uploadedKey && i.uploadedKey !== 'undefined')
-        setAllSelfies(items.map(i => ({ id: i.id, key: i.uploadedKey })))
-      } catch {
-        setAllSelfies([])
-      }
-    }
     if (session?.user?.id) {
       fetchSelected()
-      fetchAll()
     }
   }, [session?.user?.id])
-
-  const toggleSelectSelfie = async (id: string, currentSelected: boolean) => {
-    try {
-      if (currentSelected) {
-        setSelectedSelfies(prev => prev.filter(s => s.id !== id))
-      } else {
-        const found = allSelfies.find(s => s.id === id)
-        if (found) setSelectedSelfies(prev => [...prev, found])
-      }
-      await jsonFetcher(`/api/selfies/${id}/select`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selected: !currentSelected }),
-        credentials: 'include'
-      })
-    } catch {
-      // no-op
-    }
-  }
 
   // Fetch contexts when generation type is determined
   useEffect(() => {
@@ -280,10 +250,11 @@ export default function StartGenerationPage() {
         styleSettings: { ...photoStyleSettings, packageId },
         prompt: activeContext?.customPrompt || 'Professional headshot',
       }
-      if (selfieId) {
-        payload.selfieId = selfieId
-      } else if (hasMulti) {
+      // Prefer multiple selfies when available, even if a legacy single selfieId exists from query
+      if (hasMulti) {
         payload.selfieIds = selectedSelfies.map(s => s.id)
+      } else if (selfieId) {
+        payload.selfieId = selfieId
       }
       
       // Create generation request (server decides mode and credits)
@@ -327,7 +298,7 @@ export default function StartGenerationPage() {
   
   // Check if user has any credits at all
   const hasAnyCredits = userCredits.team > 0 || userCredits.individual > 0
-  
+
   // Resolve selected photo style label for display
   const selectedPackage = getPackageConfig(selectedPackageId || PRICING_CONFIG.defaultSignupPackage)
   const selectedPhotoStyleLabel = selectedPackage.label
@@ -412,14 +383,14 @@ export default function StartGenerationPage() {
             <p className="text-sm text-gray-700">Selfies selected. Continue by customizing your style below.</p>
           </div>
         ) : (
-          <SelfieUploadFlow
-            onSelfieApproved={onSelfieApproved}
-            onCancel={onSelfieUploadCancel}
-            onError={(error) => {
-              console.error('Selfie upload error:', error)
-              alert(error)
-            }}
-          />
+        <SelfieUploadFlow
+          onSelfieApproved={onSelfieApproved}
+          onCancel={onSelfieUploadCancel}
+          onError={(error) => {
+            console.error('Selfie upload error:', error)
+            alert(error)
+          }}
+        />
         )
       ) : creditsLoading || !contextLoaded ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -460,13 +431,13 @@ export default function StartGenerationPage() {
                   <div className={`grid ${headerThumbs.length <= 2 ? 'grid-flow-col auto-cols-max grid-rows-1' : 'grid-rows-2 grid-flow-col'} gap-2 max-w-[220px]`}>
                     {headerThumbs.map((s) => (
                       <div key={s.id} className="w-10 h-10 sm:w-12 sm:h-12 rounded-md overflow-hidden border border-gray-200 shadow-sm">
-                        <Image
+                    <Image
                           src={`/api/files/get?key=${encodeURIComponent(s.key)}`}
-                          alt="Selected selfie"
+                      alt="Selected selfie"
                           width={48}
                           height={48}
-                          className="w-full h-full object-cover"
-                        />
+                      className="w-full h-full object-cover"
+                    />
                       </div>
                     ))}
                   </div>

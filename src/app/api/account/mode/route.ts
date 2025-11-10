@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { getAccountMode } from '@/domain/account/accountMode'
 import { Logger } from '@/lib/logger'
 
+
+export const runtime = 'nodejs'
 /**
  * API endpoint to get account mode
  */

@@ -207,36 +207,39 @@ export interface ImageGenerator {
 
 ```typescript
 // lib/image-generator/gemini.ts
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { VertexAI } from '@google-cloud/vertexai'
 
 export class GeminiGenerator implements ImageGenerator {
-  private client: GoogleGenerativeAI
-  
+  private model: ReturnType<VertexAI['getGenerativeModel']>
+  private modelName: string
+
   constructor() {
-    this.client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+    const project = process.env.GOOGLE_PROJECT_ID!
+    const location = process.env.GOOGLE_LOCATION ?? 'us-central1'
+    this.modelName = process.env.GEMINI_IMAGE_MODEL ?? 'gemini-2.5-flash'
+
+    const vertexAI = new VertexAI({ project, location })
+    this.model = vertexAI.getGenerativeModel({ model: this.modelName })
   }
-  
+
   async generate(params: GenerationParams): Promise<GenerationResult> {
-    // Implementation with direct Gemini API calls
-    const model = this.client.getGenerativeModel({ model: 'gemini-2.5-flash' })
-    
     // Generate 4 variations
     const variations = await Promise.all([
-      this.generateSingle(model, params),
-      this.generateSingle(model, params),
-      this.generateSingle(model, params),
-      this.generateSingle(model, params),
+      this.generateSingle(params),
+      this.generateSingle(params),
+      this.generateSingle(params),
+      this.generateSingle(params),
     ])
     
     return {
       variations,
       cost: 0.10, // Actual cost per generation
-      metadata: { model: 'gemini-2.5-flash' }
+      metadata: { model: this.modelName }
     }
   }
   
-  private async generateSingle(model: any, params: GenerationParams) {
-    // Actual Gemini API call
+  private async generateSingle(params: GenerationParams) {
+    // Actual Gemini API call via Vertex AI
   }
 }
 ```
@@ -399,8 +402,12 @@ GOOGLE_CLIENT_SECRET=
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
 
-# AI
-GEMINI_API_KEY=
+# AI (Vertex AI)
+GOOGLE_PROJECT_ID=
+GOOGLE_LOCATION=us-central1
+GOOGLE_APPLICATION_CREDENTIALS=/app/service-account.json
+GEMINI_IMAGE_MODEL=gemini-2.5-flash
+GEMINI_EVAL_MODEL=
 
 # Storage (S3-compatible: Backblaze B2, Hetzner, AWS S3, etc.)
 # Use generic S3_* vars (preferred) or legacy HETZNER_S3_* vars for backward compatibility

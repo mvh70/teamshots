@@ -1,9 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { comingSoonBadge } from '@/lib/ui/comingSoon'
+import { useAnalytics } from '@/hooks/useAnalytics'
+import { TrackedLink } from '@/components/TrackedLink'
 
 type PlanId = 'pro' | 'individual' | 'tryOnce'
 
@@ -56,6 +57,7 @@ export default function PricingCard({
 }: PricingCardProps) {
   const t = useTranslations('pricing')
   const tAll = useTranslations()
+  const { track } = useAnalytics()
 
   // Match pricing page calculations
   const numberOfPhotos = calculatePhotosFromCredits(credits)
@@ -157,21 +159,41 @@ export default function PricingCard({
 
       {ctaSlot ? (
         <div className="mt-auto">{ctaSlot}</div>
-      ) : (ctaMode === 'link' && href && (
-        <Link
-          href={href}
-          className={`block w-full text-center px-6 py-3 rounded-lg font-semibold transition-all duration-300 mt-auto ${
-            popular ? 'bg-brand-cta text-white hover:bg-brand-cta-hover shadow-lg' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-          }`}
-        >
-          {t(`plans.${id}.cta`)}
-        </Link>
-      ))}
+      ) : (
+        ctaMode === 'link' &&
+        href && (
+          <TrackedLink
+            href={href}
+            event="cta_clicked"
+            eventProperties={{
+              placement: 'pricing_card',
+              plan: id,
+              billing: isYearly ? 'annual' : 'monthly',
+              mode: 'link',
+            }}
+            className={`block w-full text-center px-6 py-3 rounded-lg font-semibold transition-all duration-300 mt-auto ${
+              popular
+                ? 'bg-brand-cta text-white hover:bg-brand-cta-hover shadow-lg'
+                : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+            }`}
+          >
+            {t(`plans.${id}.cta`)}
+          </TrackedLink>
+        )
+      )}
 
       {!ctaSlot && ctaMode === 'button' && onCta && (
         <button
           type="button"
-          onClick={onCta}
+          onClick={() => {
+            track('cta_clicked', {
+              placement: 'pricing_card',
+              plan: id,
+              billing: isYearly ? 'annual' : 'monthly',
+              mode: 'button',
+            })
+            onCta()
+          }}
           className={`w-full px-6 py-3 rounded-lg font-semibold transition-all duration-300 mt-auto ${
             popular ? 'bg-brand-cta text-white hover:bg-brand-cta-hover shadow-lg' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
           }`}

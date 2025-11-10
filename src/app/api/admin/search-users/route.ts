@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 
+
+export const runtime = 'nodejs'
 /**
  * GET /api/admin/search-users?query=xxx
  * Search for users by first name, last name, or email (admin only)

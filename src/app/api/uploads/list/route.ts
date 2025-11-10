@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 
+
+export const runtime = 'nodejs'
 export async function GET() {
   try {
     const session = await auth()

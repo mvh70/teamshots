@@ -12,6 +12,7 @@ export type GenerationListItem = {
   acceptedKey?: string
   selfieKey?: string
   generatedKey?: string
+  inputSelfieUrls?: string[]
   status: 'pending' | 'processing' | 'completed' | 'failed'
   createdAt: string
   contextName?: string
@@ -38,15 +39,18 @@ export type GenerationListItem = {
 
 const MAX_IMAGE_RETRY_ATTEMPTS = 2
 
-const buildImageUrl = (key: string, retryVersion: number) => {
+const buildImageUrl = (key: string, retryVersion: number, token?: string) => {
   const params = new URLSearchParams({ key })
   if (retryVersion > 0) {
     params.set('retry', retryVersion.toString())
   }
+  if (token) {
+    params.set('token', token)
+  }
   return `/api/files/get?${params.toString()}`
 }
 
-export default function GenerationCard({ item, currentUserId }: { item: GenerationListItem; currentUserId?: string }) {
+export default function GenerationCard({ item, currentUserId, token }: { item: GenerationListItem; currentUserId?: string; token?: string }) {
   const t = useTranslations('generations')
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -55,6 +59,7 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
   const [afterImageError, setAfterImageError] = useState(false)
   const [beforeRetryCount, setBeforeRetryCount] = useState(0)
   const [afterRetryCount, setAfterRetryCount] = useState(0)
+  const [loadedGenerated, setLoadedGenerated] = useState(false)
   const beforeKey = item.selfieKey || item.uploadedKey
   const afterKey = item.generatedKey || item.uploadedKey
   const normalizedBeforeKey = beforeKey && beforeKey !== 'undefined' ? beforeKey : null
@@ -68,40 +73,59 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
   useEffect(() => {
     setAfterImageError(false)
     setAfterRetryCount(0)
+    setLoadedGenerated(false)
   }, [normalizedAfterKey])
 
   const beforeSrc = normalizedBeforeKey && !beforeImageError
-    ? buildImageUrl(normalizedBeforeKey, beforeRetryCount)
+    ? buildImageUrl(normalizedBeforeKey, beforeRetryCount, token)
     : '/placeholder-image.png'
   const afterSrc = normalizedAfterKey && !afterImageError
-    ? buildImageUrl(normalizedAfterKey, afterRetryCount)
+    ? buildImageUrl(normalizedAfterKey, afterRetryCount, token)
     : '/placeholder-image.png'
+
+  // Check if image is already loaded (cached) after render
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalHeight !== 0) {
+      setLoadedGenerated(true)
+    }
+  }, [afterSrc])
   const containerRef = useRef<HTMLDivElement | null>(null)
   // Start fully on Generated side by default (if present)
   const [pos, setPos] = useState(100) // handle position from left (0-100); 100 = Generated only
   const draggingRef = useRef(false)
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const [canScrollDown, setCanScrollDown] = useState(false)
+  const imgRef = useRef<HTMLImageElement | null>(null)
 
   const handleRegenerate = async () => {
     if (isRegenerating) return
     
     setIsRegenerating(true)
     try {
-      // Get the original generation data to recreate it
-      const response = await fetch('/api/generations/create', {
+      // Use token-based API if token is provided, otherwise use session-based API
+      const apiUrl = token 
+        ? `/api/team/member/generations/regenerate?token=${encodeURIComponent(token)}`
+        : '/api/generations/create'
+      
+      const body = token
+        ? JSON.stringify({ generationId: item.id })
+        : JSON.stringify({
+            selfieId: item.selfieId || undefined,
+            selfieKey: item.selfieId ? undefined : item.uploadedKey,
+            contextId: item.contextId,
+            prompt: 'Regenerate with same settings',
+            generationType: item.generationType,
+            creditSource: 'individual',
+            isRegeneration: true,
+            originalGenerationId: item.id,
+          })
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          selfieId: item.selfieId || undefined, // Use selfieId if available
-          selfieKey: item.selfieId ? undefined : item.uploadedKey, // Use uploadedKey (now contains original selfie key)
-          contextId: item.contextId, // Use context ID instead of name
-          prompt: 'Regenerate with same settings', // Default prompt
-          generationType: item.generationType, // Use the same generation type
-          creditSource: 'individual', // Default to individual credits
-          isRegeneration: true, // Flag this as a regeneration
-          originalGenerationId: item.id, // Pass the original generation ID
-        }),
+        body,
       })
 
       if (!response.ok) {
@@ -131,7 +155,12 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
     
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/generations/${item.id}`, {
+      // Use token-based API if token is provided, otherwise use session-based API
+      const apiUrl = token
+        ? `/api/team/member/generations/${item.id}?token=${encodeURIComponent(token)}`
+        : `/api/generations/${item.id}`
+      
+      const response = await fetch(apiUrl, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -187,6 +216,16 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
     draggingRef.current = false
   }
 
+  const determineScrollability = () => {
+    const el = scrollContainerRef.current
+    if (!el) {
+      setCanScrollDown(false)
+      return
+    }
+    const more = el.scrollHeight - el.scrollTop - el.clientHeight > 1
+    setCanScrollDown(more)
+  }
+
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
       <div
@@ -199,30 +238,57 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
         onTouchCancel={onTouchEnd}
         onTouchMove={onTouchMove}
       >
-        {/* BACKGROUND: Selfie full cover */}
-        <Image
-          src={beforeSrc}
-          alt="selfie"
-          fill
-          className="object-cover"
-          unoptimized
-          onError={() => {
-            if (beforeRetryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
-              setBeforeRetryCount(prev => prev + 1)
-              return
-            }
-            setBeforeImageError(true)
-            console.warn('Selfie image failed to load, may not be migrated to Backblaze yet:', item.selfieKey || item.uploadedKey)
-          }}
-          onLoadingComplete={() => {
-            if (beforeRetryCount !== 0) {
-              setBeforeRetryCount(0)
-            }
-          }}
-        />
+        {/* BACKGROUND: Single selfie or collage of multiple input selfies */}
+        {Array.isArray(item.inputSelfieUrls) && item.inputSelfieUrls.length > 1 ? (
+          <div className="absolute inset-0 grid bg-gray-200"
+            style={{
+              gridTemplateColumns: item.inputSelfieUrls.length <= 2 ? 'repeat(2, 1fr)'
+                : item.inputSelfieUrls.length <= 4 ? 'repeat(2, 1fr)'
+                : item.inputSelfieUrls.length <= 6 ? 'repeat(3, 1fr)'
+                : 'repeat(3, 1fr)',
+              gridTemplateRows: item.inputSelfieUrls.length <= 2 ? 'repeat(1, 1fr)'
+                : item.inputSelfieUrls.length <= 4 ? 'repeat(2, 1fr)'
+                : item.inputSelfieUrls.length <= 6 ? 'repeat(2, 1fr)'
+                : 'repeat(3, 1fr)'
+            }}
+          >
+            {item.inputSelfieUrls.slice(0, 9).map((url, idx) => (
+              <div key={`${item.id}-input-${idx}`} className="relative overflow-hidden">
+                <Image
+                  src={url}
+                  alt="input selfie"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Image
+            src={beforeSrc}
+            alt="selfie"
+            fill
+            className="object-cover"
+            unoptimized
+            onError={() => {
+              if (beforeRetryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
+                setBeforeRetryCount(prev => prev + 1)
+                return
+              }
+              setBeforeImageError(true)
+              console.warn('Selfie image failed to load, may not be migrated to Backblaze yet:', item.selfieKey || item.uploadedKey)
+            }}
+            onLoadingComplete={() => {
+              if (beforeRetryCount !== 0) {
+                setBeforeRetryCount(0)
+              }
+            }}
+          />
+        )}
 
         {/* FOREGROUND: Generated clipped to handle position OR placeholder */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
           {isIncomplete ? (
             // Placeholder for incomplete generation
             <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -237,29 +303,59 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
               </div>
             </div>
           ) : (
-            <Image
+            <div
+              ref={scrollContainerRef}
+              className="w-full h-full overflow-y-auto overflow-x-hidden relative"
+              onScroll={determineScrollability}
+            >
+              {/* Loading spinner overlay */}
+              {!loadedGenerated && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100/60 z-10">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-brand-primary" />
+                </div>
+              )}
+              {/* Use native img for flexible intrinsic sizing and scrolling */}
+              {/* Scale to container width; allow vertical scroll if taller than square */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+              ref={imgRef}
               src={afterSrc}
               alt="generated"
-              fill
-              className="object-cover"
-              unoptimized
-              style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
+                className="block w-full h-auto"
+              onLoad={() => {
+                setLoadedGenerated(true)
+                if (afterRetryCount !== 0) {
+                  setAfterRetryCount(0)
+                }
+                // Measure after image lays out
+                requestAnimationFrame(determineScrollability)
+              }}
+              onLoadStart={() => {
+                // Reset loading state when a new load starts
+                setLoadedGenerated(false)
+              }}
               onError={() => {
                 if (afterRetryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
                   setAfterRetryCount(prev => prev + 1)
                   return
                 }
                 setAfterImageError(true)
+                setLoadedGenerated(true) // Hide spinner on error too
                 console.warn('Generated image failed to load, may not be migrated to Backblaze yet:', item.generatedKey)
               }}
-              onLoadingComplete={() => {
-                if (afterRetryCount !== 0) {
-                  setAfterRetryCount(0)
-                }
-              }}
             />
+            </div>
           )}
         </div>
+
+        {/* Scroll hint arrow when content overflows */}
+        {!isIncomplete && canScrollDown && (
+          <div className="absolute bottom-2 right-2 bg-white/80 text-gray-700 rounded-full shadow p-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </div>
+        )}
 
         {/* Handle knob (also used to start drag) - only show if not incomplete */}
         {!isIncomplete && (
@@ -326,7 +422,8 @@ export default function GenerationCard({ item, currentUserId }: { item: Generati
                   onClick={async () => {
                     if (!imageKey) return
                     try {
-                      const response = await fetch(`/api/files/get?key=${encodeURIComponent(imageKey)}`)
+                      const downloadUrl = buildImageUrl(imageKey, 0, token)
+                      const response = await fetch(downloadUrl)
                       const blob = await response.blob()
                       const url = window.URL.createObjectURL(blob)
                       const link = document.createElement('a')

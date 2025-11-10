@@ -115,25 +115,25 @@ export default function UploadCard({ item, onDelete, onToggleSelect, hideGenerat
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 relative">
             {!hideGenerateCta && (
-              <Link 
-                href={`/app/generate/start?key=${encodeURIComponent(item.uploadedKey)}`} 
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-brand-cta border border-brand-cta rounded-md hover:bg-brand-cta-hover hover:border-brand-cta-hover transition-colors"
+            <Link 
+              href={`/app/generate/start?key=${encodeURIComponent(item.uploadedKey)}`} 
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-brand-cta border border-brand-cta rounded-md hover:bg-brand-cta-hover hover:border-brand-cta-hover transition-colors"
+            >
+              <svg 
+                className="w-4 h-4" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
               >
-                <svg 
-                  className="w-4 h-4" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M13 10V3L4 14h7v7l9-11h-7z" 
-                  />
-                </svg>
-                {t('actions.generate')}
-              </Link>
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M13 10V3L4 14h7v7l9-11h-7z" 
+                />
+              </svg>
+              {t('actions.generate')}
+            </Link>
             )}
           </div>
           <div className="flex items-center gap-1">

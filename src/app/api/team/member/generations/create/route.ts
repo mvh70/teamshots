@@ -9,10 +9,14 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import { getEffectiveTeamCreditBalance, getPersonCreditBalance, hasSufficientCredits, reserveCreditsForGeneration, getTeamCreditBalance } from '@/domain/credits/credits'
 import { getPackageConfig } from '@/domain/style/packages'
 import { Env } from '@/lib/env'
+import { resolveSelfies } from '@/domain/generation/selfieResolver'
+import { getRegenerationCount } from '@/domain/pricing'
 
-// Minimal validation schema aligned with /api/generations/create
+// Minimal validation schema aligned with /api/generations/create (now supports arrays)
 const createSchema = z.object({
-  selfieKey: z.string().min(1),
+  selfieKey: z.string().min(1).optional(),
+  selfieKeys: z.array(z.string()).optional(),
+  selfieIds: z.array(z.string()).optional(),
   contextId: z.string().optional(),
   styleSettings: z.record(z.string(), z.unknown()).optional(),
   prompt: z.string().min(1),
@@ -48,36 +52,32 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { selfieKey, contextId, styleSettings, prompt } = createSchema.parse(body)
+    const { selfieKey, selfieKeys, selfieIds, contextId, styleSettings, prompt } = createSchema.parse(body)
 
     // Enforce team credits for invite flow
     const teamId = invite.person.teamId
 
     // OPTIMIZATION: Run independent queries in parallel
-    const [selfie, teamUser] = await Promise.all([
-      // Find selfie by key for this person (only need userId, not full team - already have it from invite)
-      prisma.selfie.findFirst({
-        where: { key: selfieKey, personId: invite.person.id },
-        select: {
-          id: true,
-          key: true,
-          personId: true,
-          person: {
-            select: {
-              userId: true
-            }
-          }
-        },
-      }),
+    const [resolved, teamUser] = await Promise.all([
+      resolveSelfies({ personId: invite.person.id, selfieKey, selfieKeys, selfieIds }),
       // Check team credits (invitees may have personal allocation tracked separately)
       prisma.user.findFirst({
         where: { person: { teamId } },
         select: { id: true },
       })
     ])
-
-    if (!selfie) {
-      return NextResponse.json({ error: 'Selfie not found' }, { status: 404 })
+    const primarySelfie = resolved.primarySelfie
+    // Fallback: if only one resolved but multiple are selected for this person, merge them
+    let selfieKeysForJob = resolved.selfieS3Keys
+    if (!Array.isArray(selfieKeysForJob) || selfieKeysForJob.length <= 1) {
+      try {
+        const moreSelected = await prisma.selfie.findMany({
+          where: { personId: invite.person.id, selected: true },
+          select: { key: true }
+        })
+        const unique = Array.from(new Set([...(selfieKeysForJob || []), ...moreSelected.map(s => s.key)]))
+        if (unique.length > 1) selfieKeysForJob = unique
+      } catch {}
     }
 
     const hasTeamCredits = await hasSufficientCredits(
@@ -113,25 +113,32 @@ export async function POST(request: NextRequest) {
     // Prepare style settings (serialize via package adapter if provided)
     const finalPackageId = (styleSettings?.['packageId'] as string) || PRICING_CONFIG.defaultSignupPackage
     const pkg = getPackageConfig(finalPackageId)
-    const serializedStyleSettings = pkg.persistenceAdapter.serialize(
+    const serializedStyleSettingsBase = pkg.persistenceAdapter.serialize(
       (styleSettings || {}) as Record<string, unknown>
     )
+    const serializedStyleSettings = {
+      ...serializedStyleSettingsBase,
+      inputSelfies: { keys: resolved.selfieS3Keys }
+    } as Record<string, unknown>
 
     // Create generation
+    // Determine regeneration allowances for invited users
+    const invitedRegenerations = getRegenerationCount('invited')
+
     const generation = await prisma.generation.create({
       data: {
-        personId: selfie.personId,
-        selfieId: selfie.id,
+        personId: invite.person.id,
+        selfieId: primarySelfie.id,
         contextId: contextId ?? invite.person.team?.activeContextId ?? null,
-        uploadedPhotoKey: selfie.key,
+        uploadedPhotoKey: primarySelfie.key,
         generatedPhotoKeys: [],
         generationType: 'team',
         creditSource: 'team',
         status: 'pending',
         creditsUsed: PRICING_CONFIG.credits.perGeneration,
         provider: 'gemini',
-        maxRegenerations: 0, // default; backend business rules can adjust later if needed
-        remainingRegenerations: 0,
+        maxRegenerations: invitedRegenerations,
+        remainingRegenerations: invitedRegenerations,
         styleSettings: serializedStyleSettings as unknown as Parameters<typeof prisma.generation.create>[0]['data']['styleSettings'],
       },
     })
@@ -157,10 +164,11 @@ export async function POST(request: NextRequest) {
       'generate',
       {
         generationId: generation.id,
-        personId: selfie.personId,
-        userId: selfie.person.userId || undefined,
-        selfieId: selfie.id,
-        selfieS3Key: selfie.key,
+        personId: invite.person.id,
+        userId: teamUser?.id || undefined,
+        selfieId: primarySelfie.id,
+        selfieS3Key: primarySelfie.key,
+        selfieS3Keys: selfieKeysForJob,
         styleSettings: serializedStyleSettings,
         prompt,
         providerOptions: {

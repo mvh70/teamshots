@@ -108,7 +108,7 @@ npm install next-intl
 npm install @prisma/client prisma
 
 # AI & Image Generation
-npm install @google/generative-ai
+npm install @google-cloud/vertexai
 
 # File upload & storage
 npm install @aws-sdk/client-s3 sharp
@@ -142,8 +142,12 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000" # prod: https://app.teamshots.vip
 NEXTAUTH_URL="http://localhost:3000" # prod: https://app.teamshots.vip
 NEXTAUTH_SECRET="your-secret-here" # Generate: openssl rand -base64 32
 
-# Gemini API (tested and confirmed working)
-GEMINI_API_KEY="your-key-here"
+# Vertex AI (service account)
+GOOGLE_PROJECT_ID="your-gcp-project-id"
+GOOGLE_LOCATION="us-central1"
+GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
+GEMINI_IMAGE_MODEL="gemini-2.5-flash"
+GEMINI_EVAL_MODEL="gemini-2.0-flash"
 
 # Hetzner S3
 HETZNER_S3_ENDPOINT="https://fsn1.your-objectstorage.com"
@@ -1091,21 +1095,19 @@ Wait 5-10 minutes for DNS propagation. Done!
 
 ## Step 11: Set Up External Services
 
-### Gemini API
-1. Go to https://ai.google.dev/
-2. Sign in with Google account
-3. Go to "Get API Key"
-4. Create new API key
-5. Add to environment variables: `GEMINI_API_KEY`
-6. Enable billing if needed (has free tier for testing)
+### Vertex AI (Gemini)
+1. In Google Cloud Console, enable the **Vertex AI API** for your project.
+2. Create a service account with `Vertex AI User` and `Storage Object Viewer` roles.
+3. Download the JSON key and store it on the worker (referenced by `GOOGLE_APPLICATION_CREDENTIALS`).
+4. Set `GOOGLE_PROJECT_ID`, `GOOGLE_LOCATION` (e.g., `us-central1`), `GEMINI_IMAGE_MODEL`, and `GEMINI_EVAL_MODEL` in your environment.
+5. Ensure billing is enabled for the project; Vertex AI usage is billed through GCP.
 
-**Model:** Gemini 2.5 Flash (aka "Nano Banana") for image generation
+**Model:** Gemini 2.5 Flash for image generation and evaluation via Vertex AI.
 
-**Why direct API?**
-- 30-50% cheaper than Replicate or other intermediaries
-- Direct access to latest features
-- Simpler architecture
-- Better cost tracking for profitability
+**Why Vertex AI?**
+- Service-account based auth (no API keys in env)
+- Unified billing in GCP
+- Access to the latest Gemini releases with regional control
 
 ### Hetzner Object Storage (S3)
 1. Hetzner Cloud Console → "Object Storage"
@@ -1175,53 +1177,56 @@ export function WelcomeEmail({ locale }: { locale: string }) {
 
 ## Step 12: Your First Feature
 
-### Install Gemini SDK
+### Install Vertex AI SDK
 
 ```bash
-npm install @google/generative-ai
+npm install @google-cloud/vertexai
 ```
 
 ### Create Image Generator Service
 
 Create `lib/gemini.ts`:
 ```typescript
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { VertexAI } from '@google-cloud/vertexai'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+const project = process.env.GOOGLE_PROJECT_ID!
+const location = process.env.GOOGLE_LOCATION ?? 'us-central1'
+const modelName = process.env.GEMINI_IMAGE_MODEL ?? 'gemini-2.5-flash'
+
+const vertexAI = new VertexAI({ project, location })
+const model = vertexAI.getGenerativeModel({ model: modelName })
 
 export async function generateTeamPhoto(
-  imageUrl: string,
+  imageBase64: string,
   stylePreset: string,
   backgroundOption: string
 ) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
-  
   const prompt = `Transform this photo into a professional team photo.
 Style: ${stylePreset}
 Background: ${backgroundOption}
 Maintain the person's likeness while making it professional and polished.`
-  
+
   try {
     const result = await model.generateContent({
       contents: [{
         role: 'user',
         parts: [
           { text: prompt },
-          { 
+          {
             inlineData: {
               mimeType: 'image/jpeg',
-              data: imageUrl // Base64 or URL
+              data: imageBase64
             }
           }
         ]
       }]
     })
-    
-    // Extract generated image
-    const response = await result.response
-    const imageData = response.text() // This will be the generated image
-    
-    return imageData
+
+    const imageParts = result.response.candidates
+      ?.flatMap(candidate => candidate.content?.parts ?? [])
+      .filter(part => part.inlineData?.data)
+
+    return imageParts?.map(part => part.inlineData!.data!) ?? []
   } catch (error) {
     console.error('Gemini generation failed:', error)
     throw error
@@ -1230,17 +1235,17 @@ Maintain the person's likeness while making it professional and polished.`
 
 // Generate 4 variations
 export async function generateVariations(
-  imageUrl: string,
+  imageBase64: string,
   stylePreset: string,
   backgroundOption: string
 ) {
   const variations = await Promise.all([
-    generateTeamPhoto(imageUrl, stylePreset, backgroundOption),
-    generateTeamPhoto(imageUrl, stylePreset, backgroundOption),
-    generateTeamPhoto(imageUrl, stylePreset, backgroundOption),
-    generateTeamPhoto(imageUrl, stylePreset, backgroundOption),
+    generateTeamPhoto(imageBase64, stylePreset, backgroundOption),
+    generateTeamPhoto(imageBase64, stylePreset, backgroundOption),
+    generateTeamPhoto(imageBase64, stylePreset, backgroundOption),
+    generateTeamPhoto(imageBase64, stylePreset, backgroundOption),
   ])
-  
+
   return variations
 }
 ```
@@ -1262,7 +1267,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    const { imageUrl, stylePreset, backgroundOption } = await request.json()
+    const { imageBase64, stylePreset, backgroundOption } = await request.json()
     
     // Check credits
     const user = await prisma.user.findUnique({
@@ -1274,7 +1279,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Generate variations
-    const variations = await generateVariations(imageUrl, stylePreset, backgroundOption)
+    const variations = await generateVariations(imageBase64, stylePreset, backgroundOption)
     
     // Upload variations to S3
     const uploadedUrls = await Promise.all(
@@ -1285,7 +1290,7 @@ export async function POST(request: NextRequest) {
     const generation = await prisma.generation.create({
       data: {
         userId: session.user.id,
-        uploadedPhotoUrl: imageUrl,
+        uploadedPhotoBase64: imageBase64,
         stylePreset,
         backgroundOption,
         variations: uploadedUrls,

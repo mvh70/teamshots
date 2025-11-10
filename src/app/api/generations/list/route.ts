@@ -6,6 +6,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
+
+export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 
@@ -54,6 +56,7 @@ type GenerationWithRelations = {
     name: string;
     stylePreset: string;
   } | null;
+  styleSettings?: unknown;
 };
 
 export async function GET(request: NextRequest) {
@@ -218,7 +221,23 @@ export async function GET(request: NextRequest) {
     const jobStatusMap = new Map(processingGenerations.map((g, i) => [g.id, jobStatuses[i]]))
 
     // Transform generations for response
-    const transformedGenerations = generations.map((generation: GenerationWithRelations) => ({
+    const transformedGenerations = generations.map((generation: GenerationWithRelations) => {
+      // Extract input selfie keys from persisted style settings if present
+      let inputSelfieUrls: string[] = []
+      try {
+        const styles = generation.styleSettings as Record<string, unknown> | null
+        const inputSelfies = styles && typeof styles === 'object' ? (styles['inputSelfies'] as Record<string, unknown> | undefined) : undefined
+        const keys = inputSelfies && typeof inputSelfies === 'object' ? (inputSelfies['keys'] as unknown) : undefined
+        if (Array.isArray(keys)) {
+          inputSelfieUrls = keys
+            .filter((k): k is string => typeof k === 'string')
+            .map(key => `/api/files/get?key=${encodeURIComponent(key)}`)
+        }
+      } catch {
+        // ignore malformed style settings
+      }
+
+      return ({
       id: generation.id,
       selfieId: generation.selfieId,
       status: generation.status,
@@ -232,6 +251,7 @@ export async function GET(request: NextRequest) {
       selfieKey: generation.uploadedPhotoKey || undefined, // Same as uploadedKey for consistency
       generatedKey: generation.generatedPhotoKeys[0] || undefined,
       acceptedKey: generation.acceptedPhotoKey || undefined,
+      inputSelfieUrls,
       
       // Image counts
       generatedImageCount: generation.generatedPhotoKeys.length,
@@ -277,7 +297,8 @@ export async function GET(request: NextRequest) {
       
       // Permission flags
       isOwnGeneration: generation.person.userId === session.user.id
-    }))
+    })
+    })
 
     // Calculate pagination info
     const totalPages = Math.ceil(totalCount / limit)

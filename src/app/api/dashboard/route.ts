@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+
+export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
 import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
 import { getUserSubscription } from '@/domain/subscription/subscription'

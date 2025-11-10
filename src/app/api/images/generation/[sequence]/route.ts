@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { getGenerationBySequence, getPrivateImageUrl } from '@/domain/access/image-access'
 import { prisma } from '@/lib/prisma'
 
+
+export const runtime = 'nodejs'
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ sequence: string }> }

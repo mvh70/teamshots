@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { setActiveStyleServer } from '../_service'
 
+
+export const runtime = 'nodejs'
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

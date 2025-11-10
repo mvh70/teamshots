@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma'
 import { SecurityLogger } from '@/lib/security-logger'
 import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
+
+export const runtime = 'nodejs'
 const s3 = createS3Client()
 const bucket = getS3BucketName()
 

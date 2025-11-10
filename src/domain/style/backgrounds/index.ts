@@ -64,7 +64,7 @@ const CUSTOM_BG: BackgroundDefinition = {
   id: 'custom',
   label: 'Custom Background',
   generatePrompt: () => ({
-    location_type: 'A custom background from attached image, labeled as background. Pls place the subject in the scene taking into account correct placement and orientation as if the subject fits correctly in the environment.'
+    location_type: 'Use the attached image labeled "background" as the background for the scene. The subject should be placed in the foreground. Adhere strictly to the requested framing and composition for the final image.'
   })
 }
 

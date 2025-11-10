@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
+import { ExclamationTriangleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
+import { resolveShotType } from '@/domain/style/packages/camera-presets'
 
 export interface PhotoStyleSummarySettings {
   background?: {
@@ -61,6 +62,8 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
   const logoPosition = settings?.branding?.position
   // Style preset computed but intentionally not displayed on the summary card
   const shotType = settings?.shotType?.type
+  const shotTypeConfig =
+    shotType && shotType !== 'user-choice' ? resolveShotType(shotType) : undefined
 
   return (
     <div className="space-y-2">
@@ -204,7 +207,19 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
                 User choice
               </span>
             ) : (
-              shotType
+              <span className="inline-flex items-center gap-1 text-gray-700 normal-case">
+                <span className="font-medium">
+                  {shotTypeConfig?.label ?? shotType.replace(/-/g, ' ')}
+                </span>
+                {shotTypeConfig?.framingDescription && (
+                  <span className="relative inline-flex group">
+                    <QuestionMarkCircleIcon className="h-3.5 w-3.5 text-gray-400" />
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 w-56 -translate-x-1/2 rounded-md bg-gray-900 px-2 py-1 text-[10px] leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+                      {shotTypeConfig.framingDescription}
+                    </span>
+                  </span>
+                )}
+              </span>
             )}
           </div>
         </div>

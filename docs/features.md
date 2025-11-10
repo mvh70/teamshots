@@ -197,7 +197,7 @@ All features below
 
 ## How to add a new style package
 
-1. Create a package file: `src/domain/style/packages/myPackage.ts` implementing `StylePackage` (see `headshot1.ts` for a template).
+1. Create package definitions under `src/domain/style/packages/`: export a client-facing config and a server variant (see `headshot1` for templates).
 2. Register the package in `src/domain/style/packages/index.ts`.
 3. Use it by passing `packageId='myPackage'` to `PhotoStyleSettings` and to the save/load service.
 4. Build prompts inside the package’s `promptBuilder` to fully control generation behavior.

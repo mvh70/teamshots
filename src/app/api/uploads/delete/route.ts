@@ -5,6 +5,8 @@ import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { Logger } from '@/lib/logger'
 import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 
+
+export const runtime = 'nodejs'
 const s3 = createS3Client({ forcePathStyle: true })
 const bucket = getS3BucketName()
 
@@ -47,14 +49,16 @@ export async function DELETE(request: NextRequest) {
       },
     })
 
-    // Verify key belongs to this user by checking if personId matches
-    // Extract personId from key format: selfies/{personId}-{firstName}/filename
-    const keyParts = key.split('/')
-    const personIdWithName = keyParts[1]
-    const filePersonId = personIdWithName?.split('-')[0] || keyParts[1]
-    
-    if (filePersonId !== person.id) {
-      return NextResponse.json({ error: 'Unauthorized - selfie does not belong to user' }, { status: 403 })
+    if (!selfie) {
+      // Verify key belongs to this user by checking if personId matches
+      // Extract personId from key format: selfies/{personId}-{firstName}/filename
+      const keyParts = key.split('/')
+      const personIdWithName = keyParts[1]
+      const filePersonId = personIdWithName?.split('-')[0] || keyParts[1]
+
+      if (!filePersonId || filePersonId !== person.id) {
+        return NextResponse.json({ error: 'Unauthorized - selfie does not belong to user' }, { status: 403 })
+      }
     }
 
     // Delete from S3 (key is relative from database, add folder prefix if configured)

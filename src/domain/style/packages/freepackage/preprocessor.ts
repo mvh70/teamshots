@@ -1,7 +1,6 @@
 import { PhotoStyleSettings } from '@/types/photo-style'
 import { 
   removePersonFromBackground, 
-  placeLogoOnClothing, 
   combinePreprocessedImages,
   MultiStepPreprocessingResult 
 } from '@/lib/image-preprocessing'
@@ -88,34 +87,8 @@ export async function preprocessFreepackage(
       }
     }
     
-    // Step 2: Place logo on clothing if branding position is clothing
-    if (
-      styleSettings.branding?.type === 'include' && 
-      styleSettings.branding.position === 'clothing' &&
-      styleSettings.branding.logoKey
-    ) {
-      const logoKey = additionalContext?.logoS3Key || styleSettings.branding.logoKey
-      const logoBuffer = await downloadAssetAsBuffer(logoKey)
-      
-      if (logoBuffer) {
-        Logger.debug('Processing selfie: placing logo on clothing')
-        additionalContext?.onStepProgress?.('logo-placed-on-clothing')
-        const logoResult = await placeLogoOnClothing(
-          processedSelfie,
-          logoBuffer,
-          'center' // Default to center, could be configurable
-        )
-        
-        if (logoResult.processed) {
-          processedSelfie = logoResult.processed
-          intermediateResults.selfieWithLogo = logoResult.processed
-          steps.push('logo-placed-on-clothing')
-          Logger.debug('Logo placed on clothing successfully')
-        } else {
-          Logger.debug('Logo placement failed, using original selfie')
-        }
-      }
-    }
+    // Step 2 was previously placing a logo onto the clothing area of the selfie.
+    // This functionality is intentionally disabled for now.
     
     // Step 3: Combine processed images if we have both background and selfie
     if (processedBackground && processedSelfie) {

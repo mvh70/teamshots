@@ -5,6 +5,8 @@ import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
 import { getUserSubscription } from '@/domain/subscription/subscription'
 import { Logger } from '@/lib/logger'
 
+
+export const runtime = 'nodejs'
 export async function GET() {
   try {
     const session = await auth()

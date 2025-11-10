@@ -13,12 +13,15 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
 import SelectedSelfiePreview from '@/components/generation/SelectedSelfiePreview'
+import SelfieSelectionGrid from '@/components/generation/SelfieSelectionGrid'
+import SelfieSelectionBanner from '@/components/generation/SelfieSelectionBanner'
 import Panel from '@/components/common/Panel'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { hasUserDefinedFields } from '@/domain/style/userChoice'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { getPackageConfig } from '@/domain/style/packages'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
+import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
@@ -75,9 +78,13 @@ export default function InviteDashboardPage() {
   // Generation flow state
   const [showGenerationFlow, setShowGenerationFlow] = useState<boolean>(false)
   const [showStartFlow, setShowStartFlow] = useState<boolean>(false)
+  const [showStyleSelection, setShowStyleSelection] = useState<boolean>(false)
   const [availableSelfies, setAvailableSelfies] = useState<Selfie[]>([])
   const [selectedSelfie, setSelectedSelfie] = useState<string>('')
   const [recentPhotoUrls, setRecentPhotoUrls] = useState<string[]>([])
+  
+  // Multi-select: load and manage selected selfies for invited flow
+  const { selectedSet, selectedIds, loadSelected, toggleSelect } = useSelfieSelection({ token })
   
   // Photo style settings
   const [photoStyleSettings, setPhotoStyleSettings] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
@@ -228,8 +235,9 @@ export default function InviteDashboardPage() {
   useEffect(() => {
     if (showGenerationFlow || showStartFlow) {
       fetchAvailableSelfies()
+      loadSelected()
     }
-  }, [showGenerationFlow, showStartFlow, fetchAvailableSelfies])
+  }, [showGenerationFlow, showStartFlow, fetchAvailableSelfies, loadSelected])
 
   // Check if returning from selfie upload after starting generation
   useEffect(() => {
@@ -237,13 +245,15 @@ export default function InviteDashboardPage() {
     if (pendingGeneration === 'true') {
       // Initial fetch
       fetchAvailableSelfies()
+      loadSelected()
       // Quick one-shot retry to avoid race where DB write/replication lags
       const retry = setTimeout(() => {
         fetchAvailableSelfies()
+        loadSelected()
       }, 800)
       return () => clearTimeout(retry)
     }
-  }, [fetchAvailableSelfies])
+  }, [fetchAvailableSelfies, loadSelected])
 
   // Set up generation flow once selfies are fetched
   useEffect(() => {
@@ -303,8 +313,8 @@ export default function InviteDashboardPage() {
         finalGenerationType = 'team'
       }
       
-      const requestBody = {
-        selfieKey: uploadKey,
+      const hasMulti = selectedIds.length >= 2
+      const requestBody: Record<string, unknown> = {
         generationType: finalGenerationType,
         creditSource: 'team', // Use team credits for team members
         contextId: inviteData?.contextId, // Pass the context ID from the invite
@@ -312,6 +322,14 @@ export default function InviteDashboardPage() {
         styleSettings: { ...photoStyleSettings, packageId },
         // Generate a prompt from the photo style settings
         prompt: generatePromptFromSettings(photoStyleSettings)
+      }
+      if (hasMulti) {
+        requestBody.selfieIds = selectedIds
+      } else if (uploadKey) {
+        requestBody.selfieKey = uploadKey
+      } else {
+        alert('Please select at least 2 selfies or choose one selfie to continue.')
+        return
       }
       
       // Use token-authenticated endpoint for invite dashboard flows
@@ -438,6 +456,8 @@ export default function InviteDashboardPage() {
           </div>
         )}
       />
+      {/* Invite dashboard does not show selected selfies or a Generate button.
+          Actions live in Selfies and Generations pages. */}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
@@ -525,49 +545,34 @@ export default function InviteDashboardPage() {
           {showStartFlow && (
             <div className="space-y-6">
               {/* Inline selfie uploader */}
-              {!uploadKey && availableSelfies.length > 0 && (
+              {!showStyleSelection && !uploadKey && availableSelfies.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Choose a selfie to use</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                    {availableSelfies.map((selfie) => (
-                      <div
-                        key={selfie.id}
-                        onClick={() => setSelectedSelfie(selfie.key)}
-                        className={`relative cursor-pointer rounded-lg overflow-hidden border-2 h-32 ${
-                          selectedSelfie === selfie.key 
-                            ? 'border-brand-primary' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <Image src={selfie.url} alt="Selfie" fill className="object-cover" />
-                        {selectedSelfie === selfie.key && (
-                          <div className="absolute inset-0 bg-brand-primary/20 flex items-center justify-center">
-                            <CheckCircleIcon className="h-6 w-6 text-brand-primary" />
-                        </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => router.push(`/invite-dashboard/${token}/selfies`)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
-                    >
-                      Upload New Selfie
-                    </button>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Choose selfies to use</h3>
                     <button
                       onClick={() => {
                         if (selectedSelfie) {
                           setUploadKey(selectedSelfie)
-                          setIsApproved(true)
+                          setShowStyleSelection(true)
+                        } else if (selectedIds.length >= 2) {
+                          setShowStyleSelection(true)
                         }
                       }}
-                      disabled={!selectedSelfie}
+                      disabled={!selectedSelfie && selectedIds.length < 2}
                       className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
-                      Continue with Selected Selfie
+                      Continue
                     </button>
                   </div>
+                  <SelfieSelectionBanner className="mb-4" />
+                  <SelfieSelectionGrid
+                    selfies={availableSelfies}
+                    selectedSet={selectedSet}
+                    onToggle={toggleSelect}
+                    showUploadTile
+                    onUploadClick={() => router.push(`/invite-dashboard/${token}/selfies`) }
+                  />
+                  {/* Bottom buttons removed; upload tile in grid handles uploads */}
                 </div>
                 )}
               {!uploadKey && availableSelfies.length === 0 && (
@@ -593,31 +598,66 @@ export default function InviteDashboardPage() {
                 />
               )}
 
-              {/* When selfie approved, show customization and generate CTA */}
-              {uploadKey && isApproved && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mb-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Selected Selfie</h3>
-                      <div className="relative w-full h-48 rounded-lg overflow-hidden border-2 border-gray-200">
-                        <Image
-                          src={availableSelfies.find(selfie => selfie.key === uploadKey)?.url || ''}
-                          alt="Selected Selfie"
-                          fill
-                          className="object-cover"
+              {/* Style selection view (after Continue is clicked) */}
+              {showStyleSelection && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+                  <h1 className="text-xl font-semibold text-gray-900 mb-4">Ready to Generate</h1>
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
+                    <div className="flex gap-4 md:gap-6 md:flex-1 min-w-0">
+                      {/* Selected Selfie Thumbnails */}
+                      <div className="flex-none">
+                        <div className={`grid ${selectedIds.length <= 2 ? 'grid-flow-col auto-cols-max grid-rows-1' : 'grid-rows-2 grid-flow-col'} gap-2 max-w-[220px]`}>
+                          {selectedIds.map((id) => {
+                            const selfie = availableSelfies.find(s => s.id === id)
+                            if (!selfie) return null
+                            return (
+                              <div key={id} className="w-10 h-10 sm:w-12 sm:h-12 rounded-md overflow-hidden border border-gray-200 shadow-sm">
+                                <Image
+                                  src={selfie.url}
+                                  alt="Selected selfie"
+                                  width={48}
+                                  height={48}
+                                  className="w-full h-full object-cover"
+                                  unoptimized
+                                />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <GenerationSummaryTeam
+                          type="team"
+                          styleLabel={photoStyleSettings?.style?.preset || packageId}
+                          remainingCredits={stats.creditsRemaining}
+                          perGenCredits={PRICING_CONFIG.credits.perGeneration}
+                          showGenerateButton={false}
+                          showCustomizeHint={showCustomizeHint}
+                          teamName={inviteData?.teamName}
+                          showTitle={false}
+                          plain
+                          inlineHint
                         />
-              </div>
-            </div>
-                    <GenerationSummaryTeam
-                      type="team"
-                      styleLabel={photoStyleSettings?.style?.preset || packageId}
-                      remainingCredits={stats.creditsRemaining}
-                      perGenCredits={PRICING_CONFIG.credits.perGeneration}
-                      onGenerate={onProceed}
-                      showCustomizeHint={showCustomizeHint}
-                      teamName={inviteData.teamName}
-                    />
-              </div>
+                      </div>
+                    </div>
+                    <div className="md:text-right md:flex-none md:w-60">
+                      <div className="text-2xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} credits</div>
+                      <div className="text-sm text-gray-900">Cost per generation</div>
+                      <div className="mt-3 md:mt-4">
+                        <button
+                          onClick={onProceed}
+                          disabled={stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
+                          className={`w-full md:w-auto px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                            stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration
+                              ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          }`}
+                        >
+                          Generate
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                   <StyleSettingsSection
                     value={photoStyleSettings}
                     onChange={setPhotoStyleSettings}
@@ -626,6 +666,8 @@ export default function InviteDashboardPage() {
                     showToggles={false}
                     packageId={packageId || 'headshot1'}
                     noContainer
+                    teamContext
+                    className="mt-6 pt-6 border-t border-gray-200"
                   />
                 </div>
               )}
@@ -675,6 +717,7 @@ export default function InviteDashboardPage() {
                     showToggles={false}
                     packageId={packageId || 'headshot1'}
                     noContainer
+                    teamContext
                   />
 
                 </div>

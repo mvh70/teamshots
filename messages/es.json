@@ -864,6 +864,14 @@
     },
     "actions": {
       "uploadNew": "Tomar o Subir Selfie"
+    },
+    "infoBanner": {
+      "selected": "Las selfies con una marca verde se incluyen en tu próxima generación.",
+      "recommendation": "Para mejores resultados, selecciona al menos 3 selfies con diferentes iluminaciones y ángulos.",
+      "recommendationDetailed": "Para los resultados más realistas, selecciona al menos 3 selfies con diferentes iluminaciones y ángulos. Más variedad generalmente mejora la calidad."
+    },
+    "selectionHint": {
+      "text": "Selecciona al menos 2 selfies para mejores resultados."
     }
   },
   "generate": {
@@ -1103,9 +1111,10 @@
       "subtitle": "Configura cada categoría como predefinida o elección del usuario",
       "legend": {
         "editable": "Las secciones editables resaltan lo que puedes personalizar.",
-        "locked": "Los elementos bloqueados usan la configuración del preset.",
+        "locked": "Bloqueado por la configuración de estilo de foto.",
+        "lockedTeamSuffix": " establecido por el administrador del equipo.",
         "editableChip": "Editable",
-        "lockedChip": "Bloqueado por estilo",
+        "lockedChip": "Bloqueado",
         "presetChip": "Preset activo"
       },
       "status": {

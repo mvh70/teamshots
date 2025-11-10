@@ -11,6 +11,8 @@ import { checkRateLimit, getRateLimitIdentifier } from '@/lib/rate-limit'
 import { getUserEffectiveRoles, getUserWithRoles } from '@/domain/access/roles'
 import { getUserSubscription } from '@/domain/subscription/subscription'
 
+
+export const runtime = 'nodejs'
 const s3 = createS3Client()
 const bucket = getS3BucketName()
 

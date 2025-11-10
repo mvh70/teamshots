@@ -3,6 +3,22 @@ import { routing } from './i18n/routing';
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getRequestHeader } from '@/lib/server-headers'
+import { auth } from '@/auth'
+
+const PROTECTED_PATH_PREFIXES = ['/app']
+
+function removeLocalePrefix(pathname: string) {
+  const segments = pathname.split('/')
+  if (segments.length > 1 && ['en', 'es'].includes(segments[1])) {
+    return '/' + segments.slice(2).join('/')
+  }
+  return pathname
+}
+
+function isProtectedPath(pathname: string) {
+  const normalized = removeLocalePrefix(pathname)
+  return PROTECTED_PATH_PREFIXES.some(prefix => normalized.startsWith(prefix))
+}
 
 function addSecurityHeaders(response: NextResponse) {
   // Prevent clickjacking
@@ -102,6 +118,15 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(newUrl, 301)
   }
   
+  if (isProtectedPath(request.nextUrl.pathname)) {
+    const session = await auth()
+    if (!session?.user) {
+      const loginUrl = new URL('/auth/signin', request.url)
+      loginUrl.searchParams.set('callbackUrl', `${request.nextUrl.pathname}${request.nextUrl.search}`)
+      return addSecurityHeaders(NextResponse.redirect(loginUrl))
+    }
+  }
+
   const response = intlMiddleware(request)
   
   return addSecurityHeaders(response)

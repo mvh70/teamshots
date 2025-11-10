@@ -6,6 +6,8 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 
+
+export const runtime = 'nodejs'
 const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY'), {
   apiVersion: '2025-10-29.clover',
 })

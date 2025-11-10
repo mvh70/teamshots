@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 interface Step {
   id: number;
@@ -17,6 +18,7 @@ export default function HowItWorks() {
   const t = useTranslations('howItWorks');
   const [activeStep, setActiveStep] = useState(1);
   const [isVisible, setIsVisible] = useState(false);
+  const { track } = useAnalytics();
 
   const STEPS: Step[] = [
     {
@@ -194,6 +196,12 @@ export default function HowItWorks() {
           <div className="space-y-4">
             <Link
               href="/auth/signup"
+              onClick={() =>
+                track('cta_clicked', {
+                  placement: 'how_it_works',
+                  action: 'signup',
+                })
+              }
               className="inline-block bg-brand-cta text-white px-10 py-5 rounded-xl font-bold text-xl hover:bg-brand-cta-hover transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
             >
               {t('cta')}

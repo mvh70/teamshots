@@ -119,7 +119,13 @@ export async function POST(request: NextRequest) {
     // Serialize style settings for storage
     const packageId = (finalStyleSettings['packageId'] as string) || 'headshot1'
     const pkg = getPackageConfig(packageId)
-    const serializedStyleSettings = pkg.persistenceAdapter.serialize(finalStyleSettings)
+    const serializedStyleSettingsBase = pkg.persistenceAdapter.serialize(finalStyleSettings)
+    // Try to reuse stored selfie keys from the source generation
+    const storedSelfieKeys = (sourceGeneration.styleSettings as unknown as { inputSelfies?: { keys?: string[] } } | null)?.inputSelfies?.keys
+    const serializedStyleSettings = {
+      ...serializedStyleSettingsBase,
+      inputSelfies: { keys: Array.isArray(storedSelfieKeys) ? storedSelfieKeys : [] }
+    } as Record<string, unknown>
 
     // Create new generation record
     const generation = await prisma.generation.create({
@@ -162,6 +168,11 @@ export async function POST(request: NextRequest) {
       },
       creditSource: 'team',
       selfieId: sourceGeneration.selfieId,
+    }
+
+    // If we have multiple stored selfie keys, add them to the job as selfieS3Keys
+    if (Array.isArray(storedSelfieKeys) && storedSelfieKeys.length > 1) {
+      ;(jobData as unknown as { selfieS3Keys?: string[] }).selfieS3Keys = storedSelfieKeys
     }
 
     // Lazy import to avoid build-time issues

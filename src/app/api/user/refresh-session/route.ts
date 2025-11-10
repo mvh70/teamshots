@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { getUserWithRoles } from '@/domain/access/roles'
 import { Logger } from '@/lib/logger'
 
+
+export const runtime = 'nodejs'
 export async function POST() {
   try {
     const session = await auth()

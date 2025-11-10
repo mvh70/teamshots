@@ -13,6 +13,7 @@ interface StyleSettingsSectionProps {
   packageId: string
   className?: string
   noContainer?: boolean
+  teamContext?: boolean
 }
 
 export default function StyleSettingsSection({
@@ -25,7 +26,8 @@ export default function StyleSettingsSection({
   showToggles = true,
   packageId,
   className = '',
-  noContainer = false
+  noContainer = false,
+  teamContext = false
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -40,6 +42,7 @@ export default function StyleSettingsSection({
         originalContextSettings={originalContextSettings}
         showToggles={showToggles}
         packageId={packageId}
+        teamContext={teamContext}
       />
     </>
   )

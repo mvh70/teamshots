@@ -89,26 +89,44 @@ export async function GET(request: NextRequest) {
     // Transform the data for the frontend
     const tokenParam = `token=${encodeURIComponent(token)}`
 
-    const transformedGenerations = generations.map(generation => ({
-      id: generation.id,
-      selfieKey: generation.selfie?.key || '',
-      selfieUrl: generation.selfie?.key ? `/api/files/get?key=${encodeURIComponent(generation.selfie.key)}&${tokenParam}` : '',
-      generatedPhotos: generation.generatedPhotoKeys.map((key, index) => ({
-        id: `${generation.id}-${index}`,
-        url: `/api/files/get?key=${encodeURIComponent(key)}&${tokenParam}`,
-        style: generation.context?.name || 'Freestyle'
-      })),
-      status: generation.status,
-      createdAt: generation.createdAt.toISOString(),
-      generationType: generation.generationType,
-      creditsUsed: generation.creditsUsed,
-      maxRegenerations: generation.maxRegenerations,
-      remainingRegenerations: generation.remainingRegenerations,
-      generationGroupId: generation.generationGroupId,
-      isOriginal: generation.isOriginal,
-      groupIndex: generation.groupIndex,
-      jobStatus: jobStatusMap.get(generation.id) || undefined
-    }))
+    const transformedGenerations = generations.map(generation => {
+      // Attempt to read input selfie keys from persisted style settings
+      let inputSelfieKeys: string[] = []
+      try {
+        const styles = generation.styleSettings as unknown as Record<string, unknown> | null
+        const inputSelfies = styles && typeof styles === 'object' ? (styles['inputSelfies'] as Record<string, unknown> | undefined) : undefined
+        const keys = inputSelfies && typeof inputSelfies === 'object' ? (inputSelfies['keys'] as unknown) : undefined
+        if (Array.isArray(keys)) {
+          inputSelfieKeys = keys.filter((k): k is string => typeof k === 'string')
+        }
+      } catch {
+        // ignore malformed style settings
+      }
+
+      const inputSelfieUrls = inputSelfieKeys.map(key => `/api/files/get?key=${encodeURIComponent(key)}&${tokenParam}`)
+
+      return {
+        id: generation.id,
+        selfieKey: generation.selfie?.key || '',
+        selfieUrl: generation.selfie?.key ? `/api/files/get?key=${encodeURIComponent(generation.selfie.key)}&${tokenParam}` : '',
+        inputSelfieUrls,
+        generatedPhotos: generation.generatedPhotoKeys.map((key, index) => ({
+          id: `${generation.id}-${index}`,
+          url: `/api/files/get?key=${encodeURIComponent(key)}&${tokenParam}`,
+          style: generation.context?.name || 'Freestyle'
+        })),
+        status: generation.status,
+        createdAt: generation.createdAt.toISOString(),
+        generationType: generation.generationType,
+        creditsUsed: generation.creditsUsed,
+        maxRegenerations: generation.maxRegenerations,
+        remainingRegenerations: generation.remainingRegenerations,
+        generationGroupId: generation.generationGroupId,
+        isOriginal: generation.isOriginal,
+        groupIndex: generation.groupIndex,
+        jobStatus: jobStatusMap.get(generation.id) || undefined
+      }
+    })
 
     return NextResponse.json({ generations: transformedGenerations })
   } catch (error) {

@@ -10,6 +10,9 @@ import type { AdapterUser } from "next-auth/adapters"
 import type { JWT } from "next-auth/jwt"
 import { Env } from '@/lib/env'
 
+const SESSION_MAX_AGE_SECONDS = 30 * 60 // 30 minutes
+const SESSION_EXTENSION_THRESHOLD_SECONDS = 5 * 60 // 5 minutes
+
 export const authOptions = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PrismaAdapter(prisma) as any,
@@ -84,7 +87,8 @@ export const authOptions = {
   
   session: {
     strategy: "jwt" as const,
-    maxAge: 30 * 60, // 30 minutes
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    updateAge: 5 * 60, // Refresh session timestamp every 5 minutes of activity
   },
 
   // Add cookie configuration for security - Safari-compatible
@@ -153,7 +157,7 @@ export const authOptions = {
         
         // Set token expiration time when user first authenticates
         const now = Math.floor(Date.now() / 1000)
-        token.exp = now + (30 * 60) // 30 minutes from now
+        token.exp = now + SESSION_MAX_AGE_SECONDS
       }
       
       
@@ -181,16 +185,16 @@ export const authOptions = {
         } catch {}
       }
       
-      // Extend token expiration if it's close to expiring (within 5 minutes)
+      // Extend token expiration if it's close to expiring (within the configured threshold)
       // Only do this on subsequent requests (not during initial authentication)
       if (!user && token.exp) {
         const now = Math.floor(Date.now() / 1000)
         const expirationTime = token.exp
         const timeUntilExpiry = expirationTime - now
         
-        // If token expires in less than 5 minutes, extend it by 30 minutes
-        if (timeUntilExpiry < 5 * 60 && timeUntilExpiry > 0) {
-          token.exp = now + (30 * 60)
+        // If the token is close to expiring, extend it by the full session window
+        if (timeUntilExpiry < SESSION_EXTENSION_THRESHOLD_SECONDS && timeUntilExpiry > 0) {
+          token.exp = now + SESSION_MAX_AGE_SECONDS
         }
       }
       

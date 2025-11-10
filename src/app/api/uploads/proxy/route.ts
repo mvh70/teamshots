@@ -6,6 +6,8 @@ import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 
+
+export const runtime = 'nodejs'
 const s3 = createS3Client({ forcePathStyle: true })
 const bucket = getS3BucketName()
 

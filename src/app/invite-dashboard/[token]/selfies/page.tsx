@@ -2,9 +2,8 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
-import { formatDate } from '@/lib/format'
-import Image from 'next/image'
-import { CameraIcon, TrashIcon } from '@heroicons/react/24/outline'
+import SelfieGallery from '@/components/generation/SelfieGallery'
+import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
 import dynamic from 'next/dynamic'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 
@@ -29,7 +28,6 @@ export default function SelfiesPage() {
   const [selfies, setSelfies] = useState<Selfie[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [uploading, setUploading] = useState(false)
   const [forceCamera, setForceCamera] = useState(false)
   
   // Validation flow state
@@ -37,6 +35,20 @@ export default function SelfiesPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isApproved, setIsApproved] = useState<boolean>(false)
   // Header resolves invite info internally; no local invite state needed
+
+  const loadSelected = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/selfies/selected?token=${encodeURIComponent(token)}&t=${Date.now()}`, {
+        credentials: 'include',
+        cache: 'no-store'
+      })
+      if (res.ok) {
+        // Selection state is managed by SelfieGallery component
+      }
+    } catch {}
+  }, [token])
+
+  useEffect(() => { loadSelected() }, [loadSelected])
 
   const fetchSelfies = useCallback(async () => {
     try {
@@ -95,7 +107,6 @@ export default function SelfiesPage() {
   }
 
   const handleApprove = async () => {
-    setUploading(true)
     try {
       const response = await fetch('/api/team/member/selfies', {
         method: 'POST',
@@ -131,8 +142,6 @@ export default function SelfiesPage() {
     } catch (error) {
       console.error('Error saving selfie:', error)
       setError('Failed to save selfie')
-    } finally {
-      setUploading(false)
     }
   }
 
@@ -142,6 +151,7 @@ export default function SelfiesPage() {
 
   const handleRetake = async () => {
     await deleteSelfie()
+    setUploadKey('inline')
     setForceCamera(true)
   }
 
@@ -162,43 +172,6 @@ export default function SelfiesPage() {
       }
     } catch (error) {
       console.error('Error deleting selfie:', error)
-    }
-  }
-
-  const handleDelete = async (selfieId: string) => {
-    try {
-      const response = await fetch(`/api/team/member/selfies/${selfieId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-        credentials: 'include' // Required for Safari to send cookies
-      })
-
-      if (response.ok) {
-        await fetchSelfies() // Refresh the list
-      } else {
-        console.error('Failed to delete selfie')
-      }
-    } catch (error) {
-      console.error('Error deleting selfie:', error)
-    }
-  }
-
-  const formatSelfieDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString)
-      if (isNaN(date.getTime())) {
-        return 'Unknown date'
-      }
-      return formatDate(dateString, 'en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    } catch {
-      return 'Unknown date'
     }
   }
 
@@ -223,6 +196,8 @@ export default function SelfiesPage() {
         title=""
       />
 
+      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
@@ -231,26 +206,19 @@ export default function SelfiesPage() {
         )}
 
         <div className="space-y-6">
-          {/* Upload Section */}
-          {!uploadKey && (
+          {/* Upload Flow - show PhotoUpload when uploadKey is 'inline' */}
+          {uploadKey === 'inline' && !isApproved && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload New Selfie</h2>
-              <div className="max-w-md">
-                <PhotoUpload 
-                  onUpload={onUploadWithToken}
-                  onUploaded={handleUpload}
-                  autoOpenCamera={forceCamera}
-                  disabled={uploading}
-                />
-                {uploading && (
-                  <p className="mt-2 text-sm text-gray-600">Uploading...</p>
-                )}
-              </div>
+              <PhotoUpload
+                onUpload={onUploadWithToken}
+                onUploaded={handleUpload}
+                autoOpenCamera={forceCamera}
+              />
             </div>
           )}
 
-          {/* Validation Flow */}
-          {uploadKey && !isApproved && (
+          {/* Validation Flow - show approval when there's an actual uploaded key */}
+          {uploadKey && uploadKey !== 'inline' && !isApproved && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <SelfieApproval
                 uploadedPhotoKey={uploadKey}
@@ -270,6 +238,7 @@ export default function SelfiesPage() {
                   }
                   setUploadKey('')
                   setPreviewUrl(null)
+                  setForceCamera(false)
                 }}
               />
             </div>
@@ -293,60 +262,19 @@ export default function SelfiesPage() {
           {/* Selfies Grid (hidden in upload-only mode) */}
           {!uploadOnly && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6">
               <h2 className="text-lg font-semibold text-gray-900">Your Selfies</h2>
             </div>
-            <div className="p-6">
-              {selfies.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {selfies.map((selfie) => (
-                    <div key={selfie.id} className="relative group">
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                        <Image
-                          src={selfie.url}
-                          alt="Selfie"
-                          width={400}
-                          height={400}
-                          className="w-full h-full object-cover"
-                          unoptimized
-                          onError={(e) => {
-                            console.error('Image failed to load:', selfie.url, e)
-                          }}
-                          onLoad={() => {
-                            // Image loaded successfully
-                          }}
-                        />
-                      </div>
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-600">
-                          {formatSelfieDate(selfie.uploadedAt)}
-                        </p>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          selfie.status === 'approved' 
-                            ? 'bg-brand-secondary/10 text-brand-secondary'
-                            : selfie.status === 'rejected'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-brand-primary-light text-brand-primary'
-                        }`}>
-                          {selfie.status}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => handleDelete(selfie.id)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <CameraIcon className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No selfies yet</h3>
-                  <p className="mt-1 text-sm text-gray-500">Upload your first selfie to get started.</p>
-                </div>
-              )}
+            <div className="px-6 pt-2 pb-6">
+              <SelfieInfoBanner compact className="mb-6" />
+              <SelfieGallery
+                selfies={selfies}
+                token={token}
+                allowDelete
+                showUploadTile={!uploadKey}
+                onUploadClick={() => setUploadKey('inline')}
+                onDeleted={async () => { await fetchSelfies() }}
+              />
             </div>
           </div>
           )}
