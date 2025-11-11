@@ -12,10 +12,12 @@ import {
   SparklesIcon,
   LockClosedIcon
 } from '@heroicons/react/24/outline'
-import { 
-  PhotoStyleSettings as PhotoStyleSettingsType, 
+import {
+  PhotoStyleSettings as PhotoStyleSettingsType,
   CategoryType,
-  DEFAULT_PHOTO_STYLE_SETTINGS 
+  DEFAULT_PHOTO_STYLE_SETTINGS,
+  ClothingColorSettings,
+  ShotTypeSettings
 } from '@/types/photo-style'
 import EnhancedBackgroundSelector from './EnhancedBackgroundSelector'
 import ClothingStyleSelector from './ClothingStyleSelector'
@@ -24,6 +26,7 @@ import ShotTypeSelector from './ShotTypeSelector'
 import BrandingSelector from './BrandingSelector'
 import ExpressionSelector from './ExpressionSelector'
 import { getPackageConfig } from '@/domain/style/packages'
+import { defaultAspectRatioForShot } from '@/domain/style/packages/aspect-ratios'
 
 interface PhotoStyleSettingsProps {
   value: PhotoStyleSettingsType
@@ -104,6 +107,73 @@ export default function PhotoStyleSettings({
   const t = useTranslations('customization.photoStyle')
   // All categories are always expanded per UX requirement
   const pkg = getPackageConfig(packageId)
+  const packageDefaults = React.useMemo(
+    () => pkg.defaultSettings || DEFAULT_PHOTO_STYLE_SETTINGS,
+    [pkg]
+  )
+
+  const resolvedClothingColors = React.useMemo<ClothingColorSettings>(() => {
+    const defaults = packageDefaults.clothingColors
+    const current = value.clothingColors
+    const defaultColors = defaults?.colors || {}
+
+    if (current) {
+      if (current.type === 'user-choice') {
+        return {
+          type: 'user-choice',
+          colors: {
+            ...defaultColors,
+            ...(current.colors || {})
+          }
+        }
+      }
+
+      return {
+        type: 'predefined',
+        colors: {
+          ...defaultColors,
+          ...(current.colors || {})
+        }
+      }
+    }
+
+    if (Object.keys(defaultColors).length > 0) {
+      return {
+        type: 'user-choice',
+        colors: { ...defaultColors }
+      }
+    }
+
+    return { type: 'user-choice' }
+  }, [packageDefaults.clothingColors, value.clothingColors])
+
+  const syncAspectRatioWithShotType = React.useCallback(
+    (target: PhotoStyleSettingsType, shotTypeSettings?: ShotTypeSettings | null) => {
+      if (!shotTypeSettings?.type || shotTypeSettings.type === 'user-choice') {
+        return
+      }
+
+      const aspectRatioConfig = defaultAspectRatioForShot(shotTypeSettings.type)
+      if (target.aspectRatio !== aspectRatioConfig.id) {
+        target.aspectRatio = aspectRatioConfig.id
+      }
+    },
+    []
+  )
+
+  React.useEffect(() => {
+    const shotTypeValue = value.shotType?.type
+    if (!shotTypeValue || shotTypeValue === 'user-choice') {
+      return
+    }
+    const expectedAspectRatio = defaultAspectRatioForShot(shotTypeValue).id
+    if (value.aspectRatio !== expectedAspectRatio) {
+      onChange({
+        ...value,
+        aspectRatio: expectedAspectRatio
+      })
+    }
+  }, [value, value.aspectRatio, value.shotType?.type, onChange])
 
   const handleCategoryToggle = (category: CategoryType, isPredefined: boolean, event?: React.MouseEvent) => {
     if (event) {
@@ -115,8 +185,10 @@ export default function PhotoStyleSettings({
     
     if (!newSettings[category]) {
       // Initialize with default values
+      const packageDefaultValue = packageDefaults[category]
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (newSettings as any)[category] = DEFAULT_PHOTO_STYLE_SETTINGS[category]
+      ;(newSettings as any)[category] =
+        packageDefaultValue !== undefined ? packageDefaultValue : DEFAULT_PHOTO_STYLE_SETTINGS[category]
     }
     
     // Update the type based on toggle
@@ -131,13 +203,28 @@ export default function PhotoStyleSettings({
             newSettings.branding = { type: 'include' }
             break
           case 'clothing':
+            if (packageDefaults.clothing) {
+              newSettings.clothing = { ...packageDefaults.clothing }
+            } else {
             newSettings.clothing = { style: 'business' }
+            }
             break
           case 'clothingColors':
-            newSettings.clothingColors = { type: 'predefined', colors: { topCover: 'navy', topBase: 'white', bottom: 'gray' } }
+            if (packageDefaults.clothingColors) {
+              newSettings.clothingColors = {
+                type: packageDefaults.clothingColors.type,
+                colors: { ...packageDefaults.clothingColors.colors }
+              }
+            } else {
+              newSettings.clothingColors = {
+                type: 'predefined',
+                colors: { topCover: 'navy', topBase: 'white', bottom: 'gray' }
+              }
+            }
             break
           case 'shotType':
             newSettings.shotType = { type: 'headshot' }
+            syncAspectRatioWithShotType(newSettings, newSettings.shotType)
             break
           case 'style':
             newSettings.style = { type: 'preset', preset: 'corporate' }
@@ -166,6 +253,7 @@ export default function PhotoStyleSettings({
             break
           case 'shotType':
             newSettings.shotType = { type: 'user-choice' }
+            syncAspectRatioWithShotType(newSettings, newSettings.shotType)
             break
           case 'style':
             newSettings.style = { type: 'user-choice' }
@@ -193,6 +281,9 @@ export default function PhotoStyleSettings({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const newSettings: any = { ...value }
     newSettings[category] = settings
+    if (category === 'shotType') {
+      syncAspectRatioWithShotType(newSettings, settings as ShotTypeSettings)
+    }
     onChange(newSettings)
   }
 
@@ -240,6 +331,7 @@ export default function PhotoStyleSettings({
     const isPredefined = isCategoryPredefined(category.key)
     const isUserChoice = status === 'user-choice'
     const isLockedByPreset = readonlyPredefined && isPredefined
+  const isLocked = isLockedByPreset
     const chipLabel = isUserChoice
       ? t('legend.editableChip', { default: 'Editable' })
       : isLockedByPreset
@@ -284,7 +376,7 @@ export default function PhotoStyleSettings({
                 {isUserChoice ? (
                   <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
                 ) : (
-                  <LockClosedIcon className={`h-3.5 w-3.5 ${isLockedByPreset ? 'text-red-600' : ''}`} aria-hidden="true" />
+                  <LockClosedIcon className={`h-3.5 w-3.5 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
                 )}
                 {chipLabel}
               </span>
@@ -335,9 +427,12 @@ export default function PhotoStyleSettings({
 
           {category.key === 'clothingColors' && (
             <ClothingColorSelector
-              value={value.clothingColors || { type: 'user-choice' }}
+              value={resolvedClothingColors}
               onChange={(settings) => handleCategorySettingsChange('clothingColors', settings)}
               isDisabled={readonlyPredefined && isPredefined}
+              isPredefined={readonlyPredefined && isPredefined}
+              showPredefinedBadge={isPredefined}
+              showHeader
             />
           )}
 

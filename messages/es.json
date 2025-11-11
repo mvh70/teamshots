@@ -547,6 +547,8 @@
     "freestyle": "Freestyle",
         "freestyleDescription": "Personalización completa con todas opciones",
         "freestyleOnlyDescription": "Personaliza todas configuraciones para esta generación",
+        "fallbackPersonalStyle": "Estilo personal",
+        "fallbackTeamStyle": "Estilo de equipo",
         "predefinedStyle": "Estilo predefinido con preajustes",
         "insufficientCredits": "Créditos insuficientes",
         "insufficientCreditsMessage": "Necesitas {required} créditos para generar. Tienes {current}. ¡Recarga!",
@@ -813,6 +815,7 @@
       }
     },
     "creditHint": "4 créditos por generación",
+    "generating": "Generando...",
     "empty": {
       "generated": {
         "title": "Aún no hay generaciones",

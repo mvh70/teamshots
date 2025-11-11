@@ -53,7 +53,8 @@ export function resolveStyleSettings({
     hasSavedSettings: Boolean(savedStyleSettings),
     hasContextSettings: Boolean(contextSettings),
     hasJobOverrides: Boolean(jobStyleSettings && Object.keys(jobStyleSettings).length > 0),
-    shotType: mergedStyleSettings.shotType
+    shotType: mergedStyleSettings.shotType,
+    aspectRatio: mergedStyleSettings.aspectRatio
   })
 
   return {

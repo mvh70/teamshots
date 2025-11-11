@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useSession } from 'next-auth/react'
@@ -31,7 +31,7 @@ export default function StartGenerationPage() {
   const searchParams = useSearchParams()
   const { data: session } = useSession()
   const t = useTranslations('app.sidebar.generate')
-  const { isFreePlan } = usePlanInfo()
+  const { isFreePlan, uiTier } = usePlanInfo()
   const keyFromQuery = useMemo(() => searchParams.get('key') || '', [searchParams])
   const skipUpload = useMemo(() => searchParams.get('skipUpload') === '1', [searchParams])
   const typeFromQuery = useMemo(() => searchParams.get('type') as 'personal' | 'team' | null, [searchParams])
@@ -41,9 +41,19 @@ export default function StartGenerationPage() {
   const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
   const { credits: userCredits, loading: creditsLoading } = useCredits()
   const { href: buyCreditsHref } = useBuyCreditsLink()
+  const personalFallbackLabel = t('fallbackPersonalStyle', { default: 'Personal Style' })
+  const teamFallbackLabel = t('fallbackTeamStyle', { default: 'Team Style' })
+  type ContextOption = {
+    id: string
+    name: string
+    customPrompt?: string | null
+    settings?: Record<string, unknown>
+  }
+
   const [activeContext, setActiveContext] = useState<{
     id: string
     name: string
+    customPrompt?: string | null
     settings?: {
       background?: { type?: string; prompt?: string }
       branding?: { type?: string }
@@ -54,13 +64,8 @@ export default function StartGenerationPage() {
     }
     backgroundPrompt?: string
     stylePreset?: string
-    customPrompt?: string
   } | null>(null)
-  const [availableContexts, setAvailableContexts] = useState<Array<{
-    id: string
-    name: string
-    settings?: Record<string, unknown>
-  }>>([])
+  const [availableContexts, setAvailableContexts] = useState<ContextOption[]>([])
   const [contextLoaded, setContextLoaded] = useState(false)
   const [photoStyleSettings, setPhotoStyleSettings] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
@@ -134,10 +139,20 @@ export default function StartGenerationPage() {
     }
   }, [session?.user?.id])
 
+  const normalizeContextName = useCallback((rawName: string | null | undefined, index: number, total: number, type: 'personal' | 'team'): string => {
+    const trimmed = (rawName ?? '').trim()
+    if (trimmed && trimmed.toLowerCase() !== 'unnamed') {
+      return trimmed
+    }
+    const base = type === 'team' ? teamFallbackLabel : personalFallbackLabel
+    return total > 1 ? `${base} ${total - index}` : base
+  }, [teamFallbackLabel, personalFallbackLabel])
+
   // Fetch contexts when generation type is determined
   useEffect(() => {
     const fetchContexts = async () => {
-      if (!session?.user?.id || !generationType) return
+      const effectiveGenerationType: 'personal' | 'team' | null = uiTier === 'pro' ? generationType : 'personal'
+      if (!session?.user?.id || !effectiveGenerationType) return
       
       try {
           // If free plan, always use the Free Package style
@@ -167,25 +182,33 @@ export default function StartGenerationPage() {
         }
 
         // For paid users, fetch contexts based on generation type
-        const endpoint = generationType === 'personal' ? '/api/styles/personal' : '/api/styles/team'
+        const endpoint = effectiveGenerationType === 'personal' ? '/api/styles/personal' : '/api/styles/team'
         const contextData = await jsonFetcher<{ contexts?: unknown[]; activeContext?: unknown }>(endpoint)
-        const contexts = (contextData.contexts || []) as Array<{ id: string; name: string; settings?: Record<string, unknown> }>
+        const rawContexts = (contextData.contexts || []) as Array<{ id: string; name?: string | null; customPrompt?: string | null; settings?: Record<string, unknown> }>
+        const total = rawContexts.length
+        const contexts = rawContexts.map((context, index) => ({
+          id: context.id,
+          name: normalizeContextName(context.name, index, total, effectiveGenerationType),
+          customPrompt: context.customPrompt ?? null,
+          settings: context.settings
+        }))
         setAvailableContexts(contexts)
           
           // Set active context if available
-          let activeContext = null
+          let resolvedActiveContext: ContextOption | null = null
           if (contextData.activeContext) {
-            activeContext = contextData.activeContext as { id: string; name: string; settings?: Record<string, unknown> }
-            setActiveContext(activeContext)
+            const activeFromList = contexts.find((ctx) => ctx.id === (contextData.activeContext as { id: string }).id) || null
+            resolvedActiveContext = activeFromList
+            setActiveContext(activeFromList ? { ...activeFromList } : null)
           } else {
             // Default to freestyle if no context is active
             setActiveContext(null)
           }
           
           // Load deserialized settings for active context if available
-          if (activeContext) {
+          if (resolvedActiveContext) {
             // loadStyleByContextId extracts packageId from the context settings in the database
-            const { ui, pkg } = await loadStyleByContextId(activeContext.id)
+            const { ui, pkg, context } = await loadStyleByContextId(resolvedActiveContext.id)
             setPhotoStyleSettings(ui)
             setOriginalContextSettings(ui) // Store original context settings
             
@@ -193,6 +216,31 @@ export default function StartGenerationPage() {
             // This will be 'freepackage', 'headshot1', or any other package the team admin set
             const contextPackageId = pkg.id
             setSelectedPackageId(contextPackageId)
+            if (context) {
+              const contextIndex = contexts.findIndex((ctx) => ctx.id === context.id)
+              const updatedName = normalizeContextName(
+                context.name,
+                contextIndex === -1 ? contexts.length : contextIndex,
+                contexts.length || 1,
+                effectiveGenerationType
+              )
+              const enrichedContext = {
+                id: context.id,
+                name: updatedName,
+                customPrompt: context.customPrompt ?? null,
+                settings: context.settings,
+                backgroundPrompt: context.settings?.['backgroundPrompt'] as string | undefined,
+                stylePreset: context.stylePreset
+              }
+              setActiveContext(enrichedContext)
+              setAvailableContexts((prev) =>
+                prev.map((ctx) =>
+                  ctx.id === enrichedContext.id
+                    ? { ...ctx, name: enrichedContext.name, customPrompt: enrichedContext.customPrompt ?? ctx.customPrompt }
+                    : ctx
+                )
+              )
+            }
           } else {
             // No active context - initialize with default settings for individual users
             setPhotoStyleSettings(DEFAULT_PHOTO_STYLE_SETTINGS)
@@ -208,7 +256,7 @@ export default function StartGenerationPage() {
     }
 
     fetchContexts()
-  }, [session?.user?.id, generationType, isFreePlan, selectedPackageId])
+  }, [session?.user?.id, generationType, isFreePlan, selectedPackageId, uiTier, normalizeContextName])
 
   const onSelfieApproved = async (selfieKey: string, selfieId?: string) => {
     setKey(selfieKey)
@@ -308,12 +356,18 @@ export default function StartGenerationPage() {
   // No client-side choice: server enforces mode
   const shouldShowGenerationTypeSelector = false
 
+  useEffect(() => {
+    if (uiTier !== 'pro' && generationType !== 'personal') {
+      setGenerationType('personal')
+    }
+  }, [uiTier, generationType])
+
   // Auto-select generation type if user only has one option
   useEffect(() => {
     if (!creditsLoading && contextLoaded && isApproved && !generationType) {
       // If type is specified in URL, use it (if user has access)
       if (typeFromQuery) {
-        if (typeFromQuery === 'team' && hasTeamAccess) {
+        if (typeFromQuery === 'team' && uiTier === 'pro' && hasTeamAccess) {
           setGenerationType('team')
           return
         } else if (typeFromQuery === 'personal' && hasIndividualAccess) {
@@ -325,15 +379,15 @@ export default function StartGenerationPage() {
       if (shouldShowGenerationTypeSelector) {
         // User has both options, keep generationType as null to show selector
         return
-      } else if (hasTeamAccess) {
-        // User only has team access
-        setGenerationType('team')
-      } else if (hasIndividualAccess) {
-        // User only has individual access
+      } else if (hasIndividualAccess || uiTier !== 'pro') {
+        // Prefer personal generation when individual credits are available
         setGenerationType('personal')
+      } else if (hasTeamAccess && uiTier === 'pro') {
+        // Fall back to team generation access
+        setGenerationType('team')
       }
     }
-  }, [creditsLoading, contextLoaded, isApproved, shouldShowGenerationTypeSelector, hasTeamAccess, hasIndividualAccess, generationType, typeFromQuery])
+  }, [creditsLoading, contextLoaded, isApproved, shouldShowGenerationTypeSelector, hasTeamAccess, hasIndividualAccess, generationType, typeFromQuery, uiTier])
 
   // Show upsell window if no credits available
   if (!creditsLoading && !hasAnyCredits) {
@@ -399,7 +453,7 @@ export default function StartGenerationPage() {
             <p className="mt-2 text-sm text-gray-600">Loading...</p>
           </div>
         </div>
-      ) : !activeContext && hasTeamAccess ? (
+      ) : (!activeContext && generationType === 'team' && uiTier === 'pro' && hasTeamAccess) ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">No Active Context</h2>
@@ -522,15 +576,39 @@ export default function StartGenerationPage() {
                       if (e.target.value === 'freestyle') {
                         setActiveContext(null)
                         setPhotoStyleSettings(DEFAULT_PHOTO_STYLE_SETTINGS)
+                        setOriginalContextSettings(undefined)
                       } else {
                         const selectedContext = availableContexts.find(ctx => ctx.id === e.target.value)
                         if (selectedContext) {
                           // Fetch and deserialize the context properly using loadStyleByContextId
-                          const { ui, pkg } = await loadStyleByContextId(selectedContext.id)
-                          setActiveContext(selectedContext)
+                          const { ui, pkg, context } = await loadStyleByContextId(selectedContext.id)
+                          const contextIndex = availableContexts.findIndex((ctx) => ctx.id === selectedContext.id)
+                          const effectiveType = uiTier === 'pro' ? (generationType ?? 'personal') : 'personal'
+                          const updatedName = normalizeContextName(
+                            context?.name ?? selectedContext.name,
+                            contextIndex === -1 ? availableContexts.length : contextIndex,
+                            availableContexts.length || 1,
+                            effectiveType
+                          )
+                          const enrichedContext = {
+                            id: selectedContext.id,
+                            name: updatedName,
+                            customPrompt: context?.customPrompt ?? selectedContext.customPrompt ?? null,
+                            settings: context?.settings ?? selectedContext.settings,
+                            backgroundPrompt: context?.settings?.['backgroundPrompt'] as string | undefined,
+                            stylePreset: context?.stylePreset
+                          }
+                          setActiveContext(enrichedContext)
                           setPhotoStyleSettings(ui)
                           setOriginalContextSettings(ui)
                           setSelectedPackageId(pkg.id)
+                          setAvailableContexts((prev) =>
+                            prev.map((ctx) =>
+                              ctx.id === enrichedContext.id
+                                ? { ...ctx, name: enrichedContext.name, customPrompt: enrichedContext.customPrompt ?? ctx.customPrompt }
+                                : ctx
+                            )
+                          )
                         }
                       }
                     }}

@@ -13,11 +13,31 @@ interface ExpressionSelectorProps {
 }
 
 const EXPRESSIONS = [
-  { value: 'happy', label: 'Happy', emoji: '😀' },
-  { value: 'serious', label: 'Serious', emoji: '😐' },
-  { value: 'sad', label: 'Sad', emoji: '😔' },
-  { value: 'neutral', label: 'Neutral', emoji: '😶' },
-  { value: 'confident', label: 'Confident', emoji: '😎' }
+  {
+    value: 'friendly',
+    label: 'Genuine smile (teeth) *',
+    description: 'Approachable, friendly'
+  },
+  {
+    value: 'professional',
+    label: 'Soft smile (no teeth)',
+    description: 'Professional, subtle'
+  },
+  {
+    value: 'serious',
+    label: 'Neutral / serious',
+    description: 'Executive, dramatic'
+  },
+  {
+    value: 'happy',
+    label: 'Laugh / joy',
+    description: 'Lifestyle, authentic'
+  },
+  {
+    value: 'thoughtful',
+    label: 'Contemplative',
+    description: 'Editorial, artistic'
+  }
 ] as const
 
 export default function ExpressionSelector({
@@ -66,7 +86,10 @@ export default function ExpressionSelector({
             <button
               type="button"
               key={expr.value}
-              onClick={(e) => !(isPredefined || isDisabled) && handleChange(expr.value as ExpressionSettings['type'], e)}
+              onClick={(e) =>
+                !(isPredefined || isDisabled) &&
+                handleChange(expr.value as ExpressionSettings['type'], e)
+              }
               disabled={isPredefined || isDisabled}
               className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                 isSelected
@@ -74,11 +97,13 @@ export default function ExpressionSelector({
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
               } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
             >
-              <span className="text-lg leading-none" aria-hidden>
-                {expr.emoji}
-              </span>
-              <span className="text-sm font-medium">{expr.label}</span>
-              {isSelected && <div className="ml-auto w-2 h-2 bg-brand-primary rounded-full"></div>}
+              <div className="flex flex-col items-start text-left gap-1">
+                <span className="text-sm font-medium">{expr.label}</span>
+                <span className="text-xs text-gray-500">{expr.description}</span>
+              </div>
+              {isSelected && (
+                <div className="ml-auto w-2 h-2 bg-brand-primary rounded-full" />
+              )}
             </button>
           )
         })}

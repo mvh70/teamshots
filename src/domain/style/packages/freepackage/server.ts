@@ -6,6 +6,7 @@ import {
 import { resolveAspectRatio } from '../aspect-ratios'
 import { applyStandardPreset } from '../standard-settings'
 import { resolveShotType } from '../camera-presets'
+import { Logger } from '@/lib/logger'
 import type { AspectRatioId } from '../aspect-ratios'
 import type { GenerationContext, GenerationPayload, ReferenceImage } from '@/types/generation'
 
@@ -32,10 +33,24 @@ export const freepackageServer: FreePackageServerPackage = {
     const shotTypeConfig = resolveShotType(effectiveSettings.shotType?.type)
     const shotText = shotTypeConfig.label
 
-    const ratioConfig = resolveAspectRatio(
-      shotTypeConfig.id,
-      (effectiveSettings.aspectRatio as AspectRatioId | undefined) || undefined
-    )
+    const explicitAspectRatio = (effectiveSettings.aspectRatio as AspectRatioId | undefined) || undefined
+    const canonicalRatioConfig = resolveAspectRatio(shotTypeConfig.id)
+    let ratioConfig = canonicalRatioConfig
+
+    if (explicitAspectRatio && explicitAspectRatio !== canonicalRatioConfig.id) {
+      Logger.debug('Aspect ratio mismatch detected. Using canonical value derived from shot type.', {
+        packageId: freepackageBase.id,
+        shotType: shotTypeConfig.id,
+        canonicalAspectRatio: canonicalRatioConfig.id,
+        explicitAspectRatio
+      })
+    }
+
+    if (explicitAspectRatio && explicitAspectRatio === canonicalRatioConfig.id) {
+      ratioConfig = resolveAspectRatio(shotTypeConfig.id, explicitAspectRatio)
+    }
+
+    effectiveSettings.aspectRatio = ratioConfig.id
     const aspectRatio = ratioConfig.id
     const aspectRatioDescription = `${ratioConfig.id} (${ratioConfig.width}x${ratioConfig.height})`
 

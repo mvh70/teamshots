@@ -10,6 +10,7 @@ interface ClothingColorSelectorProps {
   isDisabled?: boolean // If true, controls are visually greyed and inactive
   className?: string
   showHeader?: boolean
+  showPredefinedBadge?: boolean // If true, show the badge even when editable
 }
 
 export default function ClothingColorSelector({
@@ -18,7 +19,8 @@ export default function ClothingColorSelector({
   isPredefined = false,
   isDisabled = false,
   className = '',
-  showHeader = false
+  showHeader = false,
+  showPredefinedBadge = false
 }: ClothingColorSelectorProps) {
   const t = useTranslations('customization.photoStyle.clothingColors')
 
@@ -47,7 +49,7 @@ export default function ClothingColorSelector({
               {t('subtitle', { default: 'Choose colors for clothing items' })}
             </p>
           </div>
-          {isPredefined && (
+          {(isPredefined || showPredefinedBadge) && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
               {t('predefined', { default: 'Predefined' })}
             </span>

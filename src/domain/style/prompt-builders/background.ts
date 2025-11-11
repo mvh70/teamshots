@@ -1,20 +1,12 @@
-// Central background repository
-// This defines all available backgrounds and their prompt generation logic
-import { BackgroundSettings } from '@/types/photo-style'
+import type { BackgroundSettings } from '@/types/photo-style'
 
 export interface BackgroundDefinition {
   id: string
   label: string
-  requiresColor?: boolean // If true, package should include a color picker
-  generatePrompt: (settings: Partial<BackgroundSettings>) => {
-    location_type?: string
-    color_palette?: string[]
-    description?: string
-    branding?: string
-  }
+  requiresColor?: boolean
+  generatePrompt: (settings: Partial<BackgroundSettings>) => BackgroundPrompt
 }
 
-// Base background definitions
 const OFFICE_BG: BackgroundDefinition = {
   id: 'office',
   label: 'Office Environment',
@@ -68,7 +60,6 @@ const CUSTOM_BG: BackgroundDefinition = {
   })
 }
 
-// Repository of all backgrounds
 export const BACKGROUND_REPOSITORY: Record<string, BackgroundDefinition> = {
   [OFFICE_BG.id]: OFFICE_BG,
   [TROPICAL_BEACH_BG.id]: TROPICAL_BEACH_BG,
@@ -78,23 +69,22 @@ export const BACKGROUND_REPOSITORY: Record<string, BackgroundDefinition> = {
   [CUSTOM_BG.id]: CUSTOM_BG
 }
 
-// Helper to get background definition by ID
 export function getBackgroundDefinition(id: string): BackgroundDefinition | undefined {
   return BACKGROUND_REPOSITORY[id]
 }
 
-// Helper to check if background requires a color picker
 export function backgroundRequiresColor(id: string): boolean {
   return BACKGROUND_REPOSITORY[id]?.requiresColor ?? false
 }
 
-// Helper to generate prompt for a background
-export function generateBackgroundPrompt(settings: BackgroundSettings): {
+export type BackgroundPrompt = {
   location_type?: string
   color_palette?: string[]
   description?: string
   branding?: string
-} {
+}
+
+export function generateBackgroundPrompt(settings: BackgroundSettings): BackgroundPrompt {
   const definition = getBackgroundDefinition(settings.type)
   if (!definition) {
     return {}

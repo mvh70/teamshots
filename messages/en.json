@@ -546,6 +546,8 @@
     "freestyle": "Freestyle",
     "freestyleDescription": "Full customization with all options available",
     "freestyleOnlyDescription": "Customize all photo style settings for this generation",
+    "fallbackPersonalStyle": "Personal Style",
+    "fallbackTeamStyle": "Team Style",
     "predefinedStyle": "Predefined style with preset settings",
         "insufficientCredits": "Insufficient credits",
         "insufficientCreditsMessage": "You need {required} credits to generate a photo. You currently have {current} credits. Time to top up!",
@@ -812,6 +814,7 @@
       }
     },
     "creditHint": "4 credits per generation",
+    "generating": "Generating...",
     "empty": {
       "generated": {
         "title": "No generations yet",

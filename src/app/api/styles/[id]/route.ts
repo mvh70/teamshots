@@ -107,8 +107,13 @@ export async function PUT(
     const stylePreset = settings?.style?.preset || 'corporate'
     const updatedContext = await prisma.context.update({ where: { id: contextId }, data: { name, stylePreset, customPrompt, settings: settings || {} } })
 
-    // Set as active if requested
-    if (setAsActive) await setActiveStyleServer({ scope: context.teamId ? 'pro' : 'individual', userId: session.user.id, styleId: contextId })
+    if (typeof setAsActive === 'boolean') {
+      await setActiveStyleServer({
+        scope: context.teamId ? 'pro' : 'individual',
+        userId: session.user.id,
+        styleId: setAsActive ? contextId : null
+      })
+    }
 
     return NextResponse.json({
       success: true,

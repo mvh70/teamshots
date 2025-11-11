@@ -61,12 +61,17 @@ export default function StyleForm({
   const [styleContextId, setStyleContextId] = useState<string | null>(null)
   const [customPrompt, setCustomPrompt] = useState('')
   const [setAsActive, setSetAsActive] = useState(false)
+  const [pendingSetActive, setPendingSetActive] = useState(false)
   
+  const autosaveInitialContextId = mode === 'edit'
+    ? (loading ? null : (styleContextId ?? undefined))
+    : undefined
+
   const { status: styleStatus, contextId: autosaveContextId } = useAutosaveStyle({
     scope,
     packageId: scope === 'freePackage' ? 'freepackage' : 'headshot1',
     settings: photoStyleSettings,
-    initialContextId: mode === 'edit' && styleContextId !== null ? styleContextId : undefined,
+    initialContextId: autosaveInitialContextId,
     name: autosaveName || name
   })
 
@@ -134,6 +139,55 @@ export default function StyleForm({
       setStyleContextId(autosaveContextId)
     }
   }, [autosaveContextId, styleContextId])
+
+  const activateStyle = async (targetId: string) => {
+    try {
+      await jsonFetcher(`/api/styles/${targetId}/activate`, { method: 'POST' })
+      setPendingSetActive(false)
+    } catch {
+      setPendingSetActive(false)
+      setSetAsActive(false)
+      setError('Failed to set style as default')
+    }
+  }
+
+  const deactivateStyle = async (targetId: string) => {
+    try {
+      await jsonFetcher(`/api/styles/${targetId}/activate`, { method: 'DELETE' })
+      setPendingSetActive(false)
+    } catch {
+      setPendingSetActive(false)
+      setSetAsActive(true)
+      setError('Failed to unset style as default')
+    }
+  }
+
+  const handleSetAsActiveChange = (checked: boolean) => {
+    setSetAsActive(checked)
+    if (!checked) {
+      setPendingSetActive(false)
+      const targetId = styleContextId || autosaveContextId
+      if (targetId) {
+        void deactivateStyle(targetId)
+      }
+      return
+    }
+
+    const targetId = styleContextId || autosaveContextId
+    if (targetId) {
+      void activateStyle(targetId)
+    } else {
+      setPendingSetActive(true)
+    }
+  }
+
+  useEffect(() => {
+    if (!setAsActive || !pendingSetActive) return
+    const targetId = styleContextId || autosaveContextId
+    if (targetId) {
+      void activateStyle(targetId)
+    }
+  }, [setAsActive, pendingSetActive, styleContextId, autosaveContextId])
 
   const handleSave = async () => {
     setSaving(true)
@@ -260,7 +314,7 @@ export default function StyleForm({
             type="checkbox"
             id="setAsActive"
             checked={setAsActive}
-            onChange={(e) => setSetAsActive(e.target.checked)}
+            onChange={(e) => handleSetAsActiveChange(e.target.checked)}
             className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
           />
           <label htmlFor="setAsActive" className="ml-2 text-sm text-gray-700">

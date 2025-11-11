@@ -309,6 +309,7 @@ export default function ContextsPage() {
             backUrl="/app/styles"
             scope={(contextsData?.contextType === 'team' ? 'pro' : 'individual')}
             contextId={editingContext?.id}
+            showButtons={false}
             hideFormCard
             hideMessages
           />

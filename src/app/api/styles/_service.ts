@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 export type Scope = 'individual' | 'pro' | 'freePackage'
@@ -49,21 +50,53 @@ export async function createOrUpdateStyleServer(params: {
   return { id: created.id }
 }
 
-export async function setActiveStyleServer(params: { scope: Scope; userId: string; styleId: string }): Promise<void> {
+export async function setActiveStyleServer(params: { scope: Scope; userId: string; styleId: string | null }): Promise<void> {
   if (params.scope === 'freePackage') {
-    await prisma.appSetting.upsert({
-      where: { key: 'freePackageStyleId' },
-      update: { value: params.styleId },
-      create: { key: 'freePackageStyleId', value: params.styleId }
-    })
+    if (params.styleId) {
+      await prisma.appSetting.upsert({
+        where: { key: 'freePackageStyleId' },
+        update: { value: params.styleId },
+        create: { key: 'freePackageStyleId', value: params.styleId }
+      })
+    } else {
+      await prisma.appSetting.deleteMany({ where: { key: 'freePackageStyleId' } })
+    }
     return
   }
+
   if (params.scope === 'pro') {
     const person = await prisma.person.findFirst({ where: { userId: params.userId }, select: { teamId: true } })
     if (person?.teamId) {
-      await prisma.team.update({ where: { id: person.teamId }, data: { activeContextId: params.styleId } })
+      await prisma.team.update({
+        where: { id: person.teamId },
+        data: { activeContextId: params.styleId ?? null }
+      })
     }
+    return
   }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { id: params.userId },
+    select: { metadata: true }
+  })
+
+  if (!existingUser) {
+    return
+  }
+
+  const currentMetadata = {
+    ...((existingUser.metadata as Record<string, unknown> | null) ?? {})
+  }
+  if (params.styleId) {
+    currentMetadata.activeContextId = params.styleId
+  } else {
+    delete currentMetadata.activeContextId
+  }
+
+  await prisma.user.update({
+    where: { id: params.userId },
+    data: { metadata: currentMetadata as Prisma.JsonObject }
+  })
 }
 
 

@@ -35,7 +35,7 @@ export default function SessionProvider({
   return (
     <NextAuthSessionProvider 
       session={session}
-      refetchInterval={25 * 60} // Refresh 5 min before 30-min expiry
+      refetchInterval={5 * 60} // Check session every 5 minutes during activity
       refetchOnWindowFocus={false} // Avoid burst of extra calls on focus
     >
       <PostHogUserIdentifier />

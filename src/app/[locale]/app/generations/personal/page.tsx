@@ -11,6 +11,7 @@ import { BRAND_CONFIG } from '@/config/brand'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { Toast } from '@/components/ui'
+import { fetchAccountMode } from '@/domain/account/accountMode'
 
 export default function PersonalGenerationsPage() {
   const tg = useTranslations('generations.personal')
@@ -23,31 +24,55 @@ export default function PersonalGenerationsPage() {
   const [failureToast, setFailureToast] = useState<string | null>(null)
   const { timeframe, context, setTimeframe, setContext, filterGenerated } = useGenerationFilters()
   const { href: buyCreditsHref } = useBuyCreditsLink()
-  // If the user is in a team context (admin or member), they should not access personal generations – redirect to team
+  // Team functionality lives on the team page. Pro accounts and invited team members should not access personal generations.
   useEffect(() => {
-    const redirectIfTeamAdmin = async () => {
+    let cancelled = false
+
+    const enforcePersonalAccess = async () => {
+      const userId = session?.user?.id
+      const userRole = session?.user?.role
+      const userTeamId = session?.user?.person?.teamId
+
+      if (!userId) {
+        return
+      }
+
       try {
-        // Quick client check for team membership
-        if (session?.user?.person?.teamId) {
+        const accountMode = await fetchAccountMode()
+        if (cancelled) return
+
+        if (accountMode.mode === 'pro') {
           window.location.href = '/app/generations/team'
           return
         }
-        const response = await fetch('/api/dashboard/stats')
-        if (response.ok) {
-          const data = await response.json()
-          if (data.userRole?.isTeamAdmin) {
-            window.location.href = '/app/generations/team'
+      } catch (error) {
+        console.warn('Failed to resolve account mode for personal generations', error)
+        try {
+          const response = await fetch('/api/dashboard/stats')
+          if (!cancelled && response.ok) {
+            const data = await response.json()
+            if (data.userRole?.isTeamAdmin || data.userRole?.isTeamMember) {
+              window.location.href = '/app/generations/team'
+              return
+            }
           }
+        } catch (fallbackError) {
+          console.warn('Failed to validate team role for personal generations', fallbackError)
         }
-      } catch {
-        // Silent fail; if stats endpoint fails, keep current behavior
+      }
+
+      // Invited members should stay on the team experience even if the account mode lookup reports individual.
+      if (!cancelled && userRole === 'team_member' && userTeamId) {
+        window.location.href = '/app/generations/team'
       }
     }
-    // Only check once we have (or likely have) a session
-    if (session?.user?.id) {
-      void redirectIfTeamAdmin()
+
+    void enforcePersonalAccess()
+
+    return () => {
+      cancelled = true
     }
-  }, [session?.user?.id, session?.user?.person?.teamId])
+  }, [session?.user?.id, session?.user?.role, session?.user?.person?.teamId])
   const handleGenerationFailed = useCallback(
     ({ errorMessage }: { id: string; errorMessage?: string }) => {
       if (errorMessage) {

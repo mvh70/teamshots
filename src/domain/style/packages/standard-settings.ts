@@ -1,5 +1,6 @@
 import { PhotoStyleSettings } from '@/types/photo-style'
 import { StandardPresetConfig, getStandardPreset } from './standard-presets'
+import { shotTypeSuggestedAspectRatio } from './camera-presets'
 
 function cloneSettings(settings: PhotoStyleSettings): PhotoStyleSettings {
   return JSON.parse(JSON.stringify(settings)) as PhotoStyleSettings
@@ -59,6 +60,14 @@ export function applyStandardPreset(
   if (!settings.aspectRatio || settings.aspectRatio === 'user-choice') {
     if (preset.defaults.aspectRatio) {
       settings.aspectRatio = preset.defaults.aspectRatio
+    }
+  }
+
+  const resolvedShotType = settings.shotType?.type
+  if (resolvedShotType && resolvedShotType !== 'user-choice') {
+    const canonicalAspectRatio = shotTypeSuggestedAspectRatio(resolvedShotType).id
+    if (settings.aspectRatio !== canonicalAspectRatio) {
+      settings.aspectRatio = canonicalAspectRatio
     }
   }
 

@@ -18,10 +18,24 @@ export async function loadStyle(params: { scope: Scope }) {
 export async function loadStyleByContextId(contextId: string) {
   const res = await fetch(`/api/styles/get?contextId=${encodeURIComponent(contextId)}`, { cache: 'no-store' })
   if (!res.ok) return { contextId: null, pkg: getPackageConfig('headshot1'), ui: getPackageConfig('headshot1').defaultSettings }
-  const data = await res.json() as { context?: { id: string; settings?: Record<string, unknown>; stylePreset?: string }, packageId?: string | null }
+  const data = await res.json() as {
+    context?: {
+      id: string
+      name?: string | null
+      customPrompt?: string | null
+      settings?: Record<string, unknown>
+      stylePreset?: string
+    }
+    packageId?: string | null
+  }
   const pkg = getPackageConfig(data.packageId || (data.context?.settings?.['packageId'] as string | undefined))
   const ui: PhotoStyleSettings = data.context?.settings ? pkg.persistenceAdapter.deserialize(data.context.settings as Record<string, unknown>) : pkg.defaultSettings
-  return { contextId: data.context?.id ?? null, pkg, ui }
+  return {
+    contextId: data.context?.id ?? null,
+    pkg,
+    ui,
+    context: data.context ?? null
+  }
 }
 
 export async function saveStyle(params: { scope: Scope; contextId: string | null; packageId: string; ui: PhotoStyleSettings; name?: string }) {

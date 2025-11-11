@@ -88,7 +88,7 @@ export const authOptions = {
   session: {
     strategy: "jwt" as const,
     maxAge: SESSION_MAX_AGE_SECONDS,
-    updateAge: 5 * 60, // Refresh session timestamp every 5 minutes of activity
+    updateAge: 0, // Force JWT callback to run on every request for rolling session refresh
   },
 
   // Add cookie configuration for security - Safari-compatible
