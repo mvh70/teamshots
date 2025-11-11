@@ -1,6 +1,7 @@
 'use client'
 
-import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
+import { ExclamationTriangleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
+import { resolveExpression } from '@/domain/style/packages/expression-config'
 interface ClothingColors {
   topCover?: string
   topBase?: string
@@ -154,7 +155,19 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
                 User choice
               </span>
             ) : (
-              expressionType
+              <span className="inline-flex items-center gap-1 text-gray-700 normal-case">
+                <span className="font-medium">
+                  {resolveExpression(expressionType)?.label ?? expressionType}
+                </span>
+                {resolveExpression(expressionType)?.description && (
+                  <span className="relative inline-flex group">
+                    <QuestionMarkCircleIcon className="h-3.5 w-3.5 text-gray-400" />
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 w-56 -translate-x-1/2 rounded-md bg-gray-900 px-2 py-1 text-[10px] leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+                      {resolveExpression(expressionType)?.description}
+                    </span>
+                  </span>
+                )}
+              </span>
             )}
           </div>
         </div>

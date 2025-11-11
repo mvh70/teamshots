@@ -108,6 +108,7 @@ const applyResolvedToPayload = (
   setPath(payload, 'framing.shot_type', resolved.shotType.label)
   setPath(payload, 'framing.crop_points', resolved.shotType.framingDescription)
   setPath(payload, 'framing.shows', resolved.shotType.framingDescription)
+  setPath(payload, 'framing.composition', resolved.shotType.compositionNotes ?? resolved.shotType.framingDescription)
 
   setPath(payload, 'camera.lens', {
     focal_length_mm: resolved.focalLength.mm,
@@ -166,6 +167,7 @@ export function buildStandardPrompt({
   setPath(payload, 'framing.shot_type', activeResolved.shotType.label)
   setPath(payload, 'framing.crop_points', activeResolved.shotType.framingDescription)
   setPath(payload, 'framing.shows', activeResolved.shotType.framingDescription)
+  setPath(payload, 'framing.composition', activeResolved.shotType.compositionNotes ?? activeResolved.shotType.framingDescription)
 
   setPath(payload, 'subject.pose.body_angle', activeResolved.pose.body.description)
   setPath(payload, 'subject.pose.head_position', activeResolved.pose.head.description)

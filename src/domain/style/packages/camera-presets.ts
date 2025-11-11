@@ -40,24 +40,28 @@ const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
     label: 'Extreme Close-Up',
     framingDescription: 'Extreme close-up focusing on the subject’s eyes or a key facial feature. Keep the frame tight with no background distractions.',
     preferredOrientation: 'vertical',
+    compositionNotes: 'Tight framing on facial features with minimal headroom'
   },
   'close-up': {
     id: 'close-up',
     label: 'Close-Up (Tight Headshot)',
     framingDescription: 'Close-up headshot framing from the top of the head to just below the chin, minimal neck visible.',
     preferredOrientation: 'vertical',
+    compositionNotes: 'Head and face only, minimal headroom'
   },
   'medium-close-up': {
     id: 'medium-close-up',
     label: 'Medium Close-Up (Standard Headshot)',
     framingDescription: 'Standard professional headshot framing from the top of the head down to mid-chest.',
     preferredOrientation: 'vertical',
+    compositionNotes: 'Medium close-up from head to mid-chest'
   },
   'medium-shot': {
     id: 'medium-shot',
     label: 'Medium Shot (Bust)',
     framingDescription: 'Portrait framing from the top of the head down to the waist, showing torso and arms.',
     preferredOrientation: 'vertical',
+    compositionNotes: 'Bust portrait from head to waist'
   },
   'three-quarter': {
     id: 'three-quarter',
@@ -65,18 +69,21 @@ const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
     framingDescription:
       'Three-quarter portrait framing from the top of the head to mid-thigh, full arms included. The feet must NOT be visible.',
     preferredOrientation: 'vertical',
+    compositionNotes: 'Three-quarter framing from head to mid-thigh, full arms visible'
   },
   'full-length': {
     id: 'full-length',
     label: 'Full-Length',
     framingDescription: 'Full-length portrait showing the entire body from head to toe with a touch of floor visible.',
     preferredOrientation: 'vertical',
+    compositionNotes: 'Full body visible with breathing room top and bottom'
   },
   'wide-shot': {
     id: 'wide-shot',
     label: 'Wide Shot',
     framingDescription: 'Wide shot that places the subject within their environment. Maintain awareness of background balance.',
     preferredOrientation: 'horizontal',
+    compositionNotes: 'Environmental composition with subject in context'
   }
 }
 

@@ -25,6 +25,7 @@ const BACKGROUND_BRANDING_PROMPT: Record<string, unknown> = {
   placement: 'Place the provided brand logo ONCE as a framed element on a background wall.',
   rules: [
     'Align with scene perspective and lighting.',
+    'If the background is blurred, apply the same blurring to the framed logo',
     'Do not place on subject, floors, windows, or floating in space.',
     'Maintain original aspect ratio and colors.',
     'Single placement only, no duplication or patterns.'

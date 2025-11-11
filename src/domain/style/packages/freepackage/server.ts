@@ -67,44 +67,24 @@ export const freepackageServer: FreePackageServerPackage = {
       processedSelfies[primarySelfieKey] = await assets.preprocessSelfie(primarySelfieKey)
     }
 
-    let referenceImages: ReferenceImage[] = []
-    let labelInstruction = ''
+    const shouldUseComposite: boolean =
+      options.useCompositeReference &&
+      (styleSettings.background?.type === 'custom' ||
+        (styleSettings.branding?.type !== 'exclude' && Boolean(styleSettings.branding?.logoKey)))
 
-    if (
-      styleSettings.background?.type === 'custom' ||
-      (styleSettings.branding?.type !== 'exclude' && styleSettings.branding?.logoKey)
-    ) {
-      const payload = await buildDefaultReferencePayload({
-        styleSettings: effectiveSettings,
-        selfieKeys,
-        getSelfieBuffer,
-        downloadAsset: assets.downloadAsset,
-        useCompositeReference: options.useCompositeReference,
-        generationId,
-        shotDescription: shotText,
-        aspectRatioDescription,
-        aspectRatioSize: { width: ratioConfig.width, height: ratioConfig.height }
-      })
-      referenceImages = payload.referenceImages
-      labelInstruction = payload.labelInstruction
-    } else {
-      referenceImages = await buildCollectiveReferenceImages(
-        effectiveSettings,
-        selfieKeys,
-        getSelfieBuffer,
-        assets.downloadAsset
-      )
-
-      const selfieLabels = selfieKeys.map((_, index) => `SUBJECT1-SELFIE${index + 1}`)
-      let instruction =
-        'Reference selfies are provided individually. Each image is preceded by a text label so you can identify it:\n'
-      for (const label of selfieLabels) {
-        instruction += `- **${label}:** Selfie of the subject (same person) from a different angle.\n`
-      }
-      instruction += "\nUse 'SUBJECT1-SELFIE1' as the primary identity reference; the other selfies provide supporting angles."
-      instruction += `\n**CRITICAL ORIENTATION REQUIREMENT:** The final output image MUST be vertical (portrait orientation) with height significantly greater than width. Respect the requested shot type (${shotText}) and aspect ratio (${aspectRatioDescription}).`
-      labelInstruction = instruction
-    }
+    const payload = await buildDefaultReferencePayload({
+      styleSettings: effectiveSettings,
+      selfieKeys,
+      getSelfieBuffer,
+      downloadAsset: assets.downloadAsset,
+      useCompositeReference: shouldUseComposite,
+      generationId,
+      shotDescription: shotText,
+      aspectRatioDescription,
+      aspectRatioSize: { width: ratioConfig.width, height: ratioConfig.height }
+    })
+    const referenceImages = payload.referenceImages
+    const labelInstruction = payload.labelInstruction
 
     const promptResult = freepackageBase.promptBuilder(effectiveSettings, { generationId })
     const promptString =

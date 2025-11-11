@@ -203,25 +203,28 @@ const buildColorPalette = (
   if (!colors) return undefined
   const palette: string[] = []
 
+  // Always add base layer color if provided
   if (colors.topBase) {
-    palette.push(`base layer: ${colors.topBase} color`)
+    palette.push(`base layer (e.g., shirt under hoodie, dress shirt under blazer): ${colors.topBase} color`)
   }
 
-  const canCover =
-    Boolean(colors.topCover) &&
-    descriptor.outerLayer &&
-    !NO_TOP_COVER_DETAILS.has(detailKey)
-
-  if (canCover && colors.topCover) {
-    palette.push(`outer layer: ${colors.topCover} color`)
+  // Handle topCover color based on garment type
+  if (colors.topCover) {
+    if (NO_TOP_COVER_DETAILS.has(detailKey)) {
+      // For items like hoodie, t-shirt, dress - topCover is the main garment color
+      palette.push(`${detailKey} (the main visible garment): ${colors.topCover} color`)
+    } else if (descriptor.outerLayer) {
+      // For items with separate outer layer (jacket, blazer, etc.)
+      palette.push(`outer layer (e.g., suit jacket, blazer, cardigan): ${colors.topCover} color`)
+    }
   }
 
   if (colors.bottom && isBottomVisible(shotType)) {
-    palette.push(`bottom garment: ${colors.bottom} color`)
+    palette.push(`bottom garment (trousers, skirt, dress pants): ${colors.bottom} color`)
   }
 
   if (colors.shoes && isFullBodyVisible(shotType)) {
-    palette.push(`shoes: ${colors.shoes} color`)
+    palette.push(`shoes (dress shoes, loafers, heels): ${colors.shoes} color`)
   }
 
   return palette.length > 0 ? palette : undefined

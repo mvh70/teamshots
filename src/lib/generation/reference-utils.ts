@@ -381,17 +381,23 @@ export async function buildDefaultReferencePayload({
     referenceImages.push(...references)
 
     const selfieLabels = selfieKeys.map((_, index) => `SUBJECT1-SELFIE${index + 1}`)
-    let instruction = `Reference selfies are provided individually and labeled (e.g., ${selfieLabels.join(
-      ', '
-    )}).\n`
-    instruction +=
-      '- Select the labeled selfie that best matches the required pose and lighting as the primary likeness reference.\n'
-    instruction +=
-      '- Use the remaining selfies to reinforce 3D facial understanding, hair texture, glasses, and other subtle identity cues.\n'
-    instruction +=
-      '- Maintain identity fidelity across the render and do not display the raw reference selfies in the final image.\n'
-    instruction += `\n**CRITICAL ORIENTATION REQUIREMENT:** The final output image MUST be vertical (portrait orientation) with height significantly greater than width. Respect the requested shot type (${shotDescription}) and aspect ratio (${aspectRatioDescription}).`
-    labelInstruction = instruction
+    
+    const instructionLines: string[] = [
+      `Reference selfies are provided individually and labeled (${selfieLabels.join(', ')}). Follow each resource precisely:`,
+      `- **Subject Selfies:** Choose the face that best matches the requested pose and lighting as the primary likeness. Use the remaining selfies to reinforce 3D facial structure, hair, glasses, and fine details. Stay as close as possible to the original selfies. Do not invent details, unless indicated specifically. Eg if the selfies do not show glasses, do not add glasses. Keep the hairstyle as much as possible as in the selfies. Do not show the original selfies in the final image.`
+    ]
+
+    if (styleSettings.branding?.type !== 'exclude') {
+      instructionLines.push(
+        '- **Branding:** Place the logo exactly once following the BRANDING guidance from the reference assets.'
+      )
+    }
+
+    instructionLines.push(
+      `\n**CRITICAL ORIENTATION REQUIREMENT:** The final output image MUST be vertical (portrait orientation) with height significantly greater than width. Respect the requested shot type (${shotDescription}) and aspect ratio (${aspectRatioDescription}).`
+    )
+
+    labelInstruction = instructionLines.join('\n')
   }
 
   return {
