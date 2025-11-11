@@ -200,11 +200,11 @@ export function resolveArmPosition(input?: string): PoseConfig<ArmPositionSettin
 }
 
 const EXPRESSION_LABELS: Record<NonNullable<ExpressionSettings['type']>, string> = {
-  professional: 'professional, composed expression',
-  friendly: 'friendly warm smile',
+  professional: 'soft professional smile without showing teeth',
+  friendly: 'genuine smile showing teeth',
   serious: 'serious neutral expression',
   confident: 'confident poised look',
-  happy: 'genuine warm smile',
+  happy: 'joyful laugh with bright smile',
   sad: 'subtle contemplative expression',
   neutral: 'neutral relaxed expression',
   thoughtful: 'thoughtful engaged expression',
