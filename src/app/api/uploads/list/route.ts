@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
+import { getUsedSelfiesForPerson } from '@/domain/selfie/usage'
 
 
 export const runtime = 'nodejs'
@@ -12,6 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get selfies for the user
     const uploads = await prisma.selfie.findMany({
       where: { person: { userId: session.user.id } },
       orderBy: { createdAt: 'desc' },
@@ -19,32 +21,39 @@ export async function GET() {
         id: true, 
         key: true, 
         validated: true, 
-        createdAt: true,
-        _count: {
-          select: {
-            generations: {
-              where: {
-                deleted: false
-              }
-            }
-          }
-        }
+        createdAt: true
       }
     })
+
+    // Get person ID for generation queries
+    const person = await prisma.person.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true }
+    })
+
+    if (!person) {
+      return NextResponse.json({ error: 'Person not found' }, { status: 404 })
+    }
+
+    // Get sets of used selfie IDs and keys
+    const { usedSelfieIds, usedSelfieKeys } = await getUsedSelfiesForPerson(person.id)
 
     const items = uploads.map((u: { 
       id: string; 
       key: string; 
       validated: boolean; 
-      createdAt: Date; 
-      _count: { generations: number }
-    }) => ({
-      id: u.id,
-      uploadedKey: u.key,
-      validated: u.validated,
-      createdAt: u.createdAt.toISOString(),
-      hasGenerations: u._count.generations > 0
-    }))
+      createdAt: Date
+    }) => {
+      // Check if selfie is used: either by ID or by key
+      const isUsed = usedSelfieIds.has(u.id) || usedSelfieKeys.has(u.key)
+      return {
+        id: u.id,
+        uploadedKey: u.key,
+        validated: u.validated,
+        createdAt: u.createdAt.toISOString(),
+        hasGenerations: isUsed
+      }
+    })
 
     return NextResponse.json({ items })
   } catch (e) {

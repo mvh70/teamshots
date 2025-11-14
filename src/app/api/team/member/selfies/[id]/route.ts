@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
+import { isSelfieUsedInGenerations } from '@/domain/selfie/usage'
 
 export async function DELETE(
   request: NextRequest,
@@ -35,7 +36,7 @@ export async function DELETE(
 
     const person = invite.person
 
-    // Delete the selfie if it belongs to this person
+    // Check if selfie exists and belongs to this person
     const selfie = await prisma.selfie.findFirst({
       where: {
         id: selfieId,
@@ -45,6 +46,16 @@ export async function DELETE(
 
     if (!selfie) {
       return NextResponse.json({ error: 'Selfie not found' }, { status: 404 })
+    }
+
+    // Check if selfie is used in any non-deleted generations
+    const isUsed = await isSelfieUsedInGenerations(person.id, selfieId, selfie.key)
+
+    // Prevent deletion if selfie is used in any non-deleted generations
+    if (isUsed) {
+      return NextResponse.json({ 
+        error: 'Cannot delete selfie that is used in a generation' 
+      }, { status: 400 })
     }
 
     await prisma.selfie.delete({

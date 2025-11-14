@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { Logger } from '@/lib/logger'
 import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
+import { isSelfieUsedInGenerations } from '@/domain/selfie/usage'
 
 
 export const runtime = 'nodejs'
@@ -58,6 +59,18 @@ export async function DELETE(request: NextRequest) {
 
       if (!filePersonId || filePersonId !== person.id) {
         return NextResponse.json({ error: 'Unauthorized - selfie does not belong to user' }, { status: 403 })
+      }
+    }
+
+    // If selfie exists, check if it's used in any non-deleted generations
+    if (selfie) {
+      const isUsed = await isSelfieUsedInGenerations(person.id, selfie.id, selfie.key)
+      
+      // Prevent deletion if selfie is used in any non-deleted generations
+      if (isUsed) {
+        return NextResponse.json({ 
+          error: 'Cannot delete selfie that is used in a generation' 
+        }, { status: 400 })
       }
     }
 

@@ -3,10 +3,11 @@
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
 import SelfieGallery from '@/components/generation/SelfieGallery'
-import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
 import dynamic from 'next/dynamic'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { ErrorBanner } from '@/components/ui'
+import { useSelfieSelection } from '@/hooks/useSelfieSelection'
+import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
@@ -17,6 +18,7 @@ interface Selfie {
   url: string
   uploadedAt: string
   status: 'pending' | 'approved' | 'rejected'
+  used?: boolean
 }
 
 export default function SelfiesPage() {
@@ -37,19 +39,8 @@ export default function SelfiesPage() {
   const [isApproved, setIsApproved] = useState<boolean>(false)
   // Header resolves invite info internally; no local invite state needed
 
-  const loadSelected = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/selfies/selected?token=${encodeURIComponent(token)}&t=${Date.now()}`, {
-        credentials: 'include',
-        cache: 'no-store'
-      })
-      if (res.ok) {
-        // Selection state is managed by SelfieGallery component
-      }
-    } catch {}
-  }, [token])
-
-  useEffect(() => { loadSelected() }, [loadSelected])
+  // Multi-select: load and manage selected selfies
+  const { selectedIds, loadSelected, toggleSelect } = useSelfieSelection({ token })
 
   const fetchSelfies = useCallback(async () => {
     try {
@@ -74,6 +65,35 @@ export default function SelfiesPage() {
   useEffect(() => {
     fetchSelfies()
   }, [fetchSelfies])
+
+  // Reload selected selfies when selfies list changes
+  useEffect(() => {
+    if (!loading && selfies.length > 0) {
+      loadSelected()
+    }
+  }, [loading, selfies.length, loadSelected])
+
+  // Handle selection changes from SelfieGallery
+  const handleSelectionChange = useCallback(() => {
+    // Reload selection state when gallery changes selections
+    loadSelected()
+  }, [loadSelected])
+
+  // Filter selectedIds to only include selfies that actually exist in the current list
+  // This prevents stale selections from showing incorrect counts
+  const validSelectedIds = selectedIds.filter(id => selfies.some(s => s.id === id))
+  const selectedCount = validSelectedIds.length
+  const canContinue = selectedCount >= 2
+
+  const handleContinue = () => {
+    if (canContinue) {
+      // Navigate back to dashboard and open start flow
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('openStartFlow', 'true')
+      }
+      router.push(`/invite-dashboard/${token}`)
+    }
+  }
 
   // No header-data fetching here; header handles it
 
@@ -120,6 +140,23 @@ export default function SelfiesPage() {
       })
 
       if (response.ok) {
+        const data = await response.json() as { selfie?: { id: string } }
+        const selfieId = data.selfie?.id
+
+        // Automatically select the newly uploaded selfie
+        if (selfieId) {
+          try {
+            await toggleSelect(selfieId, true)
+            // Wait a moment for the selection to persist
+            await new Promise(resolve => setTimeout(resolve, 200))
+            // Reload selected list to ensure it's up to date
+            await loadSelected()
+          } catch (error) {
+            console.error('Error selecting newly uploaded selfie:', error)
+            // Don't throw - continue with the flow even if selection fails
+          }
+        }
+
         // If part of the generation/start-flow, immediately return to dashboard to continue
         const fromGeneration = sessionStorage.getItem('fromGeneration')
         if (fromGeneration === 'true' || uploadOnly) {
@@ -259,18 +296,41 @@ export default function SelfiesPage() {
           {/* Selfies Grid (hidden in upload-only mode) */}
           {!uploadOnly && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6">
+            <div className="p-6 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Your Selfies</h2>
+              <button
+                onClick={handleContinue}
+                disabled={!canContinue}
+                className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                  canContinue
+                    ? 'text-white bg-brand-primary hover:bg-brand-primary-hover'
+                    : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+                }`}
+              >
+                Continue
+              </button>
+            </div>
+            <div className="px-6 pb-4">
+              <SelfieSelectionInfoBanner selectedCount={selectedCount} />
             </div>
             <div className="px-6 pt-2 pb-6">
-              <SelfieInfoBanner compact className="mb-6" />
               <SelfieGallery
-                selfies={selfies}
+                selfies={selfies.map(s => ({ 
+                  id: s.id, 
+                  key: s.key, 
+                  url: s.url, 
+                  uploadedAt: s.uploadedAt,
+                  used: s.used 
+                }))}
                 token={token}
                 allowDelete
                 showUploadTile={!uploadKey}
                 onUploadClick={() => setUploadKey('inline')}
-                onDeleted={async () => { await fetchSelfies() }}
+                onAfterChange={handleSelectionChange}
+                onDeleted={async () => { 
+                  await fetchSelfies()
+                  await loadSelected()
+                }}
               />
             </div>
           </div>

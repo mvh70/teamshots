@@ -5,7 +5,7 @@ import { jsonFetcher } from '@/lib/fetcher'
 interface UseSelfieUploadOptions {
   onSuccess?: (key: string, id?: string) => void
   onError?: (error: string) => void
-  saveEndpoint?: (key: string) => Promise<void> // Custom save function for invite flows
+  saveEndpoint?: (key: string) => Promise<string | undefined> // Custom save function for invite flows, can return selfie ID
 }
 
 export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieUploadOptions = {}) {
@@ -79,8 +79,13 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
 
   const handleApprove = async () => {
     try {
-      if (!tempKey) return
+      if (!tempKey) {
+        console.error('handleApprove: No tempKey available')
+        onError?.('No file to approve')
+        return
+      }
       setIsLoading(true)
+      console.log('handleApprove: Starting approval process', { tempKey })
       
       // Promote temp file to S3 and create database record
       const promoteRes = await fetch('/api/uploads/promote', {
@@ -91,14 +96,32 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
       })
       if (!promoteRes.ok) {
         const d = await promoteRes.json().catch(() => ({}))
-        throw new Error(d.error || 'Promote failed')
+        const errorMsg = d.error || 'Promote failed'
+        console.error('handleApprove: Promote failed', { status: promoteRes.status, error: errorMsg })
+        throw new Error(errorMsg)
       }
       const { key, selfieId } = await promoteRes.json() as { key: string; selfieId?: string }
+      console.log('handleApprove: Promote successful', { key, selfieId })
       
       // For custom endpoints, pass the key for additional processing
+      let customSelfieId: string | undefined = undefined
       if (saveEndpoint) {
-        await saveEndpoint(key)
+        console.log('handleApprove: Calling saveEndpoint')
+        try {
+          const result = await saveEndpoint(key)
+          // If saveEndpoint returns a selfie ID, use it (for invite flows)
+          if (typeof result === 'string') {
+            customSelfieId = result
+          }
+          console.log('handleApprove: saveEndpoint completed', { customSelfieId })
+        } catch (saveError) {
+          console.error('handleApprove: saveEndpoint failed', saveError)
+          // Don't throw - the selfie is already saved, this is just additional processing
+        }
       }
+      
+      // Use custom selfie ID if available (from saveEndpoint), otherwise use the one from promote
+      const finalSelfieId = customSelfieId || selfieId
       
       setIsApproved(true)
       setUploadedKey(key)
@@ -106,7 +129,9 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
         file_size: pendingFile?.size,
         file_type: pendingFile?.type
       })
-      onSuccess?.(key, selfieId)
+      console.log('handleApprove: Calling onSuccess callback', { key, selfieId: finalSelfieId })
+      onSuccess?.(key, finalSelfieId)
+      console.log('handleApprove: onSuccess callback completed')
       // Clear temp key now that we have final key
       setTempKey(null)
       setPendingFile(null)

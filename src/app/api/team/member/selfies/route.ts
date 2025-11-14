@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
+import { getUsedSelfiesForPerson } from '@/domain/selfie/usage'
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,8 +40,17 @@ export async function GET(request: NextRequest) {
       },
       orderBy: {
         createdAt: 'desc'
+      },
+      select: {
+        id: true,
+        key: true,
+        createdAt: true,
+        userApproved: true
       }
     })
+
+    // Get sets of used selfie IDs and keys
+    const { usedSelfieIds, usedSelfieKeys } = await getUsedSelfiesForPerson(person.id)
 
     // Transform selfies to include URLs and proper field names
     const tokenParam = `token=${encodeURIComponent(token)}`
@@ -48,12 +58,15 @@ export async function GET(request: NextRequest) {
     const transformedSelfies = selfies.map(selfie => {
       const url = `/api/files/get?key=${encodeURIComponent(selfie.key)}&${tokenParam}`
       Logger.info('Generated selfie URL', { url, key: selfie.key })
+      // Check if selfie is used: either by ID or by key
+      const isUsed = usedSelfieIds.has(selfie.id) || usedSelfieKeys.has(selfie.key)
       return {
         id: selfie.id,
         key: selfie.key,
         url,
         uploadedAt: selfie.createdAt.toISOString(),
-        status: selfie.userApproved ? 'approved' : 'uploaded'
+        status: selfie.userApproved ? 'approved' : 'uploaded',
+        used: isUsed
       }
     })
 

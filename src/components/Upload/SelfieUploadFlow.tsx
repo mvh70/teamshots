@@ -13,7 +13,7 @@ interface SelfieUploadFlowProps {
   onCancel: () => void
   onError?: (error: string) => void
   onRetake?: () => void
-  saveEndpoint?: (key: string) => Promise<void> // Custom save function for invite flows
+  saveEndpoint?: (key: string) => Promise<string | undefined> // Custom save function for invite flows, can return selfie ID
   continueUploading?: boolean // If true, don't show success message and continue showing upload interface
 }
 
@@ -107,7 +107,18 @@ export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, 
       <SelfieApproval
         uploadedPhotoKey={uploadedKey}
         previewUrl={previewUrl || undefined}
-        onApprove={handleApprove}
+        onApprove={async () => {
+          // Ensure the async operation completes and state updates propagate on mobile
+          try {
+            await handleApprove()
+            // Force a small delay to ensure React state updates propagate on mobile browsers
+            // This helps with mobile browsers that batch state updates differently
+            await new Promise(resolve => setTimeout(resolve, 100))
+          } catch (error) {
+            console.error('Error in onApprove callback:', error)
+            throw error
+          }
+        }}
         onReject={handleRejectWrapper}
         onRetake={handleRetakeWrapper}
         onCancel={onCancel}

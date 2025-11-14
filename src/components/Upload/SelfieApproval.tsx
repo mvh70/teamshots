@@ -24,13 +24,49 @@ export default function SelfieApproval({
   const [isProcessing, setIsProcessing] = useState(false)
   const t = useTranslations('selfieApproval')
 
-  const handleApprove = async () => {
+  const handleApprove = async (e?: React.MouseEvent | React.TouchEvent) => {
+    // Prevent double-tap/click on mobile
+    if (isProcessing) {
+      e?.preventDefault()
+      e?.stopPropagation()
+      return
+    }
+    
     setIsProcessing(true)
+    
     try {
-      onApprove()
-    } finally {
+      // Call the approve callback - it may be async, so wrap it
+      const result = onApprove()
+      
+      // If it returns a promise, wait for it to complete
+      // This is especially important on mobile where async operations can be delayed
+      if (result !== undefined && typeof result === 'object' && result !== null && 'then' in result) {
+        await result
+      }
+      
+      // Give mobile browsers time to process the state update
+      // Don't reset immediately - let the parent component handle the state transition
+      // The parent will hide this component when approval succeeds
+    } catch (error) {
+      console.error('Error in handleApprove:', error)
+      // Reset processing state on error so user can try again
       setIsProcessing(false)
     }
+    // Note: We intentionally don't reset isProcessing in finally
+    // The parent component will handle hiding this component when approval succeeds
+  }
+  
+  // Mobile-friendly touch handler with better event handling
+  const handleApproveTouch = (e: React.TouchEvent) => {
+    // Prevent default touch behavior that might interfere
+    e.preventDefault()
+    e.stopPropagation()
+    
+    // Use a small delay to ensure touch event is fully processed
+    // This helps prevent double-tap issues on mobile
+    setTimeout(() => {
+      handleApprove(e)
+    }, 50)
   }
 
   const handleReject = () => {
@@ -105,13 +141,15 @@ export default function SelfieApproval({
         <div className="flex flex-col gap-4 sm:flex-row sm:gap-3 sm:justify-center">
           <button
             onClick={handleApprove}
+            onTouchEnd={handleApproveTouch}
             disabled={isProcessing}
-            className={`w-full sm:w-auto px-8 py-4 sm:px-6 sm:py-2 rounded-xl sm:rounded-md text-lg sm:text-sm font-semibold sm:font-medium transition-colors ${
+            className={`w-full sm:w-auto px-8 py-4 sm:px-6 sm:py-2 rounded-xl sm:rounded-md text-lg sm:text-sm font-semibold sm:font-medium transition-colors touch-manipulation ${
               isProcessing
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-brand-primary text-white hover:bg-brand-primary-hover'
+                : 'bg-brand-primary text-white hover:bg-brand-primary-hover active:bg-brand-primary-hover'
             }`}
             data-testid="approve-button"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             {isProcessing ? t('buttons.processing') : t('buttons.approveContinue')}
           </button>

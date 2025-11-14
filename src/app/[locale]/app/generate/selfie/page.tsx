@@ -9,6 +9,7 @@ import SelfieGallery from '@/components/generation/SelfieGallery'
 import { jsonFetcher } from '@/lib/fetcher'
 import { LoadingGrid } from '@/components/ui'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
+import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -62,6 +63,8 @@ export default function SelfieSelectionPage() {
   }, [loading, uploads.length])
 
   const handleSelfieApproved = async (selfieKey: string, selfieId?: string) => {
+    console.log('handleSelfieApproved called', { selfieKey, selfieId })
+    
     // Hide upload flow first
     setShowUpload(false)
     
@@ -70,6 +73,7 @@ export default function SelfieSelectionPage() {
     let resolvedSelfieId = selfieId
     
     if (!resolvedSelfieId) {
+      console.log('No selfieId provided, trying to find it by key:', selfieKey)
       // Wait a moment for the selfie to be fully saved, then try to find it
       // Retry up to 3 times with increasing delays
       for (let attempt = 0; attempt < 3; attempt++) {
@@ -81,9 +85,11 @@ export default function SelfieSelectionPage() {
           })
           if (findRes.id) {
             resolvedSelfieId = findRes.id
+            console.log('Found selfie ID:', resolvedSelfieId)
             break
           }
         } catch (error) {
+          console.log(`Attempt ${attempt + 1} failed to find selfie:`, error)
           if (attempt === 2) {
             console.error('Error finding selfie by key after retries:', error)
             // Final fallback: try to find it in the uploads list
@@ -92,6 +98,7 @@ export default function SelfieSelectionPage() {
               const foundSelfie = (updatedUploads.items || []).find(u => u.uploadedKey === selfieKey)
               if (foundSelfie) {
                 resolvedSelfieId = foundSelfie.id
+                console.log('Found selfie in uploads list:', resolvedSelfieId)
               }
             } catch (fallbackError) {
               console.error('Error finding selfie in uploads list:', fallbackError)
@@ -99,16 +106,20 @@ export default function SelfieSelectionPage() {
           }
         }
       }
+    } else {
+      console.log('Using provided selfieId:', resolvedSelfieId)
     }
     
     // Select the selfie if we have an ID
     if (resolvedSelfieId) {
       try {
+        console.log('Selecting selfie:', resolvedSelfieId)
         await toggleSelect(resolvedSelfieId, true)
         // Wait a moment for the selection to persist
         await new Promise(resolve => setTimeout(resolve, 200))
         // Reload selected list to ensure it's up to date
         await loadSelected()
+        console.log('Selfie selected successfully')
       } catch (error) {
         console.error('Error selecting newly uploaded selfie:', error)
       }
@@ -117,7 +128,9 @@ export default function SelfieSelectionPage() {
     }
     
     // Always reload uploads to show the new selfie and selection state
+    console.log('Reloading uploads list...')
     await loadUploads()
+    console.log('Uploads list reloaded')
   }
 
   // Use a ref to prevent infinite loops
@@ -163,24 +176,7 @@ export default function SelfieSelectionPage() {
           </button>
         </div>
       </div>
-      {selectedCount < 2 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <svg className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-            <div>
-              <h3 className="text-sm font-medium text-blue-900">Select at least 2 selfies</h3>
-              <p className="mt-1 text-sm text-blue-800">
-                {selectedCount === 0 
-                  ? 'Pick your favorites or upload more to get started.'
-                  : `You've got ${selectedCount} selected. ${selectedCount === 1 ? 'Add one more' : 'Add more'} to continue.`
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <SelfieSelectionInfoBanner selectedCount={selectedCount} />
 
       {showUpload && (
         <SelfieUploadFlow
@@ -188,7 +184,10 @@ export default function SelfieSelectionPage() {
           onCancel={() => setShowUpload(false)}
           onError={(error) => {
             console.error('Selfie upload error:', error)
-            alert(error)
+            // Show error to user
+            alert(`Error: ${error}`)
+            // Hide upload flow on error so user can see the error
+            setShowUpload(false)
           }}
         />
       )}

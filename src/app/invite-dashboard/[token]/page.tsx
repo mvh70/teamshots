@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useLocale } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { 
@@ -14,7 +14,8 @@ import Image from 'next/image'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
 import SelectedSelfiePreview from '@/components/generation/SelectedSelfiePreview'
 import SelfieSelectionGrid from '@/components/generation/SelfieSelectionGrid'
-import SelfieSelectionBanner from '@/components/generation/SelfieSelectionBanner'
+import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
+import GenerateButton from '@/components/generation/GenerateButton'
 import Panel from '@/components/common/Panel'
 import { Grid } from '@/components/ui'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
@@ -51,6 +52,7 @@ interface Selfie {
   id: string
   key: string
   url: string
+  used?: boolean
 }
 
 export default function InviteDashboardPage() {
@@ -70,6 +72,7 @@ export default function InviteDashboardPage() {
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
   
   // Upload flow state
   const [uploadKey, setUploadKey] = useState<string>('')
@@ -240,6 +243,20 @@ export default function InviteDashboardPage() {
     }
   }, [showGenerationFlow, showStartFlow, fetchAvailableSelfies, loadSelected])
 
+  // Filter selectedIds to only include selfies that actually exist in the current list
+  // This prevents stale selections from showing incorrect counts
+  const validSelectedIds = useMemo(() => 
+    selectedIds.filter(id => availableSelfies.some(s => s.id === id)),
+    [selectedIds, availableSelfies]
+  )
+
+  // Auto-advance to style selection if we have 2+ selfies selected when start flow opens
+  useEffect(() => {
+    if (showStartFlow && !showStyleSelection && validSelectedIds.length >= 2 && availableSelfies.length > 0) {
+      setShowStyleSelection(true)
+    }
+  }, [showStartFlow, showStyleSelection, validSelectedIds.length, availableSelfies.length])
+
   // Check if returning from selfie upload after starting generation
   useEffect(() => {
     const pendingGeneration = sessionStorage.getItem('pendingGeneration')
@@ -305,7 +322,18 @@ export default function InviteDashboardPage() {
   }
 
   const onProceed = async () => {
+    // Require at least 2 selfies for generation
+    if (validSelectedIds.length < 2) {
+      alert('Please select at least 2 selfies to continue.')
+      return
+    }
+
+    // Prevent double-clicks
+    if (isGenerating) return
+
     try {
+      setIsGenerating(true)
+
       // Ensure generationType is a string, not an array
       let finalGenerationType = Array.isArray(generationType) ? generationType[0] : generationType
       
@@ -314,7 +342,6 @@ export default function InviteDashboardPage() {
         finalGenerationType = 'team'
       }
       
-      const hasMulti = selectedIds.length >= 2
       const requestBody: Record<string, unknown> = {
         generationType: finalGenerationType,
         creditSource: 'team', // Use team credits for team members
@@ -322,15 +349,8 @@ export default function InviteDashboardPage() {
         // Add style settings from photo style settings, including packageId
         styleSettings: { ...photoStyleSettings, packageId },
         // Generate a prompt from the photo style settings
-        prompt: generatePromptFromSettings(photoStyleSettings)
-      }
-      if (hasMulti) {
-        requestBody.selfieIds = selectedIds
-      } else if (uploadKey) {
-        requestBody.selfieKey = uploadKey
-      } else {
-        alert('Please select at least 2 selfies or choose one selfie to continue.')
-        return
+        prompt: generatePromptFromSettings(photoStyleSettings),
+        selfieIds: validSelectedIds
       }
       
       // Use token-authenticated endpoint for invite dashboard flows
@@ -352,10 +372,12 @@ export default function InviteDashboardPage() {
         const error = await response.json()
         console.error('Generation failed:', error)
         alert('Failed to start generation. Please try again.')
+        setIsGenerating(false)
       }
     } catch (error) {
       console.error('Error starting generation:', error)
       alert('Failed to start generation. Please try again.')
+      setIsGenerating(false)
     }
   }
 
@@ -482,8 +504,7 @@ export default function InviteDashboardPage() {
               <div className="space-y-3">
                 <button 
                   onClick={() => {
-                    setShowStartFlow(true)
-                    setShowGenerationFlow(false)
+                    router.push(`/invite-dashboard/${token}/selfies`)
                   }}
                   className="w-full flex items-center justify-center px-4 py-4 border border-brand-primary bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 transition-colors"
                 >
@@ -551,20 +572,17 @@ export default function InviteDashboardPage() {
                     <h3 className="text-lg font-semibold text-gray-900">Choose selfies to use</h3>
                     <button
                       onClick={() => {
-                        if (selectedSelfie) {
-                          setUploadKey(selectedSelfie)
-                          setShowStyleSelection(true)
-                        } else if (selectedIds.length >= 2) {
+                        if (validSelectedIds.length >= 2) {
                           setShowStyleSelection(true)
                         }
                       }}
-                      disabled={!selectedSelfie && selectedIds.length < 2}
+                      disabled={validSelectedIds.length < 2}
                       className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       Continue
                     </button>
                   </div>
-                  <SelfieSelectionBanner className="mb-4" />
+                  <SelfieSelectionInfoBanner selectedCount={validSelectedIds.length} className="mb-4" />
                   <SelfieSelectionGrid
                     selfies={availableSelfies}
                     selectedSet={selectedSet}
@@ -577,10 +595,43 @@ export default function InviteDashboardPage() {
                 )}
               {!uploadKey && availableSelfies.length === 0 && (
                 <SelfieUploadFlow
-                  onSelfieApproved={(key) => {
+                  onSelfieApproved={async (key, selfieId) => {
                     setUploadKey(key)
                     setIsApproved(true)
                     setGenerationType('team')
+                    
+                    // Automatically select the newly uploaded selfie
+                    if (selfieId) {
+                      try {
+                        await toggleSelect(selfieId, true)
+                        // Wait a moment for the selection to persist
+                        await new Promise(resolve => setTimeout(resolve, 200))
+                        // Reload selected list and available selfies to ensure they're up to date
+                        await loadSelected()
+                        await fetchAvailableSelfies()
+                      } catch (error) {
+                        console.error('Error selecting newly uploaded selfie:', error)
+                        // Don't throw - continue with the flow even if selection fails
+                      }
+                    } else {
+                      // If no selfieId provided, try to find it by fetching selfies
+                      // This is a fallback for cases where selfieId isn't available
+                      try {
+                        await fetchAvailableSelfies()
+                        await loadSelected()
+                        // The selfie should be in the list now, try to find and select it
+                        const updatedSelfies = await fetch(`/api/team/member/selfies?token=${token}`, {
+                          credentials: 'include'
+                        }).then(r => r.json()).then(d => d.selfies || [])
+                        const newSelfie = updatedSelfies.find((s: Selfie) => s.key === key)
+                        if (newSelfie) {
+                          await toggleSelect(newSelfie.id, true)
+                          await loadSelected()
+                        }
+                      } catch (error) {
+                        console.error('Error finding and selecting selfie:', error)
+                      }
+                    }
                   }}
                   onCancel={() => setShowStartFlow(false)}
                   onError={() => {}}
@@ -589,11 +640,17 @@ export default function InviteDashboardPage() {
                     setIsApproved(false)
                   }}
                   saveEndpoint={async (key: string) => {
-                    await fetch('/api/team/member/selfies', {
+                    const response = await fetch('/api/team/member/selfies', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ token, selfieKey: key })
                     })
+                    if (!response.ok) {
+                      throw new Error('Failed to save selfie')
+                    }
+                    const data = await response.json() as { selfie?: { id: string } }
+                    // Return selfie ID so useSelfieUpload can pass it to onSuccess
+                    return data.selfie?.id
                   }}
                 />
               )}
@@ -650,17 +707,14 @@ export default function InviteDashboardPage() {
                         </div>
                       </div>
                       <div className="mt-4 md:mt-4">
-                        <button
+                        <GenerateButton
                           onClick={onProceed}
-                          disabled={stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
-                          className={`w-full px-6 py-4 md:px-4 md:py-2 rounded-xl md:rounded-md text-lg md:text-sm font-semibold md:font-medium transition-colors ${
-                            stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration
-                              ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
-                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          }`}
+                          disabled={validSelectedIds.length < 2 || stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
+                          isGenerating={isGenerating}
+                          size="md"
                         >
                           Generate Team Photos
-                        </button>
+                        </GenerateButton>
                       </div>
                     </div>
                   </div>
