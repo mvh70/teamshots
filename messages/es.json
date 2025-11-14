@@ -1647,6 +1647,72 @@
         "failedToLoadMembers": "Error al cargar miembros"
       }
     }
+  },
+  "inviteDashboard": {
+    "loading": "Cargando panel...",
+    "insufficientCredits": {
+      "title": "Créditos insuficientes",
+      "messageWithName": "No tienes suficientes créditos para generar fotos. Por favor, contacta a {adminName} ({adminEmail}) para solicitar más créditos.",
+      "messageWithEmail": "No tienes suficientes créditos para generar fotos. Por favor, contacta al administrador de tu equipo en {adminEmail} para solicitar más créditos.",
+      "messageGeneric": "No tienes suficientes créditos para generar fotos. Por favor, contacta al administrador de tu equipo para solicitar más créditos.",
+      "yourTeamAdmin": "tu administrador de equipo"
+    },
+    "error": {
+      "invalidInvite": "Invitación Inválida",
+      "goToHomepage": "Ir a Inicio"
+    },
+    "alerts": {
+      "selectAtLeastTwoSelfies": "Por favor, selecciona al menos 2 selfies para continuar.",
+      "insufficientCreditsWithName": "No tienes suficientes créditos para generar fotos. Por favor, contacta a {adminName} ({adminEmail}) para solicitar más créditos.",
+      "insufficientCreditsWithEmail": "No tienes suficientes créditos para generar fotos. Por favor, contacta al administrador de tu equipo en {adminEmail} para solicitar más créditos.",
+      "insufficientCreditsGeneric": "No tienes suficientes créditos para generar fotos. Por favor, contacta al administrador de tu equipo para solicitar más créditos.",
+      "generationFailed": "Error al iniciar la generación. Por favor, intenta de nuevo."
+    },
+    "common": {
+      "continue": "Continuar",
+      "credits": "créditos"
+    },
+    "getStarted": {
+      "title": "Empezar",
+      "description": "Te guiaremos a través de subir tu selfie y generar tu foto de equipo.",
+      "startButton": "Inicia tu foto de equipo",
+      "viewTeamPhotos": "Ver fotos del equipo ({count})",
+      "manageSelfies": "Gestionar mis selfies ({count})"
+    },
+    "recentPhotos": {
+      "title": "Fotos recientes",
+      "viewAll": "Ver todas",
+      "empty": "Aún no hay fotos. Genera una y aparecerán aquí."
+    },
+    "selfieSelection": {
+      "title": "Elige selfies para usar"
+    },
+    "styleSelection": {
+      "readyToGenerate": "Listo para Generar",
+      "customizeHint": {
+        "headsUp": "Atención",
+        "message": "Personaliza tu foto en las secciones editables a continuación antes de generar."
+      },
+      "costPerGeneration": "Costo por generación",
+      "generateButton": "Generar Fotos de Equipo"
+    },
+    "generationFlow": {
+      "title": "Generar Fotos de Equipo",
+      "noSelfies": {
+        "title": "Aún no se han subido selfies",
+        "description": "Sube una selfie primero para generar fotos de equipo.",
+        "uploadButton": "Subir Selfie"
+      },
+      "chooseSelfie": "Elige una selfie para usar:",
+      "selfieAlt": "Selfie",
+      "uploadNewSelfie": "Subir Nueva Selfie",
+      "continueWithSelected": "Continuar con Selfie Seleccionada"
+    },
+    "signUpCta": {
+      "title": "¿Quieres crear fotos personales también?",
+      "description": "Regístrate para una cuenta personal para generar fotos con control creativo completo.",
+      "button": "Regístrate para uso personal"
+    }
   }
 }
 

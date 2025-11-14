@@ -1647,5 +1647,71 @@
         "failedToLoadMembers": "Failed to load members"
       }
     }
+  },
+  "inviteDashboard": {
+    "loading": "Loading dashboard...",
+    "insufficientCredits": {
+      "title": "Insufficient credits",
+      "messageWithName": "You don't have enough credits to generate photos. Please contact {adminName} ({adminEmail}) to request more credits.",
+      "messageWithEmail": "You don't have enough credits to generate photos. Please contact your team admin at {adminEmail} to request more credits.",
+      "messageGeneric": "You don't have enough credits to generate photos. Please contact your team admin to request more credits.",
+      "yourTeamAdmin": "your team admin"
+    },
+    "error": {
+      "invalidInvite": "Invalid Invite",
+      "goToHomepage": "Go to Homepage"
+    },
+    "alerts": {
+      "selectAtLeastTwoSelfies": "Please select at least 2 selfies to continue.",
+      "insufficientCreditsWithName": "You don't have enough credits to generate photos. Please contact {adminName} ({adminEmail}) to request more credits.",
+      "insufficientCreditsWithEmail": "You don't have enough credits to generate photos. Please contact your team admin at {adminEmail} to request more credits.",
+      "insufficientCreditsGeneric": "You don't have enough credits to generate photos. Please contact your team admin to request more credits.",
+      "generationFailed": "Failed to start generation. Please try again."
+    },
+    "common": {
+      "continue": "Continue",
+      "credits": "credits"
+    },
+    "getStarted": {
+      "title": "Get started",
+      "description": "We'll guide you through uploading your selfie and generating your team photo.",
+      "startButton": "Start your team photo",
+      "viewTeamPhotos": "View team photos ({count})",
+      "manageSelfies": "Manage my selfies ({count})"
+    },
+    "recentPhotos": {
+      "title": "Recent photos",
+      "viewAll": "View all",
+      "empty": "No photos yet. Generate one and they'll show up here."
+    },
+    "selfieSelection": {
+      "title": "Choose selfies to use"
+    },
+    "styleSelection": {
+      "readyToGenerate": "Ready to Generate",
+      "customizeHint": {
+        "headsUp": "Heads up",
+        "message": "Customize your photo in the editable sections below before generating."
+      },
+      "costPerGeneration": "Cost per generation",
+      "generateButton": "Generate Team Photos"
+    },
+    "generationFlow": {
+      "title": "Generate Team Photos",
+      "noSelfies": {
+        "title": "No selfies uploaded yet",
+        "description": "Upload a selfie first to generate team photos.",
+        "uploadButton": "Upload Selfie"
+      },
+      "chooseSelfie": "Choose a selfie to use:",
+      "selfieAlt": "Selfie",
+      "uploadNewSelfie": "Upload New Selfie",
+      "continueWithSelected": "Continue with Selected Selfie"
+    },
+    "signUpCta": {
+      "title": "Want to create personal photos too?",
+      "description": "Sign up for a personal account to generate photos with full creative control.",
+      "button": "Sign up for personal use"
+    }
   }
 }
