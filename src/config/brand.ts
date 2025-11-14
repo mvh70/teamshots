@@ -1,12 +1,12 @@
 export const BRAND_CONFIG = {
-  name: 'TeamShots',
-  domain: 'teamshots.vip',
+  name: 'TeamShotsPro',
+  domain: 'teamshotspro.com',
   
   contact: {
-    hello: 'hello@teamshots.vip',
-    support: 'support@teamshots.vip',
-    privacy: 'privacy@teamshots.vip',
-    legal: 'legal@teamshots.vip',
+    hello: 'hello@teamshotspro.com',
+    support: 'support@teamshotspro.com',
+    privacy: 'privacy@teamshotspro.com',
+    legal: 'legal@teamshotspro.com',
   },
   
   colors: {
@@ -28,8 +28,8 @@ export const BRAND_CONFIG = {
   ogImage: '/branding/og-image.jpg',
   
   legal: {
-    teamName: 'TeamShots Inc.',
-    address: '123 Main St, San Francisco, CA 94105',
+    teamName: 'TeamShotsPro',
+    address: 'Creek Harbour, Dubai, UAE',
     foundedYear: 2025,
   },
 } as const;

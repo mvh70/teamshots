@@ -3,8 +3,8 @@ import { getRequestHeader } from '@/lib/server-headers'
 
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://app.teamshots.vip',
-  'https://www.teamshots.vip',
+  'https://app.teamshotspro.com',
+  'https://www.teamshotspro.com',
 ]
 
 export async function corsMiddleware(request: NextRequest, response: NextResponse) {

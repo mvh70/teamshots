@@ -29,14 +29,14 @@
     "noCreditCard": "No credit card required",
     "joinedBadge": "Join 1,247+ teams who've eliminated photoshoots forever",
     "testimonial": {
-      "quote": "Our new website launch was delayed 3 weeks waiting for team photos. TeamShots got us consistent headshots in 60 seconds. Saved us $3,000 and our launch date.",
+      "quote": "Our new website launch was delayed 3 weeks waiting for team photos. TeamShotsPro got us consistent headshots in 60 seconds. Saved us $3,000 and our launch date.",
       "author": "Sarah Chen, Head of Marketing • TechFlow"
     },
     "priceComparison": {
       "prefix": "Traditional photoshoot:",
       "oldPrice": "$200/person",
       "arrow": "→",
-      "suffix": "TeamShots:",
+      "suffix": "TeamShotsPro:",
       "newPrice": "less than $1/person"
     }
   },
@@ -79,7 +79,7 @@
     "commercialUse": "Commercial use"
   },
   "trust": {
-    "title": "Why teams choose TeamShots over everyone else",
+    "title": "Why teams choose TeamShotsPro over everyone else",
     "subtitle": "Built for serious B2B teams that need enterprise-grade photo management, not consumer gimmicks",
     "badges": {
       "teamCommandCenter": {
@@ -107,7 +107,7 @@
       "name": "Beta user",
       "role": "Early tester",
       "company": "Coming soon",
-      "message": "Join our beta program to be featured here and help shape the future of TeamShots! (Plus, you'll look like a trendsetter)"
+      "message": "Join our beta program to be featured here and help shape the future of TeamShotsPro! (Plus, you'll look like a trendsetter)"
     }
   },
   "howItWorks": {
@@ -147,7 +147,7 @@
   },
   "faq": {
     "title": "Frequently Asked Questions",
-    "subtitle": "Everything you need to know about TeamShots",
+    "subtitle": "Everything you need to know about TeamShotsPro",
     "miniTitle": "Common questions",
     "searchPlaceholder": "Search questions...",
     "category": {
@@ -279,10 +279,10 @@
   },
   "footer": {
     "tagline": "Professional team photos in 60 seconds",
-    "copyright": "© 2025 TeamShots. All rights reserved."
+    "copyright": "© 2025 TeamShotsPro. All rights reserved."
   },
   "metadata": {
-    "title": "TeamShots - Professional, consistent team photos in 60 seconds",
+    "title": "TeamShotsPro - Professional, consistent team photos in 60 seconds",
     "description": "Built for teams and startup founders. Turn team selfies into on-brand headshots without photoshoots. Fast, consistent, and perfect for remote teams."
   },
   "pricing": {
@@ -442,7 +442,7 @@
       "planSummaryIndividual": "{credits} credits/month, {photos} photos/month",
       "selectPlanPrompt": "Select a plan to continue",
       "firstNameLabel": "First name",
-      "userTypeLabel": "How will you use TeamShots?",
+      "userTypeLabel": "How will you use TeamShotsPro?",
       "individual": "Individual",
       "individualDesc": "For personal use. Just you, looking great.",
       "team": "Team",
@@ -486,7 +486,7 @@
       "notificationsCount": "{count}"
     },
     "sidebar": {
-      "brand": "TeamShots",
+      "brand": "TeamShotsPro",
       "nav": {
         "dashboard": "Dashboard",
         "team": "Team",
@@ -553,7 +553,7 @@
     "dashboard": {
       "welcome": {
         "title": "Welcome back, {name}! 👋",
-        "titleFirstTime": "Welcome to TeamShots, {name}! 🎉",
+        "titleFirstTime": "Welcome to TeamShotsPro, {name}! 🎉",
         "subtitle": {
           "individual": "You've generated {count} professional photos. Ready to create more?",
           "team": "Your team has generated {count} professional photos this month. Keep up the great work!",
@@ -732,19 +732,19 @@
     "onboarding": {
       "tours": {
         "welcome": {
-          "title": "Welcome to TeamShots, {Firstname}!",
-          "content": "Thanks for choosing TeamShots. You're awesome! 🚀\n\nYou'll look impeccably professional before your coffee goes cold.",
+          "title": "Welcome to TeamShotsPro, {Firstname}!",
+          "content": "Thanks for choosing TeamShotsPro. You're awesome! 🚀\n\nYou'll look impeccably professional before your coffee goes cold.",
           "photoStylesTitle": "Customize your photo styles",
           "photoStylesContent": "Before generating photos, you can customize your photo styles here. Choose backgrounds, clothing, expressions, and more to create your perfect professional look.",
           "goToPhotoStylesButton": "Go to photo styles",
           "generateButton": "Click here to transform your selfie into professional headshots that elevate your presence. Your future self will thank you."
         },
         "teamAdminWelcome": {
-          "title": "Welcome to TeamShots, {Firstname}!",
-          "content": "Thanks for choosing TeamShots. You're awesome! 🚀\n\nReady to transform your entire team into a cohesive group of polished professionals? Everyone will look consistently excellent before you finish your coffee break.",
+          "title": "Welcome to TeamShotsPro, {Firstname}!",
+          "content": "Thanks for choosing TeamShotsPro. You're awesome! 🚀\n\nReady to transform your entire team into a cohesive group of polished professionals? Everyone will look consistently excellent before you finish your coffee break.",
           "teamButton": "Click here to create your team and begin the transformation.",
           "teamNameTitle": "Add your team name",
-          "teamNameContent": "Enter your team name here to get started. This will be used to identify your team throughout TeamShots."
+          "teamNameContent": "Enter your team name here to get started. This will be used to identify your team throughout TeamShotsPro."
         },
         "generationTour": {
           "uploadTitle": "Upload your photo",
@@ -781,8 +781,8 @@
           "freeContent": "Kickstart your team's journey with our Free Package style, perfect for testing the service! Most settings are locked, but each user can customize their wardrobe colors. (Who doesn't love a good teaser?) Upgrade to unlock full custom team styles.",
           "backgroundTitle": "Background is set",
           "backgroundContent": "We've got a professional background ready for your team's photos, consistent and sharp!",
-          "brandingTitle": "TeamShots logo on clothing",
-          "brandingContent": "Your team photos feature the TeamShots logo for that extra touch of consistency (we promise it's tasteful).",
+          "brandingTitle": "TeamShotsPro logo on clothing",
+          "brandingContent": "Your team photos feature the TeamShotsPro logo for that extra touch of consistency (we promise it's tasteful).",
           "shotTypeTitle": "Shot type is 3/4",
           "shotTypeContent": "Set to 3/4 view, because who doesn't look great from this angle?",
           "clothingTypeTitle": "Clothing type is business casual",
@@ -815,8 +815,8 @@
           "freeContentPro": "Use our professional \"Free Package Style\" to make yourself shine immediately. Upgrade anytime to create custom styles that perfectly match your brand.",
           "backgroundTitle": "Background is set",
           "backgroundContent": "The background is already configured for your professional look.",
-          "brandingTitle": "TeamShots logo on clothing",
-          "brandingContent": "Your photos will feature the TeamShots logo on clothing for consistent branding.",
+          "brandingTitle": "TeamShotsPro logo on clothing",
+          "brandingContent": "Your photos will feature the TeamShotsPro logo on clothing for consistent branding.",
           "shotTypeTitle": "Shot type is 3/4",
           "shotTypeContent": "The shot type is set to 3/4, giving you a professional, consistent framing.",
           "clothingTypeTitle": "Clothing type is business casual",
@@ -1181,10 +1181,10 @@
     },
     "teamInvite": {
       "subject": "Team invitation from {teamName}",
-      "text": "You've been invited to join {teamName} on TeamShots.\n\nUse this link to accept: {inviteLink}\n\nYou have {creditsAllocated} credits to get started.",
+      "text": "You've been invited to join {teamName} on TeamShotsPro.\n\nUse this link to accept: {inviteLink}\n\nYou have {creditsAllocated} credits to get started.",
       "title": "Team invitation",
-      "greeting": "You've been invited to join {teamName}'s team on TeamShots. Good news: no awkward office photo sessions required.",
-      "greetingWithName": "Hi {firstName}, you've been invited to join {teamName}'s team on TeamShots. Good news: no awkward office photo sessions required.",
+      "greeting": "You've been invited to join {teamName}'s team on TeamShotsPro. Good news: no awkward office photo sessions required.",
+      "greetingWithName": "Hi {firstName}, you've been invited to join {teamName}'s team on TeamShotsPro. Good news: no awkward office photo sessions required.",
       "whatYouGet": "What you get:",
       "credits": "{photos} professional photos ({variations} variations)",
       "teamBranded": "Team-branded photo generation",
@@ -1196,17 +1196,17 @@
       "questions": "Questions? Just reply to this email. We're real people and we'll get back to you."
     },
     "waitlistWelcome": {
-      "subject": "Welcome to TeamShots",
-      "title": "Welcome to TeamShots",
+      "subject": "Welcome to TeamShotsPro",
+      "title": "Welcome to TeamShotsPro",
       "greeting": "Hi there",
-      "thankYou": "Thanks for joining the TeamShots waitlist. We're excited to have you on board as we prepare to launch professional team photography.",
+      "thankYou": "Thanks for joining the TeamShotsPro waitlist. We're excited to have you on board as we prepare to launch professional team photography.",
       "whatToExpect": "What to expect:",
       "earlyAccess": "Early access to our platform",
       "exclusiveUpdates": "Updates on new features",
       "specialPricing": "Launch pricing for waitlist members",
       "getReady": "Get ready to transform your team photos.",
       "bestRegards": "Best regards",
-      "team": "The TeamShots Team",
+      "team": "The TeamShotsPro Team",
       "steps": {
         "step1": {
           "title": "We're finalizing the product",
@@ -1214,7 +1214,7 @@
         },
         "step2": {
           "title": "You'll get early access",
-          "description": "As a waitlist member, you'll be among the first to try TeamShots when we launch."
+          "description": "As a waitlist member, you'll be among the first to try TeamShotsPro when we launch."
         },
         "step3": {
           "title": "Launch offer",
@@ -1229,11 +1229,11 @@
         "point4": "AI-powered by Google Gemini"
       },
       "questions": "Have questions? Just reply to this email and we'll help you out.",
-      "footer": "You're receiving this because you signed up for the TeamShots waitlist.",
+      "footer": "You're receiving this because you signed up for the TeamShotsPro waitlist.",
       "unsubscribe": "Don't want these emails?",
       "unsubscribeLink": "Unsubscribe",
       "visitSite": "Visit our site",
-      "copyright": "© {year} TeamShots. All rights reserved."
+      "copyright": "© {year} TeamShotsPro. All rights reserved."
     }
   },
   "customization": {

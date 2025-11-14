@@ -33,13 +33,13 @@ export interface OnboardingContext {
 // Welcome flow for regular users
 export const welcomeTour: TourConfig = {
   name: 'welcome',
-  description: 'Initial welcome flow explaining TeamShots for individual users',
+  description: 'Initial welcome flow explaining TeamShotsPro for individual users',
   triggerCondition: (context) => !context.isTeamAdmin,
   steps: [
     {
       selector: '#welcome-section',
-      title: 'Welcome to TeamShots, {Firstname}!',
-      content: "Thanks for choosing TeamShots. You're awesome! 🚀\nReady to transform your selfie into headshots that command attention? You'll look impeccably professional before your coffee goes cold.",
+      title: 'Welcome to TeamShotsPro, {Firstname}!',
+      content: "Thanks for choosing TeamShotsPro. You're awesome! 🚀\nReady to transform your selfie into headshots that command attention? You'll look impeccably professional before your coffee goes cold.",
       side: 'bottom',
       pointerPadding: 40,
     },
@@ -62,15 +62,15 @@ export const teamAdminWelcomeTour: TourConfig = {
   steps: [
     {
       selector: '#welcome-section',
-      title: 'Welcome to TeamShots, {Firstname}!',
-      content: "Thanks for choosing TeamShots. You're awesome! 🚀\n\nReady to transform your entire team into a cohesive group of polished professionals? Everyone will look consistently excellent before you finish your coffee break.",
+      title: 'Welcome to TeamShotsPro, {Firstname}!',
+      content: "Thanks for choosing TeamShotsPro. You're awesome! 🚀\n\nReady to transform your entire team into a cohesive group of polished professionals? Everyone will look consistently excellent before you finish your coffee break.",
       side: 'bottom',
       pointerPadding: 40,
     },
     {
       selector: '#teamName',
       title: 'Add your team name',
-      content: 'Enter your team name here to get started. This will be used to identify your team throughout TeamShots.',
+      content: 'Enter your team name here to get started. This will be used to identify your team throughout TeamShotsPro.',
       side: 'bottom',
       pointerPadding: 16,
     },
@@ -212,8 +212,8 @@ export const teamPhotoStylesFreeTour: TourConfig = {
     },
     {
       selector: '#style-branding',
-      title: 'TeamShots logo on clothing',
-      content: 'Your team photos will feature the TeamShots logo on clothing for consistent branding.',
+      title: 'TeamShotsPro logo on clothing',
+      content: 'Your team photos will feature the TeamShotsPro logo on clothing for consistent branding.',
       side: 'right',
       pointerPadding: 16,
     },
@@ -308,8 +308,8 @@ export const personalPhotoStylesFreeTour: TourConfig = {
     },
     {
       selector: '#style-branding',
-      title: 'TeamShots logo on clothing',
-      content: 'Your photos will feature the TeamShots logo on clothing for consistent branding.',
+      title: 'TeamShotsPro logo on clothing',
+      content: 'Your photos will feature the TeamShotsPro logo on clothing for consistent branding.',
       side: 'right',
       pointerPadding: 16,
     },
@@ -523,7 +523,7 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
   return {
     welcome: {
       name: 'welcome',
-      description: 'Initial welcome flow explaining TeamShots for individual users',
+      description: 'Initial welcome flow explaining TeamShotsPro for individual users',
       triggerCondition: (context) => !context.isTeamAdmin,
       steps: [
         {

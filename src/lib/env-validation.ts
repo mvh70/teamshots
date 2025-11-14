@@ -11,7 +11,7 @@ const envSchema = z.object({
   
   // Email
   RESEND_API_KEY: z.string().startsWith('re_'),
-  EMAIL_FROM: z.string().email().optional().default('noreply@teamshots.vip'),
+  EMAIL_FROM: z.string().email().optional().default('noreply@teamshotspro.com'),
   
   // AWS/Hetzner S3 (optional, for backward compatibility)
   AWS_ACCESS_KEY_ID: z.string().optional(),
@@ -45,7 +45,6 @@ const envSchema = z.object({
   
   // URLs
   NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
   NEXT_PUBLIC_MARKETING_URL: z.string().url().optional(),
   
   // Redis (optional)

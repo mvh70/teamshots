@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine the base URL with fallback - force HTTP for local development
-    // Note: Stripe webhooks must point to HTTPS (https://app.teamshots.vip/api/stripe/webhook)
+    // Note: Stripe webhooks must point to HTTPS (https://app.teamshotspro.com/api/stripe/webhook)
     // but local redirects should use HTTP (https://localhost:3000)
     const baseUrl = Env.string('NEXT_PUBLIC_BASE_URL')
     

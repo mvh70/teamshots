@@ -9,7 +9,7 @@ import { initializeQueues } from './index'
 
 async function startWorkers() {
   try {
-    console.log('🚀 Starting TeamShots queue workers...')
+    console.log('🚀 Starting TeamShotsPro queue workers...')
     
     // Initialize queues
     await initializeQueues()

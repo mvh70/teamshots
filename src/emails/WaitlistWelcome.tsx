@@ -21,7 +21,7 @@ interface WaitlistWelcomeEmailProps {
 export default function WaitlistWelcomeEmail({
   locale = 'en',
 }: WaitlistWelcomeEmailProps) {
-  const baseUrl = Env.string('NEXT_PUBLIC_BASE_URL', 'https://www.teamshots.vip');
+  const baseUrl = Env.string('NEXT_PUBLIC_BASE_URL', 'https://www.teamshotspro.com');
 
   return (
     <Html>

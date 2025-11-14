@@ -37,7 +37,7 @@
       "prefix": "Sesión tradicional:",
       "oldPrice": "$200/persona",
       "arrow": "→",
-      "suffix": "TeamShots:",
+      "suffix": "TeamShotsPro:",
       "newPrice": "menos de $1/persona"
     }
   },
@@ -80,7 +80,7 @@
     "commercialUse": "Uso comercial"
   },
   "trust": {
-    "title": "¿Por qué equipos eligen TeamShots sobre todos los demás?",
+    "title": "¿Por qué equipos eligen TeamShotsPro sobre todos los demás?",
     "subtitle": "Diseñado para equipos B2B serios que necesitan gestión de fotos de nivel empresarial, no trucos para consumidores",
     "badges": {
       "teamCommandCenter": {
@@ -108,7 +108,7 @@
       "name": "Usuario beta",
       "role": "Probador temprano",
       "company": "Próximamente",
-      "message": "¡Únete a nuestro programa beta para aparecer aquí y ayudar a dar forma al futuro de TeamShots! (Además, parecerás un innovador)"
+      "message": "¡Únete a nuestro programa beta para aparecer aquí y ayudar a dar forma al futuro de TeamShotsPro! (Además, parecerás un innovador)"
     }
   },
   "howItWorks": {
@@ -148,7 +148,7 @@
   },
   "faq": {
     "title": "Preguntas Frecuentes",
-    "subtitle": "Todo lo que necesitas saber sobre TeamShots",
+    "subtitle": "Todo lo que necesitas saber sobre TeamShotsPro",
     "miniTitle": "Preguntas comunes",
     "searchPlaceholder": "Buscar preguntas...",
     "category": {
@@ -280,10 +280,10 @@
   },
   "footer": {
     "tagline": "Fotos profesionales de equipo en 60 segundos",
-    "copyright": "© 2025 TeamShots. Todos los derechos reservados."
+    "copyright": "© 2025 TeamShotsPro. Todos los derechos reservados."
   },
   "metadata": {
-    "title": "TeamShots - Fotos profesionales y consistentes de equipo en 60 segundos",
+    "title": "TeamShotsPro - Fotos profesionales y consistentes de equipo en 60 segundos",
     "description": "Diseñado para equipos y fundadores de startups. Convierte selfies en retratos acordes a tu marca sin sesiones. Rápido, consistente y perfecto para remotos."
   },
   "pricing": {
@@ -443,7 +443,7 @@
       "planSummaryIndividual": "{credits} créditos/mes, {photos} fotos/mes",
       "selectPlanPrompt": "Selecciona un plan para continuar",
       "firstNameLabel": "Nombre",
-      "userTypeLabel": "¿Cómo usarás TeamShots?",
+      "userTypeLabel": "¿Cómo usarás TeamShotsPro?",
       "individual": "Individual",
       "individualDesc": "Para uso personal. Solo tú, luciendo genial.",
       "team": "Equipo",
@@ -487,7 +487,7 @@
       "notificationsCount": "{count}"
     },
     "sidebar": {
-      "brand": "TeamShots",
+      "brand": "TeamShotsPro",
       "nav": {
         "dashboard": "Panel",
         "team": "Equipo",
@@ -554,7 +554,7 @@
     "dashboard": {
       "welcome": {
         "title": "¡Bienvenido de nuevo, {name}! 👋",
-        "titleFirstTime": "¡Bienvenido a TeamShots, {name}! 🎉",
+        "titleFirstTime": "¡Bienvenido a TeamShotsPro, {name}! 🎉",
         "subtitle": {
           "individual": "Has generado {count} fotos profesionales. ¿Listo para crear más?",
           "team": "Tu equipo ha generado {count} fotos profesionales este mes. ¡Sigue así!",
@@ -733,19 +733,19 @@
     "onboarding": {
       "tours": {
         "welcome": {
-          "title": "¡Bienvenido a TeamShots, {Firstname}!",
-          "content": "Gracias por elegir TeamShots. ¡Eres increíble! 🚀\n\nLucirás impecablemente profesional antes de que se enfríe tu café.",
+          "title": "¡Bienvenido a TeamShotsPro, {Firstname}!",
+          "content": "Gracias por elegir TeamShotsPro. ¡Eres increíble! 🚀\n\nLucirás impecablemente profesional antes de que se enfríe tu café.",
           "photoStylesTitle": "Personaliza tus estilos de foto",
           "photoStylesContent": "Antes de generar fotos, puedes personalizar tus estilos de foto aquí. Elige fondos, ropa, expresiones y más para crear tu look profesional perfecto.",
           "goToPhotoStylesButton": "Ir a estilos de foto",
           "generateButton": "Haz clic aquí para transformar tu selfie en retratos profesionales que eleven tu presencia. Tu yo futuro te lo agradecerá."
         },
         "teamAdminWelcome": {
-          "title": "¡Bienvenido a TeamShots, {Firstname}!",
-          "content": "Gracias por elegir TeamShots. ¡Eres increíble! 🚀\n\n¿Listo para transformar a todo tu equipo en un grupo cohesionado de profesionales pulidos? Todos lucirán consistentemente excelentes antes de que termines tu café.",
+          "title": "¡Bienvenido a TeamShotsPro, {Firstname}!",
+          "content": "Gracias por elegir TeamShotsPro. ¡Eres increíble! 🚀\n\n¿Listo para transformar a todo tu equipo en un grupo cohesionado de profesionales pulidos? Todos lucirán consistentemente excelentes antes de que termines tu café.",
           "teamButton": "Haz clic aquí para crear tu equipo y comenzar la transformación.",
           "teamNameTitle": "Agrega el nombre de tu equipo",
-          "teamNameContent": "Ingresa el nombre de tu equipo aquí para comenzar. Este se usará para identificar a tu equipo en todo TeamShots."
+          "teamNameContent": "Ingresa el nombre de tu equipo aquí para comenzar. Este se usará para identificar a tu equipo en todo TeamShotsPro."
         },
         "generationTour": {
           "uploadTitle": "Sube tu foto",
@@ -782,8 +782,8 @@
           "freeContent": "Comienza el viaje de tu equipo con nuestro estilo de Paquete Gratuito, ¡perfecto para probar el servicio! La mayoría de las configuraciones están bloqueadas, pero cada usuario puede personalizar los colores de su guardarropa. (¿A quién no le gusta un buen adelanto?) Actualiza para desbloquear estilos de equipo personalizados completos.",
           "backgroundTitle": "El fondo está configurado",
           "backgroundContent": "Tenemos un fondo profesional listo para las fotos de tu equipo, ¡consistente y nítido!",
-          "brandingTitle": "Logo de TeamShots en la ropa",
-          "brandingContent": "Las fotos de tu equipo incluirán el logo de TeamShots para esa consistencia extra (¡prometemos que es de buen gusto!).",
+          "brandingTitle": "Logo de TeamShotsPro en la ropa",
+          "brandingContent": "Las fotos de tu equipo incluirán el logo de TeamShotsPro para esa consistencia extra (¡prometemos que es de buen gusto!).",
           "shotTypeTitle": "El tipo de toma es 3/4",
           "shotTypeContent": "Configurado en vista 3/4, ¡porque quién no se ve genial desde este ángulo!",
           "clothingTypeTitle": "El tipo de ropa es business casual",
@@ -816,8 +816,8 @@
           "freeContentPro": "Usa nuestro \"Estilo de Paquete Gratuito\" profesional para brillar de inmediato. Actualiza en cualquier momento para crear estilos personalizados que coincidan perfectamente con tu marca.",
           "backgroundTitle": "El fondo está configurado",
           "backgroundContent": "El fondo ya está configurado para tu look profesional.",
-          "brandingTitle": "Logo de TeamShots en la ropa",
-          "brandingContent": "Tus fotos incluirán el logo de TeamShots en la ropa para una marca consistente.",
+          "brandingTitle": "Logo de TeamShotsPro en la ropa",
+          "brandingContent": "Tus fotos incluirán el logo de TeamShotsPro en la ropa para una marca consistente.",
           "shotTypeTitle": "El tipo de toma es 3/4",
           "shotTypeContent": "El tipo de toma está configurado en 3/4, dándote un encuadre profesional y consistente.",
           "clothingTypeTitle": "El tipo de ropa es business casual",
@@ -1181,10 +1181,10 @@
     },
     "teamInvite": {
       "subject": "Invitación al equipo de {teamName}",
-      "text": "Has sido invitado a unirte a {teamName} en TeamShots.\n\nUsa este enlace para aceptar: {inviteLink}\n\nTienes {creditsAllocated} créditos para empezar.",
+      "text": "Has sido invitado a unirte a {teamName} en TeamShotsPro.\n\nUsa este enlace para aceptar: {inviteLink}\n\nTienes {creditsAllocated} créditos para empezar.",
       "title": "Invitación al equipo",
-      "greeting": "Has sido invitado a unirte al equipo de {teamName} en TeamShots. La buena noticia: no necesitas sesiones de fotos incómodas en la oficina.",
-      "greetingWithName": "Hola {firstName}, has sido invitado a unirte al equipo de {teamName} en TeamShots. La buena noticia: no necesitas sesiones de fotos incómodas en la oficina.",
+      "greeting": "Has sido invitado a unirte al equipo de {teamName} en TeamShotsPro. La buena noticia: no necesitas sesiones de fotos incómodas en la oficina.",
+      "greetingWithName": "Hola {firstName}, has sido invitado a unirte al equipo de {teamName} en TeamShotsPro. La buena noticia: no necesitas sesiones de fotos incómodas en la oficina.",
       "whatYouGet": "Lo que obtienes:",
       "credits": "{photos} fotos profesionales ({variations} variaciones)",
       "teamBranded": "Generación de fotos con marca del equipo",
@@ -1196,17 +1196,17 @@
       "questions": "¿Preguntas? Solo responde a este email. Somos personas reales y te responderemos."
     },
     "waitlistWelcome": {
-      "subject": "Bienvenido a TeamShots",
-      "title": "Bienvenido a TeamShots",
+      "subject": "Bienvenido a TeamShotsPro",
+      "title": "Bienvenido a TeamShotsPro",
       "greeting": "Hola",
-      "thankYou": "Gracias por unirte a la lista de espera de TeamShots. Estamos emocionados de tenerte a bordo mientras preparamos el lanzamiento de la fotografía profesional de equipos.",
+      "thankYou": "Gracias por unirte a la lista de espera de TeamShotsPro. Estamos emocionados de tenerte a bordo mientras preparamos el lanzamiento de la fotografía profesional de equipos.",
       "whatToExpect": "Qué esperar:",
       "earlyAccess": "Acceso temprano a nuestra plataforma",
       "exclusiveUpdates": "Actualizaciones sobre nuevas funciones",
       "specialPricing": "Precios de lanzamiento para miembros de la lista",
       "getReady": "Prepárate para transformar las fotos de tu equipo.",
       "bestRegards": "Saludos",
-      "team": "El equipo de TeamShots",
+      "team": "El equipo de TeamShotsPro",
       "steps": {
         "step1": {
           "title": "Estamos finalizando el producto",
@@ -1214,7 +1214,7 @@
         },
         "step2": {
           "title": "Obtendrás acceso anticipado",
-          "description": "Como miembro de la lista de espera, serás de los primeros en probar TeamShots cuando lancemos."
+          "description": "Como miembro de la lista de espera, serás de los primeros en probar TeamShotsPro cuando lancemos."
         },
         "step3": {
           "title": "Oferta de lanzamiento",
@@ -1229,11 +1229,11 @@
         "point4": "Impulsado por IA de Google Gemini"
       },
       "questions": "¿Tienes preguntas? Simplemente responde a este correo y te ayudaremos.",
-      "footer": "Estás recibiendo esto porque te inscribiste en la lista de espera de TeamShots.",
+      "footer": "Estás recibiendo esto porque te inscribiste en la lista de espera de TeamShotsPro.",
       "unsubscribe": "¿No quieres estos correos?",
       "unsubscribeLink": "Cancelar suscripción",
       "visitSite": "Visita nuestro sitio",
-      "copyright": "© {year} TeamShots. Todos los derechos reservados."
+      "copyright": "© {year} TeamShotsPro. Todos los derechos reservados."
     }
   },
   "customization": {
