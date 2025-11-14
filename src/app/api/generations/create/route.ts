@@ -105,26 +105,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Resolve selfies by IDs first, then keys
+    // OPTIMIZATION: Resolve selfies by IDs and keys in parallel
     let selfies = [] as Array<{ id: string; key: string; personId: string; person: { userId: string | null; teamId: string | null } }>
-    if (requestedIds.length > 0) {
-      const found = await prisma.selfie.findMany({
-        where: { id: { in: requestedIds } },
-        include: { person: { select: { userId: true, teamId: true } } }
-      })
-      selfies = found.map(s => ({ id: s.id, key: s.key, personId: s.personId, person: { userId: s.person?.userId || null, teamId: s.person?.teamId || null } }))
-    }
-    if (requestedKeys.length > 0) {
-      const foundByKey = await prisma.selfie.findMany({
-        where: { key: { in: requestedKeys } },
-        include: { person: { select: { userId: true, teamId: true } } }
-      })
-      // Merge unique by id
-      const existingIds = new Set(selfies.map(s => s.id))
-      for (const s of foundByKey) {
-        if (!existingIds.has(s.id)) {
-          selfies.push({ id: s.id, key: s.key, personId: s.personId, person: { userId: s.person?.userId || null, teamId: s.person?.teamId || null } })
-        }
+    const [foundByIds, foundByKeys] = await Promise.all([
+      requestedIds.length > 0 
+        ? prisma.selfie.findMany({
+            where: { id: { in: requestedIds } },
+            include: { person: { select: { userId: true, teamId: true } } }
+          })
+        : Promise.resolve([]),
+      requestedKeys.length > 0
+        ? prisma.selfie.findMany({
+            where: { key: { in: requestedKeys } },
+            include: { person: { select: { userId: true, teamId: true } } }
+          })
+        : Promise.resolve([])
+    ])
+
+    // Combine results, avoiding duplicates
+    const seenIds = new Set<string>()
+    for (const s of [...foundByIds, ...foundByKeys]) {
+      if (!seenIds.has(s.id)) {
+        seenIds.add(s.id)
+        selfies.push({ 
+          id: s.id, 
+          key: s.key, 
+          personId: s.personId, 
+          person: { userId: s.person?.userId || null, teamId: s.person?.teamId || null } 
+        })
       }
     }
 
@@ -159,17 +167,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'All selected selfies must belong to the same person' }, { status: 400 })
     }
 
-    // Fetch full owner person (inviteToken, team admin, etc.)
-    const ownerPerson = await prisma.person.findUnique({
-      where: { id: firstPersonId },
-      select: { userId: true, teamId: true, inviteToken: true, team: { select: { adminId: true } } }
-    })
+    // OPTIMIZATION: Fetch owner person and user person in parallel
+    const [ownerPerson, userPerson] = await Promise.all([
+      prisma.person.findUnique({
+        where: { id: firstPersonId },
+        select: { userId: true, teamId: true, inviteToken: true, team: { select: { adminId: true } } }
+      }),
+      prisma.person.findUnique({ 
+        where: { userId: session.user.id }, 
+        select: { id: true, teamId: true } 
+      })
+    ])
+
     if (!ownerPerson) {
       return NextResponse.json({ error: 'Person not found for selected selfies' }, { status: 404 })
     }
-
-    // Authorization check for current user against the selfies' person
-    const userPerson = await prisma.person.findUnique({ where: { userId: session.user.id }, select: { id: true, teamId: true } })
     if (!userPerson) {
       return NextResponse.json({ error: 'User person record not found' }, { status: 404 })
     }
@@ -191,9 +203,11 @@ export async function POST(request: NextRequest) {
 
     // Debug logging removed for production security
 
-    // Determine enforced generation type and credit source (server-side only)
-    const userWithRoles = await getUserWithRoles(session.user.id)
-    const subscription = await getUserSubscription(session.user.id)
+    // OPTIMIZATION: Fetch user roles and subscription in parallel
+    const [userWithRoles, subscription] = await Promise.all([
+      getUserWithRoles(session.user.id),
+      getUserSubscription(session.user.id)
+    ])
     const effective = userWithRoles ? await getUserEffectiveRoles(userWithRoles, subscription) : null
     const isTeamContext = Boolean(effective && (effective.isTeamAdmin || effective.isTeamMember) && ownerPerson.teamId)
     const enforcedGenerationType: 'personal' | 'team' = isTeamContext ? 'team' : 'personal'
@@ -659,12 +673,22 @@ export async function POST(request: NextRequest) {
     })
 
     Telemetry.increment('generation.create.success')
+    
+    // Return account mode info to avoid redundant API call on client
+    const isPro = effective?.isTeamAdmin ?? false
+    const redirectUrl = isPro ? '/app/generations/team' : 
+      (session.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
+    
     return NextResponse.json({
       success: true,
       generationId: generation.id,
       jobId: job.id,
       status: 'queued',
       message: 'Generation queued successfully',
+      accountMode: {
+        isPro,
+        redirectUrl
+      }
     })
 
   } catch (error) {

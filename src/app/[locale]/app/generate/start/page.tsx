@@ -1,6 +1,6 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
@@ -20,7 +20,6 @@ import { jsonFetcher } from '@/lib/fetcher'
 import { loadStyle, loadStyleByContextId } from '@/domain/style/service'
 import { getPackageConfig } from '@/domain/style/packages'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
-import { fetchAccountMode } from '@/domain/account/accountMode'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import { hasUserDefinedFields } from '@/domain/style/userChoice'
 
@@ -29,6 +28,7 @@ const GenerationTypeSelector = dynamic(() => import('@/components/GenerationType
 
 export default function StartGenerationPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { data: session } = useSession()
   const t = useTranslations('app.sidebar.generate')
   const { isFreePlan, uiTier } = usePlanInfo()
@@ -71,6 +71,7 @@ export default function StartGenerationPage() {
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
   const [selectedPackageId, setSelectedPackageId] = useState<string>('')
   const [selectedSelfies, setSelectedSelfies] = useState<Array<{ id: string; key: string }>>([])
+  const [isGenerating, setIsGenerating] = useState(false)
   const headerThumbs = useMemo(() => {
     const items = selectedSelfies.length > 0 ? selectedSelfies : (key ? [{ id: 'legacy', key }] : [])
     return items
@@ -289,7 +290,12 @@ export default function StartGenerationPage() {
       return
     }
 
+    // Prevent double-clicks
+    if (isGenerating) return
+
     try {
+      setIsGenerating(true)
+
       // Ensure packageId is set (default to headshot1 if not selected)
       const packageId = selectedPackageId || PRICING_CONFIG.defaultSignupPackage
       
@@ -306,7 +312,14 @@ export default function StartGenerationPage() {
       }
       
       // Create generation request (server decides mode and credits)
-      await jsonFetcher<{ success?: boolean; error?: string }>('/api/generations/create', {
+      const response = await jsonFetcher<{ 
+        success?: boolean; 
+        error?: string;
+        accountMode?: {
+          isPro: boolean;
+          redirectUrl: string;
+        }
+      }>('/api/generations/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -314,22 +327,15 @@ export default function StartGenerationPage() {
         body: JSON.stringify(payload),
       })
 
-      // Redirect: team managers (pro accounts) should land on team generations
-      try {
-        const accountMode = await fetchAccountMode()
-        if (accountMode.isPro) {
-          window.location.href = '/app/generations/team'
-          return
-        }
-      } catch {
-        // If account mode fetch fails, fall back to generation type based redirect
-      }
-      const fallbackRedirect = (session?.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
-      window.location.href = fallbackRedirect
+      // Use account mode from response to avoid redundant API call
+      const redirectUrl = response.accountMode?.redirectUrl || 
+        (session?.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
+      router.push(redirectUrl)
       
     } catch (error) {
       console.error('Failed to start generation:', error)
       alert(`Failed to start generation: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setIsGenerating(false)
     }
   }
 
@@ -517,14 +523,24 @@ export default function StartGenerationPage() {
                 <div className="mt-3 md:mt-4">
                   <button
                     onClick={onProceed}
-                    disabled={!canGenerate}
+                    disabled={!canGenerate || isGenerating}
                     className={`w-full md:w-auto px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      canGenerate
+                      canGenerate && !isGenerating
                         ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
                         : 'bg-brand-primary/30 text-white/70 cursor-not-allowed'
                     }`}
                   >
-                    {t('generatePhoto')}
+                    {isGenerating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Starting generation...
+                      </span>
+                    ) : (
+                      t('generatePhoto')
+                    )}
                   </button>
                 </div>
                 {!hasEnoughCredits && (
