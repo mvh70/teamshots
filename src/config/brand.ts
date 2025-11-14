@@ -19,8 +19,8 @@ export const BRAND_CONFIG = {
   },
   
   logo: {
-    light: '/branding/logo-light.png',
-    dark: '/branding/logo-dark.png',
+    light: '/branding/teamshotspro_trans.png',
+    dark: '/branding/teamshotspro_trans.png',
     icon: '/branding/icon.png',
     favicon: '/branding/favicon.ico',
   },
