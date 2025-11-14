@@ -12,13 +12,13 @@ interface GridProps {
   'data-testid'?: string
 }
 
-export function Grid({ 
-  children, 
+export const Grid = React.forwardRef<HTMLDivElement, GridProps>(function Grid({
+  children,
   cols = { mobile: 2, tablet: 3, desktop: 4 },
   gap = 'md',
   className = '',
   'data-testid': testId
-}: GridProps) {
+}, ref) {
   const gapClasses = {
     sm: 'gap-2',
     md: 'gap-4',
@@ -37,11 +37,11 @@ export function Grid({
   const classes = `${gridClasses} ${responsiveClasses} ${className}`.trim()
   
   return (
-    <div className={classes} data-testid={testId}>
+    <div ref={ref} className={classes} data-testid={testId}>
       {children}
     </div>
   )
-}
+})
 
 // Predefined grid layouts for common use cases
 export function UploadGrid({ children, ...props }: Omit<GridProps, 'cols'>) {
@@ -54,7 +54,7 @@ export function UploadGrid({ children, ...props }: Omit<GridProps, 'cols'>) {
 
 export function GenerationGrid({ children, ...props }: Omit<GridProps, 'cols'>) {
   return (
-    <Grid cols={{ mobile: 2, tablet: 3, desktop: 4 }} {...props}>
+    <Grid cols={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg" {...props}>
       {children}
     </Grid>
   )
@@ -63,6 +63,14 @@ export function GenerationGrid({ children, ...props }: Omit<GridProps, 'cols'>) 
 export function CardGrid({ children, ...props }: Omit<GridProps, 'cols'>) {
   return (
     <Grid cols={{ mobile: 1, tablet: 2, desktop: 3 }} {...props}>
+      {children}
+    </Grid>
+  )
+}
+
+export function SelfieGrid({ children, ...props }: Omit<GridProps, 'cols'>) {
+  return (
+    <Grid cols={{ mobile: 2, tablet: 3, desktop: 6 }} gap="md" {...props}>
       {children}
     </Grid>
   )

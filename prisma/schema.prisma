@@ -50,6 +50,7 @@ model Person {
   inviteAcceptedAt   DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+  onboardingState    String?             @default("not_started") // "not_started", "in_progress", "completed"
   creditTransactions CreditTransaction[]
   generations        Generation[]
   team               Team?               @relation(fields: [teamId], references: [id])
@@ -133,7 +134,6 @@ model Generation {
   creditSource           String    @default("individual")
   deleted                Boolean   @default(false)
   deletedAt              DateTime?
-  generationType         String    @default("personal")
   isPublic               Boolean   @default(false)
   maxRegenerations       Int       @default(2)
   remainingRegenerations Int       @default(2)
@@ -149,7 +149,6 @@ model Generation {
   @@index([personId])
   @@index([contextId])
   @@index([selfieId])
-  @@index([generationType])
   @@index([status])
   @@index([createdAt])
   @@index([isPublic])

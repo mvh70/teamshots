@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 // Load environment variables from .env.local
-require('dotenv').config({ path: '.env' });
+import 'dotenv/config';
 
-const fs = require('fs');
-const path = require('path');
-const Stripe = require('stripe');
+import fs from 'fs';
+import path from 'path';
+import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 

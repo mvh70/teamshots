@@ -28,7 +28,7 @@ export default async function AuthLayout({children}: {children: React.ReactNode}
         <header className="w-full pt-10 pb-6">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center">
             <Link href="/" aria-label={BRAND_CONFIG.name} className="inline-flex items-center gap-3">
-              <Image src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} width={120} height={32} className="h-8 w-auto" />
+              <Image src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} width={120} height={32} className="h-8 w-auto" style={{ width: 'auto' }} />
             </Link>
           </div>
         </header>

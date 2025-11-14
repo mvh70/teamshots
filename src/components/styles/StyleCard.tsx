@@ -3,6 +3,7 @@
 import StyleSummaryCard from '@/components/styles/StyleSummaryCard'
 import type { PhotoStyleSummarySettings as SummarySettings } from '@/components/styles/StyleSummary'
 import UserStyleSummary from '@/components/styles/UserStyleSummary'
+import { Grid } from '@/components/ui'
 
 interface StyleCardProps {
   settings?: unknown
@@ -23,7 +24,7 @@ export default function StyleCard({
 }: StyleCardProps) {
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+      <Grid cols={{ mobile: 2 }} gap="md" className="text-sm text-gray-600">
         <StyleSummaryCard
           settings={(settings as SummarySettings) || undefined}
           stylePreset={stylePreset}
@@ -31,8 +32,8 @@ export default function StyleCard({
           legacyBackgroundPrompt={legacyBackgroundPrompt || undefined}
           legacyLogoUrl={legacyLogoUrl || undefined}
         />
-        <UserStyleSummary settings={settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
-      </div>
+        <UserStyleSummary settings={settings as Parameters<typeof UserStyleSummary>[0]['settings']}         />
+      </Grid>
     </div>
   )
 }

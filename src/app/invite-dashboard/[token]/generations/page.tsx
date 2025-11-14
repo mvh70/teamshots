@@ -5,6 +5,7 @@ import { PhotoIcon } from '@heroicons/react/24/outline'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import GenerationCard from '@/app/[locale]/app/generations/components/GenerationCard'
 import { useInvitedGenerations } from './useInvitedGenerations'
+import { GenerationGrid, ErrorBanner } from '@/components/ui'
 
 export default function GenerationsPage() {
   const params = useParams()
@@ -29,15 +30,11 @@ export default function GenerationsPage() {
       <InviteDashboardHeader showBackToDashboard token={token} title="" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
+        {error && <ErrorBanner message={error} className="mb-6" />}
 
         <div className="space-y-6">
           {generations.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <GenerationGrid>
               {generations.map((generation) => (
                 <GenerationCard
                   key={generation.id}
@@ -45,7 +42,7 @@ export default function GenerationsPage() {
                   token={token}
                 />
               ))}
-            </div>
+            </GenerationGrid>
           ) : (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="text-center py-12">

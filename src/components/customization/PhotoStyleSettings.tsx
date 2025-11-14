@@ -27,6 +27,7 @@ import BrandingSelector from './BrandingSelector'
 import ExpressionSelector from './ExpressionSelector'
 import { getPackageConfig } from '@/domain/style/packages'
 import { defaultAspectRatioForShot } from '@/domain/style/packages/aspect-ratios'
+import { CardGrid } from '@/components/ui'
 
 interface PhotoStyleSettingsProps {
   value: PhotoStyleSettingsType
@@ -341,6 +342,7 @@ export default function PhotoStyleSettings({
     return (
       <div
         key={category.key}
+        id={`${category.key}-settings`}
         className={`rounded-lg border shadow-sm transition ${
           isUserChoice
             ? 'bg-brand-primary-light border-brand-primary/50 hover:ring-1 hover:ring-brand-primary/60'
@@ -348,54 +350,51 @@ export default function PhotoStyleSettings({
         }`}
       >
         {/* Category Header */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="p-5 md:p-4 border-b border-gray-200">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <Icon className="h-5 w-5 text-gray-600" />
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+              <Icon className="h-6 w-6 md:h-5 md:w-5 text-gray-600 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xl md:text-lg font-semibold text-gray-900 break-words">
                   {t(`categories.${category.key}.title`, { default: category.label })}
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-base md:text-sm text-gray-600 mt-1 md:mt-0">
                   {t(`categories.${category.key}.description`, { default: category.description })}
                 </p>
               </div>
             </div>
-            
-            {/* Show status section */}
-            <div className="flex items-center gap-3">
-              <span
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                  isUserChoice
-                    ? 'bg-brand-primary-light text-brand-primary'
-                    : isLockedByPreset
-                      ? 'bg-red-50 text-red-600 border border-red-200'
-                      : 'bg-gray-100 text-gray-600'
-                }`}
-              >
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Status badges */}
+              <span className={`inline-flex items-center gap-1 px-2 py-1 md:px-2 md:py-0.5 rounded-full text-sm md:text-xs font-medium ${
+                isUserChoice ? 'bg-purple-100 text-purple-800' :
+                isLockedByPreset ? 'bg-red-50 text-red-600 border border-red-200' :
+                'bg-gray-100 text-gray-600'
+              }`}>
                 {isUserChoice ? (
-                  <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  <SparklesIcon className="h-4 w-4 md:h-3.5 md:w-3.5" aria-hidden="true" />
                 ) : (
-                  <LockClosedIcon className={`h-3.5 w-3.5 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
+                  <LockClosedIcon className={`h-4 w-4 md:h-3.5 md:w-3.5 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
                 )}
                 {chipLabel}
               </span>
 
+              {/* Larger toggle switch for mobile */}
               {showToggles && !readonlyPredefined && (
                 <button
+                  id={`${category.key}-toggle`}
                   type="button"
                   onClick={(e) => handleCategoryToggle(category.key, !isPredefined, e)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors border border-gray-200 hover:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1"
+                  className="flex items-center gap-2 px-4 py-2 md:px-3 md:py-1.5 text-base md:text-sm font-medium rounded-md transition-colors border border-gray-200 hover:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1"
                 >
-                  <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  <div className={`relative inline-flex h-7 w-12 md:h-5 md:w-9 items-center rounded-full transition-colors ${
                     isPredefined ? 'bg-brand-primary' : 'bg-gray-300'
                   }`}>
-                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                      isPredefined ? 'translate-x-5' : 'translate-x-1'
+                    <span className={`inline-block h-5 w-5 md:h-3 md:w-3 transform rounded-full bg-white transition-transform ${
+                      isPredefined ? 'translate-x-6 md:translate-x-5' : 'translate-x-1'
                     }`} />
                   </div>
                   <span className={isPredefined ? 'text-brand-primary' : 'text-gray-600'}>
-                    {isPredefined 
+                    {isPredefined
                       ? t('toggle.predefined', { default: 'Predefined' })
                       : t('toggle.userChoice', { default: 'User Choice' })
                     }
@@ -407,7 +406,7 @@ export default function PhotoStyleSettings({
         </div>
 
         {/* Category Settings - always expanded */}
-        <div className={`p-4 ${isLockedByPreset ? 'opacity-60' : ''}`}>
+        <div className={`p-5 md:p-4 ${isLockedByPreset ? 'opacity-60' : ''}`}>
           {category.key === 'background' && (
             <EnhancedBackgroundSelector
               value={value.background || { type: 'user-choice' }}
@@ -480,7 +479,7 @@ export default function PhotoStyleSettings({
     <div className={`space-y-6 ${className}`}>
       {/* Photo Style Section */}
       <div className="space-y-4">
-        <div className="bg-gray-50 rounded-lg p-4">
+        <div id="composition-settings-section" className="bg-gray-50 rounded-lg p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
@@ -505,14 +504,14 @@ export default function PhotoStyleSettings({
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CardGrid>
           {visiblePhotoCategories.map(renderCategoryCard)}
-        </div>
+        </CardGrid>
       </div>
 
       {/* User Style Section */}
       <div className="space-y-4">
-        <div className="bg-gray-50 rounded-lg p-4">
+        <div id="user-style-settings-section" className="bg-gray-50 rounded-lg p-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             {t('sections.userStyle', { default: 'User Style Settings' })}
           </h3>
@@ -520,9 +519,9 @@ export default function PhotoStyleSettings({
             {t('sections.userStyleDesc', { default: 'Clothing, expression, and lighting preferences' })}
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CardGrid>
           {visibleUserCategories.map(renderCategoryCard)}
-        </div>
+        </CardGrid>
       </div>
     </div>
   )

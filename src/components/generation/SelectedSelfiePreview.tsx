@@ -1,5 +1,5 @@
 import React from 'react'
-import Image from 'next/image'
+import { ImagePreview } from '@/components/ui'
 
 interface SelectedSelfiePreviewProps {
   title?: string
@@ -16,11 +16,14 @@ export default function SelectedSelfiePreview({
     <div className={className}>
       <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
       <div className="relative w-full h-48 rounded-lg overflow-hidden border-2 border-gray-200">
-        <Image
+        <ImagePreview
           src={url}
           alt={title}
-          fill
-          className="object-cover"
+          width={400}
+          height={192}
+          className="absolute inset-0 w-full h-full object-cover"
+          variant="full"
+          showLoadingSpinner={false}
         />
       </div>
     </div>

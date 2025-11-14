@@ -7,6 +7,7 @@ import BackgroundSelector from './BackgroundSelector'
 import BrandingControls from './BrandingControls'
 import CreditCostDisplay from './CreditCostDisplay'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { CardGrid } from '@/components/ui'
 
 interface CustomizationFormProps {
   initialValues?: {
@@ -135,7 +136,7 @@ export default function CustomizationForm({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <CardGrid gap="lg">
         <StylePresetSelector
           value={stylePreset}
           onChange={handleStylePresetChange}
@@ -159,7 +160,7 @@ export default function CustomizationForm({
           onGenerate={showGenerateButton ? handleGenerate : undefined}
           generateButtonText={generateButtonText}
         />
-      </div>
+      </CardGrid>
 
       {/* Prominent credit cost display */}
       <CreditCostDisplay

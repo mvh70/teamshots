@@ -69,10 +69,9 @@ test.describe('Internationalization and Mobile Testing', () => {
     
     // Debug: Check what title elements are available
     const landscapeTitle = await page.locator('[data-testid="selfies-title"]').count();
-    const portraitTitle = await page.locator('[data-testid="selfies-title"]').count();
-    
+
     // Try both title elements - one should be visible
-    const titleLocator = landscapeTitle > 0 
+    const titleLocator = landscapeTitle > 0
       ? page.locator('[data-testid="selfies-title"]')
       : page.locator('[data-testid="selfies-title"]');
     

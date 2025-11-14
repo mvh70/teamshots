@@ -11,6 +11,12 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'ui-avatars.com' },
       { protocol: 'https', hostname: 'avatars.githubusercontent.com' }
+    ],
+    localPatterns: [
+      {
+        pathname: '/api/files/get',
+        search: 'key=*'
+      }
     ]
   },
   async headers() {

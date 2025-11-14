@@ -7,10 +7,11 @@ import { useRouter } from '@/i18n/routing'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { BRAND_CONFIG } from '@/config/brand'
 import { getPricingDisplay } from '@/domain/pricing'
-import CheckoutButton from '@/components/pricing/CheckoutButton'
+import { CheckoutButton } from '@/components/ui'
 import BillingToggle from '@/components/pricing/BillingToggle'
 import StripeNotice from '@/components/stripe/StripeNotice'
 import PricingCard from '@/components/pricing/PricingCard'
+import { normalizePlanTierForUI } from '@/domain/subscription/utils'
 
 type Tier = 'individual' | 'pro'
 
@@ -22,13 +23,46 @@ export default function UpgradePage() {
   const searchParams = useSearchParams()
   const pricing = getPricingDisplay()
 
-  const initialTier = (searchParams.get('tier') as Tier) || 'individual'
-  const [selectedTier] = useState<Tier>(initialTier)
   const [isYearly, setIsYearly] = useState(false)
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
+  const [selectedTier, setSelectedTier] = useState<Tier>('individual')
 
   // Check for success state
   const isSuccess = searchParams.get('success') === 'true'
   const successType = searchParams.get('type')
+
+  // Check subscription and determine tier
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const response = await fetch('/api/user/subscription')
+        if (response.ok) {
+          const data = await response.json()
+          const subscription = data?.subscription
+          if (subscription) {
+            const uiTier = normalizePlanTierForUI(subscription.tier, subscription.period)
+            
+            // If user has an active paid subscription, redirect to top-up
+            if (uiTier !== 'free') {
+              router.push('/app/top-up')
+              return
+            }
+            
+            // For free users, use their chosen tier (individual or pro)
+            if (subscription.tier === 'pro' || subscription.tier === 'individual') {
+              setSelectedTier(subscription.tier)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check subscription:', error)
+      } finally {
+        setIsCheckingSubscription(false)
+      }
+    }
+
+    checkSubscription()
+  }, [router])
 
   // Clear success params from URL after display (prevents showing on refresh)
   useEffect(() => {
@@ -82,6 +116,18 @@ export default function UpgradePage() {
         annualSavings: pricing.pro.annual.savings,
         popular: true,
       }
+
+  // Show loading while checking subscription
+  if (isCheckingSubscription) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-10">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   // If success state, show success message instead of pricing cards
   if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_success')) {
@@ -139,11 +185,12 @@ export default function UpgradePage() {
           isYearly={false}
           ctaSlot={
             <CheckoutButton
-              label={t('plans.tryOnce.cta')}
-              loadingLabel={tAll('common.loading', { default: 'Loading...' })}
+              loadingText={tAll('common.loading', { default: 'Loading...' })}
               type="try_once"
               priceId={PRICING_CONFIG.tryOnce.stripePriceId}
-            />
+            >
+              {t('plans.tryOnce.cta')}
+            </CheckoutButton>
           }
           className="h-full"
         />
@@ -154,12 +201,14 @@ export default function UpgradePage() {
           previousPrice={isYearly ? subscriptionPlan.price : undefined}
           ctaSlot={
             <CheckoutButton
-              label={t('plans.' + subscriptionPlan.id + '.cta')}
-              loadingLabel={tAll('common.loading', { default: 'Loading...' })}
+              loadingText={tAll('common.loading', { default: 'Loading...' })}
               type="subscription"
               priceId={subscriptionPriceId}
               metadata={{ tier: selectedTier, period: isYearly ? 'annual' : 'monthly' }}
-            />
+              useBrandCtaColors
+            >
+              {t('plans.' + subscriptionPlan.id + '.cta')}
+            </CheckoutButton>
           }
           popularLabelKey="pricingPreview.recommended"
           className="h-full"

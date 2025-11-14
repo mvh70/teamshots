@@ -3,11 +3,18 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import SelfieUploadFlow from '@/components/Upload/SelfieUploadFlow';
 
 // Mock next/image
-jest.mock('next/image', () => {
-  return function MockImage({ src, alt, ...props }: any) {
-    return <img src={src} alt={alt} {...props} />;
-  };
-});
+jest.mock('next/image', () => ({
+  __esModule: true,
+  default: function MockImage({ src, alt, ...props }: Record<string, unknown>) {
+    return React.createElement('div', {
+      ...props,
+      'data-src': src as string,
+      'data-alt': alt as string,
+      'data-testid': 'mock-image',
+      style: { backgroundImage: `url(${src as string})` }
+    });
+  }
+}));
 
 // Mock next-intl
 jest.mock('next-intl', () => ({
@@ -24,7 +31,7 @@ jest.mock('next-intl', () => ({
 
 // Mock PhotoUpload component
 jest.mock('@/components/Upload/PhotoUpload', () => {
-  return function MockPhotoUpload({ onUploaded }: any) {
+  return function MockPhotoUpload({ onUploaded }: { onUploaded: (result: { key: string; url?: string }) => void }) {
     return (
       <div data-testid="photo-upload">
         <button
@@ -40,7 +47,12 @@ jest.mock('@/components/Upload/PhotoUpload', () => {
 
 // Mock SelfieApproval component
 jest.mock('@/components/Upload/SelfieApproval', () => {
-  return function MockSelfieApproval({ onApprove, onReject, onRetake, onCancel }: any) {
+  return function MockSelfieApproval({ onApprove, onReject, onRetake, onCancel }: {
+    onApprove: () => void
+    onReject: () => void
+    onRetake: () => void
+    onCancel: () => void
+  }) {
     return (
       <div data-testid="mock-approval">
         <button data-testid="mock-approve" onClick={onApprove}>Approve</button>

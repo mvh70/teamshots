@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
 import { BrandingSettings } from '@/types/photo-style'
+import { Grid } from '@/components/ui'
 
 interface BrandingSelectorProps {
   value: BrandingSettings
@@ -217,7 +218,7 @@ export default function BrandingSelector({
             <label className="block text-sm font-medium text-gray-700">
               {t('position.label', { default: 'Logo Position' })}
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Grid cols={{ mobile: 1, tablet: 3 }} gap="sm">
               {[
                 { key: 'background', label: t('position.background', { default: 'Background' }) },
                 { key: 'clothing', label: t('position.clothing', { default: 'Clothing' }) },
@@ -237,7 +238,7 @@ export default function BrandingSelector({
                   {opt.label}
                 </button>
               ))}
-            </div>
+            </Grid>
           </div>
         </div>
       )}

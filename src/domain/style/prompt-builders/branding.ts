@@ -43,9 +43,10 @@ const ELEMENT_BRANDING_PROMPT: Record<string, unknown> = {
 }
 
 const CLOTHING_BRANDING_RULES_BASE = [
-  'No duplication or patterns.',
-  'Maintain original aspect ratio and colors.',
-  'No stylization or warping.'
+  'Do not place the logo on outer layers (jackets/coats), background, walls, floors, signs, accessories, or skin.',
+  'Do not create patterns or duplicates.',
+  'Keep original aspect ratio and colors; no stylization or warping.',
+  'The logo size should be modest and proportional to the garment.'
 ]
 
 type ClothingBrandingConfig = {
@@ -77,10 +78,42 @@ const resolveClothingBrandingConfig = (
       }
     }
 
+    // Business formal (formal, pantsuit, blouse)
+    if (detailKey === 'formal' || detailKey === 'pantsuit' || detailKey === 'blouse') {
+      return {
+        placement: 'upper-right chest of the base dress shirt, positioned where a shirt pocket would be',
+        rules: [
+          'Put the logo on the visible base shirt only (not on the jacket), positioned on the upper-right chest where a shirt pocket would be.',
+          ...CLOTHING_BRANDING_RULES_BASE,
+          'Keep the jacket partially open so the logo remains visible.'
+        ],
+        pose: {
+          arms: 'hands clasped professionally at the front',
+          description: 'Subject stands confidently with hands clasped professionally, naturally showcasing the shirt pocket logo.'
+        }
+      }
+    }
+
+    // Business casual (casual)
+    if (detailKey === 'casual') {
+      return {
+        placement: 'center chest area of the base layer (t-shirt, knit top, or blouse)',
+        rules: [
+          'Place the provided brand logo exactly once on the center chest area of the base garment.',
+          ...CLOTHING_BRANDING_RULES_BASE
+        ],
+        pose: {
+          arms: 'hands gently clasped at the front, maintaining relaxed posture',
+          description: 'Subject stands confidently with hands relaxed at the sides, naturally showcasing the center chest logo.'
+        }
+      }
+    }
+
+    // Default fallback - business formal
     return {
-      placement: 'upper-right chest of the base dress shirt, visible beneath the jacket',
+      placement: 'upper-right chest of the base dress shirt, positioned where a shirt pocket would be',
       rules: [
-        'Apply the logo to the base shirt only, never on the jacket or lapel.',
+        'Put the logo on the visible base shirt only (not on the jacket), positioned on the upper-right chest where a shirt pocket would be.',
         ...CLOTHING_BRANDING_RULES_BASE,
         'Keep the jacket partially open so the logo remains visible.'
       ],
@@ -93,8 +126,8 @@ const resolveClothingBrandingConfig = (
 
   if (styleKey === 'startup') {
     return {
-      placement: 'center chest area of the base garment (t-shirt, blouse, dress, hoodie, or button-down)',
-      rules: ['Place the logo exactly once on the base garment.', ...CLOTHING_BRANDING_RULES_BASE],
+      placement: 'center chest area of the base garment (t-shirt, hoodie, polo, button-down)',
+      rules: ['Place the provided brand logo exactly once on the center chest area of the base garment.', ...CLOTHING_BRANDING_RULES_BASE],
       pose: {
         arms: 'hands gently pointing towards the logo on the base garment',
         description: 'The subject highlights the logo with both hands in a confident yet natural gesture.'
@@ -118,9 +151,9 @@ const resolveClothingBrandingConfig = (
   }
 
   return {
-    placement: 'upper-right chest of the base dress shirt, visible beneath the jacket',
+    placement: 'upper-right chest of the base dress shirt, positioned where a shirt pocket would be',
     rules: [
-      'Apply the logo to the base shirt only, never on the jacket or lapel.',
+      'Put the logo on the visible base shirt only (not on the jacket), positioned on the upper-right chest where a shirt pocket would be.',
       ...CLOTHING_BRANDING_RULES_BASE,
       'Keep the jacket partially open so the logo remains visible.'
     ],

@@ -37,10 +37,11 @@ export default function ConditionalHeader() {
             {/* Light background header uses the light logo variant */}
             <Image 
               src={BRAND_CONFIG.logo.light} 
-              alt={BRAND_CONFIG.name} 
-              width={120} 
-              height={32} 
-              className="h-8 w-auto" 
+              alt={BRAND_CONFIG.name}
+              width={120}
+              height={32}
+              className="h-8 w-auto"
+              style={{ width: 'auto' }}
             />
           </Link>
         </div>

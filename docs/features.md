@@ -55,7 +55,7 @@ All features below
 - **Personal Use**: Individual credits, full style control, private photos
 - **Team Use**: Team credits, preset styles, admin visible
 - Same uploaded photo can be used for both types
-- Clear credit cost display (4 credits per generation)
+- Clear credit cost display (10 credits per generation)
 
 ### 4. Photo Style Management
 **Team Users:**

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
-import { getUserSubscription } from '@/domain/subscription/subscription'
+import { UserService } from '@/domain/services/UserService'
 import { Logger } from '@/lib/logger'
+import { getTeamOnboardingState } from '@/domain/team/onboarding'
 
 
 export const runtime = 'nodejs'
@@ -14,26 +14,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
-    const [user, subscription] = await Promise.all([
-      getUserWithRoles(session.user.id),
-      getUserSubscription(session.user.id)
-    ])
-    
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    // Pass subscription to avoid duplicate query
-    const roles = await getUserEffectiveRoles(user, subscription)
+    // OPTIMIZATION: Use UserService for consolidated user context fetching
+    const userContext = await UserService.getUserContext(session.user.id)
+    const { user, roles } = userContext
     const teamId = user.person?.teamId
     const teamName = user.person?.team?.name || null
-
-    // OPTIMIZATION: Use createdAt from user object (already fetched) instead of separate query
-    // Consider it a first visit if account was created within the last 2 hours
-    const isFirstVisit = user.createdAt 
-      ? new Date().getTime() - user.createdAt.getTime() < 2 * 60 * 60 * 1000
-      : false
+    const isFirstVisit = UserService.isFirstTimeVisitor(user)
 
     // Base stats for all users
     const stats: {
@@ -47,6 +33,7 @@ export async function GET() {
       activeTemplates: 0,
       creditsUsed: 0,
       teamMembers: 0, // Only relevant for team admins
+      pendingInvites: 0
     }
 
     // Get user's generations count
@@ -120,6 +107,13 @@ export async function GET() {
       stats.teamMembers = teamMembersCount
     }
 
+    const onboardingState = await getTeamOnboardingState({
+      isTeamAdmin: roles.isTeamAdmin,
+      teamId,
+      prefetchedMemberCount: typeof stats.teamMembers === 'number' ? stats.teamMembers : undefined
+    })
+    stats.pendingInvites = onboardingState.pendingInviteCount
+
     return NextResponse.json({
       success: true,
       stats,
@@ -129,7 +123,10 @@ export async function GET() {
         isRegularUser: roles.isRegularUser,
         teamId: teamId,
         teamName: teamName,
-        needsTeamSetup: roles.isTeamAdmin && !teamId,
+        needsTeamSetup: onboardingState.needsTeamSetup,
+        needsPhotoStyleSetup: onboardingState.needsPhotoStyleSetup,
+        needsTeamInvites: onboardingState.needsTeamInvites,
+        nextTeamOnboardingStep: onboardingState.nextStep,
         isFirstVisit: isFirstVisit
       }
     })

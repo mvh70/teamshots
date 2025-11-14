@@ -40,7 +40,7 @@ export const initPostHog = () => {
         if (typeof window !== 'undefined') {
           (window as unknown as Record<string, unknown>).posthog = posthogInstance
         }
-        
+
         // Enable debug in development
         if (process.env.NODE_ENV === 'development') {
           posthogInstance.debug()
@@ -48,7 +48,9 @@ export const initPostHog = () => {
         }
       },
       // Suppress automatic error capture to avoid console spam
-      autocapture: false
+      autocapture: true,
+      // Disable session recording to reduce console noise
+      disable_session_recording: false
     })
   } catch (error) {
     // Always log errors for debugging

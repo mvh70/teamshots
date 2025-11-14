@@ -16,6 +16,7 @@ import SelectedSelfiePreview from '@/components/generation/SelectedSelfiePreview
 import SelfieSelectionGrid from '@/components/generation/SelfieSelectionGrid'
 import SelfieSelectionBanner from '@/components/generation/SelfieSelectionBanner'
 import Panel from '@/components/common/Panel'
+import { Grid } from '@/components/ui'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { hasUserDefinedFields } from '@/domain/style/userChoice'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
@@ -439,7 +440,6 @@ export default function InviteDashboardPage() {
   const photosAffordable = Math.floor(stats.creditsRemaining / PRICING_CONFIG.credits.perGeneration)
 
   const showCustomizeHint = hasUserDefinedFields(photoStyleSettings)
-  console.log('showCustomizeHint', showCustomizeHint)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -474,7 +474,7 @@ export default function InviteDashboardPage() {
           )}
 
                     {!showStartFlow && !uploadKey && (
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+           <Grid cols={{ mobile: 1, desktop: 2 }} gap="lg">
                         {/* Primary CTA and secondary links */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-2">Get started</h3>
@@ -529,16 +529,16 @@ export default function InviteDashboardPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-4 gap-2">
+                <Grid cols={{ mobile: 4 }} gap="sm">
                   {recentPhotoUrls.slice(0, 8).map((url, idx) => (
                     <div key={`${url}-${idx}`} className="relative aspect-square overflow-hidden rounded-md bg-gray-100">
                       <Image src={url} alt={`Recent photo ${idx + 1}`} fill className="object-cover" unoptimized />
                     </div>
                   ))}
-                </div>
+                </Grid>
               )}
             </div>
-          </div>
+        </Grid>
           )}
 
           {/* Guided start flow: inline selfie upload + proceed */}
@@ -600,10 +600,10 @@ export default function InviteDashboardPage() {
 
               {/* Style selection view (after Continue is clicked) */}
               {showStyleSelection && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-                  <h1 className="text-xl font-semibold text-gray-900 mb-4">Ready to Generate</h1>
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
-                    <div className="flex gap-4 md:gap-6 md:flex-1 min-w-0">
+                <div className="bg-white rounded-xl md:rounded-lg shadow-sm border border-gray-200 p-5 sm:p-6">
+                  <h1 className="text-2xl md:text-xl font-semibold text-gray-900 mb-5 md:mb-4">Ready to Generate</h1>
+                  <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-6">
+                    <div className="flex flex-col gap-4 md:flex-row md:gap-6 md:flex-1 min-w-0">
                       {/* Selected Selfie Thumbnails */}
                       <div className="flex-none">
                         <div className={`grid ${selectedIds.length <= 2 ? 'grid-flow-col auto-cols-max grid-rows-1' : 'grid-rows-2 grid-flow-col'} gap-2 max-w-[220px]`}>
@@ -611,12 +611,12 @@ export default function InviteDashboardPage() {
                             const selfie = availableSelfies.find(s => s.id === id)
                             if (!selfie) return null
                             return (
-                              <div key={id} className="w-10 h-10 sm:w-12 sm:h-12 rounded-md overflow-hidden border border-gray-200 shadow-sm">
+                              <div key={id} className="w-14 h-14 sm:w-12 sm:h-12 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
                                 <Image
                                   src={selfie.url}
                                   alt="Selected selfie"
-                                  width={48}
-                                  height={48}
+                                  width={56}
+                                  height={56}
                                   className="w-full h-full object-cover"
                                   unoptimized
                                 />
@@ -625,7 +625,7 @@ export default function InviteDashboardPage() {
                           })}
                         </div>
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <GenerationSummaryTeam
                           type="team"
                           styleLabel={photoStyleSettings?.style?.preset || packageId}
@@ -640,20 +640,26 @@ export default function InviteDashboardPage() {
                         />
                       </div>
                     </div>
-                    <div className="md:text-right md:flex-none md:w-60">
-                      <div className="text-2xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} credits</div>
-                      <div className="text-sm text-gray-900">Cost per generation</div>
-                      <div className="mt-3 md:mt-4">
+
+                    {/* Cost and Generate Button - Better mobile layout */}
+                    <div className="border-t md:border-t-0 pt-5 md:pt-0 md:text-right md:flex-none md:w-60">
+                      <div className="flex items-center justify-between md:flex-col md:items-end mb-4 md:mb-0">
+                        <div>
+                          <div className="text-sm text-gray-600 md:text-right">Cost per generation</div>
+                          <div className="text-3xl md:text-2xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} credits</div>
+                        </div>
+                      </div>
+                      <div className="mt-4 md:mt-4">
                         <button
                           onClick={onProceed}
                           disabled={stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
-                          className={`w-full md:w-auto px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                          className={`w-full px-6 py-4 md:px-4 md:py-2 rounded-xl md:rounded-md text-lg md:text-sm font-semibold md:font-medium transition-colors ${
                             stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration
                               ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
                               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           }`}
                         >
-                          Generate
+                          Generate Team Photos
                         </button>
                       </div>
                     </div>
@@ -692,7 +698,7 @@ export default function InviteDashboardPage() {
                 <div className="space-y-6">
                   {/* Selfie Preview + Summary/Action side by side */}
                   {uploadKey && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    <Grid cols={{ mobile: 1, desktop: 2 }} gap="lg" className="items-start">
                       <SelectedSelfiePreview
                         url={availableSelfies.find(selfie => selfie.key === uploadKey)?.url || ''}
                       />
@@ -705,7 +711,7 @@ export default function InviteDashboardPage() {
                         showCustomizeHint={showCustomizeHint}
                         teamName={inviteData.teamName}
                       />
-                    </div>
+                    </Grid>
                   )}
 
                   {/* Ensure style panel is visible in fallback flow */}
@@ -747,7 +753,7 @@ export default function InviteDashboardPage() {
               ) : (
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Choose a selfie to use:</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                  <Grid cols={{ mobile: 2, tablet: 3 }} gap="md" className="mb-6">
                     {availableSelfies.map((selfie) => (
                       <div
                         key={selfie.id}
@@ -771,7 +777,7 @@ export default function InviteDashboardPage() {
                         )}
                       </div>
                     ))}
-                  </div>
+                  </Grid>
                   
                   <div className="flex gap-3">
                     <button

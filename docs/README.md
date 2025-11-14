@@ -18,6 +18,7 @@ This documentation provides a complete guide to the Teamshots AI Team Photo Gene
 - **[Credit System](CREDIT_SYSTEM.md)** - Transaction-based credit management architecture
 - **[Team Management](TEAM_MANAGEMENT.md)** - Team invitation and management system
 - **[Role System Implementation](ROLE_SYSTEM_IMPLEMENTATION.md)** - Comprehensive role-based permission system
+- **[Onboarding Security Review](ONBORDA_SECURITY_REVIEW.md)** - Security and privacy assessment for Onborda integration
 - **[S3 Setup](S3_SETUP.md)** - File storage configuration and setup
 - **[DNS Setup](DNS_SETUP.md)** - Domain configuration
 - **[Email Setup](EMAIL_SETUP.md)** - Email service configuration
@@ -38,6 +39,7 @@ This documentation provides a complete guide to the Teamshots AI Team Photo Gene
 - **File Upload System** - S3 storage for uploaded and generated images
 - **Internationalization** - English and Spanish support
 - **Authentication** - NextAuth.js with email/password and OAuth support
+- **Onboarding System** - Interactive guided tours using Onborda library
 
 
 ### **🔄 Current User Flow**
@@ -73,6 +75,7 @@ This documentation provides a complete guide to the Teamshots AI Team Photo Gene
 - **Deployment**: Hetzner VPS + Coolify
 - **i18n**: next-intl (EN/ES)
 - **Permissions**: Role-based access control system
+- **Onboarding**: Onborda (client-side product tours)
 
 ## 📖 **Documentation Principles**
 

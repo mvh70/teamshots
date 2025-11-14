@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getBrandName } from '@/config/brand';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { Grid } from '@/components/ui';
 
 interface SamplePhoto {
   id: string;
@@ -141,9 +142,10 @@ export default function SampleGallery() {
             </p>
           </div>
 
-          <div 
+          <Grid
             ref={galleryRef}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            cols={{ mobile: 1, tablet: 2, desktop: 3 }}
+            gap="lg"
           >
             {SAMPLE_PHOTOS.map((photo) => (
               <div
@@ -230,7 +232,7 @@ export default function SampleGallery() {
                 </div>
               </div>
             ))}
-          </div>
+          </Grid>
 
           {/* CTA Button */}
           <div className="text-center mt-12">

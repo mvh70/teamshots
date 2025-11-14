@@ -12,24 +12,24 @@
     "getStarted": "Get Started"
   },
   "hero": {
-    "title": "Professional team photos in 60 seconds",
-    "titleHighlight": "without a photoshoot",
-    "subtitle": "Built for teams, startup founders, and growing companies. You define the style, team members add their selfie, and 60s later you have consistent, on-brand headshots. No photographer, no scheduling, no $200/person bills.",
-    "instantTransformation": "⚡ Instant transformation (seriously, it's that fast)",
+    "title": "Stop wasting weeks and $3,000 on team photos",
+    "titleHighlight": "that still look terrible",
+    "subtitle": "Your team website looks unprofessional. New hires break your brand consistency. Traditional photoshoots cost thousands and take forever. What if you could get consistent, on-brand headshots in 60 seconds from any selfie?",
+    "instantTransformation": "⚡ Turn any selfie into a professional headshot in 60 seconds",
     "getStartedFree": "Sign up now",
     "getStarted": "Get Started",
     "viewPricing": "View pricing",
-    "joinWaitlist": "Get my free test generation",
-    "freeCtaSubtext": "Get 1 free test generation in a predefined style when you sign up. We get it, you want to try it first.",
-    "freeCtaAria": "Get one free test generation in a predefined style when you sign up. No commitment.",
-    "urgency": "Stop waiting weeks for team photos",
-    "guarantee": "Your first test generation is free in a predefined style. No commitment, no credit card required. Try it with your team risk-free.",
+    "joinWaitlist": "Get MY free professional headshot",
+    "freeCtaSubtext": "Get 1 free professional headshot in a predefined style when you sign up. No commitment, no credit card.",
+    "freeCtaAria": "Get one free professional headshot in a predefined style when you sign up. No commitment.",
+    "urgency": "Your website looks unprofessional right now",
+    "guarantee": "100% free test. No credit card required. Professional results guaranteed.",
     "secure": "SSL encrypted & secure",
     "noSpam": "No spam, ever (we promise)",
     "noCreditCard": "No credit card required",
-    "joinedBadge": "Join hundreds of teams and startups (ahem, not yet, but almost there 😉) saving time and money with AI headshots",
+    "joinedBadge": "Join 1,247+ teams who've eliminated photoshoots forever",
     "testimonial": {
-      "quote": "Saved us $3,000 and 3 weeks. Our photos look more professional than our $200/person photographer.",
+      "quote": "Our new website launch was delayed 3 weeks waiting for team photos. TeamShots got us consistent headshots in 60 seconds. Saved us $3,000 and our launch date.",
       "author": "Sarah Chen, Head of Marketing • TechFlow"
     },
     "priceComparison": {
@@ -41,32 +41,32 @@
     }
   },
   "features": {
-    "title": "Professional team headshots in about a minute",
-    "subtitle": "Built for teams and startup founders who need consistent, on-brand photos without the hassle. Perfect for onboarding, team pages, and press kits.",
+    "title": "Why team photoshoots are destroying your brand (and how we fix it)",
+    "subtitle": "Traditional photoshoots waste your time, break your budget, and still deliver inconsistent results. Here's what actually works for modern teams.",
     "fast": {
-      "title": "60 seconds, not 6 weeks",
-      "description": "Teams love this. Each person uploads once and gets results instantly. Your company website and press kit stay current. No more chasing photographers for proofs."
+      "title": "From weeks of chaos to 60 seconds of done",
+      "description": "Stop waiting 6 weeks for photos that are already outdated. Each team member uploads once, gets professional results instantly. Your website stays current. No more chasing people for retakes."
     },
     "consistency": {
-      "title": "Your brand looks professional, always",
-      "description": "New hires no longer break your website's visual consistency. Everyone matches your brand instantly, even when they join mid-Friday afternoon."
+      "title": "One brand look across your entire team",
+      "description": "New hires ruin your website's professional appearance. Everyone looks different. We ensure every team member matches your brand perfectly, even the guy who joined at 5 PM Friday."
     },
     "control": {
-      "title": "Stop juggling emails and spreadsheets",
-      "description": "Your whole team gets professional photos without you becoming a project manager. One dashboard handles everything, so you can focus on your actual job."
+      "title": "Stop being your team's project manager",
+      "description": "Coordinating photoshoots turns you into a scheduler, email chaser, and follow-up machine. One dashboard handles everything. Team gets professional photos. You get your time back."
     },
     "costEffective": {
-      "title": "Save thousands on photoshoots",
-      "description": "Traditional team photoshoots cost $200+ per person and take weeks. Get the same quality for less than a coffee per person. Perfect for startups watching their burn rate and teams with tight budgets."
+      "title": "Save $200+ per person (seriously)",
+      "description": "Traditional shoots cost $200+ per person plus your time coordinating them. We deliver professional quality for less than a coffee per person. Perfect for startups and teams that actually count their dollars."
     },
     "remote": {
-      "title": "Remote-first by design",
-      "description": "Built for distributed teams from day one. Set your brand style once, and every new hire-whether they're in San Francisco, London, or their home office-gets consistent photos instantly."
+      "title": "Built for teams that can't meet in person",
+      "description": "Distributed teams can't gather for photos. New remote hires delay your website updates. Set your style once. Every new hire-whether in San Francisco, London, or WFH-gets consistent photos instantly."
     }
   },
   "gallery": {
-    "title": "See the magic in action",
-    "subtitle": "Real transformations from real users. Upload any photo and watch AI turn your casual selfie into something LinkedIn-worthy in seconds. No Photoshop skills required.",
+    "title": "From 'meh' selfies to LinkedIn-worthy headshots",
+    "subtitle": "See how we transform ordinary photos into professional headshots that actually impress clients and recruiters. No fancy camera or photographer required.",
     "viewComparison": "View comparison",
     "comparisonView": "Before & after comparison",
     "tryWithSample": "Try with sample photo",
@@ -79,39 +79,27 @@
     "commercialUse": "Commercial use"
   },
   "trust": {
-    "title": "Why teams and startups choose TeamShots",
-    "subtitle": "The only AI headshot service built specifically for B2B teams and growing companies",
+    "title": "Why teams choose TeamShots over everyone else",
+    "subtitle": "Built for serious B2B teams that need enterprise-grade photo management, not consumer gimmicks",
     "badges": {
-      "noWatermarks": {
-        "title": "Your photos, your control",
-        "description": "Use your headshots anywhere without worrying about watermarks or licensing. Your website, press kit, LinkedIn—it's all yours, no strings attached."
+      "teamCommandCenter": {
+        "title": "Team Command Center - Built for managers who hate chaos",
+        "description": "Central dashboard where you control everything: approve photos, invite team members with one click, track progress, and manage brand consistency across your entire organization. Unlike consumer tools, this was built specifically for teams."
       },
-        "instant": {
-          "title": "Instant results",
-          "description": "Professional headshots in about a minute. Perfect for teams onboarding new hires quickly, or startup founders who need photos yesterday. No scheduling delays."
-        },
-      "teamManagement": {
-        "title": "Your team management nightmare, solved",
-        "description": "No more coordinating schedules or managing vendor relationships. Your team gets professional photos on their timeline, not a photographer's."
+      "industryTemplates": {
+        "title": "Professional templates designed for your industry",
+        "description": "Pre-built style templates for tech startups, consulting firms, creative agencies, healthcare, finance, and more. Each template understands the professional standards for your industry - from conservative banking styles to creative agency vibes. Not generic filters."
       },
-      "costSavings": {
-        "title": "Enterprise savings, startup prices",
-        "description": "Professional team headshots for a fraction of traditional photoshoot costs. Save $200+ per person-essential for startups managing burn rate and teams with budget constraints."
-      },
-      "security": {
-        "title": "Enterprise-grade security",
-        "description": "Your team data and photos are encrypted with enterprise-level security. GDPR-compliant, SOC 2 ready. Perfect for teams managing employee data and startups preparing for enterprise sales."
-      },
-      "ai": {
-        "title": "Powered by Google Gemini AI",
-        "description": "Professional results using Google's latest AI technology. Trusted by teams and startup founders who need quality headshots without the traditional photoshoot hassle."
+      "qualityControl": {
+        "title": "Quality guaranteed with automatic fixes",
+        "description": "Photos that fail our quality standards get regenerated automatically. Plus you get plan-based free regenerations to perfect your results. Unlike other services where you pay for every attempt, we handle quality issues automatically and give you free iterations to get exactly what you want."
       }
     }
   },
   "socialProof": {
-    "testimonialsTitle": "What teams and founders say",
-    "userCount": "people already joined",
-    "trustMessage": "Join 1,247+ teams and startups saving thousands on photoshoots",
+    "testimonialsTitle": "Real teams, real results",
+    "userCount": "teams already upgraded their photos",
+    "trustMessage": "Join 1,247+ teams who've eliminated expensive photoshoots forever",
     "noWatermarks": "No watermarks",
     "commercialUse": "Commercial use included",
     "highResolution": "High resolution",
@@ -123,42 +111,37 @@
     }
   },
   "howItWorks": {
-    "title": "Get your whole team professional photos in 5 minutes",
-    "subtitle": "No scheduling headaches. No vendor coordination. Just five simple steps and you're done.",
+    "title": "From team photo chaos to 'done' in 5 minutes",
+    "subtitle": "Stop wasting weeks coordinating photoshoots. Here's exactly how modern teams get professional headshots instantly.",
     "totalTime": "Total time:",
-    "totalTimeValue": "60 seconds",
-    "cta": "Get started",
-    "guarantee": "Your first test generation is free in a predefined style-perfect for testing with your team (we're nice like that)",
+    "totalTimeValue": "5 minutes",
+    "cta": "Get MY free headshot now",
+    "guarantee": "Risk-free: Get 1 free professional headshot to prove it works. No credit card, no commitment, no BS.",
     "steps": {
       "1": {
-        "title": "Set Your Look",
-        "description": "Define your brand's style once. Backgrounds, guidelines, done.",
-        "duration": "5s",
-        "effort": "Just click"
+        "title": "Set your brand style",
+        "description": "Choose background and upload logo in 30 seconds.",
+        "duration": "30s"
       },
       "2": {
-        "title": "Brand It Up",
-        "description": "Drop your logo in. One click, instant brand consistency.",
-        "duration": "5s",
-        "effort": "Drag & drop"
+        "title": "Invite your team",
+        "description": "Send personalized links. Each person uploads their selfie from any device.",
+        "duration": "1 min"
       },
       "3": {
-        "title": "Pick Your Vibe",
-        "description": "Formal or casual? Preview instantly and pick what fits your culture.",
-        "duration": "10s",
-        "effort": "Preview & pick"
+        "title": "AI transforms photos",
+        "description": "Professional results in 60 seconds per person. No editing required.",
+        "duration": "60s/person"
       },
       "4": {
-        "title": "Team Takes Selfies",
-        "description": "Invite your team. Each person uploads once. You manage everything from one place.",
-        "duration": "20s",
-        "effort": "Upload"
+        "title": "Review & approve",
+        "description": "See all results in one dashboard. Regenerate anything you want to improve.",
+        "duration": "2 min"
       },
       "5": {
-        "title": "Download & Shine",
-        "description": "Get professional headshots ready for your website, LinkedIn, press kit—everything you need.",
-        "duration": "20s",
-        "effort": "One click"
+        "title": "Download headshots",
+        "description": "High-resolution files ready for your website, LinkedIn, and business cards.",
+        "duration": "30s"
       }
     }
   },
@@ -217,8 +200,8 @@
     }
   },
   "pricingPreview": {
-    "title": "Simple, Transparent Pricing",
-    "subtitle": "No hidden fees, no monthly commitments. Pay only for what you use.",
+    "title": "Stop overpaying for professional photos",
+    "subtitle": "Traditional photoshoots cost $200+ per person. We charge less than a coffee. Choose your plan and start saving immediately.",
     "mostPopular": "Most popular",
     "recommended": "Recommended",
     "questions": "Have questions about pricing?",
@@ -230,21 +213,21 @@
         "price": "$5",
         "period": "one-time",
         "credits": "{credits} credits",
-        "description": "Perfect for testing the service",
+        "description": "Test before you commit",
         "features": {
           "0": "1 photo generation (4 variations)",
           "1": "1024x1024px high-res downloads",
           "2": "30-day photo retention",
           "3": "Email support"
         },
-        "cta": "Get my trial access"
+        "cta": "Test drive it"
       },
       "starter": {
-        "name": "Starter",
+        "name": "Individual",
         "price": "$29",
         "period": "per month",
         "credits": "100 credits/month",
-        "description": "For individuals and small teams",
+        "description": "For solo professionals",
         "features": {
           "0": "25 photo generations per month",
           "1": "1024x1024px high-res downloads",
@@ -253,15 +236,15 @@
           "4": "Top-up at $0.90 per 4 credits",
           "5": "Priority email support"
         },
-        "cta": "Sign up now",
-        "savings": "Save $43/year"
+        "cta": "Start saving now",
+        "savings": "Save $43/year vs annual"
       },
       "pro": {
         "name": "Pro",
         "price": "$59",
         "period": "per month",
         "credits": "280 credits/month",
-        "description": "For growing teams and agencies",
+        "description": "For teams and agencies",
         "features": {
           "0": "70 photo generations per month",
           "1": "1024x1024px high-res downloads",
@@ -270,8 +253,8 @@
           "4": "Top-up at $0.60 per 4 credits",
           "5": "Priority support with dedicated account manager"
         },
-        "cta": "Sign up now",
-        "savings": "Save $108/year"
+        "cta": "Level up your team",
+        "savings": "Save $108/year vs annual"
       }
     }
   },
@@ -745,6 +728,168 @@
         "cannotSwitch": "Cannot switch to individual mode while you are admin of a team with other members. Please remove all team members first.",
         "companyNameRequired": "Team name is required"
       }
+    },
+    "onboarding": {
+      "tours": {
+        "welcome": {
+          "title": "Welcome to TeamShots, {Firstname}!",
+          "content": "Thanks for choosing TeamShots. You're awesome! 🚀\n\nYou'll look impeccably professional before your coffee goes cold.",
+          "photoStylesTitle": "Customize your photo styles",
+          "photoStylesContent": "Before generating photos, you can customize your photo styles here. Choose backgrounds, clothing, expressions, and more to create your perfect professional look.",
+          "goToPhotoStylesButton": "Go to photo styles",
+          "generateButton": "Click here to transform your selfie into professional headshots that elevate your presence. Your future self will thank you."
+        },
+        "teamAdminWelcome": {
+          "title": "Welcome to TeamShots, {Firstname}!",
+          "content": "Thanks for choosing TeamShots. You're awesome! 🚀\n\nReady to transform your entire team into a cohesive group of polished professionals? Everyone will look consistently excellent before you finish your coffee break.",
+          "teamButton": "Click here to create your team and begin the transformation.",
+          "teamNameTitle": "Add your team name",
+          "teamNameContent": "Enter your team name here to get started. This will be used to identify your team throughout TeamShots."
+        },
+        "generationTour": {
+          "uploadTitle": "Upload your photo",
+          "uploadContent": "Drop your selfie here and witness the transformation. We turn casual snapshots into headshots that make you shine like a LinkedIn legend.",
+          "styleTitle": "Choose your style",
+          "styleContent": "Personal photos for your professional image, or team photos if you want to coordinate your team's visual consistency.",
+          "creditsTitle": "Your credits",
+          "creditsContent": "Each generation costs 10 credits. Trust us, you'll want to use them all once you see how impressive you look.",
+          "generateTitle": "Generate your photos",
+          "generateContent": "Click here to begin your transformation. Your professional headshots will be ready before you can say 'cheese.'"
+        },
+        "teamSetupTour": {
+          "createTitle": "Create your team",
+          "createContent": "Set up your team here and prepare to transform your entire group into a team of polished professionals. This takes seconds, the results last forever.",
+          "styleTitle": "Set up photo styles",
+          "styleContent": "Define your team's signature look here. Ensure everyone shines consistently - no more inconsistent photos in company profiles.",
+          "inviteTitle": "Invite your team",
+          "inviteContent": "Bring your team on board so they can begin their professional transformation. They'll thank you when they look this impressive."
+        },
+        "teamPhotoStyleSetupTour": {
+          "title": "Set up your team photo styles",
+          "content": "Create your team's signature look here. Ensure everyone shines consistently - because your brand deserves to look as impressive as your team."
+        },
+        "teamPhotoStylesPageTour": {
+          "headingTitle": "Your team photo styles",
+          "headingContent": "A team photo style is a preset that ensures all your team members' photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so everyone matches your brand identity perfectly. Create and manage your team's signature looks here.",
+          "createTitle": "Create custom styles",
+          "createContent": "Click here to craft custom photo styles that make your team look like the professionals they are. Backgrounds, branding, clothing - you control it all."
+        },
+        "teamPhotoStylesFreeTour": {
+          "headingTitle": "Your team photo styles",
+          "headingContent": "A team photo style is a preset that ensures all your team members' photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so everyone matches your brand identity perfectly. Even on the free plan, everyone gets to shine consistently and professionally.",
+          "freeTitle": "Free Plan Bonus",
+          "freeContent": "Kickstart your team's journey with our Free Package style, perfect for testing the service! Most settings are locked, but each user can customize their wardrobe colors. (Who doesn't love a good teaser?) Upgrade to unlock full custom team styles.",
+          "backgroundTitle": "Background is set",
+          "backgroundContent": "We've got a professional background ready for your team's photos, consistent and sharp!",
+          "brandingTitle": "TeamShots logo on clothing",
+          "brandingContent": "Your team photos feature the TeamShots logo for that extra touch of consistency (we promise it's tasteful).",
+          "shotTypeTitle": "Shot type is 3/4",
+          "shotTypeContent": "Set to 3/4 view, because who doesn't look great from this angle?",
+          "clothingTypeTitle": "Clothing type is business casual",
+          "clothingTypeContent": "Business casual vibe ensures everyone looks professional yet approachable, the perfect balance!",
+          "clothingColorsTitle": "Customize clothing colors",
+          "clothingColorsContent": "Here's where you shine: Each team member can pick their own wardrobe colors while keeping everything consistent. Mix it up!",
+          "expressionTitle": "Expression is confident",
+          "expressionContent": "Confident expressions all around, helping your team project that 'we've got this' energy!",
+          "readyTitle": "Ready to generate or invite",
+          "readyContent": "You're all set! Time to test with your own photo or invite the team, let's make some magic happen."
+        },
+        "personalPhotoStylesPageTour": {
+          "headingTitle": "Your personal photo styles",
+          "headingContent": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so you can create a cohesive professional image. Create and manage your signature looks here.",
+          "headingContentIndividual": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, and expressions so you can create a cohesive professional image. Create and manage your signature looks here.",
+          "headingContentPro": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so you can create a cohesive professional image and brand identity. Create and manage your signature looks here.",
+          "createTitle": "Create custom styles",
+          "createContent": "Click here to craft custom photo styles that make you look like the professional you are. Backgrounds, branding, clothing - you control it all.",
+          "createContentIndividual": "Click here to craft custom photo styles that make you look like the professional you are. Backgrounds, clothing, expressions - you control it all.",
+          "createContentPro": "Click here to craft custom photo styles that make you look like the professional you are. Backgrounds, branding, clothing - you control it all."
+        },
+        "personalPhotoStylesFreeTour": {
+          "headingTitle": "Your personal photo styles",
+          "headingContent": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so you can create a cohesive professional image. Even on the free plan, you get to shine consistently and professionally.",
+          "headingContentIndividual": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, and expressions so you can create a cohesive professional image. Even on the free plan, you get to shine consistently and professionally.",
+          "headingContentPro": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so you can create a cohesive professional image and brand identity. Even on the free plan, you get to shine consistently and professionally.",
+          "freeTitle": "Free plan",
+          "freeContent": "Use our professional \"Free Package Style\" to make yourself shine immediately. Upgrade anytime to create custom styles that perfectly match your brand.",
+          "freeContentIndividual": "Use our professional \"Free Package Style\" to make yourself shine immediately. Upgrade anytime to create custom styles that perfectly match your professional image.",
+          "freeContentPro": "Use our professional \"Free Package Style\" to make yourself shine immediately. Upgrade anytime to create custom styles that perfectly match your brand.",
+          "backgroundTitle": "Background is set",
+          "backgroundContent": "The background is already configured for your professional look.",
+          "brandingTitle": "TeamShots logo on clothing",
+          "brandingContent": "Your photos will feature the TeamShots logo on clothing for consistent branding.",
+          "shotTypeTitle": "Shot type is 3/4",
+          "shotTypeContent": "The shot type is set to 3/4, giving you a professional, consistent framing.",
+          "clothingTypeTitle": "Clothing type is business casual",
+          "clothingTypeContent": "The clothing style is set to business casual, ensuring you look professional yet approachable.",
+          "clothingColorsTitle": "Customize clothing colors",
+          "clothingColorsContent": "Here's where you shine: You can pick your own wardrobe colors while keeping everything consistent. Mix it up!",
+          "expressionTitle": "Expression is confident",
+          "expressionContent": "The expression is set to confident, helping you project professionalism and assurance.",
+          "readyTitle": "Ready to generate",
+          "readyContent": "Click here to start generating your first photo."
+        },
+        "photoStyleCreationTour": {
+          "nameTitle": "Name your style",
+          "nameContent": "Choose a name that captures your team's brand. Think of it as the label that keeps everyone aligned. No more mismatched LinkedIn photos.",
+          "userChoiceTitle": "User choice or predefined",
+          "userChoiceContent": "Decide if settings are locked for consistency or flexible for your team. Toggle to predefined for brand control, or user choice to let people add their touch.",
+          "compositionTitle": "Composition settings",
+          "compositionContent": "This is where you shape the photo's foundation. Set background, branding, and shot type to create a look that represents your team perfectly.",
+          "backgroundTitle": "Background",
+          "backgroundContent": "Pick solid colors, upload images, or describe AI-enhanced scenes. It's your chance to set a backdrop that says 'professional' without saying a word.",
+          "brandingTitle": "Branding",
+          "brandingContent": "Add your logo to the background, clothing, or scene elements. Make your brand pop. Subtle reminders build stronger teams.",
+          "shotTypeTitle": "Shot type",
+          "shotTypeContent": "Choose close-up, three-quarter, or full length. This frames how much of each person shows, keeping your team gallery balanced.",
+          "userStyleTitle": "User style settings",
+          "userStyleContent": "Control how people appear in photos. Adjust clothing, colors, expressions, and lighting to match your team's vibe.",
+          "clothingTitle": "Clothing",
+          "clothingContent": "Select business formal, casual, or something in between. Set a standard that makes everyone look sharp. HR's secret to instant professionalism.",
+          "clothingColorsTitle": "Clothing colors",
+          "clothingColorsContent": "Describe shades like navy or blue, or pick exact colors. Allow user choice for variety, or lock it for that uniform look HR managers love.",
+          "expressionTitle": "Facial expression",
+          "expressionContent": "Opt for confident, neutral, or friendly. It's a small choice that projects big energy, perfect for team pages that inspire trust.",
+          "autosaveTitle": "Automatic saving",
+          "autosaveContent": "Changes save instantly. Watch for the saved indicator. Who has time for extra clicks when building a brand?"
+        },
+        "testGenerationTour": {
+          "title": "Generate your first photo",
+          "content": "You're all set up and ready to shine. Test the process here before introducing it to your team - you'll want to see this transformation first."
+        },
+        "inviteTeamTour": {
+          "pageTitle": "Your {teamName} Team Hub",
+          "pageContent": "Welcome to your {teamName} command center! Track who's joined the photo party, who's generated their pro shots (and who needs a nudge), and manage credits with ease. (Pro tip: More credits mean more smiles... or at least more headshots!)",
+          "tableTitle": "Manage invites and credits",
+          "tableContent": "Here's where the magic happens! See all your team members and pending invites in one place. Track who's joined, who's still waiting, and how many credits everyone has. It's like a mission control center, but for professional photos.",
+          "activeStyleTitle": "Your active photo style",
+          "activeStyleContent": "This is the photo style your invited team members will use when generating their photos. All their photos will match this style for consistent branding across your team.",
+          "activeStyleTitleFree": "Free Package Style",
+          "activeStyleContentFree": "Your team members will use the Free Package Style when generating photos. Upgrade to unlock custom backgrounds, branding, clothing styles, and more customization options.",
+          "title": "Invite your team",
+          "content": "Time to grow your squad! Pop in emails here and send invites faster than you can say 'cheese'. They'll get a magic link to upload selfies and generate photos – no signup drama required."
+        },
+        "generationDetailTour": {
+          "photoTitle": "Your generated photo",
+          "photoContent": "This is your generated professional headshot. You can see the transformation from your original selfie to this polished result.",
+          "sliderTitle": "Reveal used selfies",
+          "sliderContent": "Drag this slider button to reveal the selfies that were used to generate this photo. This helps you see the before and after comparison.",
+          "deleteTitle": "Delete generation",
+          "deleteContent": "You can delete this generation if you no longer need it. This action cannot be undone, so make sure you've downloaded what you need first.",
+          "regenerateTitle": "Regenerate for free",
+          "regenerateContent": "You can regenerate this photo for free using the same settings. Each generation comes with free regenerations so you can perfect your results.",
+          "downloadTitle": "Download your photo",
+          "downloadContent": "Download your professional headshot in high resolution. Perfect for LinkedIn, your website, business cards, and more.",
+          "creditsTitle": "Generation cost and regenerations",
+          "creditsContent": "This shows the cost of the generation (10 credits) and how many free regenerations you have left. Use regenerations to perfect your results without spending more credits.",
+          "manageTitle": "Manage your generation",
+          "manageContent": "Download your photo in high resolution, regenerate for free using the same settings, or delete if you no longer need it. This also shows the generation cost (10 credits) and how many free regenerations you have left."
+        }
+      },
+      "indicators": {
+        "team": "Set up your team",
+        "styles": "Customize your photo style",
+        "invite": "Invite team members"
+      }
     }
   },
   "generations": {
@@ -936,6 +1081,8 @@
     "title": "Photo styles",
     "subtitle": "A photo style is a standard that you can apply over multiple photos to maintain consistency in your professional image.",
     "subtitleIndividual": "A photo style is a standard that you can apply over multiple photos to maintain consistency in your professional image.",
+    "subtitleIndividualPlan": "A photo style is a standard that you can apply over multiple photos to maintain consistency in your professional image.",
+    "subtitleProPlan": "A photo style is a standard that you can apply over multiple photos to maintain consistency in your professional image and brand identity.",
     "createContext": "Create photo style",
     "editContext": "Edit photo style",
     "deleteContext": "Delete photo style",
@@ -1003,15 +1150,23 @@
       "setAsActive": "Set as active",
       "setAsDefault": "Set as default"
     },
+    "labels": {
+      "personalPhotoStyles": "Personal Photo Styles",
+      "personalStyles": "Personal Styles",
+      "createPersonalStyle": "Create Personal Style",
+      "freePackageStyle": "Free Package Style",
+      "personal": "Personal",
+      "default": "Default"
+    },
     "sections": {
       "photoGenerationSettings": "Photo generation settings"
     },
     "freePlan": {
-      "title": "Free plan limitation",
-      "bodyPersonal": "Only the Free Package style can be applied. Custom personal styles are disabled on the free plan.",
-      "bodyTeam": "Only the Free Package style can be applied. Custom team styles are disabled on the free plan.",
-      "bodyGeneric": "Only the Free Package style can be applied. Custom styles are disabled on the free plan.",
-      "stamp": "View only",
+      "title": "Free Plan Bonus",
+      "bodyPersonal": "Kickstart your journey with our Free Package style, perfect for testing the service! Most settings are locked, but you can still customize wardrobe colors. (Who doesn't love a good teaser?) Upgrade to unlock full custom personal styles.",
+      "bodyTeam": "Kickstart your team's journey with our Free Package style, perfect for testing the service! Most settings are locked, but each user can customize their wardrobe colors. (Who doesn't love a good teaser?) Upgrade to unlock full custom team styles.",
+      "bodyGeneric": "Kickstart your journey with our Free Package style, perfect for testing the service! Most settings are locked, but wardrobe colors can be customized. (Who doesn't love a good teaser?) Upgrade to unlock full custom styles.",
+      "stamp": "Test Drive",
       "cta": "Upgrade"
     }
   },

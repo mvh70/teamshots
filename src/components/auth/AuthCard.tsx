@@ -17,7 +17,7 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
             <h2 className="text-3xl font-extrabold text-gray-900">{title}</h2>
           )}
           {subtitle && (
-            <p className="mt-2 text-sm text-gray-600">{subtitle}</p>
+            <div className="mt-2 text-sm text-gray-600">{subtitle}</div>
           )}
         </div>
       )}

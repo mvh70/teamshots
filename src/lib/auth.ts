@@ -26,18 +26,8 @@ export const authOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials: Partial<Record<"email" | "password", unknown>>) {
-        console.log('🔐 NextAuth authorize called with:', { 
-          email: credentials?.email, 
-          hasPassword: !!credentials?.password,
-          databaseUrl: Env.string('DATABASE_URL'),
-          nodeEnv: Env.string('NODE_ENV')
-        });
-        
-        // Check what database the prisma client is actually using
-        console.log('🗄️ Prisma client database URL:', Env.string('DATABASE_URL'));
 
         if (!credentials?.email || !credentials?.password) {
-          console.log('❌ Missing credentials');
           return null
         }
 
@@ -45,29 +35,17 @@ export const authOptions = {
           where: { email: credentials.email as string }
         })
 
-        console.log('🔍 User lookup result:', { 
-          found: !!user, 
-          hasPassword: !!user?.password,
-          userId: user?.id,
-          userEmail: user?.email 
-        });
-
         if (!user || !user.password) {
-          console.log('❌ User not found or no password');
           return null
         }
 
         const password = credentials.password as string
         const userPasswordHash = user.password as string
         const isPasswordValid = await bcrypt.compare(password, userPasswordHash)
-        console.log('🔐 Password verification:', { isValid: isPasswordValid });
-        
+
         if (!isPasswordValid) {
-          console.log('❌ Invalid password');
           return null
         }
-
-        console.log('✅ Authentication successful');
         return {
           id: user.id,
           email: user.email,

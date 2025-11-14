@@ -11,39 +11,42 @@ export interface ProgressMessage {
 
 const STEP_MESSAGES: Record<string, ProgressMessage[]> = {
   'background-person-removed': [
-    { message: 'Giving the background some alone time...', emoji: '🧹' },
-    { message: 'Removing unwanted photobombers...', emoji: '👋' },
-    { message: 'Making space for the star of the show...', emoji: '✨' },
-    { message: 'Cleaning up the background - no distractions allowed!', emoji: '🧼' },
+    { message: 'Perfecting your background...', emoji: '🧹' },
+    { message: 'Refining your photo...', emoji: '👋' },
+    { message: 'Preparing your professional look...', emoji: '✨' },
+    { message: 'Creating a clean, professional background...', emoji: '🧼' },
   ],
   'logo-placed-on-clothing': [
-    { message: 'Stitching the logo onto your outfit...', emoji: '🧵' },
-    { message: 'Making sure your brand stands out...', emoji: '⭐' },
-    { message: 'Adding that professional touch...', emoji: '💼' },
-    { message: 'Your logo is looking sharp!', emoji: '✂️' },
+    { message: 'Adding your brand to your outfit...', emoji: '🧵' },
+    { message: 'Placing your logo perfectly...', emoji: '⭐' },
+    { message: 'Creating your branded look...', emoji: '💼' },
+    { message: 'Your logo looks professional...', emoji: '✂️' },
   ],
   'images-combined': [
-    { message: 'Mixing the perfect blend...', emoji: '🎨' },
-    { message: 'Putting all the pieces together...', emoji: '🧩' },
-    { message: 'Creating the ultimate composition...', emoji: '🎭' },
-    { message: 'Everything is coming together beautifully!', emoji: '🌈' },
+    { message: 'Blending your elements...', emoji: '🎨' },
+    { message: 'Building your composition...', emoji: '🧩' },
+    { message: 'Finalizing your photo...', emoji: '🎭' },
+    { message: 'Your photo is coming together beautifully...', emoji: '🌈' },
   ],
   'starting-preprocessing': [
-    { message: 'Preparing your photo for magic...', emoji: '🎪' },
-    { message: 'Setting up the studio...', emoji: '🎬' },
+    { message: 'Preparing your photo...', emoji: '🎪' },
+    { message: 'Setting up your generation...', emoji: '🎬' },
     { message: 'Getting everything ready...', emoji: '⚙️' },
+    { message: 'Starting your photo creation...', emoji: '🚀' },
   ],
   'completed-preprocessing': [
-    { message: 'Photo is looking great!', emoji: '✨' },
-    { message: 'Preprocessing complete!', emoji: '✅' },
+    { message: 'Photo is ready...', emoji: '✨' },
+    { message: 'Preprocessing complete...', emoji: '✅' },
+    { message: 'Your photo looks great...', emoji: '💫' },
+    { message: 'Photo preparation finished...', emoji: '🎯' },
   ],
 }
 
 const DEFAULT_MESSAGES: ProgressMessage[] = [
-  { message: 'Working on your masterpiece...', emoji: '🎨' },
-  { message: 'Generating your perfect photo...', emoji: '📸' },
-  { message: 'Almost there...', emoji: '⏳' },
-  { message: 'Creating something amazing...', emoji: '🌟' },
+  { message: 'Crafting your professional photo...', emoji: '🎨' },
+  { message: 'Creating your perfect image...', emoji: '📸' },
+  { message: 'Almost ready...', emoji: '⏳' },
+  { message: 'Making your photo amazing...', emoji: '🌟' },
 ]
 
 /**

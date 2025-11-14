@@ -7,9 +7,7 @@
  * to avoid polluting the production database with test data.
  */
 
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'child_process';
 
 const TEST_DB_NAME = 'teamshots_test';
 const TEST_DB_URL = `postgresql://postgres:postgres@localhost:5432/${TEST_DB_NAME}?schema=public`;

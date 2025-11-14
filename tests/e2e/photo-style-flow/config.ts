@@ -64,6 +64,7 @@ export const test = base.extend<{
       await page.waitForLoadState('networkidle');
     }
     
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
   },
 
@@ -134,6 +135,7 @@ export const test = base.extend<{
       await page.waitForLoadState('networkidle');
     }
     
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
   },
 
@@ -194,6 +196,7 @@ export const test = base.extend<{
       await page.waitForLoadState('networkidle');
     }
     
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
   },
 });
@@ -204,12 +207,12 @@ export { expect };
 export const testData = testFixtures;
 
 // Helper function for clicking generation button
-export async function clickGenerateButton(page: any) {
+export async function clickGenerateButton(page: Page) {
   await page.click('[data-testid="generate-button"]', { force: true });
 }
 
 // Helper function for mobile-safe clicking (handles interception issues)
-export async function clickMobileSafe(page: any, selector: string) {
+export async function clickMobileSafe(page: Page, selector: string) {
   const userAgent = await page.evaluate(() => navigator.userAgent);
   const isMobile = userAgent.includes('Mobile') || userAgent.includes('Android');
   
@@ -218,7 +221,7 @@ export async function clickMobileSafe(page: any, selector: string) {
     try {
       // First try normal click with shorter timeout
       await page.click(selector, { force: true, timeout: 3000 });
-    } catch (error) {
+    } catch {
       // If normal click fails, try JavaScript click
       await page.evaluate((sel: string) => {
         const element = document.querySelector(sel) as HTMLElement;
@@ -233,19 +236,19 @@ export async function clickMobileSafe(page: any, selector: string) {
 }
 
 // Helper function to select generation type
-export async function selectGenerationType(page: any, type: 'personal' | 'team') {
+export async function selectGenerationType(page: Page, type: 'personal' | 'team') {
   const selector = `[data-testid="generation-type-${type}"]`;
   await clickMobileSafe(page, selector);
 }
 
 // Helper function to select photo style settings
-export async function selectPhotoStyleSetting(page: any, category: string, setting: string) {
+export async function selectPhotoStyleSetting(page: Page, category: string, setting: string) {
   const selector = `[data-testid="photo-style-${category}-${setting}"]`;
   await clickMobileSafe(page, selector);
 }
 
 // Helper function to toggle photo style category
-export async function togglePhotoStyleCategory(page: any, category: string) {
+export async function togglePhotoStyleCategory(page: Page, category: string) {
   const selector = `[data-testid="photo-style-toggle-${category}"]`;
   await clickMobileSafe(page, selector);
 }

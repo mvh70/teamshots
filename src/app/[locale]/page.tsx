@@ -72,16 +72,22 @@ export default function LandingPage() {
                 placement: 'landing_hero_mobile',
                 action: 'signup',
               }}
-              className="w-full inline-block px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-center"
+              className="w-full inline-block px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-center text-lg"
             >
               {t('joinWaitlist')}
             </TrackedLink>
-            <p className="mt-3 text-sm text-gray-600 text-center max-w-md">
+            <p className="mt-3 text-sm text-gray-600 text-center max-w-md font-medium">
               {t('freeCtaSubtext')}
             </p>
             <p className="mt-1 text-xs text-gray-500 text-center max-w-md">
               {t('noCreditCard')}
             </p>
+            {/* Urgency + Scarcity - Mobile */}
+            <div className="mt-3 px-4 py-2 bg-red-50 border border-red-200 rounded-lg max-w-md">
+              <p className="text-xs text-red-700 text-center font-medium">
+                ⏰ Limited beta spots remaining
+              </p>
+            </div>
             {/* Price Anchor - Mobile */}
             <p className="mt-2 text-xs text-gray-500 text-center max-w-md">
               {t('priceComparison.prefix')} <span className="line-through text-gray-400">{t('priceComparison.oldPrice')}</span> {t('priceComparison.arrow')} {t('priceComparison.suffix')} <span className="font-semibold text-brand-cta">{t('priceComparison.newPrice')}</span>
@@ -110,9 +116,8 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* CTA Buttons below first transformation (Desktop Only) */}
-          <div className="mt-8 hidden md:block">
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          {/* Single CTA with Urgency - Desktop */}
+          <div className="mt-8 hidden md:block text-center">
               <TrackedLink
                 href="/auth/signup"
                 aria-label={t('freeCtaAria')}
@@ -121,30 +126,28 @@ export default function LandingPage() {
                   placement: 'landing_hero_desktop',
                   action: 'signup',
                 }}
-                className="inline-block px-8 py-4 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="inline-block px-12 py-5 bg-brand-cta text-white font-semibold rounded-lg hover:bg-brand-cta-hover transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-xl"
               >
                 {t('joinWaitlist')}
               </TrackedLink>
-              <TrackedLink
-                href="/pricing"
-                event="cta_clicked"
-                eventProperties={{
-                  placement: 'landing_hero_desktop',
-                  action: 'view_pricing',
-                }}
-                className="inline-block px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
-              >
-                {t('viewPricing')}
-              </TrackedLink>
+            <p className="mt-4 text-base text-gray-600 max-w-md mx-auto font-medium">
+              {t('freeCtaSubtext')}
+            </p>
+            {/* Urgency + Scarcity - Desktop */}
+            <div className="mt-4 px-6 py-3 bg-red-50 border border-red-200 rounded-lg max-w-md mx-auto">
+              <p className="text-sm text-red-700 font-medium">
+                ⏰ Limited beta access - only 100 spots left
+              </p>
             </div>
-            {/* Trust Signal - Desktop */}
-            <p className="mt-2 text-xs text-gray-500 text-center w-full">
+            {/* Trust Signals Cluster */}
+            <div className="mt-4 flex flex-col items-center space-y-1">
+              <p className="text-xs text-gray-500">
               {t('noCreditCard')}
             </p>
-            {/* Price Anchor - Desktop */}
-            <p className="mt-2 text-xs text-gray-500 text-center w-full">
+              <p className="text-xs text-gray-500">
               {t('priceComparison.prefix')} <span className="line-through text-gray-400">{t('priceComparison.oldPrice')}</span> {t('priceComparison.arrow')} {t('priceComparison.suffix')} <span className="font-semibold text-brand-cta">{t('priceComparison.newPrice')}</span>
             </p>
+            </div>
           </div>
         </div>
       </section>

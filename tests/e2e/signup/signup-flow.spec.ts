@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test'
 import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
 
 test.describe('Signup Flow with Individual/Team Selection', () => {
   let prisma: PrismaClient

@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
         uploadedPhotoKey: sourceGeneration.uploadedPhotoKey,
         contextId: sourceGeneration.contextId,
         selfieId: sourceGeneration.selfieId,
-        generationType: 'team',
+        // generationType removed - now derived from person.teamId (single source of truth)
         status: 'pending',
         maxRegenerations: 0, // Regenerations cannot be regenerated
         remainingRegenerations: 0,

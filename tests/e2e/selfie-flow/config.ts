@@ -57,6 +57,7 @@ export const test = base.extend<{
       await page.waitForLoadState('networkidle');
     }
     
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
   },
 
@@ -126,6 +127,7 @@ export const test = base.extend<{
       await page.waitForLoadState('networkidle');
     }
     
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
   },
 });
@@ -136,12 +138,12 @@ export { expect };
 export const testData = testFixtures;
 
 // Helper function for clicking upload button
-export async function clickUploadButton(page: any) {
+export async function clickUploadButton(page: Page) {
   await page.click('[data-testid="upload-cta"]', { force: true });
 }
 
 // Helper function for mobile-safe clicking (handles interception issues)
-export async function clickMobileSafe(page: any, selector: string) {
+export async function clickMobileSafe(page: Page, selector: string) {
   const userAgent = await page.evaluate(() => navigator.userAgent);
   const isMobile = userAgent.includes('Mobile') || userAgent.includes('Android');
   
@@ -150,7 +152,7 @@ export async function clickMobileSafe(page: any, selector: string) {
     try {
       // First try normal click with shorter timeout
       await page.click(selector, { force: true, timeout: 3000 });
-    } catch (error) {
+    } catch {
       // If normal click fails, try JavaScript click
       await page.evaluate((sel: string) => {
         const element = document.querySelector(sel) as HTMLElement;

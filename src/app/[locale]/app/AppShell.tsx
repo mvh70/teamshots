@@ -5,6 +5,7 @@ import { useRouter } from '@/i18n/routing'
 import { useEffect, useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
+import { OnboardingLauncher } from '@/components/onboarding/OnboardingLauncher'
 
 import { AccountMode } from '@/domain/account/accountMode'
 import { SubscriptionInfo } from '@/domain/subscription/subscription'
@@ -20,6 +21,15 @@ type SerializedSubscription = Omit<SubscriptionInfo, 'nextRenewal' | 'nextChange
   } | null
 }
 
+type InitialRole = {
+  isTeamAdmin: boolean
+  isTeamMember: boolean
+  needsTeamSetup: boolean
+  needsPhotoStyleSetup?: boolean
+  needsTeamInvites?: boolean
+  nextTeamOnboardingStep?: 'team_setup' | 'style_setup' | 'invite_members' | null
+}
+
 export default function AppShell({ 
   children, 
   initialRole, 
@@ -27,7 +37,7 @@ export default function AppShell({
   initialSubscription 
 }: { 
   children: React.ReactNode
-  initialRole?: { isTeamAdmin: boolean, isTeamMember: boolean, needsTeamSetup: boolean }
+  initialRole?: InitialRole
   initialAccountMode?: AccountMode
   initialSubscription?: SerializedSubscription | null
 }) {
@@ -109,6 +119,7 @@ export default function AppShell({
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </div>
       </div>
+      <OnboardingLauncher />
     </div>
   )
 }

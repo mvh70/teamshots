@@ -1,14 +1,11 @@
 import { headshot1 as headshot1Base } from './index'
-import {
-  buildCollectiveReferenceImages,
-  buildDefaultReferencePayload
-} from '@/lib/generation/reference-utils'
+import { buildDefaultReferencePayload } from '@/lib/generation/reference-utils'
 import { resolveAspectRatio } from '../aspect-ratios'
 import { applyStandardPreset } from '../standard-settings'
 import { resolveShotType } from '../camera-presets'
 import { Logger } from '@/lib/logger'
 import type { AspectRatioId } from '../aspect-ratios'
-import type { GenerationContext, GenerationPayload, ReferenceImage } from '@/types/generation'
+import type { GenerationContext, GenerationPayload } from '@/types/generation'
 
 export type Headshot1ServerPackage = typeof headshot1Base & {
   buildGenerationPayload: (context: GenerationContext) => Promise<GenerationPayload>

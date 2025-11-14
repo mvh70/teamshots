@@ -30,6 +30,37 @@ export function usePlanInfo(): PlanInfo {
         return
       }
 
+      // OPTIMIZATION: Check sessionStorage for initial data first
+      try {
+        const stored = sessionStorage.getItem('teamshots.initialData')
+        if (stored) {
+          const initialData = JSON.parse(stored)
+          if (initialData.subscription) {
+            const subscriptionTier = initialData.subscription.tier ?? null
+            const subscriptionPeriod = initialData.subscription.period ?? null
+            setTier(subscriptionTier)
+            setPeriod(subscriptionPeriod)
+            setIsLoading(false)
+            // Still fetch fresh data in background if data is stale (>5 seconds)
+            const dataAge = Date.now() - (initialData._timestamp || 0)
+            if (dataAge > 5000) {
+              // Fetch fresh data in background
+              jsonFetcher<{ subscription: { tier: PlanTier | null; period?: PlanPeriod } | null }>(
+                '/api/user/subscription'
+              ).then(data => {
+                setTier(data?.subscription?.tier ?? null)
+                setPeriod(data?.subscription?.period ?? null)
+              }).catch(() => {
+                // Ignore errors, keep cached data
+              })
+            }
+            return
+          }
+        }
+      } catch {
+        // Ignore parse errors, fall through to fetch
+      }
+
       try {
         const data = await jsonFetcher<{ subscription: { tier: PlanTier | null; period?: PlanPeriod } | null }>(
           '/api/user/subscription'

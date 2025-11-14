@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'fs';
 
 // Known list of files that import auth (from the previous command output)
 const authFiles = [
@@ -57,7 +57,7 @@ const needsRuntime = authFiles.filter(file => {
   try {
     const content = fs.readFileSync(file, 'utf8');
     return !content.includes("export const runtime = 'nodejs'");
-  } catch (e) {
+  } catch {
     return false;
   }
 });

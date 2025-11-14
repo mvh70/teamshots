@@ -58,16 +58,18 @@ export default function GenerationSummaryTeam({
       {showTitle && (
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Generation Summary</h3>
       )}
-      <div className={`${plain ? 'p-0' : 'bg-gray-50 rounded-lg p-4'}`}>
+      <div className={`${plain ? 'p-0' : 'bg-gray-50 rounded-xl md:rounded-lg p-5 md:p-4'}`}>
         {inlineHint && showCustomizeHint ? (
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:gap-6">
-            <div className="w-full min-w-0 md:min-w-[260px] md:max-w-xs">{summaryBlock}</div>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
+            <div className="w-full p-4 bg-white rounded-lg md:bg-transparent md:p-0 md:min-w-[260px] md:max-w-xs">
+              {summaryBlock}
+            </div>
             <div className="w-full md:flex-1">{hintBlock}</div>
           </div>
         ) : (
           <>
             {summaryBlock}
-            {hintBlock && <div className="mt-3">{hintBlock}</div>}
+            {hintBlock && <div className="mt-4 md:mt-3">{hintBlock}</div>}
           </>
         )}
       </div>
@@ -75,7 +77,7 @@ export default function GenerationSummaryTeam({
         <button
           type="button"
           onClick={onGenerate}
-          className="w-full py-3 px-4 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 text-sm font-medium"
+          className="w-full px-6 py-4 md:px-4 md:py-3 bg-brand-primary text-white rounded-xl md:rounded-md hover:bg-brand-primary/90 text-lg md:text-sm font-semibold md:font-medium transition-colors"
         >
           {generateLabel || `Generate Professional Photo (${perGenCredits} credits)`}
         </button>

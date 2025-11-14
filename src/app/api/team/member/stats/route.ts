@@ -51,12 +51,14 @@ export async function GET(request: NextRequest) {
         }
       }),
       
-      // Team photos generated
+      // Team photos generated (person.teamId is set for team members)
       prisma.generation.count({
         where: {
           personId: person.id,
           status: 'completed',
-          generationType: 'team'
+          person: {
+            teamId: { not: null } // Team generations have person.teamId set
+          }
         }
       })
     ])

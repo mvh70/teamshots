@@ -9,6 +9,7 @@ import UserStyleSummary from '@/components/styles/UserStyleSummary'
 import { jsonFetcher } from '@/lib/fetcher'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
+import { CardGrid, ErrorCard, Grid } from '@/components/ui'
 
 interface Context {
   id: string
@@ -59,7 +60,7 @@ interface ContextsData {
 
 export default function PersonalPhotoStylesPage() {
   const t = useTranslations('contexts')
-  const { isFreePlan } = usePlanInfo()
+  const { isFreePlan, tier } = usePlanInfo()
   const [contextsData, setContextsData] = useState<ContextsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -132,11 +133,7 @@ export default function PersonalPhotoStylesPage() {
   }
 
   if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-800">{error}</p>
-      </div>
-    )
+    return <ErrorCard message={error} />
   }
 
   return (
@@ -145,24 +142,25 @@ export default function PersonalPhotoStylesPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Personal Photo Styles
+            <h1 id="personal-photo-styles-heading" className="text-2xl font-bold text-gray-900">
+              {t('labels.personalPhotoStyles')}
             </h1>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-brand-premium/10 text-brand-premium">
-              Personal Styles
+              {t('labels.personalStyles')}
             </span>
           </div>
           <p className="text-gray-600 mt-1">
-            {t('subtitleIndividual')}
+            {tier === 'pro' ? t('subtitleProPlan') : t('subtitleIndividualPlan')}
           </p>
         </div>
         <button
+          id="create-personal-style-btn"
           onClick={() => { if (!isFreePlan) window.location.href = '/app/styles/personal/create' }}
           disabled={isFreePlan}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg ${isFreePlan ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-brand-primary text-white hover:bg-brand-primary-hover'}`}
         >
           <PlusIcon className="h-5 w-5" />
-          Create Personal Style
+          {t('labels.createPersonalStyle')}
         </button>
       </div>
 
@@ -176,17 +174,17 @@ export default function PersonalPhotoStylesPage() {
 
       {/* Contexts List */}
       {isFreePlan ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CardGrid gap="lg">
           <FreePlanBanner variant="personal" className="col-span-1 md:col-span-2 lg:col-span-3" />
           <div className="rounded-lg border-2 p-6 border-brand-secondary bg-white">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-gray-900">Free Package Style</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('labels.freePackageStyle')}</h3>
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-premium/10 text-brand-premium">
-                  Personal
+                  {t('labels.personal')}
                 </span>
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-secondary/10 text-brand-secondary">
-                  Default
+                  {t('labels.default')}
                 </span>
               </div>
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold border border-brand-cta/30 bg-brand-cta-light text-brand-cta uppercase tracking-wide">
@@ -198,9 +196,9 @@ export default function PersonalPhotoStylesPage() {
               stylePreset={freePackageContext?.stylePreset || 'corporate'}
             />
           </div>
-        </div>
+        </CardGrid>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CardGrid gap="lg">
         {contextsData?.contexts.map((context) => (
           <div
             key={context.id}
@@ -214,11 +212,11 @@ export default function PersonalPhotoStylesPage() {
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-gray-900">{context.name}</h3>
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-premium/10 text-brand-premium">
-                  Personal
+                  {t('labels.personal')}
                 </span>
                 {contextsData.activeContext?.id === context.id && (
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-secondary/10 text-brand-secondary">
-                    Default
+                    {t('labels.default')}
                   </span>
                 )}
               </div>
@@ -240,7 +238,7 @@ export default function PersonalPhotoStylesPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+            <Grid cols={{ mobile: 2 }} gap="md" className="text-sm text-gray-600">
               {/* Left Column - Photo Style Settings */}
               <StyleSummaryCard
                 settings={context.settings}
@@ -252,7 +250,7 @@ export default function PersonalPhotoStylesPage() {
 
               {/* Right Column - User Style Settings */}
               <UserStyleSummary settings={context.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
-            </div>
+            </Grid>
 
 
             <div className="mt-4 flex gap-2">
@@ -261,13 +259,13 @@ export default function PersonalPhotoStylesPage() {
                   onClick={() => handleActivateContext(context.id)}
                   className="flex-1 px-3 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-hover text-sm"
                 >
-                  Set as Default
+                  {t('buttons.setAsDefault')}
                 </button>
               )}
             </div>
           </div>
         ))}
-      </div>
+      </CardGrid>
       )}
 
     </div>

@@ -9,6 +9,7 @@ import { PhotoStyleSettings as PhotoStyleSettingsType, DEFAULT_PHOTO_STYLE_SETTI
 import { jsonFetcher } from '@/lib/fetcher'
 import { loadStyle, loadStyleByContextId } from '@/domain/style/service'
 import { getPackageConfig } from '@/domain/style/packages'
+import { PrimaryButton, SecondaryButton } from '@/components/ui'
 
 export interface StyleFormProps {
   mode: 'create' | 'edit'
@@ -259,11 +260,12 @@ export default function StyleForm({
     <div className="space-y-6">
       {/* Show name field only if we're not using autosave name */}
       {!autosaveName && (
-        <div>
+        <div id="style-name-input-section">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Style Name *
           </label>
           <input
+            id="style-name-input"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -278,7 +280,7 @@ export default function StyleForm({
           <label className="block text-sm font-medium text-gray-700">
             Photo Style Settings
           </label>
-          <span className={`text-xs font-medium ${
+          <span id="autosave-indicator" className={`text-xs font-medium ${
             styleStatus === 'error' ? 'text-red-600' : styleStatus === 'saved' ? 'text-brand-secondary' : 'text-gray-500'
           }`}>
             {styleStatus === 'error' ? 'Not saved' : styleStatus === 'saving' ? 'Saving…' : styleStatus === 'saved' ? 'Saved' : 'Autosave on'}
@@ -326,21 +328,19 @@ export default function StyleForm({
       {/* Action buttons */}
       {showButtons && (
         <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-          <button
+          <PrimaryButton
             onClick={handleSave}
             disabled={saving || (!autosaveName && !name.trim())}
-            className="px-6 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={saving}
+            loadingText={mode === 'create' ? 'Creating...' : 'Saving...'}
           >
-            {saving 
-              ? (mode === 'create' ? 'Creating...' : 'Saving...') 
-              : (mode === 'create' ? 'Create Style' : 'Save Changes')}
-          </button>
-          <button
+            {mode === 'create' ? 'Create Style' : 'Save Changes'}
+          </PrimaryButton>
+          <SecondaryButton
             onClick={() => router.push(backUrl)}
-            className="px-6 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
           >
             Cancel
-          </button>
+          </SecondaryButton>
         </div>
       )}
     </div>

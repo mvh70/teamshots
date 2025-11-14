@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { Grid } from '@/components/ui'
 
 interface GenerationTypeSelectorProps {
   uploadedPhotoKey: string
@@ -63,7 +64,7 @@ export default function GenerationTypeSelector({
           {t('typeSelection.howToUse')}
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Grid cols={{ mobile: 1, tablet: 2 }} gap="md">
           {/* Personal Use Option */}
           <div
             className={`relative border-2 rounded-lg p-6 cursor-pointer transition-all ${
@@ -181,7 +182,7 @@ export default function GenerationTypeSelector({
               </div>
             )}
           </div>
-        </div>
+        </Grid>
 
         {/* Continue Button */}
         <div className="mt-6 flex justify-end">

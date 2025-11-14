@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import CheckoutButton from '@/components/pricing/CheckoutButton'
+import { CheckoutButton } from '@/components/ui'
 import { calculatePricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing'
 import { PRICING_CONFIG } from '@/config/pricing'
 
@@ -114,14 +114,15 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
       </ul>
 
       <CheckoutButton
-        label={t('confirmTopUp', { defaultMessage: 'Refill my credits' })}
-        loadingLabel={tAll('common.loading', { default: 'Loading...' })}
+        loadingText={tAll('common.loading', { default: 'Loading...' })}
         type="top_up"
         metadata={{ tier, credits: details.credits }}
         className="mt-auto"
         onError={onError}
         useBrandCtaColors
-      />
+      >
+        {t('confirmTopUp', { defaultMessage: 'Refill my credits' })}
+      </CheckoutButton>
     </div>
   )
 }

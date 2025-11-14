@@ -4,12 +4,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { jsonFetcher } from '@/lib/fetcher'
-import { Link } from '@/i18n/routing'
+import { Link, useRouter } from '@/i18n/routing'
 import { PlusIcon, EnvelopeIcon, ClockIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { useCredits } from '@/contexts/CreditsContext'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
+import { ErrorCard, Grid } from '@/components/ui'
 
 interface TeamInvite {
   id: string
@@ -52,6 +53,7 @@ interface TeamMember {
 
 export default function TeamPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const t = useTranslations('team')
   const { credits } = useCredits()
   const { isFreePlan } = usePlanInfo()
@@ -86,6 +88,40 @@ export default function TeamPage() {
   useEffect(() => {
     const fetchInitialData = async () => {
       if (session?.user) {
+        // OPTIMIZATION: Check sessionStorage for initial data first
+        try {
+          const stored = sessionStorage.getItem('teamshots.initialData')
+          if (stored) {
+            const initialData = JSON.parse(stored)
+            if (initialData.roles && initialData.onboarding) {
+              const { isTeamAdmin, isTeamMember, isPlatformAdmin } = initialData.roles
+              const { needsTeamSetup } = initialData.onboarding
+              const teamId = initialData.roles.teamId
+              const teamName = initialData.roles.teamName
+
+              setUserRoles({ isTeamAdmin, isTeamMember, isPlatformAdmin })
+
+              if (isTeamAdmin) {
+                if (needsTeamSetup) {
+                  setNeedsTeamSetup(true)
+                  setLoading(false)
+                } else if (teamId && teamName) {
+                  setTeamData({ id: teamId, name: teamName })
+                  await fetchTeamData()
+                } else {
+                  setLoading(false)
+                  setError('Could not retrieve team information.')
+                }
+              } else {
+                setLoading(false) // Not an admin, will show admin-only message
+              }
+              return
+            }
+          }
+        } catch {
+          // Ignore parse errors, fall through to fetch
+        }
+
         try {
           const response = await fetch('/api/dashboard/stats')
           if (response.ok) {
@@ -159,8 +195,43 @@ export default function TeamPage() {
       })
 
       if (response.ok) {
+        const data = await response.json()
         setNeedsTeamSetup(false)
-        await fetchTeamData()
+        
+        // Update sessionStorage with new team data to avoid redundant API calls
+        try {
+          const stored = sessionStorage.getItem('teamshots.initialData')
+          let initialData = null
+          if (stored) {
+            initialData = JSON.parse(stored)
+            if (initialData.roles) {
+              initialData.roles.teamId = data.teamId
+              initialData.roles.isTeamMember = true
+              initialData.onboarding.needsTeamSetup = false
+              initialData._timestamp = Date.now()
+              sessionStorage.setItem('teamshots.initialData', JSON.stringify(initialData))
+            }
+          }
+          
+          // Update onboarding context in localStorage so tour can trigger
+          const onboardingContext = localStorage.getItem('onboarding-context')
+          if (onboardingContext) {
+            const context = JSON.parse(onboardingContext)
+            context.teamId = data.teamId
+            context.isTeamMember = true
+            localStorage.setItem('onboarding-context', JSON.stringify(context))
+          }
+          
+          // Set pending tour in sessionStorage so OnboardingLauncher can start it immediately
+          // Determine tour name based on plan (will be checked on styles page)
+          const tourName = initialData?.onboarding?.isFreePlan ? 'team-photo-styles-free' : 'team-photo-styles-page'
+          sessionStorage.setItem('pending-tour', tourName)
+        } catch {
+          // Ignore errors, continue with redirect
+        }
+        
+        // Use client-side navigation instead of full page reload
+        router.push('/app/styles/team')
       } else {
         const data = await response.json()
         setError(data.error || 'Failed to create team.')
@@ -385,8 +456,10 @@ export default function TeamPage() {
   if (needsTeamSetup) {
     return (
       <div className="max-w-xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
-        <h2 className="text-2xl font-bold text-gray-900">{t('setup.title')}</h2>
-        <p className="mt-2 text-gray-600">{t('setup.subtitle')}</p>
+        <div id="welcome-section">
+          <h2 className="text-2xl font-bold text-gray-900">{t('setup.title')}</h2>
+          <p className="mt-2 text-gray-600">{t('setup.subtitle')}</p>
+        </div>
         <form action={handleCreateTeam} className="mt-6 space-y-4 text-left">
           <div>
             <label htmlFor="teamName" className="block text-sm font-medium text-gray-700">
@@ -450,11 +523,7 @@ export default function TeamPage() {
   }
 
   if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-800">{error}</p>
-      </div>
-    )
+    return <ErrorCard message={error} />
   }
 
   return (
@@ -468,15 +537,16 @@ export default function TeamPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div id="welcome-section" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{teamData?.name || t('title')}</h1>
+          <h1 id="team-name-header" className="text-xl sm:text-2xl font-bold text-gray-900">{teamData?.name || t('title')}</h1>
           <p className="text-gray-600 mt-1">
             {t('subtitle')}
           </p>
         </div>
         {userRoles.isTeamAdmin && (
           <button
+            id="invite-team-member-btn"
             onClick={() => {
               setInviteError(null)
               setError(null)
@@ -502,7 +572,7 @@ export default function TeamPage() {
 
       {/* Setup Status */}
       {isFreePlan && !teamData?.activeContext ? (
-        <div className="space-y-4">
+        <div id="team-free-plan-banner" className="space-y-4">
           <FreePlanBanner variant="team" />
         </div>
       ) : !teamData?.activeContext ? (
@@ -526,7 +596,7 @@ export default function TeamPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div id="team-active-style" className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center gap-2">
             <CheckIcon className="h-5 w-5 text-brand-secondary" />
             <span className="text-green-800 font-medium">
@@ -544,7 +614,7 @@ export default function TeamPage() {
       )}
 
       {/* Team Members & Invites */}
-      <div className="bg-white rounded-lg border border-gray-200">
+      <div id="team-invites-table" className="bg-white rounded-lg border border-gray-200">
         {teamMembers.length === 0 && pendingInvites.length === 0 ? (
           <div className="p-6 text-center">
             {credits.team === 0 ? (
@@ -945,7 +1015,7 @@ export default function TeamPage() {
 
                   {/* Stats Grid */}
                   {member.stats && (
-                    <div className="grid grid-cols-2 gap-3 mb-4 pl-[52px]">
+                    <Grid cols={{ mobile: 2 }} gap="sm" className="mb-4 pl-[52px]">
                       <div>
                         <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('teamMembers.headers.selfies')}</p>
                         <p className="text-sm font-semibold text-gray-900">{member.stats.selfies}</p>
@@ -960,7 +1030,7 @@ export default function TeamPage() {
                           {member.isAdmin ? credits.team : (member.stats.teamCredits ?? 0)}
                         </p>
                       </div>
-                    </div>
+                    </Grid>
                   )}
 
                   {/* Status */}

@@ -69,7 +69,7 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
     <div className="space-y-2">
       {(backgroundKey || backgroundPrompt || backgroundType) && (
         backgroundType === 'gradient' && backgroundColor ? (
-          <div className="flex flex-col">
+          <div id="style-background" className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="underline">Background</span>
             </div>
@@ -85,7 +85,7 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
             </div>
           </div>
         ) : backgroundType === 'neutral' && backgroundColor ? (
-          <div className="flex flex-col">
+          <div id="style-background" className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="underline">Background</span>
             </div>
@@ -97,12 +97,12 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
               )}
             </div>
           </div>
-        ) : (
-          (backgroundKey || backgroundImageUrl) ? (
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="underline">Background</span>
-              </div>
+          ) : (
+            (backgroundKey || backgroundImageUrl) ? (
+              <div id="style-background" className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="underline">Background</span>
+                </div>
               <div className="flex items-center gap-2 ml-6 text-xs text-gray-500">
                 <Image
                   src={backgroundImageUrl as string}
@@ -115,21 +115,21 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
               </div>
             </div>
           ) : (!backgroundImageUrl && backgroundType === 'custom') ? (
-            <div className="flex flex-col">
+            <div id="style-background" className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="underline">Background</span>
               </div>
               <div className="ml-6 text-xs text-red-600">Custom background missing</div>
             </div>
           ) : backgroundPrompt ? (
-            <div className="flex flex-col">
+            <div id="style-background" className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="underline">Background</span>
               </div>
               <div className="ml-6 text-xs text-gray-500">AI Generated: {backgroundPrompt}</div>
             </div>
           ) : backgroundType === 'user-choice' ? (
-            <div className="flex flex-col">
+            <div id="style-background" className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="underline">Background</span>
               </div>
@@ -139,7 +139,7 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
               </div>
             </div>
           ) : (
-            <div className="flex flex-col">
+            <div id="style-background" className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="underline">Background</span>
               </div>
@@ -151,7 +151,7 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
 
       {(logoKey || brandingType) && (
         logoKey ? (
-          <div className="flex flex-col">
+          <div id="style-branding" className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="underline">Branding</span>
             </div>
@@ -172,7 +172,7 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
             </div>
           </div>
         ) : brandingType === 'user-choice' ? (
-          <div className="flex flex-col">
+          <div id="style-branding" className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="underline">Branding</span>
             </div>
@@ -182,7 +182,7 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
             </div>
           </div>
         ) : (
-          <div className="flex flex-col">
+          <div id="style-branding" className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="underline">Branding</span>
             </div>
@@ -196,7 +196,7 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
       {/* Style preset intentionally not displayed on summary card */}
 
       {shotType && (
-        <div className="flex flex-col">
+        <div id="style-shot-type" className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="underline">Shot type</span>
           </div>

@@ -4,6 +4,7 @@ import { TrashIcon, CameraIcon, InformationCircleIcon } from '@heroicons/react/2
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 import { useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { LoadingSpinner, SelfieGrid } from '@/components/ui'
 
 export interface GallerySelfieItem {
   id: string
@@ -33,14 +34,21 @@ export default function SelfieGallery({
   onDeleted,
 }: SelfieGalleryProps) {
   const t = useTranslations('selfies.gallery')
-  const { selectedSet, toggleSelect, selectedIds } = useSelfieSelection({ token })
+  const { selectedSet, toggleSelect } = useSelfieSelection({ token })
   const [loadedSet, setLoadedSet] = useState<Set<string>>(new Set())
   const [hoveredDeleteId, setHoveredDeleteId] = useState<string | null>(null)
 
   const handleToggle = useCallback(async (id: string, next: boolean) => {
+    // toggleSelect is async and calls loadSelected internally
     await toggleSelect(id, next)
-    if (onAfterChange) onAfterChange(Array.from(selectedIds))
-  }, [toggleSelect, onAfterChange, selectedIds])
+    // Notify parent that selection changed - parent will reload from API
+    // Use requestAnimationFrame to ensure this happens after React has processed the state update
+    if (onAfterChange) {
+      requestAnimationFrame(() => {
+        onAfterChange([]) // Parent will reload from API
+      })
+    }
+  }, [toggleSelect, onAfterChange])
 
   const handleDelete = useCallback(async (selfieId: string, key?: string) => {
     try {
@@ -64,7 +72,7 @@ export default function SelfieGallery({
   }, [token, onDeleted])
 
   return (
-    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+    <SelfieGrid>
       {selfies.map((selfie) => {
         const isSelected = selectedSet.has(selfie.id)
         const isLoaded = loadedSet.has(selfie.id)
@@ -85,7 +93,7 @@ export default function SelfieGallery({
             <div className={`aspect-square bg-gray-100 rounded-lg overflow-hidden ${isSelected ? 'ring-2 ring-brand-secondary' : ''} relative`}>
               {!isLoaded && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-brand-primary" />
+                  <LoadingSpinner />
                 </div>
               )}
               <Image
@@ -138,6 +146,6 @@ export default function SelfieGallery({
           <span>Upload/Take new selfie</span>
         </button>
       )}
-    </div>
+    </SelfieGrid>
   )
 }

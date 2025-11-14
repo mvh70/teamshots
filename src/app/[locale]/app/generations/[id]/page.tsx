@@ -5,6 +5,7 @@ import { Link } from '@/i18n/routing'
 import Image from 'next/image'
 import { formatDate } from '@/lib/format'
 import { jsonFetcher } from '@/lib/fetcher'
+import { Grid } from '@/components/ui'
 
 type GenDetail = {
   id: string
@@ -52,7 +53,7 @@ export default function GenerationDetailPage({ params }: { params: Promise<{ id:
         <Link href="/app/generations" className="text-sm text-gray-700 hover:text-gray-900">Back</Link>
       </div>
       <div className="bg-white border rounded-lg p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <Grid cols={{ mobile: 1, desktop: 2 }} gap="lg" className="items-start">
           <div className="bg-gray-50 rounded overflow-hidden">
             <Image src={`/api/files/get?key=${encodeURIComponent(imageKey)}`} alt="generated" width={500} height={500} className="w-full h-auto" />
           </div>
@@ -66,7 +67,7 @@ export default function GenerationDetailPage({ params }: { params: Promise<{ id:
               <Link href={`/app/generate/start?key=${encodeURIComponent(data.uploadedKey)}`} className="px-3 py-2 rounded-md border text-sm">Regenerate</Link>
             </div>
           </div>
-        </div>
+        </Grid>
       </div>
     </div>
   )

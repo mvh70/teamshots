@@ -2,9 +2,6 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
-import { PRICING_CONFIG } from '@/config/pricing'
-import { calculatePhotosFromCredits } from '@/domain/pricing'
-import { formatDate } from '@/lib/format'
 
 interface InviteData {
   email: string
@@ -132,71 +129,71 @@ export default function InvitePage() {
   if (!inviteData) return null
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="text-center mb-6">
-          <div className="w-12 h-12 bg-brand-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
+      <div className="max-w-sm w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
+        <div className="text-center mb-8 sm:mb-6">
+          <div className="w-16 h-16 sm:w-12 sm:h-12 bg-brand-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 sm:w-6 sm:h-6 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-gray-900 mb-2">Team Invitation</h1>
-          <p className="text-sm text-gray-600">
+          <h1 className="text-2xl sm:text-xl font-semibold text-gray-900 mb-2">Team Invitation</h1>
+          <p className="text-base sm:text-sm text-gray-600">
             You&apos;ve been invited to join <strong>{inviteData.teamName}</strong>
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-sm sm:text-xs text-gray-500 mt-2 sm:mt-1">
             Good news: no awkward photo sessions required.
           </p>
         </div>
 
-        <div className="space-y-4 mb-6">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-2">What you&apos;ll get:</h3>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+        <div className="space-y-5 sm:space-y-4 mb-8 sm:mb-6">
+          <div className="bg-gray-50 rounded-xl sm:rounded-lg p-5 sm:p-4">
+            <h3 className="text-base sm:text-sm font-medium text-gray-900 mb-3 sm:mb-2">What you&apos;ll get:</h3>
+            <ul className="text-base sm:text-sm text-gray-600 space-y-2 sm:space-y-1">
+              <li className="flex items-center gap-3 sm:gap-2">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                {calculatePhotosFromCredits(inviteData.creditsAllocated)} professional photos ({PRICING_CONFIG.regenerations.business} variations)
+                <span>Professional headshots in 60 seconds</span>
               </li>
-              <li className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <li className="flex items-center gap-3 sm:gap-2">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Team-branded photo generation
+                <span>Team-branded photo generation</span>
               </li>
-              <li className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <li className="flex items-center gap-3 sm:gap-2">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Instant access (no account setup needed)
+                <span>Instant access (no account setup needed)</span>
               </li>
             </ul>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4 sm:space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Name *
+              <label className="block text-base sm:text-sm font-medium text-gray-700 mb-2 sm:mb-1">
+                First Name
               </label>
               <input
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                className="w-full px-4 py-4 sm:px-3 sm:py-2 text-base sm:text-sm border-2 sm:border border-gray-300 rounded-xl sm:rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                 placeholder="Enter your first name"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name *
+              <label className="block text-base sm:text-sm font-medium text-gray-700 mb-2 sm:mb-1">
+                Last Name
               </label>
               <input
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                className="w-full px-4 py-4 sm:px-3 sm:py-2 text-base sm:text-sm border-2 sm:border border-gray-300 rounded-xl sm:rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                 placeholder="Enter your last name"
                 required
               />
@@ -207,17 +204,17 @@ export default function InvitePage() {
         <button
           onClick={acceptInvite}
           disabled={!firstName.trim() || !lastName.trim() || accepting}
-          className={`w-full py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+          className={`w-full py-4 sm:py-2 px-6 sm:px-4 rounded-xl sm:rounded-md text-lg sm:text-sm font-semibold sm:font-medium transition-colors ${
             firstName.trim() && lastName.trim() && !accepting
               ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
           }`}
         >
-          {accepting ? 'Accepting...' : 'Accept Invitation & Start'}
+          {accepting ? 'Accepting...' : 'Accept Invitation'}
         </button>
 
-        <p className="text-xs text-gray-500 text-center mt-4">
-          Invite expires: {formatDate(inviteData.expiresAt)}
+        <p className="text-sm sm:text-xs text-gray-500 text-center mt-5 sm:mt-4">
+          By accepting, you agree to upload a selfie for your professional headshot.
         </p>
       </div>
     </div>

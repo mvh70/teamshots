@@ -41,6 +41,9 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
   const clothingColors = settings?.clothing?.colors || settings?.clothingColors?.colors
   const expressionType = settings?.expression?.type
   const lightingType = settings?.lighting?.type
+  const hasClothing = settings?.clothing !== undefined
+  const hasExpression = settings?.expression !== undefined
+  const hasLighting = settings?.lighting !== undefined
 
   const isHexColor = (value?: string): boolean => {
     if (!value) return false
@@ -69,13 +72,13 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
   return (
     <div className="space-y-2">
       <h4 className="font-bold text-gray-800 mb-2">User Style</h4>
-      {(clothingStyle || clothingDetails) && (
-        <div className="flex flex-col">
+      {hasClothing && (
+        <div id="style-clothing-type" className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="underline">Clothing style</span>
           </div>
           <div className="ml-6 text-xs text-gray-500 capitalize">
-            {clothingStyle === 'user-choice' ? (
+            {!clothingStyle || clothingStyle === 'user-choice' ? (
               <span className="inline-flex items-center gap-1 normal-case">
                 <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
                 User choice
@@ -89,7 +92,7 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
           )}
         </div>
       )}
-      <div className="flex flex-col">
+      <div id="style-clothing-colors" className="flex flex-col">
         <div className="flex items-center gap-2">
           <span className="underline">Colors</span>
         </div>
@@ -143,13 +146,13 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
           </div>
         )}
       </div>
-      {expressionType && (
-        <div className="flex flex-col">
+      {hasExpression && (
+        <div id="style-expression" className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="underline">Expression</span>
           </div>
           <div className="ml-6 text-xs text-gray-500 capitalize">
-            {expressionType === 'user-choice' ? (
+            {!expressionType || expressionType === 'user-choice' ? (
               <span className="inline-flex items-center gap-1 normal-case">
                 <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
                 User choice
@@ -172,12 +175,21 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
           </div>
         </div>
       )}
-      {lightingType && (
+      {hasLighting && (
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="underline">Lighting</span>
           </div>
-          <div className="ml-6 text-xs text-gray-500 capitalize">{lightingType}</div>
+          <div className="ml-6 text-xs text-gray-500 capitalize">
+            {!lightingType || lightingType === 'user-choice' ? (
+              <span className="inline-flex items-center gap-1 normal-case">
+                <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
+                User choice
+              </span>
+            ) : (
+              lightingType
+            )}
+          </div>
         </div>
       )}
       {/* Shot type is displayed on the Composition card */}

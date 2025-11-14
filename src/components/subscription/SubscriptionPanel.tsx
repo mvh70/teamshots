@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import BillingToggle from "@/components/pricing/BillingToggle"
 import PricingCard from "@/components/pricing/PricingCard"
 import TopUpCard from "@/components/pricing/TopUpCard"
-import CheckoutButton from "@/components/pricing/CheckoutButton"
+import { CheckoutButton } from "@/components/ui"
 import { PRICING_CONFIG } from "@/config/pricing"
 import { InformationCircleIcon } from "@heroicons/react/24/outline"
 import { useTranslations } from "next-intl"
@@ -123,12 +123,15 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
                 isYearly={isYearly}
                 ctaSlot={
                   <CheckoutButton
-                    label={tPricing("plans.individual.cta")}
-                    loadingLabel={tAll("common.loading", { default: "Loading..." })}
+                    loadingText={tAll("common.loading", { default: "Loading..." })}
                     type="subscription"
                     priceId={isYearly ? PRICING_CONFIG.individual.annual.stripePriceId : PRICING_CONFIG.individual.monthly.stripePriceId}
                     onError={onCheckoutError}
-                  />
+                    fullWidth
+                    useBrandCtaColors
+                  >
+                    {tPricing("plans.individual.cta")}
+                  </CheckoutButton>
                 }
                 popularLabelKey="pricingPreview.recommended"
                 className="h-full"
@@ -211,12 +214,14 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
                   isYearly={true}
                   ctaSlot={
                     <CheckoutButton
-                      label={tPricing("actions.upgradeToYearly", { default: "Switch to yearly" })}
-                      loadingLabel={tAll("common.loading", { default: "Loading..." })}
+                      loadingText={tAll("common.loading", { default: "Loading..." })}
                       type="subscription"
                       priceId={currentTier === "pro" ? PRICING_CONFIG.pro.annual.stripePriceId : PRICING_CONFIG.individual.annual.stripePriceId}
                       onError={onCheckoutError}
-                    />
+                      useBrandCtaColors
+                    >
+                      {tPricing("actions.upgradeToYearly", { default: "Switch to yearly" })}
+                    </CheckoutButton>
                   }
                   popularLabelKey="pricingPreview.recommended"
                 />
@@ -291,12 +296,13 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
               isYearly={false}
               ctaSlot={
                 <CheckoutButton
-                  label={tPricing("plans.tryOnce.cta")}
-                  loadingLabel={tAll("common.loading", { default: "Loading..." })}
+                  loadingText={tAll("common.loading", { default: "Loading..." })}
                   type="try_once"
                   priceId={PRICING_CONFIG.tryOnce.stripePriceId}
                   onError={onCheckoutError}
-                />
+                >
+                  {tPricing("plans.tryOnce.cta")}
+                </CheckoutButton>
               }
               className="h-full"
             />
@@ -314,12 +320,14 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
               isYearly={isYearly}
               ctaSlot={
                 <CheckoutButton
-                  label={userMode === "team" ? tPricing("plans.pro.cta") : tPricing("plans.individual.cta")}
-                  loadingLabel={tAll("common.loading", { default: "Loading..." })}
+                  loadingText={tAll("common.loading", { default: "Loading..." })}
                   type="subscription"
                   priceId={isYearly ? (userMode === "team" ? PRICING_CONFIG.pro.annual.stripePriceId : PRICING_CONFIG.individual.annual.stripePriceId) : (userMode === "team" ? PRICING_CONFIG.pro.monthly.stripePriceId : PRICING_CONFIG.individual.monthly.stripePriceId)}
                   onError={onCheckoutError}
-                />
+                  useBrandCtaColors
+                >
+                  {userMode === "team" ? tPricing("plans.pro.cta") : tPricing("plans.individual.cta")}
+                </CheckoutButton>
               }
               popularLabelKey="pricingPreview.recommended"
               className="h-full"

@@ -26,7 +26,7 @@ export function FreePlanBanner({ variant, className }: FreePlanBannerProps) {
   }
 
   return (
-    <div className={`rounded-xl border border-yellow-300 bg-gradient-to-r from-yellow-50 to-amber-50 p-4 ${className || ''}`}>
+    <div data-testid="free-plan-banner" className={`rounded-xl border border-yellow-300 bg-gradient-to-r from-yellow-50 to-amber-50 p-4 ${className || ''}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="h-9 w-9 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center shadow-inner">

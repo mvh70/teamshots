@@ -12,9 +12,9 @@
     "getStarted": "Empezar"
   },
   "hero": {
-    "title": "Fotos profesionales de equipo en 60 segundos",
-    "titleHighlight": "sin sesión de fotos",
-    "subtitle": "Diseñado para equipos, fundadores de startups y empresas en expansión. Tú defines el estilo, los miembros del equipo añaden su selfie, y 60 segundos después tienes retratos consistentes y fieles a tu marca. Sin fotógrafo, sin agendas, sin facturas de $200/persona.",
+    "title": "Deja de perder semanas y $3,000 en fotos de equipo",
+    "titleHighlight": "que al final quedan horribles",
+    "subtitle": "Tu sitio web se ve poco profesional. Las nuevas incorporaciones rompen la consistencia de tu marca. Las sesiones tradicionales de fotos cuestan miles y tardan una eternidad. ¿Qué tal si consigues retratos acordes a tu marca en 60 segundos desde cualquier selfie?",
     "instantTransformation": "⚡ Transformación instantánea (en serio, es así de rápido)",
     "getStartedFree": "Regístrate ahora",
     "getStarted": "Empezar",
@@ -42,27 +42,27 @@
     }
   },
   "features": {
-    "title": "Retratos profesionales del equipo en aproximadamente un minuto",
-    "subtitle": "Diseñado para equipos y fundadores de startups que necesitan fotos consistentes y acordes a su marca sin complicaciones. Perfecto para incorporaciones, páginas del equipo y press kits.",
+    "title": "¿Por qué las sesiones de fotos de equipo están arruinando tu marca (y cómo lo solucionamos)?",
+    "subtitle": "Las sesiones tradicionales de fotos desperdician tu tiempo, revientan tu presupuesto y siguen entregando resultados inconsistentes. Aquí está lo que realmente funciona para equipos modernos.",
     "fast": {
-      "title": "60 segundos, no 6 semanas",
-      "description": "A los equipos les encanta. Cada uno sube una vez y obtiene resultados al instante. Tu sitio web y kit de prensa siempre actualizados. Adiós a perseguir fotógrafos por pruebas."
+      "title": "De semanas de caos a 60 segundos de 'listo'",
+      "description": "Detén la espera de 6 semanas por fotos que ya están desactualizadas. Cada miembro del equipo sube una vez, obtiene resultados profesionales al instante. Tu sitio web se mantiene actualizado. Sin más perseguir gente para retomas."
     },
     "consistency": {
-      "title": "Tu marca se ve profesional, siempre",
-      "description": "Las nuevas incorporaciones ya no rompen la consistencia visual de tu sitio web. Todos coinciden con tu marca al instante, incluso cuando se unen un viernes por la tarde."
+      "title": "Un look de marca en todo tu equipo",
+      "description": "Las nuevas incorporaciones arruinan el aspecto profesional de tu sitio web. Todo el mundo se ve diferente. Nos aseguramos de que cada miembro del equipo coincida perfectamente con tu marca, incluso el tipo que se une un viernes por la tarde."
     },
     "control": {
-      "title": "Deja de hacer malabares con correos y hojas de cálculo",
-      "description": "Todo tu equipo obtiene fotos profesionales sin que te conviertas en gestor de proyectos. Un panel lo maneja todo, para que puedas enfocarte en tu trabajo real."
+      "title": "Deja de ser el coordinador de proyectos de tu equipo",
+      "description": "Coordinar sesiones de fotos te convierte en un programador, chasqueador de correos y máquina de seguimiento. Un dashboard lo maneja todo. Tu equipo obtiene fotos profesionales. Tú recuperas tu tiempo."
     },
     "costEffective": {
-      "title": "Ahorra miles en sesiones de fotos",
-      "description": "Las sesiones tradicionales cuestan $200+ por persona y toman semanas. Obtén la misma calidad por menos que un café por persona. Perfecto para startups vigilando su tasa de consumo y equipos con presupuestos ajustados."
+      "title": "Ahorra $200+ por persona (en serio)",
+      "description": "Las sesiones tradicionales cuestan $200+ por persona más tu tiempo coordinándolas. Entregamos calidad profesional por menos que un café por persona. Perfecto para startups y equipos que en realidad cuentan sus dólares."
     },
     "remote": {
-      "title": "Remoto primero por diseño",
-      "description": "Diseñado para equipos distribuidos desde el día uno. Establece el estilo de tu marca una vez, y cada nueva incorporación—ya sea en San Francisco, Londres o su oficina en casa—obtiene fotos consistentes al instante."
+      "title": "Diseñado para equipos que no pueden reunirse en persona",
+      "description": "Equipos distribuidos no pueden reunirse para fotos. Nuevas incorporaciones remotas retrasan las actualizaciones de tu sitio web. Establece tu estilo una vez. Cada nueva incorporación—ya sea en San Francisco, Londres o trabajando desde casa—obtiene fotos consistentes al instante."
     }
   },
   "gallery": {
@@ -80,32 +80,20 @@
     "commercialUse": "Uso comercial"
   },
   "trust": {
-    "title": "¿Por qué equipos y startups eligen TeamShots?",
-    "subtitle": "El único servicio de retratos con IA diseñado específicamente para equipos B2B y empresas en crecimiento",
+    "title": "¿Por qué equipos eligen TeamShots sobre todos los demás?",
+    "subtitle": "Diseñado para equipos B2B serios que necesitan gestión de fotos de nivel empresarial, no trucos para consumidores",
     "badges": {
-      "noWatermarks": {
-        "title": "Tus fotos, tu control",
-        "description": "Usa tus retratos donde quieras sin preocuparte por marcas de agua o licencias. Tu sitio web, kit de prensa, LinkedIn—todo es tuyo, sin condiciones."
+      "teamCommandCenter": {
+        "title": "Centro de Comando del Equipo - Diseñado para managers que odian el caos",
+        "description": "Panel central donde controlas todo: aprueba fotos, invita miembros del equipo con un clic, rastrea progreso, y gestiona consistencia de marca en toda tu organización. A diferencia de herramientas para consumidores, esto fue diseñado específicamente para equipos."
       },
-      "instant": {
-        "title": "Resultados instantáneos",
-        "description": "Retratos profesionales en aproximadamente un minuto. Perfecto para equipos incorporando nuevos contratados rápidamente, o fundadores que necesitan fotos ayer. Sin retrasos de programación."
+      "industryTemplates": {
+        "title": "Plantillas profesionales diseñadas para tu industria",
+        "description": "Plantillas de estilo preconstruidas para startups de tecnología, firmas consultoras, agencias creativas, salud, finanzas, y más. Cada plantilla entiende los estándares profesionales de tu industria - desde estilos bancarios conservadores hasta el ambiente de agencia creativa. No filtros genéricos."
       },
-      "teamManagement": {
-        "title": "Tu pesadilla de gestión de equipo, resuelta",
-        "description": "Ya no más coordinación de horarios ni gestión de relaciones con proveedores. Tu equipo obtiene fotos profesionales en su propio tiempo, no en el del fotógrafo."
-      },
-      "costSavings": {
-        "title": "Ahorros empresariales, precios de startup",
-        "description": "Retratos profesionales por una fracción del costo tradicional. Ahorra $200+ por persona—esencial para startups gestionando su tasa de consumo y equipos con presupuestos limitados."
-      },
-      "security": {
-        "title": "Seguridad de nivel empresarial",
-        "description": "Tus datos y fotos están cifrados con seguridad empresarial. Conforme a GDPR, listo para SOC 2. Perfecto para equipos gestionando datos de empleados y startups preparándose para ventas empresariales."
-      },
-      "ai": {
-        "title": "Impulsado por Google Gemini AI",
-        "description": "Resultados profesionales con la última tecnología de IA de Google. Confiado por equipos y fundadores que necesitan retratos de calidad sin molestias tradicionales."
+      "qualityControl": {
+        "title": "Calidad garantizada con correcciones automáticas",
+        "description": "Las fotos que fallan nuestros estándares de calidad se regeneran automáticamente. Además obtienes regeneraciones gratuitas basadas en el plan para perfeccionar tus resultados. A diferencia de otros servicios donde pagas por cada intento, manejamos problemas de calidad automáticamente y te damos iteraciones gratuitas para obtener exactamente lo que quieres."
       }
     }
   },
@@ -124,42 +112,37 @@
     }
   },
   "howItWorks": {
-    "title": "Obtén fotos profesionales para todo tu equipo en 5 minutos",
-    "subtitle": "Sin dolores de cabeza de programación. Sin coordinación de proveedores. Solo cinco pasos simples y listo.",
+    "title": "De caos de fotos de equipo a 'listo' en 5 minutos",
+    "subtitle": "Sin dolores de cabeza de coordinación. Sin proveedores externos. Solo cinco pasos simples y listo.",
     "totalTime": "Tiempo total:",
-    "totalTimeValue": "60 segundos",
-    "cta": "¡Súbeme de nivel!",
-    "guarantee": "Tu primera generación de prueba es gratis en un estilo predefinido—perfecto para probar con tu equipo (somos así de amables)",
+    "totalTimeValue": "5 minutos",
+    "cta": "¡Obtén mi foto profesional gratis!",
+    "guarantee": "Sin riesgo: Obtén 1 foto profesional gratis para probarlo. Sin tarjeta de crédito, sin compromiso, sin tonterías.",
     "steps": {
       "1": {
-        "title": "Define Tu Estilo",
-        "description": "Define el estilo de tu marca una vez. Fondos, pautas, listo.",
-        "duration": "5s",
-        "effort": "Solo clic"
+        "title": "Configura tu estilo de marca",
+        "description": "Elige el fondo y sube tu logo en 30 segundos.",
+        "duration": "30s"
       },
       "2": {
-        "title": "Marca Personal",
-        "description": "Arrastra tu logo. Un clic, consistencia de marca instantánea.",
-        "duration": "5s",
-        "effort": "Arrastra y suelta"
+        "title": "Invita a tu equipo",
+        "description": "Envía enlaces personalizados. Cada persona sube su selfie desde cualquier dispositivo.",
+        "duration": "1 min"
       },
       "3": {
-        "title": "Elige Tu Vibra",
-        "description": "¿Formal o casual? Previsualiza al instante y elige lo que encaja con tu cultura.",
-        "duration": "10s",
-        "effort": "Previsualiza y elige"
+        "title": "IA transforma las fotos",
+        "description": "Resultados profesionales en 60 segundos por persona. Sin edición necesaria.",
+        "duration": "60s/persona"
       },
       "4": {
-        "title": "El Equipo Se Toma Selfies",
-        "description": "Invita a tu equipo. Cada uno sube una vez. Tú gestionas todo desde un lugar.",
-        "duration": "20s",
-        "effort": "Sube"
+        "title": "Revisa y aprueba",
+        "description": "Ve todos los resultados en un panel. Regenera lo que quieras mejorar.",
+        "duration": "2 min"
       },
       "5": {
-        "title": "Descarga y Brilla",
-        "description": "Obtén retratos profesionales listos para tu sitio web, LinkedIn, press kit—todo lo que necesitas.",
-        "duration": "20s",
-        "effort": "Un clic"
+        "title": "Descarga los retratos",
+        "description": "Archivos de alta resolución listos para tu sitio web, LinkedIn y tarjetas de visita.",
+        "duration": "30s"
       }
     }
   },
@@ -185,7 +168,7 @@
       },
       "2": {
         "question": "¿Cuánto cuesta?",
-        "answer": "Al registrarte, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Luego: paquete Prueba Una Vez por $5 (2 generaciones), plan Individual a $24/mes (6 generaciones/mes), o plan Pro a $59/mes (20 generaciones/mes). Planes anuales ahorran más. Créditos nunca caducan, así que acumúlalos como oro digital. Cada generación usa 10 créditos y produce 4 variaciones."
+        "answer": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: paquete Prueba Una Vez por $5 (2 generaciones), plan Individual a $29/mes (25 generaciones/mes), o plan Pro a $59/mes (70 generaciones/mes). Planes anuales te ahorran más. Créditos nunca caducan, así que acumúlalos como oro digital. Cada generación usa 10 créditos y produce 4 variaciones."
       },
       "3": {
         "question": "¿Qué tipos de fotos funcionan mejor?",
@@ -241,11 +224,11 @@
         "cta": "Obtén mi prueba"
       },
       "starter": {
-        "name": "Inicial",
+        "name": "Individual",
         "price": "$29",
         "period": "por mes",
         "credits": "100 créditos/mes",
-        "description": "Para individuos y equipos pequeños",
+        "description": "Para profesionales individuales",
         "features": {
           "0": "25 generaciones de fotos por mes",
           "1": "Descargas de alta resolución 1024x1024px",
@@ -254,7 +237,7 @@
           "4": "Recarga a $0.90 por 4 créditos",
           "5": "Soporte prioritario por correo"
         },
-        "cta": "Regístrate ahora",
+        "cta": "Empieza a ahorrar ahora",
         "savings": "Ahorra $43/año"
       },
       "pro": {
@@ -262,7 +245,7 @@
         "price": "$59",
         "period": "por mes",
         "credits": "280 créditos/mes",
-        "description": "Para equipos en crecimiento y agencias",
+        "description": "Para equipos y agencias",
         "features": {
           "0": "70 generaciones de fotos por mes",
           "1": "Descargas de alta resolución 1024x1024px",
@@ -271,7 +254,7 @@
           "4": "Recarga a $0.60 por 4 créditos",
           "5": "Soporte prioritario con gerente dedicado"
         },
-        "cta": "Regístrate ahora",
+        "cta": "Eleva a tu equipo",
         "savings": "Ahorra $108/año"
       }
     }
@@ -370,19 +353,19 @@
       "pro": {
         "name": "Pro",
         "period": "por mes",
-        "description": "Para equipos que quieren que todos luzcan increíbles",
+        "description": "Para equipos que quieren que todos luzcan igualmente increíbles",
         "features": [
           "<strong>{photos}</strong> generaciones de fotos",
           "Regenera hasta 4 veces para perfeccionar cada foto",
           "Todas las funciones Individual, más:",
-          "Invitaciones a equipo",
+          "Invitaciones a miembros del equipo",
           "Gestión de fotos del equipo",
-          "Plantillas de estilo empresa",
-          "Flujo de aprobación admin",
+          "Plantillas de estilo de empresa",
+          "Flujo de aprobación de administrador",
           "Créditos de recarga con descuento",
           "Soporte prioritario con gerente dedicado"
         ],
-        "cta": "Sube de nivel al equipo"
+        "cta": "Eleva al equipo"
       }
     },
     "faq": {
@@ -746,6 +729,168 @@
         "cannotSwitch": "No puedes cambiar al modo individual mientras eres administrador de un equipo con otros miembros. Por favor, elimina todos los miembros del equipo primero.",
         "companyNameRequired": "El nombre del equipo es requerido"
       }
+    },
+    "onboarding": {
+      "tours": {
+        "welcome": {
+          "title": "¡Bienvenido a TeamShots, {Firstname}!",
+          "content": "Gracias por elegir TeamShots. ¡Eres increíble! 🚀\n\nLucirás impecablemente profesional antes de que se enfríe tu café.",
+          "photoStylesTitle": "Personaliza tus estilos de foto",
+          "photoStylesContent": "Antes de generar fotos, puedes personalizar tus estilos de foto aquí. Elige fondos, ropa, expresiones y más para crear tu look profesional perfecto.",
+          "goToPhotoStylesButton": "Ir a estilos de foto",
+          "generateButton": "Haz clic aquí para transformar tu selfie en retratos profesionales que eleven tu presencia. Tu yo futuro te lo agradecerá."
+        },
+        "teamAdminWelcome": {
+          "title": "¡Bienvenido a TeamShots, {Firstname}!",
+          "content": "Gracias por elegir TeamShots. ¡Eres increíble! 🚀\n\n¿Listo para transformar a todo tu equipo en un grupo cohesionado de profesionales pulidos? Todos lucirán consistentemente excelentes antes de que termines tu café.",
+          "teamButton": "Haz clic aquí para crear tu equipo y comenzar la transformación.",
+          "teamNameTitle": "Agrega el nombre de tu equipo",
+          "teamNameContent": "Ingresa el nombre de tu equipo aquí para comenzar. Este se usará para identificar a tu equipo en todo TeamShots."
+        },
+        "generationTour": {
+          "uploadTitle": "Sube tu foto",
+          "uploadContent": "Suelta tu selfie aquí y presencia la transformación. Convertimos instantáneas casuales en retratos que te hacen brillar como una leyenda de LinkedIn.",
+          "styleTitle": "Elige tu estilo",
+          "styleContent": "Fotos personales para tu imagen profesional, o fotos de equipo si quieres coordinar la consistencia visual de tu equipo.",
+          "creditsTitle": "Tus créditos",
+          "creditsContent": "Cada generación cuesta 10 créditos. Créenos, querrás usarlos todos una vez que veas lo impresionante que luces.",
+          "generateTitle": "Genera tus fotos",
+          "generateContent": "Haz clic aquí para comenzar tu transformación. Tus retratos profesionales estarán listos antes de que puedas decir 'queso'."
+        },
+        "teamSetupTour": {
+          "createTitle": "Crea tu equipo",
+          "createContent": "Configura tu equipo aquí y prepárate para transformar a todo tu grupo en un equipo de profesionales pulidos. Esto toma segundos, los resultados duran para siempre.",
+          "styleTitle": "Configura estilos de fotos",
+          "styleContent": "Define el aspecto característico de tu equipo aquí. Asegura que todos brillen consistentemente - no más fotos inconsistentes en perfiles de empresa.",
+          "inviteTitle": "Invita a tu equipo",
+          "inviteContent": "Trae a tu equipo a bordo para que puedan comenzar su transformación profesional. Te lo agradecerán cuando luzcan tan impresionantes."
+        },
+        "teamPhotoStyleSetupTour": {
+          "title": "Configura los estilos de fotos de tu equipo",
+          "content": "Crea el aspecto característico de tu equipo aquí. Asegura que todos brillen consistentemente - porque tu marca merece verse tan impresionante como tu equipo."
+        },
+        "teamPhotoStylesPageTour": {
+          "headingTitle": "Los estilos de fotos de tu equipo",
+          "headingContent": "Un estilo de foto de equipo es una configuración preestablecida que asegura que todas las fotos de los miembros de tu equipo se vean consistentes y profesionales. Define fondos, ropa, expresiones y branding para que todos coincidan perfectamente con la identidad de tu marca. Crea y gestiona los aspectos característicos de tu equipo aquí.",
+          "createTitle": "Crear estilos personalizados",
+          "createContent": "Haz clic aquí para crear estilos de fotos personalizados que hagan que tu equipo luzca como los profesionales que son. Fondos, branding, ropa - tú controlas todo."
+        },
+        "teamPhotoStylesFreeTour": {
+          "headingTitle": "Tus estilos de fotos de equipo",
+          "headingContent": "Un estilo de foto de equipo es un preset que asegura que todas las fotos de los miembros de tu equipo se vean consistentes y profesionales. Define fondos, ropa, expresiones y branding para que todos coincidan perfectamente con la identidad de tu marca. ¡Incluso en el plan gratuito, todos brillan de manera consistente y profesional!",
+          "freeTitle": "Bono del Plan Gratuito",
+          "freeContent": "Comienza el viaje de tu equipo con nuestro estilo de Paquete Gratuito, ¡perfecto para probar el servicio! La mayoría de las configuraciones están bloqueadas, pero cada usuario puede personalizar los colores de su guardarropa. (¿A quién no le gusta un buen adelanto?) Actualiza para desbloquear estilos de equipo personalizados completos.",
+          "backgroundTitle": "El fondo está configurado",
+          "backgroundContent": "Tenemos un fondo profesional listo para las fotos de tu equipo, ¡consistente y nítido!",
+          "brandingTitle": "Logo de TeamShots en la ropa",
+          "brandingContent": "Las fotos de tu equipo incluirán el logo de TeamShots para esa consistencia extra (¡prometemos que es de buen gusto!).",
+          "shotTypeTitle": "El tipo de toma es 3/4",
+          "shotTypeContent": "Configurado en vista 3/4, ¡porque quién no se ve genial desde este ángulo!",
+          "clothingTypeTitle": "El tipo de ropa es business casual",
+          "clothingTypeContent": "El estilo business casual asegura que todos se vean profesionales pero accesibles, ¡el equilibrio perfecto!",
+          "clothingColorsTitle": "Personaliza los colores de la ropa",
+          "clothingColorsContent": "Aquí es donde brillas: Cada miembro del equipo puede elegir sus propios colores de guardarropa mientras mantiene todo consistente. ¡Mezcla y combina!",
+          "expressionTitle": "La expresión es confiada",
+          "expressionContent": "Expresiones confiadas por todas partes, ¡ayudando a tu equipo a proyectar esa energía de 'lo tenemos bajo control'!",
+          "readyTitle": "Listo para generar o invitar",
+          "readyContent": "¡Estás listo! Es hora de probar con tu propia foto o invitar al equipo, ¡hagamos que suceda la magia!"
+        },
+        "personalPhotoStylesPageTour": {
+          "headingTitle": "Tus estilos de foto personales",
+          "headingContent": "Un estilo de foto personal es un preset que asegura que todas tus fotos se vean consistentes y profesionales. Define fondos, ropa, expresiones y marca para que puedas crear una imagen profesional cohesiva. Crea y gestiona tus looks característicos aquí.",
+          "headingContentIndividual": "Un estilo de foto personal es un preset que asegura que todas tus fotos se vean consistentes y profesionales. Define fondos, ropa y expresiones para que puedas crear una imagen profesional cohesiva. Crea y gestiona tus looks característicos aquí.",
+          "headingContentPro": "Un estilo de foto personal es un preset que asegura que todas tus fotos se vean consistentes y profesionales. Define fondos, ropa, expresiones y marca para que puedas crear una imagen profesional cohesiva e identidad de marca. Crea y gestiona tus looks característicos aquí.",
+          "createTitle": "Crear estilos personalizados",
+          "createContent": "Haz clic aquí para crear estilos de foto personalizados que te hagan lucir como el profesional que eres. Fondos, marca, ropa - tú lo controlas todo.",
+          "createContentIndividual": "Haz clic aquí para crear estilos de foto personalizados que te hagan lucir como el profesional que eres. Fondos, ropa, expresiones - tú lo controlas todo.",
+          "createContentPro": "Haz clic aquí para crear estilos de foto personalizados que te hagan lucir como el profesional que eres. Fondos, marca, ropa - tú lo controlas todo."
+        },
+        "personalPhotoStylesFreeTour": {
+          "headingTitle": "Tus estilos de foto personales",
+          "headingContent": "Un estilo de foto personal es un preset que asegura que todas tus fotos se vean consistentes y profesionales. Define fondos, ropa, expresiones y marca para que puedas crear una imagen profesional cohesiva. Incluso en el plan gratuito, brillas de manera consistente y profesional.",
+          "headingContentIndividual": "Un estilo de foto personal es un preset que asegura que todas tus fotos se vean consistentes y profesionales. Define fondos, ropa y expresiones para que puedas crear una imagen profesional cohesiva. Incluso en el plan gratuito, brillas de manera consistente y profesional.",
+          "headingContentPro": "Un estilo de foto personal es un preset que asegura que todas tus fotos se vean consistentes y profesionales. Define fondos, ropa, expresiones y marca para que puedas crear una imagen profesional cohesiva e identidad de marca. Incluso en el plan gratuito, brillas de manera consistente y profesional.",
+          "freeTitle": "Plan gratuito",
+          "freeContent": "Usa nuestro \"Estilo de Paquete Gratuito\" profesional para brillar de inmediato. Actualiza en cualquier momento para crear estilos personalizados que coincidan perfectamente con tu marca.",
+          "freeContentIndividual": "Usa nuestro \"Estilo de Paquete Gratuito\" profesional para brillar de inmediato. Actualiza en cualquier momento para crear estilos personalizados que coincidan perfectamente con tu imagen profesional.",
+          "freeContentPro": "Usa nuestro \"Estilo de Paquete Gratuito\" profesional para brillar de inmediato. Actualiza en cualquier momento para crear estilos personalizados que coincidan perfectamente con tu marca.",
+          "backgroundTitle": "El fondo está configurado",
+          "backgroundContent": "El fondo ya está configurado para tu look profesional.",
+          "brandingTitle": "Logo de TeamShots en la ropa",
+          "brandingContent": "Tus fotos incluirán el logo de TeamShots en la ropa para una marca consistente.",
+          "shotTypeTitle": "El tipo de toma es 3/4",
+          "shotTypeContent": "El tipo de toma está configurado en 3/4, dándote un encuadre profesional y consistente.",
+          "clothingTypeTitle": "El tipo de ropa es business casual",
+          "clothingTypeContent": "El estilo de ropa está configurado en business casual, asegurando que te veas profesional pero accesible.",
+          "clothingColorsTitle": "Personaliza los colores de la ropa",
+          "clothingColorsContent": "Aquí es donde brillas: Puedes elegir tus propios colores de guardarropa mientras mantienes todo consistente. ¡Mezcla y combina!",
+          "expressionTitle": "La expresión es confiada",
+          "expressionContent": "La expresión está configurada en confiada, ayudándote a proyectar profesionalismo y seguridad.",
+          "readyTitle": "Listo para generar",
+          "readyContent": "Haz clic aquí para comenzar a generar tu primera foto."
+        },
+        "photoStyleCreationTour": {
+          "nameTitle": "Nombra tu estilo",
+          "nameContent": "Elige un nombre que capture la marca de tu equipo. Piensa en él como la etiqueta que mantiene a todos alineados. Adiós a las fotos de LinkedIn desparejas.",
+          "userChoiceTitle": "Elección del usuario o predefinido",
+          "userChoiceContent": "Decide si las configuraciones están bloqueadas para consistencia o flexibles para tu equipo. Cambia a predefinido para control de marca, o elección del usuario para agregar un toque personal.",
+          "compositionTitle": "Configuraciones de composición",
+          "compositionContent": "Aquí das forma a la base de la foto. Configura fondo, marca y tipo de toma para crear un look que represente perfectamente a tu equipo.",
+          "backgroundTitle": "Fondo",
+          "backgroundContent": "Elige colores sólidos, sube imágenes o describe escenas mejoradas con IA. Es tu oportunidad de establecer un telón de fondo que diga 'profesional' sin decir una palabra.",
+          "brandingTitle": "Marca",
+          "brandingContent": "Agrega tu logotipo al fondo, ropa o elementos de la escena. Haz que tu marca destaque. Los recordatorios sutiles construyen equipos más fuertes.",
+          "shotTypeTitle": "Tipo de toma",
+          "shotTypeContent": "Elige primer plano, tres cuartos o longitud completa. Esto enmarca cuánto se muestra de cada persona, manteniendo equilibrada tu galería de equipo.",
+          "userStyleTitle": "Configuraciones de estilo del usuario",
+          "userStyleContent": "Controla cómo aparecen las personas en las fotos. Ajusta ropa, colores, expresiones e iluminación para que coincida con la vibra de tu equipo.",
+          "clothingTitle": "Ropa",
+          "clothingContent": "Selecciona formal de negocios, casual o algo intermedio. Establece un estándar que haga que todos luzcan impecables. El secreto de RRHH para profesionalismo instantáneo.",
+          "clothingColorsTitle": "Colores de ropa",
+          "clothingColorsContent": "Describe tonos como azul marino o azul, o elige colores exactos. Permite elección del usuario para variedad, o bloquéalo para ese look uniforme que adoran los gerentes de RRHH.",
+          "expressionTitle": "Expresión facial",
+          "expressionContent": "Opta por confiado, neutral o amigable. Es una elección pequeña que proyecta gran energía, perfecta para páginas de equipo que inspiran confianza.",
+          "autosaveTitle": "Guardado automático",
+          "autosaveContent": "Los cambios se guardan al instante. Observa el indicador de guardado. ¿Quién tiene tiempo para clics extras al construir una marca?"
+        },
+        "testGenerationTour": {
+          "title": "Genera tu primera foto",
+          "content": "Estás todo configurado y listo para brillar. Prueba el proceso aquí antes de introducirlo a tu equipo - querrás ver esta transformación primero."
+        },
+        "inviteTeamTour": {
+          "pageTitle": "Tu Centro de Equipo {teamName}",
+          "pageContent": "¡Bienvenido a tu centro de mando {teamName}! Rastrea quién se unió a la fiesta de fotos, quién generó sus tomas pro (y quién necesita un empujoncito), y gestiona créditos con facilidad. (Consejo pro: ¡Más créditos significan más sonrisas... o al menos más headshots!)",
+          "tableTitle": "Gestiona invitaciones y créditos",
+          "tableContent": "¡Aquí es donde sucede la magia! Ve a todos los miembros de tu equipo e invitaciones pendientes en un solo lugar. Rastrea quién se unió, quién aún está esperando y cuántos créditos tiene cada uno. Es como un centro de control de misión, pero para fotos profesionales.",
+          "activeStyleTitle": "Tu estilo de foto activo",
+          "activeStyleContent": "Este es el estilo de foto que usarán los miembros de tu equipo invitados al generar sus fotos. Todas sus fotos coincidirán con este estilo para una marca consistente en todo tu equipo.",
+          "activeStyleTitleFree": "Estilo de Paquete Gratuito",
+          "activeStyleContentFree": "Los miembros de tu equipo usarán el Estilo de Paquete Gratuito al generar fotos. Actualiza para desbloquear fondos personalizados, marca, estilos de ropa y más opciones de personalización.",
+          "title": "Invita a tu equipo",
+          "content": "¡Hora de crecer tu escuadrón! Ingresa correos aquí y envía invitaciones más rápido que decir 'cheese'. Recibirán un enlace mágico para subir selfies y generar fotos – ¡sin dramas de registro!"
+        },
+        "generationDetailTour": {
+          "photoTitle": "Tu foto generada",
+          "photoContent": "Esta es tu foto profesional generada. Puedes ver la transformación desde tu selfie original hasta este resultado pulido.",
+          "sliderTitle": "Revelar selfies usadas",
+          "sliderContent": "Arrastra este botón deslizante para revelar las selfies que se usaron para generar esta foto. Esto te ayuda a ver la comparación antes y después.",
+          "deleteTitle": "Eliminar generación",
+          "deleteContent": "Puedes eliminar esta generación si ya no la necesitas. Esta acción no se puede deshacer, así que asegúrate de haber descargado lo que necesitas primero.",
+          "regenerateTitle": "Regenerar gratis",
+          "regenerateContent": "Puedes regenerar esta foto gratis usando la misma configuración. Cada generación viene con regeneraciones gratuitas para que puedas perfeccionar tus resultados.",
+          "downloadTitle": "Descargar tu foto",
+          "downloadContent": "Descarga tu foto profesional en alta resolución. Perfecta para LinkedIn, tu sitio web, tarjetas de presentación y más.",
+          "creditsTitle": "Costo de generación y regeneraciones",
+          "creditsContent": "Esto muestra el costo de la generación (10 créditos) y cuántas regeneraciones gratuitas te quedan. Usa las regeneraciones para perfeccionar tus resultados sin gastar más créditos.",
+          "manageTitle": "Gestiona tu generación",
+          "manageContent": "Descarga tu foto en alta resolución, regenera gratis usando la misma configuración o elimina si ya no la necesitas. Esto también muestra el costo de la generación (10 créditos) y cuántas regeneraciones gratuitas te quedan."
+        }
+      },
+      "indicators": {
+        "team": "Configura tu equipo",
+        "styles": "Personaliza tu estilo de foto",
+        "invite": "Invita miembros del equipo"
+      }
     }
   },
   "generations": {
@@ -936,6 +1081,8 @@
     "title": "Estilos de Fotos",
     "subtitle": "Un estilo de foto es un estándar que puedes aplicar a múltiples fotos para mantener la consistencia en tu imagen profesional.",
     "subtitleIndividual": "Un estilo de foto es un estándar que puedes aplicar a múltiples fotos para mantener la consistencia en tu imagen profesional.",
+    "subtitleIndividualPlan": "Un estilo de foto es un estándar que puedes aplicar a múltiples fotos para mantener la consistencia en tu imagen profesional.",
+    "subtitleProPlan": "Un estilo de foto es un estándar que puedes aplicar a múltiples fotos para mantener la consistencia en tu imagen profesional e identidad de marca.",
     "createContext": "Crear estilo de foto",
     "editContext": "Editar estilo de foto",
     "deleteContext": "Eliminar estilo de foto",
@@ -1003,15 +1150,23 @@
       "setAsActive": "Establecer como activo",
       "setAsDefault": "Establecer como predeterminado"
     },
+    "labels": {
+      "personalPhotoStyles": "Estilos de Fotos Personales",
+      "personalStyles": "Estilos Personales",
+      "createPersonalStyle": "Crear Estilo Personal",
+      "freePackageStyle": "Estilo de Paquete Gratuito",
+      "personal": "Personal",
+      "default": "Predeterminado"
+    },
     "sections": {
       "photoGenerationSettings": "Configuración de generación de fotos"
     },
     "freePlan": {
-      "title": "Límite del plan gratuito",
-      "bodyPersonal": "Solo se puede aplicar el estilo del Paquete Gratis. Los estilos personales personalizados están deshabilitados en el plan gratuito.",
-      "bodyTeam": "Solo se puede aplicar el estilo del Paquete Gratis. Los estilos de equipo personalizados están deshabilitados en el plan gratuito.",
-      "bodyGeneric": "Solo se puede aplicar el estilo del Paquete Gratis. Los estilos personalizados están deshabilitados en el plan gratuito.",
-      "stamp": "Solo vista",
+      "title": "Bono del Plan Gratuito",
+      "bodyPersonal": "Comienza tu viaje con nuestro estilo de Paquete Gratuito, ¡perfecto para probar el servicio! La mayoría de las configuraciones están bloqueadas, pero puedes personalizar los colores del guardarropa. (¿A quién no le gusta un buen adelanto?) Actualiza para desbloquear estilos personales personalizados completos.",
+      "bodyTeam": "Comienza el viaje de tu equipo con nuestro estilo de Paquete Gratuito, ¡perfecto para probar el servicio! La mayoría de las configuraciones están bloqueadas, pero cada usuario puede personalizar los colores de su guardarropa. (¿A quién no le gusta un buen adelanto?) Actualiza para desbloquear estilos de equipo personalizados completos.",
+      "bodyGeneric": "Comienza tu viaje con nuestro estilo de Paquete Gratuito, ¡perfecto para probar el servicio! La mayoría de las configuraciones están bloqueadas, pero los colores del guardarropa se pueden personalizar. (¿A quién no le gusta un buen adelanto?) Actualiza para desbloquear estilos personalizados completos.",
+      "stamp": "Prueba de Manejo",
       "cta": "Mejorar plan"
     }
   },

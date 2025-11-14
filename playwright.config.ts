@@ -9,7 +9,7 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL must be defined in .env.test');
 }
 
-(process.env as any).NODE_ENV = 'test';
+(process.env as Record<string, string>).NODE_ENV = 'test';
 
 
 export default defineConfig({

@@ -11,6 +11,7 @@ import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { SecurityLogger } from '@/lib/security-logger'
 import { Logger } from '@/lib/logger'
 import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
+import { deriveGenerationType } from '@/domain/generation/utils'
 
 // S3 configuration (supports Backblaze B2, Hetzner, AWS S3, etc.)
 const s3 = createS3Client({ forcePathStyle: true })
@@ -135,10 +136,13 @@ export async function GET(
       uploadedPhotoUrl = `/api/files/proxy?key=${encodeURIComponent(generation.uploadedPhotoKey)}&type=uploaded`
     }
 
+    // Derive generationType from person.teamId (single source of truth)
+    const derivedGenerationType = deriveGenerationType(generation.person.teamId)
+    
     return NextResponse.json({
       id: generation.id,
       status: generation.status,
-      generationType: generation.generationType,
+      generationType: derivedGenerationType, // Derived from person.teamId, not stored field
       creditSource: generation.creditSource,
       creditsUsed: generation.creditsUsed,
       provider: generation.provider,

@@ -1,11 +1,10 @@
-import { FullConfig } from '@playwright/test';
 import { execSync } from 'child_process';
 import dotenv from 'dotenv';
 
 const TEST_DB_NAME = 'teamshots_test';
 const TEST_DB_URL = `postgresql://postgres:postgres@localhost:5432/${TEST_DB_NAME}?schema=public`;
 
-async function globalSetup(config: FullConfig) {
+async function globalSetup() {
   console.log('🧪 Setting up test database for E2E tests...');
   
   try {
@@ -23,7 +22,7 @@ async function globalSetup(config: FullConfig) {
     console.log(`Creating test database: ${TEST_DB_NAME}`);
     try {
       execSync(`createdb ${TEST_DB_NAME}`, { stdio: 'inherit' });
-    } catch (error) {
+    } catch {
       // Database might already exist, that's okay
       console.log('Test database might already exist, continuing...');
     }

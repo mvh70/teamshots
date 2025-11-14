@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { UserIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { ClothingSettings } from '@/types/photo-style'
+import { Grid } from '@/components/ui'
 
 interface ClothingStyleSelectorProps {
   value: ClothingSettings
@@ -159,7 +160,7 @@ export default function ClothingStyleSelector({
             <label className="block text-sm font-medium text-gray-700 mb-3">
               {t('details.label', { default: 'Details' })}
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <Grid cols={{ mobile: 2 }} gap="sm">
               {CLOTHING_DETAILS[value.style]?.map((detail) => {
                 const isSelected = value.details === detail.value
                 return (
@@ -177,7 +178,7 @@ export default function ClothingStyleSelector({
                   </button>
                 )
               })}
-            </div>
+            </Grid>
           </div>
 
           {/* Accessories Section */}
@@ -227,7 +228,7 @@ export default function ClothingStyleSelector({
             
             {/* Accessory Selector */}
             {showAccessorySelector && !(isPredefined || isDisabled) && (
-              <div className="grid grid-cols-2 gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
+              <Grid cols={{ mobile: 2 }} gap="sm" className="p-3 border border-gray-200 rounded-lg bg-gray-50">
                 {CLOTHING_ACCESSORIES[value.style]?.map((accessory) => {
                   const isSelected = value.accessories?.includes(accessory) || false
                   return (
@@ -245,7 +246,7 @@ export default function ClothingStyleSelector({
                     </button>
                   )
                 })}
-              </div>
+              </Grid>
             )}
           </div>
         </div>

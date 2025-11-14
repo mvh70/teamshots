@@ -6,11 +6,13 @@ import { Telemetry } from '@/lib/telemetry'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { getEffectiveTeamCreditBalance, getPersonCreditBalance, hasSufficientCredits, reserveCreditsForGeneration, getTeamCreditBalance } from '@/domain/credits/credits'
+import { getPersonCreditBalance } from '@/domain/credits/credits'
 import { getPackageConfig } from '@/domain/style/packages'
 import { Env } from '@/lib/env'
 import { resolveSelfies } from '@/domain/generation/selfieResolver'
 import { getRegenerationCount } from '@/domain/pricing'
+import { CreditService } from '@/domain/services/CreditService'
+import { UserService } from '@/domain/services/UserService'
 
 // Minimal validation schema aligned with /api/generations/create (now supports arrays)
 const createSchema = z.object({
@@ -80,27 +82,42 @@ export async function POST(request: NextRequest) {
       } catch {}
     }
 
-    const hasTeamCredits = await hasSufficientCredits(
-      null,
-      teamUser?.id || null,
+    // For invited team members, get user context and verify they should use team credits
+    const userContext = await UserService.getUserContext(teamUser?.id || invite.person.team?.adminId || '')
+    const creditSourceInfo = await CreditService.determineCreditSource(userContext)
+
+    // Invited team members should always use team credits - verify this is the case
+    if (creditSourceInfo.creditSource !== 'team') {
+      Logger.error('Credit source mismatch for team member', {
+        userId: teamUser?.id,
+        expected: 'team',
+        actual: creditSourceInfo.creditSource,
+        reason: creditSourceInfo.reason
+      })
+      return NextResponse.json(
+        { error: 'Team member should use team credits' },
+        { status: 400 }
+      )
+    }
+
+    const hasTeamCredits = await CreditService.canAffordOperation(
+      teamUser?.id || invite.person.team?.adminId || '',
       PRICING_CONFIG.credits.perGeneration,
-      teamId,
+      userContext
     )
 
     if (!hasTeamCredits) {
-      const userIdForBalance = teamUser?.id ?? invite.person.team?.adminId ?? null
-      // OPTIMIZATION: Run credit balance queries in parallel
-      const [available, personAllocation] = await Promise.all([
-        userIdForBalance
-          ? getEffectiveTeamCreditBalance(userIdForBalance, teamId)
-          : getTeamCreditBalance(teamId),
-        getPersonCreditBalance(invite.person.id)
-      ])
+      const creditSummary = await CreditService.getCreditBalanceSummary(
+        teamUser?.id || invite.person.team?.adminId || '',
+        userContext
+      )
+      const personAllocation = await getPersonCreditBalance(invite.person.id)
+
       return NextResponse.json(
         {
           error: 'Insufficient team credits',
           required: PRICING_CONFIG.credits.perGeneration,
-          available,
+          available: creditSummary.team,
           personAllocation,
           message: personAllocation > 0
             ? 'You have allocation remaining but the team has insufficient credits. Contact your team admin.'
@@ -132,7 +149,7 @@ export async function POST(request: NextRequest) {
         contextId: contextId ?? invite.person.team?.activeContextId ?? null,
         uploadedPhotoKey: primarySelfie.key,
         generatedPhotoKeys: [],
-        generationType: 'team',
+        // generationType removed - now derived from person.teamId (single source of truth)
         creditSource: 'team',
         status: 'pending',
         creditsUsed: PRICING_CONFIG.credits.perGeneration,
@@ -143,16 +160,26 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Reserve team credits and link to invite
+    // Reserve team credits using CreditService
     try {
-      await reserveCreditsForGeneration(
+      const reservationResult = await CreditService.reserveCreditsForGeneration(
+        teamUser?.id || invite.person.team?.adminId || '',
         invite.person.id,
-        null,
         PRICING_CONFIG.credits.perGeneration,
-        `Reserved for generation ${generation.id}`,
-        teamId,
-        invite.id,
+        userContext
       )
+
+      if (!reservationResult.success) {
+        Logger.error('Credit reservation failed for team member', { error: reservationResult.error })
+        await prisma.generation.delete({ where: { id: generation.id } })
+        throw new Error(reservationResult.error || 'Credit reservation failed')
+      }
+
+      Logger.debug('Team member credits reserved successfully', {
+        generationId: generation.id,
+        transactionId: reservationResult.transactionId,
+        teamCreditsUsed: reservationResult.teamCreditsUsed
+      })
     } catch (creditError) {
       await prisma.generation.delete({ where: { id: generation.id } })
       throw creditError

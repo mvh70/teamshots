@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import Image from 'next/image'
+import { PreviewImage } from '@/components/ui'
 
 interface SelfieApprovalProps {
   uploadedPhotoKey: string
@@ -68,26 +68,21 @@ export default function SelfieApproval({
     </div>
   )
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const target = e.target as HTMLImageElement;
-    target.style.display = 'none';
-    const placeholder = target.nextElementSibling as HTMLElement;
-    if (placeholder) placeholder.style.display = 'flex';
-  }
 
   return (
     <div className="space-y-6" data-testid="approval-screen">
       {/* Main content container */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-        <h1 className="text-lg md:text-xl font-semibold text-gray-900 mb-4" data-testid="approval-title">
+      <div className="bg-white rounded-xl md:rounded-lg shadow-sm border border-gray-200 p-5 sm:p-6">
+        <h1 className="text-xl sm:text-lg font-semibold text-gray-900 mb-5 sm:mb-4" data-testid="approval-title">
           {t('title')}
         </h1>
-        
+
         {/* Quality Guidelines - Responsive */}
-        <div className="flex justify-center mb-4 md:mb-6">
-          <div className="bg-blue-50 rounded-md md:rounded-lg border border-blue-200 p-3 md:p-4 max-w-md" data-testid="quality-guidelines">
-            <h3 className="text-xs md:text-sm font-medium text-blue-900 mb-2 text-center">{t('guidelines.title')}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 md:gap-2 text-xs md:text-sm text-blue-800">
+        <div className="flex justify-center mb-5 sm:mb-6">
+          <div className="bg-blue-50 rounded-xl md:rounded-lg border border-blue-200 p-4 md:p-4 max-w-md w-full" data-testid="quality-guidelines">
+            <h3 className="text-base md:text-sm font-medium text-blue-900 mb-3 md:mb-2 text-center">{t('guidelines.title')}</h3>
+            {/* Stack guidelines vertically on mobile for better readability */}
+            <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-2 text-sm md:text-xs text-blue-800">
               {guidelineItems.map(item => renderGuidelineItem(item))}
             </div>
           </div>
@@ -95,55 +90,45 @@ export default function SelfieApproval({
         
         {/* Photo Preview - Responsive */}
         <div className="flex flex-col items-center space-y-4">
-          <div className="relative" data-testid="selfie-preview">
-            <Image 
-              src={previewUrl || (uploadedPhotoKey && uploadedPhotoKey !== 'undefined' ? `/api/files/get?key=${encodeURIComponent(uploadedPhotoKey)}` : '/placeholder-image.png')}
-              alt="Uploaded selfie" 
-              width={300}
-              height={300}
-              className="w-full max-w-sm h-auto rounded-lg border border-gray-200 shadow-sm"
-              unoptimized
-              data-testid="selfie-image"
-              onError={handleImageError}
-            />
-            <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center" style={{ display: 'none' }}>
-              <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-          </div>
+          <PreviewImage
+            src={previewUrl || (uploadedPhotoKey && uploadedPhotoKey !== 'undefined' ? `/api/files/get?key=${encodeURIComponent(uploadedPhotoKey)}` : '/placeholder-image.png')}
+            alt="Uploaded selfie"
+            width={300}
+            height={300}
+            data-testid="selfie-preview"
+          />
         </div>
       </div>
 
       {/* Action Buttons - Responsive */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+      <div className="bg-white rounded-xl md:rounded-lg shadow-sm border border-gray-200 p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-3 sm:justify-center">
           <button
             onClick={handleApprove}
             disabled={isProcessing}
-            className={`px-6 py-2 md:py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`w-full sm:w-auto px-8 py-4 sm:px-6 sm:py-2 rounded-xl sm:rounded-md text-lg sm:text-sm font-semibold sm:font-medium transition-colors ${
               isProcessing
-                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-brand-primary text-white hover:bg-brand-primary-hover'
             }`}
             data-testid="approve-button"
           >
             {isProcessing ? t('buttons.processing') : t('buttons.approveContinue')}
           </button>
-          
+
           <button
             onClick={handleRetake}
             disabled={isProcessing}
-            className="px-6 py-2 md:py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-8 py-4 sm:px-6 sm:py-2 border-2 sm:border border-gray-300 text-gray-700 rounded-xl sm:rounded-md hover:bg-gray-50 text-lg sm:text-sm font-semibold sm:font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="retake-button"
           >
             {t('buttons.retakePhoto')}
           </button>
-          
+
           <button
             onClick={handleReject}
             disabled={isProcessing}
-            className="px-6 py-2 md:py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-8 py-4 sm:px-6 sm:py-2 border-2 sm:border border-gray-300 text-gray-700 rounded-xl sm:rounded-md hover:bg-gray-50 text-lg sm:text-sm font-semibold sm:font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="cancel-button"
           >
             {t('buttons.cancel')}

@@ -6,6 +6,7 @@ import SelfieGallery from '@/components/generation/SelfieGallery'
 import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
 import dynamic from 'next/dynamic'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
+import { ErrorBanner } from '@/components/ui'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
@@ -199,11 +200,7 @@ export default function SelfiesPage() {
       
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
+        {error && <ErrorBanner message={error} className="mb-6" />}
 
         <div className="space-y-6">
           {/* Upload Flow - show PhotoUpload when uploadKey is 'inline' */}

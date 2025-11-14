@@ -11,6 +11,7 @@ export interface UserWithRoles {
   createdAt: Date
   person?: {
     id: string
+    firstName?: string
     teamId?: string | null
     team?: {
       id: string
@@ -193,6 +194,7 @@ export async function getUserWithRoles(userId: string): Promise<UserWithRoles | 
     createdAt: user.createdAt,
     person: user.person ? {
       id: user.person.id,
+      firstName: user.person.firstName,
       teamId: user.person.teamId,
       team: user.person.team ? {
         id: user.person.team.id,

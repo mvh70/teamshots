@@ -81,19 +81,22 @@ export default function InviteDashboardHeader({
   return (
     <div className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-5 py-5 md:gap-4 md:py-4 md:flex-row md:items-center md:justify-between">
           <div className="flex-1 min-w-0">
             {showBackToDashboard && (
               <button
                 onClick={() => router.push(`/invite-dashboard/${token}`)}
-                className="text-sm text-gray-500 hover:text-gray-700 mb-2"
+                className="text-base md:text-sm text-gray-500 hover:text-gray-700 mb-3 md:mb-2 inline-flex items-center gap-2"
               >
-                ← Back to Dashboard
+                <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Dashboard
               </button>
             )}
 
             {showMemberInfo && (
-              <p className="text-sm text-gray-500 mb-1 truncate">
+              <p className="text-base md:text-sm text-gray-500 mb-2 md:mb-1 truncate">
                 {memberName}
                 {memberEmail ? ` (${memberEmail})` : ''}
               </p>
@@ -101,20 +104,20 @@ export default function InviteDashboardHeader({
 
             {/* Team chip intentionally omitted per standard header design */}
 
-            <h1 className="text-2xl font-bold text-gray-900 truncate">{resolvedTitle}</h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <h1 className="text-3xl md:text-2xl font-bold text-gray-900 break-words">{resolvedTitle}</h1>
+            <p className="text-base md:text-sm text-gray-600 mt-2 md:mt-1">
               {resolvedSubtitle}
             </p>
           </div>
 
           {(right || showCredits) && (
-            <div className="flex flex-col items-end gap-3">
+            <div className="flex flex-col gap-4 md:gap-3 md:items-end">
               {right}
               {showCredits && (
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">Credits</p>
-                  <p className="text-2xl font-bold text-brand-primary">{creditsRemaining}</p>
-                  <p className="mt-1 text-xs text-gray-500">
+                <div className="bg-brand-primary-light rounded-xl p-4 md:bg-transparent md:p-0 md:text-right">
+                  <p className="text-sm text-gray-500 mb-1">Available Credits</p>
+                  <p className="text-4xl md:text-2xl font-bold text-brand-primary">{creditsRemaining}</p>
+                  <p className="mt-2 md:mt-1 text-sm md:text-xs text-gray-600 md:text-gray-500">
                     Good for {photosAffordable} photo{photosAffordable === 1 ? '' : 's'}
                   </p>
                 </div>

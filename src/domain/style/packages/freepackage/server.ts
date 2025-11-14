@@ -1,14 +1,11 @@
 import { freepackage as freepackageBase } from './index'
-import {
-  buildCollectiveReferenceImages,
-  buildDefaultReferencePayload
-} from '@/lib/generation/reference-utils'
+import { buildDefaultReferencePayload } from '@/lib/generation/reference-utils'
 import { resolveAspectRatio } from '../aspect-ratios'
 import { applyStandardPreset } from '../standard-settings'
 import { resolveShotType } from '../camera-presets'
 import { Logger } from '@/lib/logger'
 import type { AspectRatioId } from '../aspect-ratios'
-import type { GenerationContext, GenerationPayload, ReferenceImage } from '@/types/generation'
+import type { GenerationContext, GenerationPayload } from '@/types/generation'
 
 export type FreePackageServerPackage = typeof freepackageBase & {
   buildGenerationPayload: (context: GenerationContext) => Promise<GenerationPayload>

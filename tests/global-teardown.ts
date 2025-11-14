@@ -1,9 +1,8 @@
-import { FullConfig } from '@playwright/test';
 import { execSync } from 'child_process';
 
 const TEST_DB_NAME = 'teamshots_test';
 
-async function globalTeardown(config: FullConfig) {
+async function globalTeardown() {
   console.log('🧹 Cleaning up test database...');
   
   try {
@@ -11,7 +10,7 @@ async function globalTeardown(config: FullConfig) {
     console.log(`Terminating connections to test database: ${TEST_DB_NAME}`);
     try {
       execSync(`psql -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${TEST_DB_NAME}' AND pid <> pg_backend_pid();"`, { stdio: 'inherit' });
-    } catch (error) {
+    } catch {
       console.log('No active connections to terminate, continuing...');
     }
     

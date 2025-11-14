@@ -8,6 +8,7 @@ import UserStyleSummary from '@/components/styles/UserStyleSummary'
 import { jsonFetcher } from '@/lib/fetcher'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
+import { CardGrid, ErrorCard, Grid } from '@/components/ui'
 
 interface Context {
   id: string
@@ -130,11 +131,7 @@ export default function TeamPhotoStylesPage() {
   }
 
   if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-800">{error}</p>
-      </div>
-    )
+    return <ErrorCard message={error} />
   }
 
   return (
@@ -143,7 +140,7 @@ export default function TeamPhotoStylesPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 id="team-photo-styles-heading" className="text-2xl font-bold text-gray-900">
               Team Photo Styles
             </h1>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-brand-primary-light text-brand-primary">
@@ -155,6 +152,7 @@ export default function TeamPhotoStylesPage() {
           </p>
         </div>
         <button
+          id="create-team-style-btn"
           onClick={() => { if (!isFreePlan) window.location.href = '/app/styles/team/create' }}
           disabled={isFreePlan}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg ${isFreePlan ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-brand-primary text-white hover:bg-brand-primary-hover'}`}
@@ -190,7 +188,7 @@ export default function TeamPhotoStylesPage() {
 
       {/* Contexts List */}
       {isFreePlan ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CardGrid gap="lg">
           <FreePlanBanner variant="team" className="col-span-1 md:col-span-2 lg:col-span-3" />
           <div className="rounded-lg border-2 p-6 border-brand-secondary bg-white">
             <div className="flex items-start justify-between mb-4">
@@ -207,18 +205,18 @@ export default function TeamPhotoStylesPage() {
                 {t('freePlan.stamp')}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+            <Grid cols={{ mobile: 2 }} gap="md" className="text-sm text-gray-600">
               <StyleSummaryCard
                 settings={freePackageContext?.settings}
                 stylePreset={freePackageContext?.stylePreset || 'corporate'}
               />
               <UserStyleSummary settings={freePackageContext?.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
-            </div>
+            </Grid>
             
           </div>
-        </div>
+        </CardGrid>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CardGrid gap="lg">
         {contextsData?.contexts.map((context) => (
           <div
             key={context.id}
@@ -258,7 +256,7 @@ export default function TeamPhotoStylesPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+            <Grid cols={{ mobile: 2 }} gap="md" className="text-sm text-gray-600">
               {/* Left Column - Photo Style Settings */}
               <StyleSummaryCard
                 settings={context.settings}
@@ -270,7 +268,7 @@ export default function TeamPhotoStylesPage() {
 
               {/* Right Column - User Style Settings */}
               <UserStyleSummary settings={context.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
-            </div>
+            </Grid>
 
 
             <div className="mt-4 flex gap-2">
@@ -285,7 +283,7 @@ export default function TeamPhotoStylesPage() {
             </div>
           </div>
         ))}
-      </div>
+      </CardGrid>
       )}
 
     </div>

@@ -1,10 +1,10 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { 
-  UsersIcon, 
-  PhotoIcon, 
-  DocumentTextIcon, 
+import {
+  UsersIcon,
+  PhotoIcon,
+  DocumentTextIcon,
   ChartBarIcon,
   PlusIcon,
   ClockIcon,
@@ -27,7 +27,7 @@ interface DashboardStats {
   teamMembers: number
 }
 
-interface UserRole {
+interface UserPermissions {
   isTeamAdmin: boolean
   isTeamMember: boolean
   isRegularUser: boolean
@@ -56,6 +56,16 @@ interface PendingInvite {
 
 
 
+const normalizeUserPermissions = (
+  permissions?: Partial<UserPermissions> | null
+): UserPermissions => ({
+  isTeamAdmin: permissions?.isTeamAdmin ?? false,
+  isTeamMember: permissions?.isTeamMember ?? false,
+  isRegularUser: permissions?.isRegularUser ?? true,
+  teamId: permissions?.teamId,
+  isFirstVisit: permissions?.isFirstVisit,
+})
+
 export default function DashboardPage() {
   const router = useRouter()
   const { data: session } = useSession()
@@ -68,11 +78,7 @@ export default function DashboardPage() {
     creditsUsed: 0,
     teamMembers: 0
   })
-  const [userRole, setUserRole] = useState<UserRole>({
-    isTeamAdmin: false,
-    isTeamMember: false,
-    isRegularUser: true
-  })
+  const [userPermissions, setUserPermissions] = useState<UserPermissions>(normalizeUserPermissions())
   const [recentActivity, setRecentActivity] = useState<Activity[]>([])
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([])
 
@@ -134,13 +140,13 @@ export default function DashboardPage() {
         // reducing database queries from 9-15 to 3-5 per dashboard load
         const dashboardData = await jsonFetcher<{ 
           stats: DashboardStats; 
-          userRole: UserRole;
+          userPermissions: UserPermissions;
           activities: Activity[];
           pendingInvites: PendingInvite[];
         }>('/api/dashboard')
         
         setStats(dashboardData.stats)
-        setUserRole(dashboardData.userRole)
+        setUserPermissions(normalizeUserPermissions(dashboardData.userPermissions))
         setRecentActivity(dashboardData.activities || [])
         setPendingInvites(dashboardData.pendingInvites || [])
 
@@ -200,7 +206,7 @@ export default function DashboardPage() {
   }
 
   const statsConfig = [
-    ...(userRole.isTeamAdmin ? [{
+    ...(userPermissions.isTeamAdmin ? [{
       name: t('stats.teamMembers'),
       value: stats.teamMembers.toString(),
       change: '+0', // TODO: Calculate change from previous period
@@ -265,9 +271,9 @@ export default function DashboardPage() {
       {!showUploadFlow && (
         <>
           {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-lg p-4 md:p-6 text-white">
+      <div id="welcome-section" className="bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-lg p-4 md:p-6 text-white">
         <h2 className="text-xl md:text-2xl font-bold mb-2 text-white">
-          {userRole.isFirstVisit 
+          {userPermissions.isFirstVisit
             ? t('welcome.titleFirstTime', {name: firstName})
             : t('welcome.title', {name: firstName})
           }
@@ -275,12 +281,12 @@ export default function DashboardPage() {
         <p className="text-sm md:text-base text-brand-primary-light">
           {loading ? (
             <span className="animate-pulse">Loading your stats...</span>
-          ) : userRole.isTeamAdmin ? (
+          ) : userPermissions.isTeamAdmin ? (
             t('welcome.subtitle.teamAdmin', {
               count: stats.photosGenerated,
               teamMembers: stats.teamMembers
             })
-          ) : userRole.isTeamMember ? (
+          ) : userPermissions.isTeamMember ? (
             t('welcome.subtitle.team', {
               count: stats.photosGenerated
             })
@@ -293,10 +299,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${userRole.isTeamAdmin ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-2 lg:grid-cols-3'} gap-4 md:gap-6`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${userPermissions.isTeamAdmin ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-2 lg:grid-cols-3'} gap-4 md:gap-6`}>
         {loading ? (
           // Loading skeleton
-          Array.from({ length: userRole.isTeamAdmin ? 4 : 3 }).map((_, index) => (
+          Array.from({ length: userPermissions.isTeamAdmin ? 4 : 3 }).map((_, index) => (
             <div key={index} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -337,7 +343,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Recent Activity - Only for Team Admins */}
-        {userRole.isTeamAdmin && (
+        {userPermissions.isTeamAdmin && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-4 md:p-6 border-b border-gray-200">
               <h3 className="text-base md:text-lg font-medium text-gray-900">{t('recentActivity.title')}</h3>
@@ -397,7 +403,7 @@ export default function DashboardPage() {
         )}
 
         {/* Pending Invites - Only for Team Admins */}
-        {userRole.isTeamAdmin && (
+        {userPermissions.isTeamAdmin && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-4 md:p-6 border-b border-gray-200">
               <h3 className="text-base md:text-lg font-medium text-gray-900">{t('pendingInvites.title')}</h3>
@@ -478,7 +484,7 @@ export default function DashboardPage() {
           <h3 className="text-base md:text-lg font-medium text-gray-900">{t('quickActions.title')}</h3>
         </div>
         <div className="p-4 md:p-6">
-          <div className={`grid grid-cols-1 ${userRole.isTeamAdmin ? 'sm:grid-cols-2 md:grid-cols-3' : 'sm:grid-cols-2'} gap-3 md:gap-4`}>
+          <div className={`grid grid-cols-1 ${userPermissions.isTeamAdmin ? 'sm:grid-cols-2 md:grid-cols-3' : 'sm:grid-cols-2'} gap-3 md:gap-4`}>
             <button 
               onClick={() => setShowUploadFlow(true)}
               className="flex flex-col items-center justify-center px-4 py-4 md:px-6 md:py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[88px] md:min-h-0"
@@ -493,7 +499,7 @@ export default function DashboardPage() {
               <DocumentTextIcon className="h-7 w-7 md:h-6 md:w-6 text-brand-primary mr-2 md:mr-3" />
               <span className="text-sm md:text-base font-medium text-gray-900">{t('quickActions.createTemplate')}</span>
             </button>
-            {userRole.isTeamAdmin && (
+            {userPermissions.isTeamAdmin && (
               <button 
                 onClick={() => router.push('/app/team')}
                 className="flex items-center justify-center px-4 py-4 md:px-6 md:py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[88px] md:min-h-0"

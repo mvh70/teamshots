@@ -3,11 +3,18 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import SelfieApproval from '@/components/Upload/SelfieApproval';
 
 // Mock next/image
-jest.mock('next/image', () => {
-  return function MockImage({ src, alt, ...props }: any) {
-    return <img src={src} alt={alt} {...props} />;
-  };
-});
+jest.mock('next/image', () => ({
+  __esModule: true,
+  default: function MockImage({ src, alt, ...props }: Record<string, unknown>) {
+    return React.createElement('div', {
+      ...props,
+      'data-src': src as string,
+      'data-alt': alt as string,
+      'data-testid': 'mock-image',
+      style: { backgroundImage: `url(${src as string})` }
+    });
+  }
+}));
 
 // Mock next-intl
 jest.mock('next-intl', () => ({

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
 import { getUserSubscription } from '@/domain/subscription/subscription'
 import { Logger } from '@/lib/logger'
+import { deriveGenerationType } from '@/domain/generation/utils'
 
 
 export const runtime = 'nodejs'
@@ -70,6 +71,7 @@ export async function GET() {
           select: {
             firstName: true,
             lastName: true,
+            teamId: true, // Needed to derive generationType
             user: {
               select: {
                 id: true
@@ -89,6 +91,9 @@ export async function GET() {
       const personName = generation.person.firstName + 
         (generation.person.lastName ? ` ${generation.person.lastName}` : '')
       
+      // Derive generationType from person.teamId (single source of truth)
+      const derivedGenerationType = deriveGenerationType(generation.person.teamId)
+      
       activities.push({
         id: `generation-${generation.id}`,
         type: 'generation',
@@ -100,7 +105,7 @@ export async function GET() {
         status: generation.status === 'completed' ? 'completed' : 
                 generation.status === 'processing' ? 'processing' : 'pending',
         isOwn: generation.person.user?.id === session.user.id,
-        generationType: generation.generationType as 'personal' | 'team' | undefined
+        generationType: derivedGenerationType // Derived from person.teamId, not stored field
       })
     }
 

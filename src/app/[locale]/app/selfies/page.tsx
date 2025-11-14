@@ -5,7 +5,7 @@ import SelfieGallery from '@/components/generation/SelfieGallery'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import SelfieUploadFlow from '@/components/Upload/SelfieUploadFlow'
-import { PrimaryButton, UploadGrid } from '@/components/ui'
+import { PrimaryButton, SecondaryButton, LoadingGrid } from '@/components/ui'
 import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
 import { jsonFetcher } from '@/lib/fetcher'
 
@@ -111,12 +111,13 @@ export default function SelfiesPage() {
               </div>
               <div className="mt-4">
                 <div className="-mx-2 -my-1.5 flex">
-                  <button
+                  <SecondaryButton
                     onClick={() => setError(null)}
-                    className="bg-red-50 px-2 py-1.5 rounded-md text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+                    size="sm"
+                    className="bg-red-50 text-red-800 hover:bg-red-100 focus:ring-red-600"
                   >
                     Dismiss
-                  </button>
+                  </SecondaryButton>
                 </div>
               </div>
             </div>
@@ -125,15 +126,7 @@ export default function SelfiesPage() {
       )}
 
       {!showUploadFlow && loading ? (
-        <UploadGrid>
-          {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 animate-pulse">
-              <div className="aspect-square bg-gray-200 rounded-lg mb-3"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          ))}
-        </UploadGrid>
+        <LoadingGrid cols={4} rows={2} />
       ) : !showUploadFlow && uploads.length > 0 ? (
         <div>
           <SelfieGallery

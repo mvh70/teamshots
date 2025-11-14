@@ -3,9 +3,10 @@ import { auth } from '@/auth'
 
 export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
-import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
-import { getUserSubscription } from '@/domain/subscription/subscription'
+import { UserService } from '@/domain/services/UserService'
 import { Logger } from '@/lib/logger'
+import { getTeamOnboardingState } from '@/domain/team/onboarding'
+import { deriveGenerationType } from '@/domain/generation/utils'
 
 // OPTIMIZATION: Simple in-memory cache for dashboard stats (30 second TTL)
 const statsCache = new Map<string, { data: unknown; timestamp: number }>()
@@ -18,28 +19,21 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // OPTIMIZATION: Use shared UserService.getUserContext to get all user data in one call
+    const userContext = await UserService.getUserContext(session.user.id)
+
     // OPTIMIZATION: Check cache first (only for stats, not for activities/invites which change frequently)
     const cacheKey = `dashboard-stats-${session.user.id}`
     const cached = statsCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < STATS_CACHE_TTL) {
       Logger.debug('dashboard.stats.cache.hit', { userId: session.user.id })
-      // Return cached stats, but we still need fresh user/subscription data for userRole
-      // So we'll still fetch user/subscription, but skip stats queries
-      const [user, subscription] = await Promise.all([
-        getUserWithRoles(session.user.id),
-        getUserSubscription(session.user.id)
-      ])
-      
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 })
-      }
 
-      const roles = await getUserEffectiveRoles(user, subscription)
-      const teamId = user.person?.teamId
-      const teamName = user.person?.team?.name || null
+      // Use pre-fetched user context data
+      const teamId = userContext.teamId
+      const teamName = userContext.user.person?.team?.name || null
 
-      const isFirstVisit = user.createdAt 
-        ? new Date().getTime() - user.createdAt.getTime() < 2 * 60 * 60 * 1000
+      const isFirstVisit = userContext.user.createdAt
+        ? new Date().getTime() - userContext.user.createdAt.getTime() < 2 * 60 * 60 * 1000
         : false
 
       // Return cached stats with fresh userRole
@@ -49,6 +43,7 @@ export async function GET() {
           activeTemplates: number
           creditsUsed: number
           teamMembers: number
+          pendingInvites?: number
         }
         activities: Array<{
           id: string
@@ -70,16 +65,33 @@ export async function GET() {
         }>
       }
 
+      const pendingInviteCountFromCache = Array.isArray(cachedData.pendingInvites)
+        ? cachedData.pendingInvites.length
+        : 0
+
+      const onboardingState = await getTeamOnboardingState({
+        isTeamAdmin: userContext.roles.isTeamAdmin,
+        teamId,
+        prefetchedMemberCount: typeof cachedData.stats.teamMembers === 'number' ? cachedData.stats.teamMembers : undefined,
+        prefetchedPendingInviteCount: pendingInviteCountFromCache
+      })
+
       return NextResponse.json({
         success: true,
-        stats: cachedData.stats,
+        stats: {
+          ...cachedData.stats,
+          pendingInvites: pendingInviteCountFromCache
+        },
         userRole: {
-          isTeamAdmin: roles.isTeamAdmin,
-          isTeamMember: roles.isTeamMember,
-          isRegularUser: roles.isRegularUser,
+          isTeamAdmin: userContext.roles.isTeamAdmin,
+          isTeamMember: userContext.roles.isTeamMember,
+          isRegularUser: userContext.roles.isRegularUser,
           teamId: teamId,
           teamName: teamName,
-          needsTeamSetup: roles.isTeamAdmin && !teamId,
+          needsTeamSetup: onboardingState.needsTeamSetup,
+          needsPhotoStyleSetup: onboardingState.needsPhotoStyleSetup,
+          needsTeamInvites: onboardingState.needsTeamInvites,
+          nextTeamOnboardingStep: onboardingState.nextStep,
           isFirstVisit: isFirstVisit
         },
         activities: cachedData.activities,
@@ -87,25 +99,14 @@ export async function GET() {
       })
     }
 
-    // OPTIMIZATION: Fetch user and subscription once, share across all dashboard data
-    const [user, subscription] = await Promise.all([
-      getUserWithRoles(session.user.id),
-      getUserSubscription(session.user.id)
-    ])
-    
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    // OPTIMIZATION: User context already fetched above, use it here
+    const teamId = userContext.teamId
+    const teamName = userContext.user.person?.team?.name || null
 
-    // Pass subscription to avoid duplicate query
-    const roles = await getUserEffectiveRoles(user, subscription)
-    const teamId = user.person?.teamId
-    const teamName = user.person?.team?.name || null
-
-    // OPTIMIZATION: Use createdAt from user object (already fetched) instead of separate query
+    // OPTIMIZATION: Use createdAt from user context (already fetched)
     // Consider it a first visit if account was created within the last 2 hours
-    const isFirstVisit = user.createdAt 
-      ? new Date().getTime() - user.createdAt.getTime() < 2 * 60 * 60 * 1000
+    const isFirstVisit = userContext.user.createdAt
+      ? new Date().getTime() - userContext.user.createdAt.getTime() < 2 * 60 * 60 * 1000
       : false
 
     // Build base stats object
@@ -114,11 +115,13 @@ export async function GET() {
       activeTemplates: number
       creditsUsed: number
       teamMembers?: number
+      pendingInvites?: number
     } = {
       photosGenerated: 0,
       activeTemplates: 0,
       creditsUsed: 0,
       teamMembers: 0, // Only relevant for team admins
+      pendingInvites: 0
     }
 
     // OPTIMIZATION: Run all stats queries in parallel
@@ -196,7 +199,7 @@ export async function GET() {
         }
       }),
       // Get team members count (only for team admins)
-      roles.isTeamAdmin && teamId
+      userContext.roles.isTeamAdmin && teamId
         ? prisma.person.count({
             where: {
               teamId: teamId
@@ -231,9 +234,10 @@ export async function GET() {
       status: string
       expiresAt: Date
     }> = []
+    let pendingTeamInvitesCount = 0
 
     // OPTIMIZATION: Only fetch activity and invites if user is team admin
-    if (roles.isTeamAdmin) {
+    if (userContext.roles.isTeamAdmin) {
       // Fetch activity and pending invites in parallel
       const [recentGenerations, recentInvites, recentContexts, pendingTeamInvites] = await Promise.all([
         // Get recent generations
@@ -259,6 +263,7 @@ export async function GET() {
               select: {
                 firstName: true,
                 lastName: true,
+                teamId: true, // Needed to derive generationType
                 user: {
                   select: {
                     id: true
@@ -300,7 +305,7 @@ export async function GET() {
           take: 5
         }),
         // Get pending team invites
-        roles.isTeamAdmin && teamId
+        userContext.roles.isTeamAdmin && teamId
           ? prisma.teamInvite.findMany({
               where: {
                 teamId: teamId,
@@ -316,10 +321,15 @@ export async function GET() {
           : Promise.resolve([])
       ])
 
+      pendingTeamInvitesCount = pendingTeamInvites.length
+
       // Convert generations to activities
       for (const generation of recentGenerations) {
         const personName = generation.person.firstName + 
           (generation.person.lastName ? ` ${generation.person.lastName}` : '')
+        
+        // Derive generationType from person.teamId (single source of truth)
+        const derivedGenerationType = deriveGenerationType(generation.person.teamId)
         
         activities.push({
           id: `generation-${generation.id}`,
@@ -332,7 +342,7 @@ export async function GET() {
           status: generation.status === 'completed' ? 'completed' : 
                   generation.status === 'processing' ? 'processing' : 'pending',
           isOwn: generation.person.user?.id === session.user.id,
-          generationType: generation.generationType as 'personal' | 'team' | undefined
+          generationType: derivedGenerationType // Derived from person.teamId, not stored field
         })
       }
 
@@ -377,16 +387,29 @@ export async function GET() {
       activities.splice(10)
     }
 
+    const onboardingState = await getTeamOnboardingState({
+      isTeamAdmin: userContext.roles.isTeamAdmin,
+      teamId,
+      prefetchedMemberCount: teamMembersCount,
+      prefetchedPendingInviteCount: pendingTeamInvitesCount
+    })
+
     const responseData = {
       success: true,
-      stats,
+      stats: {
+        ...stats,
+        pendingInvites: pendingTeamInvitesCount
+      },
       userRole: {
-        isTeamAdmin: roles.isTeamAdmin,
-        isTeamMember: roles.isTeamMember,
-        isRegularUser: roles.isRegularUser,
+        isTeamAdmin: userContext.roles.isTeamAdmin,
+        isTeamMember: userContext.roles.isTeamMember,
+        isRegularUser: userContext.roles.isRegularUser,
         teamId: teamId,
         teamName: teamName,
-        needsTeamSetup: roles.isTeamAdmin && !teamId,
+        needsTeamSetup: onboardingState.needsTeamSetup,
+        needsPhotoStyleSetup: onboardingState.needsPhotoStyleSetup,
+        needsTeamInvites: onboardingState.needsTeamInvites,
+        nextTeamOnboardingStep: onboardingState.nextStep,
         isFirstVisit: isFirstVisit
       },
       activities,

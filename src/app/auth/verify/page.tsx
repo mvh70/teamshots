@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
 import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
-import AuthButton from '@/components/auth/AuthButton'
+import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
 import { jsonFetcher } from '@/lib/fetcher'
 
@@ -116,7 +116,35 @@ export default function VerifyPage() {
         if (signInResult?.error) {
           router.push('/auth/signin')
         } else {
-          router.push('/en/app/dashboard')
+          // Fetch all initial data in one consolidated call
+          const session = await getSession()
+          if (session?.user) {
+            try {
+              const response = await fetch('/api/user/initial-data')
+              if (response.ok) {
+                const data = await response.json()
+                // Store initial data in sessionStorage for components to use
+                try {
+                  // Add timestamp so components can check data freshness
+                  const dataWithTimestamp = { ...data, _timestamp: Date.now() }
+                  window.sessionStorage.setItem('teamshots.initialData', JSON.stringify(dataWithTimestamp))
+                } catch {}
+                
+                // Redirect based on onboarding state
+                if (data.onboarding?.needsTeamSetup) {
+                  router.push('/app/team')
+                } else {
+                  router.push('/app/dashboard')
+                }
+              } else {
+                router.push('/app/dashboard')
+              }
+            } catch {
+              router.push('/app/dashboard')
+            }
+          } else {
+            router.push('/app/dashboard')
+          }
         }
         return
       }
@@ -206,12 +234,12 @@ export default function VerifyPage() {
             <AuthButton
               type="button"
               onClick={handleVerify}
-              isLoading={isLoading}
+              loading={isLoading}
               disabled={isLoading || otpCode.length !== 6}
             >
               {isLoading ? t('verifying') : t('verifyCode')}
             </AuthButton>
-            {error && <div className="text-red-600 text-sm text-center">{t(error) || error}</div>}
+            {error && <InlineError message={t(error) || error} className="text-center" />}
           </div>
         </FocusTrap>
       </AuthCard>

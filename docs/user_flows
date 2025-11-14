@@ -1,25 +1,5 @@
 # User Flows
 
-## Phased Launch
-
-### Phase 1: Waitlist
-```
-User visits www.teamshots.vip
-â†“
-See value prop + "Coming Soon"
-â†“
-Enter email to join waitlist
-â†“
-Confirmation: "Thanks! We'll notify you when we launch"
-â†“
-Receive email: "You're on the waitlist"
-```
-
-### Phase 2: Full Product
-All flows below become active.
-
----
-
 ## 1. First-Time User Journey (Post-Waitlist Launch)
 
 ### Step 1: Landing Page (www.teamshots.vip)
@@ -44,6 +24,7 @@ Click "Get Started"
 Redirect to app.teamshots.vip/auth/signin
 â†"
 Sign up with email/password
+- Choose account type (Individual or Team)
 - Enter email
 - Create password
 - Confirm password
@@ -51,18 +32,18 @@ Sign up with email/password
 OTP sent to email â†' user enters OTP
 â†"
 After verification:
-- Firstname
-- Personal or Team? (radio buttons)
-- If Team:
-  - Team website URL
-  - Domain verification check (email domain vs team domain)
-  - If mismatch: Request team email â†' OTP verification
+- First name
+- If Team selected:
+  - After OTP, first dashboard entry triggers team setup flow (name, website, domain verification)
+  - If domain mismatch: request team email → OTP verification
+  - **CRITICAL**: Team credits (30) are assigned during signup but only become visible after team setup completion
+  - **Issue**: If user doesn't complete team setup flow, credits show as 0 in dashboard despite being assigned to team
 â†"
 Language preference auto-set from current selection
 â†"
 Redirect to onboarding
 â†"
-Background: If team, scrape team team page â†' extract names/photos
+Background: If team, scrape team page â†' extract names/photos
 ```
 
 ### Team Invite Flow
@@ -96,7 +77,7 @@ Welcome screen
 Guided first generation
 - Tooltip: "Upload any photo"
 - Tooltip: "Choose a style"
-- Tooltip: "This will use 3-4 credits"
+- Tooltip: "This will use 10 credits"
 
 â†“
 First successful generation
@@ -128,15 +109,14 @@ Upload photo
 - Show preview
 - Validate (face detection)
 â†"
-GENERATION TYPE SELECTION
-"How would you like to use this photo?"
-- Personal Use: Individual credits, full control, private
-- Team Use: Team credits, preset styles, admin visible
+GENERATION CONTEXT (auto-selected from account type)
+- Individual accounts: personal credits, full control, private
+- Team accounts: team credits, preset styles, admin visible
 â†"
 Customize (based on selection)
 - Personal: Select style preset, background, logo options
 - Team: Use team context (background, logo, style preset)
-- Show cost: "Uses 4 credits (1 generation)"
+- Show cost: "Uses 10 credits (1 generation)"
 â†"
 Click "Generate"
 â†"
@@ -158,7 +138,7 @@ Actions:
 ```
 Insufficient credits
 â†“
-"You need 4 credits for this generation."
+"You need 10 credits for this generation."
 - Show current balance
 - "Buy more credits" or "Subscribe" button
 â†“
@@ -168,7 +148,7 @@ OR
 
 Generation failed
 â†“
-"Something went wrong. Your 4 credits have been refunded." (translated)
+"Something went wrong. Your 10 credits have been refunded." (translated)
 â†“
 "Try again" button
 
@@ -204,10 +184,9 @@ Upload selfie
 - Face validation
 - Image quality check
 â†'
-GENERATION TYPE SELECTION
-"How would you like to use this photo?"
-- Personal Use: Individual credits, full control, private
-- Team Use: Team credits, preset styles, admin visible
+GENERATION CONTEXT (auto-selected from account type)
+- Individual accounts: personal credits, full control, private
+- Team accounts: team credits, preset styles, admin visible
 â†'
 Processing with selected context
 - Personal: Full style control
@@ -267,7 +246,7 @@ See ## 4a and ## 4b for detailed team workflows.
 ### Generation Type Selection
 - **Personal Use**: Individual credits, full style control, private photos
 - **Team Use**: Team credits, preset styles, admin visible
-- Clear credit cost display (4 credits per generation)
+- Clear credit cost display (10 credits per generation)
 - Both credit types shown in sidebar and decision screen
 
 ## 5. Returning User Flow
@@ -413,8 +392,8 @@ Header: Logo | Dashboard | History | 87 credits (21 gen) | Language (EN/ES) | Pr
 
 ### When to Show Credit Cost?
 **Always visible:**
-- During customization: "Uses 4 credits (1 generation)"
-- Before generation: Confirm button shows "Generate (4 credits)"
+- During customization: "Uses 10 credits (1 generation)"
+- Before generation: Confirm button shows "Generate (10 credits)"
 - If insufficient: Block action, show "Get X more credits"
 
 ### When to Block Generation?
@@ -425,3 +404,189 @@ Header: Logo | Dashboard | History | 87 credits (21 gen) | Language (EN/ES) | Pr
 - After Try Once: "Subscribe to keep creating"
 - Low credits (<8): "Running low - buy more or subscribe"
 - Starter user buying top-ups frequently: "Upgrade to Pro for cheaper top-ups"
+
+---
+
+## 8. Onboarding Flow
+
+### Overview
+TeamShots implements a comprehensive onboarding experience using the Onborda library to guide new users through the platform. The onboarding flow adapts based on user type, plan tier, and progress state. Tours are triggered automatically based on context conditions and user actions.
+
+**Note**: A personal photo styles page tour for free plan users (`personal-photo-styles-free`) is not currently implemented but would follow the same pattern as `team-photo-styles-free` for individual users on the free plan.
+
+### Technical Implementation
+- **Library**: Onborda for product tours and tooltips
+- **Persistence**: Client-side localStorage tracks tour completion (`onboarding-{tourName}-seen`)
+- **Context**: Adapts based on user role, account mode, plan tier, and progress flags
+- **Trigger Conditions**: Each tour has specific conditions that must be met before it can start
+- **Page-Specific**: Some tours trigger automatically when navigating to specific pages
+
+### Onboarding Tours Reference
+
+#### 1. Welcome Tour (`welcome`)
+**Trigger**: `!hasGeneratedPhotos && !isTeamAdmin`  
+**Steps**: 2
+- `#welcome-section`: Welcome message with personalized greeting
+- `#sidebar-personal-styles-nav`: Highlights photo styles customization option
+
+**Purpose**: Tour name: `welcome`. Initial welcome for individual (non-team-admin) users who haven't generated photos yet.
+
+#### 2. Team Admin Welcome Tour (`team-admin-welcome`)
+**Trigger**: `!hasGeneratedPhotos && isTeamAdmin && !teamId`  
+**Steps**: 2
+- `#welcome-section`: Welcome message for team administrators
+- `#teamName`: Prompts to add team name
+
+**Purpose**: Tour name: `team-admin-welcome`. Welcome flow for team administrators before team creation.
+
+#### 3. First Generation Tour (`first-generation`)
+**Trigger**: `!hasGeneratedPhotos`  
+**Steps**: 4
+- `#upload-photo`: Upload area explanation
+- `#generation-type-selector`: Choose between personal or team generation context
+- `#credit-cost-display`: Credit cost information (10 credits per generation)
+- `#generate-btn`: Generate button call-to-action
+
+**Purpose**: Tour name: `first-generation`. Guided tour for first photo generation, applicable to all user types.
+
+#### 4. Team Setup Tour (`team-setup`)
+**Trigger**: `isTeamAdmin && !teamId`  
+**Steps**: 3
+- `#team-create-btn`: Create team button
+- `#photo-style-setup`: Photo style setup guidance
+- `#invite-members`: Invite members guidance
+
+**Purpose**: Tour name: `team-setup`. Guide team admins through initial team setup before team creation.
+
+#### 5. Team Photo Style Setup Tour (`team-photo-style-setup`)
+**Trigger**: `isTeamAdmin && teamId && !hasGeneratedPhotos`  
+**Steps**: 1
+- `#sidebar-team-styles-nav`: Directs to team photo styles page
+
+**Purpose**: Tour name: `team-photo-style-setup`. Redirects team admins to set up team photo styles after team creation.
+
+#### 6. Team Photo Styles Page Tour - Paid Plan (`team-photo-styles-page`)
+**Trigger**: `isTeamAdmin && teamId && !hasGeneratedPhotos && !isFreePlan`  
+**Page**: `/app/styles/team`  
+**Steps**: 2
+- `#team-photo-styles-heading`: Explains what team photo styles are
+- `#create-team-style-btn`: Guides to create custom styles
+
+**Purpose**: Tour name: `team-photo-styles-page`. Explains team photo styles page for paid plan team admins.
+
+#### 7. Team Photo Styles Page Tour - Free Plan (`team-photo-styles-free`)
+**Trigger**: `isTeamAdmin && teamId && !hasGeneratedPhotos && isFreePlan`  
+**Page**: `/app/styles/team`  
+**Steps**: 9
+- `#team-photo-styles-heading`: Explains team photo styles concept
+- `[data-testid="free-plan-banner"]`: Free plan limitations and upgrade CTA
+- `#style-background`: Background configuration explanation
+- `#style-branding`: Branding/logo placement explanation
+- `#style-shot-type`: Shot type (3/4) explanation
+- `#style-clothing-type`: Clothing type (business casual) explanation
+- `#style-clothing-colors`: Clothing colors explanation
+- `#style-expression`: Expression (confident) explanation
+- `#team-photo-styles-heading`: Final step - ready to generate or invite
+
+**Purpose**: Tour name: `team-photo-styles-free`. Comprehensive walkthrough of free plan team photo styles page, explaining all pre-configured settings.
+
+#### 8. Photo Style Creation Tour (`photo-style-creation`)
+**Trigger**: `((isTeamAdmin && teamId) || isRegularUser) && !isFreePlan`  
+**Page**: `/app/styles/team/create` or `/app/styles/personal/create`  
+**Steps**: 11
+- `#style-name-input`: Name your style
+- `#composition-settings-section`: Composition settings overview
+- `#background-toggle`: User choice vs predefined toggle explanation
+- `#background-settings`: Background customization
+- `#branding-settings`: Branding/logo placement options
+- `#shotType-settings`: Shot type selection
+- `#user-style-settings-section`: User style settings overview
+- `#clothing-settings`: Clothing style configuration
+- `#clothingColors-settings`: Clothing colors configuration
+- `#expression-settings`: Facial expression settings
+- `#autosave-indicator`: Automatic saving explanation
+
+**Purpose**: Tour name: `photo-style-creation`. Comprehensive guide through creating a new photo style for paid plan users.
+
+#### 9. Test Generation Tour (`test-generation`)
+**Trigger**: `isTeamAdmin && teamId && !hasGeneratedPhotos`  
+**Steps**: 1
+- `#primary-generate-btn`: Encourages testing the service with first photo generation
+
+**Purpose**: Tour name: `test-generation`. Encourages team admins to test the generation process before inviting team members.
+
+#### 10. Invite Team Tour (`invite-team`)
+**Trigger**: `isTeamAdmin && teamId`  
+**Page**: `/app/team`  
+**Steps**: 4
+- `#team-name-header`: Page title with team name context
+- `#team-invites-table`: Invites table explanation
+- `#team-active-style` or `#team-free-plan-banner`: Active photo style explanation (varies by plan)
+- `#invite-team-member-btn`: Invite team members button
+
+**Purpose**: Tour name: `invite-team`. Guide team admins through inviting team members after team and style setup.
+
+### Flow Sequences
+
+#### Individual User Onboarding Flow
+```
+1. User signs up with "Personal" account type
+2. Welcome tour (`welcome`) triggers on dashboard
+   - Highlights welcome section
+   - Points to photo styles customization
+3. User navigates to `/app/styles/personal`
+   - If free plan: Photo style explanation tour (NOTE: Currently not implemented in code)
+   - If paid plan: User can create custom style
+4. If paid plan and user navigates to `/app/styles/personal/create`:
+   - `photo-style-creation` tour triggers (11 steps)
+5. User navigates to generation page
+6. First generation tour (`first-generation`) triggers
+   - Guides through upload, style selection, credits, generate
+7. After first generation: `hasGeneratedPhotos=true`
+   - Tours no longer trigger automatically
+```
+
+#### Team Admin Onboarding Flow
+```
+1. User signs up with "Team" account type
+2. Team admin welcome tour (`team-admin-welcome`) triggers
+   - Welcome message
+   - Prompts team name entry
+3. User creates team (teamId assigned)
+4. User navigates to `/app/styles/team`
+   - Photo style explanation tour triggers:
+     - If free plan: `team-photo-styles-free` tour (9 steps)
+     - If paid plan: `team-photo-styles-page` tour (2 steps)
+5. If paid plan and user navigates to `/app/styles/team/create`:
+   - `photo-style-creation` tour triggers (11 steps)
+6. User navigates to `/app/team`
+   - `invite-team` tour triggers (4 steps)
+7. Test generation tour (`test-generation`) may trigger
+   - Encourages admin to test before inviting
+8. After first generation: `hasGeneratedPhotos=true`
+   - Tours no longer trigger automatically
+```
+
+#### Invited Team Member Flow
+```
+1. Team member receives invite link with token
+2. Token validation and consent screen
+3. First generation tour (`first-generation`) triggers
+   - Same 4-step flow as individual users
+4. After generation: `hasGeneratedPhotos=true`
+   - Tours no longer trigger
+```
+
+### Sidebar Indicators
+The sidebar displays numbered badges for required actions:
+- **"1" on Team**: Team admin needs to create/setup team
+- **"1" on Styles**: Pro user hasn't set up photo styles
+- **"1" on Invite**: Team admin needs to invite members
+
+### User Experience Principles
+- **Progressive**: Tours shown only when relevant conditions are met
+- **Skippable**: Users can dismiss tours anytime
+- **Persistent**: Progress saved in localStorage across sessions
+- **Context-Aware**: Different tours for free vs paid plans, team vs individual
+- **Page-Specific**: Some tours only trigger on specific routes
+- **Accessible**: Keyboard navigation and screen reader support

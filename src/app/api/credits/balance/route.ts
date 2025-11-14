@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { CreditService } from '@/domain/services/CreditService'
+import { Logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
-import { getEffectiveTeamCreditBalance } from '@/domain/credits/credits'
-import { prisma } from '@/lib/prisma'
-import { Logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,72 +15,20 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') // 'individual', 'team', or 'both' (default)
 
-    // OPTIMIZATION: When fetching both or when type is not specified, fetch both balances
-    // and share the User + Person query to reduce database queries
+    // OPTIMIZATION: Use CreditService for consolidated credit balance fetching
     if (!type || type === 'both') {
-      // Fetch user with person data once (shared for both calculations)
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        include: {
-          person: {
-            select: { teamId: true }
-          }
-        }
-      })
-      
-      const teamId = user?.person?.teamId || null
+      const balanceSummary = await CreditService.getCreditBalanceSummary(session.user.id)
 
-      // OPTIMIZATION: Fetch both balances in parallel
-      const [individualBalance, teamBalance] = await Promise.all([
-        // Get individual credits for the user (only credits with planTier='individual' or no planTier)
-        prisma.creditTransaction.aggregate({
-          where: {
-            userId: session.user.id,
-            OR: [
-              { planTier: { in: ['individual', 'try_once'] } },
-              { planTier: null }
-            ]
-          },
-          _sum: { credits: true }
-        }).then(result => result._sum.credits || 0),
-        // Get effective team credits (uses centralized function)
-        getEffectiveTeamCreditBalance(session.user.id, teamId)
-      ])
-      
-      return NextResponse.json({ 
-        individual: individualBalance,
-        team: teamBalance
+      return NextResponse.json({
+        individual: balanceSummary.individual,
+        team: balanceSummary.team
       })
     } else if (type === 'individual') {
-      // Get individual credits for the user (only credits with planTier='individual' or no planTier)
-      // For individual credits, only count credits that are NOT pro tier
-      const result = await prisma.creditTransaction.aggregate({
-        where: {
-          userId: session.user.id,
-          OR: [
-            { planTier: { in: ['individual', 'try_once'] } },
-            { planTier: null }
-          ]
-        },
-        _sum: { credits: true }
-      })
-      
-      return NextResponse.json({ balance: result._sum.credits || 0 })
+      const balanceSummary = await CreditService.getCreditBalanceSummary(session.user.id)
+      return NextResponse.json({ balance: balanceSummary.individual })
     } else if (type === 'team') {
-      // Get effective team credits (uses centralized function)
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        include: {
-          person: {
-            select: { teamId: true }
-          }
-        }
-      })
-      
-      const teamId = user?.person?.teamId || null
-      const balance = await getEffectiveTeamCreditBalance(session.user.id, teamId)
-      
-      return NextResponse.json({ balance })
+      const balanceSummary = await CreditService.getCreditBalanceSummary(session.user.id)
+      return NextResponse.json({ balance: balanceSummary.team })
     } else {
       return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 })
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
+import { deriveGenerationType } from '@/domain/generation/utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +44,12 @@ export async function GET(request: NextRequest) {
       },
       include: {
         selfie: true,
-        context: true
+        context: true,
+        person: {
+          select: {
+            teamId: true // Needed to derive generationType
+          }
+        }
       }
     })
 
@@ -117,7 +123,7 @@ export async function GET(request: NextRequest) {
         })),
         status: generation.status,
         createdAt: generation.createdAt.toISOString(),
-        generationType: generation.generationType,
+        generationType: deriveGenerationType(generation.person.teamId), // Derived from person.teamId, not stored field
         creditsUsed: generation.creditsUsed,
         maxRegenerations: generation.maxRegenerations,
         remainingRegenerations: generation.remainingRegenerations,

@@ -23,7 +23,6 @@ import { usePlanInfo } from '@/hooks/usePlanInfo'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import { hasUserDefinedFields } from '@/domain/style/userChoice'
 
-const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
 
 export default function StartGenerationPage() {
@@ -31,12 +30,11 @@ export default function StartGenerationPage() {
   const router = useRouter()
   const { data: session } = useSession()
   const t = useTranslations('app.sidebar.generate')
-  const { isFreePlan, uiTier } = usePlanInfo()
+  const { isFreePlan, uiTier, tier: subscriptionTier } = usePlanInfo()
   const keyFromQuery = useMemo(() => searchParams.get('key') || '', [searchParams])
   const skipUpload = useMemo(() => searchParams.get('skipUpload') === '1', [searchParams])
-  const typeFromQuery = useMemo(() => searchParams.get('type') as 'personal' | 'team' | null, [searchParams])
   const [key, setKey] = useState<string>('')
-  const [selfieId, setSelfieId] = useState<string | null>(null)
+  const [, setSelfieId] = useState<string | null>(null)
   const [isApproved, setIsApproved] = useState<boolean>(Boolean(keyFromQuery))
   const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
   const { credits: userCredits, loading: creditsLoading } = useCredits()
@@ -83,28 +81,49 @@ export default function StartGenerationPage() {
     // Keep local state in sync if query changes
     if (keyFromQuery && !key) {
       setKey(keyFromQuery)
-      setIsApproved(true) // If key comes from query, it's already approved
       
       // Find existing selfie by key
-      findSelfieByKey(keyFromQuery)
+      findSelfieByKey(keyFromQuery).then((id) => {
+        if (id) {
+          setSelfieId(id)
+        }
+      })
+      
+      // Check if we have enough selected selfies before approving
+      // This will be checked again when selectedSelfies is loaded
     }
   }, [keyFromQuery, key])
+  
+  // Check if we should approve based on selected selfies count
+  // Only auto-approve if we have keyFromQuery AND at least 2 selfies
+  // Don't override manual approval state from onSelfieApproved
+  useEffect(() => {
+    if (keyFromQuery && selectedSelfies.length >= 2) {
+      setIsApproved(true)
+    } else if (keyFromQuery && selectedSelfies.length < 2) {
+      // If we have a key from query but not enough selfies, keep upload flow open
+      setIsApproved(false)
+    }
+  }, [keyFromQuery, selectedSelfies.length])
 
   useEffect(() => {
-    // If coming from selection step, treat selfie step as approved
+    // If coming from selection step, check if we have enough selfies before approving
     if (skipUpload && !isApproved) {
-      setIsApproved(true)
+      if (selectedSelfies.length >= 2) {
+        setIsApproved(true)
+      }
     }
-  }, [skipUpload, isApproved])
+  }, [skipUpload, isApproved, selectedSelfies.length])
 
-  const findSelfieByKey = async (key: string) => {
+  const findSelfieByKey = async (key: string): Promise<string | undefined> => {
     try {
       const { id } = await jsonFetcher<{ id: string }>(`/api/uploads/find-by-key?key=${encodeURIComponent(key)}`, {
         credentials: 'include' // Required for Safari to send cookies
       })
-      setSelfieId(id)
+      return id
     } catch (error) {
       console.error('Error finding selfie by key:', error)
+      return undefined
     }
   }
 
@@ -130,15 +149,25 @@ export default function StartGenerationPage() {
     const fetchSelected = async () => {
       try {
         const res = await jsonFetcher<{ selfies: { id: string; key: string }[] }>('/api/selfies/selected', { credentials: 'include' })
-        setSelectedSelfies(res.selfies || [])
+        const selfies = res.selfies || []
+        setSelectedSelfies(selfies)
+        
+        // If no skipUpload flag and we have less than 2 selfies selected, redirect to selection page
+        if (!skipUpload && selfies.length < 2 && !keyFromQuery) {
+          router.push('/app/generate/selfie')
+        }
       } catch {
         setSelectedSelfies([])
+        // If no skipUpload flag, redirect to selection page
+        if (!skipUpload && !keyFromQuery) {
+          router.push('/app/generate/selfie')
+        }
       }
     }
     if (session?.user?.id) {
       fetchSelected()
     }
-  }, [session?.user?.id])
+  }, [session?.user?.id, skipUpload, keyFromQuery, router])
 
   const normalizeContextName = useCallback((rawName: string | null | undefined, index: number, total: number, type: 'personal' | 'team'): string => {
     const trimmed = (rawName ?? '').trim()
@@ -149,11 +178,30 @@ export default function StartGenerationPage() {
     return total > 1 ? `${base} ${total - index}` : base
   }, [teamFallbackLabel, personalFallbackLabel])
 
+  // Determine user access and whether to show generation type selector (needed for effectiveGenerationType)
+  const hasTeamAccess = Boolean(session?.user?.person?.teamId)
+  const hasTeamCredits = userCredits.team > 0
+  const hasIndividualAccess = userCredits.individual > 0
+  
+  // Determine effective generation type (use state if set, otherwise determine from user role/subscription)
+  // This ensures correct display even before useEffect sets generationType
+  // Priority: role checks first (team_admin/team_member always use team credits), then subscription tier, then fallback
+  const isTeamAdmin = session?.user?.role === 'team_admin'
+  const isTeamMember = session?.user?.role === 'team_member'
+  const isProUser = subscriptionTier === 'pro' // Check actual subscription tier, not UI tier (pro users on free period still use team credits)
+  const effectiveGenerationType: 'personal' | 'team' = useMemo(() => 
+    generationType || 
+    (isTeamAdmin || isTeamMember || isProUser
+      ? 'team' 
+      : (hasIndividualAccess ? 'personal' : (hasTeamAccess && hasTeamCredits ? 'team' : 'personal'))),
+    [generationType, isTeamAdmin, isTeamMember, isProUser, hasIndividualAccess, hasTeamAccess, hasTeamCredits]
+  )
+
   // Fetch contexts when generation type is determined
   useEffect(() => {
     const fetchContexts = async () => {
-      const effectiveGenerationType: 'personal' | 'team' | null = uiTier === 'pro' ? generationType : 'personal'
-      if (!session?.user?.id || !effectiveGenerationType) return
+      const contextType: 'personal' | 'team' | null = uiTier === 'pro' ? generationType : 'personal'
+      if (!session?.user?.id || !contextType) return
       
       try {
           // If free plan, always use the Free Package style
@@ -183,13 +231,13 @@ export default function StartGenerationPage() {
         }
 
         // For paid users, fetch contexts based on generation type
-        const endpoint = effectiveGenerationType === 'personal' ? '/api/styles/personal' : '/api/styles/team'
+        const endpoint = contextType === 'personal' ? '/api/styles/personal' : '/api/styles/team'
         const contextData = await jsonFetcher<{ contexts?: unknown[]; activeContext?: unknown }>(endpoint)
         const rawContexts = (contextData.contexts || []) as Array<{ id: string; name?: string | null; customPrompt?: string | null; settings?: Record<string, unknown> }>
         const total = rawContexts.length
         const contexts = rawContexts.map((context, index) => ({
           id: context.id,
-          name: normalizeContextName(context.name, index, total, effectiveGenerationType),
+          name: normalizeContextName(context.name, index, total, contextType),
           customPrompt: context.customPrompt ?? null,
           settings: context.settings
         }))
@@ -257,36 +305,18 @@ export default function StartGenerationPage() {
     }
 
     fetchContexts()
-  }, [session?.user?.id, generationType, isFreePlan, selectedPackageId, uiTier, normalizeContextName])
+  }, [session?.user?.id, generationType, isFreePlan, selectedPackageId, uiTier, normalizeContextName, effectiveGenerationType])
 
-  const onSelfieApproved = async (selfieKey: string, selfieId?: string) => {
-    setKey(selfieKey)
-    setIsApproved(true)
-    
-    // Set selfie ID if provided
-    if (selfieId) {
-      setSelfieId(selfieId)
-    } else {
-      // Fallback to finding selfie by key if ID not provided
-      await findSelfieByKey(selfieKey)
-    }
-  }
 
-  const onSelfieUploadCancel = () => {
-    // User cancelled upload - go back to no key state
-    setKey('')
-    setIsApproved(false)
-    setSelfieId(null)
-  }
 
   const onTypeSelected = (type: 'personal' | 'team') => {
     setGenerationType(type)
   }
 
   const onProceed = async () => {
-    const hasMulti = selectedSelfies.length >= 2
-    if ((!selfieId && !hasMulti) || !generationType) {
-      console.error('Missing required data for generation')
+    // Require at least 2 selfies for generation
+    if (selectedSelfies.length < 2 || !effectiveGenerationType) {
+      console.error('Missing required data for generation: need at least 2 selfies')
       return
     }
 
@@ -303,12 +333,7 @@ export default function StartGenerationPage() {
         contextId: activeContext?.id,
         styleSettings: { ...photoStyleSettings, packageId },
         prompt: activeContext?.customPrompt || 'Professional headshot',
-      }
-      // Prefer multiple selfies when available, even if a legacy single selfieId exists from query
-      if (hasMulti) {
-        payload.selfieIds = selectedSelfies.map(s => s.id)
-      } else if (selfieId) {
-        payload.selfieId = selfieId
+        selfieIds: selectedSelfies.map(s => s.id)
       }
       
       // Create generation request (server decides mode and credits)
@@ -339,16 +364,14 @@ export default function StartGenerationPage() {
     }
   }
 
-  // Determine user access and whether to show generation type selector
-  const hasTeamAccess = Boolean(session?.user?.person?.teamId)
-  const hasIndividualAccess = userCredits.individual > 0
   const teamName = session?.user?.person?.team?.name
   
   // Check if user has enough credits for generation
-  const hasEnoughCredits = (generationType === 'team' && userCredits.team >= PRICING_CONFIG.credits.perGeneration) || 
-                          (generationType === 'personal' && userCredits.individual >= PRICING_CONFIG.credits.perGeneration)
-  const hasRequiredSelfies = Boolean(selfieId) || selectedSelfies.length >= 2
-  const canGenerate = hasEnoughCredits && hasRequiredSelfies && generationType
+  const hasEnoughCredits = (effectiveGenerationType === 'team' && userCredits.team >= PRICING_CONFIG.credits.perGeneration) || 
+                          (effectiveGenerationType === 'personal' && userCredits.individual >= PRICING_CONFIG.credits.perGeneration)
+  // Require at least 2 selfies for individual generation flow
+  const hasRequiredSelfies = selectedSelfies.length >= 2
+  const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType
   
   // Check if user has any credits at all
   const hasAnyCredits = userCredits.team > 0 || userCredits.individual > 0
@@ -356,44 +379,58 @@ export default function StartGenerationPage() {
   // Resolve selected photo style label for display
   const selectedPackage = getPackageConfig(selectedPackageId || PRICING_CONFIG.defaultSignupPackage)
   const selectedPhotoStyleLabel = selectedPackage.label
-  const remainingCreditsForType = generationType === 'team' ? userCredits.team : userCredits.individual
+  const remainingCreditsForType = effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual
   const showCustomizeHint = hasUserDefinedFields(photoStyleSettings)
   
   // No client-side choice: server enforces mode
   const shouldShowGenerationTypeSelector = false
 
-  useEffect(() => {
-    if (uiTier !== 'pro' && generationType !== 'personal') {
-      setGenerationType('personal')
-    }
-  }, [uiTier, generationType])
-
-  // Auto-select generation type if user only has one option
+  // Determine generation type based on strict rules:
+  // - Pro users and team admins ALWAYS use team credits
+  // - Invited team members ALWAYS use team credits
+  // - Individual users ALWAYS use personal credits
   useEffect(() => {
     if (!creditsLoading && contextLoaded && isApproved && !generationType) {
-      // If type is specified in URL, use it (if user has access)
-      if (typeFromQuery) {
-        if (typeFromQuery === 'team' && uiTier === 'pro' && hasTeamAccess) {
+      // Check if user is a team admin - they always use team credits (regardless of hasTeamAccess)
+      const checkIsTeamAdmin = session?.user?.role === 'team_admin'
+      if (checkIsTeamAdmin) {
+        setGenerationType('team')
+        return
+      }
+
+      // Check if user is an invited team member - they always use team credits
+      const checkIsTeamMember = session?.user?.role === 'team_member'
+      if (checkIsTeamMember) {
+        setGenerationType('team')
+        return
+      }
+
+      // Check if user has pro subscription - they always use team credits (check actual tier, not UI tier)
+      if (subscriptionTier === 'pro') {
           setGenerationType('team')
           return
-        } else if (typeFromQuery === 'personal' && hasIndividualAccess) {
-          setGenerationType('personal')
-          return
-        }
       }
-      
-      if (shouldShowGenerationTypeSelector) {
-        // User has both options, keep generationType as null to show selector
-        return
-      } else if (hasIndividualAccess || uiTier !== 'pro') {
-        // Prefer personal generation when individual credits are available
+
+      // Individual users use personal credits
+      if (hasIndividualAccess) {
         setGenerationType('personal')
-      } else if (hasTeamAccess && uiTier === 'pro') {
-        // Fall back to team generation access
+        return
+      }
+
+      // Fallback: if individual user has no personal credits but has team access and team credits
+      if (hasTeamAccess && hasTeamCredits) {
         setGenerationType('team')
+        return
       }
     }
-  }, [creditsLoading, contextLoaded, isApproved, shouldShowGenerationTypeSelector, hasTeamAccess, hasIndividualAccess, generationType, typeFromQuery, uiTier])
+  }, [creditsLoading, contextLoaded, isApproved, generationType, subscriptionTier, session?.user?.role, hasTeamAccess, hasIndividualAccess, hasTeamCredits])
+
+  // If not coming from selection page and we don't have enough selfies, redirect immediately
+  useEffect(() => {
+    if (!skipUpload && selectedSelfies.length < 2 && !keyFromQuery && contextLoaded) {
+      router.push('/app/generate/selfie')
+    }
+  }, [skipUpload, selectedSelfies.length, keyFromQuery, contextLoaded, router])
 
   // Show upsell window if no credits available
   if (!creditsLoading && !hasAnyCredits) {
@@ -435,31 +472,30 @@ export default function StartGenerationPage() {
     )
   }
 
+  // If not coming from selection page and we don't have enough selfies, show loading while redirecting
+  if (!skipUpload && selectedSelfies.length < 2 && !keyFromQuery) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-600">Redirecting to selfie selection...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      {!isApproved ? (
-        skipUpload ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <p className="text-sm text-gray-700">Selfies selected. Continue by customizing your style below.</p>
-          </div>
-        ) : (
-        <SelfieUploadFlow
-          onSelfieApproved={onSelfieApproved}
-          onCancel={onSelfieUploadCancel}
-          onError={(error) => {
-            console.error('Selfie upload error:', error)
-            alert(error)
-          }}
-        />
-        )
-      ) : creditsLoading || !contextLoaded ? (
+      {creditsLoading || !contextLoaded ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
             <p className="mt-2 text-sm text-gray-600">Loading...</p>
           </div>
         </div>
-      ) : (!activeContext && generationType === 'team' && uiTier === 'pro' && hasTeamAccess) ? (
+      ) : (!activeContext && effectiveGenerationType === 'team' && uiTier === 'pro' && hasTeamAccess) ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">No Active Context</h2>
@@ -472,7 +508,7 @@ export default function StartGenerationPage() {
             </Link>
           </div>
         </div>
-      ) : shouldShowGenerationTypeSelector && !generationType ? (
+      ) : skipUpload && shouldShowGenerationTypeSelector && !generationType ? (
         <GenerationTypeSelector
           uploadedPhotoKey={key}
           onTypeSelected={onTypeSelected}
@@ -480,7 +516,7 @@ export default function StartGenerationPage() {
           hasTeamAccess={hasTeamAccess}
           teamName={teamName}
         />
-      ) : (
+      ) : skipUpload ? (
         <>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
             <h1 className="text-xl font-semibold text-gray-900 mb-4">{t('readyToGenerate')}</h1>
@@ -504,7 +540,7 @@ export default function StartGenerationPage() {
                 </div>
                 <div className="min-w-0">
                   <GenerationSummaryTeam
-                    type={(generationType || 'personal') as 'personal' | 'team'}
+                    type={effectiveGenerationType}
                     styleLabel={selectedPhotoStyleLabel}
                     remainingCredits={remainingCreditsForType}
                     perGenCredits={PRICING_CONFIG.credits.perGeneration}
@@ -554,7 +590,7 @@ export default function StartGenerationPage() {
                     <p className="text-xs text-red-700 mb-2">
                       {t('insufficientCreditsMessage', {
                         required: PRICING_CONFIG.credits.perGeneration,
-                        current: generationType === 'team' ? userCredits.team : userCredits.individual
+                        current: effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual
                       })}
                     </p>
                     <Link
@@ -694,7 +730,7 @@ export default function StartGenerationPage() {
 
           {/* Selfie selection UI removed here; thumbnails are shown in header */}
         </>
-      )}
+      ) : null}
     </div>
   )
 }

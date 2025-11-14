@@ -51,15 +51,15 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
     // Get attempt info for inclusion in all progress messages
     const maxAttempts = job.opts?.attempts || 3
     const currentAttempt = job.attemptsMade + 1
-    const attemptSuffix = maxAttempts > 1 ? ` (Attempt ${currentAttempt}/${maxAttempts})` : ''
     
     // Helper to format progress messages with attempt info
-    const formatProgressWithAttempt = (progressMsg: { message: string; emoji?: string }): string => {
+    const formatProgressWithAttempt = (progressMsg: { message: string; emoji?: string }, progress: number): string => {
       const formatted = formatProgressMessage(progressMsg)
-      const result = formatted + attemptSuffix
+      const result = `Generation #${currentAttempt}\n${progress}% - ${formatted}`
       Logger.debug('Progress message formatted', { 
         original: formatted.substring(0, 50), 
-        suffix: attemptSuffix, 
+        progress,
+        attempt: currentAttempt,
         final: result.substring(0, 80) 
       })
       return result
@@ -78,7 +78,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
       })
       
-      const firstProgressMsg = formatProgressWithAttempt(getProgressMessage('starting-preprocessing'))
+      const firstProgressMsg = formatProgressWithAttempt(getProgressMessage('starting-preprocessing'), 10)
       Logger.info('Updating progress with message', { message: firstProgressMsg, progress: 10 })
       await job.updateProgress({ progress: 10, message: firstProgressMsg })
       
@@ -158,7 +158,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           downloadSelfie,
           onStepProgress: (stepName) => {
             const progressMsg = getProgressMessage(stepName)
-            const formattedMsg = formatProgressWithAttempt(progressMsg)
+            const formattedMsg = formatProgressWithAttempt(progressMsg, 15)
             job.updateProgress({ progress: 15, message: formattedMsg }).catch((err: unknown) => {
               Logger.warn('Failed to update progress', {
                 error: err instanceof Error ? err.message : String(err)
@@ -213,7 +213,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
       const finalPrompt = labelInstruction ? `${basePrompt}\n\n${labelInstruction}` : basePrompt
 
-      await job.updateProgress({ progress: 20, message: formatProgressWithAttempt(getProgressMessage()) })
+      await job.updateProgress({ progress: 20, message: formatProgressWithAttempt(getProgressMessage(), 20) })
 
       Logger.info('Generated Prompt for Gemini', { prompt: finalPrompt })
 
@@ -234,7 +234,10 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
         await job.updateProgress({
           progress: 100,
-          message: `📝 Prompt logged for inspection${attemptSuffix}`
+          message: formatProgressWithAttempt({
+            message: 'Prompt logged for inspection',
+            emoji: '📝'
+          }, 100)
         })
 
         return {
@@ -259,6 +262,9 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       const logoReference = referenceImages.find((reference) =>
         reference.description?.toLowerCase().includes('logo')
       )
+      const backgroundReference = referenceImages.find((reference) =>
+        reference.description?.toLowerCase().includes('background')
+      )
 
       while (localAttempt < MAX_LOCAL_GENERATION_ATTEMPTS) {
         let generatedBuffers: Buffer[] = []
@@ -280,7 +286,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
                   message:
                     'Gemini model configuration error. Please verify GEMINI_IMAGE_MODEL or Vertex AI access.',
                   emoji: '⚠️'
-                })
+                }, 55)
               })
               throw error
             }
@@ -307,7 +313,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
                 message: formatProgressWithAttempt({
                   message: `Gemini is busy (rate limited). Trying again in ${waitSeconds} seconds...`,
                   emoji: '⏳'
-                })
+                }, 55)
               })
 
               await delay(RATE_LIMIT_SLEEP_MS)
@@ -320,7 +326,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
         await job.updateProgress({
           progress: 60,
-          message: formatProgressWithAttempt(getProgressMessage())
+          message: formatProgressWithAttempt(getProgressMessage(), 60)
         })
 
         if (!generatedBuffers.length) {
@@ -347,9 +353,9 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         await job.updateProgress({
           progress: 65,
           message: formatProgressWithAttempt({
-            message: `Running automated quality checks for variation set ${attemptIndex}`,
+            message: 'Running automated quality check',
             emoji: '🔍'
-          })
+          }, 65)
         })
 
         for (let index = 0; index < processedVariants.length; index += 1) {
@@ -381,6 +387,13 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
                   mimeType: logoReference.mimeType,
                   description: logoReference.description
                 }
+              : undefined,
+            backgroundReference: backgroundReference
+              ? {
+                  base64: backgroundReference.base64,
+                  mimeType: backgroundReference.mimeType,
+                  description: backgroundReference.description
+                }
               : undefined
           })
           evaluations.push(evaluation)
@@ -406,7 +419,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             message: formatProgressWithAttempt({
               message: 'Image approved! Finalizing delivery',
               emoji: '✅'
-            })
+            }, 70)
           })
           approvedImageBuffers = processedVariants.map((item) => item.buffer)
           break
@@ -434,7 +447,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           message: formatProgressWithAttempt({
             message: 'Image not approved. Regenerating another version for free...',
             emoji: '♻️'
-          })
+          }, 60)
         })
 
         Logger.warn('Retrying Gemini image generation after QA rejection', {
@@ -455,7 +468,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         personId,
         generationId
       })
-      await job.updateProgress({ progress: 80, message: formatProgressWithAttempt(getProgressMessage()) })
+      await job.updateProgress({ progress: 80, message: formatProgressWithAttempt(getProgressMessage(), 80) })
       
       // Update generation record with results
       await prisma.generation.update({
@@ -470,7 +483,10 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
       })
       
-      await job.updateProgress({ progress: 100, message: `✨ All done! Your photo is ready!${attemptSuffix}` })
+      await job.updateProgress({ progress: 100, message: formatProgressWithAttempt({
+        message: 'All done! Your photo is ready!',
+        emoji: '✨'
+      }, 100) })
       
       Logger.info(`Image generation completed for job ${job.id}`)
       

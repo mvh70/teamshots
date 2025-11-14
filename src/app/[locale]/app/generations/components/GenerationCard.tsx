@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { formatDate } from '@/lib/format'
+import { LoadingSpinner } from '@/components/ui'
 
 export type GenerationListItem = {
   id: string
@@ -194,26 +195,16 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   }
 
   const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     draggingRef.current = true
     updateFromEvent(e.clientX)
-  }
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!draggingRef.current) return
-    updateFromEvent(e.clientX)
-  }
-  const onMouseUp = () => {
-    draggingRef.current = false
   }
   const onTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     draggingRef.current = true
     updateFromEvent(e.touches[0].clientX)
-  }
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!draggingRef.current) return
-    updateFromEvent(e.touches[0].clientX)
-  }
-  const onTouchEnd = () => {
-    draggingRef.current = false
   }
 
   const determineScrollability = () => {
@@ -226,18 +217,46 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
     setCanScrollDown(more)
   }
 
+  // Global mouse/touch handlers for dragging (only active when dragging)
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!draggingRef.current) return
+      updateFromEvent(e.clientX)
+    }
+    const handleGlobalMouseUp = () => {
+      draggingRef.current = false
+    }
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (!draggingRef.current) return
+      updateFromEvent(e.touches[0].clientX)
+    }
+    const handleGlobalTouchEnd = () => {
+      draggingRef.current = false
+    }
+
+    document.addEventListener('mousemove', handleGlobalMouseMove)
+    document.addEventListener('mouseup', handleGlobalMouseUp)
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
+    document.addEventListener('touchend', handleGlobalTouchEnd)
+    document.addEventListener('touchcancel', handleGlobalTouchEnd)
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove)
+      document.removeEventListener('mouseup', handleGlobalMouseUp)
+      document.removeEventListener('touchmove', handleGlobalTouchMove)
+      document.removeEventListener('touchend', handleGlobalTouchEnd)
+      document.removeEventListener('touchcancel', handleGlobalTouchEnd)
+    }
+  }, []) // updateFromEvent uses refs, so it's stable
+
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
-      <div
-        ref={containerRef}
-        className="aspect-square bg-gray-50 overflow-hidden relative select-none"
-        onMouseMove={onMouseMove}
-        onMouseLeave={onMouseUp}
-        onMouseUp={onMouseUp}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchEnd}
-        onTouchMove={onTouchMove}
-      >
+        <div className="relative aspect-square">
+        {/* Image container */}
+        <div
+          ref={containerRef}
+          className="absolute inset-0 bg-gray-50 overflow-hidden select-none"
+        >
         {/* BACKGROUND: Single selfie or collage of multiple input selfies */}
         {Array.isArray(item.inputSelfieUrls) && item.inputSelfieUrls.length > 1 ? (
           <div className="absolute inset-0 grid bg-gray-200"
@@ -294,12 +313,9 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
             <div className="w-full h-full bg-gray-100 flex items-center justify-center">
               <div className="text-center px-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 whitespace-pre-line">
                   {item.jobStatus?.message || t('generating', { default: 'Generating...' })}
                 </p>
-                {item.jobStatus?.progress !== undefined && (
-                  <p className="text-[10px] text-gray-500 mt-1">{item.jobStatus.progress}%</p>
-                )}
               </div>
             </div>
           ) : (
@@ -311,7 +327,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
               {/* Loading spinner overlay */}
               {!loadedGenerated && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-100/60 z-10">
-                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-brand-primary" />
+                  <LoadingSpinner />
                 </div>
               )}
               {/* Use native img for flexible intrinsic sizing and scrolling */}
@@ -322,6 +338,8 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
               src={afterSrc}
               alt="generated"
                 className="block w-full h-auto"
+              id={`generated-photo-${item.id}`}
+              data-onborda="generated-photo"
               onLoad={() => {
                 setLoadedGenerated(true)
                 if (afterRetryCount !== 0) {
@@ -362,9 +380,10 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
           <button
             onMouseDown={onMouseDown}
             onTouchStart={onTouchStart}
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-white shadow border border-gray-300 flex items-center justify-center text-xs"
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-white shadow border border-gray-300 flex items-center justify-center text-xs z-10"
             style={{ left: `${pos}%` }}
             aria-label="Drag slider"
+            id={`slider-button-${item.id}`}
           >
             ⇆
           </button>
@@ -378,6 +397,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
         ) : (
           <span className="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded bg-brand-primary text-white">Generated</span>
         )}
+        </div>
       </div>
       <div className="p-3 space-y-2 pb-6">
         <div className="flex items-center justify-between">
@@ -399,8 +419,8 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
           <span className="text-xs text-gray-500">{formatDate(item.createdAt)}</span>
         </div>
         <p className="text-sm text-gray-900 truncate">Photo style: {item.contextName || 'Freestyle'}</p>
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-gray-500">
+        <div className="flex items-center justify-between" data-onborda="credits-info">
+          <div className="text-xs text-gray-500" id={`credits-info-${item.id}`}>
             {item.isOriginal && `${item.costCredits} credits`}
             {item.remainingRegenerations > 0 && (
               <span className="ml-2 text-brand-secondary">
@@ -413,7 +433,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 relative">
+            <div className="flex items-center gap-1 relative">
             {isIncomplete ? (
               <span className="text-sm text-gray-500">Processing...</span>
             ) : (
@@ -439,6 +459,8 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
                     }
                   }}
                   className="relative group text-sm text-brand-primary hover:text-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-brand-primary-light transition-colors"
+                  id={`download-button-${item.id}`}
+                  data-onborda="download-button"
                 >
                   <svg 
                     className="w-4 h-4" 
@@ -464,6 +486,8 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
                     onClick={handleRegenerate}
                     disabled={isRegenerating}
                     className="relative group text-sm text-brand-secondary hover:text-brand-secondary-hover disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-brand-secondary/10 transition-colors"
+                    id={`regenerate-button-${item.id}`}
+                    data-onborda="regenerate-button"
                   >
                     {isRegenerating ? (
                       <div className="flex items-center">
@@ -497,6 +521,8 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
                     onClick={handleDelete}
                     disabled={isDeleting}
                     className="relative group text-sm text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-red-50 transition-colors"
+                    id={`delete-button-${item.id}`}
+                    data-onborda="delete-button"
                   >
                     {isDeleting ? (
                       <div className="flex items-center">

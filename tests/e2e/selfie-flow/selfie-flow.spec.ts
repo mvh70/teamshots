@@ -539,7 +539,7 @@ test.describe('Selfie Flow - Complete Tests', () => {
 
   test('Should validate file type restrictions', async ({ page }) => {
     // Create unique user for this test
-    const { userId, userEmail, plainPassword } = await createTestUser('file-validation');
+    const { userEmail, plainPassword } = await createTestUser('file-validation');
 
     // Navigate to login page and log in
     await page.goto('https://localhost:3000/en/auth/signin');
@@ -562,7 +562,7 @@ test.describe('Selfie Flow - Complete Tests', () => {
 
   test('Should handle face detection validation', async ({ page }) => {
     // Create unique user for this test
-    const { userId, userEmail, plainPassword } = await createTestUser('face-detection');
+    const { userEmail, plainPassword } = await createTestUser('face-detection');
 
     // Navigate to login page and log in
     await page.goto('https://localhost:3000/en/auth/signin');
@@ -585,7 +585,7 @@ test.describe('Selfie Flow - Complete Tests', () => {
 
   test('Should handle multiple faces detected', async ({ page }) => {
     // Create unique user for this test
-    const { userId, userEmail, plainPassword } = await createTestUser('multiple-faces');
+    const { userEmail, plainPassword } = await createTestUser('multiple-faces');
 
     // Navigate to login page and log in
     await page.goto('https://localhost:3000/en/auth/signin');
@@ -608,7 +608,7 @@ test.describe('Selfie Flow - Complete Tests', () => {
 
   test('Should handle server errors during upload', async ({ page }) => {
     // Create unique user for this test
-    const { userId, userEmail, plainPassword } = await createTestUser('server-error');
+    const { userEmail, plainPassword } = await createTestUser('server-error');
 
     // Navigate to login page and log in
     await page.goto('https://localhost:3000/en/auth/signin');
@@ -652,7 +652,7 @@ test.describe('Selfie Flow - Complete Tests', () => {
 
   test('Should handle file size limit exceeded', async ({ page }) => {
     // Create unique user for this test
-    const { userId, userEmail, plainPassword } = await createTestUser('file-size-limit');
+    const { userEmail, plainPassword } = await createTestUser('file-size-limit');
 
     // Navigate to login page and log in
     await page.goto('https://localhost:3000/en/auth/signin');
@@ -688,7 +688,7 @@ test.describe('Selfie Flow - Complete Tests', () => {
 
   test('Should handle network timeout during upload', async ({ page }) => {
     // Create unique user for this test
-    const { userId, userEmail, plainPassword } = await createTestUser('network-timeout');
+    const { userEmail, plainPassword } = await createTestUser('network-timeout');
 
     // Navigate to login page and log in
     await page.goto('https://localhost:3000/en/auth/signin');
@@ -735,7 +735,7 @@ test.describe('Selfie Flow - Complete Tests', () => {
 
   test('Should handle browser storage limitations', async ({ page }) => {
     // Create unique user for this test
-    const { userId, userEmail, plainPassword } = await createTestUser('storage-limitations');
+    const { userEmail, plainPassword } = await createTestUser('storage-limitations');
 
     // Navigate to login page and log in
     await page.goto('https://localhost:3000/en/auth/signin');
@@ -779,7 +779,7 @@ test.describe('Selfie Flow - Complete Tests', () => {
 
   test('Should handle approval API errors', async ({ page }) => {
     // Create unique user for this test
-    const { userId, userEmail, plainPassword } = await createTestUser('approval-api-error');
+    const { userEmail, plainPassword } = await createTestUser('approval-api-error');
 
     // Navigate to login page and log in
     await page.goto('https://localhost:3000/en/auth/signin');

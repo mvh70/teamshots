@@ -53,7 +53,7 @@ export function useGenerations(
       const url = new URL('/api/generations/list', window.location.origin)
       url.searchParams.set('page', page.toString())
       url.searchParams.set('limit', '50') // Increase limit to 50
-      
+
       if (effectiveScope === 'team') {
         if (effectiveTeamView) {
           url.searchParams.set('teamView', effectiveTeamView)
@@ -62,7 +62,7 @@ export function useGenerations(
           url.searchParams.set('userId', selectedUserId)
         }
       }
-      
+
       const data = await jsonFetcher<{ generations: Record<string, unknown>[]; pagination?: Record<string, unknown>; items?: Record<string, unknown>[] }>(url.toString())
       // New API returns { generations, pagination }
       if (Array.isArray(data.generations)) {
@@ -88,6 +88,36 @@ export function useGenerations(
             personUserId: (g.person as Record<string, unknown>)?.userId as string,
             jobStatus: g.jobStatus as GenerationListItem['jobStatus'],
           })) as GenerationListItem[]
+
+          // Handle generation failures using a stable reference to avoid dependency issues
+          const handleFailures = async (previousGenerations: GenerationListItem[], currentGenerations: GenerationListItem[]) => {
+            if (!onGenerationFailed || previousGenerations.length === 0) return
+
+            const previousProcessingIds = previousGenerations
+              .filter(g => g.status === 'processing' || g.status === 'pending')
+              .map(g => g.id)
+            const currentIds = new Set(currentGenerations.map(g => g.id))
+            const removedProcessingIds = previousProcessingIds.filter(id => !currentIds.has(id))
+
+            if (removedProcessingIds.length > 0) {
+              await Promise.all(
+                removedProcessingIds
+                  .filter(id => !notifiedFailuresRef.current.has(id))
+                  .map(async (id) => {
+                    try {
+                      const detail = await jsonFetcher<{ status: string; errorMessage?: string }>(`/api/generations/${id}`)
+                      if (detail.status === 'failed') {
+                        notifiedFailuresRef.current.add(id)
+                        onGenerationFailed({ id, errorMessage: detail.errorMessage })
+                      }
+                    } catch {
+                      // Ignore fetch errors for removed generations
+                    }
+                  })
+              )
+            }
+          }
+
           if (append) {
             setGenerated(prev => {
               const merged = [...prev, ...mapped]
@@ -95,32 +125,7 @@ export function useGenerations(
               return merged
             })
           } else {
-            if (onGenerationFailed && previousGenerationsRef.current.length > 0) {
-              const previousProcessingIds = previousGenerationsRef.current
-                .filter(g => g.status === 'processing' || g.status === 'pending')
-                .map(g => g.id)
-              const currentIds = new Set(mapped.map(g => g.id))
-              const removedProcessingIds = previousProcessingIds.filter(id => !currentIds.has(id))
-
-              if (removedProcessingIds.length > 0) {
-                await Promise.all(
-                  removedProcessingIds
-                    .filter(id => !notifiedFailuresRef.current.has(id))
-                    .map(async (id) => {
-                      try {
-                        const detail = await jsonFetcher<{ status: string; errorMessage?: string }>(`/api/generations/${id}`)
-                        if (detail.status === 'failed') {
-                          notifiedFailuresRef.current.add(id)
-                          onGenerationFailed({ id, errorMessage: detail.errorMessage })
-                        }
-                      } catch {
-                        // Ignore fetch errors for removed generations
-                      }
-                    })
-                )
-              }
-            }
-
+            await handleFailures(previousGenerationsRef.current, mapped)
             setGenerated(mapped)
             previousGenerationsRef.current = mapped
           }
@@ -159,6 +164,36 @@ export function useGenerations(
             personUserId: (g.person as Record<string, unknown>)?.userId as string,
             jobStatus: g.jobStatus as GenerationListItem['jobStatus'],
           })) as GenerationListItem[]
+
+          // Handle generation failures using a stable reference to avoid dependency issues
+          const handleFailures = async (previousGenerations: GenerationListItem[], currentGenerations: GenerationListItem[]) => {
+            if (!onGenerationFailed || previousGenerations.length === 0) return
+
+            const previousProcessingIds = previousGenerations
+              .filter(g => g.status === 'processing' || g.status === 'pending')
+              .map(g => g.id)
+            const currentIds = new Set(currentGenerations.map(g => g.id))
+            const removedProcessingIds = previousProcessingIds.filter(id => !currentIds.has(id))
+
+            if (removedProcessingIds.length > 0) {
+              await Promise.all(
+                removedProcessingIds
+                  .filter(id => !notifiedFailuresRef.current.has(id))
+                  .map(async (id) => {
+                    try {
+                      const detail = await jsonFetcher<{ status: string; errorMessage?: string }>(`/api/generations/${id}`)
+                      if (detail.status === 'failed') {
+                        notifiedFailuresRef.current.add(id)
+                        onGenerationFailed({ id, errorMessage: detail.errorMessage })
+                      }
+                    } catch {
+                      // Ignore fetch errors for removed generations
+                    }
+                  })
+              )
+            }
+          }
+
           if (append) {
             setGenerated(prev => {
               const merged = [...prev, ...mappedItems]
@@ -166,32 +201,7 @@ export function useGenerations(
               return merged
             })
           } else {
-            if (onGenerationFailed && previousGenerationsRef.current.length > 0) {
-              const previousProcessingIds = previousGenerationsRef.current
-                .filter(g => g.status === 'processing' || g.status === 'pending')
-                .map(g => g.id)
-              const currentIds = new Set(mappedItems.map(g => g.id))
-              const removedProcessingIds = previousProcessingIds.filter(id => !currentIds.has(id))
-
-              if (removedProcessingIds.length > 0) {
-                await Promise.all(
-                  removedProcessingIds
-                    .filter(id => !notifiedFailuresRef.current.has(id))
-                    .map(async (id) => {
-                      try {
-                        const detail = await jsonFetcher<{ status: string; errorMessage?: string }>(`/api/generations/${id}`)
-                        if (detail.status === 'failed') {
-                          notifiedFailuresRef.current.add(id)
-                          onGenerationFailed({ id, errorMessage: detail.errorMessage })
-                        }
-                      } catch {
-                        // Ignore fetch errors for removed generations
-                      }
-                    })
-                )
-              }
-            }
-
+            await handleFailures(previousGenerationsRef.current, mappedItems)
             setGenerated(mappedItems)
             previousGenerationsRef.current = mappedItems
           }
@@ -204,14 +214,14 @@ export function useGenerations(
     loadGenerations(1, false)
   }, [effectiveScope, effectiveTeamView, selectedUserId, loadGenerations])
 
-  // Poll for updates every 5 seconds
+  // Poll for updates every 30 seconds (reduced frequency to prevent refresh loops)
   useEffect(() => {
     const interval = setInterval(() => {
       // Only poll if we're not currently loading and not on a paginated view
       if (!loading && (!pagination || pagination.page === 1)) {
         loadGenerations(1, false)
       }
-    }, 5000) // Poll every 5 seconds
+    }, 30000) // Poll every 30 seconds instead of 5
 
     return () => clearInterval(interval)
   }, [loading, pagination, loadGenerations])

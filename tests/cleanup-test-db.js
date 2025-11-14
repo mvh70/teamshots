@@ -7,7 +7,7 @@
  * to ensure a clean state for the next test run.
  */
 
-const { execSync } = require('child_process');
+import { execSync } from 'child_process';
 
 const TEST_DB_NAME = 'teamshots_test';
 

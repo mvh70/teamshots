@@ -2,6 +2,7 @@
 
 import React, {useCallback, useEffect, useRef, useState} from "react";
 import Image from "next/image";
+import { ProgressBar, InlineError } from "@/components/ui";
 
 type PhotoUploadProps = {
   disabled?: boolean;
@@ -384,8 +385,14 @@ export default function PhotoUpload({
         className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer focus:outline-none ${dragOver ? "border-brand-primary bg-brand-primary-light" : "border-gray-300"} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
         data-testid="dropzone"
       >
-        <p className="text-sm text-gray-700">Drag & drop a photo here</p>
-        <p className="text-xs text-gray-500">or click to choose a file</p>
+        <div className="hidden md:block">
+          <p className="text-sm text-gray-700">Drag & drop a photo here</p>
+          <p className="text-xs text-gray-500">or click to choose a file</p>
+        </div>
+        <div className="md:hidden">
+          <p className="text-base text-gray-700 font-medium">Upload your selfie</p>
+          <p className="text-sm text-gray-500">Tap to choose from camera or gallery</p>
+        </div>
         <input
           ref={inputRef}
           type="file"
@@ -395,10 +402,10 @@ export default function PhotoUpload({
           disabled={disabled}
           data-testid={testId}
         />
-        <div className="mt-3 flex flex-col sm:flex-row justify-center gap-3">
+        <div className="mt-4 flex flex-col gap-3 md:flex-row md:justify-center md:gap-3">
           <button
             type="button"
-            className="px-4 py-2 text-sm rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover border border-brand-primary"
+            className="w-full md:w-auto px-6 py-4 md:px-4 md:py-2 text-base md:text-sm font-semibold md:font-medium rounded-xl md:rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover border border-brand-primary"
             onClick={(e) => { e.stopPropagation(); openCamera(); }}
             disabled={disabled}
             aria-label="Open camera to take a photo"
@@ -408,13 +415,13 @@ export default function PhotoUpload({
           </button>
           <button
             type="button"
-            className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
+            className="w-full md:w-auto px-6 py-4 md:px-4 md:py-2 text-base md:text-sm font-medium rounded-xl md:rounded-md border-2 md:border border-gray-300 hover:bg-gray-50"
             onClick={(e) => { e.stopPropagation(); openFilePicker(); }}
             disabled={disabled}
             aria-label="Choose a file from your device"
             data-testid="file-picker-button"
           >
-            📁 Choose File
+            📁 Choose from Gallery
           </button>
         </div>
         
@@ -429,17 +436,12 @@ export default function PhotoUpload({
 
       {isUploading && (
         <div className="mt-3" data-testid="upload-progress">
-          <div className="h-2 bg-gray-200 rounded">
-            <div className="h-2 bg-brand-primary rounded" style={{ width: `${progress}%` }} />
-          </div>
-          <p className="text-xs text-gray-500 mt-1">Uploading… {progress}%</p>
+          <ProgressBar progress={progress} text={`Uploading… ${progress}%`} />
         </div>
       )}
 
       {error && (
-        <div className="mt-3 text-sm text-red-600" role="alert" data-testid={errorType || "error-message"}>
-          {error}
-        </div>
+        <InlineError message={error} className="mt-3" data-testid={errorType || "error-message"} />
       )}
 
       {cameraOpen && (

@@ -10,12 +10,11 @@ import { useCredits } from '@/contexts/CreditsContext'
 import { BRAND_CONFIG } from '@/config/brand'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { Toast } from '@/components/ui'
+import { Toast, GenerationGrid } from '@/components/ui'
 
 export default function TeamGenerationsPage() {
   const tg = useTranslations('generations.team')
   const t = useTranslations('app.sidebar.generate')
-  const toastMessages = useTranslations('generations.toasts')
   const { data: session } = useSession()
   const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
@@ -27,18 +26,21 @@ export default function TeamGenerationsPage() {
   // Fetch effective roles from API (respects pro subscription = team admin)
   useEffect(() => {
     const fetchRoles = async () => {
-      if (session?.user?.id) {
-        try {
-          const response = await fetch('/api/dashboard/stats')
-          if (response.ok) {
-            const data = await response.json()
-            setIsTeamAdmin(data.userRole?.isTeamAdmin ?? false)
-          }
-        } catch (err) {
-          console.error('Failed to fetch roles:', err)
+      if (!session?.user?.id) return
+
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        if (response.ok) {
+          const data = await response.json()
+          setIsTeamAdmin(data.userRole?.isTeamAdmin ?? false)
         }
+      } catch (err) {
+        console.error('Failed to fetch roles:', err)
+        // Default to false on error
+        setIsTeamAdmin(false)
       }
     }
+
     fetchRoles()
   }, [session?.user?.id])
   // Initialize filter to 'team' by default for team pages (optimistic for team admins)
@@ -54,21 +56,44 @@ export default function TeamGenerationsPage() {
   const { href: buyCreditsHref } = useBuyCreditsLink()
   const [teamView] = useState<'mine' | 'team'>('mine')
   
-  // Guard: redirect individual users (no team) away from team page
+  // Guard: redirect users without pro tier/team access away from team page
+  // Pro subscribers can access team features even without a teamId
+  const [redirecting, setRedirecting] = useState(false)
+  const [shouldRedirect, setShouldRedirect] = useState(false)
+  
   useEffect(() => {
-    if (session?.user && !session.user.person?.teamId) {
-      window.location.href = '/app/generations/personal'
+    const checkAccess = async () => {
+      if (!session?.user?.id) return
+      
+      // Fetch account mode to determine if user has pro access
+      try {
+        const response = await fetch('/api/account/mode')
+        if (response.ok) {
+          const accountMode = await response.json()
+          // Only redirect if user is NOT pro (individual mode only)
+          if (accountMode.mode === 'individual' && !redirecting) {
+            setShouldRedirect(true)
+            setRedirecting(true)
+            window.location.href = '/app/generations/personal'
+          }
+        }
+      } catch (err) {
+        console.error('Failed to check account mode:', err)
+      }
     }
-  }, [session?.user])
+    
+    checkAccess()
+  }, [session?.user?.id, redirecting])
+  
   const handleGenerationFailed = useCallback(
     ({ errorMessage }: { id: string; errorMessage?: string }) => {
       if (errorMessage) {
         console.warn('Team generation failed', errorMessage)
       }
-      setFailureToast(toastMessages('generationFailed'))
+      setFailureToast('Generation failed')
       void refetchCredits()
     },
-    [toastMessages, refetchCredits]
+    [refetchCredits]
   )
 
   const { generated, teamUsers, pagination, loading, loadMore } = useGenerations(
@@ -94,6 +119,11 @@ export default function TeamGenerationsPage() {
       window.clearTimeout(timer)
     }
   }, [failureToast])
+
+  // If redirecting, show nothing to prevent flash of content
+  if (redirecting || shouldRedirect) {
+    return null
+  }
 
   const filteredGenerated = filterGenerated(generated)
   // Build photo style options dynamically from existing generations
@@ -226,11 +256,11 @@ export default function TeamGenerationsPage() {
       {/* Content */}
       {filteredGenerated.length ? (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <GenerationGrid>
               {filteredGenerated.map(item => (
                 <GenerationCard key={item.id} item={item} currentUserId={currentUserId} />
               ))}
-            </div>
+            </GenerationGrid>
             
             {/* Load More Button */}
             {pagination?.hasNextPage && (

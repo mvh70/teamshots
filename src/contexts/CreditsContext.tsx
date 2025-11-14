@@ -15,10 +15,18 @@ interface CreditsContextType {
 
 const CreditsContext = createContext<CreditsContextType | undefined>(undefined)
 
-export function CreditsProvider({ children }: { children: ReactNode }) {
+interface CreditsProviderProps {
+  children: ReactNode
+  initialCredits?: {
+    individual: number
+    team: number
+  }
+}
+
+export function CreditsProvider({ children, initialCredits }: CreditsProviderProps) {
   const { data: session } = useSession()
-  const [credits, setCredits] = useState({ individual: 0, team: 0 })
-  const [loading, setLoading] = useState(true)
+  const [credits, setCredits] = useState(initialCredits || { individual: 0, team: 0 })
+  const [loading, setLoading] = useState(!initialCredits)
 
   const fetchCredits = useCallback(async () => {
     if (!session?.user?.id) {
@@ -29,7 +37,7 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
 
     try {
       setLoading(true)
-      
+
       // OPTIMIZATION: Fetch both credit types in a single API call
       // This reduces from 2 HTTP requests + 4+ queries to 1 HTTP request + 2-3 queries
       const creditsData = await jsonFetcher<{ individual: number; team: number }>('/api/credits/balance?type=both')
@@ -45,11 +53,44 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [session?.user?.id])
+  }, [session?.user?.id]) // Stable callback - session is checked at runtime, API uses server-side auth
 
   useEffect(() => {
+    // If we have initialCredits from props, use them and skip fetching
+    if (initialCredits) {
+      setCredits(initialCredits)
+      setLoading(false)
+      return
+    }
+
+    // Check sessionStorage for initial data first (from /api/user/initial-data)
+    try {
+      const stored = sessionStorage.getItem('teamshots.initialData')
+      if (stored) {
+        const initialData = JSON.parse(stored)
+        if (initialData.credits) {
+          setCredits({
+            individual: initialData.credits.individual || 0,
+            team: initialData.credits.team || 0
+          })
+          setLoading(false)
+          // Only fetch fresh data if data is stale (>5 seconds)
+          // This prevents redundant calls immediately after login/registration
+          const dataAge = Date.now() - (initialData._timestamp || 0)
+          if (dataAge > 5000) {
+            // Fetch in background, don't block render
+            fetchCredits()
+          }
+          return
+        }
+      }
+    } catch {
+      // Ignore parse errors, fall through to fetch
+    }
+    
+    // Only fetch if we don't have cached data
     fetchCredits()
-  }, [session?.user?.id, fetchCredits])
+  }, [fetchCredits, initialCredits])
 
   return (
     <CreditsContext.Provider value={{ credits, loading, refetch: fetchCredits }}>

@@ -1,7 +1,7 @@
 const identity = {
   source: 'composite selfies',
   immutable_features:
-    'The images in the selfies show the exact same individual. Your primary task is to synthesize a single, photorealistic, and coherent identity from these images. Do not average or blend features in a way that creates a new person. Pay special attention to facial features, and skin tone. Use the selfies to understand the 3D structure of the face from different angles. The final generated person must be clearly identifiable as the person. Do not alter the fundamental facial structure, eye color, eye shape, nose shape, or unique skin details like moles, scars, or freckles visible in the source selfies.',
+    'The images in the selfies show the exact same individual. Your primary task is to synthesize a single, photorealistic, and coherent identity from these images. Do not average or blend features in a way that creates a new person. Pay special attention to facial features, form of the eyes, hair color, and skin tone. Use the selfies to understand the 3D structure of the face from different angles. The final generated person must be clearly identifiable as the person. Do not alter the fundamental facial structure, shape of the eyes, eye color, shape of the nose, or unique skin details like moles, scars, or freckles visible in the source selfies.',
   reference_roles: [
     {
       reference: 'subject1-selfies',
@@ -14,6 +14,7 @@ const identity = {
   identity_guidelines: [
     'All generated results must clearly depict the same individual from the provided selfies.',
     'Prioritize natural, photorealistic rendering quality matching the supplied source imagery.',
+    'Pay special attention to the form of the eyes, form of the nose, hair color, and skin tone.',
     'Integrate expression and lighting cues from supporting references without deviating from the core identity.'
   ] as const
 } as const

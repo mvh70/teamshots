@@ -10,6 +10,7 @@ import StyleForm from '@/components/styles/StyleForm'
 import Panel from '@/components/common/Panel'
 import { PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
+import { CardGrid, ErrorCard } from '@/components/ui'
 
 interface Context {
   id: string
@@ -117,11 +118,7 @@ export default function ContextsPage() {
   }
 
   if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-800">{error}</p>
-      </div>
-    )
+    return <ErrorCard message={error} />
   }
 
   if (success) {
@@ -197,7 +194,7 @@ export default function ContextsPage() {
 
       {/* Contexts List */}
       {isFreePlan ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CardGrid gap="lg">
           <FreePlanBanner variant="generic" className="col-span-1 md:col-span-2 lg:col-span-3" />
           <div className="rounded-lg border-2 p-6 border-brand-secondary bg-white">
             <div className="flex items-start justify-between mb-4">
@@ -226,9 +223,9 @@ export default function ContextsPage() {
             />
             
           </div>
-        </div>
+        </CardGrid>
       ) : (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <CardGrid gap="lg">
         {contextsData?.contexts.map((context) => (
           <div
             key={context.id}
@@ -290,7 +287,7 @@ export default function ContextsPage() {
             )}
           </div>
         ))}
-      </div>
+      </CardGrid>
       )}
 
       {/* Create/Edit Form - Inline (DRY via StyleForm) */}

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma, Selfie, Generation } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -58,24 +58,32 @@ export class TestDataManager {
     return team as unknown as TestTeam;
   }
 
-  async createTestSelfie(userId: string, overrides: any = {}): Promise<any> {
+  async createTestSelfie(personId: string, overrides: Partial<Prisma.SelfieCreateInput> = {}): Promise<Selfie> {
     return await prisma.selfie.create({
       data: {
         id: `test-selfie-${Date.now()}`,
-        userId,
-        uploadedKey: `test-selfie-key-${Date.now()}`,
+        person: {
+          connect: { id: personId }
+        },
+        key: `test-selfie-key-${Date.now()}`,
         validated: true,
         ...overrides,
       },
     });
   }
 
-  async createTestGeneration(userId: string, selfieId: string, overrides: any = {}): Promise<any> {
+  async createTestGeneration(personId: string, selfieId: string, overrides: Partial<Prisma.GenerationCreateInput> = {}): Promise<Generation> {
     return await prisma.generation.create({
       data: {
         id: `test-generation-${Date.now()}`,
-        userId,
-        selfieId,
+        person: {
+          connect: { id: personId }
+        },
+        selfie: {
+          connect: { id: selfieId }
+        },
+        uploadedPhotoKey: `test-uploaded-${Date.now()}`,
+        generatedPhotoKeys: [],
         status: 'completed',
         ...overrides,
       },
@@ -167,8 +175,8 @@ export async function setupTestTeam(overrides: Partial<TestTeam> = {}): Promise<
   return await testDataManager.createTestTeam(overrides);
 }
 
-export async function setupTestSelfie(userId: string, overrides: any = {}): Promise<any> {
-  return await testDataManager.createTestSelfie(userId, overrides);
+export async function setupTestSelfie(personId: string, overrides: Partial<Prisma.SelfieCreateInput> = {}): Promise<Selfie> {
+  return await testDataManager.createTestSelfie(personId, overrides);
 }
 
 export async function cleanupTestData(): Promise<void> {

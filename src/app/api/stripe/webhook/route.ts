@@ -642,10 +642,15 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
 
     await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       const person = await tx.person.findUnique({ where: { userId: user.id } })
+
+      // For pro tier, always allocate as team credits (even without a team)
+      // This allows pro users to use team features and credits get migrated when they create a team
+      const shouldBeTeamCredits = tier === 'pro'
+
       await tx.creditTransaction.create({
         data: {
           userId: user.id,
-          teamId: (tier === 'pro') ? person?.teamId || undefined : undefined,
+          teamId: shouldBeTeamCredits ? (person?.teamId || null) : null, // null for pro = unmigrated team credits
           credits: credits,
           type: 'purchase',
           description: `Credit top-up - ${tier} (${credits} credits)`,

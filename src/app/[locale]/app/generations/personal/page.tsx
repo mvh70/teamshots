@@ -10,7 +10,7 @@ import { useCredits } from '@/contexts/CreditsContext'
 import { BRAND_CONFIG } from '@/config/brand'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { Toast } from '@/components/ui'
+import { Toast, GenerationGrid } from '@/components/ui'
 import { fetchAccountMode } from '@/domain/account/accountMode'
 
 export default function PersonalGenerationsPage() {
@@ -179,11 +179,11 @@ export default function PersonalGenerationsPage() {
       {/* Content */}
       {filteredGenerated.length ? (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <GenerationGrid>
               {filteredGenerated.map(item => (
                 <GenerationCard key={item.id} item={item} />
               ))}
-            </div>
+            </GenerationGrid>
             
             {/* Load More Button */}
             {pagination?.hasNextPage && (

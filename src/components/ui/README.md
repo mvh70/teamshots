@@ -4,12 +4,19 @@ This directory contains reusable UI components that eliminate code duplication a
 
 ## Button Component
 
-Replaces the 54+ instances of duplicated button classes throughout the codebase.
+Replaces the 54+ instances of duplicated button classes throughout the codebase. Unified component supporting all button variants including auth, checkout, and loading states.
 
 ### Usage
 
 ```tsx
-import { Button, PrimaryButton, SecondaryButton, DangerButton } from '@/components/ui'
+import {
+  Button,
+  PrimaryButton,
+  SecondaryButton,
+  DangerButton,
+  AuthButton,
+  CheckoutButton
+} from '@/components/ui'
 
 // Basic usage
 <Button onClick={() => console.log('clicked')}>Click me</Button>
@@ -19,19 +26,146 @@ import { Button, PrimaryButton, SecondaryButton, DangerButton } from '@/componen
 <SecondaryButton onClick={handleCancel}>Cancel</SecondaryButton>
 <DangerButton onClick={handleDelete}>Delete</DangerButton>
 
-// Custom variants
-<Button variant="primary" size="lg" disabled={isLoading}>
-  Loading...
+// Auth button with loading (full width, auth styling)
+<AuthButton loading={isLoading} onClick={handleSignIn}>
+  Sign In
+</AuthButton>
+
+// Checkout button with sub-label and brand colors
+<CheckoutButton
+  subLabel="4 credits"
+  useBrandCtaColors
+  fullWidth
+  onClick={handleCheckout}
+>
+  Start Free Trial
+</CheckoutButton>
+
+// Loading state
+<Button variant="primary" loading loadingText="Processing...">
+  Save Changes
 </Button>
 ```
 
 ### Props
 
-- `variant`: 'primary' | 'secondary' | 'danger' (default: 'primary')
+#### Core Props
+- `variant`: 'primary' | 'secondary' | 'danger' | 'auth' | 'checkout' (default: 'primary')
 - `size`: 'sm' | 'md' | 'lg' (default: 'sm')
 - `disabled`: boolean
 - `onClick`: () => void
 - `data-testid`: string (for testing)
+- `type`: 'button' | 'submit' | 'reset' (default: 'button')
+
+#### Loading State
+- `loading`: boolean - Shows loading state
+- `loadingText`: string - Custom loading text (defaults vary by variant)
+
+#### Layout Options
+- `fullWidth`: boolean - Makes button full width
+- `className`: string - Additional CSS classes
+
+#### Auth Variant Props
+- Automatically full width with auth styling
+- Loading text defaults to "Please wait…"
+
+#### Checkout Variant Props
+- `subLabel`: string - Secondary text below main label
+- `useBrandCtaColors`: boolean - Use brand CTA colors with hover effects
+
+## Loading Components
+
+### LoadingSpinner
+
+Replaces the 10+ instances of duplicated loading spinner patterns.
+
+```tsx
+import { LoadingSpinner, SmallLoadingSpinner, LargeLoadingSpinner } from '@/components/ui'
+
+// Basic usage
+<LoadingSpinner />
+
+// Size variants
+<SmallLoadingSpinner />
+<LoadingSpinner size="md" />
+<LargeLoadingSpinner />
+
+// Custom styling
+<LoadingSpinner className="text-blue-500" />
+```
+
+### LoadingState
+
+Skeleton loading states for better UX during data loading.
+
+```tsx
+import { LoadingState, LoadingCard, LoadingGrid } from '@/components/ui'
+
+// Basic skeleton
+<LoadingState className="h-4 w-32" />
+
+// Card skeleton
+<LoadingCard />
+
+// Grid skeleton
+<LoadingGrid cols={3} rows={2} />
+```
+
+### ProgressBar
+
+Upload progress and other progress indicators.
+
+```tsx
+import { ProgressBar } from '@/components/ui'
+
+// Basic progress bar
+<ProgressBar progress={75} />
+
+// With custom text
+<ProgressBar progress={50} text="Uploading..." />
+
+// Hide text
+<ProgressBar progress={25} showText={false} />
+```
+
+### ImagePreview
+
+Consolidated image display component with loading states, error handling, and multiple variants.
+
+```tsx
+import {
+  ImagePreview,
+  ThumbnailImage,
+  PreviewImage,
+  FullImage,
+  InteractiveImagePreview
+} from '@/components/ui'
+
+// Basic image preview with loading/error states
+<ImagePreview
+  src="/api/files/get?key=..."
+  alt="Selfie"
+  width={300}
+  height={300}
+/>
+
+// Size variants
+<ThumbnailImage src="..." alt="..." />
+<PreviewImage src="..." alt="..." />
+<FullImage src="..." alt="..." />
+
+// Interactive image with overlay
+<InteractiveImagePreview src="..." alt="...">
+  <button className="absolute top-2 right-2">Delete</button>
+</InteractiveImagePreview>
+
+// Custom error message
+<ImagePreview
+  src="..."
+  alt="..."
+  errorMessage="Image failed to load"
+/>
+```
 
 ## Grid Component
 

@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 
 // Load environment variables (.env.local preferred, fallback to .env)
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
+import { config as dotenvConfig } from 'dotenv'
+import { Resend } from 'resend'
+
 const root = process.cwd()
 const envLocal = path.join(root, '.env.local')
 const envDefault = path.join(root, '.env')
 if (fs.existsSync(envLocal)) {
-  require('dotenv').config({ path: envLocal })
+  dotenvConfig({ path: envLocal })
 } else if (fs.existsSync(envDefault)) {
-  require('dotenv').config({ path: envDefault })
+  dotenvConfig({ path: envDefault })
 }
-
-const { Resend } = require('resend')
 
 function parseArgs(argv) {
   const args = {}

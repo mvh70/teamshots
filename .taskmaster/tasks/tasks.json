@@ -979,7 +979,7 @@
         "description": "Build logo upload with background removal and generate placement variations.",
         "details": "Allow admin to upload team logo. Automatically remove background. Generate placement variations: background watermark, clothing overlay, physical item in scene (cup/desk). Expose selection in review step. Cache reusable assets. Respect i18n.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           4
         ],
@@ -1018,7 +1018,7 @@
         "description": "Localize all system errors and email templates (welcome, receipts, notifications) and persist language preference on user profile; apply locale to outbound emails.",
         "details": "Store user language in profile; ensure `next-intl` locale is used for server-rendered emails and error messages. Add currency/date localization (USD for EN; EUR/MXN for ES where applicable). Add tests for both locales.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           2,
           2
@@ -1032,7 +1032,7 @@
         "description": "Show remaining credits and upsell when insufficient on generation/regeneration flows; link to pricing/top-up.",
         "details": "- Display credit balance and 4-credit cost in generation and regenerate entry points\n- If insufficient credits, show upsell with links to purchase/top-up\n- i18n for EN/ES\n- Respect user/team credit pools as applicable\n- Add minimal tests/QA notes",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": []
@@ -1086,7 +1086,7 @@
         "description": "Create a thumbnail generation API endpoint that provides resized images via signed GET requests and update the UI to use these thumbnails for improved page load performance.",
         "details": "1. Backend Implementation:\n   - Create a new `/api/files/thumbnail` endpoint that accepts parameters:\n     - `fileId`: The ID of the original image\n     - `width`: Desired thumbnail width (optional, default: 200px)\n     - `height`: Desired thumbnail height (optional, default: 200px)\n     - `fit`: Resize strategy (cover, contain, etc., optional)\n   - Implement two thumbnail generation strategies:\n     - Pre-generated: Return signed URL to already-resized object in storage\n     - On-the-fly: Generate thumbnail dynamically if not pre-generated\n   - Add caching headers for optimal performance\n   - Ensure proper authentication and authorization checks\n   - Handle error cases (file not found, invalid dimensions, etc.)\n\n2. Storage Integration:\n   - Create a thumbnails/ directory in the storage bucket\n   - Implement logic to check if thumbnail already exists before generating\n   - Add background job to pre-generate common thumbnail sizes for new uploads\n   - Implement secure URL signing with appropriate expiration times\n\n3. UI Updates:\n   - Modify image components to use thumbnail URLs instead of original images\n   - Update the following components:\n     - SelfieGallery component\n     - GeneratedImageGrid component\n     - Any image previews in the generation flow\n   - Add progressive loading (blur-up or skeleton) during thumbnail load\n   - Implement proper error handling for failed thumbnail loads\n   - Add responsive image sizing based on viewport\n\n4. Performance Optimization:\n   - Implement client-side caching of thumbnails\n   - Add appropriate width/height attributes to prevent layout shifts\n   - Consider implementing lazy loading for off-screen images",
         "testStrategy": "1. Unit Tests:\n   - Test thumbnail endpoint with various parameter combinations\n   - Verify URL signing works correctly and expires appropriately\n   - Test error handling for invalid requests\n   - Verify thumbnail generation produces correct dimensions and format\n\n2. Integration Tests:\n   - Test end-to-end flow from UI request to thumbnail display\n   - Verify caching behavior works as expected\n   - Test with various image types (JPG, PNG, etc.)\n   - Measure and verify performance improvements\n\n3. Performance Testing:\n   - Compare page load times before and after implementation\n   - Measure bandwidth usage reduction\n   - Test on various network conditions (3G, 4G, etc.)\n   - Verify browser caching is working correctly\n\n4. Security Testing:\n   - Verify unauthorized users cannot access thumbnails\n   - Test URL signing expiration behavior\n   - Ensure proper input validation prevents security issues",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           8,
           22
@@ -1100,7 +1100,7 @@
         "description": "Add comprehensive logging and metrics to the upload proxy system and implement user-friendly error messages for various failure scenarios including file size/type restrictions and S3 storage errors.",
         "details": "1. Implement structured logging for the upload proxy:\n   - Add request logging with correlation IDs to track uploads through the system\n   - Log file metadata (size, type, name) for each upload attempt\n   - Record timing metrics for upload operations (client-to-server, server-to-S3)\n   - Create separate log categories for validation errors vs. storage errors\n\n2. Implement metrics collection:\n   - Track upload success/failure rates\n   - Measure average upload sizes and times\n   - Count occurrences of specific error types\n   - Integrate with existing monitoring system\n\n3. Enhance error handling:\n   - Create a standardized error response format with:\n     - User-friendly message (localized via next-intl)\n     - Error code for client-side handling\n     - Correlation ID for troubleshooting\n   \n4. Implement specific error handlers for common scenarios:\n   - File size exceeded: \"Your file exceeds the maximum size of X MB\"\n   - Invalid file type: \"Only JPG, PNG, etc. files are accepted\"\n   - S3 storage errors: \"We're experiencing storage issues. Please try again in a few minutes\"\n   - Network timeouts: \"Upload timed out. Please check your connection and try again\"\n\n5. Update the upload UI to:\n   - Display appropriate error messages to users\n   - Provide retry options where applicable\n   - Show progress indicators during upload\n   - Handle graceful fallbacks for persistent failures\n\n6. Ensure all error messages are internationalized:\n   - Add error message keys to locale files\n   - Support both English and Spanish error messages\n   - Format file size limits appropriately by locale",
         "testStrategy": "1. Unit Tests:\n   - Test error handling for each failure scenario (size limits, type validation, S3 errors)\n   - Verify correct error codes and messages are returned\n   - Test internationalization of error messages in both English and Spanish\n   - Validate logging format and content for various scenarios\n\n2. Integration Tests:\n   - Test upload flow with various file types and sizes\n   - Simulate S3 failures and verify appropriate error handling\n   - Verify metrics are correctly recorded for successful and failed uploads\n   - Test end-to-end flow with UI error presentation\n\n3. Performance Tests:\n   - Verify logging doesn't significantly impact upload performance\n   - Test with large files to ensure proper timeout handling\n   - Measure impact of metrics collection on system resources\n\n4. Manual Testing:\n   - Verify error messages are user-friendly and helpful\n   - Test upload retry functionality after errors\n   - Confirm error messages display correctly in the UI\n   - Validate logs contain sufficient information for troubleshooting",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           4,
           19
@@ -1764,7 +1764,7 @@
     "metadata": {
       "created": "2025-10-09T14:46:51.162Z",
       "description": "Default tasks context",
-      "updated": "2025-10-31T04:48:25.269Z"
+      "updated": "2025-11-12T12:55:32.735Z"
     }
   }
 }

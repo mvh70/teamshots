@@ -21,7 +21,7 @@ No free tier. All features require credits.
 ### Credits System
 - **1 generation = 10 credits** (produces 4 photo variations)
 - **Credits roll over** month-to-month (never expire)
-- **Display format:** "100 credits (10 generations)" - emphasize credits for psychological impact
+- **Display format:** "60 credits (6 generations)" - emphasize credits for psychological impact
 
 ### Try Once (One-time Purchase)
 ```
@@ -30,21 +30,21 @@ Credits: 10 (1 generation)
 Purpose: Low-friction proof of concept
 ```
 
-### Starter Subscription
+### Individual Subscription
 ```
-Monthly: $24/month â†’ 100 credits/month (25 generations)
-Annual: $245/year â†’ 100 credits/month (Save $43/year, 15% discount)
+Monthly: $24/month â†’ 60 credits/month (6 generations)
+Annual: $228/year â†’ 60 credits/month (Save $60/year, ~21% discount)
 
-Top-ups: $0.90 per 4 credits (minimum 20 credits)
+Top-ups: $9.99 per 30 credits (minimum purchase 30 credits)
 ```
 
 ### Pro Subscription  
 ```
-Monthly: $59/month â†’ 280 credits/month (70 generations)
-Annual: $600/year â†’ 280 credits/month (Save $108/year, 15% discount)
+Monthly: $59/month â†’ 200 credits/month (20 generations)
+Annual: $588/year â†’ 200 credits/month (Save $120/year, ~17% discount)
 
-Top-ups: $0.60 per 4 credits (minimum 20 credits)
-Pro users get 33% cheaper top-ups than Starter
+Top-ups: $24.99 per 100 credits (minimum purchase 100 credits)
+Pro users get a lower price per generation than Individual
 ```
 
 ## Pricing Psychology
@@ -104,30 +104,30 @@ Pro users get 33% cheaper top-ups than Starter
 
 Assumptions:
 - User on Starter monthly: $24/month
-- Uses all 100 credits (25 generations)
-- Buys 1 top-up (20 credits, 5 generations): $4.50
+- Uses all 60 credits (6 generations)
+- Buys 1 top-up (30 credits, 3 generations): $9.99
 
 ```
-Monthly Revenue:        $28.50
-Gemini API costs:       $3.00 (30 generations Ã— $0.10)
+Monthly Revenue:        $33.99
+Gemini API costs:       $0.90 (9 generations Ã— $0.10)
 Infrastructure costs:   $0.50
-Total costs:            $3.50
-Gross Margin:           88%
+Total costs:            $1.40
+Gross Margin:           96%
 ```
 
 ### Monthly User Economics (Pro)
 
 Assumptions:
 - User on Pro monthly: $59/month
-- Uses all 280 credits (70 generations)
-- Buys 1 top-up (40 credits, 10 generations): $6.00
+- Uses all 200 credits (20 generations)
+- Buys 1 top-up (100 credits, 10 generations): $24.99
 
 ```
-Monthly Revenue:        $65.00
-Gemini API costs:       $8.00 (80 generations Ã— $0.10)
+Monthly Revenue:        $83.99
+Gemini API costs:       $3.00 (30 generations Ã— $0.10)
 Infrastructure costs:   $0.50
-Total costs:            $8.50
-Gross Margin:           87%
+Total costs:            $3.50
+Gross Margin:           96%
 ```
 
 **All scenarios maintain 85%+ gross margins.**

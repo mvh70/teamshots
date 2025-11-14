@@ -8,7 +8,7 @@ import Link from 'next/link'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
 import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
-import AuthButton from '@/components/auth/AuthButton'
+import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
 
 export default function SignInPage() {
@@ -75,10 +75,32 @@ export default function SignInPage() {
           setError('Invalid credentials')
           track('signin_error', { reason: result.error })
         } else {
-          // Check user role and redirect accordingly
+          // Fetch all initial data in one consolidated call
           const session = await getSession()
-          if (session?.user?.isAdmin) {
-            router.push('/app/dashboard')
+          if (session?.user) {
+            try {
+              const response = await fetch('/api/user/initial-data')
+              if (response.ok) {
+                const data = await response.json()
+                // Store initial data in sessionStorage for components to use
+                try {
+                  // Add timestamp so components can check data freshness
+                  const dataWithTimestamp = { ...data, _timestamp: Date.now() }
+                  window.sessionStorage.setItem('teamshots.initialData', JSON.stringify(dataWithTimestamp))
+                } catch {}
+                
+                // Redirect based on onboarding state
+                if (data.onboarding?.needsTeamSetup) {
+                  router.push('/app/team')
+                } else {
+                  router.push('/app/dashboard')
+                }
+              } else {
+                router.push('/app/dashboard')
+              }
+            } catch {
+              router.push('/app/dashboard')
+            }
           } else {
             router.push('/app/dashboard')
           }
@@ -159,10 +181,8 @@ export default function SignInPage() {
             </label>
             <a href="#" className="text-sm text-brand-primary hover:text-brand-primary-hover">{t('forgotPassword')}</a>
           </div>
-          {error && (
-            <div className="text-red-600 text-sm text-center">{t(error)}</div>
-          )}
-          <AuthButton type="submit" isLoading={isLoading}>
+          {error && <InlineError message={t(error)} className="text-center" />}
+          <AuthButton type="submit" loading={isLoading}>
             {isLoading ? t('signingIn') : t('submit')}
           </AuthButton>
           <div className="text-center text-sm">

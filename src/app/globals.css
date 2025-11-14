@@ -81,3 +81,6 @@ input[type="password"],
 textarea {
   color: #111827 !important;
 }
+
+[data-radix-portal]{ position:relative; z-index:2147483647; }
+

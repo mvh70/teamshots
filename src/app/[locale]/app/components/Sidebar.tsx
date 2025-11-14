@@ -43,10 +43,31 @@ import {
   CameraIcon as CameraIconSolid,
 } from '@heroicons/react/24/solid'
 
+type TeamOnboardingStep = 'team_setup' | 'style_setup' | 'invite_members'
+
+interface SidebarRoleState {
+  isTeamAdmin: boolean
+  isTeamMember: boolean
+  needsTeamSetup: boolean
+  needsPhotoStyleSetup?: boolean
+  needsTeamInvites?: boolean
+  nextTeamOnboardingStep?: TeamOnboardingStep | null
+}
+
+interface NavigationItem {
+  name: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  iconSolid: React.ComponentType<{ className?: string }>
+  current: boolean
+  showFor: string[]
+  id?: string
+}
+
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
-  initialRole?: { isTeamAdmin: boolean; isTeamMember: boolean; needsTeamSetup: boolean }
+  initialRole?: SidebarRoleState
   initialAccountMode?: AccountMode
   initialSubscription?: SerializedSubscription | null
 }
@@ -59,6 +80,9 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
   const [isTeamMember, setIsTeamMember] = useState(initialRole?.isTeamMember ?? false)
   const [isTeamAdmin, setIsTeamAdmin] = useState(initialRole?.isTeamAdmin ?? false)
   const [needsTeamSetup, setNeedsTeamSetup] = useState(initialRole?.needsTeamSetup ?? false)
+  const [, setNeedsPhotoStyleSetup] = useState(initialRole?.needsPhotoStyleSetup ?? false)
+  const [, setNeedsTeamInvites] = useState(initialRole?.needsTeamInvites ?? false)
+  const [, setNextTeamOnboardingStep] = useState<TeamOnboardingStep | null>(initialRole?.nextTeamOnboardingStep ?? null)
   const [allocatedCredits, setAllocatedCredits] = useState(0)
   const [accountMode, setAccountMode] = useState<AccountMode>(initialAccountMode ?? 'individual')
   const [navReady, setNavReady] = useState(Boolean(initialRole))
@@ -103,17 +127,41 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
         setIsTeamMember(initialRole.isTeamMember)
         setIsTeamAdmin(initialRole.isTeamAdmin)
         setNeedsTeamSetup(initialRole.needsTeamSetup)
+        setNeedsPhotoStyleSetup(initialRole.needsPhotoStyleSetup ?? false)
+        setNeedsTeamInvites(initialRole.needsTeamInvites ?? false)
+        setNextTeamOnboardingStep(initialRole.nextTeamOnboardingStep ?? null)
         setAccountMode(initialAccountMode)
         setNavReady(true)
         return
       }
 
-      // Fallback: Only fetch if initial data is missing
+      // OPTIMIZATION: Check sessionStorage for initial data first
+      try {
+        const stored = sessionStorage.getItem('teamshots.initialData')
+        if (stored) {
+          const initialData = JSON.parse(stored)
+          if (initialData.roles && initialData.onboarding) {
+            setIsTeamMember(initialData.roles.isTeamMember || false)
+            setIsTeamAdmin(initialData.roles.isTeamAdmin || false)
+            setNeedsTeamSetup(initialData.onboarding.needsTeamSetup || false)
+            setNeedsPhotoStyleSetup(initialData.onboarding.needsPhotoStyleSetup || false)
+            setNeedsTeamInvites(initialData.onboarding.needsTeamInvites || false)
+            setNextTeamOnboardingStep(initialData.onboarding.nextTeamOnboardingStep ?? null)
+            setAccountMode(initialData.onboarding.accountMode || 'individual')
+            setNavReady(true)
+            return
+          }
+        }
+      } catch {
+        // Ignore parse errors, fall through to fetch
+      }
+
+      // Fallback: Only fetch if initial data is missing (should rarely happen)
       try {
         // Fetch account mode and team membership in parallel
         const [accountModeResult, teamData] = await Promise.all([
           fetchAccountMode(),
-          jsonFetcher<{ userRole: { isTeamMember?: boolean; isTeamAdmin?: boolean; needsTeamSetup?: boolean } }>('/api/dashboard/stats').catch(() => null)
+          jsonFetcher<{ userRole: { isTeamMember?: boolean; isTeamAdmin?: boolean; needsTeamSetup?: boolean; needsPhotoStyleSetup?: boolean; needsTeamInvites?: boolean; nextTeamOnboardingStep?: TeamOnboardingStep | null } }>('/api/dashboard/stats').catch(() => null)
         ])
 
         // Update account mode from centralized utility
@@ -126,6 +174,9 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
           setIsTeamMember(teamData.userRole.isTeamMember || teamData.userRole.isTeamAdmin || false)
           setIsTeamAdmin(teamData.userRole.isTeamAdmin || false)
           setNeedsTeamSetup(teamData.userRole.needsTeamSetup || false)
+          setNeedsPhotoStyleSetup(teamData.userRole.needsPhotoStyleSetup || false)
+          setNeedsTeamInvites(teamData.userRole.needsTeamInvites || false)
+          setNextTeamOnboardingStep(teamData.userRole.nextTeamOnboardingStep ?? null)
         } else if (session?.user?.role) {
           // Fallback: Use session role, but note this doesn't account for pro subscription
           const role = session.user.role
@@ -148,19 +199,23 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
   // Fetch allocated credits only for team admins
   useEffect(() => {
     const fetchAllocatedCredits = async () => {
+      if (session?.user?.role !== 'team_admin') return
       try {
         const data = await jsonFetcher<{ totalRemainingCredits: number }>('/api/team/invites/credits')
         setAllocatedCredits(data.totalRemainingCredits)
       } catch (err) {
+        setAllocatedCredits(0)
         console.error('Failed to fetch allocated credits:', err)
       }
     }
 
-    // Only fetch if user is a team admin
-    if (session?.user?.id && isTeamAdmin) {
-      fetchAllocatedCredits()
+    // Only fetch if user is a team admin with an active team
+    if (session?.user?.id && isTeamAdmin && !needsTeamSetup) {
+      void fetchAllocatedCredits()
+    } else if (!needsTeamSetup) {
+      setAllocatedCredits(0)
     }
-  }, [session?.user?.id, isTeamAdmin])
+  }, [session?.user?.id, session?.user?.role, isTeamAdmin, needsTeamSetup])
 
 
   // OPTIMIZATION: Only fetch subscription if not provided as prop
@@ -172,6 +227,66 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
     }
 
     const fetchSubscription = async () => {
+      // OPTIMIZATION: Check sessionStorage for initial data first
+      try {
+        const stored = sessionStorage.getItem('teamshots.initialData')
+        if (stored) {
+          const initialData = JSON.parse(stored)
+          if (initialData.subscription) {
+            const tierRaw = initialData.subscription.tier ?? null
+            const period = initialData.subscription.period ?? null
+
+            // Normalize tier for UI (checks period first to determine free plan)
+            const normalized = normalizePlanTierForUI(tierRaw, period)
+            setPlanTier(normalized)
+
+            // Compute human-readable label based on tier + period
+            let label = 'Individual Free package'
+            if (isFreePlan(period)) {
+              label = tierRaw === 'pro' ? 'Pro Free package' : 'Individual Free package'
+            } else if (period === 'try_once') {
+              label = tierRaw === 'pro' ? 'Pro try-once' : 'Individual try-once'
+            } else if (period === 'monthly') {
+              label = tierRaw === 'pro' ? 'Pro monthly' : 'Individual monthly'
+            } else if (period === 'annual') {
+              label = tierRaw === 'pro' ? 'Pro annual' : 'Individual annual'
+            }
+            setPlanLabel(label)
+            
+            // Only fetch fresh data if stale (>5 seconds)
+            const dataAge = Date.now() - (initialData._timestamp || 0)
+            if (dataAge > 5000) {
+              // Fetch fresh data in background
+              jsonFetcher<{ subscription: { tier: string | null; period?: PlanPeriod } | null }>('/api/user/subscription')
+                .then(data => {
+                  const freshTier = data?.subscription?.tier ?? null
+                  const freshPeriod = data?.subscription?.period ?? null
+                  const normalized = normalizePlanTierForUI(freshTier, freshPeriod)
+                  setPlanTier(normalized)
+                  // Update label if needed
+                  let label = 'Individual Free package'
+                  if (isFreePlan(freshPeriod)) {
+                    label = freshTier === 'pro' ? 'Pro Free package' : 'Individual Free package'
+                  } else if (freshPeriod === 'try_once') {
+                    label = freshTier === 'pro' ? 'Pro try-once' : 'Individual try-once'
+                  } else if (freshPeriod === 'monthly') {
+                    label = freshTier === 'pro' ? 'Pro monthly' : 'Individual monthly'
+                  } else if (freshPeriod === 'annual') {
+                    label = freshTier === 'pro' ? 'Pro annual' : 'Individual annual'
+                  }
+                  setPlanLabel(label)
+                })
+                .catch(() => {
+                  // Ignore errors, keep cached data
+                })
+            }
+            return
+          }
+        }
+      } catch {
+        // Ignore parse errors, fall through to fetch
+      }
+
       try {
         const data = await jsonFetcher<{ subscription: { tier: string | null; period?: PlanPeriod } | null }>('/api/user/subscription')
         const tierRaw = data?.subscription?.tier ?? null
@@ -201,8 +316,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
     if (session?.user?.id) fetchSubscription()
   }, [session?.user?.id, initialSubscription])
 
-
-  const allNavigation = [
+  const allNavigation: NavigationItem[] = [
     {
       name: t('nav.dashboard'),
       href: '/app/dashboard',
@@ -226,6 +340,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
       iconSolid: AdjustmentsHorizontalIconSolid,
       current: pathname === '/app/styles/personal',
       showFor: ['user', 'team_member', 'team_admin'],
+      id: 'sidebar-personal-styles-nav',
     },
     {
       name: t('nav.personalGenerations'),
@@ -250,6 +365,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
       iconSolid: AdjustmentsHorizontalIconSolid,
       current: pathname === '/app/styles/team',
       showFor: ['team_admin', 'team_member'], // Pro users will have effective role 'team_member'
+      id: 'sidebar-team-styles-nav',
     },
     {
       name: t('nav.team'),
@@ -257,8 +373,8 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
       icon: UsersIcon,
       iconSolid: UsersIconSolid,
       current: pathname === '/team' || pathname === '/app/team',
-      badge: needsTeamSetup ? '1' : undefined,
       showFor: ['team_admin', 'team_member'], // Pro users will have effective role 'team_member'
+      id: 'sidebar-team-nav',
     },
   ]
 
@@ -325,7 +441,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
           <div className={`flex p-4 border-b border-gray-200 ${collapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
             {!collapsed && (
               <div className="flex items-center space-x-2">
-                <Image src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} width={112} height={28} className="h-7 w-auto" priority />
+                <Image src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} width={112} height={28} className="h-7 w-auto" style={{ width: 'auto' }} priority />
               </div>
             )}
             {collapsed && (
@@ -354,6 +470,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
           {/* Primary Action Button */}
           <div className="p-4 relative group">
             <Link
+              id="primary-generate-btn"
               href="/app/generate/selfie"
               className={`flex items-center justify-center space-x-2 bg-brand-primary text-white rounded-lg px-4 py-3 md:py-3 font-medium hover:bg-brand-primary-hover transition-all duration-200 min-h-[44px] md:min-h-0 ${
                 collapsed ? 'px-2' : ''
@@ -380,6 +497,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                   <Link
                     key={item.name}
                     href={item.href}
+                    id={item.id}
                     className={`group flex items-center px-3 py-2.5 md:py-2 text-sm md:text-sm font-medium rounded-lg transition-colors relative min-h-[44px] md:min-h-0 ${
                       item.current
                         ? 'bg-brand-primary-light text-brand-primary'
@@ -388,11 +506,6 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                   >
                     <Icon className="h-5 w-5 md:h-5 md:w-5 mr-3 flex-shrink-0" />
                     <span>{item.name}</span>
-                    {item.badge && (
-                      <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-                        {item.badge}
-                      </span>
-                    )}
                   </Link>
                 )
               })}
@@ -405,6 +518,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                   <Link
                     key={item.name}
                     href={item.href}
+                    id={item.id}
                     className={`group flex items-center justify-center px-3 py-2.5 md:py-2 text-sm font-medium rounded-lg transition-colors relative min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 ${
                       item.current
                         ? 'bg-brand-primary-light text-brand-primary'
@@ -412,11 +526,6 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                     }`}
                   >
                     <Icon className="h-5 w-5 md:h-5 md:w-5" />
-                    {item.badge && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                        {item.badge}
-                      </span>
-                    )}
                     <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
                       {item.name}
                     </span>

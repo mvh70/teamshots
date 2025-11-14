@@ -10,13 +10,14 @@ import { auth } from '@/auth'
 export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
+import { deriveGenerationType } from '@/domain/generation/utils'
 
 // Define the type for the generation object returned by prisma.generation.findMany
+// Note: generationType is NOT included here because it's derived from person.teamId, not stored in DB
 type GenerationWithRelations = {
   id: string;
   selfieId: string | null;
   status: string;
-  generationType: string;
   creditSource: string;
   creditsUsed: number;
   provider: string;
@@ -46,6 +47,7 @@ type GenerationWithRelations = {
     lastName: string | null;
     email: string | null;
     userId: string | null;
+    teamId: string | null;
     team: {
       id: string;
       name: string;
@@ -98,16 +100,15 @@ export async function GET(request: NextRequest) {
     let where: Record<string, unknown> = {}
 
     if (roles.isTeamAdmin || roles.isTeamMember) {
-      // Team context
+      // Team context - filter by person.teamId (derives generationType from person data)
       if (!userTeamId) {
         return NextResponse.json({ error: 'Not part of a team' }, { status: 403 })
       }
       if (roles.isTeamAdmin) {
         where = {
           person: {
-            teamId: userTeamId
-          },
-          generationType: 'team'
+            teamId: userTeamId // Team generations have person.teamId set
+          }
         }
         if (userId && userId !== 'all') {
           (where.person as Record<string, unknown>).id = userId
@@ -117,18 +118,17 @@ export async function GET(request: NextRequest) {
         where = {
           person: {
             userId: session.user.id,
-            teamId: userTeamId
-          },
-          generationType: 'team'
+            teamId: userTeamId // Team generations have person.teamId set
+          }
         }
       }
     } else {
-      // Individual context
+      // Individual context - filter by person.userId AND person.teamId IS NULL
       where = {
         person: {
-          userId: session.user.id
-        },
-        generationType: 'personal'
+          userId: session.user.id,
+          teamId: null // Personal generations have person.teamId = null
+        }
       }
     }
 
@@ -156,6 +156,7 @@ export async function GET(request: NextRequest) {
               lastName: true,
               email: true,
               userId: true, // Make sure userId is selected
+              teamId: true, // Needed to derive generationType
               team: {
                 select: {
                   id: true,
@@ -237,11 +238,14 @@ export async function GET(request: NextRequest) {
         // ignore malformed style settings
       }
 
+      // Derive generationType from person.teamId (single source of truth)
+      const derivedGenerationType = deriveGenerationType(generation.person.teamId)
+      
       return ({
       id: generation.id,
       selfieId: generation.selfieId,
       status: generation.status,
-      generationType: generation.generationType,
+      generationType: derivedGenerationType, // Derived from person.teamId, not stored field
       creditSource: generation.creditSource,
       creditsUsed: generation.creditsUsed,
       provider: generation.provider,

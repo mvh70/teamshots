@@ -33,6 +33,11 @@ export interface ImageEvaluationInput {
     mimeType: string
     description?: string
   }
+  backgroundReference?: {
+    base64: string
+    mimeType: string
+    description?: string
+  }
 }
 
 export interface StructuredEvaluation {
@@ -42,6 +47,8 @@ export interface StructuredEvaluation {
   identity_preserved: 'YES' | 'NO' | 'UNCERTAIN'
   proportions_realistic: 'YES' | 'NO' | 'UNCERTAIN'
   no_unauthorized_accessories: 'YES' | 'NO' | 'UNCERTAIN'
+  no_visible_reference_labels: 'YES' | 'NO' | 'UNCERTAIN'
+  custom_background_matches: 'YES' | 'NO' | 'N/A'
   branding_logo_matches: 'YES' | 'NO' | 'N/A'
   branding_positioned_correctly: 'YES' | 'NO' | 'N/A'
   branding_scene_aligned: 'YES' | 'NO' | 'N/A'
@@ -83,7 +90,8 @@ export async function evaluateGeneratedImage({
   labelInstruction,
   selfieReferences,
   compositeReference,
-  logoReference
+  logoReference,
+  backgroundReference
 }: ImageEvaluationInput): Promise<ImageEvaluationResult> {
   const modelName = Env.string('GEMINI_EVAL_MODEL', Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash'))
   const model = await getVertexGenerativeModel(modelName)
@@ -145,30 +153,53 @@ export async function evaluateGeneratedImage({
     '6. no_unauthorized_accessories',
     '   - Compare the reference selfies to the generated image',
     '   - Are there NO accessories (glasses, jewelry, piercings, tattoos, hats)',
-    '     that are ABSENT from the reference selfies?'
+    '     that are ABSENT from the reference selfies?',
+    '',
+    '7. no_visible_reference_labels',
+    '   - Are there NO visible labels, text overlays, or bordered text boxes containing words like:',
+    '     SUBJECT, SELFIE, LOGO, FORMAT, REFERENCE, ADDITIONAL, or similar labeling patterns?',
+    '   - Look specifically for: white/light boxes with borders containing text, labels with patterns like',
+    '     "SUBJECT1-SELFIE#", "FORMAT #:#", or any text that appears to be from reference materials',
+    '   - Legitimate scene text (signs, badges, documents) is acceptable if contextually appropriate',
+    '   - Answer NO if you see ANY bordered labels with our reference keywords'
   ]
+
+  if (backgroundReference) {
+    baseInstructions.push(
+      '',
+      '8. custom_background_matches',
+      '   - Does the background in the generated image match the provided custom background reference?',
+      '   - Are key visual elements, colors, textures, and overall scene from the reference background present?',
+      '   - The background should be recognizable as derived from the reference (exact match not required)'
+    )
+  } else {
+    baseInstructions.push(
+      '',
+      '8. custom_background_matches: N/A (no custom background required)'
+    )
+  }
 
   if (logoReference) {
     baseInstructions.push(
       '',
-      '7. branding_logo_matches',
+      '9. branding_logo_matches',
       '   - Does the logo in the generated image match the provided brand asset?',
       '   - Are colors, proportions, and design elements preserved (no distortion)?',
       '',
-      '8. branding_positioned_correctly',
+      '10. branding_positioned_correctly',
       '   - Is the logo placed in the designated location shown in reference assets?',
       '   - Does it appear exactly ONCE (not duplicated or missing)?',
       '',
-      '9. branding_scene_aligned',
+      '11. branding_scene_aligned',
       '   - Is the logo integrated naturally into the scene?',
       '   - Does lighting, perspective, and scale match the environment?'
     )
   } else {
     baseInstructions.push(
       '',
-      '7. branding_logo_matches: N/A (no logo required)',
-      '8. branding_positioned_correctly: N/A (no logo required)',
-      '9. branding_scene_aligned: N/A (no logo required)'
+      '9. branding_logo_matches: N/A (no logo required)',
+      '10. branding_positioned_correctly: N/A (no logo required)',
+      '11. branding_scene_aligned: N/A (no logo required)'
     )
   }
 
@@ -183,12 +214,16 @@ export async function evaluateGeneratedImage({
     '  "identity_preserved": "YES",',
     '  "proportions_realistic": "YES",',
     '  "no_unauthorized_accessories": "YES",',
+    '  "no_visible_reference_labels": "YES",',
+    '  "custom_background_matches": "N/A",',
     '  "branding_logo_matches": "N/A",',
     '  "branding_positioned_correctly": "N/A",',
     '  "branding_scene_aligned": "N/A",',
     '  "explanations": {',
     '    "dimensions_and_aspect_correct": "Image meets size requirements",',
     '    "is_fully_generated": "Fully AI-generated, no selfie portions visible",',
+    '    "no_visible_reference_labels": "No reference labels detected",',
+    '    "custom_background_matches": "Custom background properly applied",',
     '    ...',
     '  }',
     '}'
@@ -217,6 +252,15 @@ export async function evaluateGeneratedImage({
     })
     parts.push({
       inlineData: { mimeType: compositeReference.mimeType, data: compositeReference.base64 }
+    })
+  }
+
+  if (backgroundReference) {
+    parts.push({
+      text: backgroundReference.description ?? 'Custom background reference for comparison.'
+    })
+    parts.push({
+      inlineData: { mimeType: backgroundReference.mimeType, data: backgroundReference.base64 }
     })
   }
 
@@ -323,6 +367,9 @@ export async function evaluateGeneratedImage({
     structuredEvaluation.identity_preserved === 'NO',
     structuredEvaluation.proportions_realistic === 'NO',
     structuredEvaluation.no_unauthorized_accessories === 'NO',
+    structuredEvaluation.no_visible_reference_labels === 'NO',
+    structuredEvaluation.no_visible_reference_labels === 'UNCERTAIN', // Critical field - auto-reject uncertainty
+    structuredEvaluation.custom_background_matches === 'NO',
     structuredEvaluation.branding_logo_matches === 'NO',
     structuredEvaluation.branding_positioned_correctly === 'NO',
     structuredEvaluation.branding_scene_aligned === 'NO'
@@ -331,7 +378,7 @@ export async function evaluateGeneratedImage({
   // Count uncertain responses
   const uncertainCount = Object.values(structuredEvaluation).filter((v) => v === 'UNCERTAIN').length
 
-  // Approval: ALL must be YES (or N/A for branding)
+  // Approval: ALL must be YES (or N/A for custom background/branding)
   const allApproved =
     structuredEvaluation.dimensions_and_aspect_correct === 'YES' &&
     structuredEvaluation.is_fully_generated === 'YES' &&
@@ -339,6 +386,9 @@ export async function evaluateGeneratedImage({
     structuredEvaluation.identity_preserved === 'YES' &&
     structuredEvaluation.proportions_realistic === 'YES' &&
     structuredEvaluation.no_unauthorized_accessories === 'YES' &&
+    structuredEvaluation.no_visible_reference_labels === 'YES' &&
+    (structuredEvaluation.custom_background_matches === 'YES' ||
+      structuredEvaluation.custom_background_matches === 'N/A') &&
     (structuredEvaluation.branding_logo_matches === 'YES' ||
       structuredEvaluation.branding_logo_matches === 'N/A') &&
     (structuredEvaluation.branding_positioned_correctly === 'YES' ||
@@ -409,6 +459,8 @@ function parseStructuredEvaluation(text: string): StructuredEvaluation | null {
       identity_preserved: normalizeYesNoUncertain(parsed.identity_preserved),
       proportions_realistic: normalizeYesNoUncertain(parsed.proportions_realistic),
       no_unauthorized_accessories: normalizeYesNoUncertain(parsed.no_unauthorized_accessories),
+      no_visible_reference_labels: normalizeYesNoUncertain(parsed.no_visible_reference_labels),
+      custom_background_matches: normalizeYesNoNA(parsed.custom_background_matches),
       branding_logo_matches: normalizeYesNoNA(parsed.branding_logo_matches),
       branding_positioned_correctly: normalizeYesNoNA(parsed.branding_positioned_correctly),
       branding_scene_aligned: normalizeYesNoNA(parsed.branding_scene_aligned),

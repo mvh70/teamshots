@@ -10,7 +10,7 @@ import { auth } from '@/auth'
 export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
 import { Env } from '@/lib/env'
-import { hasSufficientCredits, reserveCreditsForGeneration, getUserCreditBalance, getPersonCreditBalance, getEffectiveTeamCreditBalance } from '@/domain/credits/credits'
+import { getPersonCreditBalance } from '@/domain/credits/credits'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getRegenerationCount } from '@/domain/pricing'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -21,8 +21,9 @@ import { randomUUID } from 'crypto'
 import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { getPackageConfig } from '@/domain/style/packages'
-import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
-import { getUserSubscription } from '@/domain/subscription/subscription'
+import { CreditService } from '@/domain/services/CreditService'
+import { UserService } from '@/domain/services/UserService'
+import { deriveGenerationType, deriveCreditSource } from '@/domain/generation/utils'
 
 const cloneDeep = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
@@ -106,9 +107,8 @@ export async function POST(request: NextRequest) {
     }
 
     // OPTIMIZATION: Resolve selfies by IDs and keys in parallel
-    let selfies = [] as Array<{ id: string; key: string; personId: string; person: { userId: string | null; teamId: string | null } }>
     const [foundByIds, foundByKeys] = await Promise.all([
-      requestedIds.length > 0 
+      requestedIds.length > 0
         ? prisma.selfie.findMany({
             where: { id: { in: requestedIds } },
             include: { person: { select: { userId: true, teamId: true } } }
@@ -124,14 +124,15 @@ export async function POST(request: NextRequest) {
 
     // Combine results, avoiding duplicates
     const seenIds = new Set<string>()
+    const selfies = [] as Array<{ id: string; key: string; personId: string; person: { userId: string | null; teamId: string | null } }>
     for (const s of [...foundByIds, ...foundByKeys]) {
       if (!seenIds.has(s.id)) {
         seenIds.add(s.id)
-        selfies.push({ 
-          id: s.id, 
-          key: s.key, 
-          personId: s.personId, 
-          person: { userId: s.person?.userId || null, teamId: s.person?.teamId || null } 
+        selfies.push({
+          id: s.id,
+          key: s.key,
+          personId: s.personId,
+          person: { userId: s.person?.userId || null, teamId: s.person?.teamId || null }
         })
       }
     }
@@ -150,12 +151,10 @@ export async function POST(request: NextRequest) {
         })
         if (moreSelected.length > 1) {
           const existingIds = new Set(selfies.map(s => s.id))
-          for (const s of moreSelected) {
-            if (!existingIds.has(s.id)) {
-              // Use the same person as the already-resolved selfie to avoid early references
-              selfies.push({ id: s.id, key: s.key, personId: selfies[0].personId, person: selfies[0].person })
-            }
-          }
+          const additionalSelfies = moreSelected
+            .filter(s => !existingIds.has(s.id))
+            .map(s => ({ id: s.id, key: s.key, personId: selfies[0].personId, person: selfies[0].person }))
+          selfies.push(...additionalSelfies)
         }
       } catch {}
     }
@@ -203,18 +202,40 @@ export async function POST(request: NextRequest) {
 
     // Debug logging removed for production security
 
-    // OPTIMIZATION: Fetch user roles and subscription in parallel
-    const [userWithRoles, subscription] = await Promise.all([
-      getUserWithRoles(session.user.id),
-      getUserSubscription(session.user.id)
-    ])
-    const effective = userWithRoles ? await getUserEffectiveRoles(userWithRoles, subscription) : null
-    const isTeamContext = Boolean(effective && (effective.isTeamAdmin || effective.isTeamMember) && ownerPerson.teamId)
-    const enforcedGenerationType: 'personal' | 'team' = isTeamContext ? 'team' : 'personal'
-    const enforcedCreditSource: 'individual' | 'team' = isTeamContext ? 'team' : 'individual'
+    // Get user context and determine credit source using centralized logic
+    const userContext = await UserService.getUserContext(session.user.id)
+    const creditSourceInfo = await CreditService.determineCreditSource(userContext)
+    const enforcedCreditSource = creditSourceInfo.creditSource
+
+    // Derive generation type from person's team membership (single source of truth)
+    const derivedGenerationType = deriveGenerationType(ownerPerson.teamId)
+    const derivedCreditSource = deriveCreditSource(ownerPerson.teamId)
+
+    // Validate that the determined credit source matches the derived one from person data
+    // This ensures consistency: if person is in a team, they must use team credits
+    if (derivedCreditSource !== enforcedCreditSource) {
+      Logger.error('Credit source mismatch', {
+        userId: session.user.id,
+        personTeamId: ownerPerson.teamId,
+        derivedCreditSource,
+        enforcedCreditSource,
+        reason: creditSourceInfo.reason
+      })
+      return NextResponse.json({ 
+        error: 'Credit source mismatch. Person team membership does not match user role.' 
+      }, { status: 400 })
+    }
+
+    Logger.debug('Credit source determination', {
+      userId: session.user.id,
+      creditSource: enforcedCreditSource,
+      generationType: derivedGenerationType,
+      personTeamId: ownerPerson.teamId,
+      reason: creditSourceInfo.reason
+    })
 
     // Additional hard checks for ownership by mode
-    if (enforcedGenerationType === 'team') {
+    if (derivedGenerationType === 'team') {
       if (!ownerPerson.teamId || !isSameTeam) {
         return NextResponse.json({ error: 'Not authorized to create team generation for this person' }, { status: 403 })
       }
@@ -298,68 +319,37 @@ export async function POST(request: NextRequest) {
     }
 
 
-    // Determine credit source and check balance (using enforced values)
-    // Regenerations are free, so skip credit checks for regenerations
-    const personId: string | null = primarySelfie.personId
-    const userId: string | null = ownerPerson.userId
-    
+    // Check credits using CreditService (skip for regenerations which are free)
     if (!isRegeneration) {
-      // Only check credits for new generations, not regenerations
+      const canAfford = await CreditService.canAffordOperation(
+        session.user.id,
+        PRICING_CONFIG.credits.perGeneration,
+        userContext
+      )
+
+      if (!canAfford) {
+        // Get detailed credit information for error message
+        const creditSummary = await CreditService.getCreditBalanceSummary(session.user.id, userContext)
+
       if (enforcedCreditSource === 'individual') {
-        // For individual credits, use the user's credits
-        const hasCredits = await hasSufficientCredits(null, userId, PRICING_CONFIG.credits.perGeneration)
-        if (!hasCredits) {
           return NextResponse.json(
             { 
               error: 'Insufficient individual credits',
               required: PRICING_CONFIG.credits.perGeneration,
-              available: await getUserCreditBalance(userId!),
+              available: creditSummary.individual,
               message: 'Please purchase a subscription or credit package to generate photos',
               redirectTo: '/en/app/settings?purchase=required'
             },
             { status: 402 }
           )
-        }
       } else {
-        // For team credits, use the team's credits
-        if (!ownerPerson.teamId) {
-          return NextResponse.json(
-            { error: 'Person must be part of a team to use team credits' },
-            { status: 400 }
-          )
-        }
-        
-        // Get userId for effective team credit balance
-        const teamUser = await prisma.user.findFirst({
-          where: {
-            person: {
-              teamId: ownerPerson.teamId
-            }
-          },
-          select: { id: true }
-        })
-        
-        const hasCredits = await hasSufficientCredits(
-          null, 
-          teamUser?.id || null, 
-          PRICING_CONFIG.credits.perGeneration, 
-          ownerPerson.teamId
-        )
-        
-        if (!hasCredits) {
-          const available = await getEffectiveTeamCreditBalance(
-            teamUser?.id || session.user.id, 
-            ownerPerson.teamId
-          )
-          
-          // Check if the person still has allocation left
-          const personAllocation = await getPersonCreditBalance(personId)
-          
+          // Team credits insufficient
+          const personAllocation = await getPersonCreditBalance(primarySelfie.personId)
           return NextResponse.json(
             { 
               error: 'Insufficient team credits',
               required: PRICING_CONFIG.credits.perGeneration,
-              available,
+              available: creditSummary.team,
               personAllocation,
               message: personAllocation > 0 
                 ? 'You have allocation remaining but the team has insufficient credits. Contact your team admin.' 
@@ -415,9 +405,9 @@ export async function POST(request: NextRequest) {
       let userType: 'tryOnce' | 'personal' | 'business' | 'invited' = 'tryOnce'
       
       // Check if user has a subscription
-      if (userId) {
+      if (session.user.id) {
         const user = await prisma.user.findUnique({
-          where: { id: userId }
+          where: { id: session.user.id }
         })
         const userPlanTier = (user as unknown as { planTier?: string | null })?.planTier
         if (userPlanTier === 'individual') {
@@ -507,8 +497,8 @@ export async function POST(request: NextRequest) {
     try {
       let shouldEnforceFreeStyle = false
       
-      if (userId) {
-        const userBasic = await prisma.user.findUnique({ where: { id: userId } })
+      if (session.user.id) {
+        const userBasic = await prisma.user.findUnique({ where: { id: session.user.id } })
         const basicPlanPeriod = (userBasic as unknown as { planPeriod?: string | null })?.planPeriod
         // Check if user is on free plan
         if (basicPlanPeriod === 'free') {
@@ -593,7 +583,7 @@ export async function POST(request: NextRequest) {
         contextId: resolvedContextId,
         uploadedPhotoKey: primarySelfie.key,
         generatedPhotoKeys: [], // Will be populated by worker
-        generationType: enforcedGenerationType,
+        // generationType removed - now derived from person.teamId (single source of truth)
         creditSource: enforcedCreditSource,
         status: 'pending',
         creditsUsed: isRegeneration ? 0 : PRICING_CONFIG.credits.perGeneration, // Regenerations are free
@@ -607,28 +597,28 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Reserve credits (skip for regenerations - they are free)
+    // Reserve credits using CreditService (skip for regenerations - they are free)
     if (!isRegeneration) {
       try {
-        // Get teamInviteId for team members
-        let teamInviteId: string | undefined
-        if (enforcedCreditSource === 'team' && ownerPerson.inviteToken) {
-          const teamInvite = await prisma.teamInvite.findUnique({
-            where: { token: ownerPerson.inviteToken as string }
-          })
-          teamInviteId = teamInvite?.id
+        const reservationResult = await CreditService.reserveCreditsForGeneration(
+          session.user.id,
+          primarySelfie.personId,
+          PRICING_CONFIG.credits.perGeneration,
+          userContext
+        )
+
+        if (!reservationResult.success) {
+          Logger.error('Credit reservation failed', { error: reservationResult.error })
+          await prisma.generation.delete({ where: { id: generation.id } })
+          throw new Error(reservationResult.error || 'Credit reservation failed')
         }
 
-        // Debug logging removed for production security
-        
-        await reserveCreditsForGeneration(
-          enforcedCreditSource === 'individual' ? null : personId,
-          enforcedCreditSource === 'individual' ? userId : null,
-          PRICING_CONFIG.credits.perGeneration,
-          `Reserved for generation ${generation.id}`,
-          enforcedCreditSource === 'team' ? ownerPerson.teamId || undefined : undefined,
-          teamInviteId
-        )
+        Logger.debug('Credits reserved successfully', {
+          generationId: generation.id,
+          transactionId: reservationResult.transactionId,
+          individualCreditsUsed: reservationResult.individualCreditsUsed,
+          teamCreditsUsed: reservationResult.teamCreditsUsed
+        })
       } catch (creditError) {
         // If credit reservation fails, delete the generation record
         await prisma.generation.delete({ where: { id: generation.id } })
@@ -668,14 +658,14 @@ export async function POST(request: NextRequest) {
       },
       creditSource: enforcedCreditSource,
     }, {
-      priority: enforcedGenerationType === 'team' ? 1 : 0, // Higher priority for team generations
+      priority: derivedGenerationType === 'team' ? 1 : 0, // Higher priority for team generations
       jobId: `gen-${generation.id}`, // Custom ID for easier tracking
     })
 
     Telemetry.increment('generation.create.success')
     
     // Return account mode info to avoid redundant API call on client
-    const isPro = effective?.isTeamAdmin ?? false
+    const isPro = userContext.roles.isTeamAdmin ?? false
     const redirectUrl = isPro ? '/app/generations/team' : 
       (session.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
     

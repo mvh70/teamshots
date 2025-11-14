@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
+import { deriveGenerationType } from '@/domain/generation/utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,18 +43,28 @@ export async function GET(request: NextRequest) {
       },
       take: 10,
       include: {
-        selfie: true
+        selfie: true,
+        person: {
+          select: {
+            teamId: true // Needed to derive generationType
+          }
+        }
       }
     })
 
-    const activities = generations.map(generation => ({
-      id: generation.id,
-      type: 'generation',
-      action: `Generated ${generation.generationType === 'personal' ? 'personal' : 'team'} photos`,
-      time: generation.createdAt.toISOString(),
-      status: generation.status,
-      generationType: generation.generationType
-    }))
+    const activities = generations.map(generation => {
+      // Derive generationType from person.teamId (single source of truth)
+      const derivedGenerationType = deriveGenerationType(generation.person.teamId)
+      
+      return {
+        id: generation.id,
+        type: 'generation',
+        action: `Generated ${derivedGenerationType === 'personal' ? 'personal' : 'team'} photos`,
+        time: generation.createdAt.toISOString(),
+        status: generation.status,
+        generationType: derivedGenerationType // Derived from person.teamId, not stored field
+      }
+    })
 
     return NextResponse.json({ activities })
   } catch (error) {
