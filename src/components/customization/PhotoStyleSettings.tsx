@@ -343,54 +343,79 @@ export default function PhotoStyleSettings({
       <div
         key={category.key}
         id={`${category.key}-settings`}
-        className={`rounded-lg border shadow-sm transition ${
-          isUserChoice
-            ? 'bg-brand-primary-light border-brand-primary/50 hover:ring-1 hover:ring-brand-primary/60'
-            : 'bg-white border-gray-200'
+        className={`transition ${
+          isPredefined
+            ? 'md:rounded-lg md:border md:shadow-sm md:bg-white md:border-gray-200'
+            : isUserChoice
+              ? 'rounded-lg border shadow-sm bg-brand-primary-light border-brand-primary/50 hover:ring-1 hover:ring-brand-primary/60'
+              : 'rounded-lg border shadow-sm bg-white border-gray-200'
         }`}
       >
         {/* Category Header */}
-        <div className="p-5 md:p-4 border-b border-gray-200">
+        <div className={`${
+          isPredefined 
+            ? 'p-0 md:p-4 md:border-b border-gray-200' 
+            : 'p-5 md:p-4 border-b border-gray-200'
+        }`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
+            {/* Mobile: Icon, title, and badge on same line */}
+            <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-none">
               <Icon className="h-6 w-6 md:h-5 md:w-5 text-gray-600 flex-shrink-0" />
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 md:flex-none">
+                <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-xl md:text-lg font-semibold text-gray-900 break-words">
                   {t(`categories.${category.key}.title`, { default: category.label })}
                 </h3>
-                <p className="text-base md:text-sm text-gray-600 mt-1 md:mt-0">
+                  {/* Status badge - inline with title on mobile only */}
+                  <span className={`md:hidden inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium flex-shrink-0 ${
+                    isUserChoice ? 'bg-purple-100 text-purple-800' :
+                    isLockedByPreset ? 'bg-red-50 text-red-600 border border-red-200' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {isUserChoice ? (
+                      <SparklesIcon className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <LockClosedIcon className={`h-4 w-4 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
+                    )}
+                    {chipLabel}
+                  </span>
+                </div>
+                <p className={`text-base md:text-sm text-gray-600 mt-1 md:mt-0 ${
+                  category.key === 'background' && isPredefined ? 'hidden' : 'hidden md:block'
+                }`}>
                   {t(`categories.${category.key}.description`, { default: category.description })}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Desktop: Badge and toggle on the right */}
+            <div className="hidden md:flex items-center gap-3 flex-shrink-0">
               {/* Status badges */}
-              <span className={`inline-flex items-center gap-1 px-2 py-1 md:px-2 md:py-0.5 rounded-full text-sm md:text-xs font-medium ${
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                 isUserChoice ? 'bg-purple-100 text-purple-800' :
                 isLockedByPreset ? 'bg-red-50 text-red-600 border border-red-200' :
                 'bg-gray-100 text-gray-600'
               }`}>
                 {isUserChoice ? (
-                  <SparklesIcon className="h-4 w-4 md:h-3.5 md:w-3.5" aria-hidden="true" />
+                  <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
                 ) : (
-                  <LockClosedIcon className={`h-4 w-4 md:h-3.5 md:w-3.5 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
+                  <LockClosedIcon className={`h-3.5 w-3.5 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
                 )}
                 {chipLabel}
               </span>
 
-              {/* Larger toggle switch for mobile */}
+              {/* Toggle switch */}
               {showToggles && !readonlyPredefined && (
                 <button
                   id={`${category.key}-toggle`}
                   type="button"
                   onClick={(e) => handleCategoryToggle(category.key, !isPredefined, e)}
-                  className="flex items-center gap-2 px-4 py-2 md:px-3 md:py-1.5 text-base md:text-sm font-medium rounded-md transition-colors border border-gray-200 hover:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1"
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors border border-gray-200 hover:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1"
                 >
-                  <div className={`relative inline-flex h-7 w-12 md:h-5 md:w-9 items-center rounded-full transition-colors ${
+                  <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
                     isPredefined ? 'bg-brand-primary' : 'bg-gray-300'
                   }`}>
-                    <span className={`inline-block h-5 w-5 md:h-3 md:w-3 transform rounded-full bg-white transition-transform ${
-                      isPredefined ? 'translate-x-6 md:translate-x-5' : 'translate-x-1'
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      isPredefined ? 'translate-x-5' : 'translate-x-1'
                     }`} />
                   </div>
                   <span className={isPredefined ? 'text-brand-primary' : 'text-gray-600'}>
@@ -402,17 +427,48 @@ export default function PhotoStyleSettings({
                 </button>
               )}
             </div>
+            {/* Mobile: Toggle below title/badge */}
+            {showToggles && !readonlyPredefined && (
+              <div className="md:hidden">
+                <button
+                  id={`${category.key}-toggle`}
+                  type="button"
+                  onClick={(e) => handleCategoryToggle(category.key, !isPredefined, e)}
+                  className="flex items-center gap-2 px-4 py-2 text-base font-medium rounded-md transition-colors border border-gray-200 hover:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1"
+                >
+                  <div className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                    isPredefined ? 'bg-brand-primary' : 'bg-gray-300'
+                  }`}>
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                      isPredefined ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </div>
+                  <span className={isPredefined ? 'text-brand-primary' : 'text-gray-600'}>
+                    {isPredefined
+                      ? t('toggle.predefined', { default: 'Predefined' })
+                      : t('toggle.userChoice', { default: 'User Choice' })
+                    }
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Category Settings - always expanded */}
-        <div className={`p-5 md:p-4 ${isLockedByPreset ? 'opacity-60' : ''}`}>
+        <div className={`${
+          isPredefined 
+            ? 'p-0 md:p-4' 
+            : 'p-5 md:p-4'
+        } ${isLockedByPreset ? 'opacity-60' : ''}`}>
           {category.key === 'background' && (
             <EnhancedBackgroundSelector
               value={value.background || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('background', settings)}
+              isPredefined={readonlyPredefined && isPredefined}
               isDisabled={readonlyPredefined && isPredefined}
               availableBackgrounds={pkg.availableBackgrounds}
+              showHeader={false}
             />
           )}
           
@@ -420,6 +476,7 @@ export default function PhotoStyleSettings({
             <ClothingStyleSelector
               value={value.clothing || { style: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('clothing', settings)}
+              isPredefined={readonlyPredefined && isPredefined}
               isDisabled={readonlyPredefined && isPredefined}
             />
           )}
@@ -439,6 +496,7 @@ export default function PhotoStyleSettings({
             <ShotTypeSelector
               value={value.shotType || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('shotType', settings)}
+              isPredefined={readonlyPredefined && isPredefined}
               isDisabled={readonlyPredefined && isPredefined}
             />
           )}
@@ -447,6 +505,7 @@ export default function PhotoStyleSettings({
             <BrandingSelector
               value={value.branding || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('branding', settings)}
+              isPredefined={readonlyPredefined && isPredefined}
               isDisabled={readonlyPredefined && isPredefined}
             />
           )}
@@ -455,6 +514,7 @@ export default function PhotoStyleSettings({
             <ExpressionSelector
               value={value.expression || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('expression', settings)}
+              isPredefined={readonlyPredefined && isPredefined}
               isDisabled={readonlyPredefined && isPredefined}
             />
           )}
@@ -479,7 +539,7 @@ export default function PhotoStyleSettings({
     <div className={`space-y-6 ${className}`}>
       {/* Photo Style Section */}
       <div className="space-y-4">
-        <div id="composition-settings-section" className="bg-gray-50 rounded-lg p-4">
+        <div id="composition-settings-section" className="hidden md:block bg-gray-50 rounded-lg p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
@@ -511,7 +571,7 @@ export default function PhotoStyleSettings({
 
       {/* User Style Section */}
       <div className="space-y-4">
-        <div id="user-style-settings-section" className="bg-gray-50 rounded-lg p-4">
+        <div id="user-style-settings-section" className="hidden md:block bg-gray-50 rounded-lg p-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             {t('sections.userStyle', { default: 'User Style Settings' })}
           </h3>

@@ -85,6 +85,17 @@ export default function SelfiesPage() {
   const selectedCount = validSelectedIds.length
   const canContinue = selectedCount >= 2
 
+  // Only show continue button when coming from generation flow (not when just managing selfies)
+  const [isInGenerationFlow, setIsInGenerationFlow] = useState(false)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const fromGeneration = sessionStorage.getItem('fromGeneration') === 'true'
+      const openStartFlow = sessionStorage.getItem('openStartFlow') === 'true'
+      // Only show continue button if explicitly in generation flow, not just when managing selfies
+      setIsInGenerationFlow(fromGeneration || openStartFlow)
+    }
+  }, [])
+
   const handleContinue = () => {
     if (canContinue) {
       // Navigate back to dashboard and open start flow
@@ -232,9 +243,63 @@ export default function SelfiesPage() {
         showBackToDashboard
         token={token}
         title=""
+        onBackClick={() => {
+          // Clear sessionStorage flags to prevent auto-continuing to generation
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('openStartFlow')
+            sessionStorage.removeItem('fromGeneration')
+            sessionStorage.removeItem('pendingGeneration')
+          }
+          router.replace(`/invite-dashboard/${token}`)
+        }}
       />
 
       
+
+      {/* Mobile: Selfies section breaks out of padding container */}
+      {!uploadOnly && (
+        <>
+          {/* Mobile: Direct content, no wrapper, with padding */}
+          <div className="md:hidden bg-white">
+            <div className="px-4 pt-4 flex items-center justify-between gap-3">
+              <SelfieSelectionInfoBanner selectedCount={selectedCount} className="flex-1 mb-0" />
+              {isInGenerationFlow && (
+                <button
+                  onClick={handleContinue}
+                  disabled={!canContinue}
+                  className={`px-4 py-2 text-sm font-medium rounded-md flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                    canContinue
+                      ? 'text-white bg-brand-primary hover:bg-brand-primary-hover'
+                      : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+                  }`}
+                >
+                  Continue
+                </button>
+              )}
+            </div>
+            <div className="px-4 pt-2 pb-4">
+              <SelfieGallery
+                selfies={selfies.map(s => ({ 
+                  id: s.id, 
+                  key: s.key, 
+                  url: s.url, 
+                  uploadedAt: s.uploadedAt,
+                  used: s.used 
+                }))}
+                token={token}
+                allowDelete
+                showUploadTile={!uploadKey}
+                onUploadClick={() => setUploadKey('inline')}
+                onAfterChange={handleSelectionChange}
+                onDeleted={async () => { 
+                  await fetchSelfies()
+                  await loadSelected()
+                }}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && <ErrorBanner message={error} className="mb-6" />}
@@ -293,47 +358,51 @@ export default function SelfiesPage() {
             </div>
           )}
 
-          {/* Selfies Grid (hidden in upload-only mode) */}
+          {/* Selfies Grid (hidden in upload-only mode) - Desktop only */}
           {!uploadOnly && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Your Selfies</h2>
-              <button
-                onClick={handleContinue}
-                disabled={!canContinue}
-                className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
-                  canContinue
-                    ? 'text-white bg-brand-primary hover:bg-brand-primary-hover'
-                    : 'text-gray-400 bg-gray-200 cursor-not-allowed'
-                }`}
-              >
-                Continue
-              </button>
-            </div>
-            <div className="px-6 pb-4">
-              <SelfieSelectionInfoBanner selectedCount={selectedCount} />
-            </div>
-            <div className="px-6 pt-2 pb-6">
-              <SelfieGallery
-                selfies={selfies.map(s => ({ 
-                  id: s.id, 
-                  key: s.key, 
-                  url: s.url, 
-                  uploadedAt: s.uploadedAt,
-                  used: s.used 
-                }))}
-                token={token}
-                allowDelete
-                showUploadTile={!uploadKey}
-                onUploadClick={() => setUploadKey('inline')}
-                onAfterChange={handleSelectionChange}
-                onDeleted={async () => { 
-                  await fetchSelfies()
-                  await loadSelected()
-                }}
-              />
-            </div>
-          </div>
+              <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200">
+                {/* Desktop: Title and continue button (only in generation flow) */}
+                <div className="flex p-6 items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900">Your Selfies</h2>
+                  {isInGenerationFlow && (
+                    <button
+                      onClick={handleContinue}
+                      disabled={!canContinue}
+                      className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                        canContinue
+                          ? 'text-white bg-brand-primary hover:bg-brand-primary-hover'
+                          : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+                      }`}
+                    >
+                      Continue
+                    </button>
+                  )}
+                </div>
+                {/* Desktop: Info banner */}
+                <div className="px-6 pb-4">
+                  <SelfieSelectionInfoBanner selectedCount={selectedCount} />
+                </div>
+                <div className="px-6 pt-2 pb-6">
+                  <SelfieGallery
+                    selfies={selfies.map(s => ({ 
+                      id: s.id, 
+                      key: s.key, 
+                      url: s.url, 
+                      uploadedAt: s.uploadedAt,
+                      used: s.used 
+                    }))}
+                    token={token}
+                    allowDelete
+                    showUploadTile={!uploadKey}
+                    onUploadClick={() => setUploadKey('inline')}
+                    onAfterChange={handleSelectionChange}
+                    onDeleted={async () => { 
+                      await fetchSelfies()
+                      await loadSelected()
+                    }}
+                  />
+                </div>
+              </div>
           )}
         </div>
       </div>

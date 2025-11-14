@@ -118,7 +118,7 @@ export default function BrandingSelector({
             <h3 className="text-lg font-semibold text-gray-900">
               {t('title', { default: 'Branding' })}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="hidden md:block text-sm text-gray-600">
               {t('subtitle', { default: 'Choose logo and branding options' })}
             </p>
           </div>
@@ -131,7 +131,7 @@ export default function BrandingSelector({
       )}
 
       {/* Include Logo Toggle */}
-      <div className="mb-6">
+      <div className={`mb-6 ${isPredefined ? 'hidden md:block' : ''}`}>
         <button
           type="button"
           onClick={() => !(isPredefined || isDisabled) && handleTypeChange(value.type === 'include' ? 'exclude' : 'include')}
@@ -171,7 +171,9 @@ export default function BrandingSelector({
                   onError={() => setImageLoaded(false)}
                   unoptimized
                 />
-                <div className="absolute inset-x-0 bottom-0 p-3 flex justify-center bg-gradient-to-t from-black/30 to-transparent">
+                <div className={`absolute inset-x-0 bottom-0 p-3 flex justify-center bg-gradient-to-t from-black/30 to-transparent ${
+                  isPredefined ? 'hidden md:flex' : ''
+                }`}>
                   <label
                     htmlFor="logo-upload"
                     className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md ${
@@ -185,7 +187,7 @@ export default function BrandingSelector({
                 </div>
               </div>
             ) : (
-              <div className="p-6">
+              <div className={`p-6 ${isPredefined ? 'hidden md:block' : ''}`}>
                 <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-sm text-gray-600 mb-2">
                   {t('uploadPrompt', { default: 'Click to upload or drag and drop' })}
@@ -215,30 +217,49 @@ export default function BrandingSelector({
 
           {/* Position selector */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              {t('position.label', { default: 'Logo Position' })}
-            </label>
-            <Grid cols={{ mobile: 1, tablet: 3 }} gap="sm">
-              {[
-                { key: 'background', label: t('position.background', { default: 'Background' }) },
-                { key: 'clothing', label: t('position.clothing', { default: 'Clothing' }) },
-                { key: 'elements', label: t('position.elements', { default: 'Other elements' }) }
-              ].map(opt => (
-                <button
-                  type="button"
-                  key={opt.key}
-                  onClick={() => !(isPredefined || isDisabled) && handlePositionChange(opt.key as BrandingSettings['position'])}
-                  disabled={isPredefined || isDisabled}
-                  className={`w-full px-3 py-2 rounded-md border text-sm transition-colors ${
-                    value.position === opt.key
-                      ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
-                  } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </Grid>
+            {isPredefined ? (
+              <div className="md:hidden">
+                <div className="text-sm font-medium text-gray-700">
+                  {value.position === 'background' && t('position.background', { default: 'Background' })}
+                  {value.position === 'clothing' && t('position.clothing', { default: 'Clothing' })}
+                  {value.position === 'elements' && t('position.elements', { default: 'Other elements' })}
+                </div>
+              </div>
+            ) : (
+              <label className="block text-sm font-medium text-gray-700">
+                {t('position.label', { default: 'Logo Position' })}
+              </label>
+            )}
+            <div className={isPredefined ? 'hidden md:block' : ''}>
+              <Grid cols={{ mobile: 1, tablet: 3 }} gap="sm">
+                {[
+                  { key: 'background', label: t('position.background', { default: 'Background' }) },
+                  { key: 'clothing', label: t('position.clothing', { default: 'Clothing' }) },
+                  { key: 'elements', label: t('position.elements', { default: 'Other elements' }) }
+                ].map(opt => {
+                  const isSelected = value.position === opt.key
+                  // On mobile, hide unselected options when predefined
+                  const shouldHide = isPredefined && !isSelected
+                  return (
+                  <button
+                    type="button"
+                    key={opt.key}
+                    onClick={() => !(isPredefined || isDisabled) && handlePositionChange(opt.key as BrandingSettings['position'])}
+                    disabled={isPredefined || isDisabled}
+                    className={`w-full px-3 py-2 rounded-md border text-sm transition-colors ${
+                      value.position === opt.key
+                        ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
+                      } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
+                        shouldHide ? 'hidden md:block' : ''
+                      }`}
+                  >
+                    {opt.label}
+                  </button>
+                  )
+                })}
+              </Grid>
+            </div>
           </div>
         </div>
       )}

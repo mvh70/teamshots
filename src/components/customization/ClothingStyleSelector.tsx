@@ -113,7 +113,7 @@ export default function ClothingStyleSelector({
             <h3 className="text-lg font-semibold text-gray-900">
               {t('title', { default: 'Clothing Style' })}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="hidden md:block text-sm text-gray-600">
               {t('subtitle', { default: 'Choose clothing style and accessories' })}
             </p>
           </div>
@@ -129,6 +129,8 @@ export default function ClothingStyleSelector({
       <div className="space-y-3 mb-6">
         {CLOTHING_STYLES.map((style) => {
           const isSelected = value.style === style.value
+          // On mobile, hide unselected options when predefined
+          const shouldHide = isPredefined && !isSelected
           
           return (
             <button
@@ -140,7 +142,9 @@ export default function ClothingStyleSelector({
                 isSelected
                   ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
-              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
+                shouldHide ? 'hidden md:flex' : ''
+              }`}
             >
               <UserIcon className="h-5 w-5 flex-shrink-0" />
               <span className="text-sm font-medium">{style.label}</span>

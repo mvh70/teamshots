@@ -412,8 +412,6 @@ Header: Logo | Dashboard | History | 87 credits (21 gen) | Language (EN/ES) | Pr
 ### Overview
 TeamShots implements a comprehensive onboarding experience using the Onborda library to guide new users through the platform. The onboarding flow adapts based on user type, plan tier, and progress state. Tours are triggered automatically based on context conditions and user actions.
 
-**Note**: A personal photo styles page tour for free plan users (`personal-photo-styles-free`) is not currently implemented but would follow the same pattern as `team-photo-styles-free` for individual users on the free plan.
-
 ### Technical Implementation
 - **Library**: Onborda for product tours and tooltips
 - **Persistence**: Client-side localStorage tracks tour completion (`onboarding-{tourName}-seen`)
@@ -490,7 +488,31 @@ TeamShots implements a comprehensive onboarding experience using the Onborda lib
 
 **Purpose**: Tour name: `team-photo-styles-free`. Comprehensive walkthrough of free plan team photo styles page, explaining all pre-configured settings.
 
-#### 8. Photo Style Creation Tour (`photo-style-creation`)
+#### 8. Personal Photo Styles Page Tour - Paid Plan (`personal-photo-styles-page`)
+**Trigger**: `isRegularUser && !hasGeneratedPhotos && !isFreePlan`  
+**Page**: `/app/styles/personal`  
+**Steps**: 2
+- `#personal-photo-styles-heading`: Explains what personal photo styles are
+- `#create-personal-style-btn`: Guides to create custom styles
+
+**Purpose**: Tour name: `personal-photo-styles-page`. Explains personal photo styles page for paid plan individual users.
+
+#### 9. Personal Photo Styles Page Tour - Free Plan (`personal-photo-styles-free`)
+**Trigger**: `isRegularUser && !hasGeneratedPhotos && isFreePlan`  
+**Page**: `/app/styles/personal`  
+**Steps**: 8
+- `#personal-photo-styles-heading`: Explains personal photo styles concept
+- `[data-testid="free-plan-banner"]`: Free plan limitations and upgrade CTA
+- `#style-background`: Background configuration explanation
+- `#style-branding`: Branding/logo placement explanation
+- `#style-shot-type`: Shot type (3/4) explanation
+- `#style-clothing-type`: Clothing type (business casual) explanation
+- `#style-clothing-colors`: Clothing colors customization explanation
+- `#primary-generate-btn`: Ready to generate first photo
+
+**Purpose**: Tour name: `personal-photo-styles-free`. Comprehensive walkthrough of free plan personal photo styles page, explaining all pre-configured settings.
+
+#### 10. Photo Style Creation Tour (`photo-style-creation`)
 **Trigger**: `((isTeamAdmin && teamId) || isRegularUser) && !isFreePlan`  
 **Page**: `/app/styles/team/create` or `/app/styles/personal/create`  
 **Steps**: 11
@@ -508,14 +530,14 @@ TeamShots implements a comprehensive onboarding experience using the Onborda lib
 
 **Purpose**: Tour name: `photo-style-creation`. Comprehensive guide through creating a new photo style for paid plan users.
 
-#### 9. Test Generation Tour (`test-generation`)
+#### 11. Test Generation Tour (`test-generation`)
 **Trigger**: `isTeamAdmin && teamId && !hasGeneratedPhotos`  
 **Steps**: 1
 - `#primary-generate-btn`: Encourages testing the service with first photo generation
 
 **Purpose**: Tour name: `test-generation`. Encourages team admins to test the generation process before inviting team members.
 
-#### 10. Invite Team Tour (`invite-team`)
+#### 12. Invite Team Tour (`invite-team`)
 **Trigger**: `isTeamAdmin && teamId`  
 **Page**: `/app/team`  
 **Steps**: 4
@@ -526,6 +548,15 @@ TeamShots implements a comprehensive onboarding experience using the Onborda lib
 
 **Purpose**: Tour name: `invite-team`. Guide team admins through inviting team members after team and style setup.
 
+#### 13. Generation Detail Tour (`generation-detail`)
+**Trigger**: `hasGeneratedPhotos && (isRegularUser || isTeamAdmin)`  
+**Page**: `/app/generations/team` or `/app/generations/personal`  
+**Steps**: 2
+- `[data-onborda="generated-photo"]`: Generated photo explanation
+- `[data-onborda="credits-info"]`: Management options (download, regenerate, delete) and credit information
+
+**Purpose**: Tour name: `generation-detail`. Explains how to interact with generated photos after first generation.
+
 ### Flow Sequences
 
 #### Individual User Onboarding Flow
@@ -535,15 +566,16 @@ TeamShots implements a comprehensive onboarding experience using the Onborda lib
    - Highlights welcome section
    - Points to photo styles customization
 3. User navigates to `/app/styles/personal`
-   - If free plan: Photo style explanation tour (NOTE: Currently not implemented in code)
-   - If paid plan: User can create custom style
+   - If free plan: `personal-photo-styles-free` tour triggers (8 steps)
+   - If paid plan: `personal-photo-styles-page` tour triggers (2 steps)
 4. If paid plan and user navigates to `/app/styles/personal/create`:
    - `photo-style-creation` tour triggers (11 steps)
 5. User navigates to generation page
 6. First generation tour (`first-generation`) triggers
    - Guides through upload, style selection, credits, generate
 7. After first generation: `hasGeneratedPhotos=true`
-   - Tours no longer trigger automatically
+   - `generation-detail` tour triggers (2 steps) - explains how to interact with generated photos
+8. After generation detail tour: Tours no longer trigger automatically
 ```
 
 #### Team Admin Onboarding Flow
@@ -564,7 +596,8 @@ TeamShots implements a comprehensive onboarding experience using the Onborda lib
 7. Test generation tour (`test-generation`) may trigger
    - Encourages admin to test before inviting
 8. After first generation: `hasGeneratedPhotos=true`
-   - Tours no longer trigger automatically
+   - `generation-detail` tour triggers (2 steps) - explains how to interact with generated photos
+9. After generation detail tour: Tours no longer trigger automatically
 ```
 
 #### Invited Team Member Flow
@@ -574,7 +607,8 @@ TeamShots implements a comprehensive onboarding experience using the Onborda lib
 3. First generation tour (`first-generation`) triggers
    - Same 4-step flow as individual users
 4. After generation: `hasGeneratedPhotos=true`
-   - Tours no longer trigger
+   - `generation-detail` tour triggers (2 steps) - explains how to interact with generated photos
+5. After generation detail tour: Tours no longer trigger
 ```
 
 ### Sidebar Indicators

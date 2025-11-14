@@ -181,7 +181,7 @@ export default function EnhancedBackgroundSelector({
             <h3 className="text-lg font-semibold text-gray-900">
               {t('title', { default: 'Background' })}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="hidden md:block text-sm text-gray-600">
               {t('subtitle', { default: 'Choose your background style' })}
             </p>
           </div>
@@ -194,10 +194,17 @@ export default function EnhancedBackgroundSelector({
       )}
 
       {/* Background Type Selection */}
-      <div className="space-y-3 mb-6">
+      <div className={`space-y-3 mb-6 ${
+        // Hide entire selection section on mobile when predefined and custom upload is selected
+        isPredefined && value.type === 'custom' ? 'hidden md:block' : ''
+      }`}>
         {filteredBackgroundTypes.map((type) => {
           const Icon = type.icon
           const isSelected = value.type === type.value
+          // On mobile, hide unselected options when predefined
+          const shouldHide = isPredefined && !isSelected
+          // On mobile, hide custom upload option when predefined
+          const hideCustomUpload = isPredefined && type.value === 'custom'
           
           return (
             <button
@@ -209,7 +216,9 @@ export default function EnhancedBackgroundSelector({
                 isSelected
                   ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
-              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
+                shouldHide ? 'hidden md:flex' : ''
+              } ${hideCustomUpload ? 'hidden md:flex' : ''}`}
             >
               <Icon className="h-5 w-5 flex-shrink-0" />
               <span className="text-sm font-medium">{type.label}</span>
@@ -336,7 +345,9 @@ export default function EnhancedBackgroundSelector({
 
       {value.type === 'custom' && (
         <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className={`block text-sm font-medium text-gray-700 ${
+            isPredefined ? 'hidden md:block' : ''
+          }`}>
             {t('customUpload', { default: 'Upload Background' })}
           </label>
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-0 text-center relative overflow-hidden">
@@ -352,7 +363,9 @@ export default function EnhancedBackgroundSelector({
                   onError={() => setImageLoaded(false)}
                   unoptimized
                 />
-                <div className="absolute inset-x-0 bottom-0 p-3 flex justify-center bg-gradient-to-t from-black/30 to-transparent">
+                <div className={`absolute inset-x-0 bottom-0 p-3 flex justify-center bg-gradient-to-t from-black/30 to-transparent ${
+                  isPredefined ? 'hidden md:flex' : ''
+                }`}>
                   <label
                     htmlFor="background-upload"
                     className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md ${
@@ -366,7 +379,7 @@ export default function EnhancedBackgroundSelector({
                 </div>
               </div>
             ) : (
-              <div className="p-6">
+              <div className={`p-6 ${isPredefined ? 'hidden md:block' : ''}`}>
                 <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-sm text-gray-600 mb-2">
                   {t('uploadPrompt', { default: 'Click to upload or drag and drop' })}

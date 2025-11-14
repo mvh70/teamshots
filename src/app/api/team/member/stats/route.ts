@@ -19,7 +19,21 @@ export async function GET(request: NextRequest) {
         usedAt: { not: null }
       },
       include: {
-        team: true,
+        team: {
+          include: {
+            admin: {
+              select: {
+                email: true,
+                person: {
+                  select: {
+                    firstName: true,
+                    lastName: true
+                  }
+                }
+              }
+            }
+          }
+        },
         person: true
       }
     })
@@ -66,11 +80,20 @@ export async function GET(request: NextRequest) {
     // Calculate remaining credits using the same logic as getPersonCreditBalance
     const creditsRemaining = await getTeamInviteRemainingCredits(invite.id)
 
+    // Get admin name from person if available, otherwise use email
+    const adminPerson = invite.team.admin?.person
+    const adminName = adminPerson 
+      ? `${adminPerson.firstName}${adminPerson.lastName ? ' ' + adminPerson.lastName : ''}`.trim()
+      : null
+    const adminEmail = invite.team.admin?.email || null
+
     const stats = {
       photosGenerated,
       creditsRemaining,
       selfiesUploaded: selfiesCount,
-      teamPhotosGenerated: teamPhotosCount
+      teamPhotosGenerated: teamPhotosCount,
+      adminName,
+      adminEmail
     }
 
     return NextResponse.json({ stats })

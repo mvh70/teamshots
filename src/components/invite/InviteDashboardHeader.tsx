@@ -14,6 +14,7 @@ interface InviteDashboardHeaderProps {
   teamName?: string
   creditsRemaining?: number
   photosAffordable?: number
+  onBackClick?: () => void
 }
 
 export default function InviteDashboardHeader({
@@ -26,9 +27,18 @@ export default function InviteDashboardHeader({
   memberEmail: memberEmailProp,
   teamName: teamNameProp,
   creditsRemaining,
-  photosAffordable
+  photosAffordable,
+  onBackClick
 }: InviteDashboardHeaderProps) {
   const router = useRouter()
+  
+  const handleBackClick = () => {
+    if (onBackClick) {
+      onBackClick()
+    } else {
+      router.push(`/invite-dashboard/${token}`)
+    }
+  }
 
   // Resolve member/team info: prefer props; otherwise fetch from invite token
   const [fetched, setFetched] = useState<{ memberName?: string; memberEmail?: string; teamName?: string } | null>(null)
@@ -81,14 +91,45 @@ export default function InviteDashboardHeader({
   return (
     <div className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-5 py-5 md:gap-4 md:py-4 md:flex-row md:items-center md:justify-between">
+        {/* Mobile: Reduced header with team name and back arrow or credits */}
+        <div className="md:hidden flex items-center justify-between py-3">
+          <div className="flex-1 min-w-0 pr-4">
+            <h1 className="text-lg font-semibold text-gray-900 truncate">
+              {teamName || 'Team'}
+            </h1>
+          </div>
+          {showBackToDashboard ? (
+            <button
+              onClick={handleBackClick}
+              className="flex-shrink-0 p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              aria-label="Back to dashboard"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          ) : creditsRemaining !== undefined ? (
+            <div className="flex-shrink-0 text-right">
+              <p className="text-xs text-gray-500">Credits</p>
+              <p className="text-xl font-bold text-brand-primary">{creditsRemaining}</p>
+              {photosAffordable !== undefined && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Good for {photosAffordable} photo{photosAffordable === 1 ? '' : 's'}
+                </p>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Desktop: Full header */}
+        <div className="hidden md:flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
           <div className="flex-1 min-w-0">
             {showBackToDashboard && (
               <button
-                onClick={() => router.push(`/invite-dashboard/${token}`)}
-                className="text-base md:text-sm text-gray-500 hover:text-gray-700 mb-3 md:mb-2 inline-flex items-center gap-2"
+                onClick={handleBackClick}
+                className="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-flex items-center gap-2"
               >
-                <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Back to Dashboard
@@ -96,7 +137,7 @@ export default function InviteDashboardHeader({
             )}
 
             {showMemberInfo && (
-              <p className="text-base md:text-sm text-gray-500 mb-2 md:mb-1 truncate">
+              <p className="text-sm text-gray-500 mb-1 truncate">
                 {memberName}
                 {memberEmail ? ` (${memberEmail})` : ''}
               </p>
@@ -104,20 +145,20 @@ export default function InviteDashboardHeader({
 
             {/* Team chip intentionally omitted per standard header design */}
 
-            <h1 className="text-3xl md:text-2xl font-bold text-gray-900 break-words">{resolvedTitle}</h1>
-            <p className="text-base md:text-sm text-gray-600 mt-2 md:mt-1">
+            <h1 className="text-2xl font-bold text-gray-900 break-words">{resolvedTitle}</h1>
+            <p className="text-sm text-gray-600 mt-1">
               {resolvedSubtitle}
             </p>
           </div>
 
           {(right || showCredits) && (
-            <div className="flex flex-col gap-4 md:gap-3 md:items-end">
+            <div className="flex flex-col gap-3 md:items-end">
               {right}
               {showCredits && (
-                <div className="bg-brand-primary-light rounded-xl p-4 md:bg-transparent md:p-0 md:text-right">
+                <div className="text-right">
                   <p className="text-sm text-gray-500 mb-1">Available Credits</p>
-                  <p className="text-4xl md:text-2xl font-bold text-brand-primary">{creditsRemaining}</p>
-                  <p className="mt-2 md:mt-1 text-sm md:text-xs text-gray-600 md:text-gray-500">
+                  <p className="text-2xl font-bold text-brand-primary">{creditsRemaining}</p>
+                  <p className="mt-1 text-xs text-gray-500">
                     Good for {photosAffordable} photo{photosAffordable === 1 ? '' : 's'}
                   </p>
                 </div>

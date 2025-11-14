@@ -62,7 +62,7 @@ export default function ShotTypeSelector({
             <h3 className="text-lg font-semibold text-gray-900">
               {t('title', { default: 'Shot Type' })}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="hidden md:block text-sm text-gray-600">
               {t('subtitle', { default: 'Choose the framing for your photo' })}
             </p>
           </div>
@@ -78,6 +78,8 @@ export default function ShotTypeSelector({
       <div className={`space-y-3 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
         {SHOT_TYPES.map((shotType) => {
           const isSelected = shotType.value === selectedType
+          // On mobile, hide unselected options when predefined
+          const shouldHide = isPredefined && !isSelected
           
           return (
             <button
@@ -92,7 +94,9 @@ export default function ShotTypeSelector({
                 isSelected
                   ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
-              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
+                shouldHide ? 'hidden md:flex' : ''
+              }`}
             >
               <CameraIcon className="h-5 w-5 flex-shrink-0" />
               <div className="flex flex-col items-start">

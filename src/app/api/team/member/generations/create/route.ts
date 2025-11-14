@@ -6,7 +6,7 @@ import { Telemetry } from '@/lib/telemetry'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { getPersonCreditBalance } from '@/domain/credits/credits'
+import { getPersonCreditBalance, getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { getPackageConfig } from '@/domain/style/packages'
 import { Env } from '@/lib/env'
 import { resolveSelfies } from '@/domain/generation/selfieResolver'
@@ -55,6 +55,20 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { selfieKey, selfieKeys, selfieIds, contextId, styleSettings, prompt } = createSchema.parse(body)
+
+    // Check invite's remaining credits first (invited members have their own allocation)
+    const inviteCreditsRemaining = await getTeamInviteRemainingCredits(invite.id)
+    if (inviteCreditsRemaining < PRICING_CONFIG.credits.perGeneration) {
+      return NextResponse.json(
+        {
+          error: 'Insufficient credits',
+          required: PRICING_CONFIG.credits.perGeneration,
+          available: inviteCreditsRemaining,
+          message: 'You don\'t have enough credits to generate photos. Please contact your team admin to request more credits.',
+        },
+        { status: 402 }
+      )
+    }
 
     // Enforce team credits for invite flow
     const teamId = invite.person.teamId

@@ -4,10 +4,12 @@ import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useLocale } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { BRAND_CONFIG } from '@/config/brand'
 import { 
   PhotoIcon, 
   CheckCircleIcon,
   CameraIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
@@ -45,6 +47,8 @@ interface DashboardStats {
   creditsRemaining: number
   selfiesUploaded: number
   teamPhotosGenerated: number
+  adminName?: string | null
+  adminEmail?: string | null
 }
 
 
@@ -328,6 +332,12 @@ export default function InviteDashboardPage() {
       return
     }
 
+    // Check if user has enough credits
+    if (stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration) {
+      alert(`You don't have enough credits to generate photos. ${stats.adminName ? `Please contact ${stats.adminName} (${stats.adminEmail || 'your team admin'})` : stats.adminEmail ? `Please contact your team admin at ${stats.adminEmail}` : 'Please contact your team admin'} to request more credits.`)
+      return
+    }
+
     // Prevent double-clicks
     if (isGenerating) return
 
@@ -469,20 +479,45 @@ export default function InviteDashboardPage() {
       <InviteDashboardHeader
         token={token}
         title=""
+        teamName={inviteData.teamName}
+        creditsRemaining={stats.creditsRemaining}
+        photosAffordable={photosAffordable}
         showBackToDashboard={(showStartFlow || showGenerationFlow || !!uploadKey)}
-        right={(
-          <div className="text-right">
-            <p className="text-sm text-gray-500">Credits</p>
-            <p className="text-2xl font-bold text-brand-primary">{stats.creditsRemaining}</p>
-            <p className="text-xs text-gray-500 mt-1">Good for {photosAffordable} photo{photosAffordable === 1 ? '' : 's'}</p>
-          </div>
-        )}
+        onBackClick={() => {
+          // Reset all flow states when going back to dashboard
+          setShowStartFlow(false)
+          setShowGenerationFlow(false)
+          setShowStyleSelection(false)
+          setUploadKey('')
+          setIsApproved(false)
+          setGenerationType(null)
+          router.replace(`/invite-dashboard/${token}`)
+        }}
       />
       {/* Invite dashboard does not show selected selfies or a Generate button.
           Actions live in Selfies and Generations pages. */}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
+          {/* Insufficient credits warning */}
+          {stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6">
+              <div className="flex items-start gap-3">
+                <svg className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-yellow-800 mb-1">
+                    Insufficient credits
+                  </h3>
+                  <p className="text-sm text-yellow-700">
+                    You don't have enough credits to generate photos. {stats.adminName ? `Please contact ${stats.adminName} (${stats.adminEmail || 'your team admin'})` : stats.adminEmail ? `Please contact your team admin at ${stats.adminEmail}` : 'Please contact your team admin'} to request more credits.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Context summary - hidden for now */}
           {SHOW_CONTEXT_SUMMARY && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-wrap items-center gap-3">
@@ -499,14 +534,19 @@ export default function InviteDashboardPage() {
            <Grid cols={{ mobile: 1, desktop: 2 }} gap="lg">
                         {/* Primary CTA and secondary links */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Get started</h3>
-              <p className="text-sm text-gray-600 mb-4">We&#39;ll guide you through uploading your selfie and generating your team photo.</p>
+              <h3 className="hidden md:block text-lg font-medium text-gray-900 mb-2">Get started</h3>
+              <p className="hidden md:block text-sm text-gray-600 mb-4">We&#39;ll guide you through uploading your selfie and generating your team photo.</p>
               <div className="space-y-3">
                 <button 
                   onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem('fromGeneration', 'true')
+                      sessionStorage.setItem('openStartFlow', 'true')
+                    }
                     router.push(`/invite-dashboard/${token}/selfies`)
                   }}
-                  className="w-full flex items-center justify-center px-4 py-4 border border-brand-primary bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 transition-colors"
+                  disabled={stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
+                  className="w-full flex items-center justify-center px-4 py-4 border border-brand-primary bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-primary"
                 >
                   <PhotoIcon className="h-6 w-6 mr-3" />
                   <span className="text-sm font-medium">Start your team photo</span>
@@ -522,7 +562,14 @@ export default function InviteDashboardPage() {
                   )}
                   {stats.selfiesUploaded > 0 && (
                   <button 
-                      onClick={() => router.push(`/invite-dashboard/${token}/selfies`)}
+                      onClick={() => {
+                        // Clear generation flow flags when managing selfies
+                        if (typeof window !== 'undefined') {
+                          sessionStorage.removeItem('fromGeneration')
+                          sessionStorage.removeItem('openStartFlow')
+                        }
+                        router.push(`/invite-dashboard/${token}/selfies`)
+                      }}
                       className="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
                     > 
                       Manage my selfies ({stats.selfiesUploaded})
@@ -568,7 +615,8 @@ export default function InviteDashboardPage() {
               {/* Inline selfie uploader */}
               {!showStyleSelection && !uploadKey && availableSelfies.length > 0 && (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-3">
+                  {/* Desktop: Title and continue button */}
+                  <div className="hidden md:flex items-center justify-between mb-3">
                     <h3 className="text-lg font-semibold text-gray-900">Choose selfies to use</h3>
                     <button
                       onClick={() => {
@@ -582,7 +630,23 @@ export default function InviteDashboardPage() {
                       Continue
                     </button>
                   </div>
-                  <SelfieSelectionInfoBanner selectedCount={validSelectedIds.length} className="mb-4" />
+                  {/* Mobile: Info banner and continue button on same line */}
+                  <div className="md:hidden flex items-center justify-between gap-3 mb-4">
+                    <SelfieSelectionInfoBanner selectedCount={validSelectedIds.length} className="flex-1 mb-0" />
+                    <button
+                      onClick={() => {
+                        if (validSelectedIds.length >= 2) {
+                          setShowStyleSelection(true)
+                        }
+                      }}
+                      disabled={validSelectedIds.length < 2}
+                      className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex-shrink-0"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                  {/* Desktop: Info banner */}
+                  <SelfieSelectionInfoBanner selectedCount={validSelectedIds.length} className="hidden md:block mb-4" />
                   <SelfieSelectionGrid
                     selfies={availableSelfies}
                     selectedSet={selectedSet}
@@ -657,9 +721,54 @@ export default function InviteDashboardPage() {
 
               {/* Style selection view (after Continue is clicked) */}
               {showStyleSelection && (
-                <div className="bg-white rounded-xl md:rounded-lg shadow-sm border border-gray-200 p-5 sm:p-6">
-                  <h1 className="text-2xl md:text-xl font-semibold text-gray-900 mb-5 md:mb-4">Ready to Generate</h1>
-                  <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-6">
+                <div className="md:bg-white md:rounded-lg md:shadow-sm md:border md:border-gray-200 md:p-6">
+                  <h1 className="hidden md:block text-xl font-semibold text-gray-900 mb-4">Ready to Generate</h1>
+                  
+                  {/* Mobile: Orange heads-up banner first, then style settings, then cost and generate button */}
+                  <div className="md:hidden space-y-6">
+                    {showCustomizeHint && (
+                      <div
+                        role="note"
+                        className="w-full flex items-start gap-3 rounded-md border border-brand-cta/40 bg-brand-cta-light p-3"
+                      >
+                        <SparklesIcon className="h-5 w-5 text-brand-primary mt-0.5 flex-shrink-0" aria-hidden="true" />
+                        <p className="text-[13px] leading-snug text-text-body">
+                          <span className="font-medium text-brand-primary">Heads up:</span> Customize your photo in the <span className="text-brand-primary font-medium inline-flex items-center gap-1"><SparklesIcon className="h-4 w-4" aria-hidden="true" />editable</span> sections below before generating.
+                        </p>
+                      </div>
+                    )}
+                    <StyleSettingsSection
+                      value={photoStyleSettings}
+                      onChange={setPhotoStyleSettings}
+                      readonlyPredefined={true}
+                      originalContextSettings={originalContextSettings}
+                      showToggles={false}
+                      packageId={packageId || 'headshot1'}
+                      noContainer
+                      teamContext
+                    />
+                    <div className="md:border-t md:border-gray-200 md:pt-5 pt-5">
+                      <div className="hidden md:flex items-center justify-between mb-4">
+                        <div>
+                          <div className="text-sm text-gray-600">Cost per generation</div>
+                          <div className="text-3xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} credits</div>
+                        </div>
+                      </div>
+                      <GenerateButton
+                        onClick={onProceed}
+                        disabled={validSelectedIds.length < 2 || stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
+                        isGenerating={isGenerating}
+                        size="md"
+                      >
+                        Generate Team Photos
+                      </GenerateButton>
+                    </div>
+                    {/* Mobile-only spacing before banner */}
+                    <div className="md:hidden h-12"></div>
+                  </div>
+
+                  {/* Desktop: Original layout with selfie summary and generation details */}
+                  <div className="hidden md:flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-6">
                     <div className="flex flex-col gap-4 md:flex-row md:gap-6 md:flex-1 min-w-0">
                       {/* Selected Selfie Thumbnails */}
                       <div className="flex-none">
@@ -727,7 +836,7 @@ export default function InviteDashboardPage() {
                     packageId={packageId || 'headshot1'}
                     noContainer
                     teamContext
-                    className="mt-6 pt-6 border-t border-gray-200"
+                    className="hidden md:block mt-6 pt-6 border-t border-gray-200"
                   />
                 </div>
               )}
@@ -856,7 +965,7 @@ export default function InviteDashboardPage() {
                           setShowStartFlow(true)
                         }
                       }}
-                      disabled={!selectedSelfie}
+                      disabled={!selectedSelfie || stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
                       className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       Continue with Selected Selfie
@@ -868,7 +977,7 @@ export default function InviteDashboardPage() {
           )}
 
           {/* Sign up CTA */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:mt-6">
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Want to create personal photos too?
             </h3>
@@ -877,9 +986,18 @@ export default function InviteDashboardPage() {
             </p>
             <button
               onClick={() => router.push('/auth/signup')}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium"
+              className="px-4 py-2 text-white rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-cta-ring"
+              style={{
+                backgroundColor: BRAND_CONFIG.colors.cta,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.ctaHover
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.cta
+              }}
             >
-              Sign Up for Personal Use
+              Sign up for personal use
             </button>
           </div>
         </div>

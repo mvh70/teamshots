@@ -67,7 +67,7 @@ export default function ExpressionSelector({
             <h3 className="text-lg font-semibold text-gray-900">
               {t('title', { default: 'Expression' })}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="hidden md:block text-sm text-gray-600">
               {t('subtitle', { default: 'Choose a facial expression' })}
             </p>
           </div>
@@ -82,6 +82,8 @@ export default function ExpressionSelector({
       <div className={`space-y-3 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
         {EXPRESSIONS.map((expr) => {
           const isSelected = value.type === expr.value
+          // On mobile, hide unselected options when predefined
+          const shouldHide = isPredefined && !isSelected
           return (
             <button
               type="button"
@@ -95,7 +97,9 @@ export default function ExpressionSelector({
                 isSelected
                   ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
-              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
+                shouldHide ? 'hidden md:block' : ''
+              }`}
             >
               <div className="flex flex-col items-start text-left gap-1">
                 <span className="text-sm font-medium">{expr.label}</span>

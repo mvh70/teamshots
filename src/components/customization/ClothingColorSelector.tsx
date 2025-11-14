@@ -45,7 +45,7 @@ export default function ClothingColorSelector({
             <h3 className="text-lg font-semibold text-gray-900">
               {t('title', { default: 'Clothing Colors' })}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="hidden md:block text-sm text-gray-600">
               {t('subtitle', { default: 'Choose colors for clothing items' })}
             </p>
           </div>
