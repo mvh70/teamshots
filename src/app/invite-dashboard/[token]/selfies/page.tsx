@@ -307,7 +307,7 @@ export default function SelfiesPage() {
         <div className="space-y-6">
           {/* Upload Flow - show PhotoUpload when uploadKey is 'inline' */}
           {uploadKey === 'inline' && !isApproved && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="md:bg-white md:rounded-lg md:shadow-sm md:border md:border-gray-200 md:p-6 md:static fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-50 md:z-auto">
               <PhotoUpload
                 onUpload={onUploadWithToken}
                 onUploaded={handleUpload}
@@ -326,15 +326,7 @@ export default function SelfiesPage() {
                 onReject={handleReject}
                 onRetake={handleRetake}
                 onCancel={() => {
-                  // If this page was opened in upload-only mode from the start flow, go back to dashboard and reopen start flow
-                  const fromStartFlow = (typeof window !== 'undefined') && (uploadOnly || sessionStorage.getItem('openStartFlow') === 'true')
-                  if (fromStartFlow) {
-                    if (typeof window !== 'undefined') {
-                      sessionStorage.setItem('openStartFlow', 'true')
-                    }
-                    router.push(`/invite-dashboard/${token}`)
-                    return
-                  }
+                  // Always return to selfie selection screen by clearing upload state
                   setUploadKey('')
                   setPreviewUrl(null)
                   setForceCamera(false)
@@ -352,7 +344,7 @@ export default function SelfiesPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Selfie Approved!</h3>
+                <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">Selfie Approved!</h3>
                 <p className="text-sm text-gray-600">Your selfie has been saved successfully.</p>
               </div>
             </div>
@@ -363,7 +355,7 @@ export default function SelfiesPage() {
               <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200">
                 {/* Desktop: Title and continue button (only in generation flow) */}
                 <div className="flex p-6 items-center justify-between">
-                  <h2 className="text-xl md:text-2xl font-semibold text-gray-900">Your Selfies</h2>
+                  <h2 className="text-lg md:text-2xl font-semibold text-gray-900">Your Selfies</h2>
                   {isInGenerationFlow && (
                     <button
                       onClick={handleContinue}

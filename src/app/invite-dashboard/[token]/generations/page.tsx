@@ -47,7 +47,7 @@ export default function GenerationsPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="text-center py-12">
                 <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-lg font-semibold text-gray-900">No generations yet</h3>
+                <h3 className="mt-2 text-base md:text-lg font-semibold text-gray-900">No generations yet</h3>
                 <p className="mt-1 text-sm text-gray-500">Upload a selfie and generate your first team photos.</p>
                 <div className="mt-6">
                   <button

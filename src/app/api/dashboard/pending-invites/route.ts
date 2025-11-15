@@ -1,60 +1,41 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
-import { getUserWithRoles, getUserEffectiveRoles } from '@/domain/access/roles'
-import { getUserSubscription } from '@/domain/subscription/subscription'
+import { requireAuth } from '@/lib/api/auth-middleware'
+import { internalError } from '@/lib/api/errors'
+import { UserService } from '@/domain/services/UserService'
 import { Logger } from '@/lib/logger'
-
+import { fetchPendingInvites } from '@/domain/dashboard/activities'
+import { formatTimeAgo } from '@/lib/format-time'
 
 export const runtime = 'nodejs'
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authResult = await requireAuth()
+    if (authResult instanceof NextResponse) {
+      return authResult
     }
+    const { userId } = authResult
 
-    // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
-    const [user, subscription] = await Promise.all([
-      getUserWithRoles(session.user.id),
-      getUserSubscription(session.user.id)
-    ])
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    // Pass subscription to avoid duplicate query
-    const roles = await getUserEffectiveRoles(user, subscription)
-    const teamId = user.person?.teamId
+    // OPTIMIZATION: Use UserService.getUserContext to get all user data in one call
+    const userContext = await UserService.getUserContext(userId)
+    const teamId = userContext.teamId
 
     // Only team admins can see pending invites (pro users are team admins by definition)
-    if (!roles.isTeamAdmin || !teamId) {
+    if (!userContext.roles.isTeamAdmin || !teamId) {
       return NextResponse.json({
         success: true,
         pendingInvites: []
       })
     }
 
-    // Get pending team invites
-    const pendingInvites = await prisma.teamInvite.findMany({
-      where: {
-        teamId: teamId,
-        usedAt: null, // Only pending invites
-        expiresAt: {
-          gt: new Date() // Not expired
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
+    // Use shared function to fetch pending invites
+    const pendingInvites = await fetchPendingInvites(teamId)
 
     const formattedInvites = pendingInvites.map(invite => ({
       id: invite.id,
       email: invite.email,
-      name: invite.email.split('@')[0], // Use email prefix as name
-      sent: formatTimeAgo(invite.createdAt),
-      status: 'pending',
+      name: invite.name,
+      sent: formatTimeAgo(invite.createdAt, userContext.onboarding.language), // Format using shared utility with locale
+      status: invite.status,
       expiresAt: invite.expiresAt
     }))
 
@@ -65,24 +46,6 @@ export async function GET() {
 
   } catch (error) {
     Logger.error('Error fetching pending invites', { error: error instanceof Error ? error.message : String(error) })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-function formatTimeAgo(date: Date): string {
-  const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-  
-  if (diffInSeconds < 60) {
-    return 'Just now'
-  } else if (diffInSeconds < 3600) {
-    const minutes = Math.floor(diffInSeconds / 60)
-    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`
-  } else if (diffInSeconds < 86400) {
-    const hours = Math.floor(diffInSeconds / 3600)
-    return `${hours} hour${hours > 1 ? 's' : ''} ago`
-  } else {
-    const days = Math.floor(diffInSeconds / 86400)
-    return `${days} day${days > 1 ? 's' : ''} ago`
+    return internalError('Failed to fetch pending invites')
   }
 }

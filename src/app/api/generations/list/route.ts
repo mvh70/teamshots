@@ -5,12 +5,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireAuth } from '@/lib/api/auth-middleware'
+import { internalError } from '@/lib/api/errors'
 
 export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { deriveGenerationType } from '@/domain/generation/utils'
+import { UserService } from '@/domain/services/UserService'
 
 // Define the type for the generation object returned by prisma.generation.findMany
 // Note: generationType is NOT included here because it's derived from person.teamId, not stored in DB
@@ -64,13 +66,11 @@ type GenerationWithRelations = {
 export async function GET(request: NextRequest) {
   try {
     // Get user session
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+    const authResult = await requireAuth()
+    if (authResult instanceof NextResponse) {
+      return authResult
     }
+    const { userId: sessionUserId } = authResult
 
     // Parse query parameters
     const { searchParams } = new URL(request.url)
@@ -81,20 +81,10 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
     const offset = (page - 1) * limit
 
-    // Get user with roles to determine permissions
-    // OPTIMIZATION: Fetch subscription in parallel with user to avoid duplicate queries
-    const { getUserWithRoles, getUserEffectiveRoles } = await import('@/domain/access/roles')
-    const { getUserSubscription } = await import('@/domain/subscription/subscription')
-    const [user, subscription] = await Promise.all([
-      getUserWithRoles(session.user.id),
-      getUserSubscription(session.user.id)
-    ])
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-    // Pass subscription to avoid duplicate query
-    const roles = await getUserEffectiveRoles(user, subscription)
-    const userTeamId = user.person?.teamId
+    // OPTIMIZATION: Use UserService.getUserContext to get all user data in one call
+    const userContext = await UserService.getUserContext(sessionUserId)
+    const roles = userContext.roles
+    const userTeamId = userContext.teamId
 
     // Build where clause based on derived scope (roles)
     let where: Record<string, unknown> = {}
@@ -117,7 +107,7 @@ export async function GET(request: NextRequest) {
         // team member sees only own team generations
         where = {
           person: {
-            userId: session.user.id,
+            userId: sessionUserId,
             teamId: userTeamId // Team generations have person.teamId set
           }
         }
@@ -126,7 +116,7 @@ export async function GET(request: NextRequest) {
       // Individual context - filter by person.userId AND person.teamId IS NULL
       where = {
         person: {
-          userId: session.user.id,
+          userId: sessionUserId,
           teamId: null // Personal generations have person.teamId = null
         }
       }
@@ -147,7 +137,7 @@ export async function GET(request: NextRequest) {
     // Get generations with pagination
     const [generations, totalCount] = await Promise.all([
       prisma.generation.findMany({
-        where: where as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        where: where,
         include: {
           person: {
             select: {
@@ -179,7 +169,7 @@ export async function GET(request: NextRequest) {
         skip: offset,
         take: limit
       }),
-      prisma.generation.count({ where: where as any }) // eslint-disable-line @typescript-eslint/no-explicit-any
+      prisma.generation.count({ where: where })
     ])
 
     // Helper function to get job status for processing generations
@@ -300,7 +290,7 @@ export async function GET(request: NextRequest) {
       groupIndex: generation.groupIndex,
       
       // Permission flags
-      isOwnGeneration: generation.person.userId === session.user.id
+      isOwnGeneration: generation.person.userId === sessionUserId
     })
     })
 
@@ -325,9 +315,6 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     Logger.error('Failed to get generations list', { error: error instanceof Error ? error.message : String(error) })
-    return NextResponse.json(
-      { error: 'Failed to get generations list' },
-      { status: 500 }
-    )
+    return internalError('Failed to get generations list')
   }
 }

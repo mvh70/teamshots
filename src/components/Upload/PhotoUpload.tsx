@@ -1,6 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useRef, useState} from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { ProgressBar, InlineError } from "@/components/ui";
 
@@ -27,6 +28,8 @@ export default function PhotoUpload({
 }: PhotoUploadProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRefMobile = useRef<HTMLVideoElement | null>(null);
+  const videoRefDesktop = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [dragOver, setDragOver] = useState(false);
@@ -47,6 +50,17 @@ export default function PhotoUpload({
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
   }, [previewUrl, stream]);
+
+  // Scroll to top on mobile when camera opens
+  useEffect(() => {
+    if (cameraOpen && typeof window !== 'undefined') {
+      // Check if mobile (viewport width < 768px)
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }, [cameraOpen]);
 
   // Auto-open camera if requested (moved below openCamera declaration)
 
@@ -333,23 +347,73 @@ export default function PhotoUpload({
   // Attach stream to video after modal renders
   useEffect(() => {
     if (!cameraOpen || !stream) return;
-    const v = videoRef.current as (HTMLVideoElement & { srcObject?: MediaStream }) | null;
-    if (!v) return;
-    (v as HTMLVideoElement & { srcObject?: MediaStream }).srcObject = stream;
-    const onLoaded = async () => {
-      try { await v.play(); } catch {}
-      // If width/height still zero, retry once shortly (Safari quirk)
-      if ((v.videoWidth || 0) === 0) {
-        setTimeout(async () => {
-          try { await v.play(); } catch {}
+    
+    // Small delay to ensure DOM is ready, especially for mobile portal
+    const timeoutId = setTimeout(() => {
+      // Determine which video element to use based on screen size
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const v = (isMobile ? videoRefMobile.current : videoRefDesktop.current) as (HTMLVideoElement & { srcObject?: MediaStream }) | null;
+      
+      // Fallback to the other ref if primary one is not available
+      const videoElement = v || videoRefMobile.current || videoRefDesktop.current;
+      if (!videoElement) return;
+      
+      // Set srcObject to attach the stream
+      (videoElement as HTMLVideoElement & { srcObject?: MediaStream }).srcObject = stream;
+      
+      // Update the main videoRef for capture function
+      videoRef.current = videoElement;
+      
+      const onLoaded = async () => {
+        try { 
+          await videoElement.play(); 
+        } catch (error) {
+          console.error('Video play error:', error);
+          // Retry play after a short delay
+          setTimeout(async () => {
+            try { 
+              await videoElement.play(); 
+            } catch (retryError) {
+              console.error('Video play retry error:', retryError);
+            }
+          }, 100);
+        }
+        
+        // If width/height still zero, retry once shortly (Safari quirk)
+        if ((videoElement.videoWidth || 0) === 0) {
+          setTimeout(async () => {
+            try { 
+              await videoElement.play(); 
+              setCameraReady(true);
+            } catch (retryError) {
+              console.error('Video play retry error:', retryError);
+              setCameraReady(true); // Set ready anyway to allow capture attempts
+            }
+          }, 200);
+        } else {
           setCameraReady(true);
-        }, 100);
-      } else {
-        setCameraReady(true);
+        }
+      };
+      
+      videoElement.onloadedmetadata = onLoaded;
+      
+      // Also try to play immediately if metadata is already loaded
+      if (videoElement.readyState >= 2) {
+        onLoaded();
+      }
+    }, 50);
+    
+    return () => { 
+      clearTimeout(timeoutId);
+      const mobileVideo = videoRefMobile.current;
+      const desktopVideo = videoRefDesktop.current;
+      if (mobileVideo) {
+        mobileVideo.onloadedmetadata = null;
+      }
+      if (desktopVideo) {
+        desktopVideo.onloadedmetadata = null;
       }
     };
-    v.onloadedmetadata = onLoaded;
-    return () => { v.onloadedmetadata = null };
   }, [cameraOpen, stream]);
 
   const capturePhoto = async () => {
@@ -444,11 +508,20 @@ export default function PhotoUpload({
         <InlineError message={error} className="mt-3" data-testid={errorType || "error-message"} />
       )}
 
-      {cameraOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" data-testid="camera-interface">
-          <div className="bg-white rounded-lg p-4 w-full max-w-md">
-            <div className="relative">
-              <video ref={videoRef} className="w-full rounded-md bg-black" playsInline muted autoPlay />
+      {cameraOpen && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/60" data-testid="camera-interface">
+          {/* Mobile: Top sheet - fixed to top */}
+          <div className="md:hidden fixed top-0 left-0 right-0 bg-white rounded-b-lg p-4 shadow-lg z-[10000] max-h-[90vh] overflow-y-auto">
+            <div className="relative w-full">
+              <video 
+                ref={videoRefMobile} 
+                className="w-full rounded-md bg-black aspect-video object-cover" 
+                playsInline 
+                muted 
+                autoPlay
+                width="100%"
+                style={{ minHeight: '200px', display: 'block' }}
+              />
               <canvas ref={canvasRef} className="hidden" />
             </div>
             <div className="mt-3 flex items-center justify-between">
@@ -469,7 +542,42 @@ export default function PhotoUpload({
               </button>
             </div>
           </div>
-        </div>
+          {/* Desktop: Centered modal */}
+          <div className="hidden md:flex md:items-center md:justify-center h-full">
+            <div className="bg-white rounded-lg p-4 w-full max-w-md shadow-lg">
+              <div className="relative w-full">
+                <video 
+                  ref={videoRefDesktop} 
+                  className="w-full rounded-md bg-black aspect-video object-cover" 
+                  playsInline 
+                  muted 
+                  autoPlay
+                  width="100%"
+                  style={{ display: 'block' }}
+                />
+                <canvas ref={canvasRef} className="hidden" />
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <button
+                  type="button"
+                  className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
+                  onClick={closeCamera}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={`px-3 py-2 text-sm rounded-md ${cameraReady ? 'bg-brand-primary text-white hover:bg-brand-primary-hover' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+                  onClick={capturePhoto}
+                  disabled={!cameraReady}
+                >
+                  Capture
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {toast && (

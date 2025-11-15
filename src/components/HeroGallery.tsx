@@ -23,27 +23,41 @@ export default function HeroGallery() {
   const t = useTranslations('gallery');
   const [isInteracting, setIsInteracting] = useState(false);
   const [sliderPosition, setSliderPosition] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
 
   const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    
     const container = e.currentTarget.parentElement as HTMLDivElement;
     const rect = container.getBoundingClientRect();
     
     const onMouseMove = (e: MouseEvent) => {
+      e.preventDefault();
       const x = e.clientX - rect.left;
       const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
       setSliderPosition(percentage);
     };
 
     const onMouseUp = () => {
+      setIsDragging(false);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
     };
 
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ew-resize';
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    
     const container = e.currentTarget.parentElement as HTMLDivElement;
     const rect = container.getBoundingClientRect();
     
@@ -55,6 +69,7 @@ export default function HeroGallery() {
     };
 
     const onTouchEnd = () => {
+      setIsDragging(false);
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
     };
@@ -73,19 +88,6 @@ export default function HeroGallery() {
       >
         <div 
           className="relative aspect-square bg-gray-100 overflow-hidden cursor-ew-resize"
-          onMouseMove={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-            setSliderPosition(percentage);
-          }}
-          onTouchMove={(e) => {
-            e.preventDefault();
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.touches[0].clientX - rect.left;
-            const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-            setSliderPosition(percentage);
-          }}
         >
           {/* Background: After image (now on background to make left = Before) */}
           <Image
@@ -112,8 +114,12 @@ export default function HeroGallery() {
           <button
             onMouseDown={onMouseDown}
             onTouchStart={onTouchStart}
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-14 h-14 rounded-full bg-white shadow-depth-xl border-3 border-brand-primary/30 flex items-center justify-center text-lg hover:shadow-depth-2xl hover:scale-110 transition-all duration-300 active:scale-95 z-20"
-            style={{ left: `${sliderPosition}%` }}
+            className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-14 h-14 rounded-full bg-white shadow-depth-xl border-3 border-brand-primary/30 flex items-center justify-center text-lg z-20 select-none ${
+              isDragging 
+                ? 'cursor-ew-resize scale-105' 
+                : 'hover:shadow-depth-2xl hover:scale-110 transition-all duration-300 active:scale-95'
+            }`}
+            style={{ left: `${sliderPosition}%`, transition: isDragging ? 'none' : undefined }}
             aria-label="Drag slider"
           >
             <span className="text-brand-primary font-bold">⇄</span>

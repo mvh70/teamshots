@@ -548,7 +548,7 @@ export default function InviteDashboardPage() {
            <Grid cols={{ mobile: 1, desktop: 2 }} gap="lg">
                         {/* Primary CTA - Prominent Generate Button */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="hidden md:block text-xl font-semibold text-gray-900 mb-2">{t('getStarted.title')}</h3>
+              <h3 className="hidden md:block text-lg md:text-xl font-semibold text-gray-900 mb-2">{t('getStarted.title')}</h3>
               <p className="hidden md:block text-sm text-gray-600 mb-4">{t('getStarted.description')}</p>
               <div className="space-y-3">
                 {/* Sticky wrapper for mobile */}
@@ -562,7 +562,7 @@ export default function InviteDashboardPage() {
                       router.push(`/invite-dashboard/${token}/selfies`)
                     }}
                     disabled={stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
-                    className="w-full flex items-center justify-center px-6 py-5 bg-brand-primary text-white rounded-2xl hover:bg-brand-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-primary shadow-md hover:shadow-lg font-semibold text-lg"
+                    className="w-full flex items-center justify-center px-6 py-5 bg-brand-primary text-white rounded-2xl hover:bg-brand-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-primary shadow-md hover:shadow-lg font-semibold text-base md:text-lg"
                   >
                     <PhotoIcon className="h-7 w-7 mr-3" />
                     <span>{t('getStarted.startButton')}</span>
@@ -598,7 +598,7 @@ export default function InviteDashboardPage() {
             {/* Recent photos thumbnails */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xl font-semibold text-gray-900">{t('recentPhotos.title')}</h3>
+                <h3 className="text-lg md:text-xl font-semibold text-gray-900">{t('recentPhotos.title')}</h3>
                 <button
                   onClick={() => router.push(`/invite-dashboard/${token}/generations`)}
                   className="text-sm text-brand-primary hover:text-brand-primary-hover"
@@ -634,7 +634,7 @@ export default function InviteDashboardPage() {
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   {/* Desktop: Title and continue button */}
                   <div className="hidden md:flex items-center justify-between mb-3">
-                    <h3 className="text-xl font-semibold text-gray-900">{t('selfieSelection.title')}</h3>
+                    <h3 className="text-lg md:text-xl font-semibold text-gray-900">{t('selfieSelection.title')}</h3>
                     <button
                       onClick={() => {
                         if (validSelectedIds.length >= 2) {
@@ -1003,7 +1003,7 @@ export default function InviteDashboardPage() {
 
           {/* Sign up CTA */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:mt-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
               {t('signUpCta.title')}
             </h3>
             <p className="text-sm text-gray-600 mb-4">

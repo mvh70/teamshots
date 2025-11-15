@@ -1288,10 +1288,10 @@
       "subtitle": "Configure each category as predefined or user choice",
       "legend": {
         "editable": "Editable sections highlight what you can customize.",
-        "locked": "Locked by the photo style settings.",
+        "locked": "Pre-set by your team admin.",
         "lockedTeamSuffix": " as set by your team admin.",
         "editableChip": "Editable",
-        "lockedChip": "Locked",
+        "lockedChip": "Pre-set by team admin",
         "presetChip": "Preset active"
       },
       "status": {

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireAuth } from '@/lib/api/auth-middleware'
+import { internalError } from '@/lib/api/errors'
 import { UserService } from '@/domain/services/UserService'
 import { CreditService } from '@/domain/services/CreditService'
 import { getTeamOnboardingState } from '@/domain/team/onboarding'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
+import { buildGenerationWhere, buildContextWhere } from '@/lib/prisma-helpers'
 
 /**
  * Consolidated endpoint for initial user data after registration/login
@@ -14,12 +16,11 @@ export const runtime = 'nodejs'
 
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authResult = await requireAuth()
+    if (authResult instanceof NextResponse) {
+      return authResult
     }
-
-    const userId = session.user.id
+    const { userId } = authResult
 
     // Fetch all user context data in parallel
     const [userContext, creditBalance, userWithLocale, personData] = await Promise.all([
@@ -59,31 +60,16 @@ export async function GET() {
       teamId: teamId || undefined,
     })
 
-    // Get basic counts (minimal queries)
+    // Get basic counts (minimal queries) - use query helpers for consistency
     const [generationsCount, contextsCount, creditsUsedResult] = await Promise.all([
       prisma.generation.count({
-        where: {
-          OR: [
-            { person: { userId } },
-            ...(teamId ? [{ person: { teamId } }] : [])
-          ]
-        }
+        where: buildGenerationWhere(userId, teamId)
       }),
       prisma.context.count({
-        where: {
-          OR: [
-            { userId },
-            ...(teamId ? [{ teamId }] : [])
-          ]
-        }
+        where: buildContextWhere(userId, teamId)
       }),
       prisma.generation.aggregate({
-        where: {
-          OR: [
-            { person: { userId } },
-            ...(teamId ? [{ person: { teamId } }] : [])
-          ]
-        },
+        where: buildGenerationWhere(userId, teamId),
         _sum: { creditsUsed: true }
       })
     ])
@@ -153,7 +139,7 @@ export async function GET() {
     Logger.error('Error fetching initial user data', { 
       error: error instanceof Error ? error.message : String(error) 
     })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return internalError('Failed to fetch initial user data')
   }
 }
 

@@ -1288,10 +1288,10 @@
       "subtitle": "Configura cada categoría como predefinida o elección del usuario",
       "legend": {
         "editable": "Las secciones editables resaltan lo que puedes personalizar.",
-        "locked": "Bloqueado por la configuración de estilo de foto.",
+        "locked": "Preestablecido por el administrador del equipo.",
         "lockedTeamSuffix": " establecido por el administrador del equipo.",
         "editableChip": "Editable",
-        "lockedChip": "Bloqueado",
+        "lockedChip": "Preestablecido por admin del equipo",
         "presetChip": "Preset activo"
       },
       "status": {

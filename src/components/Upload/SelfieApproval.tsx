@@ -71,6 +71,9 @@ export default function SelfieApproval({
 
   const handleReject = () => {
     onReject()
+  }
+
+  const handleCancel = () => {
     onCancel()
   }
 
@@ -164,7 +167,7 @@ export default function SelfieApproval({
           </button>
 
           <button
-            onClick={handleReject}
+            onClick={handleCancel}
             disabled={isProcessing}
             className="w-full sm:w-auto px-8 py-4 sm:px-6 sm:py-2 border-2 sm:border border-gray-300 text-gray-700 rounded-xl sm:rounded-md hover:bg-gray-50 text-lg sm:text-sm font-semibold sm:font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="cancel-button"

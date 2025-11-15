@@ -62,6 +62,7 @@ export default function SampleGallery() {
   const tHero = useTranslations('hero');
   const { track } = useAnalytics();
   const [sliderPositions, setSliderPositions] = useState<Record<string, number>>({});
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
 
   // Intersection Observer for lazy loading
@@ -91,25 +92,38 @@ export default function SampleGallery() {
   };
 
   const onMouseDown = (photoId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingId(photoId);
+    
     const container = e.currentTarget.parentElement as HTMLDivElement;
     const rect = container.getBoundingClientRect();
     
     const onMouseMove = (e: MouseEvent) => {
+      e.preventDefault();
       const x = e.clientX - rect.left;
       const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
       handleSliderChange(photoId, percentage);
     };
 
     const onMouseUp = () => {
+      setDraggingId(null);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
     };
 
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ew-resize';
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
   };
 
   const onTouchStart = (photoId: string, e: React.TouchEvent) => {
+    e.preventDefault();
+    setDraggingId(photoId);
+    
     const container = e.currentTarget.parentElement as HTMLDivElement;
     const rect = container.getBoundingClientRect();
     
@@ -121,6 +135,7 @@ export default function SampleGallery() {
     };
 
     const onTouchEnd = () => {
+      setDraggingId(null);
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
     };
@@ -160,19 +175,6 @@ export default function SampleGallery() {
                   {/* Interactive Before/After Slider */}
                   <div 
                     className="relative aspect-square bg-bg-gray-50 overflow-hidden cursor-ew-resize"
-                    onMouseMove={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-                      handleSliderChange(photo.id, percentage);
-                    }}
-                    onTouchMove={(e) => {
-                      e.preventDefault();
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = e.touches[0].clientX - rect.left;
-                      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-                      handleSliderChange(photo.id, percentage);
-                    }}
                   >
                     {/* Background: After image (now background so left = Before) */}
                     <Image
@@ -199,8 +201,15 @@ export default function SampleGallery() {
                     <button
                       onMouseDown={(e) => onMouseDown(photo.id, e)}
                       onTouchStart={(e) => onTouchStart(photo.id, e)}
-                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-bg-white shadow-depth-lg border-2 border-brand-primary/30 flex items-center justify-center text-sm hover:shadow-depth-xl hover:scale-110 transition-all duration-300 active:scale-95 z-20"
-                      style={{ left: `${sliderPositions[photo.id] || 50}%` }}
+                      className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-bg-white shadow-depth-lg border-2 border-brand-primary/30 flex items-center justify-center text-sm z-20 select-none ${
+                        draggingId === photo.id
+                          ? 'cursor-ew-resize scale-105'
+                          : 'hover:shadow-depth-xl hover:scale-110 transition-all duration-300 active:scale-95'
+                      }`}
+                      style={{ 
+                        left: `${sliderPositions[photo.id] || 50}%`,
+                        transition: draggingId === photo.id ? 'none' : undefined
+                      }}
                       aria-label="Drag slider"
                     >
                       <span className="text-brand-primary font-bold">⇄</span>

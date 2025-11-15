@@ -5,7 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireAuth } from '@/lib/api/auth-middleware'
+import { badRequest, notFound, internalError, forbidden } from '@/lib/api/errors'
 import { prisma } from '@/lib/prisma'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { SecurityLogger } from '@/lib/security-logger'
@@ -25,20 +26,15 @@ export async function GET(
     const { id: generationId } = await params
     
     if (!generationId) {
-      return NextResponse.json(
-        { error: 'Generation ID is required' },
-        { status: 400 }
-      )
+      return badRequest('Generation ID is required')
     }
 
     // Get user session
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+    const authResult = await requireAuth()
+    if (authResult instanceof NextResponse) {
+      return authResult
     }
+    const { userId } = authResult
 
     // OPTIMIZATION: Run independent queries in parallel
     const [generation, userPerson] = await Promise.all([
@@ -58,20 +54,17 @@ export async function GET(
       }),
       // SECURITY: Get user person for access verification
       prisma.person.findUnique({
-        where: { userId: session.user.id },
+        where: { userId },
         select: { id: true, teamId: true }
       })
     ])
 
     if (!generation) {
-      return NextResponse.json(
-        { error: 'Generation not found' },
-        { status: 404 }
-      )
+      return notFound('Generation not found')
     }
 
     if (!userPerson) {
-      return NextResponse.json({ error: 'User person record not found' }, { status: 404 })
+      return notFound('User person not found')
     }
 
     const isOwner = generation.personId === userPerson.id
@@ -79,14 +72,11 @@ export async function GET(
 
     if (!isOwner && !isSameTeam) {
       await SecurityLogger.logSuspiciousActivity(
-        session.user.id,
+        userId,
         'unauthorized_generation_access_attempt',
         { generationId: generation.id, generationOwnerId: generation.personId }
       )
-      return NextResponse.json(
-        { error: 'Access denied' },
-        { status: 403 }
-      )
+      return forbidden('Access denied')
     }
 
     // Get job status from queue if generation is still processing
@@ -190,10 +180,7 @@ export async function GET(
 
   } catch (error) {
     Logger.error('Failed to get generation status', { error: error instanceof Error ? error.message : String(error) })
-    return NextResponse.json(
-      { error: 'Failed to get generation status' },
-      { status: 500 }
-    )
+    return internalError('Failed to get generation status')
   }
 }
 
@@ -205,20 +192,15 @@ export async function DELETE(
     const { id: generationId } = await params
     
     if (!generationId) {
-      return NextResponse.json(
-        { error: 'Generation ID is required' },
-        { status: 400 }
-      )
+      return badRequest('Generation ID is required')
     }
 
     // Get user session
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+    const authResult = await requireAuth()
+    if (authResult instanceof NextResponse) {
+      return authResult
     }
+    const { userId } = authResult
 
     // Get generation with related data
     const generation = await prisma.generation.findUnique({
@@ -234,34 +216,25 @@ export async function DELETE(
     })
 
     if (!generation) {
-      return NextResponse.json(
-        { error: 'Generation not found' },
-        { status: 404 }
-      )
+      return notFound('Generation not found')
     }
 
     // Check if user is the owner of this generation
     // Team admins can only delete their own photos, not team members' photos
-    const isOwner = generation.person.userId === session.user.id
+    const isOwner = generation.person.userId === userId
 
     if (!isOwner) {
       await SecurityLogger.logSuspiciousActivity(
-        session.user.id,
+        userId,
         'unauthorized_generation_delete_attempt',
         { generationId: generation.id, generationOwnerId: generation.person.userId }
       )
-      return NextResponse.json(
-        { error: 'Access denied. You can only delete your own photos.' },
-        { status: 403 }
-      )
+      return forbidden('Access denied. You can only delete your own photos.')
     }
 
     // Check if already deleted
     if (generation.deleted) {
-      return NextResponse.json(
-        { error: 'Generation already deleted' },
-        { status: 400 }
-      )
+      return badRequest('Generation already deleted')
     }
 
     // Delete generated images from S3
@@ -310,9 +283,6 @@ export async function DELETE(
 
   } catch (error) {
     Logger.error('Failed to delete generation', { error: error instanceof Error ? error.message : String(error) })
-    return NextResponse.json(
-      { error: 'Failed to delete generation' },
-      { status: 500 }
-    )
+    return internalError('Failed to delete generation')
   }
 }

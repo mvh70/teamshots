@@ -557,8 +557,7 @@ export default function PhotoStyleSettings({
               <div className="flex items-center justify-end gap-2 mt-1">
                 <LockClosedIcon className="h-4 w-4 text-red-600" aria-hidden="true" />
                 <span className="text-red-600">
-                  {t('legend.locked', { default: 'Locked by the photo style settings.' })}
-                  {teamContext ? t('legend.lockedTeamSuffix', { default: ' as set by your team admin.' }) : ''}
+                  {t('legend.locked', { default: 'Pre-set by your team admin.' })}
                 </span>
               </div>
             </div>

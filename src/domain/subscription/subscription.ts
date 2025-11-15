@@ -23,8 +23,43 @@ export interface SubscriptionInfo {
 }
 
 // Add cache at the top of the file, after imports
+// OPTIMIZATION: Use Map with automatic cleanup to prevent memory leaks
 const subscriptionCache = new Map<string, { data: SubscriptionInfo | null; timestamp: number }>();
 const CACHE_TTL = 60 * 1000; // 1 minute
+const MAX_CACHE_SIZE = 1000; // Maximum number of cached entries
+
+/**
+ * Clean up old cache entries to prevent memory leaks
+ * Removes entries older than CACHE_TTL or if cache exceeds MAX_CACHE_SIZE
+ */
+function cleanupCache(): void {
+  const now = Date.now()
+  const entriesToDelete: string[] = []
+
+  // Find entries to delete (too old or if cache is too large)
+  for (const [key, value] of subscriptionCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL) {
+      entriesToDelete.push(key)
+    }
+  }
+
+  // If cache is still too large after removing old entries, remove oldest remaining entries
+  if (subscriptionCache.size - entriesToDelete.length > MAX_CACHE_SIZE) {
+    const sortedEntries = Array.from(subscriptionCache.entries())
+      .filter(([key]) => !entriesToDelete.includes(key))
+      .sort((a, b) => a[1].timestamp - b[1].timestamp)
+    
+    const excessCount = subscriptionCache.size - entriesToDelete.length - MAX_CACHE_SIZE
+    for (let i = 0; i < excessCount; i++) {
+      entriesToDelete.push(sortedEntries[i][0])
+    }
+  }
+
+  // Delete entries
+  for (const key of entriesToDelete) {
+    subscriptionCache.delete(key)
+  }
+}
 
 /**
  * Get subscription information for a user
@@ -119,6 +154,12 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
 
   // After computing result
   subscriptionCache.set(userId, { data: result, timestamp: Date.now() });
+  
+  // Cleanup cache periodically (every 10th call to avoid overhead)
+  if (subscriptionCache.size % 10 === 0) {
+    cleanupCache();
+  }
+  
   return result;
 }
 
