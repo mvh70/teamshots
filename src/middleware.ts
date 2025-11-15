@@ -58,7 +58,7 @@ function addSecurityHeaders(response: NextResponse) {
   
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://static.cloudflareinsights.com ${posthogDomains}`,
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://pineapple.teamshotspro.com ${posthogDomains}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
