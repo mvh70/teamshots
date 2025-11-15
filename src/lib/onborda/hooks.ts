@@ -83,8 +83,6 @@ export function useOnboardingState() {
       } catch {
         // Ignore parse errors, fall through to API call
       }
-    } else {
-      console.log('useOnboardingState: On generations page, forcing fresh context fetch')
     }
 
     // Fetch from API (always on generations pages, or if no sessionStorage data)
@@ -99,9 +97,6 @@ export function useOnboardingState() {
             serverContext.completedTours.forEach((tourName: string) => {
               localStorage.setItem(`onboarding-${tourName}-seen`, 'true')
             })
-            console.log('useOnboardingState: Synced completed tours from database to localStorage', {
-              completedTours: serverContext.completedTours
-            })
           }
           
           const newContext = {
@@ -110,19 +105,12 @@ export function useOnboardingState() {
             userId: session?.user?.id || serverContext.userId,
             _loaded: true, // Mark as loaded after API fetch
           }
-          console.log('useOnboardingState: Fetched fresh context', { 
-            hasGeneratedPhotos: serverContext.hasGeneratedPhotos,
-            completedTours: serverContext.completedTours,
-            pathname 
-          })
           setContext(newContext)
         } else {
-          console.error('useOnboardingState: API call failed', response.status, await response.text())
           // Even on error, mark as loaded to prevent infinite waiting
           setContext(prev => ({ ...prev, _loaded: true }))
         }
       } catch (error) {
-        console.error('useOnboardingState: Failed to load onboarding context:', error)
         // Even on error, mark as loaded to prevent infinite waiting
         setContext(prev => ({ ...prev, _loaded: true }))
       }
@@ -130,8 +118,6 @@ export function useOnboardingState() {
 
     if (session?.user?.id) {
       loadOnboardingContext()
-    } else {
-      console.log('useOnboardingState: No session user ID')
     }
   }, [session?.user?.id, pathname]) // Re-check when pathname changes
 
@@ -209,7 +195,6 @@ export function useOnbordaTours() {
             body: JSON.stringify({ tourName }),
           })
         } catch (error) {
-          console.error('Failed to persist tour completion to database:', error)
           // Continue execution even if database update fails
         }
       }
@@ -220,7 +205,6 @@ export function useOnbordaTours() {
           updateContext({ hasGeneratedPhotos: true })
           // Set generation-detail tour as pending so it starts when user views their generated photos
           sessionStorage.setItem('pending-tour', 'generation-detail')
-          console.log('OnboardingLauncher: Set pending tour to generation-detail after first-generation tour')
           break
         case 'team-admin-welcome':
           // Team admin welcome tour completed - user should now set up their team
@@ -248,11 +232,8 @@ export function useOnbordaTours() {
           updateContext({ hasGeneratedPhotos: true })
           // Set generation-detail tour as pending so it starts when user views their generated photos
           sessionStorage.setItem('pending-tour', 'generation-detail')
-          console.log('OnboardingLauncher: Set pending tour to generation-detail after test-generation tour')
           break
       }
-    } else {
-      console.log('Tour NOT found for completion:', tourName)
     }
     setCurrentTour(null)
   }

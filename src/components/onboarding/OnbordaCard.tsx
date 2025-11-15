@@ -57,7 +57,7 @@ export function OnbordaCard({
       const hasCompleted = localStorage.getItem(`onboarding-${onbordaCurrentTour}-seen`) === 'true'
       if (!hasCompleted) {
         // Fire and forget - don't await to avoid blocking UI
-        completeTour(onbordaCurrentTour).catch(console.error)
+        completeTour(onbordaCurrentTour).catch(() => {})
       }
     }
   }, [isOnbordaVisible, onbordaCurrentTour, completeTour])
@@ -66,7 +66,7 @@ export function OnbordaCard({
     if (isLast) {
       if (onbordaCurrentTour) {
         // Fire and forget - don't await to avoid blocking UI
-        completeTour(onbordaCurrentTour).catch(console.error)
+        completeTour(onbordaCurrentTour).catch(() => {})
       }
       closeOnborda()
       return
@@ -78,7 +78,7 @@ export function OnbordaCard({
   const handleGoToPhotoStyles = async () => {
     if (onbordaCurrentTour) {
       // Fire and forget - don't await to avoid blocking UI
-      completeTour(onbordaCurrentTour).catch(console.error)
+      completeTour(onbordaCurrentTour).catch(() => {})
     }
     closeOnborda()
     router.push('/app/styles/personal')
@@ -103,23 +103,21 @@ export function OnbordaCard({
   const handleTest = async () => {
     if (onbordaCurrentTour) {
       // Fire and forget - don't await to avoid blocking UI
-      completeTour(onbordaCurrentTour).catch(console.error)
+      completeTour(onbordaCurrentTour).catch(() => {})
     }
     closeOnborda()
     router.push('/app/generate/start')
   }
 
   const handleInvite = async () => {
-    console.log('OnbordaCard: handleInvite called', { onbordaCurrentTour })
     if (onbordaCurrentTour) {
       // Fire and forget - don't await to avoid blocking UI
-      completeTour(onbordaCurrentTour).catch(console.error)
+      completeTour(onbordaCurrentTour).catch(() => {})
     }
     closeOnborda()
     // Set pending tour for invite team tour using both state and sessionStorage
     // sessionStorage ensures it persists across navigation
     // Also clear the "seen" flag so the tour can start even if previously seen
-    console.log('OnbordaCard: Setting pending tour to invite-team')
     localStorage.removeItem('onboarding-invite-team-seen')
     sessionStorage.setItem('pending-tour', 'invite-team')
     startTour('invite-team')
@@ -128,19 +126,6 @@ export function OnbordaCard({
   }
 
   const hasCustomActions = extendedStep?.customActions && isLast
-
-  // Debug logging for invite tour step 3
-  useEffect(() => {
-    if (onbordaCurrentTour === 'invite-team' && currentStep === 2) {
-      console.log('OnbordaCard: Step 3 content check', {
-        title: step?.title,
-        content: step?.content,
-        contentType: typeof step?.content,
-        contentLength: typeof step?.content === 'string' ? step.content.length : 'N/A',
-        fullStep: step,
-      })
-    }
-  }, [onbordaCurrentTour, currentStep, step])
 
   return (
     <div className="w-[360px] sm:w-[420px] rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 p-5 space-y-4 text-gray-900">

@@ -109,7 +109,6 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
     if (rawPeriod === 'year') return 'annual'
     return (rawPeriod as PlanPeriod) ?? null
   })()
-  Logger.info('subscription.period.normalized', { userId, rawPeriod, period })
 
   // Compute next renewal date when applicable
   let nextRenewal: Date | null = null
