@@ -63,6 +63,13 @@ export function useOnboardingState() {
               _loaded: true, // Mark as loaded immediately
             }
 
+            // Sync completed tours from initial data to localStorage if available
+            if (initialData.onboarding?.completedTours && Array.isArray(initialData.onboarding.completedTours)) {
+              initialData.onboarding.completedTours.forEach((tourName: string) => {
+                localStorage.setItem(`onboarding-${tourName}-seen`, 'true')
+              })
+            }
+            
             const newContext = {
               ...baseContext,
               ...serverContext,
@@ -86,6 +93,17 @@ export function useOnboardingState() {
         const response = await fetch('/api/onboarding/context')
         if (response.ok) {
           const serverContext = await response.json()
+          
+          // Sync completed tours from database to localStorage
+          if (serverContext.completedTours && Array.isArray(serverContext.completedTours)) {
+            serverContext.completedTours.forEach((tourName: string) => {
+              localStorage.setItem(`onboarding-${tourName}-seen`, 'true')
+            })
+            console.log('useOnboardingState: Synced completed tours from database to localStorage', {
+              completedTours: serverContext.completedTours
+            })
+          }
+          
           const newContext = {
             ...baseContext,
             ...serverContext,
@@ -94,6 +112,7 @@ export function useOnboardingState() {
           }
           console.log('useOnboardingState: Fetched fresh context', { 
             hasGeneratedPhotos: serverContext.hasGeneratedPhotos,
+            completedTours: serverContext.completedTours,
             pathname 
           })
           setContext(newContext)

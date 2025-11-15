@@ -31,7 +31,7 @@ export async function GET() {
         where: { id: userId },
         select: { locale: true }
       }),
-      // Get person data with lastName and email
+      // Get person data with lastName, email, and onboardingState
       prisma.person.findUnique({
         where: { userId },
         select: {
@@ -40,6 +40,7 @@ export async function GET() {
           lastName: true,
           email: true,
           teamId: true,
+          onboardingState: true,
           team: {
             select: {
               id: true,
@@ -49,6 +50,19 @@ export async function GET() {
         }
       })
     ])
+
+    // Parse completed tours from Person.onboardingState
+    let completedTours: string[] = []
+    if (personData?.onboardingState) {
+      try {
+        const parsed = JSON.parse(personData.onboardingState)
+        if (parsed.completedTours && Array.isArray(parsed.completedTours)) {
+          completedTours = parsed.completedTours
+        }
+      } catch {
+        // If parsing fails, treat as empty (old format or invalid JSON)
+      }
+    }
 
     const { user, roles, subscription, onboarding, teamId } = userContext
     const teamName = personData?.team?.name || user.person?.team?.name || null
@@ -133,6 +147,7 @@ export async function GET() {
         needsTeamInvites: teamOnboardingState.needsTeamInvites,
         nextTeamOnboardingStep: teamOnboardingState.nextStep,
         isFirstVisit,
+        completedTours, // Include completed tours from database
       },
     })
   } catch (error) {
