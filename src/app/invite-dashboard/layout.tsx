@@ -1,5 +1,21 @@
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
+import { Playfair_Display, Inter } from 'next/font/google'
+import '../globals.css'
+
+const displayFont = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+  weight: ['400', '700', '900'],
+})
+
+const bodyFont = Inter({
+  subsets: ['latin'],
+  variable: '--font-body',
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+})
 
 export default async function InviteDashboardLayout({
   children,
@@ -12,7 +28,9 @@ export default async function InviteDashboardLayout({
   
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
+      <div className={`${displayFont.variable} ${bodyFont.variable} font-body`}>
       {children}
+      </div>
     </NextIntlClientProvider>
   )
 }

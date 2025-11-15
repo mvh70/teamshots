@@ -1707,7 +1707,7 @@
         "message": "Customize your photo in the editable sections below before generating."
       },
       "costPerGeneration": "Cost per generation",
-      "generateButton": "Generate Team Photos"
+      "generateButton": "Generate photo"
     },
     "generationFlow": {
       "title": "Generate Team Photos",

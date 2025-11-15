@@ -145,7 +145,7 @@ export default function InviteDashboardHeader({
 
             {/* Team chip intentionally omitted per standard header design */}
 
-            <h1 className="text-2xl font-bold text-gray-900 break-words">{resolvedTitle}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 break-words font-display">{resolvedTitle}</h1>
             <p className="text-sm text-gray-600 mt-1">
               {resolvedSubtitle}
             </p>

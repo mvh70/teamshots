@@ -1707,7 +1707,7 @@
         "message": "Personaliza tu foto en las secciones editables a continuación antes de generar."
       },
       "costPerGeneration": "Costo por generación",
-      "generateButton": "Generar Fotos de Equipo"
+      "generateButton": "Generar foto"
     },
     "generationFlow": {
       "title": "Generar Fotos de Equipo",

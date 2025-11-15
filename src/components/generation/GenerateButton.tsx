@@ -32,7 +32,7 @@ export default function GenerateButton({
     <button
       onClick={onClick}
       disabled={isDisabled}
-      className={`w-full ${sizeClasses[size]} font-semibold md:font-medium rounded-xl md:rounded-md transition-colors ${
+      className={`w-full ${sizeClasses[size]} font-semibold md:font-medium rounded-2xl md:rounded-md transition-colors shadow-md hover:shadow-lg ${
         isEnabled
           ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
           : 'bg-brand-primary/30 text-white/70 cursor-not-allowed'

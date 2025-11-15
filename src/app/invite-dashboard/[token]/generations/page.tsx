@@ -47,14 +47,14 @@ export default function GenerationsPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="text-center py-12">
                 <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No generations yet</h3>
+                <h3 className="mt-2 text-lg font-semibold text-gray-900">No generations yet</h3>
                 <p className="mt-1 text-sm text-gray-500">Upload a selfie and generate your first team photos.</p>
                 <div className="mt-6">
                   <button
                     onClick={() => router.push(`/invite-dashboard/${token}`)}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover"
+                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-semibold rounded-lg text-white bg-brand-primary hover:bg-brand-primary-hover shadow-md"
                   >
-                    Upload Selfie
+                    Generate Photos
                   </button>
                 </div>
               </div>

@@ -267,7 +267,7 @@ export default function SelfiesPage() {
                 <button
                   onClick={handleContinue}
                   disabled={!canContinue}
-                  className={`px-4 py-2 text-sm font-medium rounded-md flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                  className={`px-5 py-3 text-base font-semibold rounded-lg flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary shadow-md ${
                     canContinue
                       ? 'text-white bg-brand-primary hover:bg-brand-primary-hover'
                       : 'text-gray-400 bg-gray-200 cursor-not-allowed'
@@ -352,7 +352,7 @@ export default function SelfiesPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Selfie Approved!</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Selfie Approved!</h3>
                 <p className="text-sm text-gray-600">Your selfie has been saved successfully.</p>
               </div>
             </div>
@@ -363,12 +363,12 @@ export default function SelfiesPage() {
               <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200">
                 {/* Desktop: Title and continue button (only in generation flow) */}
                 <div className="flex p-6 items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900">Your Selfies</h2>
+                  <h2 className="text-xl md:text-2xl font-semibold text-gray-900">Your Selfies</h2>
                   {isInGenerationFlow && (
                     <button
                       onClick={handleContinue}
                       disabled={!canContinue}
-                      className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                      className={`px-5 py-3 text-base font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary shadow-md ${
                         canContinue
                           ? 'text-white bg-brand-primary hover:bg-brand-primary-hover'
                           : 'text-gray-400 bg-gray-200 cursor-not-allowed'

@@ -266,6 +266,8 @@ export default function InviteDashboardPage() {
   useEffect(() => {
     const pendingGeneration = sessionStorage.getItem('pendingGeneration')
     if (pendingGeneration === 'true') {
+      // Show the start flow UI immediately so user sees the flow, not just the banner
+      setShowStartFlow(true)
       // Initial fetch
       fetchAvailableSelfies()
       loadSelected()
@@ -279,19 +281,15 @@ export default function InviteDashboardPage() {
   }, [fetchAvailableSelfies, loadSelected])
 
   // Set up generation flow once selfies are fetched
+  // Note: When returning from selfie approval, we show the start flow (with selfie selection)
+  // instead of the old upload flow, so we don't set uploadKey here anymore
   useEffect(() => {
     const pendingGeneration = sessionStorage.getItem('pendingGeneration')
-    if (pendingGeneration === 'true' && availableSelfies.length > 0 && !uploadKey) {
-      // Use the most recent selfie (first in the array)
-      const latestSelfie = availableSelfies[0]
-      if (latestSelfie) {
-        setUploadKey(latestSelfie.key)
-        setIsApproved(true)
-        setGenerationType('team')
-        sessionStorage.removeItem('pendingGeneration')
-      }
+    if (pendingGeneration === 'true' && availableSelfies.length > 0) {
+      // Clear the pending flag - the start flow is already showing and will handle the rest
+      sessionStorage.removeItem('pendingGeneration')
     }
-  }, [availableSelfies, uploadKey])
+  }, [availableSelfies])
 
   const onApprove = () => {
     setIsApproved(true)
@@ -462,7 +460,7 @@ export default function InviteDashboardPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <h1 className="text-lg font-semibold text-gray-900 mb-2">{t('error.invalidInvite')}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t('error.invalidInvite')}</h1>
             <p className="text-sm text-gray-600 mb-4">{error}</p>
             <button
               onClick={() => router.push(`/${locale}`)}
@@ -516,7 +514,7 @@ export default function InviteDashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div className="flex-1">
-                  <h3 className="text-sm font-medium text-yellow-800 mb-1">
+                  <h3 className="text-base font-medium text-yellow-800 mb-1">
                     {t('insufficientCredits.title')}
                   </h3>
                   <p className="text-sm text-yellow-700">
@@ -548,25 +546,28 @@ export default function InviteDashboardPage() {
 
                     {!showStartFlow && !uploadKey && (
            <Grid cols={{ mobile: 1, desktop: 2 }} gap="lg">
-                        {/* Primary CTA and secondary links */}
+                        {/* Primary CTA - Prominent Generate Button */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="hidden md:block text-lg font-medium text-gray-900 mb-2">{t('getStarted.title')}</h3>
+              <h3 className="hidden md:block text-xl font-semibold text-gray-900 mb-2">{t('getStarted.title')}</h3>
               <p className="hidden md:block text-sm text-gray-600 mb-4">{t('getStarted.description')}</p>
               <div className="space-y-3">
-                <button 
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      sessionStorage.setItem('fromGeneration', 'true')
-                      sessionStorage.setItem('openStartFlow', 'true')
-                    }
-                    router.push(`/invite-dashboard/${token}/selfies`)
-                  }}
-                  disabled={stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
-                  className="w-full flex items-center justify-center px-4 py-4 border border-brand-primary bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-primary"
-                >
-                  <PhotoIcon className="h-6 w-6 mr-3" />
-                  <span className="text-sm font-medium">{t('getStarted.startButton')}</span>
-                </button>
+                {/* Sticky wrapper for mobile */}
+                <div className="md:static sticky bottom-0 md:bottom-auto z-10 bg-white md:bg-transparent pt-4 md:pt-0 pb-4 md:pb-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:shadow-none -mx-6 md:mx-0 px-6 md:px-0">
+                  <button 
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        sessionStorage.setItem('fromGeneration', 'true')
+                        sessionStorage.setItem('openStartFlow', 'true')
+                      }
+                      router.push(`/invite-dashboard/${token}/selfies`)
+                    }}
+                    disabled={stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
+                    className="w-full flex items-center justify-center px-6 py-5 bg-brand-primary text-white rounded-2xl hover:bg-brand-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-primary shadow-md hover:shadow-lg font-semibold text-lg"
+                  >
+                    <PhotoIcon className="h-7 w-7 mr-3" />
+                    <span>{t('getStarted.startButton')}</span>
+                  </button>
+                </div>
                 <div className="flex gap-3">
                   {stats.teamPhotosGenerated > 0 && (
                     <button 
@@ -597,7 +598,7 @@ export default function InviteDashboardPage() {
             {/* Recent photos thumbnails */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-medium text-gray-900">{t('recentPhotos.title')}</h3>
+                <h3 className="text-xl font-semibold text-gray-900">{t('recentPhotos.title')}</h3>
                 <button
                   onClick={() => router.push(`/invite-dashboard/${token}/generations`)}
                   className="text-sm text-brand-primary hover:text-brand-primary-hover"
@@ -633,7 +634,7 @@ export default function InviteDashboardPage() {
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   {/* Desktop: Title and continue button */}
                   <div className="hidden md:flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900">{t('selfieSelection.title')}</h3>
+                    <h3 className="text-xl font-semibold text-gray-900">{t('selfieSelection.title')}</h3>
                     <button
                       onClick={() => {
                         if (validSelectedIds.length >= 2) {
@@ -641,7 +642,7 @@ export default function InviteDashboardPage() {
                         }
                       }}
                       disabled={validSelectedIds.length < 2}
-                      className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                      className="px-5 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-base font-semibold shadow-md"
                     >
                       {t('common.continue')}
                     </button>
@@ -656,7 +657,7 @@ export default function InviteDashboardPage() {
                         }
                       }}
                       disabled={validSelectedIds.length < 2}
-                      className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex-shrink-0"
+                      className="px-5 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-base font-semibold shadow-md flex-shrink-0"
                     >
                       {t('common.continue')}
                     </button>
@@ -737,8 +738,8 @@ export default function InviteDashboardPage() {
 
               {/* Style selection view (after Continue is clicked) */}
               {showStyleSelection && (
-                <div className="md:bg-white md:rounded-lg md:shadow-sm md:border md:border-gray-200 md:p-6">
-                  <h1 className="hidden md:block text-xl font-semibold text-gray-900 mb-4">{t('styleSelection.readyToGenerate')}</h1>
+                <div className="md:bg-white md:rounded-lg md:shadow-sm md:border md:border-gray-200 md:p-6 pb-24 md:pb-6">
+                  <h1 className="hidden md:block text-2xl md:text-3xl font-bold text-gray-900 mb-4 font-display">{t('styleSelection.readyToGenerate')}</h1>
                   
                   {/* Mobile: Orange heads-up banner first, then style settings, then cost and generate button */}
                   <div className="md:hidden space-y-6">
@@ -770,17 +771,19 @@ export default function InviteDashboardPage() {
                           <div className="text-3xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} {t('common.credits')}</div>
                         </div>
                       </div>
-                      <GenerateButton
-                        onClick={onProceed}
-                        disabled={validSelectedIds.length < 2 || stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
-                        isGenerating={isGenerating}
-                        size="md"
-                      >
-                        {t('styleSelection.generateButton')}
-                      </GenerateButton>
                     </div>
-                    {/* Mobile-only spacing before banner */}
-                    <div className="md:hidden h-12"></div>
+                  </div>
+                  
+                  {/* Fixed sticky button at bottom - Mobile */}
+                  <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-4 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                    <GenerateButton
+                      onClick={onProceed}
+                      disabled={validSelectedIds.length < 2 || stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
+                      isGenerating={isGenerating}
+                      size="md"
+                    >
+                      {t('styleSelection.generateButton')}
+                    </GenerateButton>
                   </div>
 
                   {/* Desktop: Original layout with selfie summary and generation details */}
@@ -831,7 +834,13 @@ export default function InviteDashboardPage() {
                           <div className="text-3xl md:text-2xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} {t('common.credits')}</div>
                         </div>
                       </div>
-                      <div className="mt-4 md:mt-4">
+                    </div>
+                  </div>
+                  
+                  {/* Fixed sticky button at bottom - Desktop */}
+                  <div className="hidden md:block fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg pt-4 pb-4 px-6">
+                    <div className="max-w-7xl mx-auto flex justify-end">
+                      <div className="w-60">
                         <GenerateButton
                           onClick={onProceed}
                           disabled={validSelectedIds.length < 2 || stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
@@ -916,7 +925,7 @@ export default function InviteDashboardPage() {
               {availableSelfies.length === 0 ? (
                 <div className="text-center py-8">
                   <CameraIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">{t('generationFlow.noSelfies.title')}</h4>
+                  <h4 className="text-xl font-semibold text-gray-900 mb-2">{t('generationFlow.noSelfies.title')}</h4>
                   <p className="text-sm text-gray-600 mb-4">{t('generationFlow.noSelfies.description')}</p>
                   <button
                     onClick={() => {
@@ -931,7 +940,7 @@ export default function InviteDashboardPage() {
                 </div>
               ) : (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">{t('generationFlow.chooseSelfie')}</h4>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-3">{t('generationFlow.chooseSelfie')}</h4>
                   <Grid cols={{ mobile: 2, tablet: 3 }} gap="md" className="mb-6">
                     {availableSelfies.map((selfie) => (
                       <div
@@ -982,7 +991,7 @@ export default function InviteDashboardPage() {
                         }
                       }}
                       disabled={!selectedSelfie || stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
-                      className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                      className="px-5 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-base font-semibold shadow-md"
                     >
                       {t('generationFlow.continueWithSelected')}
                     </button>
@@ -994,7 +1003,7 @@ export default function InviteDashboardPage() {
 
           {/* Sign up CTA */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:mt-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
               {t('signUpCta.title')}
             </h3>
             <p className="text-sm text-gray-600 mb-4">
