@@ -570,7 +570,7 @@ export default function DashboardPage() {
               <div className={`grid grid-cols-1 ${userPermissions.isTeamAdmin ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-4`}>
                 {/* Primary Action - Generate Photos */}
                 <button 
-                  onClick={() => setShowUploadFlow(true)}
+                  onClick={() => router.push('/app/generate/start')}
                   className="flex flex-col items-center justify-center px-6 py-8 border-2 border-gray-300 rounded-xl hover:border-brand-cta hover:shadow-depth-md hover:scale-[1.02] transition-all duration-200 bg-white group min-h-[140px]"
                 >
                   <div className="w-12 h-12 bg-brand-cta rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200">
@@ -581,7 +581,7 @@ export default function DashboardPage() {
                 
                 {/* Secondary Actions */}
                 <button 
-                  onClick={() => router.push('/app/contexts')}
+                  onClick={() => router.push('/app/styles')}
                   className="flex flex-col items-center justify-center px-6 py-8 border-2 border-gray-300 rounded-xl hover:border-brand-primary hover:shadow-depth-md hover:scale-[1.02] transition-all duration-200 bg-white group min-h-[120px]"
                 >
                   <div className="w-12 h-12 bg-brand-primary-light rounded-xl flex items-center justify-center mb-3 group-hover:bg-brand-primary group-hover:scale-110 transition-all duration-200">

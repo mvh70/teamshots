@@ -606,7 +606,7 @@
       "quickActions": {
         "title": "Acciones rápidas",
         "generate": "Generar fotos",
-        "createTemplate": "Crear plantilla",
+        "createTemplate": "Crear estilo de foto",
         "manageTeam": "Gestionar equipo"
       },
       "successMessages": {
