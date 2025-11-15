@@ -5,13 +5,11 @@ import {
   UsersIcon,
   PhotoIcon,
   DocumentTextIcon,
-  ChartBarIcon,
   PlusIcon,
   ClockIcon,
   CheckCircleIcon,
   XMarkIcon,
   SparklesIcon,
-  RectangleStackIcon,
   UserGroupIcon
 } from '@heroicons/react/24/outline'
 import {useTranslations} from 'next-intl'

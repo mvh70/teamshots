@@ -14,8 +14,13 @@
   "hero": {
     "title": "Stop wasting weeks and $3,000 on team photos",
     "titleHighlight": "that still look terrible",
+    "titleMain": "Professional team photos",
+    "titleHighlightTime": "in 60 seconds",
     "subtitle": "Your team website looks unprofessional. New hires break your brand consistency. Traditional photoshoots cost thousands and take forever. What if you could get consistent, on-brand headshots in 60 seconds from any selfie?",
+    "subtitleMain": "Turn any selfie into consistent, on-brand headshots. No photographer, no coordination.",
     "instantTransformation": "⚡ Turn any selfie into a professional headshot in 60 seconds",
+    "finalCtaTitle": "Ready to transform your team photos?",
+    "finalCtaSubtitle": "Get your free professional headshot and see the difference in 60 seconds.",
     "getStartedFree": "Sign up now",
     "getStarted": "Get Started",
     "viewPricing": "View pricing",
@@ -43,6 +48,8 @@
   "features": {
     "title": "Why team photoshoots are destroying your brand (and how we fix it)",
     "subtitle": "Traditional photoshoots waste your time, break your budget, and still deliver inconsistent results. Here's what actually works for modern teams.",
+    "sectionTitle": "Everything you need, nothing you don't",
+    "sectionSubtitle": "Professional headshots without the hassle",
     "fast": {
       "title": "From weeks of chaos to 60 seconds of done",
       "description": "Stop waiting 6 weeks for photos that are already outdated. Each team member uploads once, gets professional results instantly. Your website stays current. No more chasing people for retakes."

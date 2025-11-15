@@ -27,11 +27,12 @@ This document outlines a complete reimagining of the TeamShotsPro invite dashboa
 **Core Concept:** The invite dashboard should feel like being welcomed into a professional team. It's polished enough for corporate environments, but warm enough to feel approachable and human. This is often the first touchpoint team members have with TeamShotsPro—it must make an excellent impression.
 
 **Key Principles:**
+- **Mobile-First**: Designed for mobile as the primary experience, then enhanced for desktop
 - **Clarity First**: Every element guides users toward their goal (generate team photos)
-- **Visual Breathing Room**: Generous whitespace prevents cognitive overload
+- **Visual Breathing Room**: Generous whitespace prevents cognitive overload (especially on small screens)
 - **Purposeful Motion**: Subtle animations that guide attention, not distract
 - **Brand Consistency**: Every element reinforces TeamShotsPro's identity
-- **Mobile-First**: Optimized for the most common access point (mobile devices)
+- **Touch-Optimized**: Large touch targets, thumb-friendly interactions
 - **Accessibility**: WCAG 2.1 AA compliance throughout
 
 **Avoid:**
@@ -44,45 +45,44 @@ This document outlines a complete reimagining of the TeamShotsPro invite dashboa
 
 ## User Journey & Information Architecture
 
-### Primary User Flow
+### Primary User Flow (Speed-Optimized)
+
+**Goal:** Get users to generate photos as quickly as possible.
 
 1. **Landing** → User clicks invite link, validates token
 2. **Welcome** → Personalized greeting with team context
-3. **Overview** → Credit status, recent activity, quick actions
-4. **Upload** → Selfie upload and selection (2+ required)
-5. **Style** → Style customization (if allowed) or preview
-6. **Generate** → Photo generation with progress feedback
-7. **Review** → Generated photos gallery
-8. **Signup CTA** → Optional account creation
+3. **Generate Flow** → Direct path to generation (selfie upload integrated)
+   - Upload selfies (2+ required) - inline, part of flow
+   - Select selfies (if multiple uploaded)
+   - Style selection (if allowed) - quick, minimal
+   - Generate → Prominent button, clear CTA
+4. **Review** → Generated photos gallery
+5. **Signup CTA** → Optional account creation
+
+**Key Principle:** Selfies are part of the generation process, not a separate concern. Users shouldn't need to manage selfies separately - they upload and generate in one flow.
 
 ### Dashboard States
 
-#### State 1: First-Time Visitor (No Selfies)
-**Goal:** Guide user to upload their first selfie
-- Prominent upload CTA
-- Clear instructions
-- Visual examples/previews
-- Credit status visible but not overwhelming
+#### State 1: First-Time Visitor (No Generations)
+**Goal:** Get user to generate photos immediately
+- Prominent "Generate Photos" button (primary CTA)
+- Credit status visible but minimal
+- Direct generation flow (selfie upload integrated)
+- No separate selfie management - it's part of the flow
 
-#### State 2: Has Selfies, No Generations
-**Goal:** Guide user to generate photos
-- Show uploaded selfies
-- Enable multi-select (2+ required)
-- Style selection interface
-- Generate button prominent
-
-#### State 3: Has Generations
-**Goal:** Show success, enable more generations
-- Recent photos gallery
-- Quick regenerate option
-- Upload more selfies option
+#### State 2: Has Generations
+**Goal:** Show success, enable more generations quickly
+- Recent photos gallery (small, not dominant)
+- Large "Generate More Photos" button (primary CTA)
 - Credit balance with "good for X photos" indicator
+- Quick access to view all generations
 
-#### State 4: Low Credits
+#### State 3: Low Credits
 **Goal:** Inform user, guide to admin contact
 - Warning banner (not alarming)
 - Clear messaging about contacting admin
 - Disabled generate button with explanation
+- Still show recent photos if available
 
 ---
 
@@ -160,115 +160,130 @@ font-family: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', sa
 - Grid gaps: 24px (lg)
 - Element spacing: 16px (md)
 
-### Layout Principles
+### Layout Principles (Mobile-First)
 
 **Grid System:**
-- 12-column responsive grid
+- Mobile-first: Start with single column, add columns at larger breakpoints
 - Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
-- Max content width: 1280px (xl)
-- Mobile-first approach
+- Max content width: 1280px (xl) - but mobile is primary
+- Touch-optimized spacing (minimum 16px between interactive elements)
 
-**Content Hierarchy:**
-1. **Header** (fixed/sticky) - Team context, credits, navigation
-2. **Welcome Section** (full width) - Personalized greeting
-3. **Primary Stats** (grid, 2-3 columns) - Credits, photos, selfies
-4. **Main Content** (flexible layout) - Upload flow, gallery, or generation
-5. **Quick Actions** (horizontal grid) - Secondary actions
+**Content Hierarchy (Mobile-Optimized):**
+1. **Header** (compact, sticky) - Team name, credits only
+2. **Welcome Section** (full width, compact) - Personalized greeting
+3. **Hero Generate Button** (full width, massive) - PRIMARY CTA
+4. **Credit Status** (minimal, single line) - Secondary info
+5. **Recent Photos** (compact grid, 2 columns) - Only if photos exist
 6. **Signup CTA** (full width, bottom) - Account creation prompt
 
-**Whitespace Strategy:**
-- Generous padding around content sections
-- Clear visual separation between card groups
-- Breathing room around interactive elements
-- Consistent vertical rhythm
+**Mobile-Specific Considerations:**
+- Single column layout (no side-by-side content)
+- Full-width buttons (easier to tap)
+- Larger touch targets (minimum 44px × 44px)
+- Thumb-friendly zones (primary actions in bottom half of screen)
+- Sticky navigation/actions (generate button always accessible)
+- Minimal scrolling required (key actions visible above fold)
+
+**Whitespace Strategy (Mobile):**
+- Reduced padding (16px instead of 24px) to maximize screen space
+- Clear visual separation between sections
+- Breathing room around interactive elements (16px minimum)
+- Consistent vertical rhythm (8px base unit)
 
 ---
 
 ## Component Design Specifications
 
-### 1. Header Component
+### 1. Header Component (Mobile-Optimized)
 
-**Purpose:** Persistent navigation and context display
+**Purpose:** Minimal, compact header that doesn't compete with primary CTA
 
 **Design:**
-- Sticky header (desktop) or compact mobile header
-- Team name prominently displayed
-- Credit balance with "good for X photos" indicator
-- Back navigation when in sub-flows
-- Clean, minimal aesthetic
+- Compact mobile header (single line, minimal)
+- Team name and credits only (no subtitle on mobile)
+- Sticky position (always accessible)
+- Back button when in flows (left side, large touch target)
 
 **Layout:**
 ```
+Mobile (Primary):
+┌─────────────────────────────────────┐
+│  ←  Acme Corp        20 (5 photos)  │
+└─────────────────────────────────────┘
+
 Desktop:
 ┌─────────────────────────────────────────────────────────────┐
 │  [Team Name]                    Credits: 20 (5 photos)     │
 │  Welcome back, Sarah                                        │
 └─────────────────────────────────────────────────────────────┘
-
-Mobile:
-┌─────────────────────────────────────┐
-│  [Team Name]         20 credits     │
-│                      (5 photos)     │
-└─────────────────────────────────────┘
 ```
 
-**Visual Specs:**
+**Visual Specs (Mobile):**
+- Height: 56px (compact)
+- Padding: 12px vertical, 16px horizontal
 - Background: white with subtle border-bottom
-- Padding: 16px vertical, 24px horizontal (desktop)
-- Typography: Team name (18px, semibold), credits (16px, bold, brand-primary)
-- Mobile: Compact single-line layout
+- Typography: Team name (16px, semibold), credits (14px, bold, brand-primary)
+- Back button: 44px × 44px touch target, left-aligned
+- Single line layout (no wrapping)
+
+**Visual Specs (Desktop):**
+- Height: 80px
+- Padding: 16px vertical, 24px horizontal
+- Typography: Team name (18px), credits (16px), subtitle (14px)
 
 **Implementation Notes:**
-- Use existing `InviteDashboardHeader` component as base
-- Enhance with better typography hierarchy
-- Add subtle shadow on scroll (desktop)
-- Ensure credit display uses brand colors from config
+- Mobile-first: Design for mobile, enhance for desktop
+- Ensure back button is large enough for thumb (44px minimum)
+- Credits should be right-aligned for easy scanning
+- Use brand colors from config
+- Sticky on scroll (mobile and desktop)
 
 ---
 
-### 2. Welcome Section
+### 2. Welcome Section (Mobile-Optimized)
 
-**Purpose:** Personalized greeting, context setting, first-time user guidance
+**Purpose:** Quick, compact greeting that doesn't take up too much screen space
 
 **Design:**
-- Full-width gradient background (`bg-gradient-to-r from-brand-primary to-brand-primary-hover`)
+- Compact on mobile (minimal vertical space)
+- Full-width gradient background
 - White text overlay
-- Large, friendly greeting with user's first name
-- Contextual subtitle based on user state
-- Subtle animation on load (fade + slide up)
+- Short, punchy copy (mobile-friendly)
+- Subtle animation on load
 
-**Content Variations:**
+**Content Variations (Mobile-Optimized):**
 
 **First-Time User:**
 ```
-"Welcome to [Team Name], [Name]! 🎉"
-"Upload your selfie and generate your professional team photo in under 60 seconds."
-```
-
-**Returning User (No Generations):**
-```
-"Welcome back, [Name]! 👋"
-"You've uploaded [X] selfies. Ready to generate your team photos?"
+"Welcome, [Name]! 🎉"
+"Generate your team photos in 60 seconds."
 ```
 
 **Returning User (Has Generations):**
 ```
 "Welcome back, [Name]! 👋"
-"You've generated [X] professional photos. Create more?"
+"Generate more photos?"
 ```
 
-**Visual Specs:**
+**Visual Specs (Mobile):**
+- Padding: 24px vertical, 16px horizontal (reduced for mobile)
+- Typography: Title (24px, bold), subtitle (14px, regular)
+- Border radius: 12px
 - Background: Gradient from brand-primary to brand-primary-hover
-- Text color: White (#FFFFFF)
-- Padding: 32px (xl) vertical, 24px (lg) horizontal
-- Border radius: 12px (rounded-xl)
-- Subtle shadow for depth
-- Animation: fade-in + slide-up on mount
+- Text color: White
+- Height: Auto, but compact (don't dominate screen)
+
+**Visual Specs (Desktop):**
+- Padding: 32px vertical, 24px horizontal
+- Typography: Title (32px), subtitle (18px)
+- More generous spacing
 
 **Implementation Notes:**
-- Use brand colors from config (no hardcoded values)
+- Mobile-first: Compact copy, reduced padding
+- Use brand colors from config
+- Keep it short - don't compete with generate button
 - Responsive text sizing (smaller on mobile)
-- Add subtle grain texture overlay for depth (optional)
+- Animation: Subtle fade-in (fast, 300ms)
 
 ---
 
@@ -368,134 +383,182 @@ Mobile:
 
 ---
 
-### 5. Primary Action Card
+### 5. Hero Generate Button (Mobile-Optimized, Primary CTA)
 
-**Purpose:** Main CTA for photo generation flow
+**Purpose:** THE single most important action - generate photos immediately
 
 **Design:**
-- Large, prominent card
-- Clear action label
-- Visual icon/illustration
-- Disabled state with explanation (if low credits)
+- Massive, impossible-to-miss button
+- Mobile-optimized: Full width, thumb-friendly
+- Takes center stage on the page
+- Clear, action-oriented copy (mobile-friendly length)
+- Selfie upload integrated into the flow (not a separate step)
 
-**Layout:**
+**Layout (Mobile - Primary):**
 ```
 ┌─────────────────────────────────────┐
 │                                     │
-│         [Large Icon]                │
+│         [📸 Icon - 64px]            │
 │                                     │
 │    Generate Your Team Photos        │
 │                                     │
 │    Upload selfies and create        │
 │    professional headshots           │
 │                                     │
-│    [Start →]                        │
+│    [Generate Photos →]              │
 │                                     │
 └─────────────────────────────────────┘
 ```
 
-**Visual Treatment:**
-- Background: brand-cta (orange) for primary action
-- Text: White
-- Icon: 64px, white
-- Padding: 32px (xl) vertical, 24px (lg) horizontal
-- Border radius: 12px
-- Hover: Slight scale (1.02), deeper shadow
+**Layout (Desktop):**
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                     │
+│                    [📸 Large Icon - 80px]                          │
+│                                                                     │
+│              Generate Your Team Photos                              │
+│                                                                     │
+│         Upload your selfies and create professional headshots       │
+│         in under 60 seconds                                         │
+│                                                                     │
+│                    [Generate Photos →]                              │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Visual Treatment (Mobile):**
+- Background: brand-cta (orange) - maximum visibility
+- Text: White, large (18px button text)
+- Icon: 64px, white (smaller for mobile)
+- Padding: 48px vertical, 24px horizontal (generous but mobile-optimized)
+- Border radius: 16px (more rounded, friendly)
+- Shadow: Large, prominent shadow-lg
+- Size: Full width (100% - no margins)
+- Touch target: Minimum 88px height (easy thumb tap)
+- Position: Sticky at bottom when scrolling (always accessible)
+
+**Visual Treatment (Desktop):**
+- Padding: 64px vertical, 48px horizontal
+- Icon: 80px
+- Text: 20px
+- Max-width: 600px centered
+- Hover: Scale 1.03, deeper shadow, brand-cta-hover
 
 **States:**
-- **Enabled**: Full brand-cta color, white text
-- **Disabled**: Gray background, muted text, explanation tooltip
-- **Loading**: Spinner, disabled interaction
+- **Enabled**: Full brand-cta color, white text, prominent shadow
+- **Disabled**: Gray background, muted text, explanation below button
+- **Loading**: Spinner, disabled interaction, "Generating..." text
+
+**Mobile-Specific Features:**
+- Sticky positioning (stays at bottom when scrolling)
+- Full-width (no side margins)
+- Large touch target (minimum 88px height)
+- Thumb-friendly (positioned in bottom half of screen)
+- Haptic feedback on tap (if available)
 
 **Implementation Notes:**
+- Mobile-first: Design for mobile, enhance for desktop
+- This is THE primary action - make it unmissable
 - Use brand-cta color from config
 - Ensure sufficient contrast (WCAG AA+)
-- Add smooth hover transitions
-- Mobile: Full width, maintain padding
+- Add smooth transitions (no hover on mobile, active state instead)
+- Sticky positioning on mobile (always accessible)
+- When clicked, opens inline generation flow (selfie upload integrated)
 
 ---
 
-### 6. Recent Photos Gallery
+### 6. Recent Photos Gallery (Secondary, Compact)
 
-**Purpose:** Show success, enable quick access to generated photos
+**Purpose:** Show success, but don't distract from primary CTA
 
 **Design:**
-- Grid of photo thumbnails (4 columns desktop, 2 mobile)
-- Hover: Slight scale, show overlay with "View" action
+- Small, compact gallery (not dominant)
+- Shows recent photos if available
 - "View all" link to generations page
-- Empty state: Friendly message with CTA
+- Only shown if user has generated photos
+- Positioned below primary CTA (not competing for attention)
 
 **Layout:**
 ```
-┌─────────────────────────────────────┐
-│  Recent Photos          [View all →] │
-│                                     │
-│  [Photo] [Photo] [Photo] [Photo]   │
-│  [Photo] [Photo] [Photo] [Photo]   │
-│                                     │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│  Your Photos              [View all →]                             │
+│                                                                     │
+│  [Photo] [Photo] [Photo] [Photo]                                   │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 **Visual Specs:**
-- Thumbnail size: 120px × 120px (desktop), 80px × 80px (mobile)
+- Thumbnail size: 100px × 100px (desktop), 80px × 80px (mobile)
 - Border radius: 8px
 - Aspect ratio: 1:1 (square)
 - Hover: Scale 1.05, subtle shadow
-- Grid gap: 16px (md)
+- Grid gap: 12px (sm)
+- Max 4 thumbnails shown (then "View all" link)
 
 **Empty State:**
-- Centered icon (PhotoIcon)
-- Friendly message: "No photos yet"
-- CTA: "Generate your first photos"
+- Hidden if no photos (don't show empty state - just show generate button)
 
 **Implementation Notes:**
 - Use Next.js Image component for optimization
-- Lazy load images below fold
-- Add loading skeleton
-- Ensure responsive grid (use Grid component)
+- Lazy load images
+- Keep it compact - don't compete with primary CTA
+- Only render if user has generated photos
 
 ---
 
-### 7. Selfie Upload Flow
+### 7. Integrated Generation Flow (Selfie Upload Included)
 
-**Purpose:** Guide users through selfie upload and selection
+**Purpose:** Streamlined flow that gets users to generation quickly
 
 **Design:**
-- Step-by-step wizard interface
-- Clear progress indicator
-- Visual feedback at each step
-- Multi-select interface (2+ selfies required)
+- Single, integrated flow (not separate pages)
+- Selfie upload is part of generation, not separate
+- Minimal steps, maximum speed
+- Prominent generate button throughout
 
-**Steps:**
-1. **Upload** → Drag-drop or camera capture
-2. **Select** → Choose 2+ selfies from gallery
-3. **Style** → Customize style (if allowed) or preview
-4. **Generate** → Confirm and generate
+**Flow Steps (All Inline):**
+1. **Upload Selfies** → Drag-drop or camera (2+ required)
+2. **Select Selfies** → Quick selection if multiple uploaded
+3. **Style** → Quick customization (if allowed) or skip
+4. **Generate** → Large, prominent button
 
 **Visual Specs:**
-- Step indicator: Horizontal progress bar
-- Active step: brand-primary color
-- Completed step: brand-secondary color
-- Pending step: gray-300
-- Card-based layout for each step
+- Inline modal/panel (not full page navigation)
+- Progress indicator: Simple dots (4 steps)
+- Each step: Card-based, clear actions
+- Generate button: Always visible, always prominent
 
 **Upload Interface:**
-- Large drop zone (min-height: 200px)
+- Large drop zone (min-height: 300px)
 - Drag-drop visual feedback
 - Camera icon for mobile capture
-- File validation feedback
+- "Upload 2+ selfies" helper text
+- Auto-advance when 2+ uploaded
 
 **Selection Interface:**
-- Grid of selfie thumbnails
+- Grid of uploaded selfies
 - Checkbox overlay on selection
-- Selected count indicator
-- "Select 2+ selfies" helper text
+- "Selected: X selfies" indicator
+- Auto-advance when 2+ selected
+
+**Style Selection:**
+- Quick accordion (if admin-enabled)
+- Or skip if admin-controlled
+- Minimal time spent here
+
+**Generate Button:**
+- Large, prominent (brand-cta color)
+- Always visible at bottom
+- Shows cost and remaining credits
+- Disabled until 2+ selfies selected
 
 **Implementation Notes:**
-- Use existing `SelfieUploadFlow` component
-- Enhance with better visual feedback
-- Add step progress indicator
-- Ensure mobile camera access works
+- This is an inline flow, not separate pages
+- Selfie management is NOT a separate concern
+- Focus on speed - minimize clicks
+- Generate button should be prominent throughout
+- Use existing components but integrate them inline
 
 ---
 
@@ -598,38 +661,73 @@ Mobile:
 
 ---
 
-## Responsive Design
+## Responsive Design (Mobile-First)
 
-### Mobile (< 768px)
+### Mobile (< 768px) - PRIMARY EXPERIENCE
+
+**Design Philosophy:**
+- Mobile is the primary experience, not an afterthought
+- Every component designed for mobile first
+- Desktop is an enhancement, not the base
 
 **Key Adaptations:**
-- Single column layout
-- Reduced padding (16px instead of 24px)
-- Stacked stats cards
-- Full-width action buttons
-- Compact header
-- Larger touch targets (min 44px)
+- **Single column layout** (no side-by-side content)
+- **Reduced padding** (16px instead of 24px) to maximize screen space
+- **Full-width components** (buttons, cards, inputs)
+- **Compact header** (56px height, single line)
+- **Large touch targets** (minimum 44px × 44px, preferably 48px+)
+- **Thumb-friendly zones** (primary actions in bottom 2/3 of screen)
+- **Sticky actions** (generate button always accessible)
+- **Minimal scrolling** (key actions visible above fold)
+- **Stacked content** (no horizontal grids)
+
+**Typography (Mobile):**
+- Reduced font sizes (H1: 28px instead of 32px)
+- Tighter line heights (1.2-1.3 for headings)
+- Shorter copy (mobile-optimized text)
+
+**Spacing (Mobile):**
+- Base unit: 8px (instead of 16px for some elements)
+- Card padding: 16px (instead of 24px)
+- Section spacing: 24px (instead of 32px)
+- Element gaps: 12px (instead of 16px)
 
 **Navigation:**
-- Hamburger menu if needed
-- Bottom navigation for key actions
-- Swipe gestures for galleries
+- Back button (large, left-aligned, 44px touch target)
+- Sticky generate button (bottom, always accessible)
+- No hamburger menu (minimal navigation needed)
+- Swipe gestures for galleries (optional enhancement)
+
+**Touch Optimization:**
+- All interactive elements: Minimum 44px × 44px
+- Button padding: 16px vertical, 24px horizontal
+- Gap between buttons: 12px minimum
+- No hover states (use active/tap states instead)
 
 ### Tablet (768px - 1024px)
 
 **Key Adaptations:**
-- 2-column grid for stats
+- 2-column grid for stats (if needed)
 - Side-by-side layouts where appropriate
-- Maintain desktop spacing
+- Maintain mobile spacing (don't jump to desktop)
+- Touch targets still large (44px minimum)
 
-### Desktop (> 1024px)
+### Desktop (> 1024px) - ENHANCEMENT
 
 **Key Adaptations:**
-- 3-column grid for stats
-- Side-by-side content sections
-- Hover states and interactions
-- Sticky header
-- Generous whitespace
+- 3-column grid for stats (enhancement)
+- Side-by-side content sections (enhancement)
+- Hover states and interactions (enhancement)
+- Sticky header (enhancement)
+- Generous whitespace (enhancement)
+- Larger typography (enhancement)
+
+**Desktop Enhancements:**
+- Hover effects (not available on mobile)
+- Larger images/previews
+- More generous spacing
+- Side-by-side layouts
+- Enhanced animations
 
 ---
 
@@ -680,10 +778,14 @@ Mobile:
 - Alt text for images
 - Status announcements for dynamic content
 
-**Touch Targets:**
-- Minimum 44px × 44px
-- Adequate spacing between targets
-- No overlapping interactive elements
+**Touch Targets (Mobile-Critical):**
+- **Minimum 44px × 44px** (Apple HIG standard)
+- **Preferred 48px × 48px** (Android Material Design)
+- **Primary actions: 56px+** (generate button, main CTAs)
+- **Adequate spacing**: 12px minimum between targets (prevents mis-taps)
+- **No overlapping**: Clear separation between interactive elements
+- **Thumb zones**: Primary actions in bottom 2/3 of screen (natural thumb reach)
+- **Edge padding**: 16px minimum from screen edges (prevents accidental taps)
 
 ---
 
@@ -697,47 +799,71 @@ Mobile:
 3. Set up brand color system (ensure no hardcoded values)
 4. Create base layout components
 5. Implement responsive grid system
+6. **Priority:** Create prominent generate button component
 
 **Deliverables:**
 - Component structure documented
 - Brand color audit complete
 - Base layout components
+- Hero generate button component
 
 ---
 
-### Phase 2: Core Components (Week 2)
+### Phase 2: Core Components (Week 2) - Mobile-First
 
 **Tasks:**
-1. Redesign header component
-2. Create welcome section component
-3. Build stats cards grid
-4. Implement credit status card
-5. Create primary action card
+1. **Priority:** Create mobile-optimized hero generate button (full width, sticky, thumb-friendly)
+2. Redesign header component (compact mobile, minimal, credits only)
+3. Create welcome section component (mobile-optimized, compact copy)
+4. Build stats cards grid (compact, not dominant, mobile-first)
+5. Implement credit status card (minimal, mobile-optimized)
+6. Create inline generation flow component (mobile-optimized)
 
 **Deliverables:**
-- Header component
-- Welcome section
-- Stats cards
-- Credit card
-- Primary CTA card
+- **Mobile-optimized hero generate button (primary focus)**
+- Compact mobile header
+- Mobile-optimized welcome section
+- Stats cards (compact, mobile-first)
+- Credit card (minimal, mobile-optimized)
+- Inline generation flow component (mobile-first)
+
+**Mobile-Specific Requirements:**
+- All components designed mobile-first
+- Touch targets minimum 44px × 44px
+- Full-width buttons on mobile
+- Sticky generate button
+- Thumb-friendly positioning
 
 ---
 
-### Phase 3: Flow Components (Week 3)
+### Phase 3: Integrated Flow (Week 3) - Mobile-Optimized
 
 **Tasks:**
-1. Redesign selfie upload flow
-2. Enhance style selection interface
-3. Build generation progress component
-4. Create recent photos gallery
-5. Implement signup CTA card
+1. **Priority:** Integrate selfie upload into generation flow (mobile-optimized, not separate)
+2. Create inline selfie selection (mobile-optimized, thumb-friendly)
+3. Enhance style selection interface (quick, minimal, mobile-friendly)
+4. Build generation progress component (mobile-optimized, clear on small screens)
+5. Create compact recent photos gallery (mobile-optimized, 2-column grid)
+6. Implement signup CTA card (mobile-optimized, full width)
 
 **Deliverables:**
-- Upload flow components
-- Style selection UI
-- Progress component
-- Gallery component
-- Signup CTA
+- **Mobile-optimized integrated generation flow (selfie upload included)**
+- Mobile-optimized inline selfie selection
+- Mobile-friendly style selection UI
+- Mobile-optimized progress component
+- Mobile-optimized compact gallery component
+- Mobile-optimized signup CTA
+
+**Mobile-Specific Requirements:**
+- Full-screen or modal overlay on mobile (not inline on page)
+- Large touch targets throughout flow
+- Sticky generate button (always accessible)
+- Thumb-friendly positioning
+- Minimal scrolling required
+- Clear progress indicators (dots or steps)
+- Large, clear action buttons
+
+**Key Principle:** Selfies are part of generation, not a separate page/concern. Mobile-first design throughout.
 
 ---
 
@@ -901,6 +1027,13 @@ src/components/invite-dashboard/
 
 ---
 
+## Related Pages
+
+This document covers the main invite dashboard. For detailed specifications on individual pages, see:
+
+- **[Invite Dashboard Pages Redesign](./INVITE_DASHBOARD_PAGES_REDESIGN.md)** - Selfies page, Generations page, and Generate flow
+- **[Invite Dashboard Pages Visual Spec](./INVITE_DASHBOARD_PAGES_VISUAL_SPEC.md)** - Visual layouts for all pages
+
 ## References
 
 - [Dashboard Visual Spec](./DASHBOARD_VISUAL_SPEC.md)
@@ -914,17 +1047,21 @@ src/components/invite-dashboard/
 
 ## Appendix: Component Checklist
 
-### Must-Have Components
-- [ ] Header (with credits, team name, navigation)
+### Must-Have Components (Priority Order)
+- [ ] **Hero Generate Button** (massive, prominent, primary CTA)
+- [ ] **Inline Generation Flow** (selfie upload integrated, not separate)
+- [ ] Header (minimal, credits only)
 - [ ] Welcome Section (personalized greeting)
-- [ ] Credit Status Card (prominent, clear)
-- [ ] Stats Grid (credits, photos, selfies)
-- [ ] Primary Action Card (generate photos CTA)
-- [ ] Recent Photos Gallery (thumbnails, view all)
-- [ ] Selfie Upload Flow (upload, select, style, generate)
-- [ ] Style Selection Interface (if admin-enabled)
+- [ ] Credit Status (minimal, not dominant)
+- [ ] Recent Photos Gallery (compact, secondary, only if photos exist)
+- [ ] Style Selection Interface (quick, minimal, if admin-enabled)
 - [ ] Generation Progress (real-time updates)
 - [ ] Signup CTA Card (account creation prompt)
+
+### Removed/De-emphasized
+- ❌ Separate selfies page (selfies are part of generation flow)
+- ❌ Selfie management interface (not needed - part of flow)
+- ❌ Dominant stats cards (minimal, don't distract from CTA)
 
 ### Nice-to-Have Components
 - [ ] Empty States (friendly, actionable)

@@ -74,7 +74,7 @@ export default function SocialProof() {
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10">
-            {TESTIMONIALS.map((testimonial, index) => (
+            {TESTIMONIALS.map((testimonial) => (
               <div
                 key={testimonial.id}
                 className="bg-bg-white rounded-2xl p-8 shadow-depth-md border-2 border-transparent hover:shadow-depth-xl hover:border-brand-primary-lighter hover:-translate-y-2 transition-all duration-500"

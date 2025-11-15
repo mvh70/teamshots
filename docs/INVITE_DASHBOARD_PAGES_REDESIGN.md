@@ -35,17 +35,27 @@ All pages follow the same design principles: welcoming professionalism, brand co
 
 ## 1. Selfies Page Redesign
 
-### Purpose
+### ⚠️ IMPORTANT: Design Change
 
-The selfies page allows team members to upload, view, select, and manage their selfies. It's the foundation for photo generation—users need at least 2 selfies to generate photos.
+**The selfies page is NOT a separate concern.** Selfie upload and selection are integrated directly into the generation flow. Users should NOT need to navigate to a separate selfies page - it's all part of the inline generation process.
 
-### User Goals
+**If a separate selfies page exists, it should be:**
+- Hidden from primary navigation
+- Only accessible via direct URL or "Manage selfies" link (secondary)
+- Used only for advanced selfie management (deletion, etc.)
+- NOT part of the primary user flow
 
-1. Upload new selfies (camera or file upload)
-2. View all uploaded selfies
-3. Select 2+ selfies for generation
-4. Delete unused selfies
-5. Continue to generation flow
+### Purpose (If Separate Page Exists)
+
+The selfies page would only be for advanced selfie management (deletion, viewing all selfies). The primary flow integrates selfie upload into generation.
+
+### User Goals (If Separate Page Exists)
+
+1. View all uploaded selfies
+2. Delete unused selfies
+3. Return to generation flow
+
+**Note:** Upload and selection happen inline during generation flow, not on this page.
 
 ### Page Structure
 
@@ -478,19 +488,24 @@ The generations page displays all generated photos for the team member. It shows
 
 ---
 
-## 3. Generate Flow Redesign
+## 3. Generate Flow Redesign (PRIMARY FOCUS)
 
 ### Purpose
 
-The generate flow guides users through the complete photo generation process: selfie selection, style customization, and generation confirmation.
+**THE PRIMARY GOAL:** Get users to generate photos as quickly as possible.
 
-### User Flow
+The generate flow is the main experience - everything else supports this. Selfie upload is integrated directly into this flow, not a separate step.
 
-1. **Select Selfies** → Choose 2+ selfies
-2. **Customize Style** → Adjust settings (if allowed)
-3. **Review & Confirm** → Check cost, confirm generation
-4. **Generate** → Real-time progress
-5. **View Results** → Redirect to generations page
+### User Flow (Speed-Optimized)
+
+1. **Click "Generate Photos"** → Opens inline flow (prominent button on dashboard)
+2. **Upload Selfies** → Drag-drop or camera (2+ required) - INLINE, part of flow
+3. **Select Selfies** → Quick selection if multiple uploaded - INLINE
+4. **Style** → Quick customization (if allowed) or skip - INLINE, minimal
+5. **Generate** → Large, prominent button - ALWAYS VISIBLE
+6. **View Results** → Redirect to generations page
+
+**Key Principle:** Selfies are part of generation, not a separate concern. The flow should be fast, inline, and focused on getting to generation quickly.
 
 ### Flow Structure
 
@@ -517,22 +532,33 @@ The generate flow guides users through the complete photo generation process: se
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Step 1: Select Selfies
+### Step 1: Upload & Select Selfies (Combined)
 
 **Layout:**
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Step 1 of 4: Select Selfies                                        │
+│  Step 1 of 4: Upload Your Selfies                                  │
 ├─────────────────────────────────────────────────────────────────────┤ │
 │                                                                     │ │
-│  Select 2 or more selfies to generate your team photos             │ │
+│  Upload 2 or more selfies to generate your team photos             │ │
 │                                                                     │ │
-│  ✓ Selected: 2 selfies                                             │ │
+│  ┌───────────────────────────────────────────────────────────────┐ │ │
+│  │                                                               │ │ │
+│  │              [📷 Camera Icon - 64px]                          │ │ │
+│  │                                                               │ │ │
+│  │         Drag and drop your selfies here                       │ │ │
+│  │              or click to browse                                │ │ │
+│  │                                                               │ │ │
+│  │                    [Choose Files]                              │ │ │
+│  │                                                               │ │ │
+│  └───────────────────────────────────────────────────────────────┘ │ │
 │                                                                     │ │
-│  [Selfie] [Selfie] [Selfie] [+ Upload]                            │ │
-│   ✓        ✓        ☐                                               │ │
+│  ✓ Uploaded: 2 selfies                                             │ │
 │                                                                     │ │
-│  [← Back]                                    [Continue →]           │ │
+│  [Selfie] [Selfie]                                                 │ │
+│   ✓        ✓                                                        │ │
+│                                                                     │ │
+│                    [Generate Photos →]                              │ │
 │                                                                     │ │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -540,9 +566,10 @@ The generate flow guides users through the complete photo generation process: se
 **Visual Specs:**
 - Title: 24px, font-weight: 600
 - Description: 16px, text-muted
-- Selection banner: brand-primary-light background
-- Gallery: Same as selfies page gallery
-- Navigation: Bottom-aligned buttons
+- Upload zone: Large, prominent (min-height: 300px)
+- Selection indicator: brand-primary-light background (when 2+ uploaded)
+- Generate button: ALWAYS VISIBLE, prominent (brand-cta color)
+- Auto-advance: When 2+ selfies uploaded and selected
 
 ---
 
@@ -858,19 +885,22 @@ The generate flow guides users through the complete photo generation process: se
 
 ## Implementation Plan
 
-### Phase 1: Selfies Page (Week 1)
+### Phase 1: Integrated Generation Flow (Week 1) - PRIORITY
 
 **Tasks:**
-1. Redesign selfie gallery component
-2. Create selection info banner
-3. Enhance upload flow component
-4. Implement empty states
-5. Add loading skeletons
+1. **Priority:** Create inline generation flow component
+2. Integrate selfie upload directly into flow (not separate page)
+3. Create prominent generate button (always visible)
+4. Build inline selfie selection (part of flow)
+5. Add auto-advance logic (when 2+ selfies uploaded)
 
 **Deliverables:**
-- Redesigned selfies page
-- Enhanced gallery component
-- Upload flow improvements
+- **Inline generation flow (selfie upload integrated)**
+- Prominent generate button component
+- Inline selfie selection
+- Auto-advance logic
+
+**Note:** Selfies page redesign is LOW PRIORITY - focus on integrated flow first
 
 ---
 

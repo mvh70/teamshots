@@ -10,7 +10,7 @@ import HowItWorks from '@/components/HowItWorks';
 import FAQ from '@/components/FAQ';
 import PricingPreview from '@/components/PricingPreview';
 import { TrackedLink } from '@/components/TrackedLink';
-import { createIntersectionObserver, prefersReducedMotion, ANIMATION_DELAYS } from '@/lib/animations';
+import { prefersReducedMotion, ANIMATION_DELAYS } from '@/lib/animations';
 
 export default function LandingPage() {
   const t = useTranslations('hero');
@@ -46,9 +46,9 @@ export default function LandingPage() {
                 transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.title}ms` 
               }}
             >
-              Professional team photos{' '}
+              {t('titleMain')}{' '}
               <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent">
-                in 60 seconds
+                {t('titleHighlightTime')}
               </span>
             </h1>
 
@@ -61,7 +61,7 @@ export default function LandingPage() {
                 transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.subtitle}ms` 
               }}
             >
-              Turn any selfie into consistent, on-brand headshots. No photographer, no coordination.
+              {t('subtitleMain')}
             </p>
 
             {/* Supporting Description */}
@@ -130,10 +130,10 @@ export default function LandingPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 bg-bg-gray-50">
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
-            Everything you need, nothing you don't
+            {tFeatures('sectionTitle')}
           </h2>
           <p className="text-xl text-text-body max-w-3xl mx-auto leading-relaxed">
-            Professional headshots without the hassle
+            {tFeatures('sectionSubtitle')}
           </p>
         </div>
         <div className="grid md:grid-cols-2 gap-8 lg:gap-10 max-w-5xl mx-auto">
@@ -206,10 +206,10 @@ export default function LandingPage() {
       {/* Final CTA Section - Before Footer */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 text-center">
         <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
-          Ready to transform your team photos?
+          {t('finalCtaTitle')}
         </h2>
         <p className="text-xl text-text-body mb-10 max-w-2xl mx-auto leading-relaxed">
-          Get your free professional headshot and see the difference in 60 seconds.
+          {t('finalCtaSubtitle')}
         </p>
         <TrackedLink
           href="/auth/signup"

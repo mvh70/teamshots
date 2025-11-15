@@ -14,8 +14,13 @@
   "hero": {
     "title": "Deja de perder semanas y $3,000 en fotos de equipo",
     "titleHighlight": "que al final quedan horribles",
+    "titleMain": "Fotos profesionales de equipo",
+    "titleHighlightTime": "en 60 segundos",
     "subtitle": "Tu sitio web se ve poco profesional. Las nuevas incorporaciones rompen la consistencia de tu marca. Las sesiones tradicionales de fotos cuestan miles y tardan una eternidad. ¿Qué tal si consigues retratos acordes a tu marca en 60 segundos desde cualquier selfie?",
+    "subtitleMain": "Convierte cualquier selfie en retratos consistentes y acordes a tu marca. Sin fotógrafo, sin coordinación.",
     "instantTransformation": "⚡ Transformación instantánea (en serio, es así de rápido)",
+    "finalCtaTitle": "¿Listo para transformar las fotos de tu equipo?",
+    "finalCtaSubtitle": "Obtén tu retrato profesional gratis y ve la diferencia en 60 segundos.",
     "getStartedFree": "Regístrate ahora",
     "getStarted": "Empezar",
     "viewPricing": "Ver precios",
@@ -44,6 +49,8 @@
   "features": {
     "title": "¿Por qué las sesiones de fotos de equipo están arruinando tu marca (y cómo lo solucionamos)?",
     "subtitle": "Las sesiones tradicionales de fotos desperdician tu tiempo, revientan tu presupuesto y siguen entregando resultados inconsistentes. Aquí está lo que realmente funciona para equipos modernos.",
+    "sectionTitle": "Todo lo que necesitas, nada de lo que no",
+    "sectionSubtitle": "Retratos profesionales sin complicaciones",
     "fast": {
       "title": "De semanas de caos a 60 segundos de 'listo'",
       "description": "Detén la espera de 6 semanas por fotos que ya están desactualizadas. Cada miembro del equipo sube una vez, obtiene resultados profesionales al instante. Tu sitio web se mantiene actualizado. Sin más perseguir gente para retomas."
