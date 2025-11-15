@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma'
 import { getUserEffectiveRoles, getUserWithRoles } from '@/domain/access/roles'
-import type { UserRole } from '@/domain/access/roles'
 
 /**
  * File ownership record type

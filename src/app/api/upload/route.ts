@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   // Validate file using shared utility (5MB max for this endpoint)
   const MAX_FILE_SIZE = 5 * 1024 * 1024
   const validation = await validateImageFile(buffer, MAX_FILE_SIZE)
-  if (!validation.valid) {
+  if (!validation.valid || !validation.extension || !validation.mimeType) {
     return validation.error!
   }
 
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     
     // Use selfie ID as filename (relative key, without folder prefix)
     // Format: selfies/{personId}-{firstName}/{selfieId}.{ext}
-    const relativeKey = `${folder}/${person.id}-${firstName}/${selfie.id}.${detectedType.ext}`
+    const relativeKey = `${folder}/${person.id}-${firstName}/${selfie.id}.${validation.extension}`
     
     // Update the selfie record with the relative key (without folder prefix)
     await prisma.selfie.update({
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
   }
   
   // For non-selfie uploads (backgrounds, logos, etc.), use UUID
-  const fileName = `${randomUUID()}.${detectedType.ext}`
+  const fileName = `${randomUUID()}.${validation.extension}`
   const relativeKey = `${folder}/${person.id}/${fileName}`
 
   // Upload WITH folder prefix (if configured)
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     Bucket: BUCKET_NAME,
     Key: s3Key,
     Body: buffer,
-    ContentType: detectedType.mime,
+    ContentType: validation.mimeType,
     Metadata: {
       uploadedBy: session.user.id,
       personId: person.id,
