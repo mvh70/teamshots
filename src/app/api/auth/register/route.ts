@@ -12,6 +12,22 @@ export async function POST(request: NextRequest) {
     Logger.debug('2. Request object', { type: typeof request, present: !!request })
     Logger.debug('3. Request headers', { type: typeof request?.headers, present: !!request?.headers })
     
+    // Rate limiting for registration endpoint
+    const { checkRateLimit, getRateLimitIdentifier } = await import('@/lib/rate-limit')
+    const { RATE_LIMITS } = await import('@/config/rate-limit-config')
+    const { SecurityLogger } = await import('@/lib/security-logger')
+    
+    const identifier = await getRateLimitIdentifier(request, 'register')
+    const rateLimit = await checkRateLimit(identifier, RATE_LIMITS.register.limit, RATE_LIMITS.register.window)
+    
+    if (!rateLimit.success) {
+      await SecurityLogger.logRateLimitExceeded(identifier)
+      return NextResponse.json(
+        { error: 'Registration rate limit exceeded. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000)) }}
+      )
+    }
+    
     const body = await request.json()
     Logger.debug('4. Body parsed successfully')
 
@@ -89,7 +105,7 @@ export async function POST(request: NextRequest) {
       // User may have been created via Stripe webhook during checkout.
       // Since OTP is verified, safely set password and ensure a Person exists/linked.
       Logger.info('Existing user found; updating credentials and linking person')
-      const hashedPasswordExisting = await bcrypt.hash(password, 12)
+      const hashedPasswordExisting = await bcrypt.hash(password, 13)
       const updated = await prisma.user.update({
         where: { id: existingUser.id },
         data: { password: hashedPasswordExisting }
@@ -110,9 +126,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Hash password
+    // Hash password with increased cost factor for better security
+    // Cost factor 13 provides good security while maintaining reasonable performance
     Logger.info('13. Hashing password...')
-    const hashedPassword = await bcrypt.hash(password, 12)
+    const hashedPassword = await bcrypt.hash(password, 13)
     Logger.debug('14. Password hashed')
 
     // Check if there's an existing person record from invite acceptance

@@ -47,19 +47,8 @@ export default function RootLayout({
       </head>
       <body className="overflow-x-hidden bg-gray-50">
         <Script
-          id="safari-compatibility-check"
+          src="/safari-compatibility.js"
           strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              // Safari compatibility check
-              if (typeof window !== 'undefined') {
-                // Check for required features
-                if (!window.Promise) {
-                  console.error('Promise not supported - Safari version too old');
-                }
-              }
-            `,
-          }}
         />
         {/* Server-side session fetch to avoid client auth race */}
         <SessionWrapper>

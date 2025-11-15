@@ -1,0 +1,42 @@
+HTTP/1.1 307 Temporary Redirect
+permissions-policy: camera=(self), microphone=(), geolocation=()
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://pineapple.teamshotspro.com https://app.posthog.com https://eu.i.posthog.com https://us.i.posthog.com https://app-assets.i.posthog.com https://eu-assets.i.posthog.com https://us-assets.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://app.posthog.com https://eu.i.posthog.com https://us.i.posthog.com https://app-assets.i.posthog.com https://eu-assets.i.posthog.com https://us-assets.i.posthog.com ws: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; media-src 'self' data: blob:; worker-src 'self' blob:; child-src 'self' blob:
+location: /
+set-cookie: NEXT_LOCALE=en; Path=/; SameSite=lax
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-permitted-cross-domain-policies: none
+x-xss-protection: 1; mode=block
+Date: Sat, 15 Nov 2025 17:29:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+HTTP/1.1 200 OK
+permissions-policy: camera=(self), microphone=(), geolocation=()
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://pineapple.teamshotspro.com https://app.posthog.com https://eu.i.posthog.com https://us.i.posthog.com https://app-assets.i.posthog.com https://eu-assets.i.posthog.com https://us-assets.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://app.posthog.com https://eu.i.posthog.com https://us.i.posthog.com https://app-assets.i.posthog.com https://eu-assets.i.posthog.com https://us-assets.i.posthog.com ws: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; media-src 'self' data: blob:; worker-src 'self' blob:; child-src 'self' blob:
+link: <https://localhost:3000/>; rel="alternate"; hreflang="en", <https://localhost:3000/es>; rel="alternate"; hreflang="es", <https://localhost:3000/>; rel="alternate"; hreflang="x-default"
+link: </_next/static/media/e4af272ccee01ff0-s.p.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/media/eaead17c7dbfcd5d-s.p.woff2>; rel=preload; as="font"; crossorigin=""; type="font/woff2", </_next/static/css/app/layout.css?v=1763227783859>; rel=preload; as="style"
+set-cookie: NEXT_LOCALE=en; Path=/; SameSite=lax
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-permitted-cross-domain-policies: none
+x-xss-protection: 1; mode=block
+x-middleware-rewrite: /en
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+Cache-Control: no-store, must-revalidate
+x-nextjs-cache: HIT
+x-nextjs-prerender: 1
+X-Powered-By: Next.js
+Content-Type: text/html; charset=utf-8
+Date: Sat, 15 Nov 2025 17:29:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+

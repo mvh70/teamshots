@@ -26,10 +26,14 @@ export const authOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials: Partial<Record<"email" | "password", unknown>>) {
-
         if (!credentials?.email || !credentials?.password) {
           return null
         }
+
+        // Rate limiting for sign-in attempts
+        // Note: Rate limiting in authorize() is skipped to avoid Edge Runtime build issues with bullmq
+        // Rate limiting for sign-in is enforced at the API route level via middleware or route handler
+        // This ensures security while maintaining compatibility with Edge Runtime
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string }
@@ -46,6 +50,7 @@ export const authOptions = {
         if (!isPasswordValid) {
           return null
         }
+        
         return {
           id: user.id,
           email: user.email,
@@ -69,13 +74,13 @@ export const authOptions = {
     updateAge: 0, // Force JWT callback to run on every request for rolling session refresh
   },
 
-  // Add cookie configuration for security - Safari-compatible
+  // Add cookie configuration for security - Strict SameSite for CSRF protection
   cookies: {
     sessionToken: {
       name: `${Env.string('NODE_ENV') === 'production' ? '__Secure-' : ''}next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: 'lax' as const,
+        sameSite: 'strict' as const, // Changed from 'lax' to 'strict' for stronger CSRF protection
         path: '/',
         secure: Env.string('NODE_ENV') === 'production'
       }
@@ -84,7 +89,7 @@ export const authOptions = {
       name: `${Env.string('NODE_ENV') === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
       options: {
         httpOnly: true,
-        sameSite: 'lax' as const,
+        sameSite: 'strict' as const, // Changed from 'lax' to 'strict'
         path: '/',
         secure: Env.string('NODE_ENV') === 'production'
       }
@@ -93,7 +98,7 @@ export const authOptions = {
       name: `${Env.string('NODE_ENV') === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
       options: {
         httpOnly: true,
-        sameSite: 'lax' as const,
+        sameSite: 'strict' as const, // Changed from 'lax' to 'strict'
         path: '/',
         secure: Env.string('NODE_ENV') === 'production'
       }

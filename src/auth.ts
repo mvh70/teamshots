@@ -1,7 +1,10 @@
 import NextAuth from "next-auth"
 import { authOptions } from "@/lib/auth"
 
-const { handlers: { GET, POST }, auth: originalAuth } = NextAuth(authOptions)
+const { handlers, auth: originalAuth } = NextAuth(authOptions)
+
+// Export handlers for use in route
+export { handlers }
 
 // Custom auth function that checks for E2E headers and handles impersonation
 export async function auth() {
@@ -21,8 +24,26 @@ export async function auth() {
     if (headersList) {
       try {
         const e2eUserId = headersList.get('x-e2e-user-id')
+        const nodeEnv = process.env.NODE_ENV
         
-        if (e2eUserId) {
+        // SECURITY: Only allow E2E bypass in test environment
+        // In production, E2E headers are ignored to prevent authentication bypass
+        if (e2eUserId && (nodeEnv === 'test' || nodeEnv === 'development')) {
+          // Log E2E authentication bypass for audit purposes
+          try {
+            const { SecurityLogger } = await import('@/lib/security-logger')
+            await SecurityLogger.logSuspiciousActivity(
+              e2eUserId,
+              'e2e_auth_bypass',
+              { 
+                environment: nodeEnv,
+                email: headersList.get('x-e2e-user-email') || 'test@example.com'
+              }
+            )
+          } catch {
+            // Ignore logging errors in E2E context
+          }
+          
           // Return mock session for E2E tests
           return {
             user: {
@@ -36,6 +57,7 @@ export async function auth() {
             expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
           }
         }
+        // In production, ignore E2E headers completely
       } catch {
         // If anything fails while reading headers, fall through to standard auth
       }
@@ -76,6 +98,20 @@ export async function auth() {
             })
 
             if (impersonatedUser && !impersonatedUser.isAdmin) {
+              // SECURITY: Log all impersonation actions for audit trail
+              try {
+                const { SecurityLogger } = await import('@/lib/security-logger')
+                await SecurityLogger.logImpersonation(
+                  originalSession.user.id,
+                  originalSession.user.email,
+                  impersonatedUser.id,
+                  impersonatedUser.email
+                )
+              } catch {
+                // Log error but don't block impersonation if logging fails
+                console.error('Failed to log impersonation')
+              }
+              
               // Fetch person data for the impersonated user
               const person = await prisma.person.findUnique({
                 where: { userId: impersonatedUser.id },
@@ -120,6 +156,4 @@ export async function auth() {
   
   return originalAuth()
 }
-
-export { GET, POST }
 

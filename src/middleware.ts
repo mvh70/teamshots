@@ -45,7 +45,7 @@ function addSecurityHeaders(response: NextResponse) {
     'camera=(self), microphone=(), geolocation=()'
   )
   
-  // Content Security Policy - Safari-compatible version
+  // Content Security Policy - Strict CSP without unsafe-inline/unsafe-eval
   // PostHog domains: supports both EU and US regions
   const posthogDomains = [
     'https://app.posthog.com',
@@ -56,10 +56,13 @@ function addSecurityHeaders(response: NextResponse) {
     'https://us-assets.i.posthog.com'
   ].join(' ')
   
+  // Strict CSP: No unsafe-inline or unsafe-eval
+  // External scripts are loaded from trusted domains
+  // Next.js Script components with src attribute work with this CSP
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://pineapple.teamshotspro.com ${posthogDomains}`,
-    "style-src 'self' 'unsafe-inline'",
+    `script-src 'self' https://static.cloudflareinsights.com https://pineapple.teamshotspro.com ${posthogDomains}`,
+    "style-src 'self' 'unsafe-inline'", // Keep unsafe-inline for styles as Next.js requires it for CSS-in-JS
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
     `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com ${posthogDomains} ws: wss:`,

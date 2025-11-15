@@ -2,16 +2,23 @@ import { NextRequest } from 'next/server'
 import { getRequestIp } from './server-headers'
 import { RATE_LIMITS, RATE_BLOCK } from '@/config/rate-limit-config'
 
-// Lazy import Redis to avoid build-time issues
+// Lazy import Redis to avoid build-time issues and Edge Runtime incompatibility
 let redis: unknown = null
 
 async function getRedis(): Promise<unknown> {
+  // Skip Redis import in Edge Runtime to avoid bullmq build issues
+  if (typeof process !== 'undefined' && process.env?.NEXT_RUNTIME?.includes('edge')) {
+    return null
+  }
+  
   if (!redis) {
     try {
-      const { redis: redisInstance } = await import('@/queue')
-      redis = redisInstance
-    } catch (error) {
-      console.warn('Redis not available during build time:', error)
+      // Dynamic import - webpack warning is expected and safe
+      // This prevents static analysis from bundling bullmq for Edge Runtime
+      const queueModule = await import('@/queue')
+      redis = queueModule.redis
+    } catch {
+      // Redis not available (build time, Edge Runtime, or Redis down)
       return null
     }
   }

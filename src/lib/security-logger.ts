@@ -68,4 +68,32 @@ export class SecurityLogger {
     })
   }
 
+  static async logImpersonation(
+    adminUserId: string,
+    adminEmail: string | null,
+    impersonatedUserId: string,
+    impersonatedUserEmail: string
+  ) {
+    const ip = (await getRequestIp()) || 'unknown'
+    const userAgent = await getRequestHeader('user-agent')
+    
+    await prisma.securityLog.create({
+      data: {
+        type: 'impersonation',
+        userId: adminUserId,
+        email: adminEmail || undefined,
+        ipAddress: ip,
+        userAgent,
+        success: true,
+        action: 'impersonate',
+        resource: impersonatedUserId,
+        details: {
+          impersonatedUserId,
+          impersonatedUserEmail,
+          timestamp: new Date().toISOString()
+        }
+      },
+    })
+  }
+
 }
