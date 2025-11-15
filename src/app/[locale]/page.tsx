@@ -16,14 +16,28 @@ export default function LandingPage() {
   const t = useTranslations('hero');
   const tFeatures = useTranslations('features');
   const [heroVisible, setHeroVisible] = useState(false);
-  const [reducedMotion] = useState(() => prefersReducedMotion());
+  const [reducedMotion] = useState(() => {
+    // Safely check for reduced motion preference
+    try {
+      return prefersReducedMotion();
+    } catch (error) {
+      console.error('Error checking reduced motion preference:', error);
+      return false;
+    }
+  });
 
   useEffect(() => {
     // Trigger hero animations on mount
-    if (!reducedMotion) {
+    try {
+      if (!reducedMotion) {
+        setHeroVisible(true);
+      } else {
+        setHeroVisible(true); // Show immediately if reduced motion
+      }
+    } catch (error) {
+      console.error('Error setting hero visibility:', error);
+      // Fallback: show content immediately
       setHeroVisible(true);
-    } else {
-      setHeroVisible(true); // Show immediately if reduced motion
     }
   }, [reducedMotion]);
 

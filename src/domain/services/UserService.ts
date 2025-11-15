@@ -31,17 +31,41 @@ export class UserService {
       language: 'en' | 'es'
     }
     teamId: string | null
+    person: {
+      id: string
+      firstName: string | null
+      lastName: string | null
+      email: string | null
+      teamId: string | null
+      onboardingState: string | null
+      team: {
+        id: string
+        name: string
+      } | null
+    } | null
   }> {
     // OPTIMIZATION: Fetch all data in parallel to minimize queries
     const [user, subscription, personWithCounts] = await Promise.all([
       getUserWithRoles(userId),
       getUserSubscription(userId),
-      // Get person with selfie and generation counts
+      // Get person with selfie and generation counts, plus additional fields needed by initial-data route
       prisma.person.findUnique({
         where: { userId },
-        include: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          teamId: true,
+          onboardingState: true,
           selfies: { select: { id: true }, take: 1 },
           generations: { select: { id: true }, take: 1 },
+          team: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
           _count: {
             select: {
               selfies: true,
@@ -79,7 +103,16 @@ export class UserService {
         accountMode,
         language: language as 'en' | 'es'
       },
-      teamId: personWithCounts?.teamId || null
+      teamId: personWithCounts?.teamId || null,
+      person: personWithCounts ? {
+        id: personWithCounts.id,
+        firstName: personWithCounts.firstName,
+        lastName: personWithCounts.lastName,
+        email: personWithCounts.email,
+        teamId: personWithCounts.teamId,
+        onboardingState: personWithCounts.onboardingState,
+        team: personWithCounts.team
+      } : null
     }
   }
 

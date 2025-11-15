@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { Logger } from '@/lib/logger'
+import { validateImageFileByHeader } from '@/lib/file-validation'
 
 const BASE_DIR = path.join(process.cwd(), 'storage', 'tmp')
 
@@ -15,11 +16,10 @@ export async function POST(req: NextRequest) {
     const extension = req.headers.get('x-file-extension') || ''
 
     const body = await req.arrayBuffer()
-    if (!contentType.startsWith('image/')) {
-      return NextResponse.json({ error: 'Only image uploads are allowed' }, { status: 400 })
-    }
-    if (body.byteLength > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 413 })
+    // Validate file using shared utility (10MB max for this endpoint)
+    const validation = validateImageFileByHeader(contentType, body.byteLength, 10 * 1024 * 1024)
+    if (!validation.valid) {
+      return validation.error!
     }
 
     await ensureDir()

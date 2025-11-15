@@ -5,6 +5,7 @@ import { getRequestHeader } from '@/lib/server-headers'
 import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { validateImageFileByHeader } from '@/lib/file-validation'
 
 
 export const runtime = 'nodejs'
@@ -69,12 +70,10 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.arrayBuffer()
-    // Enforce limits: max 10MB and image/* types only
-    if (!contentType.startsWith('image/')) {
-      return NextResponse.json({ error: 'Only image uploads are allowed' }, { status: 400 })
-    }
-    if (body.byteLength > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 413 })
+    // Validate file using shared utility (10MB max for this endpoint)
+    const validation = validateImageFileByHeader(contentType, body.byteLength, 10 * 1024 * 1024)
+    if (!validation.valid) {
+      return validation.error!
     }
     
     // Add folder prefix if configured

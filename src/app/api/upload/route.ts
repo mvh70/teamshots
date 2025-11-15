@@ -1,4 +1,3 @@
-import { fileTypeFromBuffer } from 'file-type'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { getSelfieSequence } from '@/domain/access/image-access'
@@ -9,6 +8,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
+import { validateImageFile } from '@/lib/file-validation'
 
 
 export const runtime = 'nodejs'
@@ -53,20 +53,11 @@ export async function POST(request: NextRequest) {
   // Convert to buffer
   const buffer = Buffer.from(await file.arrayBuffer())
 
-  // File size validation (5MB max)
+  // Validate file using shared utility (5MB max for this endpoint)
   const MAX_FILE_SIZE = 5 * 1024 * 1024
-  if (buffer.length > MAX_FILE_SIZE) {
-    return NextResponse.json({ error: 'File too large (max 5MB)' }, { status: 400 })
-  }
-
-  // Validate file type by CONTENT not extension
-  const detectedType = await fileTypeFromBuffer(buffer)
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg']
-  
-  if (!detectedType || !allowedMimeTypes.includes(detectedType.mime)) {
-    return NextResponse.json({ 
-      error: 'Invalid file type. Only JPEG, PNG, and WebP images allowed.' 
-    }, { status: 400 })
+  const validation = await validateImageFile(buffer, MAX_FILE_SIZE)
+  if (!validation.valid) {
+    return validation.error!
   }
 
   // OPTIMIZATION: Get person record with firstName in a single query
@@ -110,7 +101,7 @@ export async function POST(request: NextRequest) {
       Bucket: BUCKET_NAME,
       Key: s3Key,
       Body: buffer,
-      ContentType: detectedType.mime,
+      ContentType: validation.mimeType,
       Metadata: {
         uploadedBy: session.user.id,
         personId: person.id,

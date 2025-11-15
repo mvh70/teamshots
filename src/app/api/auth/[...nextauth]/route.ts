@@ -11,7 +11,9 @@ export async function POST(request: NextRequest) {
   const url = request.nextUrl
   if (url.searchParams.get('callbackUrl') || request.headers.get('content-type')?.includes('application/x-www-form-urlencoded')) {
     try {
-      const formData = await request.formData()
+      // Clone the request before reading the body to avoid "body already consumed" error
+      const clonedRequest = request.clone()
+      const formData = await clonedRequest.formData()
       const email = formData.get('email') as string | null
       
       if (email) {
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
   }
   
-  // Call original NextAuth handler
+  // Call original NextAuth handler with the original (unconsumed) request
   return originalPOST(request)
 }
 

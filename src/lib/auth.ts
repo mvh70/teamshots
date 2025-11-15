@@ -13,6 +13,48 @@ import { Env } from '@/lib/env'
 const SESSION_MAX_AGE_SECONDS = 30 * 60 // 30 minutes
 const SESSION_EXTENSION_THRESHOLD_SECONDS = 5 * 60 // 5 minutes
 
+/**
+ * Helper function to fetch and format person data for JWT token
+ */
+async function fetchPersonForToken(userId: string): Promise<{
+  person: {
+    id: string
+    firstName: string
+    lastName?: string | null
+    teamId?: string | null
+    team?: {
+      id: string
+      name: string
+      adminId: string
+    } | null
+  }
+  givenName: string
+} | null> {
+  try {
+    const person = await prisma.person.findUnique({
+      where: { userId },
+      include: {
+        team: {
+          select: { id: true, name: true, adminId: true }
+        }
+      }
+    })
+    if (person) {
+      return {
+        person: {
+          id: person.id,
+          firstName: person.firstName,
+          lastName: person.lastName,
+          teamId: person.teamId,
+          team: person.team
+        },
+        givenName: person.firstName
+      }
+    }
+  } catch {}
+  return null
+}
+
 export const authOptions = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PrismaAdapter(prisma) as any,
@@ -116,56 +158,20 @@ export const authOptions = {
         token.isAdmin = user.isAdmin
         token.locale = user.locale
         
-        try {
-          // Pull person data if linked
-          const person = await prisma.person.findUnique({
-            where: { userId: user.id },
-            include: {
-              team: {
-                select: { id: true, name: true, adminId: true }
-              }
-            }
-          })
-          if (person) {
-            token.person = {
-              id: person.id,
-              firstName: person.firstName,
-              lastName: person.lastName,
-              teamId: person.teamId,
-              team: person.team
-            }
-            token.givenName = person.firstName
-          }
-        } catch {}
-        
         // Set token expiration time when user first authenticates
         const now = Math.floor(Date.now() / 1000)
         token.exp = now + SESSION_MAX_AGE_SECONDS
       }
       
-      
-      // On subsequent requests, ensure we hydrate person data if missing
-      if (!token.person && token.sub) {
-        try {
-          const person = await prisma.person.findUnique({
-            where: { userId: token.sub },
-            include: {
-              team: {
-                select: { id: true, name: true, adminId: true }
-              }
-            }
-          })
-          if (person) {
-            token.person = {
-              id: person.id,
-              firstName: person.firstName,
-              lastName: person.lastName,
-              teamId: person.teamId,
-              team: person.team
-            }
-            token.givenName = person.firstName
-          }
-        } catch {}
+      // Fetch person data if missing (works for both initial auth and subsequent requests)
+      // Determine userId - use user.id if available (initial auth), otherwise token.sub (subsequent requests)
+      const userId = user?.id || token.sub
+      if (userId && !token.person) {
+        const personData = await fetchPersonForToken(userId)
+        if (personData) {
+          token.person = personData.person
+          token.givenName = personData.givenName
+        }
       }
       
       // Extend token expiration if it's close to expiring (within the configured threshold)

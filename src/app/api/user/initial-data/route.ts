@@ -23,39 +23,22 @@ export async function GET() {
     const { userId } = authResult
 
     // Fetch all user context data in parallel
-    const [userContext, creditBalance, userWithLocale, personData] = await Promise.all([
+    // OPTIMIZATION: userContext already includes person data, so we only need to fetch locale separately
+    const [userContext, creditBalance, userWithLocale] = await Promise.all([
       UserService.getUserContext(userId),
       CreditService.getCreditBalanceSummary(userId),
-      // Get user locale directly from database
+      // Get user locale directly from database (not included in UserWithRoles type yet)
       prisma.user.findUnique({
         where: { id: userId },
         select: { locale: true }
-      }),
-      // Get person data with lastName, email, and onboardingState
-      prisma.person.findUnique({
-        where: { userId },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          teamId: true,
-          onboardingState: true,
-          team: {
-            select: {
-              id: true,
-              name: true
-            }
-          }
-        }
       })
     ])
 
     // Parse completed tours from Person.onboardingState
     let completedTours: string[] = []
-    if (personData?.onboardingState) {
+    if (userContext.person?.onboardingState) {
       try {
-        const parsed = JSON.parse(personData.onboardingState)
+        const parsed = JSON.parse(userContext.person.onboardingState)
         if (parsed.completedTours && Array.isArray(parsed.completedTours)) {
           completedTours = parsed.completedTours
         }
@@ -64,8 +47,8 @@ export async function GET() {
       }
     }
 
-    const { user, roles, subscription, onboarding, teamId } = userContext
-    const teamName = personData?.team?.name || user.person?.team?.name || null
+    const { user, roles, subscription, onboarding, teamId, person } = userContext
+    const teamName = person?.team?.name || user.person?.team?.name || null
     const isFirstVisit = UserService.isFirstTimeVisitor(user)
 
     // Get dashboard stats (only if needed - can be lazy loaded)
@@ -104,12 +87,12 @@ export async function GET() {
         email: user.email,
         locale: userWithLocale?.locale || 'en',
       },
-      person: personData ? {
-        id: personData.id,
-        firstName: personData.firstName,
-        lastName: personData.lastName,
-        email: personData.email,
-        teamId: personData.teamId,
+      person: person ? {
+        id: person.id,
+        firstName: person.firstName,
+        lastName: person.lastName,
+        email: person.email,
+        teamId: person.teamId,
       } : null,
       // Roles
       roles: {

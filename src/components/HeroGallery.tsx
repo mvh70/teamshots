@@ -129,7 +129,7 @@ export default function HeroGallery() {
         {/* Interactive Hint - Shows on first load */}
         {!isInteracting && (
           <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-5 transition-all duration-500 pointer-events-none z-10">
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className="absolute top-[40%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
               <div className="bg-white/95 backdrop-blur-sm text-gray-900 px-6 py-3 rounded-full shadow-depth-xl border border-gray-200/50 flex items-center gap-2 animate-pulse">
                 <svg className="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
