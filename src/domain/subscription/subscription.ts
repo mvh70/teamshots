@@ -65,8 +65,8 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
 
   if (!user) return null
 
-  // Derive effective tier: a try_once purchase is represented as planPeriod 'try_once'
-  // even though planTier may remain 'individual'. Surface 'try_once' in API to drive UI correctly.
+  // Use planTier as single source of truth - never overwrite it
+  // planPeriod indicates billing frequency, not tier
   const storedTier = (user as unknown as { planTier?: PlanTier }).planTier ?? null
   const rawPeriod = (user as unknown as { planPeriod?: string | null }).planPeriod ?? null
   const period = ((): PlanPeriod => {
@@ -75,7 +75,6 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
     return (rawPeriod as PlanPeriod) ?? null
   })()
   Logger.info('subscription.period.normalized', { userId, rawPeriod, period })
-  const effectiveTier: PlanTier = period === 'try_once' ? 'try_once' : storedTier
 
   // Compute next renewal date when applicable
   let nextRenewal: Date | null = null
@@ -102,7 +101,7 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
   }
 
   const result = {
-    tier: effectiveTier,
+    tier: storedTier,
     status: user.subscriptionStatus as SubscriptionStatus,
     stripeSubscriptionId: user.stripeSubscriptionId,
     stripeCustomerId: user.stripeCustomerId,

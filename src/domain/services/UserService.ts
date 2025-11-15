@@ -60,7 +60,7 @@ export class UserService {
 
     // Determine account mode
     let accountMode: 'individual' | 'pro' | 'team_member' = 'individual'
-    if (subscription?.tier === 'pro' && subscription.period !== 'try_once') {
+    if (subscription?.tier === 'pro') {
       accountMode = 'pro'
     } else if (roles.isTeamMember && !roles.isTeamAdmin) {
       accountMode = 'team_member'
