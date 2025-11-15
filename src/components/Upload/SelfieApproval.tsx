@@ -17,7 +17,8 @@ export default function SelfieApproval({
   uploadedPhotoKey,
   previewUrl,
   onApprove,
-  onReject,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onReject: _onReject,
   onRetake,
   onCancel
 }: SelfieApprovalProps) {
@@ -67,10 +68,6 @@ export default function SelfieApproval({
     setTimeout(() => {
       handleApprove(e)
     }, 50)
-  }
-
-  const handleReject = () => {
-    onReject()
   }
 
   const handleCancel = () => {

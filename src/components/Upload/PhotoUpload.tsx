@@ -348,6 +348,10 @@ export default function PhotoUpload({
   useEffect(() => {
     if (!cameraOpen || !stream) return;
     
+    // Capture ref values at the start of the effect for cleanup
+    const mobileVideo = videoRefMobile.current;
+    const desktopVideo = videoRefDesktop.current;
+    
     // Small delay to ensure DOM is ready, especially for mobile portal
     const timeoutId = setTimeout(() => {
       // Determine which video element to use based on screen size
@@ -405,8 +409,6 @@ export default function PhotoUpload({
     
     return () => { 
       clearTimeout(timeoutId);
-      const mobileVideo = videoRefMobile.current;
-      const desktopVideo = videoRefDesktop.current;
       if (mobileVideo) {
         mobileVideo.onloadedmetadata = null;
       }

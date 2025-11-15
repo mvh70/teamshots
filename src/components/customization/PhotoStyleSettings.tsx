@@ -103,7 +103,8 @@ export default function PhotoStyleSettings({
   originalContextSettings,
   showToggles = true,
   packageId,
-  teamContext = false
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  teamContext: _teamContext = false
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   // All categories are always expanded per UX requirement
