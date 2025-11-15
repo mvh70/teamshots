@@ -59,7 +59,7 @@ export function Button({
       case 'danger':
         return 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed'
       case 'auth':
-        return 'w-full py-3 px-4 text-white bg-brand-primary hover:bg-brand-primary-hover focus:ring-brand-primary focus:ring-offset-2 disabled:opacity-50 shadow-md'
+        return 'w-full py-4 px-6 text-white bg-brand-cta hover:bg-brand-cta-hover focus:ring-brand-cta focus:ring-offset-2 disabled:opacity-50 shadow-depth-lg hover:shadow-depth-xl transform hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98] font-bold rounded-xl transition-all duration-300'
       case 'checkout':
         if (useBrandCtaColors) {
           return 'text-white disabled:opacity-60 disabled:cursor-not-allowed'
@@ -73,7 +73,7 @@ export function Button({
   const variantClasses = getVariantClasses()
 
   // Auth-style button has fixed layout
-  const finalSizeClasses = variant === 'auth' ? 'py-3 px-4' : sizeClasses[size]
+  const finalSizeClasses = variant === 'auth' ? 'py-4 px-6' : sizeClasses[size]
   const classes = `${baseClasses} ${finalSizeClasses} ${variantClasses} ${loading || disabled ? 'opacity-60 cursor-not-allowed' : ''} ${authStyle ? 'flex gap-2' : ''} ${className}`
 
   const brandStyle: React.CSSProperties | undefined = (variant === 'checkout' && useBrandCtaColors)

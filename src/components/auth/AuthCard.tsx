@@ -10,14 +10,14 @@ type AuthCardProps = {
 
 export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
   return (
-    <div className="w-full max-w-md bg-white/90 backdrop-blur rounded-xl shadow-lg border border-gray-100 p-8">
+    <div className="w-full max-w-md bg-bg-white/95 backdrop-blur-sm rounded-3xl shadow-depth-xl border-2 border-brand-primary-lighter p-8 lg:p-10">
       {(title || subtitle) && (
-        <div className="mb-6 text-center">
+        <div className="mb-8 text-center">
           {title && (
-            <h2 className="text-3xl font-extrabold text-gray-900">{title}</h2>
+            <h2 className="text-3xl lg:text-4xl font-display font-bold text-text-dark">{title}</h2>
           )}
           {subtitle && (
-            <div className="mt-2 text-sm text-gray-600">{subtitle}</div>
+            <div className="mt-3 text-base lg:text-lg text-text-body leading-relaxed">{subtitle}</div>
           )}
         </div>
       )}

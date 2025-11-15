@@ -168,22 +168,22 @@ export default function SignUpPage() {
     <AuthSplitLayout
       left={
         <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-primary-light via-white to-brand-cta-light rounded-2xl" />
-          <div className="relative p-10">
-            <h1 className="text-4xl font-extrabold text-gray-900 mb-4">{t('welcome')}</h1>
-            <p className="text-gray-700 mb-8 text-lg">{t('welcomeSubtitle')}</p>
-            <div className="space-y-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-primary-light via-bg-white to-brand-cta-light rounded-3xl shadow-depth-lg" />
+          <div className="relative p-10 lg:p-12">
+            <h1 className="text-4xl lg:text-5xl font-display font-bold text-text-dark mb-6">{t('welcome')}</h1>
+            <p className="text-lg lg:text-xl text-text-body mb-10 leading-relaxed">{t('welcomeSubtitle')}</p>
+            <div className="space-y-5">
               <div className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-brand-cta rounded-full" />
-                <span className="text-gray-700">{t('benefit1')}</span>
+                <span className="w-2.5 h-2.5 bg-brand-cta rounded-full" />
+                <span className="text-base lg:text-lg text-text-body">{t('benefit1')}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-brand-cta rounded-full" />
-                <span className="text-gray-700">{t('benefit2')}</span>
+                <span className="w-2.5 h-2.5 bg-brand-cta rounded-full" />
+                <span className="text-base lg:text-lg text-text-body">{t('benefit2')}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-brand-cta rounded-full" />
-                <span className="text-gray-700">{t('benefit3')}</span>
+                <span className="w-2.5 h-2.5 bg-brand-cta rounded-full" />
+                <span className="text-base lg:text-lg text-text-body">{t('benefit3')}</span>
               </div>
             </div>
           </div>
@@ -194,70 +194,70 @@ export default function SignUpPage() {
         title={t('title')}
         subtitle={
           <div>
-            <div className="flex justify-center mb-2">
-              <span className="inline-flex items-center bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-semibold">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
+            <div className="flex justify-center mb-3">
+              <span className="inline-flex items-center bg-brand-secondary/10 text-brand-secondary px-4 py-2 rounded-full text-xs lg:text-sm font-bold shadow-depth-sm">
+                <span className="w-2 h-2 bg-brand-secondary rounded-full mr-2 animate-pulse"></span>
                 {t('freeBadge', { default: 'Includes 1 free generation' })}
               </span>
             </div>
             <div className="flex items-center justify-center gap-2 text-sm">
-              <div className={`h-1.5 w-24 rounded-full ${step === 1 ? 'bg-brand-primary' : 'bg-brand-primary-light'}`} />
-              <div className={`h-1.5 w-24 rounded-full ${step === 2 ? 'bg-brand-primary' : 'bg-brand-primary-light'}`} />
+              <div className={`h-2 w-24 rounded-full transition-all duration-300 ${step === 1 ? 'bg-brand-primary shadow-depth-sm' : 'bg-brand-primary-lighter'}`} />
+              <div className={`h-2 w-24 rounded-full transition-all duration-300 ${step === 2 ? 'bg-brand-primary shadow-depth-sm' : 'bg-brand-primary-lighter'}`} />
             </div>
-            <p className="mt-2 text-gray-600">{t('stepOf', { step: String(step) })}</p>
+            <p className="mt-3 text-sm lg:text-base text-text-body">{t('stepOf', { step: String(step) })}</p>
           </div>
         }
       >
         <FocusTrap>
-        <div className="space-y-6">
+        <div className="space-y-6 lg:space-y-7">
           {step === 1 && (
             <>
               {/* Plan summary (inferred from entry point) */}
               {inferredTier || isTryOnce ? (
-                <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800">
+                <div className="rounded-xl border-2 border-brand-primary-lighter bg-bg-gray-50 px-5 py-4 text-sm lg:text-base text-text-body shadow-depth-sm">
                   {isTryOnce ? (
                     <div>
-                      <strong>{t('planTryOnce')}:</strong> {t('planSummaryTryOnce', { credits: PRICING_CONFIG.tryOnce.credits, photos: calculatePhotosFromCredits(PRICING_CONFIG.tryOnce.credits) })}
+                      <strong className="font-bold text-text-dark">{t('planTryOnce')}:</strong> {t('planSummaryTryOnce', { credits: PRICING_CONFIG.tryOnce.credits, photos: calculatePhotosFromCredits(PRICING_CONFIG.tryOnce.credits) })}
                     </div>
                   ) : inferredTier === 'team' ? (
                     <div>
-                      <strong>{t('planPro')}:</strong> {t('planSummaryPro', { credits: PRICING_CONFIG.pro.includedCredits, photos: calculatePhotosFromCredits(PRICING_CONFIG.pro.includedCredits) })}
+                      <strong className="font-bold text-text-dark">{t('planPro')}:</strong> {t('planSummaryPro', { credits: PRICING_CONFIG.pro.includedCredits, photos: calculatePhotosFromCredits(PRICING_CONFIG.pro.includedCredits) })}
                     </div>
                   ) : (
                     <div>
-                      <strong>{t('planIndividual')}:</strong> {t('planSummaryIndividual', { credits: PRICING_CONFIG.individual.includedCredits, photos: calculatePhotosFromCredits(PRICING_CONFIG.individual.includedCredits) })}
+                      <strong className="font-bold text-text-dark">{t('planIndividual')}:</strong> {t('planSummaryIndividual', { credits: PRICING_CONFIG.individual.includedCredits, photos: calculatePhotosFromCredits(PRICING_CONFIG.individual.includedCredits) })}
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4 space-y-3">
-                  <div className="text-sm text-gray-800">
-                    {t('selectPlanPrompt')}: <strong>{t('planIndividual')}</strong> or <strong>{t('planPro')}</strong>
+                <div className="rounded-xl border-2 border-brand-primary-lighter bg-bg-gray-50 px-5 py-5 space-y-4 shadow-depth-sm">
+                  <div className="text-sm lg:text-base text-text-body">
+                    {t('selectPlanPrompt')}: <strong className="font-bold text-text-dark">{t('planIndividual')}</strong> or <strong className="font-bold text-text-dark">{t('planPro')}</strong>
                   </div>
                   <Grid cols={{ mobile: 2 }} gap="sm">
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, userType: 'individual' })}
-                      className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                      className={`p-4 lg:p-5 border-2 rounded-xl text-left transition-all duration-300 ${
                         formData.userType === 'individual'
-                          ? 'border-brand-primary bg-brand-primary-light'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                          ? 'border-brand-primary bg-brand-primary-light shadow-depth-md'
+                          : 'border-brand-primary-lighter hover:border-brand-primary bg-bg-white hover:shadow-depth-sm'
                       }`}
                     >
-                      <div className="font-medium text-gray-900">{t('individual')}</div>
-                      <div className="mt-1 text-sm text-gray-600">{t('individualDesc')}</div>
+                      <div className="font-bold text-text-dark text-base lg:text-lg">{t('individual')}</div>
+                      <div className="mt-2 text-sm lg:text-base text-text-body">{t('individualDesc')}</div>
                     </button>
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, userType: 'team' })}
-                      className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                      className={`p-4 lg:p-5 border-2 rounded-xl text-left transition-all duration-300 ${
                         formData.userType === 'team'
-                          ? 'border-brand-primary bg-brand-primary-light'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                          ? 'border-brand-primary bg-brand-primary-light shadow-depth-md'
+                          : 'border-brand-primary-lighter hover:border-brand-primary bg-bg-white hover:shadow-depth-sm'
                       }`}
                     >
-                      <div className="font-medium text-gray-900">{t('team')}</div>
-                      <div className="mt-1 text-sm text-gray-600">{t('teamDesc')}</div>
+                      <div className="font-bold text-text-dark text-base lg:text-lg">{t('team')}</div>
+                      <div className="mt-2 text-sm lg:text-base text-text-body">{t('teamDesc')}</div>
                     </button>
                   </Grid>
                 </div>
@@ -316,7 +316,7 @@ export default function SignUpPage() {
           {step === 2 && (
             <>
               {infoMessage && (
-                <div className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-md p-3 text-center mb-2">
+                <div className="text-sm lg:text-base text-text-body bg-bg-gray-50 border-2 border-brand-primary-lighter rounded-xl p-4 text-center mb-2 shadow-depth-sm">
                   {infoMessage}
                 </div>
               )}
@@ -331,16 +331,16 @@ export default function SignUpPage() {
                 value={formData.otpCode}
                 onChange={(e) => setFormData({ ...formData, otpCode: e.target.value })}
               />
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-sm lg:text-base">
                 <button
                   type="button"
-                  className="text-brand-primary hover:text-brand-primary-hover disabled:opacity-50"
+                  className="text-brand-primary hover:text-brand-primary-hover disabled:opacity-50 transition-colors duration-300 font-medium"
                   onClick={handleSendOTP}
                   disabled={resendCooldown > 0 || isLoading}
                 >
                   {resendCooldown > 0 ? t('resendIn', { seconds: String(resendCooldown) }) : t('resendCode')}
                 </button>
-                <span className="text-gray-500">{t('otpHelp')}</span>
+                <span className="text-text-muted">{t('otpHelp')}</span>
               </div>
               {error === 'auth.signup.newCodeSent' && (
                 <div className="text-brand-secondary text-sm text-center">{t('newCodeSent')}</div>
@@ -358,8 +358,8 @@ export default function SignUpPage() {
 
           {error && <InlineError message={t(error)} className="text-center" />}
 
-          <div className="text-center">
-            <Link href="/auth/signin" className="font-medium text-brand-primary hover:text-brand-primary-hover">
+          <div className="text-center text-sm lg:text-base">
+            <Link href="/auth/signin" className="font-medium text-brand-primary hover:text-brand-primary-hover transition-colors duration-300">
               {t('haveAccount')}
             </Link>
           </div>

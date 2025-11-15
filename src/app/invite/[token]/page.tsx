@@ -151,19 +151,19 @@ export default function InvitePage() {
             <h3 className="text-base sm:text-sm font-medium text-gray-900 mb-3 sm:mb-2">What you&apos;ll get:</h3>
             <ul className="text-base sm:text-sm text-gray-600 space-y-2 sm:space-y-1">
               <li className="flex items-center gap-3 sm:gap-2">
-                <svg className="w-5 h-5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4 text-brand-secondary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 <span>Professional headshots in 60 seconds</span>
               </li>
               <li className="flex items-center gap-3 sm:gap-2">
-                <svg className="w-5 h-5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4 text-brand-secondary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 <span>Team-branded photo generation</span>
               </li>
               <li className="flex items-center gap-3 sm:gap-2">
-                <svg className="w-5 h-5 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4 text-brand-secondary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 <span>Instant access (no account setup needed)</span>

@@ -173,17 +173,17 @@ export default function VerifyPage() {
         <FocusTrap>
           <div className="space-y-6">
             {infoMessage && (
-              <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-100 p-5 shadow-lg">
+              <div className="relative overflow-hidden rounded-2xl border border-brand-secondary-lighter bg-gradient-to-br from-brand-secondary-light via-white to-brand-secondary-lighter p-5 shadow-lg">
                 {/* decorative confetti */}
-                <div className="pointer-events-none absolute -top-3 -left-3 h-16 w-16 rounded-full bg-emerald-400/20 blur-xl" />
-                <div className="pointer-events-none absolute -bottom-4 -right-4 h-20 w-20 rounded-full bg-emerald-300/20 blur-xl" />
+                <div className="pointer-events-none absolute -top-3 -left-3 h-16 w-16 rounded-full bg-brand-secondary/20 blur-xl" />
+                <div className="pointer-events-none absolute -bottom-4 -right-4 h-20 w-20 rounded-full bg-brand-secondary-border/20 blur-xl" />
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md">
+                  <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-brand-secondary text-white shadow-md">
                     <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l3-3z" clipRule="evenodd"/></svg>
                   </div>
                   <div className="flex-1">
-                    <div className="text-lg font-extrabold text-emerald-800">{t('bannerTitle')}</div>
-                    <p className="mt-1 text-sm text-emerald-900/80">{infoMessage}</p>
+                    <div className="text-lg font-extrabold text-brand-secondary-text-light">{t('bannerTitle')}</div>
+                    <p className="mt-1 text-sm text-brand-secondary-text-light/80">{infoMessage}</p>
                   </div>
                 </div>
               </div>

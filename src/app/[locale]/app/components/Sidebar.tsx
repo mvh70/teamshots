@@ -15,7 +15,9 @@ import {
   UserIcon,
   CameraIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
@@ -67,12 +69,13 @@ interface NavigationItem {
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  onMenuItemClick?: () => void
   initialRole?: SidebarRoleState
   initialAccountMode?: AccountMode
   initialSubscription?: SerializedSubscription | null
 }
 
-export default function Sidebar({ collapsed, onToggle, initialRole, initialAccountMode, initialSubscription }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialRole, initialAccountMode, initialSubscription }: SidebarProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const t = useTranslations('app.sidebar')
@@ -89,6 +92,21 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
   const [planTier, setPlanTier] = useState<'free' | 'individual' | 'pro' | null>(null)
   const [planLabel, setPlanLabel] = useState<string | null>(null)
   const { credits } = useCredits()
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile and force collapsed on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024) // lg breakpoint
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // On mobile, always use collapsed styling (icons-only), but respect collapsed prop for visibility
+  // On desktop, use collapsed prop for both visibility and styling
+  const effectiveCollapsed = isMobile ? true : collapsed
 
   // Initialize subscription data from props if available
   useEffect(() => {
@@ -431,20 +449,23 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
 
   return (
     <div className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300 transform ${
-      // Width adjusts as before; add off-canvas behavior on small screens
-      (collapsed ? 'w-20' : 'w-64') + ' ' + (collapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0') + ' ' + (collapsed ? 'overflow-visible' : '')
+      // Width: always collapsed (w-20) on mobile, respect effectiveCollapsed on desktop
+      (isMobile ? 'w-20' : (effectiveCollapsed ? 'w-20' : 'w-64')) + ' ' + 
+      // Visibility: use collapsed prop (when false, sidebar is visible)
+      (collapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0') + ' ' + 
+      (effectiveCollapsed ? 'overflow-visible' : '')
     }`}>
-      <div className={`flex flex-col h-screen ${collapsed ? 'overflow-visible' : ''}`}>
+      <div className={`flex flex-col h-screen ${effectiveCollapsed ? 'overflow-visible' : ''}`}>
         {/* Top Section - Header and Primary Action */}
         <div className="flex-shrink-0">
           {/* Header */}
-          <div className={`flex p-4 border-b border-gray-200 ${collapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
-            {!collapsed && (
+          <div className={`flex p-4 border-b border-gray-200 ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
+            {!effectiveCollapsed && (
               <div className="flex items-center space-x-2">
                 <Image src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} width={112} height={28} className="h-7 w-auto" style={{ width: 'auto' }} priority />
               </div>
             )}
-            {collapsed && (
+            {effectiveCollapsed && (
               <div className="w-12 h-12 rounded-lg flex items-center justify-center">
                 <Image src={BRAND_CONFIG.logo.icon} alt={BRAND_CONFIG.name} width={48} height={48} className="h-12 w-12" priority />
               </div>
@@ -452,17 +473,30 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
             <div className="relative group">
               <button
                 onClick={onToggle}
-                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                aria-label={isMobile ? (collapsed ? 'Show menu' : 'Hide sidebar') : (effectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
                 className="p-2 md:p-1.5 rounded-md hover:bg-gray-100 transition-colors min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center"
               >
-                {collapsed ? (
-                  <ChevronRightIcon className="h-6 w-6 text-gray-500" />
+                {/* On mobile: show hamburger when hidden, X when visible. On desktop: show chevrons */}
+                {isMobile ? (
+                  collapsed ? (
+                    <Bars3Icon className="h-6 w-6 text-gray-500" />
+                  ) : (
+                    <XMarkIcon className="h-6 w-6 text-gray-500" />
+                  )
                 ) : (
-                  <ChevronLeftIcon className="h-6 w-6 text-gray-500" />
+                  effectiveCollapsed ? (
+                    <ChevronRightIcon className="h-6 w-6 text-gray-500" />
+                  ) : (
+                    <ChevronLeftIcon className="h-6 w-6 text-gray-500" />
+                  )
                 )}
               </button>
-              <span className={`pointer-events-none absolute ${collapsed ? 'left-full ml-2' : 'left-full ml-2'} top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg`}>
-                {collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              <span className={`pointer-events-none absolute ${effectiveCollapsed ? 'left-full ml-2' : 'left-full ml-2'} top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg`}>
+                {isMobile ? (
+                  collapsed ? 'Show menu' : 'Hide sidebar'
+                ) : (
+                  effectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+                )}
               </span>
             </div>
           </div>
@@ -472,14 +506,15 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
             <Link
               id="primary-generate-btn"
               href="/app/generate/selfie"
+              onClick={onMenuItemClick}
               className={`flex items-center justify-center space-x-2 bg-brand-primary text-white rounded-lg px-4 py-3 md:py-3 font-medium hover:bg-brand-primary-hover transition-all duration-200 min-h-[44px] md:min-h-0 ${
-                collapsed ? 'px-2' : ''
+                effectiveCollapsed ? 'px-2' : ''
               }`}
             >
               <PlusIcon className="h-6 w-6 md:h-8 md:w-8" />
-              {!collapsed && <span className="text-sm md:text-base">{t('primary.generate')}</span>}
+              {!effectiveCollapsed && <span className="text-sm md:text-base">{t('primary.generate')}</span>}
             </Link>
-            {collapsed && (
+            {effectiveCollapsed && (
               <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
                 {t('primary.generate')}
               </span>
@@ -488,8 +523,8 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
         </div>
 
         {/* Navigation - Takes up available space */}
-        <nav className={`flex-1 px-4 space-y-1 min-h-0 ${collapsed ? 'overflow-visible' : 'overflow-y-auto overflow-x-visible'}`}>
-          {!collapsed ? (
+        <nav className={`flex-1 px-4 space-y-1 min-h-0 ${effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto overflow-x-visible'}`}>
+          {!effectiveCollapsed ? (
             <div className="h-full overflow-y-auto overflow-x-visible">
               {!navReady ? null : navigation.map((item) => {
                 const Icon = item.current ? item.iconSolid : item.icon
@@ -498,6 +533,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                     key={item.name}
                     href={item.href}
                     id={item.id}
+                    onClick={onMenuItemClick}
                     className={`group flex items-center px-3 py-2.5 md:py-2 text-sm md:text-sm font-medium rounded-lg transition-colors relative min-h-[44px] md:min-h-0 ${
                       item.current
                         ? 'bg-brand-primary-light text-brand-primary'
@@ -519,6 +555,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                     key={item.name}
                     href={item.href}
                     id={item.id}
+                    onClick={onMenuItemClick}
                     className={`group flex items-center justify-center px-3 py-2.5 md:py-2 text-sm font-medium rounded-lg transition-colors relative min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 ${
                       item.current
                         ? 'bg-brand-primary-light text-brand-primary'
@@ -537,12 +574,12 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
         </nav>
 
         {/* Bottom Section - Credits and User Profile (Fixed at bottom) */}
-        <div className={`flex-shrink-0 bg-white border-t border-gray-200 ${collapsed ? 'overflow-visible' : ''}`}>
+        <div className={`flex-shrink-0 bg-white border-t border-gray-200 ${effectiveCollapsed ? 'overflow-visible' : ''}`}>
           {/* Credits Section */}
           {session?.user && (
             <div className="px-4 py-3 border-t border-gray-200">
               {/* Plan stamp just above credits */}
-              {!collapsed && planTier && (
+              {!effectiveCollapsed && planTier && (
                 <div className="mb-3 flex justify-center">
                   <span
                     className={`inline-block rotate-[-3deg] px-3 py-1 text-[10px] uppercase tracking-widest font-semibold rounded-md border-2 border-dashed shadow-sm ${
@@ -557,21 +594,21 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                   </span>
                 </div>
               )}
-              {!collapsed && (
+              {!effectiveCollapsed && (
                 <h3 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">
                   {t('credits.title')}
                 </h3>
               )}
-              <div className={`space-y-2 ${collapsed ? 'text-center' : ''}`}>
+              <div className={`space-y-2 ${effectiveCollapsed ? 'text-center' : ''}`}>
                 {accountMode === 'individual' && (
-                  <div className={`relative group flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
-                    <span className={`text-xs font-medium text-gray-500 ${collapsed ? 'text-center' : ''}`}>
+                  <div className={`relative group flex items-center justify-between ${effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
+                    <span className={`text-xs font-medium text-gray-500 ${effectiveCollapsed ? 'text-center' : ''}`}>
                       {t('credits.individual')}
                     </span>
-                    <span className={`text-sm font-semibold ${collapsed ? 'text-lg' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
+                    <span className={`text-sm font-semibold ${effectiveCollapsed ? 'text-lg' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
                       {credits.individual ?? 0}
                     </span>
-                    {collapsed && (
+                    {effectiveCollapsed && (
                       <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
                         {t('credits.individual')}: {credits.individual ?? 0}
                       </span>
@@ -581,28 +618,28 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
 
                 {accountMode === 'pro' && (
                   <>
-                    <div className={`relative group flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
-                      <span className={`text-xs font-medium text-gray-500 ${collapsed ? 'text-center' : ''}`}>
+                    <div className={`relative group flex items-center justify-between ${effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
+                      <span className={`text-xs font-medium text-gray-500 ${effectiveCollapsed ? 'text-center' : ''}`}>
                         {t('credits.team')}
                       </span>
-                      <span className={`text-sm font-semibold ${collapsed ? 'text-lg' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
+                      <span className={`text-sm font-semibold ${effectiveCollapsed ? 'text-lg' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
                         {credits.team ?? 0}
                       </span>
-                      {collapsed && (
+                      {effectiveCollapsed && (
                         <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
                           {t('credits.team')}: {credits.team ?? 0}
                         </span>
                       )}
                     </div>
                     {isTeamAdmin && allocatedCredits > 0 && (
-                      <div className={`relative group flex items-center justify-between ${collapsed ? 'flex-col space-y-1' : ''}`}>
-                        <span className={`text-xs font-medium text-gray-500 ${collapsed ? 'text-center' : ''}`}>
+                      <div className={`relative group flex items-center justify-between ${effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
+                        <span className={`text-xs font-medium text-gray-500 ${effectiveCollapsed ? 'text-center' : ''}`}>
                           {t('credits.allocated')}
                         </span>
-                        <span className={`text-sm font-semibold ${collapsed ? 'text-lg' : ''} text-brand-cta`}>
+                        <span className={`text-sm font-semibold ${effectiveCollapsed ? 'text-lg' : ''} text-brand-cta`}>
                           {allocatedCredits}
                         </span>
-                        {collapsed && (
+                        {effectiveCollapsed && (
                           <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
                             {t('credits.allocated')}: {allocatedCredits}
                           </span>
@@ -617,10 +654,11 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
               </div>
               
               {/* Buy Credits Button */}
-              <div className={`mt-3 ${collapsed ? 'relative group' : ''}`}>
-                {collapsed ? (
+              <div className={`mt-3 ${effectiveCollapsed ? 'relative group' : ''}`}>
+                {effectiveCollapsed ? (
                   <Link
                     href={planTier === 'free' ? '/app/upgrade' : '/app/top-up'}
+                    onClick={onMenuItemClick}
                     className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs font-medium text-white rounded-md transition-colors bg-brand-cta hover:bg-brand-cta-hover min-h-[44px] md:min-h-0"
                   >
                     <PlusIcon className="h-4 w-4 md:h-3 md:w-3" />
@@ -628,13 +666,14 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                 ) : (
                   <Link
                     href={planTier === 'free' ? '/app/upgrade' : '/app/top-up'}
+                    onClick={onMenuItemClick}
                     className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs md:text-xs font-medium text-white rounded-md transition-colors bg-brand-cta hover:bg-brand-cta-hover min-h-[44px] md:min-h-0"
                   >
                     <PlusIcon className="h-4 w-4 md:h-3 md:w-3 mr-1" />
                     {t('credits.buyMore')}
                   </Link>
                 )}
-                {collapsed && (
+                {effectiveCollapsed && (
                   <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
                     {t('credits.buyMore')}
                   </span>
@@ -647,7 +686,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
           {session?.user && (
             <div className="p-4 border-t border-gray-200 relative">
             <div
-              className={`relative group flex items-center space-x-3 ${collapsed ? 'justify-center' : ''} cursor-pointer`}
+              className={`relative group flex items-center space-x-3 ${effectiveCollapsed ? 'justify-center' : ''} cursor-pointer`}
               onClick={() => setMenuOpen(!menuOpen)}
               data-testid="user-menu"
             >
@@ -664,7 +703,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                   {t('profile.pro')}
                 </div>
               </div>
-              {!collapsed && (
+              {!effectiveCollapsed && (
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {session?.user?.name || session?.user?.email}
@@ -674,7 +713,7 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
                   </p>
                 </div>
               )}
-              {collapsed && (
+              {effectiveCollapsed && (
                 <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
                   {session?.user?.name || session?.user?.email}
                 </span>
@@ -682,14 +721,17 @@ export default function Sidebar({ collapsed, onToggle, initialRole, initialAccou
             </div>
             {menuOpen && (
               <div className={`absolute rounded-lg border border-gray-200 bg-white shadow-lg z-[9999] ${
-                collapsed 
+                effectiveCollapsed 
                   ? 'left-full ml-2 bottom-4 w-48' 
                   : 'bottom-16 left-4 right-4'
               }`}>
                 <Link
                   href="/app/settings"
                   className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onMenuItemClick?.()
+                  }}
                 >
                   <Cog6ToothIcon className="h-4 w-4 text-gray-500" />
                   <span>{t('nav.settings')}</span>

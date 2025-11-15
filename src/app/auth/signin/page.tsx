@@ -119,22 +119,22 @@ export default function SignInPage() {
     <AuthSplitLayout
       left={
         <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-primary-light via-white to-brand-cta-light rounded-2xl" />
-          <div className="relative p-10">
-            <h1 className="text-4xl font-extrabold text-gray-900 mb-4">{t('welcomeBack')}</h1>
-            <p className="text-gray-700 mb-8 text-lg">{t('welcomeSubtitle')}</p>
-            <div className="space-y-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-primary-light via-bg-white to-brand-cta-light rounded-3xl shadow-depth-lg" />
+          <div className="relative p-10 lg:p-12">
+            <h1 className="text-4xl lg:text-5xl font-display font-bold text-text-dark mb-6">{t('welcomeBack')}</h1>
+            <p className="text-lg lg:text-xl text-text-body mb-10 leading-relaxed">{t('welcomeSubtitle')}</p>
+            <div className="space-y-5">
               <div className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-brand-cta rounded-full" />
-                <span className="text-gray-700">{t('benefit1')}</span>
+                <span className="w-2.5 h-2.5 bg-brand-cta rounded-full" />
+                <span className="text-base lg:text-lg text-text-body">{t('benefit1')}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-brand-cta rounded-full" />
-                <span className="text-gray-700">{t('benefit2')}</span>
+                <span className="w-2.5 h-2.5 bg-brand-cta rounded-full" />
+                <span className="text-base lg:text-lg text-text-body">{t('benefit2')}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-brand-cta rounded-full" />
-                <span className="text-gray-700">{t('benefit3')}</span>
+                <span className="w-2.5 h-2.5 bg-brand-cta rounded-full" />
+                <span className="text-base lg:text-lg text-text-body">{t('benefit3')}</span>
               </div>
             </div>
           </div>
@@ -143,7 +143,7 @@ export default function SignInPage() {
     >
       <AuthCard title={t('title')}>
         <FocusTrap>
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-6 lg:space-y-7" onSubmit={handleSubmit}>
           <AuthInput
             id="email"
             type="email"
@@ -168,25 +168,25 @@ export default function SignInPage() {
             />
           )}
           <div className="flex items-center justify-between">
-            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+            <label className="inline-flex items-center gap-2 text-sm text-text-body">
               <input
                 id="magic-link"
                 name="magic-link"
                 type="checkbox"
-                className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-brand-primary-lighter rounded transition-colors duration-300"
                 checked={useMagicLink}
                 onChange={(e) => setUseMagicLink(e.target.checked)}
               />
               {t('useMagicLink')}
             </label>
-            <a href="#" className="text-sm text-brand-primary hover:text-brand-primary-hover">{t('forgotPassword')}</a>
+            <a href="#" className="text-sm text-brand-primary hover:text-brand-primary-hover transition-colors duration-300">{t('forgotPassword')}</a>
           </div>
           {error && <InlineError message={t(error)} className="text-center" />}
           <AuthButton type="submit" loading={isLoading}>
             {isLoading ? t('signingIn') : t('submit')}
           </AuthButton>
-          <div className="text-center text-sm">
-            <Link href="/auth/signup" className="font-medium text-brand-primary hover:text-brand-primary-hover">
+          <div className="text-center text-sm lg:text-base">
+            <Link href="/auth/signup" className="font-medium text-brand-primary hover:text-brand-primary-hover transition-colors duration-300">
               {t('noAccount')}
             </Link>
           </div>

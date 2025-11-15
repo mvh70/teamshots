@@ -172,7 +172,7 @@ export function useOnbordaTours() {
   }
 
   // Complete a tour and update context
-  const completeTour = (tourName: string) => {
+  const completeTour = async (tourName: string) => {
     const tour = getTour(tourName, t, context)
     if (tour) {
       // Track completion before updating context
@@ -180,6 +180,20 @@ export function useOnbordaTours() {
 
       // Mark tour as seen in localStorage to prevent re-showing
       localStorage.setItem(`onboarding-${tourName}-seen`, 'true')
+
+      // Persist tour completion to database (Person.onboardingState)
+      if (context.personId) {
+        try {
+          await fetch('/api/onboarding/complete-tour', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tourName }),
+          })
+        } catch (error) {
+          console.error('Failed to persist tour completion to database:', error)
+          // Continue execution even if database update fails
+        }
+      }
 
       // Update context based on completed tour
       switch (tourName) {

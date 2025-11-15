@@ -147,11 +147,11 @@ export default function UpgradePage() {
 
     return (
       <div className="max-w-2xl mx-auto px-4 py-10">
-        <div className="border rounded-lg p-6 shadow-sm bg-green-50 border-green-200">
-          <h1 className="text-2xl font-semibold mb-2 text-green-900">
+        <div className="border rounded-lg p-6 shadow-sm bg-brand-secondary-light border-brand-secondary-lighter">
+          <h1 className="text-2xl font-semibold mb-2 text-brand-secondary-text-light">
             {successTitle}
           </h1>
-          <p className="text-green-800 mb-4">
+          <p className="text-brand-secondary-text-light mb-4">
             {successMessage}
           </p>
           <div className="flex gap-3">

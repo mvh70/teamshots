@@ -104,9 +104,9 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
   // Determine styling based on type
   const styles = {
     success: {
-      container: 'bg-green-50 border-green-200',
-      icon: 'text-green-400',
-      text: 'text-green-800',
+      container: 'bg-brand-secondary-light border-brand-secondary-lighter',
+      icon: 'text-brand-secondary',
+      text: 'text-brand-secondary-text-light',
       iconComponent: CheckIcon,
     },
     canceled: {

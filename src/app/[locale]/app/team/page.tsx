@@ -322,8 +322,10 @@ export default function TeamPage() {
       const data = await response.json()
 
       if (response.ok) {
+        await fetchTeamData()
         setError(null)
-        // TODO: Show success message
+        setSuccessMessage(t('teamInvites.actions.resendSuccess'))
+        setTimeout(() => setSuccessMessage(null), 5000)
       } else {
         setError(data.error)
       }
@@ -530,9 +532,9 @@ export default function TeamPage() {
     <div className="space-y-6">
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+        <div className="bg-brand-secondary-light border border-brand-secondary-lighter rounded-lg p-4 flex items-center gap-3">
           <CheckIcon className="h-5 w-5 text-brand-secondary flex-shrink-0" />
-          <p className="text-green-800">{successMessage}</p>
+          <p className="text-brand-secondary-text-light">{successMessage}</p>
         </div>
       )}
 
@@ -596,14 +598,14 @@ export default function TeamPage() {
           </Link>
         </div>
       ) : (
-        <div id="team-active-style" className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div id="team-active-style" className="bg-brand-secondary-light border border-brand-secondary-lighter rounded-lg p-4">
           <div className="flex items-center gap-2">
             <CheckIcon className="h-5 w-5 text-brand-secondary" />
-            <span className="text-green-800 font-medium">
+            <span className="text-brand-secondary-text-light font-medium">
               {t('readyToInvite.title')}
             </span>
           </div>
-          <p className="text-green-700 text-sm mt-1">
+          <p className="text-brand-secondary-text text-sm mt-1">
             {t('readyToInvite.activeStyle', { 
               name: (isFreePlan && (!teamData.activeContext.name || teamData.activeContext.name === 'unnamed')) 
                 ? 'Free Package Style' 
@@ -796,6 +798,15 @@ export default function TeamPage() {
                     {/* Admin Actions */}
                     {userRoles.isTeamAdmin && (
                       <div className="flex items-center justify-center gap-2">
+                        {memberInvite && (
+                          <button
+                            onClick={() => handleResendInvite(memberInvite.id)}
+                            disabled={resending === memberInvite.id}
+                            className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50"
+                          >
+                            {resending === memberInvite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
+                          </button>
+                        )}
                         {!member.isCurrentUser && member.userId && (
                           <>
                             {!member.isAdmin && (
@@ -914,25 +925,21 @@ export default function TeamPage() {
                     {/* Admin Actions */}
                     {userRoles.isTeamAdmin && (
                       <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleResendInvite(invite.id)}
+                          disabled={resending === invite.id}
+                          className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50"
+                        >
+                          {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
+                        </button>
                         {!invite.usedAt && (
-                          <>
-                            {!isExpired(invite.expiresAt) && (
-                              <button
-                                onClick={() => handleResendInvite(invite.id)}
-                                disabled={resending === invite.id}
-                                className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50"
-                              >
-                                {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleRevokeInvite(invite.id)}
-                              disabled={revoking === invite.id}
-                              className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50"
-                            >
-                              {revoking === invite.id ? t('teamInvites.actions.revoking') : t('teamInvites.actions.revoke')}
-                            </button>
-                          </>
+                          <button
+                            onClick={() => handleRevokeInvite(invite.id)}
+                            disabled={revoking === invite.id}
+                            className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50"
+                          >
+                            {revoking === invite.id ? t('teamInvites.actions.revoking') : t('teamInvites.actions.revoke')}
+                          </button>
                         )}
                       </div>
                     )}
@@ -1049,33 +1056,46 @@ export default function TeamPage() {
                   </div>
 
                   {/* Admin Actions */}
-                  {userRoles.isTeamAdmin && !member.isCurrentUser && member.userId && (
+                  {userRoles.isTeamAdmin && (
                     <div className="flex flex-wrap gap-2 pl-[52px]">
-                      {!member.isAdmin && (
+                      {memberInvite && (
                         <button
-                          onClick={() => handleChangeMemberRole(member.id, 'team_admin')}
-                          disabled={changingRole === member.id}
-                          className="text-xs px-3 py-1.5 rounded-md text-brand-premium border border-brand-premium hover:bg-brand-premium/10 disabled:opacity-50 min-h-[44px]"
+                          onClick={() => handleResendInvite(memberInvite.id)}
+                          disabled={resending === memberInvite.id}
+                          className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50 min-h-[44px]"
                         >
-                          {changingRole === member.id ? t('teamMembers.actions.promoting') : t('teamMembers.actions.makeAdmin')}
+                          {resending === memberInvite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
                         </button>
                       )}
-                      {member.isAdmin && (
-                        <button
-                          onClick={() => handleChangeMemberRole(member.id, 'team_member')}
-                          disabled={changingRole === member.id}
-                          className="text-xs px-3 py-1.5 rounded-md text-brand-cta border border-brand-cta hover:bg-brand-cta/10 disabled:opacity-50 min-h-[44px]"
-                        >
-                          {changingRole === member.id ? t('teamMembers.actions.demoting') : t('teamMembers.actions.demote')}
-                        </button>
+                      {!member.isCurrentUser && member.userId && (
+                        <>
+                          {!member.isAdmin && (
+                            <button
+                              onClick={() => handleChangeMemberRole(member.id, 'team_admin')}
+                              disabled={changingRole === member.id}
+                              className="text-xs px-3 py-1.5 rounded-md text-brand-premium border border-brand-premium hover:bg-brand-premium/10 disabled:opacity-50 min-h-[44px]"
+                            >
+                              {changingRole === member.id ? t('teamMembers.actions.promoting') : t('teamMembers.actions.makeAdmin')}
+                            </button>
+                          )}
+                          {member.isAdmin && (
+                            <button
+                              onClick={() => handleChangeMemberRole(member.id, 'team_member')}
+                              disabled={changingRole === member.id}
+                              className="text-xs px-3 py-1.5 rounded-md text-brand-cta border border-brand-cta hover:bg-brand-cta/10 disabled:opacity-50 min-h-[44px]"
+                            >
+                              {changingRole === member.id ? t('teamMembers.actions.demoting') : t('teamMembers.actions.demote')}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleRemoveMember(member.id)}
+                            disabled={removing === member.id}
+                            className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50 min-h-[44px]"
+                          >
+                            {removing === member.id ? t('teamMembers.actions.removing') : t('teamMembers.actions.remove')}
+                          </button>
+                        </>
                       )}
-                      <button
-                        onClick={() => handleRemoveMember(member.id)}
-                        disabled={removing === member.id}
-                        className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50 min-h-[44px]"
-                      >
-                        {removing === member.id ? t('teamMembers.actions.removing') : t('teamMembers.actions.remove')}
-                      </button>
                     </div>
                   )}
                 </div>
@@ -1148,24 +1168,24 @@ export default function TeamPage() {
                   </div>
 
                   {/* Admin Actions */}
-                  {userRoles.isTeamAdmin && !invite.usedAt && (
+                  {userRoles.isTeamAdmin && (
                     <div className="flex flex-wrap gap-2 pl-[52px]">
-                      {!isExpired(invite.expiresAt) && (
+                      <button
+                        onClick={() => handleResendInvite(invite.id)}
+                        disabled={resending === invite.id}
+                        className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50 min-h-[44px]"
+                      >
+                        {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
+                      </button>
+                      {!invite.usedAt && (
                         <button
-                          onClick={() => handleResendInvite(invite.id)}
-                          disabled={resending === invite.id}
-                          className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50 min-h-[44px]"
+                          onClick={() => handleRevokeInvite(invite.id)}
+                          disabled={revoking === invite.id}
+                          className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50 min-h-[44px]"
                         >
-                          {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
+                          {revoking === invite.id ? t('teamInvites.actions.revoking') : t('teamInvites.actions.revoke')}
                         </button>
                       )}
-                      <button
-                        onClick={() => handleRevokeInvite(invite.id)}
-                        disabled={revoking === invite.id}
-                        className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50 min-h-[44px]"
-                      >
-                        {revoking === invite.id ? t('teamInvites.actions.revoking') : t('teamInvites.actions.revoke')}
-                      </button>
                     </div>
                   )}
                 </div>

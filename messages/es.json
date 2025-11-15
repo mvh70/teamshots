@@ -564,8 +564,13 @@
       "stats": {
         "teamMembers": "Miembros del Equipo",
         "photosGenerated": "Fotos Generadas",
-        "activeTemplates": "Plantillas Activas",
-        "creditsUsed": "Créditos Usados"
+        "activeTemplates": "Estilos de Foto Activos",
+        "unlockPhotoStyles": "Desbloquear estilos de foto",
+        "creditsUsed": "Créditos Usados",
+        "credits": "Créditos",
+        "creditsUnit": "créditos",
+        "generationsAvailable": "{count, plural, =0 {Sin generaciones} =1 {generación} other {generaciones}} disponibles",
+        "buyMore": "Comprar más créditos"
       },
       "recentActivity": {
         "title": "Actividad Reciente",
@@ -1491,6 +1496,7 @@
       "actions": {
         "resend": "Reenviar",
         "resending": "Reenviando...",
+        "resendSuccess": "Invitación reenviada exitosamente",
         "revoke": "Revocar",
         "revoking": "Revocando..."
       },

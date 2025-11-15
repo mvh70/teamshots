@@ -79,19 +79,19 @@ export default function WaitlistForm() {
           {/* Risk Reduction Elements */}
           <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-600 mt-4">
             <div className="flex items-center">
-              <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 mr-2 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {t('guarantee')}
             </div>
             <div className="flex items-center">
-              <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 mr-2 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
               {t('secure')}
             </div>
             <div className="flex items-center">
-              <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 mr-2 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {t('noSpam')}
@@ -103,7 +103,7 @@ export default function WaitlistForm() {
           <div
             className={`mt-6 p-4 rounded-lg text-center ${
               status === 'success' 
-                ? 'bg-green-50 text-green-800 border border-green-200' 
+                ? 'bg-brand-secondary-light text-brand-secondary-text-light border border-brand-secondary-lighter' 
                 : 'bg-red-50 text-red-800 border border-red-200'
             }`}
           >
@@ -124,7 +124,7 @@ export default function WaitlistForm() {
 
         <div className="mt-6 flex justify-center">
           <div className="inline-flex items-center bg-brand-primary-light text-brand-primary px-4 py-2 rounded-full">
-            <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+            <span className="w-2 h-2 bg-brand-secondary rounded-full mr-2 animate-pulse"></span>
             {t('joinedBadge')}
           </div>
         </div>

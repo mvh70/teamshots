@@ -21,10 +21,10 @@ export default function SubscriptionStatusBanner({ title, subtitle, statusLabel 
         badge: 'bg-amber-100 text-amber-800',
       }
     : {
-        bg: 'bg-gradient-to-r from-emerald-50 to-teal-50',
-        border: 'border-emerald-200',
-        subtitle: 'text-emerald-800/80',
-        badge: 'bg-emerald-100 text-emerald-800',
+        bg: 'bg-gradient-to-r from-brand-secondary-light to-brand-secondary-light',
+        border: 'border-brand-secondary-lighter',
+        subtitle: 'text-brand-secondary-text-light/80',
+        badge: 'bg-brand-secondary-lighter text-brand-secondary-text-light',
       }
 
   return (

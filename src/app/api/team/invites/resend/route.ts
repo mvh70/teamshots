@@ -41,12 +41,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User is not part of a team' }, { status: 400 })
     }
 
-    // Find the invite
+    // Find the invite (allow both unused and used invites to be resent)
     const invite = await prisma.teamInvite.findFirst({
       where: {
         id,
-        teamId: user.person.team.id,
-        usedAt: null // Only resend unused invites
+        teamId: user.person.team.id
       },
       select: {
         id: true,
@@ -64,12 +63,20 @@ export async function POST(request: NextRequest) {
     })
 
     if (!invite) {
-      return NextResponse.json({ error: 'Invite not found or already used' }, { status: 404 })
+      return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
     }
 
-    // Check if invite is expired
-    if (invite.expiresAt < new Date()) {
-      return NextResponse.json({ error: 'Cannot resend expired invite' }, { status: 400 })
+    // If invite is expired, extend expiration date by 24 hours
+    const now = new Date()
+    let expiresAt = invite.expiresAt
+    if (invite.expiresAt < now) {
+      expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours from now
+      
+      // Update the invite expiration date
+      await prisma.teamInvite.update({
+        where: { id: invite.id },
+        data: { expiresAt }
+      })
     }
 
     // Send email with invite link

@@ -131,13 +131,13 @@ export default function SampleGallery() {
 
   return (
     <>
-      <section className="py-16 bg-white">
+      <section className="py-20 lg:py-32 bg-bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
               {t('title')}
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-text-body max-w-3xl mx-auto leading-relaxed">
               {t('subtitle')}
             </p>
           </div>
@@ -147,17 +147,19 @@ export default function SampleGallery() {
             cols={{ mobile: 1, tablet: 2, desktop: 3 }}
             gap="lg"
           >
-            {SAMPLE_PHOTOS.map((photo) => (
+            {SAMPLE_PHOTOS.map((photo, index) => (
               <div
                 key={photo.id}
                 className="gallery-image"
               >
                 <div 
-                  className="relative bg-gray-100 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
+                  className={`group relative bg-bg-gray-50 rounded-2xl overflow-hidden shadow-depth-lg hover:shadow-depth-2xl transition-all duration-500 hover:-translate-y-2 ${
+                    index === 1 ? 'lg:mt-8' : '' // Stagger middle item on desktop
+                  }`}
                 >
                   {/* Interactive Before/After Slider */}
                   <div 
-                    className="relative aspect-square bg-gray-100 overflow-hidden cursor-ew-resize"
+                    className="relative aspect-square bg-bg-gray-50 overflow-hidden cursor-ew-resize"
                     onMouseMove={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const x = e.clientX - rect.left;
@@ -197,34 +199,34 @@ export default function SampleGallery() {
                     <button
                       onMouseDown={(e) => onMouseDown(photo.id, e)}
                       onTouchStart={(e) => onTouchStart(photo.id, e)}
-                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white shadow-lg border-2 border-gray-300 flex items-center justify-center text-xs hover:shadow-xl transition-shadow"
+                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-bg-white shadow-depth-lg border-2 border-brand-primary/30 flex items-center justify-center text-sm hover:shadow-depth-xl hover:scale-110 transition-all duration-300 active:scale-95 z-20"
                       style={{ left: `${sliderPositions[photo.id] || 50}%` }}
                       aria-label="Drag slider"
                     >
-                      ⇆
+                      <span className="text-brand-primary font-bold">⇄</span>
                     </button>
 
                     {/* Dynamic Labels based on slider position (right = Before, left = After) */}
-                    <div className="pointer-events-none">
+                    <div className="pointer-events-none z-10">
                       {(sliderPositions[photo.id] || 50) > 50 ? (
-                        <div className="absolute top-3 left-3 bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+                        <div className="absolute top-4 left-4 bg-brand-cta text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-depth-md border-2 border-white/30">
                           {t('before')}
                         </div>
                       ) : (
-                        <div className="absolute top-3 right-3 bg-green-500 text-white px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+                        <div className="absolute top-4 right-4 bg-brand-secondary text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-depth-md border-2 border-white/30">
                           {t('after')}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Attribution */}
+                  {/* Attribution with Enhanced Styling */}
                   {photo.attribution && (
-                    <div className="p-4 bg-white">
-                      <p className="text-sm font-semibold text-gray-900">
+                    <div className="p-5 bg-bg-white group-hover:bg-bg-gray-50 transition-colors duration-300">
+                      <p className="text-base font-bold text-text-dark font-display">
                         {photo.attribution.name}
                       </p>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-sm text-text-body mt-1">
                         {photo.attribution.role} • {photo.attribution.team}
                       </p>
                     </div>
@@ -234,8 +236,8 @@ export default function SampleGallery() {
             ))}
           </Grid>
 
-          {/* CTA Button */}
-          <div className="text-center mt-12">
+          {/* CTA Button with Enhanced Styling */}
+          <div className="text-center mt-16">
             <Link
               href="/auth/signup"
               onClick={() =>
@@ -244,13 +246,13 @@ export default function SampleGallery() {
                   action: 'signup',
                 })
               }
-              className="bg-brand-cta text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-brand-cta-hover transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center bg-brand-cta text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-brand-cta-hover transition-all duration-300 shadow-depth-xl hover:shadow-depth-2xl transform hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2"
             >
               {tHero('getStarted')}
             </Link>
             {/* Subtext reinforcing free offer below CTA */}
             <div className="mt-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-text-body">
                 {tHero('freeCtaSubtext')}
               </p>
             </div>

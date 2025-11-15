@@ -132,7 +132,7 @@ export default function CreditCostDisplay({
                 <span className="text-sm text-blue-700">
                   {t('yourBalance', { default: 'Your balance' })}:
                 </span>
-                <span className={`text-sm font-bold ${hasEnoughCredits ? 'text-green-700' : 'text-red-600'}`}>
+                <span className={`text-sm font-bold ${hasEnoughCredits ? 'text-brand-secondary-text' : 'text-red-600'}`}>
                   {credits} {t('credits', { default: 'credits' })}
                 </span>
               </div>

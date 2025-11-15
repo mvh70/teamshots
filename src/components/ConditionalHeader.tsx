@@ -29,8 +29,8 @@ export default function ConditionalHeader() {
   }
 
   return (
-    <header className="border-b bg-white shadow-sm sticky top-0 z-50">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header className="border-b border-brand-primary-lighter bg-bg-white/95 backdrop-blur-sm shadow-depth-sm sticky top-0 z-50">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 lg:h-20 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center" aria-label={BRAND_CONFIG.name}>
@@ -40,30 +40,30 @@ export default function ConditionalHeader() {
               alt={BRAND_CONFIG.name}
               width={120}
               height={32}
-              className="h-8 w-auto"
+              className="h-8 lg:h-10 w-auto"
               style={{ width: 'auto' }}
             />
           </Link>
         </div>
 
         {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center gap-6">
+        <div className="hidden lg:flex items-center gap-8">
           <Link 
             href="/" 
-            className="text-gray-700 hover:text-gray-900 transition-colors duration-200 font-medium"
+            className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
           >
             {t('home')}
           </Link>
           <Link 
             href="/pricing" 
-            className="text-gray-700 hover:text-gray-900 transition-colors duration-200 font-medium"
+            className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
           >
             {t('pricing')}
           </Link>
           <LanguageSwitcher />
           <Link
             href={session ? "/app/dashboard" : "/auth/signin"}
-            className="text-gray-700 hover:text-gray-900 transition-colors duration-200 font-medium"
+            className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
           >
             {session ? t('dashboard') : t('signin')}
           </Link>
@@ -76,7 +76,7 @@ export default function ConditionalHeader() {
                 viewport: 'desktop',
               })
             }
-            className="px-4 py-2 bg-brand-cta text-white rounded-lg hover:bg-brand-cta-hover transition-colors duration-200 font-semibold shadow-sm hover:shadow-md"
+            className="px-6 py-3 bg-brand-cta text-white rounded-xl hover:bg-brand-cta-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2"
           >
             {t('getStarted')}
           </Link>
@@ -85,16 +85,16 @@ export default function ConditionalHeader() {
         {/* Mobile Menu Button */}
         <button
           onClick={toggleMobileMenu}
-          className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="lg:hidden p-2 rounded-xl hover:bg-brand-primary-light transition-colors duration-300"
           aria-label="Toggle menu"
           aria-expanded={mobileMenuOpen}
         >
           {mobileMenuOpen ? (
-            <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 text-text-body" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 text-text-body" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           )}
@@ -103,19 +103,19 @@ export default function ConditionalHeader() {
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t bg-white">
+        <div className="lg:hidden border-t border-brand-primary-lighter bg-bg-white">
           <div className="px-4 py-4 space-y-4">
             <Link 
               href="/"
               onClick={toggleMobileMenu}
-              className="block text-gray-700 hover:text-gray-900 transition-colors duration-200 font-medium py-2"
+              className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
             >
               {t('home')}
             </Link>
             <Link 
               href="/pricing"
               onClick={toggleMobileMenu}
-              className="block text-gray-700 hover:text-gray-900 transition-colors duration-200 font-medium py-2"
+              className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
             >
               {t('pricing')}
             </Link>
@@ -125,7 +125,7 @@ export default function ConditionalHeader() {
             <Link
               href={session ? "/app/dashboard" : "/auth/signin"}
               onClick={toggleMobileMenu}
-              className="block text-gray-700 hover:text-gray-900 transition-colors duration-200 font-medium py-2"
+              className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
             >
               {session ? t('dashboard') : t('signin')}
             </Link>
@@ -139,7 +139,7 @@ export default function ConditionalHeader() {
                   viewport: 'mobile',
                 })
               }}
-              className="block w-full text-center px-4 py-2 bg-brand-cta text-white rounded-lg hover:bg-brand-cta-hover transition-colors duration-200 font-semibold shadow-sm"
+              className="block w-full text-center px-6 py-3 bg-brand-cta text-white rounded-xl hover:bg-brand-cta-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2"
             >
               {t('getStarted')}
             </Link>

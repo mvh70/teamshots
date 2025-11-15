@@ -58,16 +58,20 @@ export async function GET() {
 
     stats.photosGenerated = generationsCount
 
-    // Get active templates (contexts) count
+    // Get active photo styles (contexts) count
+    // In team mode: only count team contexts (teamId matches)
+    // In personal mode: only count personal contexts (userId matches, teamId is null)
     const contextsCount = await prisma.context.count({
-      where: {
-        OR: [
-          // Personal contexts
-          { userId: session.user.id },
-          // Team contexts (if user is part of a team)
-          ...(teamId ? [{ teamId }] : [])
-        ]
-      }
+      where: teamId
+        ? {
+            // Team mode: only team contexts
+            teamId: teamId
+          }
+        : {
+            // Personal mode: only personal contexts
+            userId: session.user.id,
+            teamId: null
+          }
     })
 
     stats.activeTemplates = contextsCount

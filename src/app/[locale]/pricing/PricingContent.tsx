@@ -42,37 +42,41 @@ export default function PricingContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-16">
+    <div className="min-h-screen bg-bg-gray-50 py-20 lg:py-32 relative grain-texture">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
             {t('title')}
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-text-body max-w-3xl mx-auto leading-relaxed">
             {t('subtitle')}
           </p>
           
           {/* Monthly/Yearly Toggle */}
-          <div className="flex items-center justify-center mb-8">
-            <div className="bg-gray-100 p-1 rounded-lg inline-flex">
+          <div className="flex items-center justify-center mt-10 mb-8">
+            <div className="relative bg-bg-white p-1.5 rounded-2xl inline-flex shadow-depth-lg border-2 border-brand-primary-lighter hover:border-brand-primary transition-all duration-300">
               <button
                 onClick={() => setIsYearly(false)}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`relative px-8 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 z-10 ${
                   !isYearly
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-brand-primary text-white shadow-depth-md scale-105'
+                    : 'text-text-body hover:text-brand-primary active:scale-95'
                 }`}
+                aria-pressed={!isYearly}
+                aria-label={t('monthly')}
               >
                 {t('monthly')}
               </button>
               <button
                 onClick={() => setIsYearly(true)}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`relative px-8 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 z-10 ${
                   isYearly
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-brand-primary text-white shadow-depth-md scale-105'
+                    : 'text-text-body hover:text-brand-primary active:scale-95'
                 }`}
+                aria-pressed={isYearly}
+                aria-label={t('yearly')}
               >
                 {t('yearly')}
               </button>
@@ -81,7 +85,7 @@ export default function PricingContent() {
         </div>
 
         {/* Pricing Cards (using shared component) */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
+        <div className="grid md:grid-cols-3 gap-8 lg:gap-10 mb-16 overflow-visible">
           <PricingCard
             {...proPlan}
             isYearly={isYearly}
@@ -107,16 +111,16 @@ export default function PricingContent() {
 
         {/* FAQ Section */}
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-8">
+          <h2 className="text-3xl lg:text-4xl font-display font-bold text-center mb-12 text-text-dark">
             {t('faq.title')}
           </h2>
           <div className="space-y-6">
             {['freeGen', 'howCreditsWork', 'topUp', 'satisfaction'].map((faqKey) => (
-              <div key={faqKey} className="bg-white rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-2">
+              <div key={faqKey} className="bg-bg-white rounded-2xl p-6 lg:p-8 shadow-depth-md hover:shadow-depth-lg transition-all duration-300">
+                <h3 className="text-lg lg:text-xl font-bold mb-3 text-text-dark font-display">
                   {t(`faq.questions.${faqKey}.question`)}
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-base lg:text-lg text-text-body leading-relaxed">
                   {t(`faq.questions.${faqKey}.answer`)}
                 </p>
               </div>

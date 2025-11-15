@@ -64,7 +64,7 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
         </p>
 
         <div className="mt-4 relative group">
-          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600 rounded-2xl p-1 shadow-2xl">
+          <div className="relative overflow-hidden bg-gradient-to-br from-brand-secondary via-brand-secondary to-brand-secondary-hover rounded-2xl p-1 shadow-2xl">
             <div className="bg-white/95 backdrop-blur-sm rounded-xl px-5 py-4">
               <div className="flex items-center gap-4">
                 <div className="flex flex-col">
@@ -97,13 +97,13 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
           return (
             <>
               <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-brand-secondary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 <span className="text-gray-700"><strong>{photos}</strong> {t('photoGenerations', { defaultMessage: 'photo generations' })}</span>
               </li>
               <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-brand-secondary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 <span className="text-gray-700">{regenerationText}</span>

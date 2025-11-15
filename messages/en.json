@@ -414,7 +414,7 @@
       "freeBadge": "Includes 1 free test generation in a predefined style",
       "title": "Create your account",
       "welcome": "Create your account",
-      "welcomeSubtitle": "Built for teams and startup founders. Join in seconds. No photoshoot, no photographer, no vendor management-just professional team photos.",
+      "welcomeSubtitle": "Built for teams and startup founders. Join in seconds. No photoshoot, no photographer, no vendor management. Just professional team photos.",
       "benefit1": "Generate professional headshots in 60 seconds",
       "benefit2": "Credits never expire. Use them whenever.",
       "benefit3": "Perfect for remote teams and new hires",
@@ -563,8 +563,13 @@
       "stats": {
         "teamMembers": "Team members",
         "photosGenerated": "Photos generated",
-        "activeTemplates": "Active templates",
-        "creditsUsed": "Credits used"
+        "activeTemplates": "Active photo styles",
+        "unlockPhotoStyles": "Unlock photo styles",
+        "creditsUsed": "Credits used",
+        "credits": "Credits",
+        "creditsUnit": "credits",
+        "generationsAvailable": "{count, plural, =0 {No generations} =1 {generation} other {generations}} available",
+        "buyMore": "Buy more credits"
       },
       "recentActivity": {
         "title": "Recent activity",
@@ -1491,6 +1496,7 @@
       "actions": {
         "resend": "Resend",
         "resending": "Resending...",
+        "resendSuccess": "Invite resent successfully",
         "revoke": "Revoke",
         "revoking": "Revoking..."
       },

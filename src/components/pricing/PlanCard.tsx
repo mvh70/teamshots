@@ -82,7 +82,7 @@ export default function PlanCard({
           <span className="text-4xl font-bold text-gray-900">{displayPrice}</span>
           <span className="text-gray-600 whitespace-nowrap text-sm leading-none">{displayPeriod}</span>
           {displaySavings && (
-            <span className="ml-3 relative inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg">
+            <span className="ml-3 relative inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-lg">
               {displaySavings}
             </span>
           )}
@@ -104,7 +104,7 @@ export default function PlanCard({
       <ul className="space-y-3 mb-8 flex-grow">
         {(t.raw(`plans.${id}.features`) as string[]).map((feature: string) => (
           <li key={feature} className="flex items-start gap-3 text-gray-700">
-            <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-brand-secondary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
             <span>{feature}</span>

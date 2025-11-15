@@ -6,7 +6,22 @@ import Image from 'next/image';
 import ConditionalHeader from '@/components/ConditionalHeader';
 import { BRAND_CONFIG } from '@/config/brand';
 import { auth } from '@/auth';
+import { Playfair_Display, Inter } from 'next/font/google';
 import '../globals.css';
+
+const displayFont = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+  weight: ['400', '700', '900'],
+});
+
+const bodyFont = Inter({
+  subsets: ['latin'],
+  variable: '--font-body',
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+});
 
 type Props = {
   children: React.ReactNode;
@@ -37,6 +52,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <NextIntlClientProvider messages={messages}>
+      <div className={`${displayFont.variable} ${bodyFont.variable} font-body`}>
           {/* Conditional header that only shows on non-app routes */}
           <ConditionalHeader />
           {children}
@@ -76,6 +92,7 @@ export default async function LocaleLayout({ children, params }: Props) {
               </div>
             </footer>
           )}
+      </div>
     </NextIntlClientProvider>
   );
 }

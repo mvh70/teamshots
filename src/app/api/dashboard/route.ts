@@ -153,20 +153,19 @@ export async function GET() {
               }
             }
       }),
-      // Get active templates (contexts) count
+      // Get active photo styles (contexts) count
+      // In team mode: only count team contexts (teamId matches)
+      // In personal mode: only count personal contexts (userId matches, teamId is null)
       prisma.context.count({
         where: teamId
           ? {
-              OR: [
-                // Personal contexts
-                { userId: session.user.id },
-                // Team contexts
-                { teamId }
-              ]
+              // Team mode: only team contexts
+              teamId: teamId
             }
           : {
-              // When no team, use simple condition (no OR needed)
-              userId: session.user.id
+              // Personal mode: only personal contexts
+              userId: session.user.id,
+              teamId: null
             }
       }),
       // Get credits used from generations

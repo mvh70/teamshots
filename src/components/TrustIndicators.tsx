@@ -16,7 +16,7 @@ export default function TrustIndicators() {
   const TRUST_BADGES: TrustBadge[] = [
     {
       icon: (
-        <svg className="w-12 h-12 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-8 h-8 lg:w-10 lg:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
@@ -25,7 +25,7 @@ export default function TrustIndicators() {
     },
     {
       icon: (
-        <svg className="w-12 h-12 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-8 h-8 lg:w-10 lg:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z" />
         </svg>
       ),
@@ -34,7 +34,7 @@ export default function TrustIndicators() {
     },
     {
       icon: (
-        <svg className="w-12 h-12 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-8 h-8 lg:w-10 lg:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
@@ -44,13 +44,13 @@ export default function TrustIndicators() {
   ];
 
   return (
-    <section className="py-12 bg-gray-50">
+    <section className="py-20 lg:py-32 bg-bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">
+        <div className="text-center mb-16">
+          <h3 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
             {t('title')}
           </h3>
-          <p className="text-gray-600 text-lg">
+          <p className="text-xl text-text-body max-w-3xl mx-auto leading-relaxed">
             {t('subtitle')}
           </p>
         </div>
@@ -59,15 +59,17 @@ export default function TrustIndicators() {
           {TRUST_BADGES.map((badge, index) => (
             <div
               key={index}
-              className="bg-white rounded-xl p-8 text-center shadow-md hover:shadow-lg transition-all duration-300 border-2 border-gray-100 hover:border-brand-primary/20"
+              className="group bg-bg-white rounded-3xl p-8 lg:p-10 text-center shadow-depth-md hover:shadow-depth-xl transition-all duration-500 border-2 border-transparent hover:border-brand-primary-lighter hover:-translate-y-2"
             >
-              <div className="w-16 h-16 bg-brand-primary-light rounded-lg flex items-center justify-center mb-4">
-                {badge.icon}
+              <div className="w-16 h-16 lg:w-20 lg:h-20 bg-brand-primary-light rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-primary group-hover:scale-110 transition-all duration-500 shadow-depth-sm group-hover:shadow-depth-md">
+                <div className="text-brand-primary group-hover:text-white transition-colors duration-500">
+                  {badge.icon}
+                </div>
               </div>
-              <h4 className="font-bold text-gray-900 mb-3 text-lg">
+              <h4 className="font-bold text-text-dark mb-4 text-xl lg:text-2xl font-display">
                 {badge.title}
               </h4>
-              <p className="text-base text-gray-600 leading-relaxed">
+              <p className="text-base lg:text-lg text-text-body leading-relaxed">
                 {badge.description}
               </p>
             </div>

@@ -56,15 +56,17 @@ export function OnbordaCard({
       // Only complete if we haven't already completed this tour
       const hasCompleted = localStorage.getItem(`onboarding-${onbordaCurrentTour}-seen`) === 'true'
       if (!hasCompleted) {
-        completeTour(onbordaCurrentTour)
+        // Fire and forget - don't await to avoid blocking UI
+        completeTour(onbordaCurrentTour).catch(console.error)
       }
     }
   }, [isOnbordaVisible, onbordaCurrentTour, completeTour])
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isLast) {
       if (onbordaCurrentTour) {
-        completeTour(onbordaCurrentTour)
+        // Fire and forget - don't await to avoid blocking UI
+        completeTour(onbordaCurrentTour).catch(console.error)
       }
       closeOnborda()
       return
@@ -73,9 +75,10 @@ export function OnbordaCard({
     nextStep()
   }
 
-  const handleGoToPhotoStyles = () => {
+  const handleGoToPhotoStyles = async () => {
     if (onbordaCurrentTour) {
-      completeTour(onbordaCurrentTour)
+      // Fire and forget - don't await to avoid blocking UI
+      completeTour(onbordaCurrentTour).catch(console.error)
     }
     closeOnborda()
     router.push('/app/styles/personal')
@@ -97,18 +100,20 @@ export function OnbordaCard({
     closeOnborda()
   }
 
-  const handleTest = () => {
+  const handleTest = async () => {
     if (onbordaCurrentTour) {
-      completeTour(onbordaCurrentTour)
+      // Fire and forget - don't await to avoid blocking UI
+      completeTour(onbordaCurrentTour).catch(console.error)
     }
     closeOnborda()
     router.push('/app/generate/start')
   }
 
-  const handleInvite = () => {
+  const handleInvite = async () => {
     console.log('OnbordaCard: handleInvite called', { onbordaCurrentTour })
     if (onbordaCurrentTour) {
-      completeTour(onbordaCurrentTour)
+      // Fire and forget - don't await to avoid blocking UI
+      completeTour(onbordaCurrentTour).catch(console.error)
     }
     closeOnborda()
     // Set pending tour for invite team tour using both state and sessionStorage

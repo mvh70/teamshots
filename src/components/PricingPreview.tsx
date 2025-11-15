@@ -42,36 +42,40 @@ export default function PricingPreview() {
   }
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-20 lg:py-32 bg-bg-gray-50 relative grain-texture">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
             {t('title')}
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-text-body max-w-3xl mx-auto leading-relaxed">
             {t('subtitle')}
           </p>
           
           {/* Monthly/Yearly Toggle */}
-          <div className="flex items-center justify-center mb-8">
-            <div className="bg-gray-100 p-1 rounded-lg inline-flex">
+          <div className="flex items-center justify-center mt-10 mb-8">
+            <div className="relative bg-bg-white p-1.5 rounded-2xl inline-flex shadow-depth-lg border-2 border-brand-primary-lighter hover:border-brand-primary transition-all duration-300">
               <button
                 onClick={() => setIsYearly(false)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`relative px-8 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 z-10 ${
                   !isYearly
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-brand-primary text-white shadow-depth-md scale-105'
+                    : 'text-text-body hover:text-brand-primary active:scale-95'
                 }`}
+                aria-pressed={!isYearly}
+                aria-label={t('monthly')}
               >
                 {t('monthly')}
               </button>
               <button
                 onClick={() => setIsYearly(true)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`relative px-8 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 z-10 ${
                   isYearly
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-brand-primary text-white shadow-depth-md scale-105'
+                    : 'text-text-body hover:text-brand-primary active:scale-95'
                 }`}
+                aria-pressed={isYearly}
+                aria-label={t('yearly')}
               >
                 {t('yearly')}
               </button>
@@ -80,7 +84,7 @@ export default function PricingPreview() {
         </div>
 
         {/* Pricing Cards (shared) */}
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-8 lg:gap-10 overflow-visible">
           <PricingCard
             {...proPlan}
             isYearly={isYearly}
