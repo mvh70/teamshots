@@ -100,13 +100,16 @@ export default function DashboardPage() {
   // Onboarding state
   const { context: onboardingContext } = useOnboardingState()
   const [onboardingStep, setOnboardingStep] = useState(1)
-  const hasCompletedMainOnboarding = localStorage.getItem('onboarding-main-onboarding-seen') === 'true'
+  const [hasCompletedMainOnboarding, setHasCompletedMainOnboarding] = useState(false)
   const shouldShowOnboarding = !hasCompletedMainOnboarding && onboardingContext._loaded
 
   // Onboarding handlers
   const handleStartAction = () => {
     // Mark onboarding as complete
-    localStorage.setItem('onboarding-main-onboarding-seen', 'true')
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('onboarding-main-onboarding-seen', 'true')
+      setHasCompletedMainOnboarding(true)
+    }
     
     // Navigate based on plan type and segment
     const segment = onboardingContext.onboardingSegment || 'individual'
@@ -127,6 +130,14 @@ export default function DashboardPage() {
       router.push('/app/generate/start')
     }
   }
+
+  // Read onboarding completion status from localStorage (client-side only)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const completed = localStorage.getItem('onboarding-main-onboarding-seen') === 'true'
+      setHasCompletedMainOnboarding(completed)
+    }
+  }, [])
 
   // Check for success parameter in URL
   useEffect(() => {
@@ -546,8 +557,11 @@ export default function DashboardPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  localStorage.setItem('onboarding-main-onboarding-seen', 'true')
-                  window.location.reload() // Refresh to hide onboarding
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('onboarding-main-onboarding-seen', 'true')
+                    setHasCompletedMainOnboarding(true)
+                    window.location.reload() // Refresh to hide onboarding
+                  }
                 }}
                 className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
               >

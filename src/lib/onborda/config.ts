@@ -73,40 +73,127 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
   const getSegmentSpecificContent = (step: ContentStep, segment: SegmentType | undefined = 'individual') => {
     const segmentContent = {
       'welcome-content': {
-        organizer: 'Welcome to TeamShotsPro! Transform your team\'s casual selfies into polished professional headshots in under 60 seconds.\n\nJoin thousands of HR teams and founders who\'ve elevated their company\'s professional presence.',
-        individual: 'Welcome to TeamShotsPro! Transform your casual selfie into polished professional headshots in under 60 seconds.\n\nJoin thousands of professionals who\'ve upgraded their LinkedIn, portfolios, and personal brand.',
-        invited: 'Welcome to TeamShotsPro! Your team is creating consistent professional photos, and you\'re part of it.\n\nUpload your selfie to match your team\'s professional style and get your headshots in under 60 seconds.'
+        // Translations are used instead - see translation keys below
+        // organizer/individual/invited handled via translation keys
       },
       'transformation-content': {
-        organizer: 'See the transformation: Watch as we turn everyday selfies into professional headshots that command attention.\n\nTeams using our service see 40% higher engagement on company profiles. Here\'s a pro tip: Use natural lighting and frame from the chest up for best results.',
-        individual: 'See the transformation: Watch as we turn your casual selfie into a professional headshot that stands out.\n\nPerfect for LinkedIn, portfolios, and professional networking. Here\'s a pro tip: Use natural lighting and frame from the chest up for best results.',
-        invited: 'See the transformation: Watch as we turn your selfie into a professional headshot that matches your team\'s style.\n\nYour photos will be consistent with your team while showcasing your unique professional presence.'
+        // Translations are used instead - see translation keys below
+        // organizer/individual/invited handled via translation keys
       },
       'how-it-works-content': {
-        organizer: 'How it works:\n\n1. Set your team\'s brand style\n2. Invite your team members\n3. Team members upload selfies and customize (e.g., wardrobe colors)\n4. Wait for the magic to happen\n\nYour entire team gets consistent, professional photos that match your brand.',
-        individual: 'How it works:\n\n1. Upload your selfie\n2. Set your style\n3. Let the magic happen\n\nChoose backgrounds, clothing, expressions, and branding.',
-        invited: 'How it works:\n\n1. Upload your selfie\n2. Customize your photo (e.g., wardrobe colors)\n3. Wait for the magic to happen\n\nProfessional headshots ready in under 60 seconds.'
+        // Translations are used instead - see translation keys below
+        // organizer/individual/invited handled via translation keys
       },
       'first-action-content': {
-        organizer: 'Ready to set your brand style?\n\nStart by setting your on-brand photo style. Define backgrounds, clothing, expressions, and branding that match your company.',
-        'organizer-free': 'Ready to test it out?\n\nOn the free plan, your team\'s photo style is locked in. Send an invite to yourself to test it out and see how it works!',
-        individual: 'Ready to begin your transformation?\n\nLet\'s start by uploading your first selfie. Fully customize your photo style to match your brand. Get your professional photos in under 60 seconds.',
-        'individual-free': 'Ready to begin your transformation?\n\nLet\'s start by uploading your first selfie. The free plan includes a fixed professional style to test the service. Get your professional photos in under 60 seconds.',
-        invited: 'Ready to join your team?\n\nUpload your selfie now and get professional headshots that match your team\'s style. Over 4,000 professional photos generated this week.'
+        // Translations are used instead - see translation keys below
+        // organizer/organizer-free/individual/individual-free/invited handled via translation keys
       }
     }
 
-    // Handle organizer with free plan check
+    // Handle welcome-content with translations
+    if (step === 'welcome-content') {
+      if (segment === 'organizer') {
+        return t('dashboard.onboarding.welcomeContent.organizer')
+      }
+      if (segment === 'individual') {
+        return t('dashboard.onboarding.welcomeContent.individual')
+      }
+      if (segment === 'invited') {
+        return t('dashboard.onboarding.welcomeContent.invited')
+      }
+    }
+
+    // Handle transformation-content with translations
+    if (step === 'transformation-content') {
+      if (segment === 'organizer') {
+        return t('dashboard.onboarding.transformationContent.organizer')
+      }
+      if (segment === 'individual') {
+        return t('dashboard.onboarding.transformationContent.individual')
+      }
+      if (segment === 'invited') {
+        return t('dashboard.onboarding.transformationContent.invited')
+      }
+    }
+
+    // Handle organizer with free plan check - use translations
     if (step === 'first-action-content' && segment === 'organizer' && context?.isFreePlan) {
-      return segmentContent[step]?.['organizer-free'] || segmentContent[step]?.organizer || ''
+      return t('dashboard.onboarding.firstAction.organizer.free.description')
     }
 
-    // Handle individual with free plan check
+    // Handle organizer paid plan - use translations
+    if (step === 'first-action-content' && segment === 'organizer') {
+      return t('dashboard.onboarding.firstAction.organizer.paid.description')
+    }
+
+    // Handle individual with free plan check - use translations
     if (step === 'first-action-content' && segment === 'individual' && context?.isFreePlan) {
-      return segmentContent[step]?.['individual-free'] || segmentContent[step]?.individual || ''
+      return t('dashboard.onboarding.firstAction.individual.free.description')
     }
 
-    return (segmentContent[step] as Record<string, string>)?.[segment] || segmentContent[step]?.individual || ''
+    // Handle individual paid plan - use translations
+    if (step === 'first-action-content' && segment === 'individual') {
+      return t('dashboard.onboarding.firstAction.individual.paid.description')
+    }
+
+    // Handle invited first-action-content - use translations
+    if (step === 'first-action-content' && segment === 'invited') {
+      return t('dashboard.onboarding.firstAction.invited.description')
+    }
+
+    // Handle how-it-works-content with translations
+    if (step === 'how-it-works-content') {
+      if (segment === 'organizer') {
+        const step1 = t('dashboard.onboarding.howItWorks.organizer.step1.title')
+        const step2 = t('dashboard.onboarding.howItWorks.organizer.step2.title')
+        const step3 = t('dashboard.onboarding.howItWorks.organizer.step3.title')
+        const step4 = t('dashboard.onboarding.howItWorks.organizer.step4.title')
+        const step4Desc = t('dashboard.onboarding.howItWorks.organizer.step4.description')
+        return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n2. ${step2}\n3. ${step3}\n4. ${step4}\n\n${step4Desc}.`
+      }
+      if (segment === 'individual') {
+        const step1 = t('dashboard.onboarding.howItWorks.individual.step1.title')
+        const step2 = t('dashboard.onboarding.howItWorks.individual.step2.title')
+        const step3 = t('dashboard.onboarding.howItWorks.individual.step3.title')
+        const step2Desc = t('dashboard.onboarding.howItWorks.individual.step2.description')
+        return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n2. ${step2}\n3. ${step3}\n\n${step2Desc}.`
+      }
+      if (segment === 'invited') {
+        const step1 = t('dashboard.onboarding.howItWorks.invited.step1.title')
+        const step2 = t('dashboard.onboarding.howItWorks.invited.step2.title')
+        const step3 = t('dashboard.onboarding.howItWorks.invited.step3.title')
+        const step3Desc = t('dashboard.onboarding.howItWorks.invited.step3.description')
+        return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n2. ${step2}\n3. ${step3}\n\n${step3Desc}.`
+      }
+    }
+
+    // Fallback for other cases (e.g., invited segment)
+    const stepContent = segmentContent[step] as Record<string, string> | undefined
+    if (stepContent && segment && stepContent[segment]) {
+      return stepContent[segment]
+    }
+    // Final fallback
+    if (stepContent && 'individual' in stepContent) {
+      return stepContent.individual
+    }
+    return ''
+  }
+
+  // Helper to get first action title with translations
+  const getFirstActionTitle = (segment: SegmentType | undefined = 'individual') => {
+    if (segment === 'organizer' && context?.isFreePlan) {
+      return t('dashboard.onboarding.firstAction.organizer.free.title')
+    }
+    if (segment === 'organizer') {
+      return t('dashboard.onboarding.firstAction.organizer.paid.title')
+    }
+    if (segment === 'individual' && context?.isFreePlan) {
+      return t('dashboard.onboarding.firstAction.individual.free.title')
+    }
+    if (segment === 'individual') {
+      return t('dashboard.onboarding.firstAction.individual.paid.title')
+    }
+    return 'Ready to get started?'
   }
 
   return {
@@ -117,21 +204,21 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
       steps: [
         {
           selector: '#welcome-section',
-          title: 'Professional photos in 60 seconds',
+          title: t('onboarding.tours.mainOnboarding.welcomeTitle'),
           content: getSegmentSpecificContent('welcome-content', context?.onboardingSegment),
           side: 'bottom',
           pointerPadding: 40,
         },
         {
           selector: '#how-it-works',
-          title: 'How it works',
+          title: t('dashboard.onboarding.howItWorks.title'),
           content: getSegmentSpecificContent('how-it-works-content', context?.onboardingSegment),
           side: 'bottom',
           pointerPadding: 40,
         },
         {
           selector: '#first-action',
-          title: 'Ready to get started?',
+          title: getFirstActionTitle(context?.onboardingSegment),
           content: getSegmentSpecificContent('first-action-content', context?.onboardingSegment),
           side: 'bottom',
           pointerPadding: 40,
@@ -599,15 +686,15 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
       steps: [
         {
           selector: '[data-onborda="credits-info"]',
-          title: 'Not thrilled with your photo?',
-          content: 'No worries. You get free do-overs with every generation. Check here to see how many tries you have left.',
+          title: t('onboarding.tours.generationDetailTour.creditsInfoTitle1'),
+          content: t('onboarding.tours.generationDetailTour.creditsInfoContent1'),
           side: 'top',
           pointerPadding: 20,
         },
         {
           selector: '[data-onborda="credits-info"]',
-          title: 'Your photo, your way',
-          content: 'Love it? Download it ↓. Want another shot? Regenerate it ↻. Changed your mind? Delete it 🗑️. You\'re in control.',
+          title: t('onboarding.tours.generationDetailTour.creditsInfoTitle2'),
+          content: t('onboarding.tours.generationDetailTour.creditsInfoContent2'),
           side: 'top',
           pointerPadding: 20,
         },

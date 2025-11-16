@@ -626,11 +626,21 @@
         "daysAgo": "{count} day{count, plural, one {} other {s}} ago"
       },
       "onboarding": {
+        "welcomeContent": {
+          "organizer": "Welcome to TeamShotsPro! Transform your team's casual selfies into polished professional headshots in under 60 seconds.\n\nJoin thousands of HR teams and founders who've elevated their company's professional presence.",
+          "individual": "Welcome to TeamShotsPro! Transform your casual selfie into polished professional headshots in under 60 seconds.\n\nJoin thousands of professionals who've upgraded their LinkedIn, portfolios, and personal brand.",
+          "invited": "Welcome to TeamShotsPro! Your team is creating consistent professional photos, and you're part of it.\n\nUpload your selfie to match your team's professional style and get your headshots in under 60 seconds."
+        },
+        "transformationContent": {
+          "organizer": "See the transformation: Watch as we turn everyday selfies into professional headshots that command attention.\n\nTeams using our service see 40% higher engagement on company profiles. Here's a pro tip: Use natural lighting and frame from the chest up for best results.",
+          "individual": "See the transformation: Watch as we turn your casual selfie into a professional headshot that stands out.\n\nPerfect for LinkedIn, portfolios, and professional networking. Here's a pro tip: Use natural lighting and frame from the chest up for best results.",
+          "invited": "See the transformation: Watch as we turn your selfie into a professional headshot that matches your team's style.\n\nYour photos will be consistent with your team while showcasing your unique professional presence."
+        },
         "howItWorks": {
           "title": "How it works",
           "organizer": {
             "step1": {
-              "title": "Set your team&apos;s brand style",
+              "title": "Set your team's brand style",
               "description": "Define backgrounds, clothing, expressions, and branding that match your company"
             },
             "step2": {
@@ -674,14 +684,14 @@
               "descriptionFree": "Professional headshots ready in under 60 seconds. The free plan uses a fixed professional style to test the service.",
               "descriptionPaid": "Professional headshots ready in under 60 seconds. Fully customize your style to match your brand."
             },
-            "note": "That&apos;s it! No photo shoots, no scheduling, no hassle."
+            "note": "That's it! No photo shoots, no scheduling, no hassle."
           }
         },
         "firstAction": {
           "organizer": {
             "free": {
               "title": "Ready to test it out?",
-              "description": "On the free plan, your team&apos;s photo style is locked in. Send an invite to yourself to test it out and see how it works!",
+              "description": "On the free plan, your team's photo style is locked in. Send an invite to yourself to test it out and see how it works!",
               "button": "Go to Team Page"
             },
             "paid": {
@@ -693,14 +703,18 @@
           "individual": {
             "free": {
               "title": "Ready to begin your transformation?",
-              "description": "Let&apos;s start by uploading your first selfie. The free plan includes a fixed professional style to test the service. Get your professional photos in under 60 seconds.",
+              "description": "Let's start by uploading your first selfie. The free plan includes a fixed professional style to test the service. Get your professional photos in under 60 seconds.",
               "button": "Start Creating Professional Photos"
             },
             "paid": {
               "title": "Ready to begin your transformation?",
-              "description": "Let&apos;s start by uploading your first selfie. Fully customize your photo style to match your brand. Get your professional photos in under 60 seconds.",
+              "description": "Let's start by uploading your first selfie. Fully customize your photo style to match your brand. Get your professional photos in under 60 seconds.",
               "button": "Start Creating Professional Photos"
             }
+          },
+          "invited": {
+            "title": "Ready to join your team?",
+            "description": "Upload your selfie now and get professional headshots that match your team's style. Over 4,000 professional photos generated this week."
           }
         },
         "navigation": {
@@ -1031,6 +1045,10 @@
           "downloadContent": "Download your professional headshot in high resolution. Perfect for LinkedIn, your website, business cards, and more.",
           "creditsTitle": "Generation cost and regenerations",
           "creditsContent": "This shows the cost of the generation (10 credits) and how many free regenerations you have left. Use regenerations to perfect your results without spending more credits.",
+          "creditsInfoTitle1": "Not thrilled with your photo?",
+          "creditsInfoContent1": "No worries. You get free do-overs with every generation. Check here to see how many tries you have left.",
+          "creditsInfoTitle2": "Your photo, your way",
+          "creditsInfoContent2": "Love it? Download it ↓. Want another shot? Regenerate it ↻. Changed your mind? Delete it 🗑️. You're in control.",
           "manageTitle": "Manage your generation",
           "manageContent": "Download your photo in high resolution, regenerate for free using the same settings, or delete if you no longer need it. This also shows the generation cost (10 credits) and how many free regenerations you have left."
         }

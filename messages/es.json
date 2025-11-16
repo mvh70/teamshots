@@ -627,6 +627,16 @@
         "daysAgo": "hace {count} día{count, plural, one {} other {s}}"
       },
       "onboarding": {
+        "welcomeContent": {
+          "organizer": "¡Bienvenido a TeamShotsPro! Transforma las selfies casuales de tu equipo en retratos profesionales pulidos en menos de 60 segundos.\n\nÚnete a miles de equipos de RRHH y fundadores que han elevado la presencia profesional de su empresa.",
+          "individual": "¡Bienvenido a TeamShotsPro! Transforma tu selfie casual en retratos profesionales pulidos en menos de 60 segundos.\n\nÚnete a miles de profesionales que han mejorado su LinkedIn, portafolios y marca personal.",
+          "invited": "¡Bienvenido a TeamShotsPro! Tu equipo está creando fotos profesionales consistentes, y tú eres parte de ello.\n\nSube tu selfie para que coincida con el estilo profesional de tu equipo y obtén tus retratos en menos de 60 segundos."
+        },
+        "transformationContent": {
+          "organizer": "Ve la transformación: Observa cómo convertimos selfies cotidianas en retratos profesionales que captan atención.\n\nLos equipos que usan nuestro servicio ven un 40% más de engagement en perfiles de empresa. Aquí va un consejo profesional: Usa iluminación natural y enmarca desde el pecho hacia arriba para mejores resultados.",
+          "individual": "Ve la transformación: Observa cómo convertimos tu selfie casual en un retrato profesional que destaca.\n\nPerfecto para LinkedIn, portafolios y networking profesional. Aquí va un consejo profesional: Usa iluminación natural y enmarca desde el pecho hacia arriba para mejores resultados.",
+          "invited": "Ve la transformación: Observa cómo convertimos tu selfie en un retrato profesional que coincide con el estilo de tu equipo.\n\nTus fotos serán consistentes con tu equipo mientras muestran tu presencia profesional única."
+        },
         "howItWorks": {
           "title": "Cómo funciona",
           "organizer": {
@@ -702,6 +712,10 @@
               "description": "Comencemos subiendo tu primer selfie. Personaliza completamente tu estilo de foto para que coincida con tu marca. Obtén tus fotos profesionales en menos de 60 segundos.",
               "button": "Comenzar a crear fotos profesionales"
             }
+          },
+          "invited": {
+            "title": "¿Listo para unirte a tu equipo?",
+            "description": "Sube tu selfie ahora y obtén retratos profesionales que coincidan con el estilo de tu equipo. Más de 4,000 fotos profesionales generadas esta semana."
           }
         },
         "navigation": {
@@ -1032,6 +1046,10 @@
           "downloadContent": "Descarga tu foto profesional en alta resolución. Perfecta para LinkedIn, tu sitio web, tarjetas de presentación y más.",
           "creditsTitle": "Costo de generación y regeneraciones",
           "creditsContent": "Esto muestra el costo de la generación (10 créditos) y cuántas regeneraciones gratuitas te quedan. Usa las regeneraciones para perfeccionar tus resultados sin gastar más créditos.",
+          "creditsInfoTitle1": "¿No te gusta tu foto?",
+          "creditsInfoContent1": "No te preocupes. Obtienes regeneraciones gratuitas con cada generación. Revisa aquí para ver cuántos intentos te quedan.",
+          "creditsInfoTitle2": "Tu foto, tu manera",
+          "creditsInfoContent2": "¿Te encanta? Descárgala ↓. ¿Quieres otra? Regenera ↻. ¿Cambiaste de opinión? Elimínala 🗑️. Tú tienes el control.",
           "manageTitle": "Gestiona tu generación",
           "manageContent": "Descarga tu foto en alta resolución, regenera gratis usando la misma configuración o elimina si ya no la necesitas. Esto también muestra el costo de la generación (10 créditos) y cuántas regeneraciones gratuitas te quedan."
         }
