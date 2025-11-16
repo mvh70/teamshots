@@ -106,6 +106,7 @@ type RedisClientLike = {
   expire: (key: string, seconds: number) => Promise<number>
   set: (key: string, value: string, mode?: string, duration?: number) => Promise<unknown>
   ttl: (key: string) => Promise<number>
+  del: (key: string) => Promise<number>
 }
 
 async function getRedisTyped(): globalThis.Promise<RedisClientLike | null> {
@@ -129,6 +130,17 @@ export async function blockIp(ip: string, seconds: number): Promise<void> {
   // NX EX <seconds>
   try {
     await redis.set(key, '1', 'EX', seconds)
+  } catch {
+    // noop
+  }
+}
+
+export async function unblockIp(ip: string): Promise<void> {
+  const redis = await getRedisTyped()
+  if (!redis) return
+  const key = `rate_block:${ip}`
+  try {
+    await redis.del(key)
   } catch {
     // noop
   }

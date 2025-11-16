@@ -41,6 +41,130 @@
   }
 }
 
+/* Prevent onborda highlight from affecting layout */
+.onborda-highlight,
+[class*="onborda-highlight"],
+[class*="highlight"] {
+  position: absolute !important;
+  pointer-events: none !important;
+  will-change: transform !important;
+  contain: layout style paint !important;
+}
+
+/* Prevent highlight from triggering layout shifts */
+[data-onborda-highlight] {
+  position: absolute !important;
+  pointer-events: none !important;
+  will-change: transform !important;
+  contain: layout style paint !important;
+}
+
+/* Prevent highlight from affecting GenerationCard slider */
+[data-onborda="action-buttons"],
+[data-onborda="regenerations-info"] {
+  position: relative !important;
+  isolation: isolate !important;
+}
+
+/* Ensure highlight overlay doesn't affect parent layout */
+[data-onborda-highlight] ~ *,
+* [data-onborda-highlight] {
+  position: relative !important;
+}
+
+/* Prevent GenerationCard from being affected by highlight overlays */
+.rounded-lg.border.border-gray-200 {
+  contain: layout style !important;
+  isolation: isolate !important;
+}
+
+/* Ensure slider container is isolated */
+.aspect-square {
+  contain: layout style paint !important;
+  isolation: isolate !important;
+}
+
+/* Onborda card positioning overrides for generation-detail tour */
+/* Position generation-detail tour cards in corners */
+[data-onborda-tour="generation-detail"][data-onborda-step="0"] {
+  /* Step 1: Position in bottom left corner */
+  position: absolute !important;
+  bottom: 75px !important;
+  left: -175px !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+}
+
+[data-onborda-tour="generation-detail"][data-onborda-step="1"] {
+  /* Step 2: Position in bottom right corner */
+  position: absolute !important;
+  bottom: 75px !important;
+  right: -250px !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+}
+
+/* Move pointer to bottom left/right of cards for generation-detail tour */
+/* Step 1: Pointer on left side */
+[data-onborda-tour="generation-detail"][data-onborda-step="0"] .onborda-pointer,
+[data-onborda-tour="generation-detail"][data-onborda-step="0"] .onborda-arrow,
+[data-onborda-tour="generation-detail"][data-onborda-step="0"] [data-onborda-pointer],
+[data-onborda-tour="generation-detail"][data-onborda-step="0"]::before,
+[data-onborda-tour="generation-detail"][data-onborda-step="0"]::after,
+[data-onborda-tour="generation-detail"][data-onborda-step="0"] svg,
+[data-onborda-tour="generation-detail"][data-onborda-step="0"] [style*="position: absolute"],
+[data-onborda-tour="generation-detail"][data-onborda-step="0"] [style*="position:absolute"] {
+  /* Position at bottom left of card */
+  left: 20px !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: -8px !important;
+
+  /* Force down-facing pointer shape using borders */
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 8px solid transparent !important;
+  border-right: 8px solid transparent !important;
+  border-top: 8px solid #6366F1 !important; /* Brand primary color */
+  border-bottom: none !important;
+  background: none !important;
+
+  /* Override any transforms */
+  transform: none !important;
+  margin: 0 !important;
+}
+
+/* Step 2: Pointer on right side */
+[data-onborda-tour="generation-detail"][data-onborda-step="1"] .onborda-pointer,
+[data-onborda-tour="generation-detail"][data-onborda-step="1"] .onborda-arrow,
+[data-onborda-tour="generation-detail"][data-onborda-step="1"] [data-onborda-pointer],
+[data-onborda-tour="generation-detail"][data-onborda-step="1"]::before,
+[data-onborda-tour="generation-detail"][data-onborda-step="1"]::after,
+[data-onborda-tour="generation-detail"][data-onborda-step="1"] svg,
+[data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position: absolute"],
+[data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position:absolute"] {
+  /* Position at bottom right of card */
+  left: auto !important;
+  right: 20px !important;
+  top: auto !important;
+  bottom: -8px !important;
+
+  /* Force down-facing pointer shape using borders */
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 8px solid transparent !important;
+  border-right: 8px solid transparent !important;
+  border-top: 8px solid #6366F1 !important; /* Brand primary color */
+  border-bottom: none !important;
+  background: none !important;
+
+  /* Override any transforms */
+  transform: none !important;
+  margin: 0 !important;
+}
+
 body {
   background: var(--background);
   color: var(--text-body);

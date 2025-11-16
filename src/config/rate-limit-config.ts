@@ -21,16 +21,18 @@ export const RATE_LIMITS = {
   passwordReset: { limit: 3, window: 3600 }, // 3 attempts per hour
 
   // Team invite public endpoints
-  inviteValidate: { limit: 100, window: 1 }, // 15 validations per minute per IP
-  inviteAccept: { limit: 10, window: 60 }, // 10 accepts per minute per IP
+  // Increased significantly to allow legitimate users uploading/deleting photos and navigating
+  inviteValidate: { limit: 1000, window: 60 }, // 1000 validations per minute per IP (very permissive for normal usage)
+  inviteAccept: { limit: 20, window: 60 }, // 20 accepts per minute per IP
 } as const
 
 export type RateLimitKey = keyof typeof RATE_LIMITS
 
 // Temporary IP block thresholds (sliding window) for sensitive public flows
 export const RATE_BLOCK = {
-  // If an IP hits 50 attempts within 5 minutes on invite flows, block 15 minutes
-  invite: { limit: 50, window: 300, blockSeconds: 900 },
+  // If an IP hits 2000 attempts within 5 minutes on invite flows, block 5 minutes (reduced from 15)
+  // Increased limit significantly and reduced block duration to prevent false positives during normal photo upload/delete workflows
+  invite: { limit: 2000, window: 300, blockSeconds: 300 },
 } as const
 
 export type RateBlockKey = keyof typeof RATE_BLOCK

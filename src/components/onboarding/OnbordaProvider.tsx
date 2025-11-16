@@ -1,11 +1,11 @@
 'use client'
 
 import { ReactNode, useRef, useEffect, useState } from 'react'
-import { OnbordaProvider as OnbordaProviderLib, Onborda } from 'onborda'
+import { OnbordaProvider as OnbordaProviderLib, Onborda, useOnborda } from 'onborda'
 import { createTranslatedTours, OnboardingContext } from '@/lib/onborda/config'
 import { OnbordaCard } from '@/components/onboarding/OnbordaCard'
 import { useTranslations } from 'next-intl'
-import { useOnboardingState } from '@/lib/onborda/hooks'
+import { useOnboardingState, useOnbordaTours } from '@/lib/onborda/hooks'
 
 interface OnbordaProviderProps {
   children: ReactNode
@@ -13,8 +13,9 @@ interface OnbordaProviderProps {
 
 // Helper function to generate tours with translations and firstName interpolation
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function generateTours(t: (key: string, values?: Record<string, any>) => string, context?: OnboardingContext) {
+function generateTours(t: (key: string, values?: Record<string, any>) => string, context?: OnboardingContext, isMobile = false) {
   const translatedTours = createTranslatedTours(t, context)
+  
   return Object.values(translatedTours).map(tour => ({
     tour: tour.name,
     steps: tour.steps.map((step, stepIndex) => {
@@ -59,25 +60,74 @@ function generateTours(t: (key: string, values?: Record<string, any>) => string,
         }
       }
 
+      // Adjust positioning for mobile on generation-detail tour
+      // Note: Step 1 (photo explanation) has been removed, so this is no longer needed
+      let adjustedSide = step.side
+      let adjustedPointerPadding = step.pointerPadding
+
       return {
         ...step,
         title: title || step.title,
         content: content || step.content,
         icon: null,
+        side: adjustedSide,
+        pointerPadding: adjustedPointerPadding,
       }
     }),
   }))
+}
+
+function TourStarter() {
+  const { pendingTour } = useOnbordaTours()
+  const onborda = useOnborda()
+
+  useEffect(() => {
+    console.log('[Tour Debug] TourStarter: Effect triggered', { 
+      pendingTour, 
+      onborda: !!onborda,
+      startOnborda: !!onborda?.startOnborda,
+      isOnbordaVisible: onborda?.isOnbordaVisible 
+    })
+    
+    if (pendingTour && onborda?.startOnborda && !onborda.isOnbordaVisible) {
+      console.log('[Tour Debug] TourStarter: Starting tour', { pendingTour, isOnbordaVisible: onborda.isOnbordaVisible })
+      // Start the tour using Onborda's API
+      setTimeout(() => {
+        console.log('[Tour Debug] TourStarter: Calling startOnborda', pendingTour)
+        onborda.startOnborda(pendingTour)
+      }, 500)
+    } else {
+      console.log('[Tour Debug] TourStarter: Not starting tour', { 
+        pendingTour, 
+        hasStartOnborda: !!onborda?.startOnborda, 
+        isOnbordaVisible: onborda?.isOnbordaVisible 
+      })
+    }
+  }, [pendingTour, onborda])
+
+  return null
 }
 
 export function OnbordaProvider({ children }: OnbordaProviderProps) {
   const t = useTranslations('app')
   const { context } = useOnboardingState()
   const [tours, setTours] = useState<ReturnType<typeof generateTours> | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Track mobile state reactively
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
   
   // Track context values to detect changes
   const contextRef = useRef<{ teamName?: string; firstName?: string; isFreePlan?: boolean }>({})
   
-  // Generate tours when context is loaded, using ref to prevent unnecessary regenerations
+  // Generate tours when context is loaded or mobile state changes, using ref to prevent unnecessary regenerations
   const toursRef = useRef<ReturnType<typeof generateTours> | null>(null)
   useEffect(() => {
     const teamNameChanged = context.teamName !== contextRef.current.teamName
@@ -87,21 +137,26 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
     // Regenerate tours if context is loaded and relevant values changed
     if (context._loaded && (teamNameChanged || firstNameChanged || isFreePlanChanged || !toursRef.current)) {
       contextRef.current = { teamName: context.teamName, firstName: context.firstName, isFreePlan: context.isFreePlan }
-      toursRef.current = generateTours(t, context)
+      toursRef.current = generateTours(t, context, isMobile)
       setTours(toursRef.current)
     } else if (!toursRef.current) {
       // Generate initial tours with current context (will use fallbacks if values not available)
-      toursRef.current = generateTours(t, context)
+      toursRef.current = generateTours(t, context, isMobile)
+      setTours(toursRef.current)
+    } else {
+      // Regenerate if mobile state changed (for responsive positioning)
+      toursRef.current = generateTours(t, context, isMobile)
       setTours(toursRef.current)
     }
-  }, [context._loaded, context.teamName, context.firstName, context.isFreePlan, context, t])
+  }, [context._loaded, context.teamName, context.firstName, context.isFreePlan, context, t, isMobile])
   
   // Use tours from ref if state is not ready yet
-  const finalTours = tours || toursRef.current || generateTours(t, context)
+  const finalTours = tours || toursRef.current || generateTours(t, context, isMobile)
 
   return (
     <OnbordaProviderLib>
       <Onborda steps={finalTours} cardComponent={OnbordaCard}>
+        <TourStarter />
         {children}
       </Onborda>
     </OnbordaProviderLib>

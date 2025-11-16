@@ -383,6 +383,10 @@ export default function InviteDashboardPage() {
       })
 
       if (response.ok) {
+        // Set pending tour flag for generation-detail tour
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('pending-tour', 'generation-detail')
+        }
         // Redirect to generations page to see the result
         router.push(`/invite-dashboard/${token}/generations`)
       } else {
@@ -1001,8 +1005,8 @@ export default function InviteDashboardPage() {
             </Panel>
           )}
 
-          {/* Sign up CTA */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:mt-6">
+          {/* Sign up CTA - Hidden on mobile */}
+          <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:mt-6">
             <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
               {t('signUpCta.title')}
             </h3>

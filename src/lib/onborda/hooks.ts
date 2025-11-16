@@ -186,10 +186,15 @@ export function useOnbordaTours() {
 
   // Start a specific tour
   const startTour = (tourName: string) => {
+    console.log('[Tour Debug] startTour called', { tourName })
     const tour = getTour(tourName, t, context)
+    console.log('[Tour Debug] Tour found?', { tourFound: !!tour, tourName })
     if (tour) {
+      console.log('[Tour Debug] Setting pendingTour', tourName)
       setPendingTour(tourName)
       trackTourStarted(tourName, context)
+    } else {
+      console.warn('[Tour Debug] Tour not found:', tourName)
     }
   }
 

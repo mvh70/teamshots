@@ -495,23 +495,23 @@ export const generationDetailTour: TourConfig = {
   name: 'generation-detail',
   description: 'Tour explaining how to interact with generated photos',
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-  steps: [
-    {
-      selector: '[data-onborda="generated-photo"]',
-      title: 'Your generated photo',
-      content: 'This is your generated professional headshot. You can see the transformation from your original selfie to this polished result.',
-      side: 'right',
-      pointerPadding: 20,
-    },
-    {
-      selector: '[data-onborda="credits-info"]',
-      title: 'Manage your generation',
-      content: 'Download your photo in high resolution, regenerate for free using the same settings, or delete if you no longer need it. This also shows the generation cost (10 credits) and how many free regenerations you have left.',
-      side: 'top',
-      pointerPadding: 20,
-    },
-  ]
+  triggerCondition: (_context) => false, // Deactivated - triggered manually from invite dashboard
+      steps: [
+        {
+          selector: '[data-onborda="regenerations-info"]',
+          title: 'Not thrilled with your photo?',
+          content: 'No worries. You get free do-overs with every generation. Check here to see how many tries you have left.',
+          side: 'top',
+          pointerPadding: 20,
+        },
+        {
+          selector: '[data-onborda="regenerations-info"]',
+          title: 'Your photo, your way',
+          content: 'Love it? Download it ↓. Want another shot? Regenerate it ↻. Changed your mind? Delete it 🗑️. You\'re in control.',
+          side: 'top',
+          pointerPadding: 20,
+        },
+      ]
 }
 
 /*
@@ -1232,22 +1232,20 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
       name: 'generation-detail',
       description: 'Tour explaining how to interact with generated photos',
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
+  triggerCondition: (_context) => false, // Deactivated - triggered manually from invite dashboard
       steps: [
         {
-          selector: '[data-onborda="generated-photo"]',
-          title: t('onboarding.tours.generationDetailTour.photoTitle'),
-          content: t('onboarding.tours.generationDetailTour.photoContent'),
-          side: 'right',
+          selector: '[data-onborda="credits-info"]',
+          title: 'Not thrilled with your photo?',
+          content: 'No worries. You get free do-overs with every generation. Check here to see how many tries you have left.',
+          side: 'bottom',
           pointerPadding: 20,
         },
         {
           selector: '[data-onborda="credits-info"]',
-          title: t('onboarding.tours.generationDetailTour.manageTitle', { default: 'Manage your generation' }),
-          content: t('onboarding.tours.generationDetailTour.manageContent', { 
-            default: 'Download your photo in high resolution, regenerate for free using the same settings, or delete if you no longer need it. This also shows the generation cost (10 credits) and how many free regenerations you have left.' 
-          }),
-          side: 'top',
+          title: 'Your photo, your way',
+          content: 'Love it? Download it ↓. Want another shot? Regenerate it ↻. Changed your mind? Delete it 🗑️. You\'re in control.',
+          side: 'bottom',
           pointerPadding: 20,
         },
       ]

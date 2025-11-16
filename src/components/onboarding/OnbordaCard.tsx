@@ -127,8 +127,26 @@ export function OnbordaCard({
 
   const hasCustomActions = extendedStep?.customActions && isLast
 
+  // Color the icons in content to match button colors
+  const displayContent = useMemo(() => {
+    if (!step?.content) return null
+    const content = typeof step.content === 'string' ? step.content : String(step.content)
+    // Download (↓): brand-primary (indigo)
+    // Regenerate (↻): brand-secondary (green)
+    // Delete (🗑️): red-600
+    return content
+      .replace(/↓/g, '<span style="color: #6366F1;">↓</span>')
+      .replace(/↻/g, '<span style="color: #10B981;">↻</span>')
+      .replace(/🗑️/g, '<span style="color: #DC2626;">🗑️</span>')
+      .replace(/\n/g, '<br />')
+  }, [step?.content])
+
   return (
-    <div className="w-[360px] sm:w-[420px] mx-4 sm:mx-0 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 p-5 space-y-4 text-gray-900">
+    <div
+      className="w-[360px] sm:w-[420px] mx-4 sm:mx-0 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 p-5 space-y-4 text-gray-900"
+      data-onborda-tour={onbordaCurrentTour}
+      data-onborda-step={currentStep}
+    >
       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500">
         <span>
           Step {currentStep + 1}
@@ -138,10 +156,11 @@ export function OnbordaCard({
       </div>
 
       {displayTitle ? <h3 className="text-lg font-semibold text-gray-900">{displayTitle}</h3> : null}
-      {step?.content && (
-        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-          {typeof step.content === 'string' ? step.content : String(step.content)}
-        </p>
+      {displayContent && (
+        <p 
+          className="text-sm text-gray-600 leading-relaxed whitespace-pre-line"
+          dangerouslySetInnerHTML={{ __html: displayContent }}
+        />
       )}
 
       {hasCustomActions ? (

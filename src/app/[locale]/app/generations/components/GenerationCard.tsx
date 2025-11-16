@@ -423,17 +423,17 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
           <div className="text-xs text-gray-500" id={`credits-info-${item.id}`}>
             {item.isOriginal && `${item.costCredits} credits`}
             {item.remainingRegenerations > 0 && (
-              <span className="ml-2 text-brand-secondary">
+              <span className="ml-2 text-brand-secondary" data-onborda="regenerations-info">
                 • {item.remainingRegenerations} regenerations left
               </span>
             )}
             {item.remainingRegenerations === 0 && (
-              <span className={item.isOriginal ? "ml-2 text-gray-400" : "text-gray-400"}>
+              <span className={item.isOriginal ? "ml-2 text-gray-400" : "text-gray-400"} data-onborda="regenerations-info">
                 {item.isOriginal ? '• No regenerations left' : 'Regenerated photo'}
               </span>
             )}
           </div>
-            <div className="flex items-center gap-1 relative">
+            <div className="flex items-center gap-1 relative" data-onborda="action-buttons">
             {isIncomplete ? (
               <span className="text-sm text-gray-500">Processing...</span>
             ) : (

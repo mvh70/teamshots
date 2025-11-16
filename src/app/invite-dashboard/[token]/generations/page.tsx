@@ -1,17 +1,90 @@
 'use client'
 
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useEffect } from 'react'
 import { PhotoIcon } from '@heroicons/react/24/outline'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import GenerationCard from '@/app/[locale]/app/generations/components/GenerationCard'
 import { useInvitedGenerations } from './useInvitedGenerations'
 import { GenerationGrid, ErrorBanner } from '@/components/ui'
+import { OnboardingLauncher } from '@/components/onboarding/OnboardingLauncher'
+import { useOnbordaTours } from '@/lib/onborda/hooks'
+import { useOnborda } from 'onborda'
 
 export default function GenerationsPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const token = params.token as string
   const { generations, loading, error } = useInvitedGenerations(token)
+  const { startTour, pendingTour } = useOnbordaTours()
+  const onborda = useOnborda()
+  
+  // Check for forceTour URL parameter
+  const forceTour = searchParams?.get('forceTour') === 'true'
+
+  // Trigger generation-detail tour after first generation is completed
+  useEffect(() => {
+    if (!loading && generations.length > 0) {
+      // Check if tour has been completed (persists across sessions via localStorage)
+      // Uses same key format as completeTour function: 'onboarding-{tourName}-seen'
+      const hasSeenTour = localStorage.getItem('onboarding-generation-detail-seen')
+      console.log('[Tour Debug] Checking tour conditions:', {
+        loading,
+        generationsCount: generations.length,
+        hasSeenTour,
+        forceTour,
+        pendingTour: sessionStorage.getItem('pending-tour')
+      })
+      
+      // If forceTour is true, always start the tour (ignore seen flag)
+      if (forceTour) {
+        // Clear the seen flag to allow tour to start
+        localStorage.removeItem('onboarding-generation-detail-seen')
+        sessionStorage.removeItem('pending-tour')
+        console.log('[Tour Debug] Starting tour (forced via URL parameter)')
+        // Start the tour after a delay to ensure DOM is ready
+        setTimeout(() => {
+          startTour('generation-detail')
+        }, 1500)
+        return
+      }
+      
+      // Normal flow: check if tour has been seen
+      if (!hasSeenTour) {
+        // Check if there's a pending tour from generation completion
+        const sessionPendingTour = sessionStorage.getItem('pending-tour')
+        if (sessionPendingTour === 'generation-detail') {
+          // Clear the pending tour flag
+          sessionStorage.removeItem('pending-tour')
+          console.log('[Tour Debug] Starting tour from pending flag')
+          // Start the tour after a delay to ensure DOM is ready
+          setTimeout(() => {
+            startTour('generation-detail')
+          }, 1500)
+        } else {
+          // If tour hasn't been seen and we have generations, start the tour
+          // This handles cases where user navigates directly to generations page
+          console.log('[Tour Debug] Starting tour (no pending flag)')
+          setTimeout(() => {
+            startTour('generation-detail')
+          }, 1500)
+        }
+      } else {
+        console.log('[Tour Debug] Tour already seen, skipping')
+      }
+    }
+  }, [loading, generations.length, startTour, forceTour])
+
+  // Directly start Onborda tour when pendingTour is set
+  useEffect(() => {
+    if (pendingTour === 'generation-detail' && onborda?.startOnborda && !onborda.isOnbordaVisible) {
+      console.log('[Tour Debug] GenerationsPage: Starting Onborda tour directly', { pendingTour })
+      setTimeout(() => {
+        onborda.startOnborda('generation-detail')
+      }, 2000)
+    }
+  }, [pendingTour, onborda])
 
   if (loading) {
     return (
@@ -26,6 +99,7 @@ export default function GenerationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <OnboardingLauncher />
       {/* Header */}
       <InviteDashboardHeader showBackToDashboard token={token} title="" />
 

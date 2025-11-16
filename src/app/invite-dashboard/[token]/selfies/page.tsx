@@ -87,14 +87,31 @@ export default function SelfiesPage() {
 
   // Only show continue button when coming from generation flow (not when just managing selfies)
   const [isInGenerationFlow, setIsInGenerationFlow] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const fromGeneration = sessionStorage.getItem('fromGeneration') === 'true'
       const openStartFlow = sessionStorage.getItem('openStartFlow') === 'true'
       // Only show continue button if explicitly in generation flow, not just when managing selfies
       setIsInGenerationFlow(fromGeneration || openStartFlow)
+      
+      // Detect mobile viewport
+      const checkMobile = () => {
+        setIsMobile(window.innerWidth < 768) // md breakpoint
+      }
+      checkMobile()
+      window.addEventListener('resize', checkMobile)
+      return () => window.removeEventListener('resize', checkMobile)
     }
   }, [])
+  
+  // Auto-open upload on mobile when in generation flow
+  useEffect(() => {
+    if (isMobile && isInGenerationFlow && !uploadKey && !isApproved) {
+      setUploadKey('inline')
+    }
+  }, [isMobile, isInGenerationFlow, uploadKey, isApproved])
 
   const handleContinue = () => {
     if (canContinue) {
@@ -168,22 +185,37 @@ export default function SelfiesPage() {
           }
         }
 
-        // If part of the generation/start-flow, immediately return to dashboard to continue
-        const fromGeneration = sessionStorage.getItem('fromGeneration')
-        if (fromGeneration === 'true' || uploadOnly) {
-          sessionStorage.setItem('pendingGeneration', 'true')
-          sessionStorage.removeItem('fromGeneration')
+        // Always stay on selfie selection page - user clicks Continue button to proceed
+        // Only navigate away if in upload-only mode
+        if (uploadOnly) {
             router.push(`/invite-dashboard/${token}`)
           return
         }
-        // Otherwise show success briefly and reset
+        // Show success briefly but keep upload window open for mobile in generation flow
         setIsApproved(true)
         await fetchSelfies()
+        // Clear the uploaded key immediately to prevent approval screen from showing again
+        // On mobile in generation flow, reset to 'inline' to keep upload window open
+        // Otherwise, clear completely
+        if (isMobile && isInGenerationFlow) {
+          // Reset to 'inline' immediately to keep upload window open but clear approval state
+          // Also reset forceCamera immediately to prevent camera from reopening
+          setUploadKey('inline')
+          setPreviewUrl(null)
+          setForceCamera(false)
+          // Clear approval state after showing success message
+          setTimeout(() => {
+            setIsApproved(false)
+          }, 1500)
+        } else {
+          // Reset completely after showing success message
           setTimeout(() => {
             setUploadKey('')
             setPreviewUrl(null)
             setIsApproved(false)
+            setForceCamera(false)
         }, 1500)
+        }
       } else {
         console.error('Failed to save selfie')
         setError('Failed to save selfie')
@@ -256,6 +288,42 @@ export default function SelfiesPage() {
 
       
 
+      {/* Approval Flow - Show above selfies on mobile */}
+      {uploadKey && uploadKey !== 'inline' && !isApproved && (
+        <div className="md:hidden bg-white border-b border-gray-200">
+          <div className="px-4 py-4">
+            <SelfieApproval
+              uploadedPhotoKey={uploadKey}
+              previewUrl={previewUrl || undefined}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onRetake={handleRetake}
+              onCancel={() => {
+                // Always return to selfie selection screen by clearing upload state
+                setUploadKey('')
+                setPreviewUrl(null)
+                setForceCamera(false)
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Success Message - Show above selfies on mobile */}
+      {isApproved && (
+        <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4">
+          <div className="text-center">
+            <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-brand-secondary/10 mb-3">
+              <svg className="h-5 w-5 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Selfie Approved!</h3>
+            <p className="text-xs text-gray-600">Your selfie has been saved successfully.</p>
+          </div>
+        </div>
+      )}
+
       {/* Mobile: Selfies section breaks out of padding container */}
       {!uploadOnly && (
         <>
@@ -288,7 +356,7 @@ export default function SelfiesPage() {
                 }))}
                 token={token}
                 allowDelete
-                showUploadTile={!uploadKey}
+                showUploadTile={!uploadKey && !(isMobile && isInGenerationFlow)}
                 onUploadClick={() => setUploadKey('inline')}
                 onAfterChange={handleSelectionChange}
                 onDeleted={async () => { 
@@ -306,7 +374,8 @@ export default function SelfiesPage() {
 
         <div className="space-y-6">
           {/* Upload Flow - show PhotoUpload when uploadKey is 'inline' */}
-          {uploadKey === 'inline' && !isApproved && (
+          {/* On mobile in generation flow, keep showing even after approval */}
+          {uploadKey === 'inline' && (!isApproved || (isMobile && isInGenerationFlow)) && (
             <div className="md:bg-white md:rounded-lg md:shadow-sm md:border md:border-gray-200 md:p-6 md:static fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-50 md:z-auto">
               <PhotoUpload
                 onUpload={onUploadWithToken}
@@ -316,9 +385,9 @@ export default function SelfiesPage() {
             </div>
           )}
 
-          {/* Validation Flow - show approval when there's an actual uploaded key */}
+          {/* Validation Flow - show approval when there's an actual uploaded key (Desktop only - mobile version is above) */}
           {uploadKey && uploadKey !== 'inline' && !isApproved && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <SelfieApproval
                 uploadedPhotoKey={uploadKey}
                 previewUrl={previewUrl || undefined}
@@ -335,9 +404,9 @@ export default function SelfiesPage() {
             </div>
           )}
 
-          {/* Success Message */}
+          {/* Success Message - Desktop only (mobile version is above selfies section) */}
           {isApproved && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="text-center">
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-brand-secondary/10 mb-4">
                   <svg className="h-6 w-6 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -385,7 +454,7 @@ export default function SelfiesPage() {
                     }))}
                     token={token}
                     allowDelete
-                    showUploadTile={!uploadKey}
+                    showUploadTile={!uploadKey && !(isMobile && isInGenerationFlow)}
                     onUploadClick={() => setUploadKey('inline')}
                     onAfterChange={handleSelectionChange}
                     onDeleted={async () => { 

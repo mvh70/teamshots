@@ -535,12 +535,38 @@ export default function PhotoStyleSettings({
 
   const visiblePhotoCategories = PHOTO_STYLE_CATEGORIES.filter(c => pkg.visibleCategories.includes(c.key))
   const visibleUserCategories = USER_STYLE_CATEGORIES.filter(c => pkg.visibleCategories.includes(c.key))
+  const allCategories = [...visiblePhotoCategories, ...visibleUserCategories]
+
+  // Separate categories into editable and predefined for mobile reordering
+  const editableCategories = allCategories.filter(cat => {
+    const status = getCategoryStatus(cat.key)
+    return status === 'user-choice'
+  })
+  
+  const predefinedCategories = allCategories.filter(cat => {
+    const status = getCategoryStatus(cat.key)
+    return status !== 'user-choice'
+  })
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Photo Style Section */}
-      <div className="space-y-4">
-        <div id="composition-settings-section" className="hidden md:block bg-gray-50 rounded-lg p-4">
+      {/* Mobile: Editable sections first, then predefined */}
+      <div className="md:hidden space-y-4">
+        {editableCategories.length > 0 && (
+          <CardGrid>
+            {editableCategories.map(renderCategoryCard)}
+          </CardGrid>
+        )}
+        {predefinedCategories.length > 0 && (
+          <CardGrid>
+            {predefinedCategories.map(renderCategoryCard)}
+          </CardGrid>
+        )}
+      </div>
+
+      {/* Desktop: Original order - Photo Style Section */}
+      <div className="hidden md:block space-y-4">
+        <div id="composition-settings-section" className="bg-gray-50 rounded-lg p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
@@ -569,9 +595,9 @@ export default function PhotoStyleSettings({
         </CardGrid>
       </div>
 
-      {/* User Style Section */}
-      <div className="space-y-4">
-        <div id="user-style-settings-section" className="hidden md:block bg-gray-50 rounded-lg p-4">
+      {/* Desktop: User Style Section */}
+      <div className="hidden md:block space-y-4">
+        <div id="user-style-settings-section" className="bg-gray-50 rounded-lg p-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             {t('sections.userStyle', { default: 'User Style Settings' })}
           </h3>
