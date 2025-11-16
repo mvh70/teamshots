@@ -27,6 +27,7 @@ export interface OnboardingContext {
   accountMode: 'individual' | 'pro' | 'team_member'
   language: 'en' | 'es'
   isFreePlan: boolean
+  onboardingSegment: 'organizer' | 'individual' | 'invited' // New: defines the user segment for onboarding
   _loaded?: boolean // Internal flag to track if context has been loaded from server
 }
 
@@ -34,7 +35,8 @@ export interface OnboardingContext {
 export const welcomeTour: TourConfig = {
   name: 'welcome',
   description: 'Initial welcome flow explaining TeamShotsPro for individual users',
-  triggerCondition: (context) => !context.isTeamAdmin,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#welcome-section',
@@ -58,7 +60,8 @@ export const welcomeTour: TourConfig = {
 export const teamAdminWelcomeTour: TourConfig = {
   name: 'team-admin-welcome',
   description: 'Welcome flow for team administrators',
-  triggerCondition: (context) => context.isTeamAdmin && !context.teamId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#welcome-section',
@@ -81,7 +84,8 @@ export const teamAdminWelcomeTour: TourConfig = {
 export const generationTour: TourConfig = {
   name: 'first-generation',
   description: 'Guided tour for first photo generation',
-  triggerCondition: undefined,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#upload-photo',
@@ -118,7 +122,8 @@ export const generationTour: TourConfig = {
 export const teamSetupTour: TourConfig = {
   name: 'team-setup',
   description: 'Guide for setting up a team',
-  triggerCondition: (context) => context.isTeamAdmin && !context.teamId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#team-create-btn',
@@ -148,7 +153,8 @@ export const teamSetupTour: TourConfig = {
 export const teamPhotoStyleSetupTour: TourConfig = {
   name: 'team-photo-style-setup',
   description: 'Guide for setting up team photo styles after team creation',
-  triggerCondition: (context) => Boolean(context.isTeamAdmin && context.teamId),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#sidebar-team-styles-nav',
@@ -164,7 +170,8 @@ export const teamPhotoStyleSetupTour: TourConfig = {
 export const teamPhotoStylesPageTour: TourConfig = {
   name: 'team-photo-styles-page',
   description: 'Explain team photo styles page for paid plans',
-  triggerCondition: (context) => Boolean(context.isTeamAdmin && context.teamId && !context.isFreePlan),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#team-photo-styles-heading',
@@ -187,7 +194,8 @@ export const teamPhotoStylesPageTour: TourConfig = {
 export const teamPhotoStylesFreeTour: TourConfig = {
   name: 'team-photo-styles-free',
   description: 'Explain team photo styles page for free plans',
-  triggerCondition: (context) => Boolean(context.isTeamAdmin && context.teamId && context.isFreePlan),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#team-photo-styles-heading',
@@ -260,7 +268,8 @@ export const teamPhotoStylesFreeTour: TourConfig = {
 export const personalPhotoStylesPageTour: TourConfig = {
   name: 'personal-photo-styles-page',
   description: 'Explain personal photo styles page for paid plans',
-  triggerCondition: (context) => Boolean(context.isRegularUser && !context.hasGeneratedPhotos && !context.isFreePlan),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#personal-photo-styles-heading',
@@ -283,7 +292,8 @@ export const personalPhotoStylesPageTour: TourConfig = {
 export const personalPhotoStylesFreeTour: TourConfig = {
   name: 'personal-photo-styles-free',
   description: 'Explain personal photo styles page for free plans',
-  triggerCondition: (context) => Boolean(context.isRegularUser && !context.hasGeneratedPhotos && context.isFreePlan),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#personal-photo-styles-heading',
@@ -355,7 +365,8 @@ export const personalPhotoStylesFreeTour: TourConfig = {
 export const photoStyleCreationTour: TourConfig = {
   name: 'photo-style-creation',
   description: 'Comprehensive guide through creating a new photo style',
-  triggerCondition: (context) => Boolean((context.isTeamAdmin && context.teamId) || context.isRegularUser) && !context.isFreePlan,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#style-name-input',
@@ -441,7 +452,8 @@ export const photoStyleCreationTour: TourConfig = {
 export const testGenerationTour: TourConfig = {
   name: 'test-generation',
   description: 'Encourage testing the service with first photo generation',
-  triggerCondition: (context) => Boolean(context.isTeamAdmin && context.teamId),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '#primary-generate-btn',
@@ -454,10 +466,12 @@ export const testGenerationTour: TourConfig = {
 }
 
 // Invite team members tour
+// DISABLED: Now using auto-opening invite modal instead of tour
 export const inviteTeamTour: TourConfig = {
   name: 'invite-team',
   description: 'Guide for inviting team members',
-  triggerCondition: (context) => Boolean(context.isTeamAdmin && context.teamId),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated - using modal instead
   steps: [
     {
       selector: '#team-free-plan-banner, #team-active-style',
@@ -480,7 +494,8 @@ export const inviteTeamTour: TourConfig = {
 export const generationDetailTour: TourConfig = {
   name: 'generation-detail',
   description: 'Tour explaining how to interact with generated photos',
-  triggerCondition: (context) => Boolean(context.hasGeneratedPhotos && (context.isRegularUser || context.isTeamAdmin)),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
   steps: [
     {
       selector: '[data-onborda="generated-photo"]',
@@ -499,8 +514,176 @@ export const generationDetailTour: TourConfig = {
   ]
 }
 
+/*
+Cialdini Principles Mapping for Main Onboarding Flow:
+
+1. RECIPROCITY: Give value first, get commitment back
+   - Screen 2: Provide before/after transformation demo without asking for anything
+   - Screen 2: Share professional photo tips and best practices upfront
+
+2. COMMITMENT & CONSISTENCY: Get small commitments, build on them
+   - Screen 4: First action (upload selfie) builds on understanding and excitement from previous screens
+
+3. SOCIAL PROOF: Show what others are doing
+   - Screen 1: "Join thousands of professionals who've already elevated their presence"
+   - Screen 4: "Over 4,000 professional photos generated this week"
+
+4. AUTHORITY: Demonstrate credibility and expertise
+   - Screen 1: Segment-specific positioning (HR teams, founders, professionals)
+   - Screen 2: "Teams using consistent professional photos see 40% higher engagement" (with credible source implication)
+   - Screen 3: Clear, simple process demonstrates expertise
+
+5. LIKING: Build rapport and connection
+   - Screen 1: Warm, welcoming tone with segment-specific messaging
+   - Screen 3: Simple, friendly explanation: "That's it! No photo shoots, no scheduling, no hassle."
+
+6. SCARCITY: Limited availability creates desire
+   - Screen 4: "Over 4,000 professional photos generated this week" (implied popularity/demand)
+
+7. UNITY: Shared identity and belonging
+   - Screen 1: Segment-specific messaging reinforces belonging (HR teams, professionals, team members)
+   - Screen 2: "Perfect for LinkedIn, portfolios, and professional networking" (shared professional goals)
+   - Reinforces belonging to professional community
+*/
+
+/*
+IMPLEMENTATION PLAN WITH MOBILE OPTIMIZATION:
+
+## Mobile-First Design Principles:
+- Touch targets: Minimum 44px height/width for interactive elements
+- Thumb zone: Place primary actions in bottom 1/3 of screen
+- One-handed use: Critical elements within 120px from bottom
+- Swipe gestures: Horizontal swipes for galleries, vertical for scrolling
+- Readable text: 16px minimum font size, 1.5x line height
+- Progressive disclosure: Show essential info first, details on demand
+- Landscape consideration: Test and optimize for both orientations
+
+## Components to Update:
+1. `src/components/onboarding/OnboardingLauncher.tsx`
+   - Update to trigger 'main-onboarding' tour instead of old welcome tours
+   - Add logic to check if user has seen main-onboarding
+   - MOBILE: Ensure tour positioning works on small screens
+
+2. `src/components/onboarding/OnbordaCard.tsx`
+   - Already supports customActions, should work with new tour
+   - May need updates for segment-specific button text/behavior
+   - MOBILE: Optimize card width (max 360px), ensure buttons are touch-friendly
+
+## New UI Components Needed (Mobile-Optimized):
+1. **Before/After Slider** (`src/components/onboarding/BeforeAfterSlider.tsx`)
+   - Touch-friendly slider with large drag handles
+   - Swipe gestures for smooth interaction
+   - Optimized image loading for mobile networks
+   - MOBILE: Full-width on mobile, centered on desktop
+
+2. **Role Selection Cards** (`src/components/onboarding/RoleSelection.tsx`)
+   - Large touch targets (minimum 44px)
+   - Clear visual hierarchy with icons
+   - MOBILE: Single column stack, swipe between options
+   - Should set user segment in context/state
+
+3. **Outcome Selection** (`src/components/onboarding/OutcomeSelection.tsx`)
+   - Card-based layout optimized for touch
+   - Radio button alternatives with clear selection states
+   - MOBILE: Vertical stack with ample spacing
+   - Should commit user to specific goal
+
+4. **Progress Indicator** (`src/components/onboarding/OnboardingProgress.tsx`)
+   - Shows "Step X of 5" with visual progress bar
+   - MOBILE: Compact design, positioned at top of tour card
+   - Clear visual feedback for step completion
+
+5. **Welcome Gallery** (`src/components/onboarding/WelcomeGallery.tsx`)
+   - Touch/swipe navigation between images
+   - Lazy loading for performance
+   - MOBILE: Full-width carousel, touch indicators
+   - Auto-rotating with pause on touch
+
+## Selectors to Add:
+- `#welcome-section` - Main dashboard welcome area (responsive layout)
+- `#role-selection` - Role selection component (touch-optimized)
+- `#wow-moment` - Before/after demo component (mobile-friendly)
+- `#outcome-selection` - Outcome selection component (stacked for mobile)
+- `#first-action` - Upload area or team creation area (large touch targets)
+
+## Pages to Update:
+1. **Dashboard/Home Page** (`src/app/[locale]/page.tsx`)
+   - Add role selection component with mobile-first layout
+   - Add outcome selection component with responsive cards
+   - Add before/after demo component with touch interactions
+   - Add progress indicator integrated into mobile layout
+   - Add welcome gallery with swipe navigation
+   - MOBILE: Single column layout, prioritize vertical scrolling
+
+## Tour Positioning (Mobile-Optimized):
+- Use `side: 'bottom'` for mobile to avoid keyboard interference
+- Larger `pointerPadding` on mobile (40px) for better visibility
+- Responsive card sizing: `w-[360px] sm:w-[420px]` for OnbordaCard
+
+## API Updates Needed:
+1. **Context API** (`src/app/api/onboarding/context/route.ts`)
+   - May need to return onboardingSegment in response
+   - Consider device type detection for mobile-specific behaviors
+
+## Database/Schema Updates:
+- Consider adding onboarding_segment to user profiles if needed for persistence
+- Potentially track mobile vs desktop completion rates
+
+## Mobile Optimization Implementation Status:
+✅ **Completed:**
+- OnbordaCard: Added `mx-4 sm:mx-0` for mobile margins, `min-h-[44px]` for touch targets
+- BeforeAfterSlider: Created touch-friendly component with swipe gestures and mobile-specific UI
+- RoleSelection: Built mobile-first component with large touch targets and responsive layout
+- Translation keys: Added EN/ES support for role selection component
+
+## Mobile-Specific Testing Requirements:
+- Test all 3 segments (organizer, individual, invited) on mobile
+- Test tour flow on various screen sizes (320px to 414px width)
+- Test touch interactions: swipes, taps, long presses
+- Test before/after slider with finger dragging
+- Test role/outcome selection with touch targets
+- Test in both portrait and landscape orientations
+- Test with slow network conditions (image loading)
+- Test keyboard avoidance on mobile browsers
+- Test with system font scaling enabled
+- Verify accessibility: screen reader support, high contrast mode
+*/
+
+// Main onboarding flow: 3-screen sequence applying Cialdini principles
+// Note: This is a template. The actual tour with segment-specific content is created in createTranslatedTours
+export const mainOnboardingTour: TourConfig = {
+  name: 'main-onboarding',
+  description: 'Comprehensive onboarding flow with wow moment and systematic influence principles',
+  triggerCondition: (context) => !context.hasGeneratedPhotos && (context._loaded ?? false),
+  steps: [
+    {
+      selector: '#welcome-section',
+      title: 'Professional photos in 60 seconds',
+      content: 'Welcome to TeamShotsPro! Transform your casual selfie into polished professional headshots in under 60 seconds.\n\nJoin thousands of professionals who\'ve upgraded their LinkedIn, portfolios, and personal brand.',
+      side: 'bottom',
+      pointerPadding: 40,
+    },
+    {
+      selector: '#how-it-works',
+      title: 'How it works',
+      content: 'How it works:\n\n1. Upload your selfie\n2. Choose your style preferences\n3. Get professional photos in under 60 seconds\n\nThat\'s it! No photo shoots, no scheduling, no hassle.',
+      side: 'bottom',
+      pointerPadding: 40,
+    },
+    {
+      selector: '#first-action',
+      title: 'Ready to get started?',
+      content: 'Ready to transform your photo?\n\nUpload your selfie now and get professional headshots in under 60 seconds. Over 4,000 professional photos generated this week.',
+      side: 'bottom',
+      pointerPadding: 40,
+      customActions: true,
+    },
+  ]
+}
+
 // Tour configurations registry
 export const tourConfigs: Record<string, TourConfig> = {
+  'main-onboarding': mainOnboardingTour,
   welcome: welcomeTour,
   'team-admin-welcome': teamAdminWelcomeTour,
   'first-generation': generationTour,
@@ -520,11 +703,84 @@ export const tourConfigs: Record<string, TourConfig> = {
 // Function to create tours with translations
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createTranslatedTours(t: (key: string, values?: Record<string, any>) => string, context?: OnboardingContext): Record<string, TourConfig> {
+  // Segment-specific content helpers
+  type ContentStep = 'welcome-content' | 'transformation-content' | 'how-it-works-content' | 'first-action-content'
+  type SegmentType = 'organizer' | 'individual' | 'invited'
+
+  const getSegmentSpecificContent = (step: ContentStep, segment: SegmentType | undefined = 'individual') => {
+    const segmentContent = {
+      'welcome-content': {
+        organizer: 'Welcome to TeamShotsPro! Transform your team\'s casual selfies into polished professional headshots in under 60 seconds.\n\nJoin thousands of HR teams and founders who\'ve elevated their company\'s professional presence.',
+        individual: 'Welcome to TeamShotsPro! Transform your casual selfie into polished professional headshots in under 60 seconds.\n\nJoin thousands of professionals who\'ve upgraded their LinkedIn, portfolios, and personal brand.',
+        invited: 'Welcome to TeamShotsPro! Your team is creating consistent professional photos, and you\'re part of it.\n\nUpload your selfie to match your team\'s professional style and get your headshots in under 60 seconds.'
+      },
+      'transformation-content': {
+        organizer: 'See the transformation: Watch as we turn everyday selfies into professional headshots that command attention.\n\nTeams using our service see 40% higher engagement on company profiles. Here\'s a pro tip: Use natural lighting and frame from the chest up for best results.',
+        individual: 'See the transformation: Watch as we turn your casual selfie into a professional headshot that stands out.\n\nPerfect for LinkedIn, portfolios, and professional networking. Here\'s a pro tip: Use natural lighting and frame from the chest up for best results.',
+        invited: 'See the transformation: Watch as we turn your selfie into a professional headshot that matches your team\'s style.\n\nYour photos will be consistent with your team while showcasing your unique professional presence.'
+      },
+      'how-it-works-content': {
+        organizer: 'How it works:\n\n1. Set your team\'s brand style\n2. Invite your team members\n3. Team members upload selfies and customize (e.g., wardrobe colors)\n4. Wait for the magic to happen\n\nYour entire team gets consistent, professional photos that match your brand.',
+        individual: 'How it works:\n\n1. Upload your selfie\n2. Set your style\n3. Let the magic happen\n\nChoose backgrounds, clothing, expressions, and branding.',
+        invited: 'How it works:\n\n1. Upload your selfie\n2. Customize your photo (e.g., wardrobe colors)\n3. Wait for the magic to happen\n\nProfessional headshots ready in under 60 seconds.'
+      },
+      'first-action-content': {
+        organizer: 'Ready to set your brand style?\n\nStart by setting your on-brand photo style. Define backgrounds, clothing, expressions, and branding that match your company.',
+        'organizer-free': 'Ready to test it out?\n\nOn the free plan, your team\'s photo style is locked in. Send an invite to yourself to test it out and see how it works!',
+        individual: 'Ready to begin your transformation?\n\nLet\'s start by uploading your first selfie. Fully customize your photo style to match your brand. Get your professional photos in under 60 seconds.',
+        'individual-free': 'Ready to begin your transformation?\n\nLet\'s start by uploading your first selfie. The free plan includes a fixed professional style to test the service. Get your professional photos in under 60 seconds.',
+        invited: 'Ready to join your team?\n\nUpload your selfie now and get professional headshots that match your team\'s style. Over 4,000 professional photos generated this week.'
+      }
+    }
+
+    // Handle organizer with free plan check
+    if (step === 'first-action-content' && segment === 'organizer' && context?.isFreePlan) {
+      return segmentContent[step]?.['organizer-free'] || segmentContent[step]?.organizer || ''
+    }
+
+    // Handle individual with free plan check
+    if (step === 'first-action-content' && segment === 'individual' && context?.isFreePlan) {
+      return segmentContent[step]?.['individual-free'] || segmentContent[step]?.individual || ''
+    }
+
+    return (segmentContent[step] as Record<string, string>)?.[segment] || segmentContent[step]?.individual || ''
+  }
+
   return {
+    'main-onboarding': {
+      name: 'main-onboarding',
+      description: 'Comprehensive onboarding flow with wow moment and systematic influence principles',
+      triggerCondition: (context) => !context.hasGeneratedPhotos && (context._loaded ?? false),
+      steps: [
+        {
+          selector: '#welcome-section',
+          title: 'Professional photos in 60 seconds',
+          content: getSegmentSpecificContent('welcome-content', context?.onboardingSegment),
+          side: 'bottom',
+          pointerPadding: 40,
+        },
+        {
+          selector: '#how-it-works',
+          title: 'How it works',
+          content: getSegmentSpecificContent('how-it-works-content', context?.onboardingSegment),
+          side: 'bottom',
+          pointerPadding: 40,
+        },
+        {
+          selector: '#first-action',
+          title: 'Ready to get started?',
+          content: getSegmentSpecificContent('first-action-content', context?.onboardingSegment),
+          side: 'bottom',
+          pointerPadding: 40,
+          customActions: true,
+        },
+      ]
+    },
     welcome: {
       name: 'welcome',
       description: 'Initial welcome flow explaining TeamShotsPro for individual users',
-      triggerCondition: (context) => !context.isTeamAdmin,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#welcome-section',
@@ -546,7 +802,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'team-admin-welcome': {
       name: 'team-admin-welcome',
       description: 'Welcome flow for team administrators',
-      triggerCondition: (context) => context.isTeamAdmin && !context.teamId,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#welcome-section',
@@ -567,7 +824,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'first-generation': {
       name: 'first-generation',
       description: 'Guided tour for first photo generation',
-      triggerCondition: undefined,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#upload-photo',
@@ -602,7 +860,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'team-setup': {
       name: 'team-setup',
       description: 'Guide for setting up a team',
-      triggerCondition: (context) => context.isTeamAdmin && !context.teamId,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#team-create-btn',
@@ -630,7 +889,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'team-photo-style-setup': {
       name: 'team-photo-style-setup',
       description: 'Guide for setting up team photo styles after team creation',
-      triggerCondition: (context) => Boolean(context.isTeamAdmin && context.teamId),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#sidebar-team-styles-nav',
@@ -644,7 +904,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'team-photo-styles-page': {
       name: 'team-photo-styles-page',
       description: 'Explain team photo styles page for paid plans',
-      triggerCondition: (context) => Boolean(context.isTeamAdmin && context.teamId && !context.isFreePlan),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#team-photo-styles-heading',
@@ -665,7 +926,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'team-photo-styles-free': {
       name: 'team-photo-styles-free',
       description: 'Explain team photo styles page for free plans',
-      triggerCondition: (context) => Boolean(context.isTeamAdmin && context.teamId && context.isFreePlan),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#team-photo-styles-heading',
@@ -736,7 +998,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'personal-photo-styles-page': {
       name: 'personal-photo-styles-page',
       description: 'Explain personal photo styles page for paid plans',
-      triggerCondition: (context) => Boolean(context.isRegularUser && !context.isFreePlan),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#personal-photo-styles-heading',
@@ -757,7 +1020,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'personal-photo-styles-free': {
       name: 'personal-photo-styles-free',
       description: 'Explain personal photo styles page for free plans',
-      triggerCondition: (context) => Boolean(context.isRegularUser && context.isFreePlan),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#personal-photo-styles-heading',
@@ -827,7 +1091,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'photo-style-creation': {
       name: 'photo-style-creation',
       description: 'Comprehensive guide through creating a new photo style',
-      triggerCondition: (context) => Boolean((context.isTeamAdmin && context.teamId) || context.isRegularUser) && !context.isFreePlan,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#style-name-input',
@@ -911,7 +1176,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'test-generation': {
       name: 'test-generation',
       description: 'Encourage testing the service with first photo generation',
-      triggerCondition: (context) => Boolean(context.isTeamAdmin && context.teamId),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#primary-generate-btn',
@@ -925,7 +1191,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'invite-team': {
       name: 'invite-team',
       description: 'Guide for inviting team members',
-      triggerCondition: (context) => Boolean(context.isTeamAdmin && context.teamId),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '#team-name-header',
@@ -964,7 +1231,8 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     'generation-detail': {
       name: 'generation-detail',
       description: 'Tour explaining how to interact with generated photos',
-      triggerCondition: (context) => Boolean(context.hasGeneratedPhotos && (context.isRegularUser || context.isTeamAdmin)),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  triggerCondition: (_context) => false, // Deactivated
       steps: [
         {
           selector: '[data-onborda="generated-photo"]',

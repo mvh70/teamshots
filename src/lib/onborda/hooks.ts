@@ -22,6 +22,7 @@ export function useOnboardingState() {
     accountMode: 'individual',
     language: 'en',
     isFreePlan: true,
+    onboardingSegment: 'individual', // Default segment
     _loaded: false, // Internal flag to track if context has been loaded from server
   })
 
@@ -45,6 +46,13 @@ export function useOnboardingState() {
         if (initialDataStr) {
           const initialData = JSON.parse(initialDataStr)
           if (initialData.onboarding && initialData.user?.id) {
+            // Determine onboarding segment based on user context
+            const determineSegment = (roles: { isTeamAdmin?: boolean; isTeamMember?: boolean }): 'organizer' | 'individual' | 'invited' => {
+              if (roles?.isTeamAdmin) return 'organizer'
+              if (roles?.isTeamMember) return 'invited'
+              return 'individual'
+            }
+
             // Map initial data to onboarding context format and set immediately
             const serverContext: Partial<OnboardingContext> = {
               userId: initialData.user?.id,
@@ -60,6 +68,7 @@ export function useOnboardingState() {
               accountMode: initialData.onboarding.accountMode || 'individual',
               language: initialData.onboarding.language || 'en',
               isFreePlan: initialData.onboarding.isFreePlan !== undefined ? initialData.onboarding.isFreePlan : true,
+              onboardingSegment: determineSegment(initialData.roles),
               _loaded: true, // Mark as loaded immediately
             }
 
@@ -91,6 +100,13 @@ export function useOnboardingState() {
         const response = await fetch('/api/onboarding/context')
         if (response.ok) {
           const serverContext = await response.json()
+
+          // Determine onboarding segment based on server response
+          const determineSegment = (ctx: { isTeamAdmin?: boolean; isTeamMember?: boolean }): 'organizer' | 'individual' | 'invited' => {
+            if (ctx.isTeamAdmin) return 'organizer'
+            if (ctx.isTeamMember) return 'invited'
+            return 'individual'
+          }
           
           // Sync completed tours from database to localStorage
           if (serverContext.completedTours && Array.isArray(serverContext.completedTours)) {
@@ -103,6 +119,7 @@ export function useOnboardingState() {
             ...baseContext,
             ...serverContext,
             userId: session?.user?.id || serverContext.userId,
+            onboardingSegment: determineSegment(serverContext),
             _loaded: true, // Mark as loaded after API fetch
           }
           setContext(newContext)
@@ -110,7 +127,7 @@ export function useOnboardingState() {
           // Even on error, mark as loaded to prevent infinite waiting
           setContext(prev => ({ ...prev, _loaded: true }))
         }
-      } catch (error) {
+      } catch {
         // Even on error, mark as loaded to prevent infinite waiting
         setContext(prev => ({ ...prev, _loaded: true }))
       }
@@ -194,7 +211,7 @@ export function useOnbordaTours() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tourName }),
           })
-        } catch (error) {
+        } catch {
           // Continue execution even if database update fails
         }
       }

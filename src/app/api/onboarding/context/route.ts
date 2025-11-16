@@ -44,6 +44,13 @@ export async function GET() {
       }
     }
 
+    // Determine onboarding segment based on user roles
+    const determineSegment = (roles: { isTeamAdmin: boolean; isTeamMember: boolean }): 'organizer' | 'individual' | 'invited' => {
+      if (roles.isTeamAdmin) return 'organizer'
+      if (roles.isTeamMember) return 'invited'
+      return 'individual'
+    }
+
     // Build onboarding context using pre-fetched data
     const context: OnboardingContext & { completedTours?: string[] } = {
       userId: userContext.user.id,
@@ -59,6 +66,8 @@ export async function GET() {
       accountMode: userContext.onboarding.accountMode,
       language: userContext.onboarding.language,
       isFreePlan: isFreePlan(userContext.subscription?.period),
+      onboardingSegment: determineSegment(userContext.roles),
+      _loaded: true,
       completedTours, // Include completed tours from database
     }
 

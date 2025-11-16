@@ -18,15 +18,6 @@ function generateTours(t: (key: string, values?: Record<string, any>) => string,
   return Object.values(translatedTours).map(tour => ({
     tour: tour.name,
     steps: tour.steps.map((step, stepIndex) => {
-      // Debug logging for invite tour step 3 - only log if tour is actually applicable
-      if (tour.name === 'invite-team' && stepIndex === 2 && tour.triggerCondition && context && tour.triggerCondition(context)) {
-        console.log('generateTours: Invite tour step 3', {
-          title: step.title,
-          content: step.content,
-          isFreePlan: context.isFreePlan,
-          contextLoaded: context._loaded,
-        })
-      }
       // Interpolate firstName in title if present, otherwise remove placeholder
       let title = step.title
       if (title) {

@@ -128,7 +128,7 @@ export function OnbordaCard({
   const hasCustomActions = extendedStep?.customActions && isLast
 
   return (
-    <div className="w-[360px] sm:w-[420px] rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 p-5 space-y-4 text-gray-900">
+    <div className="w-[360px] sm:w-[420px] mx-4 sm:mx-0 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 p-5 space-y-4 text-gray-900">
       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500">
         <span>
           Step {currentStep + 1}
@@ -159,7 +159,7 @@ export function OnbordaCard({
             <button
               type="button"
               onClick={handleGoToPhotoStyles}
-              className="flex-1 inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+              className="flex-1 inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-3 min-h-[44px] text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
             >
               {t('onboarding.tours.welcome.goToPhotoStylesButton')}
             </button>
@@ -168,14 +168,14 @@ export function OnbordaCard({
               <button
                 type="button"
                 onClick={handleTest}
-                className="flex-1 inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                className="flex-1 inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-3 min-h-[44px] text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
               >
                 Test
               </button>
               <button
                 type="button"
                 onClick={handleInvite}
-                className="flex-1 inline-flex items-center justify-center rounded-lg bg-brand-secondary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-secondary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
+                className="flex-1 inline-flex items-center justify-center rounded-lg bg-brand-secondary px-4 py-3 min-h-[44px] text-sm font-semibold text-white shadow-sm hover:bg-brand-secondary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
               >
                 Invite
               </button>
@@ -196,7 +196,7 @@ export function OnbordaCard({
           <button
             type="button"
             onClick={handleNext}
-            className="inline-flex items-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+            className="inline-flex items-center rounded-lg bg-brand-primary px-4 py-3 min-h-[44px] text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
           >
             {isLast ? 'Finish' : 'Next'}
           </button>

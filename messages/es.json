@@ -625,6 +625,90 @@
         "minutesAgo": "hace {count} minuto{count, plural, one {} other {s}}",
         "hoursAgo": "hace {count} hora{count, plural, one {} other {s}}",
         "daysAgo": "hace {count} día{count, plural, one {} other {s}}"
+      },
+      "onboarding": {
+        "howItWorks": {
+          "title": "Cómo funciona",
+          "organizer": {
+            "step1": {
+              "title": "Establece el estilo de marca de tu equipo",
+              "description": "Define fondos, ropa, expresiones y marca que coincidan con tu empresa"
+            },
+            "step2": {
+              "title": "Invita a los miembros de tu equipo",
+              "description": "Envía invitaciones para que tu equipo se una y comience a crear fotos"
+            },
+            "step3": {
+              "title": "Los miembros del equipo suben selfies",
+              "description": "Cada miembro sube su selfie y personaliza (por ejemplo, colores de ropa)"
+            },
+            "step4": {
+              "title": "Espera a que ocurra la magia",
+              "description": "Todo tu equipo obtiene fotos consistentes y profesionales que coinciden con tu marca"
+            }
+          },
+          "invited": {
+            "step1": {
+              "title": "Sube tu selfie",
+              "description": "Simplemente sube una foto tuya"
+            },
+            "step2": {
+              "title": "Personaliza tu foto",
+              "description": "Personaliza elementos como colores de ropa"
+            },
+            "step3": {
+              "title": "Espera a que ocurra la magia",
+              "description": "Fotos profesionales listas en menos de 60 segundos"
+            }
+          },
+          "individual": {
+            "step1": {
+              "title": "Sube tu selfie",
+              "description": "Simplemente sube una foto tuya"
+            },
+            "step2": {
+              "title": "Establece tu estilo",
+              "description": "Elige fondos, ropa, expresiones y marca"
+            },
+            "step3": {
+              "title": "Deja que ocurra la magia",
+              "descriptionFree": "Fotos profesionales listas en menos de 60 segundos. El plan gratuito usa un estilo profesional fijo para probar el servicio.",
+              "descriptionPaid": "Fotos profesionales listas en menos de 60 segundos. Personaliza completamente tu estilo para que coincida con tu marca."
+            },
+            "note": "¡Eso es todo! Sin sesiones de fotos, sin programación, sin complicaciones."
+          }
+        },
+        "firstAction": {
+          "organizer": {
+            "free": {
+              "title": "¿Listo para probarlo?",
+              "description": "En el plan gratuito, el estilo de foto de tu equipo está bloqueado. Envíate una invitación a ti mismo para probarlo y ver cómo funciona.",
+              "button": "Ir a la página del equipo"
+            },
+            "paid": {
+              "title": "¿Listo para establecer tu estilo de marca?",
+              "description": "Comienza estableciendo tu estilo de foto acorde a tu marca. Define fondos, ropa, expresiones y marca que coincidan con tu empresa.",
+              "button": "Establecer tu estilo de foto"
+            }
+          },
+          "individual": {
+            "free": {
+              "title": "¿Listo para comenzar tu transformación?",
+              "description": "Comencemos subiendo tu primer selfie. El plan gratuito incluye un estilo profesional fijo para probar el servicio. Obtén tus fotos profesionales en menos de 60 segundos.",
+              "button": "Comenzar a crear fotos profesionales"
+            },
+            "paid": {
+              "title": "¿Listo para comenzar tu transformación?",
+              "description": "Comencemos subiendo tu primer selfie. Personaliza completamente tu estilo de foto para que coincida con tu marca. Obtén tus fotos profesionales en menos de 60 segundos.",
+              "button": "Comenzar a crear fotos profesionales"
+            }
+          }
+        },
+        "navigation": {
+          "back": "Atrás",
+          "skip": "Omitir por ahora",
+          "next": "Siguiente"
+        }
       }
     },
     "settings": {
@@ -744,6 +828,60 @@
     },
     "onboarding": {
       "tours": {
+        "mainOnboarding": {
+          "welcomeTitle": "Fotos profesionales de equipo en 60 segundos",
+          "welcomeContent": "¡Bienvenido a TeamShotsPro! Transforma selfies casuales en retratos profesionales pulidos que captan atención y construyen credibilidad.\n\nÚnete a miles de profesionales que ya han elevado su presencia. Construido en infraestructura segura, diseñado para equipos de RRHH y talento.",
+          "roleSelectionTitle": "¿Qué te trae aquí?",
+          "roleSelectionContent": "¿Estás configurando esto para tu empresa, creando un estilo de equipo, o solo buscando mejorar tu marca personal? Estás en buena compañía de equipos de personas que se preocupan por la presentación y la equidad. Vamos a ponerte en el camino correcto.",
+          "wowMomentTitle": "Ve la transformación",
+          "wowMomentContent": "Observa cómo convertimos fotos casuales en retratos profesionales. Los equipos que usan fotos profesionales consistentes ven un 40% más de engagement en perfiles de empresa.\n\nAquí va un consejo profesional: Usa iluminación natural y enmarca desde el pecho hacia arriba para mejores resultados.\n\n[La demo interactiva antes/después iría aquí]",
+          "outcomeSelectionTitle": "Cómo se ve el éxito para ti",
+          "outcomeSelectionContent": "Ya sea fotos estandarizadas para tu sistema de seguimiento de candidatos, marca consistente para tu página Acerca de, o esa actualización perfecta de LinkedIn – te tenemos cubierto. Equipos como el tuyo usualmente comienzan con marca consistente en todos los perfiles.",
+          "firstActionTitle": "¿Listo para comenzar?",
+          "firstActionContent": "Comencemos subiendo tu primera selfie. Actualmente estamos procesando un número limitado de nuevos equipos por día para mantener nuestros estándares de calidad.\n\nMás de 4,000 fotos profesionales generadas esta semana."
+        },
+        "roleSelection": {
+          "title": "¿Qué te trae aquí?",
+          "subtitle": "Elige cómo usarás TeamShotsPro",
+          "organizer": {
+            "title": "Organizador de Equipo",
+            "description": "Estoy configurando para mi empresa o equipo"
+          },
+          "individual": {
+            "title": "Solo para Mí",
+            "description": "Estoy mejorando mi marca personal"
+          }
+        },
+        "outcomeSelection": {
+          "title": "Cómo se ve el éxito para ti",
+          "subtitle": "Elige tu objetivo principal",
+          "organizer": {
+            "ats": {
+              "title": "Optimización ATS",
+              "description": "Estandarizar fotos para sistemas de seguimiento de candidatos"
+            },
+            "branding": {
+              "title": "Consistencia de Marca",
+              "description": "Crear fotos cohesivas de equipo para materiales de marketing"
+            }
+          },
+          "individual": {
+            "linkedin": {
+              "title": "Mejora de LinkedIn",
+              "description": "Fotos profesionales que impulsan tu perfil"
+            },
+            "portfolio": {
+              "title": "Mejora de Portafolio",
+              "description": "Fotos de alta calidad para tu trabajo creativo"
+            }
+          },
+          "invited": {
+            "team": {
+              "title": "Consistencia de Equipo",
+              "description": "Coincidir con el estilo de foto profesional de tu equipo"
+            }
+          }
+        },
         "welcome": {
           "title": "¡Bienvenido a TeamShotsPro, {Firstname}!",
           "content": "Gracias por elegir TeamShotsPro. ¡Eres increíble! 🚀\n\nLucirás impecablemente profesional antes de que se enfríe tu café.",

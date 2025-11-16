@@ -624,6 +624,90 @@
         "minutesAgo": "{count} minute{count, plural, one {} other {s}} ago",
         "hoursAgo": "{count} hour{count, plural, one {} other {s}} ago",
         "daysAgo": "{count} day{count, plural, one {} other {s}} ago"
+      },
+      "onboarding": {
+        "howItWorks": {
+          "title": "How it works",
+          "organizer": {
+            "step1": {
+              "title": "Set your team&apos;s brand style",
+              "description": "Define backgrounds, clothing, expressions, and branding that match your company"
+            },
+            "step2": {
+              "title": "Invite your team members",
+              "description": "Send invites so your team can join and start creating photos"
+            },
+            "step3": {
+              "title": "Team members upload selfies",
+              "description": "Each member uploads their selfie and customizes (e.g., wardrobe colors)"
+            },
+            "step4": {
+              "title": "Wait for the magic to happen",
+              "description": "Your entire team gets consistent, professional photos that match your brand"
+            }
+          },
+          "invited": {
+            "step1": {
+              "title": "Upload your selfie",
+              "description": "Simply upload a photo of yourself"
+            },
+            "step2": {
+              "title": "Customize your photo",
+              "description": "Personalize elements like wardrobe colors"
+            },
+            "step3": {
+              "title": "Wait for the magic to happen",
+              "description": "Professional headshots ready in under 60 seconds"
+            }
+          },
+          "individual": {
+            "step1": {
+              "title": "Upload your selfie",
+              "description": "Simply upload a photo of yourself"
+            },
+            "step2": {
+              "title": "Set your style",
+              "description": "Choose backgrounds, clothing, expressions, and branding"
+            },
+            "step3": {
+              "title": "Let the magic happen",
+              "descriptionFree": "Professional headshots ready in under 60 seconds. The free plan uses a fixed professional style to test the service.",
+              "descriptionPaid": "Professional headshots ready in under 60 seconds. Fully customize your style to match your brand."
+            },
+            "note": "That&apos;s it! No photo shoots, no scheduling, no hassle."
+          }
+        },
+        "firstAction": {
+          "organizer": {
+            "free": {
+              "title": "Ready to test it out?",
+              "description": "On the free plan, your team&apos;s photo style is locked in. Send an invite to yourself to test it out and see how it works!",
+              "button": "Go to Team Page"
+            },
+            "paid": {
+              "title": "Ready to set your brand style?",
+              "description": "Start by setting your on-brand photo style. Define backgrounds, clothing, expressions, and branding that match your company.",
+              "button": "Set Your Photo Style"
+            }
+          },
+          "individual": {
+            "free": {
+              "title": "Ready to begin your transformation?",
+              "description": "Let&apos;s start by uploading your first selfie. The free plan includes a fixed professional style to test the service. Get your professional photos in under 60 seconds.",
+              "button": "Start Creating Professional Photos"
+            },
+            "paid": {
+              "title": "Ready to begin your transformation?",
+              "description": "Let&apos;s start by uploading your first selfie. Fully customize your photo style to match your brand. Get your professional photos in under 60 seconds.",
+              "button": "Start Creating Professional Photos"
+            }
+          }
+        },
+        "navigation": {
+          "back": "Back",
+          "skip": "Skip for now",
+          "next": "Next"
+        }
       }
     },
     "settings": {
@@ -743,6 +827,60 @@
     },
     "onboarding": {
       "tours": {
+        "mainOnboarding": {
+          "welcomeTitle": "Professional team photos in 60 seconds",
+          "welcomeContent": "Welcome to TeamShotsPro! Transform casual selfies into polished professional headshots that command attention and build credibility.\n\nJoin thousands of professionals who've already elevated their presence. Built on secure infrastructure designed for HR and talent teams.",
+          "roleSelectionTitle": "What brings you here?",
+          "roleSelectionContent": "Are you setting this up for your company, building a team style, or just looking to upgrade your personal brand? You're in good company of people teams who care about presentation and fairness. Let's get you started on the right path.",
+          "wowMomentTitle": "See the transformation",
+          "wowMomentContent": "Watch as we turn casual snapshots into professional headshots. Teams using consistent professional photos see 40% higher engagement on company profiles.\n\nHere's a pro tip: Use natural lighting and frame from the chest up for best results.\n\n[Interactive before/after demo would go here]",
+          "outcomeSelectionTitle": "What success looks like for you",
+          "outcomeSelectionContent": "Whether it's standardized photos for your applicant tracking system, consistent branding for your About page, or that perfect LinkedIn upgrade – we've got you covered. Teams like yours usually start with consistent branding across all profiles.",
+          "firstActionTitle": "Ready to begin?",
+          "firstActionContent": "Let's start with uploading your first selfie. We're currently processing a limited number of new teams per day to maintain our quality standards.\n\nOver 4,000 professional photos generated this week."
+        },
+        "roleSelection": {
+          "title": "What brings you here?",
+          "subtitle": "Choose how you'll be using TeamShotsPro",
+          "organizer": {
+            "title": "Team Organizer",
+            "description": "I'm setting up for my company or team"
+          },
+          "individual": {
+            "title": "Just for Me",
+            "description": "I'm upgrading my personal brand"
+          }
+        },
+        "outcomeSelection": {
+          "title": "What success looks like for you",
+          "subtitle": "Choose your primary goal",
+          "organizer": {
+            "ats": {
+              "title": "ATS Optimization",
+              "description": "Standardize photos for applicant tracking systems"
+            },
+            "branding": {
+              "title": "Brand Consistency",
+              "description": "Create cohesive team photos for marketing materials"
+            }
+          },
+          "individual": {
+            "linkedin": {
+              "title": "LinkedIn Upgrade",
+              "description": "Professional headshots that boost your profile"
+            },
+            "portfolio": {
+              "title": "Portfolio Enhancement",
+              "description": "High-quality photos for your creative work"
+            }
+          },
+          "invited": {
+            "team": {
+              "title": "Team Consistency",
+              "description": "Match your team's professional photo style"
+            }
+          }
+        },
         "welcome": {
           "title": "Welcome to TeamShotsPro, {Firstname}!",
           "content": "Thanks for choosing TeamShotsPro. You're awesome! 🚀\n\nYou'll look impeccably professional before your coffee goes cold.",

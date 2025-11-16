@@ -20,6 +20,9 @@ import { useEffect, useState } from 'react'
 import { jsonFetcher } from '@/lib/fetcher'
 import { useCredits } from '@/contexts/CreditsContext'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
+import { WelcomeGallery } from '@/components/onboarding/WelcomeGallery'
+import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress'
+import { useOnboardingState } from '@/lib/onborda/hooks'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -93,6 +96,37 @@ export default function DashboardPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [showUploadFlow, setShowUploadFlow] = useState(false)
   const [mounted, setMounted] = useState(false)
+
+  // Onboarding state
+  const { context: onboardingContext } = useOnboardingState()
+  const [onboardingStep, setOnboardingStep] = useState(1)
+  const hasCompletedMainOnboarding = localStorage.getItem('onboarding-main-onboarding-seen') === 'true'
+  const shouldShowOnboarding = !hasCompletedMainOnboarding && onboardingContext._loaded
+
+  // Onboarding handlers
+  const handleStartAction = () => {
+    // Mark onboarding as complete
+    localStorage.setItem('onboarding-main-onboarding-seen', 'true')
+    
+    // Navigate based on plan type and segment
+    const segment = onboardingContext.onboardingSegment || 'individual'
+    const isFree = onboardingContext.isFreePlan ?? true
+    
+    if (segment === 'organizer') {
+      if (isFree) {
+        // Free plan: redirect to team page to invite yourself
+        // Set flag to automatically open invite modal when they arrive at team page
+        sessionStorage.setItem('open-invite-modal', 'true')
+        router.push('/app/team')
+      } else {
+        // Paid plan: redirect to photo styles page to set brand style
+        router.push('/app/styles/team')
+      }
+    } else {
+      // Individual users go to generate
+      router.push('/app/generate/start')
+    }
+  }
 
   // Check for success parameter in URL
   useEffect(() => {
@@ -266,6 +300,273 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Onboarding Flow */}
+      {shouldShowOnboarding && (
+        <div className="bg-white rounded-xl shadow-depth-sm border border-gray-200 p-8">
+          <OnboardingProgress
+            currentStep={onboardingStep}
+            totalSteps={3}
+            className="mb-8"
+          />
+
+          {/* Step 1: Welcome with Gallery */}
+          {onboardingStep === 1 && (
+            <div className="text-center space-y-8">
+              <WelcomeGallery />
+            </div>
+          )}
+
+          {/* Step 2: How It Works */}
+          {onboardingStep === 2 && (
+            <div className="text-center space-y-6" id="how-it-works">
+              <div className="max-w-md mx-auto">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  {t('onboarding.howItWorks.title')}
+                </h3>
+                <div className="space-y-4 text-left">
+                  {onboardingContext.onboardingSegment === 'organizer' ? (
+                    <>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          1
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step1.title')}</h4>
+                          <p className="text-sm text-gray-600">
+                            {t('onboarding.howItWorks.organizer.step1.description')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          2
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step2.title')}</h4>
+                          <p className="text-sm text-gray-600">
+                            {t('onboarding.howItWorks.organizer.step2.description')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          3
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step3.title')}</h4>
+                          <p className="text-sm text-gray-600">
+                            {t('onboarding.howItWorks.organizer.step3.description')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          4
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step4.title')}</h4>
+                          <p className="text-sm text-gray-600">
+                            {t('onboarding.howItWorks.organizer.step4.description')}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  ) : onboardingContext.onboardingSegment === 'invited' ? (
+                    <>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          1
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.invited.step1.title')}</h4>
+                          <p className="text-sm text-gray-600">
+                            {t('onboarding.howItWorks.invited.step1.description')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          2
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.invited.step2.title')}</h4>
+                          <p className="text-sm text-gray-600">
+                            {t('onboarding.howItWorks.invited.step2.description')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          3
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.invited.step3.title')}</h4>
+                          <p className="text-sm text-gray-600">
+                            {t('onboarding.howItWorks.invited.step3.description')}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          1
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.individual.step1.title')}</h4>
+                          <p className="text-sm text-gray-600">
+                            {t('onboarding.howItWorks.individual.step1.description')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          2
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.individual.step2.title')}</h4>
+                          <p className="text-sm text-gray-600">
+                            {t('onboarding.howItWorks.individual.step2.description')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          3
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.individual.step3.title')}</h4>
+                          <p className="text-sm text-gray-600">
+                            {onboardingContext.isFreePlan 
+                              ? t('onboarding.howItWorks.individual.step3.descriptionFree')
+                              : t('onboarding.howItWorks.individual.step3.descriptionPaid')}
+                          </p>
+                        </div>
+                      </div>
+                      {!onboardingContext.isFreePlan && (
+                        <p className="mt-6 text-sm text-gray-500 italic">
+                          {t('onboarding.howItWorks.individual.note')}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: First Action */}
+          {onboardingStep === 3 && (
+            <div className="text-center space-y-6" id="first-action">
+              <div className="max-w-md mx-auto">
+                {onboardingContext.onboardingSegment === 'organizer' ? (
+                  <>
+                    {onboardingContext.isFreePlan ? (
+                      <>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          {t('onboarding.firstAction.organizer.free.title')}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                          {t('onboarding.firstAction.organizer.free.description')}
+                        </p>
+                        <button
+                          onClick={handleStartAction}
+                          className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px]"
+                        >
+                          {t('onboarding.firstAction.organizer.free.button')}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          {t('onboarding.firstAction.organizer.paid.title')}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                          {t('onboarding.firstAction.organizer.paid.description')}
+                        </p>
+                        <button
+                          onClick={handleStartAction}
+                          className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px]"
+                        >
+                          {t('onboarding.firstAction.organizer.paid.button')}
+                        </button>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {onboardingContext.isFreePlan ? (
+                      <>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          {t('onboarding.firstAction.individual.free.title')}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                          {t('onboarding.firstAction.individual.free.description')}
+                        </p>
+                        <button
+                          onClick={handleStartAction}
+                          className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px]"
+                        >
+                          {t('onboarding.firstAction.individual.free.button')}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          {t('onboarding.firstAction.individual.paid.title')}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                          {t('onboarding.firstAction.individual.paid.description')}
+                        </p>
+                        <button
+                          onClick={handleStartAction}
+                          className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px]"
+                        >
+                          {t('onboarding.firstAction.individual.paid.button')}
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Navigation buttons for onboarding */}
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+            <button
+              onClick={() => setOnboardingStep(Math.max(1, onboardingStep - 1))}
+              disabled={onboardingStep === 1}
+              className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {t('onboarding.navigation.back')}
+            </button>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  localStorage.setItem('onboarding-main-onboarding-seen', 'true')
+                  window.location.reload() // Refresh to hide onboarding
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+              >
+                {t('onboarding.navigation.skip')}
+              </button>
+
+              {onboardingStep < 3 && (
+                <button
+                  onClick={() => setOnboardingStep(onboardingStep + 1)}
+                  className="px-6 py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-primary-hover min-h-[40px]"
+                >
+                  {t('onboarding.navigation.next')}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Selfie Upload Flow */}
       {showUploadFlow && (
         <SelfieUploadFlow
@@ -299,6 +600,10 @@ export default function DashboardPage() {
                 t('welcome.subtitle.teamAdmin', {
                   count: stats.photosGenerated,
                   teamMembers: stats.teamMembers
+                })
+              ) : userPermissions.isRegularUser ? (
+                t('welcome.subtitle.individual', {
+                  count: stats.photosGenerated
                 })
               ) : userPermissions.isTeamMember ? (
                 t('welcome.subtitle.team', {

@@ -161,6 +161,24 @@ export default function TeamPage() {
     fetchInitialData()
   }, [session?.user])
 
+  // Check if we should auto-open invite modal from onboarding
+  useEffect(() => {
+    const shouldOpenModal = sessionStorage.getItem('open-invite-modal')
+    if (shouldOpenModal === 'true' && !loading && teamData && userRoles.isTeamAdmin) {
+      // Clear the flag
+      sessionStorage.removeItem('open-invite-modal')
+      // Open the invite modal automatically
+      setShowInviteForm(true)
+      // Reset form values
+      setEmailValue('')
+      setFirstNameValue('')
+      setCreditsInputValue(PRICING_CONFIG.team.defaultInviteCredits.toString())
+      setAllocatedCredits(PRICING_CONFIG.team.defaultInviteCredits)
+      setInviteError(null)
+      setError(null)
+    }
+  }, [loading, teamData, userRoles.isTeamAdmin])
+
   const fetchTeamData = async () => {
     try {
       const [contextsData, invitesData, membersData] = await Promise.all([
@@ -196,6 +214,7 @@ export default function TeamPage() {
 
       if (response.ok) {
         const data = await response.json()
+        const teamName = formData.get('teamName') as string
         setNeedsTeamSetup(false)
         
         // Update sessionStorage with new team data to avoid redundant API calls
@@ -206,6 +225,7 @@ export default function TeamPage() {
             initialData = JSON.parse(stored)
             if (initialData.roles) {
               initialData.roles.teamId = data.teamId
+              initialData.roles.teamName = teamName
               initialData.roles.isTeamMember = true
               initialData.onboarding.needsTeamSetup = false
               initialData._timestamp = Date.now()
@@ -218,20 +238,34 @@ export default function TeamPage() {
           if (onboardingContext) {
             const context = JSON.parse(onboardingContext)
             context.teamId = data.teamId
+            context.teamName = teamName
             context.isTeamMember = true
             localStorage.setItem('onboarding-context', JSON.stringify(context))
           }
           
-          // Set pending tour in sessionStorage so OnboardingLauncher can start it immediately
-          // Determine tour name based on plan (will be checked on styles page)
-          const tourName = initialData?.onboarding?.isFreePlan ? 'team-photo-styles-free' : 'team-photo-styles-page'
-          sessionStorage.setItem('pending-tour', tourName)
         } catch {
           // Ignore errors, continue with redirect
         }
         
-        // Use client-side navigation instead of full page reload
-        router.push('/app/styles/team')
+        // Clear any old pending tours before redirecting to dashboard
+        try {
+          const pendingTour = sessionStorage.getItem('pending-tour')
+          const deactivatedTours = [
+            'team-admin-welcome',
+            'team-setup',
+            'team-photo-styles-page',
+            'team-photo-styles-free',
+            'team-photo-style-setup'
+          ]
+          if (pendingTour && deactivatedTours.includes(pendingTour)) {
+            sessionStorage.removeItem('pending-tour')
+          }
+        } catch {
+          // Ignore errors, continue with redirect
+        }
+        
+        // Redirect to dashboard to show onboarding after team setup
+        router.push('/app/dashboard')
       } else {
         const data = await response.json()
         setError(data.error || 'Failed to create team.')

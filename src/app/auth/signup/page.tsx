@@ -9,10 +9,11 @@ import { jsonFetcher } from '@/lib/fetcher'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
 import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
-import { AuthButton, InlineError, Grid } from '@/components/ui'
+import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { PlanSelection } from '@/components/auth/PlanSelection'
 
 export default function SignUpPage() {
   const t = useTranslations('auth.signup')
@@ -230,37 +231,10 @@ export default function SignUpPage() {
                   )}
                 </div>
               ) : (
-                <div className="rounded-xl border-2 border-brand-primary-lighter bg-bg-gray-50 px-5 py-5 space-y-4 shadow-depth-sm">
-                  <div className="text-sm lg:text-base text-text-body">
-                    {t('selectPlanPrompt')}: <strong className="font-bold text-text-dark">{t('planIndividual')}</strong> or <strong className="font-bold text-text-dark">{t('planPro')}</strong>
-                  </div>
-                  <Grid cols={{ mobile: 2 }} gap="sm">
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, userType: 'individual' })}
-                      className={`p-4 lg:p-5 border-2 rounded-xl text-left transition-all duration-300 ${
-                        formData.userType === 'individual'
-                          ? 'border-brand-primary bg-brand-primary-light shadow-depth-md'
-                          : 'border-brand-primary-lighter hover:border-brand-primary bg-bg-white hover:shadow-depth-sm'
-                      }`}
-                    >
-                      <div className="font-bold text-text-dark text-base lg:text-lg">{t('individual')}</div>
-                      <div className="mt-2 text-sm lg:text-base text-text-body">{t('individualDesc')}</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, userType: 'team' })}
-                      className={`p-4 lg:p-5 border-2 rounded-xl text-left transition-all duration-300 ${
-                        formData.userType === 'team'
-                          ? 'border-brand-primary bg-brand-primary-light shadow-depth-md'
-                          : 'border-brand-primary-lighter hover:border-brand-primary bg-bg-white hover:shadow-depth-sm'
-                      }`}
-                    >
-                      <div className="font-bold text-text-dark text-base lg:text-lg">{t('team')}</div>
-                      <div className="mt-2 text-sm lg:text-base text-text-body">{t('teamDesc')}</div>
-                    </button>
-                  </Grid>
-                </div>
+                <PlanSelection
+                  selectedPlan={formData.userType}
+                  onPlanSelect={(plan) => setFormData({ ...formData, userType: plan })}
+                />
               )}
 
               <AuthInput
