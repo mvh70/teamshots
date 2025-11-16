@@ -41,6 +41,24 @@
   }
 }
 
+/* General responsive styles for all onborda tours */
+@media (max-width: 640px) {
+  /* Ensure onborda cards stay within viewport on mobile */
+  /* Target the card component wrapper */
+  [data-onborda-tour] {
+    max-width: calc(100vw - 2rem) !important;
+  }
+
+  /* Prevent cards from being positioned off-screen */
+  [data-onborda-tour][style*="left"] {
+    max-width: calc(100vw - 2rem) !important;
+  }
+
+  [data-onborda-tour][style*="right"] {
+    max-width: calc(100vw - 2rem) !important;
+  }
+}
+
 /* Prevent onborda highlight from affecting layout */
 .onborda-highlight,
 [class*="onborda-highlight"],
@@ -89,7 +107,7 @@
 [data-onborda-tour="generation-detail"][data-onborda-step="0"] {
   /* Step 1: Position in bottom left corner */
   position: absolute !important;
-  bottom: 75px !important;
+  bottom: 0px !important;
   left: -175px !important;
   right: auto !important;
   top: auto !important;
@@ -99,11 +117,26 @@
 [data-onborda-tour="generation-detail"][data-onborda-step="1"] {
   /* Step 2: Position in bottom right corner */
   position: absolute !important;
-  bottom: 75px !important;
+  bottom: 0px !important;
   right: -250px !important;
   left: auto !important;
   top: auto !important;
   transform: none !important;
+}
+
+/* Mobile responsive positioning for generation-detail tour */
+@media (max-width: 640px) {
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] {
+    /* On mobile, position cards above the target element */
+    position: absolute !important;
+    bottom: auto !important;
+    top: -20px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) translateY(-100%) !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
 }
 
 /* Move pointer to bottom left/right of cards for generation-detail tour */
@@ -163,6 +196,33 @@
   /* Override any transforms */
   transform: none !important;
   margin: 0 !important;
+}
+
+/* Mobile responsive pointer positioning for generation-detail tour */
+@media (max-width: 640px) {
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] .onborda-pointer,
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] .onborda-arrow,
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] [data-onborda-pointer],
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"]::before,
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"]::after,
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] svg,
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] [style*="position: absolute"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] [style*="position:absolute"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] .onborda-pointer,
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] .onborda-arrow,
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [data-onborda-pointer],
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"]::before,
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"]::after,
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] svg,
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position: absolute"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position:absolute"] {
+    /* On mobile, position pointer at bottom center of card (pointing down) */
+    left: 50% !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: -8px !important;
+    transform: translateX(-50%) !important;
+  }
 }
 
 body {

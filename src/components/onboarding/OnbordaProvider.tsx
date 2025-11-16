@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useRef, useEffect, useState } from 'react'
+import { ReactNode, useRef, useEffect, useState, useMemo } from 'react'
 import { OnbordaProvider as OnbordaProviderLib, Onborda, useOnborda } from 'onborda'
 import { createTranslatedTours, OnboardingContext } from '@/lib/onborda/config'
 import { OnbordaCard } from '@/components/onboarding/OnbordaCard'
@@ -13,7 +13,7 @@ interface OnbordaProviderProps {
 
 // Helper function to generate tours with translations and firstName interpolation
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function generateTours(t: (key: string, values?: Record<string, any>) => string, context?: OnboardingContext) {
+function generateTours(t: (key: string, values?: Record<string, any>) => string, context?: OnboardingContext, isMobile = false) {
   const translatedTours = createTranslatedTours(t, context)
   
   return Object.values(translatedTours).map(tour => ({
@@ -60,10 +60,25 @@ function generateTours(t: (key: string, values?: Record<string, any>) => string,
         }
       }
 
-      // Adjust positioning for mobile on generation-detail tour
-      // Note: Step 1 (photo explanation) has been removed, so this is no longer needed
-      const adjustedSide = step.side
-      const adjustedPointerPadding = step.pointerPadding
+      // Adjust positioning for mobile - prefer bottom side and larger padding
+      let adjustedSide = step.side
+      let adjustedPointerPadding = step.pointerPadding
+
+      if (isMobile) {
+        // On mobile, prefer bottom positioning to avoid keyboard interference
+        // Only change if current side would cause issues (left/right on small screens)
+        if (step.side === 'left' || step.side === 'right') {
+          // Keep left/right for elements that need it, but increase padding
+          adjustedPointerPadding = Math.max(step.pointerPadding || 20, 40)
+        } else if (step.side === 'top') {
+          // Top positioning can be problematic on mobile, prefer bottom
+          adjustedSide = 'bottom'
+          adjustedPointerPadding = Math.max(step.pointerPadding || 20, 40)
+        } else {
+          // Bottom is already good, just ensure adequate padding
+          adjustedPointerPadding = Math.max(step.pointerPadding || 20, 40)
+        }
+      }
 
       return {
         ...step,
@@ -112,9 +127,27 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
   const t = useTranslations('app')
   const { context } = useOnboardingState()
   const [tours, setTours] = useState<ReturnType<typeof generateTours> | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Track window size for responsive tour positioning
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640)
+    }
+    
+    // Check on mount
+    checkMobile()
+    
+    // Listen for resize events
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
   
   // Track context values to detect changes
   const contextRef = useRef<{ teamName?: string; firstName?: string; isFreePlan?: boolean }>({})
+  
+  // Track previous mobile state to detect changes
+  const prevMobileRef = useRef(isMobile)
   
   // Generate tours when context is loaded or mobile state changes, using ref to prevent unnecessary regenerations
   const toursRef = useRef<ReturnType<typeof generateTours> | null>(null)
@@ -122,21 +155,26 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
     const teamNameChanged = context.teamName !== contextRef.current.teamName
     const firstNameChanged = context.firstName !== contextRef.current.firstName
     const isFreePlanChanged = context.isFreePlan !== contextRef.current.isFreePlan
+    const mobileChanged = isMobile !== prevMobileRef.current
     
     // Regenerate tours if context is loaded and relevant values changed
-    if (context._loaded && (teamNameChanged || firstNameChanged || isFreePlanChanged || !toursRef.current)) {
+    if (context._loaded && (teamNameChanged || firstNameChanged || isFreePlanChanged || mobileChanged || !toursRef.current)) {
       contextRef.current = { teamName: context.teamName, firstName: context.firstName, isFreePlan: context.isFreePlan }
-      toursRef.current = generateTours(t, context)
+      prevMobileRef.current = isMobile
+      toursRef.current = generateTours(t, context, isMobile)
       setTours(toursRef.current)
     } else if (!toursRef.current) {
       // Generate initial tours with current context (will use fallbacks if values not available)
-      toursRef.current = generateTours(t, context)
+      prevMobileRef.current = isMobile
+      toursRef.current = generateTours(t, context, isMobile)
       setTours(toursRef.current)
     }
-  }, [context._loaded, context.teamName, context.firstName, context.isFreePlan, context, t])
+  }, [context._loaded, context.teamName, context.firstName, context.isFreePlan, context, t, isMobile])
   
   // Use tours from ref if state is not ready yet
-  const finalTours = tours || toursRef.current || generateTours(t, context)
+  const finalTours = useMemo(() => {
+    return tours || toursRef.current || generateTours(t, context, isMobile)
+  }, [tours, t, context, isMobile])
 
   return (
     <OnbordaProviderLib>
