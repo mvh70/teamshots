@@ -13,7 +13,7 @@ interface OnbordaProviderProps {
 
 // Helper function to generate tours with translations and firstName interpolation
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function generateTours(t: (key: string, values?: Record<string, any>) => string, context?: OnboardingContext, isMobile = false) {
+function generateTours(t: (key: string, values?: Record<string, any>) => string, context?: OnboardingContext) {
   const translatedTours = createTranslatedTours(t, context)
   
   return Object.values(translatedTours).map(tour => ({
@@ -62,8 +62,8 @@ function generateTours(t: (key: string, values?: Record<string, any>) => string,
 
       // Adjust positioning for mobile on generation-detail tour
       // Note: Step 1 (photo explanation) has been removed, so this is no longer needed
-      let adjustedSide = step.side
-      let adjustedPointerPadding = step.pointerPadding
+      const adjustedSide = step.side
+      const adjustedPointerPadding = step.pointerPadding
 
       return {
         ...step,
@@ -112,17 +112,6 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
   const t = useTranslations('app')
   const { context } = useOnboardingState()
   const [tours, setTours] = useState<ReturnType<typeof generateTours> | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
-  
-  // Track mobile state reactively
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
   
   // Track context values to detect changes
   const contextRef = useRef<{ teamName?: string; firstName?: string; isFreePlan?: boolean }>({})
@@ -137,21 +126,17 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
     // Regenerate tours if context is loaded and relevant values changed
     if (context._loaded && (teamNameChanged || firstNameChanged || isFreePlanChanged || !toursRef.current)) {
       contextRef.current = { teamName: context.teamName, firstName: context.firstName, isFreePlan: context.isFreePlan }
-      toursRef.current = generateTours(t, context, isMobile)
+      toursRef.current = generateTours(t, context)
       setTours(toursRef.current)
     } else if (!toursRef.current) {
       // Generate initial tours with current context (will use fallbacks if values not available)
-      toursRef.current = generateTours(t, context, isMobile)
-      setTours(toursRef.current)
-    } else {
-      // Regenerate if mobile state changed (for responsive positioning)
-      toursRef.current = generateTours(t, context, isMobile)
+      toursRef.current = generateTours(t, context)
       setTours(toursRef.current)
     }
-  }, [context._loaded, context.teamName, context.firstName, context.isFreePlan, context, t, isMobile])
+  }, [context._loaded, context.teamName, context.firstName, context.isFreePlan, context, t])
   
   // Use tours from ref if state is not ready yet
-  const finalTours = tours || toursRef.current || generateTours(t, context, isMobile)
+  const finalTours = tours || toursRef.current || generateTours(t, context)
 
   return (
     <OnbordaProviderLib>
