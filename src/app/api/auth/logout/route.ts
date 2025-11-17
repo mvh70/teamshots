@@ -61,28 +61,6 @@ async function extractJtiFromRequest(request: NextRequest): Promise<string | nul
   }
 }
 
-/**
- * Clean up expired revoked tokens (run periodically)
- */
-export async function cleanupExpiredRevokedTokens(): Promise<number> {
-  try {
-    const now = new Date()
-    const result = await prisma.revokedToken.deleteMany({
-      where: {
-        expiresAt: {
-          lt: now
-        }
-      }
-    })
-    return result.count
-  } catch (error) {
-    Logger.error('Failed to cleanup expired revoked tokens', {
-      error: error instanceof Error ? error.message : String(error)
-    })
-    return 0
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     // Get current session to identify user
