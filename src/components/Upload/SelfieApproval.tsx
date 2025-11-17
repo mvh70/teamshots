@@ -8,7 +8,6 @@ interface SelfieApprovalProps {
   uploadedPhotoKey: string
   previewUrl?: string
   onApprove: () => void
-  onReject: () => void
   onRetake: () => void
   onCancel: () => void
 }
@@ -17,8 +16,6 @@ export default function SelfieApproval({
   uploadedPhotoKey,
   previewUrl,
   onApprove,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onReject: _onReject,
   onRetake,
   onCancel
 }: SelfieApprovalProps) {

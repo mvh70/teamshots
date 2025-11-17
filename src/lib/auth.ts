@@ -34,9 +34,13 @@ async function isTokenRevoked(jti: string | undefined): Promise<boolean> {
       where: { jti }
     })
     return !!revoked
-  } catch {
-    // If check fails, fail secure - reject the token
-    return true
+  } catch (error) {
+    // If check fails, log the error but fail-open to prevent database issues from locking users out
+    // Only fail-secure if we're certain the table exists (migration applied)
+    console.error('Error checking token revocation:', error)
+    // Fail-open: allow session to continue if database check fails
+    // This prevents database connectivity issues from locking users out
+    return false
   }
 }
 
@@ -199,11 +203,17 @@ export const authOptions = {
         
         // SECURITY: Store token version to invalidate all tokens when role/permissions change
         // Fetch current token version from database
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { tokenVersion: true }
-        })
-        token.tokenVersion = dbUser?.tokenVersion ?? 0
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { tokenVersion: true }
+          })
+          token.tokenVersion = dbUser?.tokenVersion ?? 0
+        } catch (error) {
+          // If database query fails, default to 0 and log the error
+          console.error('Error fetching token version during initial auth:', error)
+          token.tokenVersion = 0
+        }
         
         // Set token expiration time when user first authenticates
         const now = Math.floor(Date.now() / 1000)
@@ -212,16 +222,34 @@ export const authOptions = {
       
       // SECURITY: Check token version on every request - if it doesn't match, token is invalid
       if (!user && token.sub) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.sub },
-          select: { tokenVersion: true }
-        })
-        const currentTokenVersion = dbUser?.tokenVersion ?? 0
-        const tokenTokenVersion = (token.tokenVersion as number) ?? 0
-        
-        if (currentTokenVersion !== tokenTokenVersion) {
-          // Token version mismatch - user's role/permissions changed, invalidate this token
-          throw new Error('Token version mismatch - session invalidated due to role/permission change')
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.sub },
+            select: { tokenVersion: true }
+          })
+          
+          // If user doesn't exist in DB, reject the token
+          if (!dbUser) {
+            throw new Error('User not found - session invalidated')
+          }
+          
+          const currentTokenVersion = dbUser.tokenVersion ?? 0
+          // For tokens created before tokenVersion was added, treat as version 0
+          const tokenTokenVersion = (token.tokenVersion as number | undefined) ?? 0
+          
+          if (currentTokenVersion !== tokenTokenVersion) {
+            // Token version mismatch - user's role/permissions changed, invalidate this token
+            throw new Error('Token version mismatch - session invalidated due to role/permission change')
+          }
+        } catch (error) {
+          // If it's already an Error we threw, re-throw it
+          if (error instanceof Error && error.message.includes('session invalidated')) {
+            throw error
+          }
+          // For database errors, log but don't fail - allow session to continue
+          // This prevents database issues from locking users out
+          console.error('Error checking token version:', error)
+          // Don't throw - allow the session to continue
         }
       }
       

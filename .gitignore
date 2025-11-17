@@ -60,6 +60,9 @@ node_modules/
 
 # Playwright auth state
 playwright/.auth/ 
+playwright*
+playwright-report*
+playwright-test-results*
 
 certificates
 
@@ -78,3 +81,5 @@ CLAUDE.md
 AGENTS.md
 
 
+tests*
+test-results*

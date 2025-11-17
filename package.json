@@ -22,6 +22,7 @@
     "test:e2e:ui": "playwright test tests/e2e/ --ui",
     "test:e2e:headed": "playwright test tests/e2e/ --headed",
     "test:e2e:debug": "playwright test tests/e2e/ --debug",
+    "test:dev": "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/teamshots_test?schema=public npm run dev",
     "test:all": "npm run test && npm run test:e2e",
     "test:selfie-flow": "playwright test tests/e2e/selfie-flow/",
     "test:selfie-flow:debug": "playwright test tests/e2e/selfie-flow/ --debug",

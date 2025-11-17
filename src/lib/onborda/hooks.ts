@@ -187,6 +187,14 @@ export function useOnbordaTours() {
   // Start a specific tour
   const startTour = (tourName: string) => {
     console.log('[Tour Debug] startTour called', { tourName })
+    
+    // Check if tour has already been completed (persists across sessions via localStorage)
+    const hasCompleted = localStorage.getItem(`onboarding-${tourName}-seen`) === 'true'
+    if (hasCompleted) {
+      console.log('[Tour Debug] Tour already completed, skipping', { tourName })
+      return
+    }
+    
     const tour = getTour(tourName, t, context)
     console.log('[Tour Debug] Tour found?', { tourFound: !!tour, tourName })
     if (tour) {
@@ -207,6 +215,17 @@ export function useOnbordaTours() {
 
       // Mark tour as seen in localStorage to prevent re-showing
       localStorage.setItem(`onboarding-${tourName}-seen`, 'true')
+
+      // Clear pendingTour immediately to prevent TourStarter from restarting the tour
+      setPendingTour(null)
+
+      // Also clear sessionStorage if this tour was pending there
+      if (typeof window !== 'undefined') {
+        const sessionPendingTour = sessionStorage.getItem('pending-tour')
+        if (sessionPendingTour === tourName) {
+          sessionStorage.removeItem('pending-tour')
+        }
+      }
 
       // Persist tour completion to database (Person.onboardingState)
       if (context.personId) {

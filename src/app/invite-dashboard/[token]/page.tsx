@@ -297,10 +297,6 @@ export default function InviteDashboardPage() {
     setGenerationType('team')
   }
 
-  const onReject = async () => {
-    await deleteSelfie()
-  }
-
   const onRetake = async () => {
     await deleteSelfie()
   }
@@ -383,9 +379,23 @@ export default function InviteDashboardPage() {
       })
 
       if (response.ok) {
-        // Set pending tour flag for generation-detail tour
+        // Set pending tour flag for generation-detail tour ONLY for first generation
+        // Check if this is the first generation by checking if tour has already been seen
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('pending-tour', 'generation-detail')
+          const hasSeenTour = localStorage.getItem('onboarding-generation-detail-seen') === 'true'
+          const wasFirstGeneration = stats.photosGenerated === 0
+          
+          // Only set pending tour if this is the first generation and tour hasn't been seen
+          if (wasFirstGeneration && !hasSeenTour) {
+            sessionStorage.setItem('pending-tour', 'generation-detail')
+            console.log('[Tour Debug] Setting pending tour for first generation', { photosGenerated: stats.photosGenerated })
+          } else {
+            console.log('[Tour Debug] Skipping pending tour - not first generation or already seen', { 
+              wasFirstGeneration, 
+              hasSeenTour, 
+              photosGenerated: stats.photosGenerated 
+            })
+          }
         }
         // Redirect to generations page to see the result
         router.push(`/invite-dashboard/${token}/generations`)
@@ -680,6 +690,7 @@ export default function InviteDashboardPage() {
                 )}
               {!uploadKey && availableSelfies.length === 0 && (
                 <SelfieUploadFlow
+                  hideHeader={true}
                   onSelfieApproved={async (key, selfieId) => {
                     setUploadKey(key)
                     setIsApproved(true)
@@ -879,7 +890,6 @@ export default function InviteDashboardPage() {
                 <SelfieApproval
                   uploadedPhotoKey={uploadKey}
                   onApprove={onApprove}
-                  onReject={onReject}
                   onRetake={onRetake}
                   onCancel={() => {
                     setUploadKey('')

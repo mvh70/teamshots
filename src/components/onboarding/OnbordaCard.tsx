@@ -1,7 +1,7 @@
 import type { CardComponentProps } from 'onborda/dist/types'
 import { useOnborda } from 'onborda'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
@@ -21,6 +21,7 @@ export function OnbordaCard({
   const router = useRouter()
   const t = useTranslations('app')
   const extendedStep = step as ExtendedStep | undefined
+  const isCompletingRef = useRef(false)
 
   // Get firstName from session for interpolation
   const firstName = session?.user?.person?.firstName || session?.user?.name?.split(' ')[0] || undefined
@@ -52,7 +53,7 @@ export function OnbordaCard({
 
   // Detect when tour is closed and complete it
   useEffect(() => {
-    if (!isOnbordaVisible && onbordaCurrentTour) {
+    if (!isOnbordaVisible && onbordaCurrentTour && !isCompletingRef.current) {
       // Only complete if we haven't already completed this tour
       const hasCompleted = localStorage.getItem(`onboarding-${onbordaCurrentTour}-seen`) === 'true'
       if (!hasCompleted) {
@@ -60,15 +61,31 @@ export function OnbordaCard({
         completeTour(onbordaCurrentTour).catch(() => {})
       }
     }
+    // Reset the ref when tour becomes visible again (new tour starting)
+    if (isOnbordaVisible) {
+      isCompletingRef.current = false
+    }
   }, [isOnbordaVisible, onbordaCurrentTour, completeTour])
 
   const handleNext = async () => {
     if (isLast) {
       if (onbordaCurrentTour) {
+        // Mark that we're completing to prevent useEffect from running
+        isCompletingRef.current = true
+        // Set localStorage flag synchronously before closing to prevent race condition
+        localStorage.setItem(`onboarding-${onbordaCurrentTour}-seen`, 'true')
         // Fire and forget - don't await to avoid blocking UI
         completeTour(onbordaCurrentTour).catch(() => {})
       }
+      // Close the tour and ensure it stays closed
       closeOnborda()
+      // Force close again after a brief delay to ensure it stays closed
+      setTimeout(() => {
+        if (isOnbordaVisible) {
+          console.log('[Tour Debug] Force closing tour that is still visible after completion')
+          closeOnborda()
+        }
+      }, 100)
       return
     }
 
@@ -77,6 +94,10 @@ export function OnbordaCard({
 
   const handleGoToPhotoStyles = async () => {
     if (onbordaCurrentTour) {
+      // Mark that we're completing to prevent useEffect from running
+      isCompletingRef.current = true
+      // Set localStorage flag synchronously before closing to prevent race condition
+      localStorage.setItem(`onboarding-${onbordaCurrentTour}-seen`, 'true')
       // Fire and forget - don't await to avoid blocking UI
       completeTour(onbordaCurrentTour).catch(() => {})
     }
@@ -102,6 +123,10 @@ export function OnbordaCard({
 
   const handleTest = async () => {
     if (onbordaCurrentTour) {
+      // Mark that we're completing to prevent useEffect from running
+      isCompletingRef.current = true
+      // Set localStorage flag synchronously before closing to prevent race condition
+      localStorage.setItem(`onboarding-${onbordaCurrentTour}-seen`, 'true')
       // Fire and forget - don't await to avoid blocking UI
       completeTour(onbordaCurrentTour).catch(() => {})
     }
@@ -111,6 +136,10 @@ export function OnbordaCard({
 
   const handleInvite = async () => {
     if (onbordaCurrentTour) {
+      // Mark that we're completing to prevent useEffect from running
+      isCompletingRef.current = true
+      // Set localStorage flag synchronously before closing to prevent race condition
+      localStorage.setItem(`onboarding-${onbordaCurrentTour}-seen`, 'true')
       // Fire and forget - don't await to avoid blocking UI
       completeTour(onbordaCurrentTour).catch(() => {})
     }

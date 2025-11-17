@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import SelfieApproval from './SelfieApproval'
+import SelfieUploadSuccess from './SelfieUploadSuccess'
 import { useSelfieUpload } from '@/hooks/useSelfieUpload'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
@@ -14,10 +15,15 @@ interface SelfieUploadFlowProps {
   onError?: (error: string) => void
   onRetake?: () => void
   saveEndpoint?: (key: string) => Promise<string | undefined> // Custom save function for invite flows, can return selfie ID
-  continueUploading?: boolean // If true, don't show success message and continue showing upload interface
+  uploadEndpoint?: (file: File) => Promise<{ key: string; url?: string }> // Custom upload function for invite flows or other custom flows
+  hideHeader?: boolean // Hide title and cancel button for compact/sticky views
 }
 
-export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, onRetake, saveEndpoint, continueUploading = false }: SelfieUploadFlowProps) {
+export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, onRetake, saveEndpoint, uploadEndpoint, hideHeader = false }: SelfieUploadFlowProps) {
+  // Debug: always log hideHeader value to verify prop is received
+  if (typeof window !== 'undefined') {
+    console.log('[SelfieUploadFlow] hideHeader prop value:', hideHeader)
+  }
   const t = useTranslations('selfies')
   const {
     uploadedKey,
@@ -26,30 +32,19 @@ export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, 
     handlePhotoUploaded,
     handleApprove,
     handleReject,
-    handleRetake,
-    reset
+    handleRetake
   } = useSelfieUpload({
     onSuccess: (key, id) => {
       onSelfieApproved(key, id)
     },
     onError: onError,
-    saveEndpoint
+    saveEndpoint,
+    uploadEndpoint
   })
 
   // Store the preview URL for the approval screen
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [forceCamera, setForceCamera] = useState<boolean>(false)
-
-  // Reset the upload state when continueUploading becomes true (after a selfie is approved but we need more)
-  // This ensures the upload interface stays visible even after approval
-  useEffect(() => {
-    if (continueUploading) {
-      // Always reset when we need to continue uploading, regardless of isApproved state
-      reset()
-      setPreviewUrl(null)
-      setForceCamera(false)
-    }
-  }, [continueUploading, reset])
 
   // Wrapper for handlePhotoUploaded to store preview URL
   const handlePhotoUploadedWrapper = async (result: { key: string; url?: string }) => {
@@ -77,31 +72,6 @@ export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, 
     onCancel()
   }
 
-  // If we need to continue uploading, never show approval screen or success message
-  // Always show the upload interface
-  if (continueUploading) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-testid="upload-flow">
-        <div data-testid="mobile-upload-interface">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900" data-testid="desktop-upload-title">{t('upload.title')}</h2>
-            <button
-              onClick={onCancel}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
-              data-testid="cancel-upload"
-            >
-              Cancel
-            </button>
-          </div>
-          <p className="text-sm text-gray-600 mb-4" data-testid="upload-description">{t('upload.description')}</p>
-          <div className="max-w-md">
-            <PhotoUpload onUpload={handlePhotoUpload} onUploaded={handlePhotoUploadedWrapper} testId="desktop-file-input" autoOpenCamera={forceCamera} />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   if (uploadedKey && !isApproved) {
     return (
       <SelfieApproval
@@ -119,24 +89,28 @@ export default function SelfieUploadFlow({ onSelfieApproved, onCancel, onError, 
             throw error
           }
         }}
-        onReject={handleRejectWrapper}
         onRetake={handleRetakeWrapper}
-        onCancel={onCancel}
+        onCancel={() => {
+          // On cancel, reject the upload
+          handleRejectWrapper()
+        }}
       />
     )
   }
 
-  if (isApproved && !continueUploading) {
+  if (isApproved) {
+    return <SelfieUploadSuccess />
+  }
+
+  // When hideHeader is true, render a minimal wrapper for mobile (no padding/border)
+  // but keep styling for desktop
+  if (hideHeader) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-testid="upload-success">
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-brand-secondary-lighter mb-4">
-            <svg className="h-6 w-6 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="md:bg-white md:rounded-lg md:shadow-sm md:border md:border-gray-200 md:p-6" data-testid="upload-flow">
+        <div data-testid="mobile-upload-interface">
+          <div className="md:max-w-md">
+            <PhotoUpload onUpload={handlePhotoUpload} onUploaded={handlePhotoUploadedWrapper} testId="desktop-file-input" autoOpenCamera={forceCamera} />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2" data-testid="success-title">Selfie Approved!</h3>
-          <p className="text-sm text-gray-600" data-testid="success-message">Your selfie has been saved successfully.</p>
         </div>
       </div>
     )

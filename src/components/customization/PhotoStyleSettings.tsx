@@ -537,15 +537,42 @@ export default function PhotoStyleSettings({
   const visibleUserCategories = USER_STYLE_CATEGORIES.filter(c => pkg.visibleCategories.includes(c.key))
   const allCategories = [...visiblePhotoCategories, ...visibleUserCategories]
 
+  // Capture initial value on mount to preserve ordering
+  const initialValueRef = React.useRef<PhotoStyleSettingsType | undefined>(undefined)
+  if (initialValueRef.current === undefined) {
+    initialValueRef.current = value
+  }
+
+  // Determine initial editable state based on originalContextSettings or initial value
+  // This preserves the ordering even when users make changes
+  const wasInitiallyEditable = React.useMemo(() => {
+    const initialSettings = originalContextSettings || initialValueRef.current || value
+    const currentPkg = getPackageConfig(packageId)
+    const visiblePhoto = PHOTO_STYLE_CATEGORIES.filter(c => currentPkg.visibleCategories.includes(c.key))
+    const visibleUser = USER_STYLE_CATEGORIES.filter(c => currentPkg.visibleCategories.includes(c.key))
+    const allCats = [...visiblePhoto, ...visibleUser]
+    return new Set(
+      allCats
+        .filter(cat => {
+          const categorySettings = initialSettings[cat.key]
+          if (!categorySettings) return false
+          if (cat.key === 'clothing') {
+            return (categorySettings as { style?: string }).style === 'user-choice'
+          }
+          return (categorySettings as { type?: string }).type === 'user-choice'
+        })
+        .map(cat => cat.key)
+    )
+  }, [originalContextSettings, packageId])
+
   // Separate categories into editable and predefined for mobile reordering
+  // Use initial editable state to preserve ordering, not current state
   const editableCategories = allCategories.filter(cat => {
-    const status = getCategoryStatus(cat.key)
-    return status === 'user-choice'
+    return wasInitiallyEditable.has(cat.key)
   })
   
   const predefinedCategories = allCategories.filter(cat => {
-    const status = getCategoryStatus(cat.key)
-    return status !== 'user-choice'
+    return !wasInitiallyEditable.has(cat.key)
   })
 
   return (

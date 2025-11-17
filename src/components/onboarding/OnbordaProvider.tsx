@@ -93,32 +93,71 @@ function generateTours(t: (key: string, values?: Record<string, any>) => string,
 }
 
 function TourStarter() {
-  const { pendingTour } = useOnbordaTours()
+  const { pendingTour, clearPendingTour } = useOnbordaTours()
   const onborda = useOnborda()
+  const forceCloseRef = useRef<string | null>(null)
+  const lastCheckedTourRef = useRef<string | null>(null)
 
   useEffect(() => {
-    console.log('[Tour Debug] TourStarter: Effect triggered', { 
-      pendingTour, 
-      onborda: !!onborda,
-      startOnborda: !!onborda?.startOnborda,
-      isOnbordaVisible: onborda?.isOnbordaVisible 
-    })
+    // If a tour is visible but it's already completed, force close it (only once per tour)
+    if (onborda?.isOnbordaVisible && onborda?.currentTour) {
+      // Only check if we haven't already force-closed this specific tour
+      if (forceCloseRef.current !== onborda.currentTour) {
+        const hasCompleted = localStorage.getItem(`onboarding-${onborda.currentTour}-seen`) === 'true'
+        if (hasCompleted) {
+          console.log('[Tour Debug] TourStarter: Tour is visible but already completed, forcing close', { currentTour: onborda.currentTour })
+          forceCloseRef.current = onborda.currentTour
+          onborda.closeOnborda()
+          return
+        }
+      }
+    }
     
-    if (pendingTour && onborda?.startOnborda && !onborda.isOnbordaVisible) {
-      console.log('[Tour Debug] TourStarter: Starting tour', { pendingTour, isOnbordaVisible: onborda.isOnbordaVisible })
+    // Reset forceCloseRef when tour becomes invisible or changes
+    if (!onborda?.isOnbordaVisible || (onborda?.currentTour && forceCloseRef.current !== onborda.currentTour)) {
+      forceCloseRef.current = null
+    }
+    
+    // Only process pendingTour if it's different from what we last checked
+    if (pendingTour && pendingTour !== lastCheckedTourRef.current && onborda?.startOnborda && !onborda.isOnbordaVisible) {
+      lastCheckedTourRef.current = pendingTour
+      
+      // Double-check localStorage before starting (defense in depth)
+      const hasCompleted = localStorage.getItem(`onboarding-${pendingTour}-seen`) === 'true'
+      if (hasCompleted) {
+        console.log('[Tour Debug] TourStarter: Tour already completed, clearing pendingTour', { pendingTour })
+        clearPendingTour()
+        return
+      }
+      
+      console.log('[Tour Debug] TourStarter: Starting tour', { pendingTour })
       // Start the tour using Onborda's API
       setTimeout(() => {
+        // Check again right before starting (race condition protection)
+        const stillCompleted = localStorage.getItem(`onboarding-${pendingTour}-seen`) === 'true'
+        if (stillCompleted) {
+          console.log('[Tour Debug] TourStarter: Tour was completed during timeout, cancelling start', { pendingTour })
+          clearPendingTour()
+          lastCheckedTourRef.current = null
+          return
+        }
+        // Also check if tour is already visible (might have been started by something else)
+        if (onborda.isOnbordaVisible) {
+          console.log('[Tour Debug] TourStarter: Tour is already visible, skipping start', { pendingTour })
+          clearPendingTour()
+          lastCheckedTourRef.current = null
+          return
+        }
         console.log('[Tour Debug] TourStarter: Calling startOnborda', pendingTour)
         onborda.startOnborda(pendingTour)
       }, 500)
-    } else {
-      console.log('[Tour Debug] TourStarter: Not starting tour', { 
-        pendingTour, 
-        hasStartOnborda: !!onborda?.startOnborda, 
-        isOnbordaVisible: onborda?.isOnbordaVisible 
-      })
     }
-  }, [pendingTour, onborda])
+    
+    // Reset lastCheckedTourRef when pendingTour is cleared
+    if (!pendingTour) {
+      lastCheckedTourRef.current = null
+    }
+  }, [pendingTour, onborda?.isOnbordaVisible, onborda?.currentTour, onborda?.startOnborda, onborda, clearPendingTour])
 
   return null
 }

@@ -6,14 +6,16 @@ interface UseSelfieUploadOptions {
   onSuccess?: (key: string, id?: string) => void
   onError?: (error: string) => void
   saveEndpoint?: (key: string) => Promise<string | undefined> // Custom save function for invite flows, can return selfie ID
+  uploadEndpoint?: (file: File) => Promise<{ key: string; url?: string }> // Custom upload function for invite flows or other custom flows
 }
 
-export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieUploadOptions = {}) {
+export function useSelfieUpload({ onSuccess, onError, saveEndpoint, uploadEndpoint }: UseSelfieUploadOptions = {}) {
   const [uploadedKey, setUploadedKey] = useState<string | null>(null)
   const [isApproved, setIsApproved] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [tempKey, setTempKey] = useState<string | null>(null)
+  const [isDirectUpload, setIsDirectUpload] = useState(false) // Track if using direct upload (no temp storage)
   const { track } = useAnalytics()
 
   const handlePhotoUpload = async (file: File): Promise<{ key: string; url?: string }> => {
@@ -27,7 +29,15 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
         file_name: file.name
       })
       
-      // Upload file to local temp storage immediately
+      // Use custom upload endpoint if provided (for invite flows)
+      if (uploadEndpoint) {
+        const result = await uploadEndpoint(file)
+        setPendingFile(file)
+        setIsDirectUpload(true) // Mark as direct upload (no temp storage)
+        return result
+      }
+      
+      // Standard flow: Upload file to local temp storage
       const ext = file.name.split('.')?.pop()?.toLowerCase()
       const res = await fetch('/api/uploads/temp', {
         method: 'POST',
@@ -45,6 +55,7 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
       const data = await res.json() as { tempKey: string }
       setTempKey(data.tempKey)
       setPendingFile(file)
+      setIsDirectUpload(false) // Mark as temp storage flow
       
       // Create preview URL for local display
       const url = URL.createObjectURL(file)
@@ -79,15 +90,51 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
 
   const handleApprove = async () => {
     try {
+      setIsLoading(true)
+      
+      // If using direct upload (custom endpoint), skip promote step
+      if (isDirectUpload) {
+        if (!uploadedKey) {
+          console.error('handleApprove: No uploadedKey available for direct upload')
+          onError?.('No file to approve')
+          return
+        }
+        console.log('handleApprove: Direct upload flow - calling saveEndpoint', { uploadedKey })
+        
+        // For direct uploads, call saveEndpoint if provided (creates DB record)
+        let customSelfieId: string | undefined = undefined
+        if (saveEndpoint) {
+          try {
+            const result = await saveEndpoint(uploadedKey)
+            if (typeof result === 'string') {
+              customSelfieId = result
+            }
+            console.log('handleApprove: saveEndpoint completed', { customSelfieId })
+          } catch (saveError) {
+            console.error('handleApprove: saveEndpoint failed', saveError)
+            // Don't throw - the file is already uploaded, this is just DB record creation
+          }
+        }
+        
+        setIsApproved(true)
+        track('selfie_upload_success', {
+          file_size: pendingFile?.size,
+          file_type: pendingFile?.type
+        })
+        console.log('handleApprove: Calling onSuccess callback', { key: uploadedKey, selfieId: customSelfieId })
+        onSuccess?.(uploadedKey, customSelfieId)
+        setPendingFile(null)
+        return
+      }
+      
+      // Standard flow: Promote temp file to S3 and create database record
       if (!tempKey) {
         console.error('handleApprove: No tempKey available')
         onError?.('No file to approve')
         return
       }
-      setIsLoading(true)
       console.log('handleApprove: Starting approval process', { tempKey })
       
-      // Promote temp file to S3 and create database record
       const promoteRes = await fetch('/api/uploads/promote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -147,27 +194,39 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
 
   const handleReject = async () => {
     track('selfie_rejected')
-    if (uploadedKey?.startsWith('temp:') && tempKey) {
+    if (isDirectUpload && uploadedKey) {
+      // Direct upload: delete from S3
+      await deleteSelfie(uploadedKey)
+    } else if (uploadedKey?.startsWith('temp:') && tempKey) {
+      // Temp storage: delete temp file
       await deleteTemp(tempKey)
     } else if (uploadedKey && !uploadedKey.startsWith('temp:')) {
+      // Already promoted: delete from S3
       await deleteSelfie(uploadedKey)
     }
     setUploadedKey(null)
     setPendingFile(null)
     setTempKey(null)
+    setIsDirectUpload(false)
     setIsApproved(false)
   }
 
   const handleRetake = async () => {
     track('selfie_retake')
-    if (uploadedKey?.startsWith('temp:') && tempKey) {
+    if (isDirectUpload && uploadedKey) {
+      // Direct upload: delete from S3
+      await deleteSelfie(uploadedKey)
+    } else if (uploadedKey?.startsWith('temp:') && tempKey) {
+      // Temp storage: delete temp file
       await deleteTemp(tempKey)
     } else if (uploadedKey && !uploadedKey.startsWith('temp:')) {
+      // Already promoted: delete from S3
       await deleteSelfie(uploadedKey)
     }
     setUploadedKey(null)
     setPendingFile(null)
     setTempKey(null)
+    setIsDirectUpload(false)
     setIsApproved(false)
   }
 
@@ -200,6 +259,7 @@ export function useSelfieUpload({ onSuccess, onError, saveEndpoint }: UseSelfieU
     setIsLoading(false)
     setPendingFile(null)
     setTempKey(null)
+    setIsDirectUpload(false)
   }
 
   return {

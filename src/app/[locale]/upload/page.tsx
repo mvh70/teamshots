@@ -58,10 +58,6 @@ export default function UploadPage() {
     setIsApproved(true)
   }
 
-  const onReject = async () => {
-    await deleteSelfie()
-  }
-
   const onRetake = async () => {
     await deleteSelfie()
   }
@@ -165,7 +161,6 @@ export default function UploadPage() {
         <SelfieApproval
           uploadedPhotoKey={key}
           onApprove={onApprove}
-          onReject={onReject}
           onRetake={onRetake}
           onCancel={onCancel}
         />
