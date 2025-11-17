@@ -101,10 +101,14 @@ export async function POST(request: NextRequest) {
             })
 
             // Ensure user role is team_admin if they're the admin
+            // SECURITY: Incrementing tokenVersion invalidates all existing JWT tokens for this user
             if (team.adminId === user.id && user.role !== 'team_admin') {
               await prisma.user.update({
                 where: { id: user.id },
-                data: { role: 'team_admin' }
+                data: { 
+                  role: 'team_admin',
+                  tokenVersion: { increment: 1 } // Invalidate all existing sessions
+                }
               })
             }
 
@@ -130,9 +134,13 @@ export async function POST(request: NextRequest) {
             })
 
             // Update user role to team_admin
+            // SECURITY: Incrementing tokenVersion invalidates all existing JWT tokens for this user
             await prisma.user.update({
               where: { id: user.id },
-              data: { role: 'team_admin' }
+              data: { 
+                role: 'team_admin',
+                tokenVersion: { increment: 1 } // Invalidate all existing sessions
+              }
             })
 
             if (user.person) {

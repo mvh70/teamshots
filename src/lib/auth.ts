@@ -9,9 +9,36 @@ import type { Session, User } from "next-auth"
 import type { AdapterUser } from "next-auth/adapters"
 import type { JWT } from "next-auth/jwt"
 import { Env } from '@/lib/env'
+import { randomBytes } from 'crypto'
 
 const SESSION_MAX_AGE_SECONDS = 30 * 60 // 30 minutes
 const SESSION_EXTENSION_THRESHOLD_SECONDS = 5 * 60 // 5 minutes
+
+/**
+ * Generate a unique JWT ID (jti) for token tracking
+ */
+function generateJti(): string {
+  return randomBytes(32).toString('hex')
+}
+
+/**
+ * Check if a token has been revoked
+ */
+async function isTokenRevoked(jti: string | undefined): Promise<boolean> {
+  if (!jti) {
+    return false
+  }
+  
+  try {
+    const revoked = await prisma.revokedToken.findUnique({
+      where: { jti }
+    })
+    return !!revoked
+  } catch {
+    // If check fails, fail secure - reject the token
+    return true
+  }
+}
 
 /**
  * Helper function to fetch and format person data for JWT token
@@ -153,14 +180,49 @@ export const authOptions = {
   callbacks: {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async jwt({ token, user, trigger: _trigger }: { token: JWT; user?: User | AdapterUser | null; trigger?: string }) {
+      // SECURITY: Check if token has been revoked (only on subsequent requests, not initial auth)
+      if (!user && token.jti) {
+        const isRevoked = await isTokenRevoked(token.jti as string)
+        if (isRevoked) {
+          // Token has been revoked - throw error to reject authentication
+          throw new Error('Token has been revoked')
+        }
+      }
+      
       if (user) {
         token.role = user.role
         token.isAdmin = user.isAdmin
         token.locale = user.locale
         
+        // SECURITY: Generate unique JWT ID (jti) for token tracking and revocation
+        token.jti = generateJti()
+        
+        // SECURITY: Store token version to invalidate all tokens when role/permissions change
+        // Fetch current token version from database
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { tokenVersion: true }
+        })
+        token.tokenVersion = dbUser?.tokenVersion ?? 0
+        
         // Set token expiration time when user first authenticates
         const now = Math.floor(Date.now() / 1000)
         token.exp = now + SESSION_MAX_AGE_SECONDS
+      }
+      
+      // SECURITY: Check token version on every request - if it doesn't match, token is invalid
+      if (!user && token.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { tokenVersion: true }
+        })
+        const currentTokenVersion = dbUser?.tokenVersion ?? 0
+        const tokenTokenVersion = (token.tokenVersion as number) ?? 0
+        
+        if (currentTokenVersion !== tokenTokenVersion) {
+          // Token version mismatch - user's role/permissions changed, invalidate this token
+          throw new Error('Token version mismatch - session invalidated due to role/permission change')
+        }
       }
       
       // Fetch person data if missing (works for both initial auth and subsequent requests)

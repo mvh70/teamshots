@@ -441,7 +441,19 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
     ? roleFiltered.filter(item => individualHrefs.has(item.href))
     : [] // team_member mode - no sidebar navigation
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      // SECURITY: Revoke the JWT token before signing out
+      // This ensures the token cannot be used after logout
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      })
+    } catch (error) {
+      // Log error but continue with signOut to ensure cookie is cleared
+      console.error('Failed to revoke token on logout:', error)
+    }
+    
     // Always use current origin to ensure correct protocol (http vs https)
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
     signOut({ callbackUrl: `${baseUrl}/` })

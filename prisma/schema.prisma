@@ -24,6 +24,7 @@ model User {
   freeTrialGrantedAt   DateTime?
   planPeriod           String?
   planTier             String?
+  tokenVersion          Int                  @default(0) // Incremented when role/permissions change to invalidate all sessions
   accounts             Account[]
   teams                Team[]               @relation("TeamAdmin")
   creditTransactions   CreditTransaction[]
@@ -34,6 +35,7 @@ model User {
   transactions         Transaction[]
   subscriptionChanges  SubscriptionChange[]
   userPackages         UserPackage[]
+  revokedTokens        RevokedToken[]
 
   @@index([email])
 }
@@ -398,4 +400,17 @@ model UserPackage {
   @@unique([userId, packageId])
   @@index([userId])
   @@index([packageId])
+}
+
+model RevokedToken {
+  id        String   @id @default(cuid())
+  jti       String   @unique // JWT ID (jti claim)
+  userId    String
+  expiresAt DateTime // When the token would naturally expire
+  revokedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([jti])
+  @@index([userId])
+  @@index([expiresAt])
 }

@@ -41,10 +41,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Can only change your own role for testing purposes' }, { status: 400 })
     }
 
-    // Update the user's role
+    // Update the user's role and increment token version to invalidate all sessions
+    // SECURITY: Incrementing tokenVersion invalidates all existing JWT tokens for this user
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { role: newRole },
+      data: { 
+        role: newRole,
+        tokenVersion: { increment: 1 } // Invalidate all existing sessions
+      },
       include: {
         person: {
           include: {
@@ -61,7 +65,9 @@ export async function POST(request: NextRequest) {
       { 
         targetUserId: userId, 
         oldRole: session.user.role || 'user', 
-        newRole: newRole 
+        newRole: newRole,
+        tokenVersion: updatedUser.tokenVersion,
+        note: 'All sessions invalidated due to role change'
       }
     )
 

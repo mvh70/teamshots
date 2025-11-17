@@ -104,17 +104,25 @@ export async function POST(request: NextRequest) {
         data: { adminId: targetPerson.userId }
       })
 
-      // Update user role
+      // Update user role and invalidate all sessions
+      // SECURITY: Incrementing tokenVersion invalidates all existing JWT tokens for this user
       await prisma.user.update({
         where: { id: targetPerson.userId },
-        data: { role: 'team_admin' }
+        data: { 
+          role: 'team_admin',
+          tokenVersion: { increment: 1 } // Invalidate all existing sessions
+        }
       })
     } else {
-      // Demoting to member
+      // Demoting to member and invalidate all sessions
+      // SECURITY: Incrementing tokenVersion invalidates all existing JWT tokens for this user
       if (targetPerson.userId) {
         await prisma.user.update({
           where: { id: targetPerson.userId },
-          data: { role: 'team_member' }
+          data: { 
+            role: 'team_member',
+            tokenVersion: { increment: 1 } // Invalidate all existing sessions
+          }
         })
       }
 
@@ -138,9 +146,13 @@ export async function POST(request: NextRequest) {
             data: { adminId: otherMember.userId }
           })
 
+          // SECURITY: Incrementing tokenVersion invalidates all existing JWT tokens for this user
           await prisma.user.update({
             where: { id: otherMember.userId },
-            data: { role: 'team_admin' }
+            data: { 
+              role: 'team_admin',
+              tokenVersion: { increment: 1 } // Invalidate all existing sessions
+            }
           })
         } else {
           return NextResponse.json({ 
@@ -159,7 +171,8 @@ export async function POST(request: NextRequest) {
         targetPersonId: targetPerson.id,
         newRole: role,
         teamId: teamId,
-        isSelfChange: targetPerson.userId === session.user.id
+        isSelfChange: targetPerson.userId === session.user.id,
+        note: 'All sessions invalidated due to role change'
       }
     )
 
