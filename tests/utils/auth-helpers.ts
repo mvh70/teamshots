@@ -280,8 +280,9 @@ export async function acceptInvite(options: {
   })
 
   // Allocate credits from invite
-  const { allocateCreditsFromInvite } = await import('@/domain/credits/credits')
-  await allocateCreditsFromInvite(
+  // Import the function dynamically to avoid circular dependencies
+  const creditsModule = await import('@/domain/credits/credits')
+  await creditsModule.allocateCreditsFromInvite(
     person.id,
     invite.id,
     invite.creditsAllocated,
@@ -333,7 +334,7 @@ export async function createTeamContext(options: {
       name: options.name || 'Test Context',
       teamId: options.teamId,
       stylePreset: options.stylePreset || 'corporate',
-      settings: options.settings || {},
+      settings: (options.settings || {}) as unknown as Parameters<typeof prisma.context.create>[0]['data']['settings'],
     }
   })
 
