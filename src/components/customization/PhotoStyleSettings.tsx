@@ -546,7 +546,8 @@ export default function PhotoStyleSettings({
   // Determine initial editable state based on originalContextSettings or initial value
   // This preserves the ordering even when users make changes
   const wasInitiallyEditable = React.useMemo(() => {
-    const initialSettings = originalContextSettings || initialValueRef.current || value
+    // Use initialValueRef.current instead of value to avoid dependency on changing value
+    const initialSettings = originalContextSettings || initialValueRef.current
     const currentPkg = getPackageConfig(packageId)
     const visiblePhoto = PHOTO_STYLE_CATEGORIES.filter(c => currentPkg.visibleCategories.includes(c.key))
     const visibleUser = USER_STYLE_CATEGORIES.filter(c => currentPkg.visibleCategories.includes(c.key))
@@ -554,7 +555,7 @@ export default function PhotoStyleSettings({
     return new Set(
       allCats
         .filter(cat => {
-          const categorySettings = initialSettings[cat.key]
+          const categorySettings = initialSettings?.[cat.key]
           if (!categorySettings) return false
           if (cat.key === 'clothing') {
             return (categorySettings as { style?: string }).style === 'user-choice'

@@ -5,7 +5,10 @@ import { OnbordaProvider as OnbordaProviderLib, Onborda, useOnborda } from 'onbo
 import { createTranslatedTours, OnboardingContext } from '@/lib/onborda/config'
 import { OnbordaCard } from '@/components/onboarding/OnbordaCard'
 import { useTranslations } from 'next-intl'
-import { useOnboardingState, useOnbordaTours } from '@/lib/onborda/hooks'
+import { useOnbordaTours } from '@/lib/onborda/hooks'
+import { useOnboardingState } from '@/contexts/OnboardingContext'
+import { usePathname } from 'next/navigation'
+import { getTour } from '@/lib/onborda/config'
 
 interface OnbordaProviderProps {
   children: ReactNode
@@ -93,8 +96,10 @@ function generateTours(t: (key: string, values?: Record<string, any>) => string,
 }
 
 function TourStarter() {
-  const { pendingTour, clearPendingTour } = useOnbordaTours()
+  const { pendingTour, clearPendingTour, context } = useOnbordaTours()
   const onborda = useOnborda()
+  const t = useTranslations('app')
+  const pathname = usePathname()
   const forceCloseRef = useRef<string | null>(null)
   const lastCheckedTourRef = useRef<string | null>(null)
 
@@ -103,9 +108,10 @@ function TourStarter() {
     if (onborda?.isOnbordaVisible && onborda?.currentTour) {
       // Only check if we haven't already force-closed this specific tour
       if (forceCloseRef.current !== onborda.currentTour) {
-        const hasCompleted = localStorage.getItem(`onboarding-${onborda.currentTour}-seen`) === 'true'
+        // Check database via context.completedTours instead of localStorage
+        const completedTours = context.completedTours || []
+        const hasCompleted = completedTours.includes(onborda.currentTour)
         if (hasCompleted) {
-          console.log('[Tour Debug] TourStarter: Tour is visible but already completed, forcing close', { currentTour: onborda.currentTour })
           forceCloseRef.current = onborda.currentTour
           onborda.closeOnborda()
           return
@@ -122,33 +128,40 @@ function TourStarter() {
     if (pendingTour && pendingTour !== lastCheckedTourRef.current && onborda?.startOnborda && !onborda.isOnbordaVisible) {
       lastCheckedTourRef.current = pendingTour
       
-      // Double-check localStorage before starting (defense in depth)
-      const hasCompleted = localStorage.getItem(`onboarding-${pendingTour}-seen`) === 'true'
+      const tour = getTour(pendingTour, t, context)
+      
+      // Add path check
+      if (tour?.startingPath && !pathname.endsWith(tour.startingPath)) {
+        clearPendingTour()
+        lastCheckedTourRef.current = null
+        return
+      }
+      
+      // Double-check database before starting (defense in depth)
+      const completedTours = context.completedTours || []
+      const hasCompleted = completedTours.includes(pendingTour)
       if (hasCompleted) {
-        console.log('[Tour Debug] TourStarter: Tour already completed, clearing pendingTour', { pendingTour })
         clearPendingTour()
         return
       }
       
-      console.log('[Tour Debug] TourStarter: Starting tour', { pendingTour })
       // Start the tour using Onborda's API
       setTimeout(() => {
         // Check again right before starting (race condition protection)
-        const stillCompleted = localStorage.getItem(`onboarding-${pendingTour}-seen`) === 'true'
+        // Re-read from context in case it was updated
+        const updatedCompletedTours = context.completedTours || []
+        const stillCompleted = updatedCompletedTours.includes(pendingTour)
         if (stillCompleted) {
-          console.log('[Tour Debug] TourStarter: Tour was completed during timeout, cancelling start', { pendingTour })
           clearPendingTour()
           lastCheckedTourRef.current = null
           return
         }
         // Also check if tour is already visible (might have been started by something else)
         if (onborda.isOnbordaVisible) {
-          console.log('[Tour Debug] TourStarter: Tour is already visible, skipping start', { pendingTour })
           clearPendingTour()
           lastCheckedTourRef.current = null
           return
         }
-        console.log('[Tour Debug] TourStarter: Calling startOnborda', pendingTour)
         onborda.startOnborda(pendingTour)
       }, 500)
     }
@@ -157,7 +170,7 @@ function TourStarter() {
     if (!pendingTour) {
       lastCheckedTourRef.current = null
     }
-  }, [pendingTour, onborda?.isOnbordaVisible, onborda?.currentTour, onborda?.startOnborda, onborda, clearPendingTour])
+  }, [pendingTour, onborda?.isOnbordaVisible, onborda?.currentTour, onborda?.startOnborda, onborda, clearPendingTour, context.completedTours, t, context, pathname])
 
   return null
 }
@@ -182,38 +195,55 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
   
-  // Track context values to detect changes
-  const contextRef = useRef<{ teamName?: string; firstName?: string; isFreePlan?: boolean }>({})
+  // Track context values to detect changes - only track what actually affects tour generation
+  const contextRef = useRef<{ teamName?: string; firstName?: string; isFreePlan?: boolean; accountMode?: string }>({})
   
   // Track previous mobile state to detect changes
   const prevMobileRef = useRef(isMobile)
   
+  // Track if context has been loaded to prevent premature generation
+  const contextLoadedRef = useRef(false)
+  
   // Generate tours when context is loaded or mobile state changes, using ref to prevent unnecessary regenerations
   const toursRef = useRef<ReturnType<typeof generateTours> | null>(null)
   useEffect(() => {
+    // Update loaded ref
+    if (context._loaded && !contextLoadedRef.current) {
+      contextLoadedRef.current = true
+    }
+    
+    // Only proceed if context is loaded
+    if (!contextLoadedRef.current) {
+      return
+    }
+    
     const teamNameChanged = context.teamName !== contextRef.current.teamName
     const firstNameChanged = context.firstName !== contextRef.current.firstName
     const isFreePlanChanged = context.isFreePlan !== contextRef.current.isFreePlan
+    const accountModeChanged = context.accountMode !== contextRef.current.accountMode
     const mobileChanged = isMobile !== prevMobileRef.current
     
-    // Regenerate tours if context is loaded and relevant values changed
-    if (context._loaded && (teamNameChanged || firstNameChanged || isFreePlanChanged || mobileChanged || !toursRef.current)) {
-      contextRef.current = { teamName: context.teamName, firstName: context.firstName, isFreePlan: context.isFreePlan }
-      prevMobileRef.current = isMobile
-      toursRef.current = generateTours(t, context, isMobile)
-      setTours(toursRef.current)
-    } else if (!toursRef.current) {
-      // Generate initial tours with current context (will use fallbacks if values not available)
+    // Regenerate tours only if relevant values changed
+    if (teamNameChanged || firstNameChanged || isFreePlanChanged || accountModeChanged || mobileChanged || !toursRef.current) {
+      contextRef.current = { 
+        teamName: context.teamName, 
+        firstName: context.firstName, 
+        isFreePlan: context.isFreePlan,
+        accountMode: context.accountMode
+      }
       prevMobileRef.current = isMobile
       toursRef.current = generateTours(t, context, isMobile)
       setTours(toursRef.current)
     }
-  }, [context._loaded, context.teamName, context.firstName, context.isFreePlan, context, t, isMobile])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context._loaded, context.teamName, context.firstName, context.isFreePlan, context.accountMode, t, isMobile]) // Removed full context object from dependencies
   
   // Use tours from ref if state is not ready yet
+  // The useEffect handles all tour generation, this is just a memoized accessor
   const finalTours = useMemo(() => {
-    return tours || toursRef.current || generateTours(t, context, isMobile)
-  }, [tours, t, context, isMobile])
+    // Prefer state tours, then ref tours
+    return tours || toursRef.current || []
+  }, [tours]) // Only depend on tours state - useEffect handles regeneration when context changes
 
   return (
     <OnbordaProviderLib>
@@ -224,3 +254,4 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
     </OnbordaProviderLib>
   )
 }
+

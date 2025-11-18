@@ -22,7 +22,9 @@ import { useCredits } from '@/contexts/CreditsContext'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
 import { WelcomeGallery } from '@/components/onboarding/WelcomeGallery'
 import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress'
-import { useOnboardingState } from '@/lib/onborda/hooks'
+import { OnboardingBenefits } from '@/components/onboarding/OnboardingBenefits'
+import { useOnboardingState } from '@/contexts/OnboardingContext'
+import { useAnalytics } from '@/hooks/useAnalytics'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -96,12 +98,14 @@ export default function DashboardPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [showUploadFlow, setShowUploadFlow] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [preparingOnboarding, setPreparingOnboarding] = useState(false)
 
   // Onboarding state
-  const { context: onboardingContext } = useOnboardingState()
+  const { context: onboardingContext, updateContext: updateOnboardingContext } = useOnboardingState()
+  const { track } = useAnalytics()
   const [onboardingStep, setOnboardingStep] = useState(1)
-  const [hasCompletedMainOnboarding, setHasCompletedMainOnboarding] = useState(false)
+  const [hasCompletedMainOnboarding, setHasCompletedMainOnboarding] = useState(false) // Start as false, will be set to true if completed
+  const [showOnboardingImmediately, setShowOnboardingImmediately] = useState(false)
+  const [onboardingStartedTracked, setOnboardingStartedTracked] = useState(false)
   
   // Check for transition flag immediately on mount
   useEffect(() => {
@@ -110,55 +114,132 @@ export default function DashboardPage() {
       if (showImmediately) {
         // Clear flag immediately to prevent stale state
         sessionStorage.removeItem('show-onboarding-immediately')
-        // Force onboarding to show
+        // Set flag to show onboarding immediately once context is loaded
+        setShowOnboardingImmediately(true)
+        // Ensure onboarding is not marked as completed
         setHasCompletedMainOnboarding(false)
-        setPreparingOnboarding(true)
+      }
+
+      // Prevent any automatic redirects to photo styles page after team creation
+      // Users should complete onboarding first, then navigate when ready
+      const preventRedirect = sessionStorage.getItem('prevent-style-redirect')
+      if (preventRedirect !== 'true') {
+        sessionStorage.setItem('prevent-style-redirect', 'true')
       }
     }
   }, [])
   
-  const shouldShowOnboarding = !hasCompletedMainOnboarding && onboardingContext._loaded && !preparingOnboarding
+  const shouldShowOnboarding = !hasCompletedMainOnboarding && onboardingContext._loaded
+
+  // Don't show onboarding during initial server render to prevent hydration mismatch
+  const showOnboardingSection = mounted && shouldShowOnboarding
+
+  // Track onboarding funnel analytics
+  useEffect(() => {
+    if (showOnboardingSection && !onboardingStartedTracked && session?.user?.id) {
+      // Track onboarding started (first time user sees onboarding)
+      track('onboarding_started', {
+        user_id: session.user.id,
+        onboarding_segment: onboardingContext.onboardingSegment,
+        is_free_plan: onboardingContext.isFreePlan,
+        total_steps: 3
+      })
+      setOnboardingStartedTracked(true)
+    }
+  }, [showOnboardingSection, onboardingStartedTracked, session?.user?.id, onboardingContext.onboardingSegment, onboardingContext.isFreePlan, track])
+
+  // Track step views
+  useEffect(() => {
+    if (showOnboardingSection && session?.user?.id) {
+      track('onboarding_step_viewed', {
+        user_id: session.user.id,
+        step_number: onboardingStep,
+        step_name: onboardingStep === 1 ? 'welcome_gallery' :
+                   onboardingStep === 2 ? 'how_it_works' : 'first_action',
+        onboarding_segment: onboardingContext.onboardingSegment,
+        is_free_plan: onboardingContext.isFreePlan
+      })
+    }
+  }, [onboardingStep, showOnboardingSection, session?.user?.id, onboardingContext.onboardingSegment, onboardingContext.isFreePlan, track])
 
   // Onboarding handlers
-  const handleStartAction = () => {
-    // Mark onboarding as complete
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('onboarding-main-onboarding-seen', 'true')
-      setHasCompletedMainOnboarding(true)
-    }
-    
-    // Navigate based on plan type and segment
-    const segment = onboardingContext.onboardingSegment || 'individual'
-    const isFree = onboardingContext.isFreePlan ?? true
-    
-    if (segment === 'organizer') {
-      if (isFree) {
-        // Free plan: redirect to team page to invite yourself
-        // Set flag to automatically open invite modal when they arrive at team page
-        sessionStorage.setItem('open-invite-modal', 'true')
-        router.push('/app/team')
-      } else {
-        // Paid plan: redirect to photo styles page to set brand style
-        router.push('/app/styles/team')
+  const handleStartAction = async () => {
+    try {
+      const response = await fetch('/api/onboarding/complete-tour', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tourName: 'main-onboarding' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to complete onboarding');
       }
-    } else {
-      // Individual users go to generate
-      router.push('/app/generate/start')
+
+      // Force refresh the onboarding context to get the latest completed tours from database
+      const contextResponse = await fetch('/api/onboarding/context');
+      if (contextResponse.ok) {
+        const freshContext = await contextResponse.json();
+        // Update the context with the fresh data
+        updateOnboardingContext({
+          completedTours: freshContext.completedTours || [],
+          _loaded: true
+        });
+      }
+
+      // Track onboarding completion
+      if (session?.user?.id) {
+        track('onboarding_completed', {
+          user_id: session.user.id,
+          onboarding_segment: onboardingContext.onboardingSegment,
+          is_free_plan: onboardingContext.isFreePlan,
+          final_step: onboardingStep,
+          completion_time: Date.now()
+        })
+      }
+
+      // Navigate based on plan type and segment
+      const segment = onboardingContext.onboardingSegment || 'individual';
+      const isFree = onboardingContext.isFreePlan ?? true;
+
+      if (segment === 'organizer') {
+        if (isFree) {
+          // Free plan: redirect to team page to invite yourself
+          // Set flag to automatically open invite modal when they arrive at team page
+          sessionStorage.setItem('open-invite-modal', 'true');
+          router.push('/app/team');
+        } else {
+          // Paid plan: stay on dashboard (user can navigate to photo styles when ready)
+          // Don't auto-redirect to photo styles page
+        }
+      } else {
+        // Individual users go to generate
+        router.push('/app/generate/start');
+      }
+    } catch (error) {
+      console.error('Failed to mark onboarding as complete:', error);
+      // Show user-facing error (you can style this better or use a toast library)
+      alert('Failed to save onboarding completion. Please try again.');
+      // Do NOT set hasCompletedMainOnboarding(true) on error
     }
   }
 
-  // Read onboarding completion status from localStorage (client-side only)
-  // Only check if we're not showing onboarding immediately
+  // Read onboarding completion status from database (via onboardingContext.completedTours)
   useEffect(() => {
-    if (typeof window !== 'undefined' && !preparingOnboarding) {
-      const completed = localStorage.getItem('onboarding-main-onboarding-seen') === 'true'
-      setHasCompletedMainOnboarding(completed)
-      // Once onboarding context is loaded, clear preparing state
-      if (onboardingContext._loaded) {
-        setPreparingOnboarding(false)
+    if (onboardingContext._loaded) {
+      // Check if main-onboarding is in completedTours array from database
+      const completedTours = onboardingContext.completedTours || []
+      const completed = completedTours.includes('main-onboarding')
+
+      // If we have the immediate flag set, override the completion status
+      if (showOnboardingImmediately) {
+        setHasCompletedMainOnboarding(false)
+        // Clear the flag now that onboarding context is loaded
+        setShowOnboardingImmediately(false)
+      } else {
+        setHasCompletedMainOnboarding(completed)
       }
     }
-  }, [onboardingContext._loaded, preparingOnboarding])
+  }, [onboardingContext._loaded, onboardingContext.completedTours, showOnboardingImmediately])
 
   // Check for success parameter in URL
   useEffect(() => {
@@ -213,7 +294,10 @@ export default function DashboardPage() {
         const dashboardData = await jsonFetcher<{ 
           success: boolean;
           stats: DashboardStats; 
-          userRole: UserPermissions;
+          userRole: UserPermissions & {
+            needsPhotoStyleSetup?: boolean;
+            nextTeamOnboardingStep?: 'team_setup' | 'style_setup' | 'invite_members' | null;
+          };
           activities: Activity[];
           pendingInvites: PendingInvite[];
         }>('/api/dashboard')
@@ -223,6 +307,10 @@ export default function DashboardPage() {
           setUserPermissions(normalizeUserPermissions(dashboardData.userRole))
           setRecentActivity(dashboardData.activities || [])
           setPendingInvites(dashboardData.pendingInvites || [])
+          
+          // IMPORTANT: Do NOT redirect based on needsPhotoStyleSetup
+          // Users should complete onboarding first, then navigate to photo styles when ready
+          // The onboarding flow will guide them appropriately
         }
 
       } catch (error) {
@@ -316,7 +404,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 md:space-y-8 max-w-7xl mx-auto">
       {/* Onboarding Flow - Show first if applicable to prevent flickering */}
-      {shouldShowOnboarding && (
+      {showOnboardingSection && (
         <div className="bg-white rounded-xl shadow-depth-sm border border-gray-200 p-8 animate-fade-in">
           <OnboardingProgress
             currentStep={onboardingStep}
@@ -328,6 +416,7 @@ export default function DashboardPage() {
           {onboardingStep === 1 && (
             <div className="text-center space-y-8">
               <WelcomeGallery />
+              <OnboardingBenefits />
             </div>
           )}
 
@@ -341,50 +430,68 @@ export default function DashboardPage() {
                 <div className="space-y-4 text-left">
                   {onboardingContext.onboardingSegment === 'organizer' ? (
                     <>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
-                          1
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step1.title')}</h4>
-                          <p className="text-sm text-gray-600">
-                            {t('onboarding.howItWorks.organizer.step1.description')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
-                          2
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step2.title')}</h4>
-                          <p className="text-sm text-gray-600">
-                            {t('onboarding.howItWorks.organizer.step2.description')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
-                          3
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step3.title')}</h4>
-                          <p className="text-sm text-gray-600">
-                            {t('onboarding.howItWorks.organizer.step3.description')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
-                          4
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step4.title')}</h4>
-                          <p className="text-sm text-gray-600">
-                            {t('onboarding.howItWorks.organizer.step4.description')}
-                          </p>
-                        </div>
-                      </div>
+                      {onboardingContext.isFreePlan ? (
+                        <>
+                          <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                              1
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.free.step1.title')}</h4>
+                              <p className="text-sm text-gray-600">
+                                {t('onboarding.howItWorks.organizer.free.step1.description')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                              2
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.free.step2.title')}</h4>
+                              <p className="text-sm text-gray-600">
+                                {t('onboarding.howItWorks.organizer.free.step2.description')}
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                              1
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step1.title')}</h4>
+                              <p className="text-sm text-gray-600">
+                                {t('onboarding.howItWorks.organizer.step1.description')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                              2
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step2.title')}</h4>
+                              <p className="text-sm text-gray-600">
+                                {t('onboarding.howItWorks.organizer.step2.description')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                              3
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step4.title')}</h4>
+                              <p className="text-sm text-gray-600">
+                                {t('onboarding.howItWorks.organizer.step4.description')}
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </>
                   ) : onboardingContext.onboardingSegment === 'invited' ? (
                     <>
@@ -440,17 +547,6 @@ export default function DashboardPage() {
                           2
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.individual.step2.title')}</h4>
-                          <p className="text-sm text-gray-600">
-                            {t('onboarding.howItWorks.individual.step2.description')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
-                          3
-                        </div>
-                        <div>
                           <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.individual.step3.title')}</h4>
                           <p className="text-sm text-gray-600">
                             {onboardingContext.isFreePlan 
@@ -479,10 +575,10 @@ export default function DashboardPage() {
                   <>
                     {onboardingContext.isFreePlan ? (
                       <>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-4">
                           {t('onboarding.firstAction.organizer.free.title')}
                         </h3>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-sm text-gray-600 mb-6">
                           {t('onboarding.firstAction.organizer.free.description')}
                         </p>
                         <button
@@ -494,10 +590,10 @@ export default function DashboardPage() {
                       </>
                     ) : (
                       <>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-4">
                           {t('onboarding.firstAction.organizer.paid.title')}
                         </h3>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-sm text-gray-600 mb-6">
                           {t('onboarding.firstAction.organizer.paid.description')}
                         </p>
                         <button
@@ -513,10 +609,10 @@ export default function DashboardPage() {
                   <>
                     {onboardingContext.isFreePlan ? (
                       <>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-4">
                           {t('onboarding.firstAction.individual.free.title')}
                         </h3>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-sm text-gray-600 mb-6">
                           {t('onboarding.firstAction.individual.free.description')}
                         </p>
                         <button
@@ -528,10 +624,10 @@ export default function DashboardPage() {
                       </>
                     ) : (
                       <>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-4">
                           {t('onboarding.firstAction.individual.paid.title')}
                         </h3>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-sm text-gray-600 mb-6">
                           {t('onboarding.firstAction.individual.paid.description')}
                         </p>
                         <button
@@ -560,11 +656,21 @@ export default function DashboardPage() {
 
             <div className="flex gap-3">
               <button
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('onboarding-main-onboarding-seen', 'true')
+                onClick={async () => {
+                  // Mark onboarding as complete in database
+                  try {
+                    await fetch('/api/onboarding/complete-tour', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ tourName: 'main-onboarding' }),
+                    })
                     setHasCompletedMainOnboarding(true)
                     window.location.reload() // Refresh to hide onboarding
+                  } catch (error) {
+                    console.error('Failed to mark onboarding as complete:', error)
+                    // Continue anyway
+                    setHasCompletedMainOnboarding(true)
+                    window.location.reload()
                   }
                 }}
                 className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
@@ -614,12 +720,12 @@ export default function DashboardPage() {
         />
       )}
 
-      {!showUploadFlow && !shouldShowOnboarding && (
+      {!showUploadFlow && !shouldShowOnboarding && mounted && (
         <>
           {/* Welcome Section */}
-          <div 
-            id="welcome-section" 
-            className={`bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-xl p-6 md:p-8 text-white shadow-depth-lg transition-all duration-300 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}
+          <div
+            id="welcome-section"
+            className={`bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-xl p-6 md:p-8 text-white shadow-depth-lg transition-all duration-300 animate-fade-in`}
             style={{ animationDelay: '0ms' }}
           >
             <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white leading-tight">
@@ -632,18 +738,40 @@ export default function DashboardPage() {
               {loading ? (
                 <span className="animate-pulse">Loading your stats...</span>
               ) : userPermissions.isTeamAdmin ? (
-                t('welcome.subtitle.teamAdmin', {
-                  count: stats.photosGenerated,
-                  teamMembers: stats.teamMembers
-                })
-              ) : userPermissions.isRegularUser ? (
-                t('welcome.subtitle.individual', {
-                  count: stats.photosGenerated
-                })
+                stats.teamMembers === 0 ? (
+                  isFreePlan ? (
+                    t('welcome.subtitle.teamAdminNoMembersFree')
+                  ) : (
+                    t('welcome.subtitle.teamAdminNoMembersPaid')
+                  )
+                ) : stats.photosGenerated === 0 ? (
+                  t('welcome.subtitle.teamAdminMembersNoPhotos', { teamMembers: stats.teamMembers })
+                ) : (
+                  t('welcome.subtitle.teamAdminMembersWithPhotos', {
+                    count: stats.photosGenerated,
+                    teamMembers: stats.teamMembers
+                  })
+                )
+              ) : userPermissions.isRegularUser || !userPermissions.isTeamAdmin ? (  // Treat regular and default as individual
+                stats.photosGenerated === 0 ? (
+                  isFreePlan ? (
+                    t('welcome.subtitle.individualNoPhotosFree')
+                  ) : (
+                    t('welcome.subtitle.individualNoPhotosPaid')
+                  )
+                ) : (
+                  t('welcome.subtitle.individualWithPhotos', {
+                    count: stats.photosGenerated
+                  })
+                )
               ) : userPermissions.isTeamMember ? (
-                t('welcome.subtitle.team', {
-                  count: stats.photosGenerated
-                })
+                stats.photosGenerated === 0 ? (
+                  t('welcome.subtitle.teamNoPhotos')
+                ) : (
+                  t('welcome.subtitle.teamWithPhotos', {
+                    count: stats.photosGenerated
+                  })
+                )
               ) : (
                 t('welcome.subtitle.individual', {
                   count: stats.photosGenerated
@@ -653,7 +781,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stats Grid - Credit Status Card First, Then Other Stats */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${userPermissions.isTeamAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6`}>
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${userPermissions.isTeamAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6 animate-fade-in`} style={{ animationDelay: '100ms' }}>
             {/* Credit Status Card - Prominent First Card */}
             {loading || creditsLoading ? (
               <div className="bg-white rounded-xl p-6 shadow-depth-sm border border-gray-200 animate-pulse">

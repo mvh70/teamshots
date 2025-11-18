@@ -8,6 +8,7 @@ import { getEffectiveTeamCreditBalance, getTeamInviteRemainingCredits } from '@/
 import { PRICING_CONFIG } from '@/config/pricing'
 import { Logger } from '@/lib/logger'
 import { getTranslation } from '@/lib/translations'
+import { getPackageConfig } from '@/domain/style/packages'
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,11 +77,13 @@ export async function POST(request: NextRequest) {
     const adminPlanPeriod = rawAdminPlanPeriod === 'month' ? 'monthly' : rawAdminPlanPeriod === 'year' ? 'annual' : rawAdminPlanPeriod
     const isAdminOnFreePlan = adminPlanPeriod === 'free' || !adminPlanPeriod
 
-    // If no active context, check if we can use free package context
-    let contextToUse = team?.activeContext
-    if (!contextToUse && isAdminOnFreePlan) {
+    // For free plan admins, always use free package context (create if needed)
+    // For paid plan admins, use team's active context
+    let contextToUse: typeof team.activeContext = null
+    if (isAdminOnFreePlan) {
       // Get free package context
       const setting = await prisma.appSetting.findUnique({ where: { key: 'freePackageStyleId' } })
+      
       if (setting?.value) {
         const freePackageContext = await prisma.context.findUnique({ 
           where: { id: setting.value }
@@ -89,6 +92,51 @@ export async function POST(request: NextRequest) {
           contextToUse = freePackageContext
         }
       }
+      
+      // If free package context doesn't exist, create it automatically
+      if (!contextToUse) {
+        try {
+          const pkg = getPackageConfig('freepackage')
+          const defaultSettings = pkg.defaultSettings
+          const serializedSettings = pkg.persistenceAdapter.serialize(defaultSettings) as Record<string, unknown>
+          
+          // Create the free package context with default settings
+          const newContext = await prisma.context.create({
+            data: {
+              name: 'Free Package Style',
+              stylePreset: pkg.defaultPresetId,
+              settings: serializedSettings as unknown as Parameters<typeof prisma.context.create>[0]['data']['settings'],
+            },
+            select: { id: true },
+          })
+          
+          // Save it to appSetting for future use
+          await prisma.appSetting.upsert({
+            where: { key: 'freePackageStyleId' },
+            update: { value: newContext.id },
+            create: { key: 'freePackageStyleId', value: newContext.id },
+          })
+          
+          // Use the newly created context
+          contextToUse = await prisma.context.findUnique({ 
+            where: { id: newContext.id }
+          })
+          
+          Logger.info('Auto-created free package context for team invitation', { 
+            contextId: newContext.id, 
+            teamId: team.id 
+          })
+        } catch (error) {
+          Logger.error('Failed to auto-create free package context', { 
+            error: error instanceof Error ? error.message : String(error),
+            teamId: team.id 
+          })
+          // Fall through to error below
+        }
+      }
+    } else {
+      // Paid plan: use team's active context
+      contextToUse = team?.activeContext ?? null
     }
 
     if (!contextToUse) {

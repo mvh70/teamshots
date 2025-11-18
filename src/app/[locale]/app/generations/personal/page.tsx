@@ -12,6 +12,7 @@ import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { Toast, GenerationGrid } from '@/components/ui'
 import { fetchAccountMode } from '@/domain/account/accountMode'
+import { UpgradePrompt } from '@/components/generations/UpgradePrompt'
 
 export default function PersonalGenerationsPage() {
   const tg = useTranslations('generations.personal')
@@ -184,7 +185,12 @@ export default function PersonalGenerationsPage() {
                 <GenerationCard key={item.id} item={item} />
               ))}
             </GenerationGrid>
-            
+
+            {/* Upgrade Prompt */}
+            {filteredGenerated.length > 0 && (
+              <UpgradePrompt className="mt-8" />
+            )}
+
             {/* Load More Button */}
             {pagination?.hasNextPage && (
               <div className="text-center mt-6">

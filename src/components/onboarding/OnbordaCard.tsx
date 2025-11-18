@@ -1,6 +1,7 @@
 import type { CardComponentProps } from 'onborda/dist/types'
 import { useOnborda } from 'onborda'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
+import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useEffect, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from '@/i18n/routing'
@@ -16,10 +17,11 @@ export function OnbordaCard({
   arrow,
 }: CardComponentProps) {
   const { isOnbordaVisible, closeOnborda, currentTour: onbordaCurrentTour } = useOnborda()
-  const { completeTour, skipTour, startTour } = useOnbordaTours()
+  const { completeTour, skipTour } = useOnbordaTours()
   const { data: session } = useSession()
   const router = useRouter()
   const t = useTranslations('app')
+  const { context: onboardingContext } = useOnboardingState()
   const extendedStep = step as ExtendedStep | undefined
   const isCompletingRef = useRef(false)
 
@@ -54,8 +56,9 @@ export function OnbordaCard({
   // Detect when tour is closed and complete it
   useEffect(() => {
     if (!isOnbordaVisible && onbordaCurrentTour && !isCompletingRef.current) {
-      // Only complete if we haven't already completed this tour
-      const hasCompleted = localStorage.getItem(`onboarding-${onbordaCurrentTour}-seen`) === 'true'
+      // Only complete if we haven't already completed this tour (check database)
+      const completedTours = onboardingContext.completedTours || []
+      const hasCompleted = completedTours.includes(onbordaCurrentTour)
       if (!hasCompleted) {
         // Fire and forget - don't await to avoid blocking UI
         completeTour(onbordaCurrentTour).catch(() => {})
@@ -65,15 +68,14 @@ export function OnbordaCard({
     if (isOnbordaVisible) {
       isCompletingRef.current = false
     }
-  }, [isOnbordaVisible, onbordaCurrentTour, completeTour])
+  }, [isOnbordaVisible, onbordaCurrentTour, completeTour, onboardingContext.completedTours])
 
   const handleNext = async () => {
     if (isLast) {
       if (onbordaCurrentTour) {
         // Mark that we're completing to prevent useEffect from running
         isCompletingRef.current = true
-        // Set localStorage flag synchronously before closing to prevent race condition
-        localStorage.setItem(`onboarding-${onbordaCurrentTour}-seen`, 'true')
+        // Mark tour as completed in database (not localStorage)
         // Fire and forget - don't await to avoid blocking UI
         completeTour(onbordaCurrentTour).catch(() => {})
       }
@@ -82,7 +84,6 @@ export function OnbordaCard({
       // Force close again after a brief delay to ensure it stays closed
       setTimeout(() => {
         if (isOnbordaVisible) {
-          console.log('[Tour Debug] Force closing tour that is still visible after completion')
           closeOnborda()
         }
       }, 100)
@@ -96,8 +97,7 @@ export function OnbordaCard({
     if (onbordaCurrentTour) {
       // Mark that we're completing to prevent useEffect from running
       isCompletingRef.current = true
-      // Set localStorage flag synchronously before closing to prevent race condition
-      localStorage.setItem(`onboarding-${onbordaCurrentTour}-seen`, 'true')
+      // Mark tour as completed in database (not localStorage)
       // Fire and forget - don't await to avoid blocking UI
       completeTour(onbordaCurrentTour).catch(() => {})
     }
@@ -121,38 +121,37 @@ export function OnbordaCard({
     closeOnborda()
   }
 
-  const handleTest = async () => {
+  const handleContinue = async () => {
     if (onbordaCurrentTour) {
       // Mark that we're completing to prevent useEffect from running
       isCompletingRef.current = true
-      // Set localStorage flag synchronously before closing to prevent race condition
-      localStorage.setItem(`onboarding-${onbordaCurrentTour}-seen`, 'true')
+      // Mark tour as completed in database (not localStorage)
       // Fire and forget - don't await to avoid blocking UI
       completeTour(onbordaCurrentTour).catch(() => {})
     }
     closeOnborda()
-    router.push('/app/generate/start')
+
+    // Determine redirect destination based on user segment
+    const isOrganizer = onboardingContext.onboardingSegment === 'organizer'
+    console.log('OnbordaCard: Completing tour', {
+      isOrganizer,
+      onboardingSegment: onboardingContext.onboardingSegment,
+      isFreePlan: onboardingContext.isFreePlan,
+      userId: onboardingContext.userId
+    })
+
+    if (isOrganizer) {
+      // Team admins should stay on dashboard after onboarding completion
+      // Users can navigate to photo styles when ready
+      // No redirect needed - stay on current page (dashboard)
+      console.log('OnbordaCard: Team admin completed onboarding, staying on dashboard')
+    } else {
+      // Individuals go to generate
+      console.log('OnbordaCard: Individual completed onboarding, redirecting to generate')
+      router.push('/app/generate/start')
+    }
   }
 
-  const handleInvite = async () => {
-    if (onbordaCurrentTour) {
-      // Mark that we're completing to prevent useEffect from running
-      isCompletingRef.current = true
-      // Set localStorage flag synchronously before closing to prevent race condition
-      localStorage.setItem(`onboarding-${onbordaCurrentTour}-seen`, 'true')
-      // Fire and forget - don't await to avoid blocking UI
-      completeTour(onbordaCurrentTour).catch(() => {})
-    }
-    closeOnborda()
-    // Set pending tour for invite team tour using both state and sessionStorage
-    // sessionStorage ensures it persists across navigation
-    // Also clear the "seen" flag so the tour can start even if previously seen
-    localStorage.removeItem('onboarding-invite-team-seen')
-    sessionStorage.setItem('pending-tour', 'invite-team')
-    startTour('invite-team')
-    // Navigate immediately - sessionStorage will be checked on the new page
-    router.push('/app/team')
-  }
 
   const hasCustomActions = extendedStep?.customActions && isLast
 
@@ -176,6 +175,20 @@ export function OnbordaCard({
       data-onborda-tour={onbordaCurrentTour}
       data-onborda-step={currentStep}
     >
+      {/* Step indicators */}
+      <div className="flex justify-center gap-2 mb-3">
+        {Array.from({ length: totalSteps }, (_, i) => (
+          <div
+            key={i}
+            className={`w-2 h-2 rounded-full transition-colors ${
+              i === currentStep
+                ? 'bg-brand-primary'
+                : 'bg-gray-300'
+            }`}
+          />
+        ))}
+      </div>
+
       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500">
         <span>
           Step {currentStep + 1}
@@ -212,22 +225,13 @@ export function OnbordaCard({
               {t('onboarding.tours.welcome.goToPhotoStylesButton')}
             </button>
           ) : (
-            <div className="flex-1 flex gap-3">
-              <button
-                type="button"
-                onClick={handleTest}
-                className="flex-1 inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-3 min-h-[44px] text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
-              >
-                Test
-              </button>
-              <button
-                type="button"
-                onClick={handleInvite}
-                className="flex-1 inline-flex items-center justify-center rounded-lg bg-brand-secondary px-4 py-3 min-h-[44px] text-sm font-semibold text-white shadow-sm hover:bg-brand-secondary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
-              >
-                Invite
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="flex-1 inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-3 min-h-[44px] text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+            >
+              Continue
+            </button>
           )}
         </div>
       ) : (

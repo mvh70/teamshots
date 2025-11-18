@@ -175,6 +175,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Reserve team credits using CreditService
+    // Credits are tracked per person, not per invite
     try {
       const reservationResult = await CreditService.reserveCreditsForGeneration(
         teamUser?.id || invite.person.team?.adminId || '',

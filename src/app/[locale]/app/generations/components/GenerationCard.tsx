@@ -114,7 +114,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
             selfieId: item.selfieId || undefined,
             selfieKey: item.selfieId ? undefined : item.uploadedKey,
             contextId: item.contextId,
-            prompt: 'Regenerate with same settings',
+            prompt: t('actions.retryPrompt'),
             generationType: item.generationType,
             creditSource: 'individual',
             isRegeneration: true,
@@ -131,7 +131,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to regenerate')
+        throw new Error(errorData.error || t('actions.retryFailed'))
       }
 
       await response.json()
@@ -139,8 +139,8 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
       // Optionally refresh the page or show success message
       window.location.reload()
     } catch (error) {
-      console.error('Failed to regenerate:', error)
-      alert('Failed to regenerate image. Please try again.')
+      console.error('Failed to retry:', error)
+      alert(t('actions.retryFailedMessage'))
     } finally {
       setIsRegenerating(false)
     }
@@ -424,12 +424,12 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
             {item.isOriginal && `${item.costCredits} credits`}
             {item.remainingRegenerations > 0 && (
               <span className="ml-2 text-brand-secondary" data-onborda="regenerations-info">
-                • {item.remainingRegenerations} regenerations left
+                • {t('actions.retriesLeft', { count: item.remainingRegenerations })}
               </span>
             )}
             {item.remainingRegenerations === 0 && (
               <span className={item.isOriginal ? "ml-2 text-gray-400" : "text-gray-400"} data-onborda="regenerations-info">
-                {item.isOriginal ? '• No regenerations left' : 'Regenerated photo'}
+                {item.isOriginal ? `• ${t('actions.noRetriesLeft')}` : t('actions.retriedPhoto')}
               </span>
             )}
           </div>
@@ -510,7 +510,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
                     )}
                     {/* Popover tooltip */}
                     <div className="absolute bottom-full left-0 transform -translate-x-2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                      {isRegenerating ? 'Regenerating...' : `${t('actions.regenerate')} (${item.remainingRegenerations} left)`}
+                      {isRegenerating ? t('actions.retrying') : `${t('actions.regenerate')} (${item.remainingRegenerations} left)`}
                       <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                     </div>
                   </button>

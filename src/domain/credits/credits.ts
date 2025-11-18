@@ -113,31 +113,37 @@ export async function getEffectiveTeamCreditBalance(userId: string, teamId?: str
 /**
  * Get current credit balance for a person
  * For team members, this returns the remaining allocated credits (allocation - usage)
+ * Credits are tracked per person, not per invite
  * For individual users, this returns their personal credit balance
  */
 export async function getPersonCreditBalance(personId: string): Promise<number> {
   // First, check if this person has a team invite with allocation
   const invite = await prisma.teamInvite.findFirst({
-    where: { personId },
-    include: {
-      creditTransactions: {
-        where: {
-          type: 'generation' // Only count generation transactions
-        }
-      }
-    }
+    where: { personId }
   })
 
-  // If person has a team invite, return remaining allocation
+  // If person has a team invite, calculate remaining allocation
+  // Credits are tracked per person, so we look at person transactions, not invite transactions
   if (invite) {
-    const usedCredits = invite.creditTransactions.reduce((sum: number, transaction: { credits: number }) => {
+    // Get all generation transactions for this person (credits are tracked per person)
+    const personTransactions = await prisma.creditTransaction.findMany({
+      where: {
+        personId,
+        type: 'generation' // Only count generation transactions
+      }
+    })
+    
+    // Calculate used credits from person transactions
+    const usedCredits = personTransactions.reduce((sum: number, transaction: { credits: number }) => {
       return sum + Math.abs(transaction.credits) // Credits is negative for debits
     }, 0)
+    
+    // Return remaining: allocation - usage
     const remaining = Math.max(0, (invite.creditsAllocated ?? 0) - usedCredits)
     return remaining
   }
 
-  // Otherwise, return standard credit balance
+  // Otherwise, return standard credit balance (sum of all person transactions)
   const result = await prisma.creditTransaction.aggregate({
     where: { personId },
     _sum: { credits: true }
@@ -396,28 +402,23 @@ export async function reserveCreditsForGeneration(
 
 /**
  * Calculate remaining credits for a team invite
+ * Credits are tracked per person, so we get the person's balance
  */
 export async function getTeamInviteRemainingCredits(teamInviteId: string): Promise<number> {
   const invite = await prisma.teamInvite.findUnique({
     where: { id: teamInviteId },
-    include: {
-      creditTransactions: {
-        where: {
-          type: 'generation' // Only count generation transactions
-        }
-      }
+    select: {
+      personId: true,
+      creditsAllocated: true
     }
   })
 
-  if (!invite) {
+  if (!invite || !invite.personId) {
     return 0
   }
 
-  const usedCredits = invite.creditTransactions.reduce((sum: number, transaction: { credits: number }) => {
-    return sum + Math.abs(transaction.credits) // Credits is negative for debits, so we need absolute value
-  }, 0)
-
-  return Math.max(0, (invite.creditsAllocated ?? 0) - usedCredits)
+  // Credits are tracked per person, so use getPersonCreditBalance
+  return await getPersonCreditBalance(invite.personId)
 }
 
 /**

@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { jsonFetcher } from '@/lib/fetcher'
-import { Link, useRouter } from '@/i18n/routing'
+import { Link } from '@/i18n/routing'
 import { PlusIcon, EnvelopeIcon, ClockIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { useCredits } from '@/contexts/CreditsContext'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
 import { ErrorCard, Grid } from '@/components/ui'
+import { Sparkles } from 'lucide-react'
 
 interface TeamInvite {
   id: string
@@ -53,7 +54,6 @@ interface TeamMember {
 
 export default function TeamPage() {
   const { data: session } = useSession()
-  const router = useRouter()
   const t = useTranslations('team')
   const { credits } = useCredits()
   const { isFreePlan } = usePlanInfo()
@@ -80,11 +80,15 @@ export default function TeamPage() {
   })
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [teamCreationSuccess, setTeamCreationSuccess] = useState(false)
   const [allocatedCredits, setAllocatedCredits] = useState<number>(PRICING_CONFIG.team.defaultInviteCredits)
   const [creditsInputValue, setCreditsInputValue] = useState(PRICING_CONFIG.team.defaultInviteCredits.toString())
   const [emailValue, setEmailValue] = useState('')
   const [firstNameValue, setFirstNameValue] = useState('')
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false)
+  const [submittingTeam, setSubmittingTeam] = useState(false)
+  const [teamNameValue, setTeamNameValue] = useState('')
+  const [teamWebsiteValue, setTeamWebsiteValue] = useState('')
+  const hasCheckedWelcomePopup = useRef(false)
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -106,6 +110,9 @@ export default function TeamPage() {
                 if (needsTeamSetup) {
                   setNeedsTeamSetup(true)
                   setLoading(false)
+
+                  // Check if user just signed up - show welcome popup if data is fresh (within 30 seconds)
+                  // This will be checked in a separate useEffect to avoid hydration mismatch
                 } else if (teamId && teamName) {
                   setTeamData({ id: teamId, name: teamName })
                   await fetchTeamData()
@@ -162,6 +169,28 @@ export default function TeamPage() {
     fetchInitialData()
   }, [session?.user])
 
+  // Check for welcome popup after hydration to avoid hydration mismatch
+  useEffect(() => {
+    if (needsTeamSetup && !hasCheckedWelcomePopup.current) {
+      hasCheckedWelcomePopup.current = true
+      try {
+        const stored = sessionStorage.getItem('teamshots.initialData')
+        if (stored) {
+          const initialData = JSON.parse(stored)
+          if (initialData._timestamp) {
+            const timestamp = initialData._timestamp
+            const thirtySecondsAgo = Date.now() - 30 * 1000
+            if (timestamp > thirtySecondsAgo) {
+              setShowWelcomePopup(true)
+            }
+          }
+        }
+      } catch {
+        // Ignore errors
+      }
+    }
+  }, [needsTeamSetup])
+
   // Check if we should auto-open invite modal from onboarding
   useEffect(() => {
     const shouldOpenModal = sessionStorage.getItem('open-invite-modal')
@@ -200,25 +229,24 @@ export default function TeamPage() {
   }
 
 
-  const handleCreateTeam = async (formData: FormData) => {
-    setLoading(true)
+  const handleCreateTeam = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setSubmittingTeam(true)
     setError(null)
     try {
       const response = await fetch('/api/team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.get('teamName'),
-          website: formData.get('teamWebsite')
+          name: teamNameValue,
+          website: teamWebsiteValue
         })
       })
 
       if (response.ok) {
         const data = await response.json()
-        const teamName = formData.get('teamName') as string
-        setNeedsTeamSetup(false)
-        setTeamCreationSuccess(true)
-        
+        const teamName = teamNameValue
+
         // Update sessionStorage with new team data to avoid redundant API calls
         try {
           const stored = sessionStorage.getItem('teamshots.initialData')
@@ -234,25 +262,42 @@ export default function TeamPage() {
               sessionStorage.setItem('teamshots.initialData', JSON.stringify(initialData))
             }
           }
-          
-          // Update onboarding context in localStorage so tour can trigger
-          const onboardingContext = localStorage.getItem('onboarding-context')
-          if (onboardingContext) {
-            const context = JSON.parse(onboardingContext)
-            context.teamId = data.teamId
-            context.teamName = teamName
-            context.isTeamMember = true
-            localStorage.setItem('onboarding-context', JSON.stringify(context))
-          }
-          
+
+          // Onboarding context will be fetched fresh from database on next page load
+
           // Set transition flag so dashboard knows to show onboarding immediately
           sessionStorage.setItem('show-onboarding-immediately', 'true')
-          
+
         } catch {
           // Ignore errors, continue with redirect
         }
-        
-        // Clear any old pending tours before redirecting to dashboard
+
+        // Clear any old pending tours from database before redirecting to dashboard
+        // This prevents automatic redirects to styles/team page
+        try {
+          const deactivatedTours = [
+            'team-admin-welcome',
+            'team-setup',
+            'team-photo-styles-page',
+            'team-photo-styles-free',
+            'team-photo-style-setup'
+          ]
+
+          // Clear each deactivated tour from database
+          await Promise.all(
+            deactivatedTours.map(tourName =>
+              fetch(`/api/onboarding/pending-tour?tourName=${encodeURIComponent(tourName)}`, {
+                method: 'DELETE',
+              }).catch(() => {
+                // Ignore individual errors, continue clearing others
+              })
+            )
+          )
+        } catch {
+          // Ignore errors, continue with redirect
+        }
+
+        // Also clear sessionStorage tours (legacy)
         try {
           const pendingTour = sessionStorage.getItem('pending-tour')
           const deactivatedTours = [
@@ -268,19 +313,26 @@ export default function TeamPage() {
         } catch {
           // Ignore errors, continue with redirect
         }
-        
-        // Delay redirect by 300ms to ensure sessionStorage writes complete and show success feedback
-        setTimeout(() => {
-          router.push('/app/dashboard')
-        }, 300)
+
+        // Set flag to prevent any automatic redirects to photo styles page
+        // Users should complete onboarding first, then navigate when ready
+        try {
+          sessionStorage.setItem('prevent-style-redirect', 'true')
+        } catch {
+          // Ignore errors
+        }
+
+        // Redirect immediately to dashboard using hard navigation to avoid showing intermediate state
+        console.log('Team page: Team created successfully, redirecting to dashboard immediately')
+        window.location.href = '/app/dashboard'
       } else {
         const data = await response.json()
         setError(data.error || 'Failed to create team.')
+        setSubmittingTeam(false)
       }
     } catch {
       setError('An error occurred while creating the team.')
-    } finally {
-      setLoading(false)
+      setSubmittingTeam(false)
     }
   }
 
@@ -498,24 +550,38 @@ export default function TeamPage() {
 
   if (needsTeamSetup) {
     return (
-      <div className="max-w-xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
-        <div id="welcome-section">
-          <h2 className="text-2xl font-bold text-gray-900">{t('setup.title')}</h2>
-          <p className="mt-2 text-gray-600">{t('setup.subtitle')}</p>
-        </div>
-        {teamCreationSuccess ? (
-          <div className="mt-6 bg-brand-secondary-light border border-brand-secondary-lighter rounded-lg p-6">
-            <div className="flex items-center justify-center gap-3">
-              <CheckIcon className="h-6 w-6 text-brand-secondary" />
-              <div>
-                <p className="text-brand-secondary-text-light font-medium">{t('setup.success')}</p>
-                <p className="text-brand-secondary-text text-sm mt-1">Redirecting to dashboard...</p>
+      <>
+        {/* Welcome Popup Modal */}
+        {showWelcomePopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-scale-in">
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-brand-primary/10 mb-4">
+                  <Sparkles className="h-6 w-6 text-brand-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  {t('setup.welcomePopup.title')}
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  {t('setup.welcomePopup.message')}
+                </p>
+                <button
+                  onClick={() => setShowWelcomePopup(false)}
+                  className="w-full px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors"
+                >
+                  {t('setup.welcomePopup.dismiss')}
+                </button>
               </div>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-secondary ml-2"></div>
             </div>
           </div>
-        ) : (
-          <form action={handleCreateTeam} className="mt-6 space-y-4 text-left">
+        )}
+        
+        <div className="max-w-xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
+          <div id="welcome-section">
+            <h2 className="text-2xl font-bold text-gray-900">{t('setup.title')}</h2>
+            <p className="mt-2 text-gray-600">{t('setup.subtitle')}</p>
+          </div>
+          <form onSubmit={handleCreateTeam} className="mt-6 space-y-4 text-left">
           <div>
             <label htmlFor="teamName" className="block text-sm font-medium text-gray-700">
               {t('setup.teamNameLabel')}
@@ -525,7 +591,10 @@ export default function TeamPage() {
               name="teamName"
               id="teamName"
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
+              value={teamNameValue}
+              onChange={(e) => setTeamNameValue(e.target.value)}
+              disabled={submittingTeam}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder={t('setup.teamNamePlaceholder')}
             />
           </div>
@@ -537,19 +606,27 @@ export default function TeamPage() {
               type="url"
               name="teamWebsite"
               id="teamWebsite"
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"
+              value={teamWebsiteValue}
+              onChange={(e) => setTeamWebsiteValue(e.target.value)}
+              disabled={submittingTeam}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder={t('setup.teamWebsitePlaceholder')}
             />
           </div>
           <button
             type="submit"
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+            disabled={submittingTeam}
+            className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t('setup.createButton')}
+            {submittingTeam ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+            ) : (
+              t('setup.createButton')
+            )}
           </button>
         </form>
-        )}
       </div>
+      </>
     )
   }
 
@@ -587,7 +664,7 @@ export default function TeamPage() {
       {/* Success Message */}
       {successMessage && (
         <div className="bg-brand-secondary-light border border-brand-secondary-lighter rounded-lg p-4 flex items-center gap-3">
-          <CheckIcon className="h-5 w-5 text-brand-secondary flex-shrink-0" />
+          <Sparkles className="h-5 w-5 text-brand-secondary flex-shrink-0" />
           <p className="text-brand-secondary-text-light">{successMessage}</p>
         </div>
       )}

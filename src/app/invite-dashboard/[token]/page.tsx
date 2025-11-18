@@ -378,31 +378,39 @@ export default function InviteDashboardPage() {
         body: JSON.stringify(requestBody)
       })
 
+      console.log('Generation response status:', response.status, response.ok)
+
       if (response.ok) {
-        // Set pending tour flag for generation-detail tour ONLY for first generation
-        // Check if this is the first generation by checking if tour has already been seen
+        const responseData = await response.json().catch(() => ({}))
+        console.log('Generation created successfully:', responseData)
+        
+        // Set generation-detail tour as pending in database for first generation
+        // Only for users who have accepted invites (have personId)
         if (typeof window !== 'undefined') {
-          const hasSeenTour = localStorage.getItem('onboarding-generation-detail-seen') === 'true'
           const wasFirstGeneration = stats.photosGenerated === 0
-          
-          // Only set pending tour if this is the first generation and tour hasn't been seen
-          if (wasFirstGeneration && !hasSeenTour) {
-            sessionStorage.setItem('pending-tour', 'generation-detail')
-            console.log('[Tour Debug] Setting pending tour for first generation', { photosGenerated: stats.photosGenerated })
-          } else {
-            console.log('[Tour Debug] Skipping pending tour - not first generation or already seen', { 
-              wasFirstGeneration, 
-              hasSeenTour, 
-              photosGenerated: stats.photosGenerated 
+
+          if (wasFirstGeneration) {
+            // Set the tour as pending in database for when user views generations
+            fetch('/api/onboarding/pending-tour', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tourName: 'generation-detail' }),
+            }).catch(error => {
+              console.error('Failed to set pending tour:', error)
             })
           }
         }
+        
+        // Reset generating state before redirect
+        setIsGenerating(false)
+        
         // Redirect to generations page to see the result
+        console.log('Redirecting to generations page:', `/invite-dashboard/${token}/generations`)
         router.push(`/invite-dashboard/${token}/generations`)
       } else {
-        const error = await response.json()
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }))
         console.error('Generation failed:', error)
-        alert(t('alerts.generationFailed'))
+        alert(error.message || error.error || t('alerts.generationFailed'))
         setIsGenerating(false)
       }
     } catch (error) {

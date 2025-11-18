@@ -5,19 +5,18 @@ import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/routing'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { BRAND_CONFIG } from '@/config/brand'
 import { getPricingDisplay } from '@/domain/pricing'
 import { CheckoutButton } from '@/components/ui'
 import BillingToggle from '@/components/pricing/BillingToggle'
 import StripeNotice from '@/components/stripe/StripeNotice'
 import PricingCard from '@/components/pricing/PricingCard'
 import { normalizePlanTierForUI } from '@/domain/subscription/utils'
+import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
 
 type Tier = 'individual' | 'pro'
 
 export default function UpgradePage() {
   const t = useTranslations('pricing')
-  const tDashboard = useTranslations('app.dashboard')
   const tAll = useTranslations()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -129,45 +128,9 @@ export default function UpgradePage() {
     )
   }
 
-  // If success state, show success message instead of pricing cards
-  if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_success')) {
-    let successMessage = ''
-    let successTitle = ''
-    
-    if (successType === 'try_once_success') {
-      successTitle = tDashboard('successMessages.titleTryOnce', { default: "All set! 🎉" })
-      successMessage = tDashboard('successMessages.tryOnce', { default: 'Your purchase was successful! Credits added to your account.', credits: PRICING_CONFIG.tryOnce.credits })
-    } else if (successType === 'individual_success') {
-      successTitle = tDashboard('successMessages.titleIndividual', { default: "You're in! 🚀" })
-      successMessage = tDashboard('successMessages.individual', { default: 'Subscription activated successfully.', credits: PRICING_CONFIG.individual.includedCredits })
-    } else if (successType === 'pro_success') {
-      successTitle = tDashboard('successMessages.titlePro', { default: "Pro unlocked! 🎯" })
-      successMessage = tDashboard('successMessages.pro', { default: 'Pro subscription activated successfully.', credits: PRICING_CONFIG.pro.includedCredits })
-    }
-
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-10">
-        <div className="border rounded-lg p-6 shadow-sm bg-brand-secondary-light border-brand-secondary-lighter">
-          <h1 className="text-2xl font-semibold mb-2 text-brand-secondary-text-light">
-            {successTitle}
-          </h1>
-          <p className="text-brand-secondary-text-light mb-4">
-            {successMessage}
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => router.push('/app/dashboard')}
-              className="px-4 py-2 text-white rounded-md"
-              style={{ backgroundColor: BRAND_CONFIG.colors.cta }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.ctaHover }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.cta }}
-            >
-              {tAll('app.sidebar.nav.dashboard', { default: 'Dashboard' })}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
+  // If success state, show purchase success screen
+  if (isSuccess) {
+    return <PurchaseSuccess />
   }
 
   return (

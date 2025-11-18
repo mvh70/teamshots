@@ -114,22 +114,14 @@ export async function GET(request: NextRequest) {
           type: true
         }
       }) : Promise.resolve([]),
-      // Fetch all team invites for persons (needed for getPersonCreditBalance logic)
+      // Fetch all team invites for persons (needed for allocation amount)
       allPersonIds.length > 0 ? prisma.teamInvite.findMany({
         where: {
           personId: { in: allPersonIds }
         },
         select: {
           personId: true,
-          creditsAllocated: true,
-          creditTransactions: {
-            where: {
-              type: 'generation'
-            },
-            select: {
-              credits: true
-            }
-          }
+          creditsAllocated: true
         }
       }) : Promise.resolve([])
     ])
@@ -156,10 +148,15 @@ export async function GET(request: NextRequest) {
     })
 
     // Calculate person credits (handling invite allocation logic)
+    // Credits are tracked per person, so we look at person transactions, not invite transactions
     const personCreditsMap = new Map<string, number>()
     teamInvitesMap.forEach((invite, personId) => {
-      // If person has invite, calculate remaining allocation
-      const usedCredits = invite.creditTransactions.reduce((sum, tx) => sum + Math.abs(tx.credits), 0)
+      // If person has invite, calculate remaining allocation from person transactions
+      // Get generation transactions for this person
+      const personGenTransactions = personCreditTransactions.filter(tx => 
+        tx.personId === personId && tx.type === 'generation'
+      )
+      const usedCredits = personGenTransactions.reduce((sum, tx) => sum + Math.abs(tx.credits), 0)
       const remaining = Math.max(0, (invite.creditsAllocated ?? 0) - usedCredits)
       personCreditsMap.set(personId, remaining)
     })

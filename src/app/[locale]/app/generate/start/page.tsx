@@ -23,6 +23,7 @@ import { usePlanInfo } from '@/hooks/usePlanInfo'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import GenerateButton from '@/components/generation/GenerateButton'
 import { hasUserDefinedFields } from '@/domain/style/userChoice'
+import { useAnalytics } from '@/hooks/useAnalytics'
 
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
 
@@ -30,6 +31,7 @@ export default function StartGenerationPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
+  const { track } = useAnalytics()
   const t = useTranslations('app.sidebar.generate')
   const { isFreePlan, uiTier, tier: subscriptionTier } = usePlanInfo()
   const keyFromQuery = useMemo(() => searchParams.get('key') || '', [searchParams])
@@ -326,6 +328,19 @@ export default function StartGenerationPage() {
 
     try {
       setIsGenerating(true)
+
+      // Track generation started
+      if (session?.user?.id) {
+        track('generation_started', {
+          user_id: session.user.id,
+          generation_type: effectiveGenerationType,
+          selfie_count: selectedSelfies.length,
+          style_context_id: activeContext?.id,
+          package_id: selectedPackageId || PRICING_CONFIG.defaultSignupPackage,
+          is_free_plan: isFreePlan,
+          subscription_tier: subscriptionTier
+        })
+      }
 
       // Ensure packageId is set (default to headshot1 if not selected)
       const packageId = selectedPackageId || PRICING_CONFIG.defaultSignupPackage

@@ -32,7 +32,7 @@
     "secure": "SSL encrypted & secure",
     "noSpam": "No spam, ever (we promise)",
     "noCreditCard": "No credit card required",
-    "joinedBadge": "Join 1,247+ teams who've eliminated photoshoots forever",
+    "joinedBadge": "Professional team photos without the photoshoot hassle",
     "testimonial": {
       "quote": "Our new website launch was delayed 3 weeks waiting for team photos. TeamShotsPro got us consistent headshots in 60 seconds. Saved us $3,000 and our launch date.",
       "author": "Sarah Chen, Head of Marketing • TechFlow"
@@ -99,14 +99,14 @@
       },
       "qualityControl": {
         "title": "Quality guaranteed with automatic fixes",
-        "description": "Photos that fail our quality standards get regenerated automatically. Plus you get plan-based free regenerations to perfect your results. Unlike other services where you pay for every attempt, we handle quality issues automatically and give you free iterations to get exactly what you want."
+        "description": "Photos that fail our quality standards get regenerated automatically. Plus you get plan-based free retries to perfect your results. Unlike other services where you pay for every attempt, we handle quality issues automatically and give you free iterations to get exactly what you want."
       }
     }
   },
   "socialProof": {
     "testimonialsTitle": "Real teams, real results",
     "userCount": "teams already upgraded their photos",
-    "trustMessage": "Join 1,247+ teams who've eliminated expensive photoshoots forever",
+    "trustMessage": "Eliminate expensive photoshoots forever",
     "noWatermarks": "No watermarks",
     "commercialUse": "Commercial use included",
     "highResolution": "High resolution",
@@ -136,13 +136,13 @@
         "duration": "1 min"
       },
       "3": {
-        "title": "AI transforms photos",
-        "description": "Professional results in 60 seconds per person. No editing required.",
+        "title": "Professional photos in 60 seconds",
+        "description": "Get polished headshots instantly. No editing required.",
         "duration": "60s/person"
       },
       "4": {
         "title": "Review & approve",
-        "description": "See all results in one dashboard. Regenerate anything you want to improve.",
+        "description": "See all results in one dashboard. Retry anything you want to improve.",
         "duration": "2 min"
       },
       "5": {
@@ -185,8 +185,8 @@
         "answer": "Yes! All generated photos are yours to use for any professional purpose - LinkedIn, company websites, business cards, presentations, and more. You receive high-resolution files (1024x1024px) perfect for any professional use. Go ahead, look amazing everywhere."
       },
       "5": {
-        "question": "How does the AI photo generation work?",
-        "answer": "Our AI analyzes your uploaded photo using advanced facial recognition and style transfer algorithms (we promise it's not magic, just really smart math). It creates professional headshots by applying corporate photography styles while maintaining your unique facial features and identity-yes, you'll still look like you, just more polished."
+        "question": "How does the photo generation work?",
+        "answer": "Our system analyzes your uploaded photo and creates professional headshots by applying polished photography styles. You'll still look like you, just more professional and polished. See the gallery above for real examples."
       },
       "6": {
         "question": "How many photos do I get per generation?",
@@ -202,7 +202,7 @@
       },
       "9": {
         "question": "Will the photos look professional and real?",
-        "answer": "Yes. Our AI maintains your unique features while applying professional photography styles. You'll still look like you, just polished and professional. See the gallery above for real examples."
+        "answer": "Yes. Our system maintains your unique features while applying professional photography styles. You'll still look like you, just polished and professional. See the gallery above for real examples."
       }
     }
   },
@@ -213,7 +213,7 @@
     "recommended": "Recommended",
     "questions": "Have questions about pricing?",
     "viewFullPricing": "View full pricing details",
-    "poweredBy": "Powered by Google Gemini AI",
+    "poweredBy": "Powered by advanced photo technology",
     "plans": {
       "tryOnce": {
         "name": "Try Once",
@@ -267,7 +267,7 @@
   },
   "waitlist": {
     "title": "Join the Waitlist",
-    "subtitle": "Join 247+ teams and startups already transforming their team photos (and saving thousands)",
+    "subtitle": "Transform your team photos and save thousands on expensive photoshoots",
     "emailPlaceholder": "Enter your work email",
     "submit": "Join Waitlist",
     "submitFirstPerson": "Get Started",
@@ -282,7 +282,7 @@
     "guarantee": "Try once almost for free, before you subscribe",
     "secure": "SSL encrypted & secure",
     "noSpam": "No spam, ever",
-    "joinedBadge": "Join hundreds of teams already using AI headshots (ahem, not yet, but almost there 😉)"
+    "joinedBadge": "Professional AI headshots in 60 seconds"
   },
   "footer": {
     "tagline": "Professional team photos in 60 seconds",
@@ -295,9 +295,9 @@
   "pricing": {
     "monthly": "Monthly",
     "yearly": "Yearly",
-    "freeIntro": "Your first test generation is free in a predefined style when you sign up. Choose credits or a plan when you're ready.",
+    "freeIntro": "Your free test generation is ready. Upgrade to unlock unlimited access and team features. Get started in 60 seconds.",
     "title": "Simple, Transparent Pricing",
-    "subtitle": "Choose the plan that works best for you. All plans include credits that roll over and never expire.",
+    "subtitle": "You're one click from professional team photos that make everyone look great. Choose a plan and get going.",
     "mostPopular": "Most Popular",
     "credits": "credits",
     "creditsPerMonth": "credits monthly",
@@ -332,7 +332,7 @@
         "description": "Perfect for testing the service",
         "features": [
           "<strong>{photos}</strong> photo generation",
-          "Regenerate up to 2 times to perfect each photo",
+          "Retry up to 2 times to perfect each photo",
           "Photos retained for 30 days from generation",
           "Top-up credits available",
           "Email support"
@@ -345,7 +345,7 @@
         "description": "For solo professionals who like to look good",
         "features": [
           "<strong>{photos}</strong> photo generations",
-          "Regenerate up to 3 times to perfect each photo",
+          "Retry up to 3 times to perfect each photo",
           "Photos retained while active + 30 days after",
           "Credits roll over, never expire",
           "Top-up credits available",
@@ -359,7 +359,7 @@
         "description": "For teams who want everyone to look equally amazing",
         "features": [
           "<strong>{photos}</strong> photo generations",
-          "Regenerate up to 4 times to perfect each photo",
+          "Retry up to 4 times to perfect each photo",
           "All Individual features, plus:",
           "Team member invitations",
           "Team photo management",
@@ -373,7 +373,7 @@
     },
     "perPhotoVariation": "per photo variation",
     "includesVariationsPerPhoto": "Includes {count} variations per photo",
-    "variationsBullet": "Regenerate up to {count} times to perfect each photo",
+    "variationsBullet": "Retry up to {count} times to perfect each photo",
     "faq": {
       "title": "Frequently Asked Questions",
       "questions": {
@@ -391,9 +391,33 @@
         },
         "satisfaction": {
           "question": "What if I'm not satisfied?",
-          "answer": "Every photo includes 2-4 regenerations depending on your plan, so you can refine the results until they're perfect. That's why we offer a free test generation in a predefined style when you sign up - try it first, no obligations."
+          "answer": "Every photo includes 2-4 retries depending on your plan, so you can refine the results until they're perfect. That's why we offer a free test generation in a predefined style when you sign up - try it first, no obligations."
         }
       }
+    },
+    "purchaseSuccess": {
+      "title": "Welcome aboard!",
+      "subtitle": "Your purchase was successful. Here's what you unlocked:",
+      "tryOnce": {
+        "title": "Try Once Package",
+        "credits": "{count} credits for photo generation, good for {uniquePhotos} unique photo",
+        "retries": "{count} free retries to perfect your photos"
+      },
+      "individual": {
+        "title": "Individual Plan",
+        "credits": "{count} credits per month, good for {uniquePhotos} unique photos",
+        "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
+        "styles": "Custom backgrounds and styles"
+      },
+      "pro": {
+        "title": "Pro Plan",
+        "credits": "{count} credits per month, good for {uniquePhotos} unique photos",
+        "retriesAndVariations": "{retries} free retries per generation, so {totalVariations} photo variations in total",
+        "styles": "Custom backgrounds and team styles",
+        "team": "Team member invitations and management"
+      },
+      "continueToGenerate": "Start Generating Photos",
+      "continueToDashboard": "Go to Dashboard"
     }
   },
   "auth": {
@@ -559,12 +583,24 @@
     },
     "dashboard": {
       "welcome": {
-        "title": "Welcome back, {name}! 👋",
-        "titleFirstTime": "Welcome to TeamShotsPro, {name}! 🎉",
+        "title": "Welcome back, {name}!",
+        "titleFirstTime": "Welcome, {name}! Let's get started.",
         "subtitle": {
-          "individual": "You've generated {count} professional photos. Ready to create more?",
+          "individual": "You have generated {count} professional photos this month.",
           "team": "Your team has generated {count} professional photos this month. Keep up the great work!",
-          "teamAdmin": "Your team has generated {count} professional photos this month. {teamMembers} team members are ready to create more."
+          "teamAdmin": "Your team has generated {count} professional photos this month. {teamMembers} team members are ready to create more.",
+
+          "teamAdminNoMembersFree": "Your team is ready to be invited and use the predefined freestyle.",
+          "teamAdminNoMembersPaid": "Your team is ready to be invited with custom predefined styles. Make your custom photo style before you invite.",
+          "teamAdminMembersNoPhotos": "{teamMembers} team members invited to create photos.",
+          "teamAdminMembersWithPhotos": "Your team has generated {count} photos this month. {teamMembers} team members ready to create more.",
+
+          "individualNoPhotosFree": "You are ready to generate your first photos using the predefined freestyle.",
+          "individualNoPhotosPaid": "You are ready to generate photos with custom predefined styles. Make your custom photo style before you go for it.",
+          "individualWithPhotos": "You have generated {count} photos this month.",
+
+          "teamNoPhotos": "You are ready to generate photos using your team's styles.",
+          "teamWithPhotos": "Your team has generated {count} professional photos this month. Keep up the great work!"
         }
       },
       "stats": {
@@ -627,94 +663,100 @@
       },
       "onboarding": {
         "welcomeContent": {
-          "organizer": "Welcome to TeamShotsPro! Transform your team's casual selfies into polished professional headshots in under 60 seconds.\n\nJoin thousands of HR teams and founders who've elevated their company's professional presence.",
-          "individual": "Welcome to TeamShotsPro! Transform your casual selfie into polished professional headshots in under 60 seconds.\n\nJoin thousands of professionals who've upgraded their LinkedIn, portfolios, and personal brand.",
-          "invited": "Welcome to TeamShotsPro! Your team is creating consistent professional photos, and you're part of it.\n\nUpload your selfie to match your team's professional style and get your headshots in under 60 seconds."
+          "organizer": "Welcome to TeamShotsPro. Transform your team's casual selfies into polished professional headshots in under 60 seconds. Enhance your company's professional presence without the need for photoshoots.",
+          "individual": "Welcome to TeamShotsPro. Transform your casual selfie into polished professional headshots in under 60 seconds. Elevate your LinkedIn profiles, portfolios, and personal brand.",
+          "invited": "Welcome to TeamShotsPro. Your team is creating consistent professional photos, and you are part of it. Upload your selfie to match your team's style and receive your headshots in under 60 seconds."
         },
         "transformationContent": {
-          "organizer": "See the transformation: Watch as we turn everyday selfies into professional headshots that command attention.\n\nTeams using our service see 40% higher engagement on company profiles. Here's a pro tip: Use natural lighting and frame from the chest up for best results.",
-          "individual": "See the transformation: Watch as we turn your casual selfie into a professional headshot that stands out.\n\nPerfect for LinkedIn, portfolios, and professional networking. Here's a pro tip: Use natural lighting and frame from the chest up for best results.",
-          "invited": "See the transformation: Watch as we turn your selfie into a professional headshot that matches your team's style.\n\nYour photos will be consistent with your team while showcasing your unique professional presence."
+          "organizer": "Observe the transformation: We convert everyday selfies into professional headshots that command attention. Pro tip: Use natural lighting and frame from the chest up for optimal results.",
+          "individual": "Observe the transformation: We convert your casual selfie into a standout professional headshot. Ideal for LinkedIn, portfolios, and professional networking. Pro tip: Use natural lighting and frame from the chest up for optimal results.",
+          "invited": "Observe the transformation: We convert your selfie into a professional headshot that aligns with your team's style. This ensures consistent visuals while highlighting your unique professional presence."
         },
         "howItWorks": {
           "title": "How it works",
           "organizer": {
             "step1": {
-              "title": "Set your team's brand style",
-              "description": "Define backgrounds, clothing, expressions, and branding that match your company"
+              "title": "Set your team's style",
+              "description": "Select backgrounds, outfits, and branding to align with your needs."
             },
             "step2": {
               "title": "Invite your team members",
-              "description": "Send invites so your team can join and start creating photos"
-            },
-            "step3": {
-              "title": "Team members upload selfies",
-              "description": "Each member uploads their selfie and customizes (e.g., wardrobe colors)"
+              "description": "Send invitations so your team can join and begin creating photos."
             },
             "step4": {
-              "title": "Wait for the magic to happen",
-              "description": "Your entire team gets consistent, professional photos that match your brand"
+              "title": "Receive the results",
+              "description": "Photos generate in 60 seconds once selfies are uploaded, ensuring consistent and professional results."
+            },
+            "free": {
+              "step1": {
+                "title": "Invite your team members",
+                "description": "No sign-ups required. Links allow them to start with our Free Package Style preset, which provides a fixed professional look for testing without customizations."
+              },
+              "step2": {
+                "title": "Receive the results",
+                "description": "Photos appear in 60 seconds once selfies are uploaded, matching the Free Package Style preset for quick evaluation."
+              }
             }
           },
           "invited": {
             "step1": {
               "title": "Upload your selfie",
-              "description": "Simply upload a photo of yourself"
+              "description": "Capture a photo. Any device works."
             },
             "step2": {
-              "title": "Customize your photo",
-              "description": "Personalize elements like wardrobe colors"
+              "title": "Customize your look",
+              "description": "Adjust details such as clothing colors."
             },
             "step3": {
-              "title": "Wait for the magic to happen",
-              "description": "Professional headshots ready in under 60 seconds"
+              "title": "Receive your professionals",
+              "description": "Ready in 60 seconds once your selfie is uploaded, approved for team consistency."
             }
           },
           "individual": {
             "step1": {
               "title": "Upload your selfie",
-              "description": "Simply upload a photo of yourself"
+              "description": "Capture a photo. Simple and straightforward."
             },
             "step2": {
               "title": "Set your style",
-              "description": "Choose backgrounds, clothing, expressions, and branding"
+              "description": "Choose backgrounds, outfits, and expressions."
             },
             "step3": {
-              "title": "Let the magic happen",
-              "descriptionFree": "Professional headshots ready in under 60 seconds. The free plan uses a fixed professional style to test the service.",
-              "descriptionPaid": "Professional headshots ready in under 60 seconds. Fully customize your style to match your brand."
+              "title": "Receive the results",
+              "descriptionFree": "Professional results ready in under 60 seconds once your selfie is uploaded, with our fixed free style.",
+              "descriptionPaid": "Custom professional results in under 60 seconds once your selfie is uploaded, tailored to your preferences."
             },
-            "note": "That's it! No photo shoots, no scheduling, no hassle."
+            "note": "No photoshoots or scheduling required. Just effective results."
           }
         },
         "firstAction": {
           "organizer": {
             "free": {
-              "title": "Ready to test it out?",
-              "description": "On the free plan, your team's photo style is locked in. Send an invite to yourself to test it out and see how it works!",
+              "title": "Ready to begin?",
+              "description": "The free plan uses our Free Package Style preset with fixed professional settings for testing. No customizations are available, but it allows quick evaluation. Send an invitation to yourself to test the process and view the results.",
               "button": "Go to Team Page"
             },
             "paid": {
-              "title": "Ready to set your brand style?",
-              "description": "Start by setting your on-brand photo style. Define backgrounds, clothing, expressions, and branding that match your company.",
+              "title": "Ready to define your brand style?",
+              "description": "Begin by establishing your team's photo style, including backgrounds, outfits, expressions, and branding.",
               "button": "Set Your Photo Style"
             }
           },
           "individual": {
             "free": {
-              "title": "Ready to begin your transformation?",
-              "description": "Let's start by uploading your first selfie. The free plan includes a fixed professional style to test the service. Get your professional photos in under 60 seconds.",
-              "button": "Start Creating Professional Photos"
+              "title": "Ready to begin?",
+              "description": "The free plan uses our preset style. Try it to experience the results. No commitment required.",
+              "button": "Start Creating Professionals"
             },
             "paid": {
-              "title": "Ready to begin your transformation?",
-              "description": "Let's start by uploading your first selfie. Fully customize your photo style to match your brand. Get your professional photos in under 60 seconds.",
-              "button": "Start Creating Professional Photos"
+              "title": "Ready to begin?",
+              "description": "Proceed to create your first set.",
+              "button": "Start Creating Professionals"
             }
           },
           "invited": {
             "title": "Ready to join your team?",
-            "description": "Upload your selfie now and get professional headshots that match your team's style. Over 4,000 professional photos generated this week."
+            "description": "Upload now for headshots that match your team's style."
           }
         },
         "navigation": {
@@ -840,6 +882,20 @@
       }
     },
     "onboarding": {
+      "benefits": {
+        "noScheduling": {
+          "description": "No scheduling needed"
+        },
+        "lowerCost": {
+          "description": "Lower cost than photographers"
+        },
+        "instantResults": {
+          "description": "60 seconds to results"
+        },
+        "freeRetries": {
+          "description": "Free retries until perfect"
+        }
+      },
       "tours": {
         "mainOnboarding": {
           "welcomeTitle": "Professional team photos in 60 seconds",
@@ -893,6 +949,20 @@
               "title": "Team Consistency",
               "description": "Match your team's professional photo style"
             }
+          }
+        },
+        "benefits": {
+          "noScheduling": {
+            "description": "No scheduling needed"
+          },
+          "lowerCost": {
+            "description": "Lower cost than photographers"
+          },
+          "instantResults": {
+            "description": "60 seconds to results"
+          },
+          "freeRetries": {
+            "description": "Free retries until perfect"
           }
         },
         "welcome": {
@@ -1000,7 +1070,7 @@
           "compositionTitle": "Composition settings",
           "compositionContent": "This is where you shape the photo's foundation. Set background, branding, and shot type to create a look that represents your team perfectly.",
           "backgroundTitle": "Background",
-          "backgroundContent": "Pick solid colors, upload images, or describe AI-enhanced scenes. It's your chance to set a backdrop that says 'professional' without saying a word.",
+          "backgroundContent": "Pick solid colors, upload images, or describe professional scenes. It's your chance to set a backdrop that says 'professional' without saying a word.",
           "brandingTitle": "Branding",
           "brandingContent": "Add your logo to the background, clothing, or scene elements. Make your brand pop. Subtle reminders build stronger teams.",
           "shotTypeTitle": "Shot type",
@@ -1039,18 +1109,18 @@
           "sliderContent": "Drag this slider button to reveal the selfies that were used to generate this photo. This helps you see the before and after comparison.",
           "deleteTitle": "Delete generation",
           "deleteContent": "You can delete this generation if you no longer need it. This action cannot be undone, so make sure you've downloaded what you need first.",
-          "regenerateTitle": "Regenerate for free",
-          "regenerateContent": "You can regenerate this photo for free using the same settings. Each generation comes with free regenerations so you can perfect your results.",
+          "regenerateTitle": "Retry for free",
+          "regenerateContent": "You can retry this photo for free using the same settings. Each generation comes with free retries so you can perfect your results.",
           "downloadTitle": "Download your photo",
           "downloadContent": "Download your professional headshot in high resolution. Perfect for LinkedIn, your website, business cards, and more.",
-          "creditsTitle": "Generation cost and regenerations",
-          "creditsContent": "This shows the cost of the generation (10 credits) and how many free regenerations you have left. Use regenerations to perfect your results without spending more credits.",
+          "creditsTitle": "Generation cost and retries",
+          "creditsContent": "This shows the cost of the generation (10 credits) and how many free retries you have left. Use retries to perfect your results without spending more credits.",
           "creditsInfoTitle1": "Not thrilled with your photo?",
           "creditsInfoContent1": "No worries. You get free do-overs with every generation. Check here to see how many tries you have left.",
           "creditsInfoTitle2": "Your photo, your way",
-          "creditsInfoContent2": "Love it? Download it ↓. Want another shot? Regenerate it ↻. Changed your mind? Delete it 🗑️. You're in control.",
+          "creditsInfoContent2": "Love it? Download it ↓. Want another shot? Retry it ↻. Changed your mind? Delete it 🗑️. You're in control.",
           "manageTitle": "Manage your generation",
-          "manageContent": "Download your photo in high resolution, regenerate for free using the same settings, or delete if you no longer need it. This also shows the generation cost (10 credits) and how many free regenerations you have left."
+          "manageContent": "Download your photo in high resolution, retry for free using the same settings, or delete if you no longer need it. This also shows the generation cost (10 credits) and how many free retries you have left."
         }
       },
       "indicators": {
@@ -1062,6 +1132,11 @@
   },
   "generations": {
     "title": "Generations",
+    "upgradePrompt": {
+      "title": "Like what you see?",
+      "description": "Unlock the full power with unlimited custom styles and backgrounds.",
+      "button": "Unlock the Full Power"
+    },
     "personal": {
       "title": "Personal generations",
       "empty": {
@@ -1143,15 +1218,32 @@
     "actions": {
       "view": "View",
       "download": "Download",
-      "regenerate": "Regenerate",
+      "regenerate": "Retry",
       "generate": "Generate",
       "newSelfie": "New selfie",
       "delete": "Delete",
-      "deleting": "Deleting..."
+      "deleting": "Deleting...",
+      "retrying": "Retrying...",
+      "retryPrompt": "Retry with same settings",
+      "retryFailed": "Failed to retry",
+      "retryFailedMessage": "Failed to retry image. Please try again.",
+      "retriesLeft": "{count} retries left",
+      "noRetriesLeft": "No retries left",
+      "retriedPhoto": "Retried photo"
     },
     "status": {
       "used": "used",
       "ready": "ready"
+    },
+    "detail": {
+      "title": "Generation",
+      "loading": "Loading…",
+      "notFound": "Not found",
+      "back": "Back",
+      "status": "Status:",
+      "created": "Created:",
+      "context": "Context:",
+      "credits": "Credits:"
     },
     "labels": {
       "usedInGeneration": "Used in a generation",
@@ -1241,7 +1333,7 @@
         "noAccess": "No company access"
       },
       "continue": "Continue",
-      "helpText": "You can always regenerate this photo later for the other use case if needed."
+      "helpText": "You can always retry this photo later for the other use case if needed."
     }
   },
   
@@ -1394,7 +1486,7 @@
         "point1": "Professional headshots in 60 seconds",
         "point2": "Save $200+ per person vs traditional photography",
         "point3": "Perfect for remote and distributed teams",
-        "point4": "AI-powered by Google Gemini"
+        "point4": "Powered by advanced photo technology"
       },
       "questions": "Have questions? Just reply to this email and we'll help you out.",
       "footer": "You're receiving this because you signed up for the TeamShotsPro waitlist.",
@@ -1732,7 +1824,13 @@
       "teamWebsitePlaceholder": "https://yourcompany.com",
       "companyWebsitePlaceholder": "https://yourcompany.com",
       "createButton": "Create team",
-      "success": "Team created successfully!"
+      "creatingButton": "Creating...",
+      "success": "Team created successfully!",
+      "welcomePopup": {
+        "title": "You're all set",
+        "message": "You're just moments away from professional team photos that make everyone shine. Start by giving your team a name. Make it epic! 🚀",
+        "dismiss": "Got it"
+      }
     }
   },
   "selfieApproval": {

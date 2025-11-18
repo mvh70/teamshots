@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useOnborda } from 'onborda'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
@@ -47,6 +47,7 @@ function getSessionStorageData(): Partial<OnboardingContext> | null {
           language: initialData.onboarding.language || 'en',
           isFreePlan: initialData.onboarding.isFreePlan !== undefined ? initialData.onboarding.isFreePlan : true,
           onboardingSegment: determineSegment(initialData.roles),
+          completedTours: initialData.onboarding?.completedTours || [], // Include completed tours from database
           _loaded: true, // Mark as loaded immediately when using sessionStorage
         }
       }
@@ -62,22 +63,33 @@ function getSessionStorageData(): Partial<OnboardingContext> | null {
 export function useOnboardingState() {
   const { data: session } = useSession()
   const pathname = usePathname()
-  
+
   // Read sessionStorage synchronously in initializer to set _loaded immediately
   const sessionStorageData = typeof window !== 'undefined' ? getSessionStorageData() : null
-  const baseContext = typeof window !== 'undefined' 
-    ? (localStorage.getItem('onboarding-context') ? JSON.parse(localStorage.getItem('onboarding-context')!) : {})
-    : {}
-  
+
   const [context, setContext] = useState<OnboardingContext>(() => {
     if (sessionStorageData) {
       return {
-        ...baseContext,
+        // Provide defaults for all required properties
+        isTeamAdmin: false,
+        isTeamMember: false,
+        isRegularUser: true,
+        hasUploadedSelfie: false,
+        hasGeneratedPhotos: false,
+        accountMode: 'individual',
+        language: 'en',
+        isFreePlan: true,
+        onboardingSegment: 'individual',
+        // Override with sessionStorage data (which may be partial)
         ...sessionStorageData,
-        _loaded: true, // Ensure _loaded is true when using sessionStorage
+        // CRITICAL: Override completedTours, pendingTours, and _loaded AFTER spreading sessionStorage
+        // This ensures we always fetch fresh tour data from API, not stale sessionStorage
+        completedTours: [], // Force empty - API is source of truth for completed tours
+        pendingTours: [], // Force empty - API is source of truth for pending tours
+        _loaded: false, // Force false - must wait for API fetch to get fresh tour data
       }
     }
-    
+
     return {
       isTeamAdmin: false,
       isTeamMember: false,
@@ -88,61 +100,57 @@ export function useOnboardingState() {
       language: 'en',
       isFreePlan: true,
       onboardingSegment: 'individual', // Default segment
+      completedTours: [], // Default to empty array
+      pendingTours: [], // Default to empty array
       _loaded: false, // Internal flag to track if context has been loaded from server
     }
   })
 
-  // Load onboarding context from localStorage and server
-  // Also re-check when pathname changes to pick up updated sessionStorage data
+  // Track loading state with ref to prevent circular dependencies
+  const isLoadingRef = useRef(false)
+  const hasLoadedRef = useRef(false)
+  const lastPathnameRef = useRef(pathname)
+  const lastResponseHashRef = useRef<string | null>(null)
+  const isSettingContextRef = useRef(false) // Guard against React Strict Mode double-invocation
+
+  // Load onboarding context from server only (no localStorage caching)
+  // Always fetch fresh data to ensure database is the single source of truth
   useEffect(() => {
     // Check if we're on a generations page - if so, always refresh context to get latest hasGeneratedPhotos
     const isGenerationsPage = pathname === '/app/generations/team' || pathname === '/app/generations/personal'
-    
-    // If we already have loaded data from sessionStorage (in initializer), skip API call unless on generations page
-    if (context._loaded && !isGenerationsPage) {
-      // Re-check sessionStorage on pathname changes to pick up updates (e.g., after team creation)
-      const updatedData = getSessionStorageData()
-      if (updatedData) {
-        const stored = localStorage.getItem('onboarding-context')
-        const baseContext = stored ? JSON.parse(stored) : {}
-        
-        // Sync completed tours from initial data to localStorage if available
-        try {
-          const initialDataStr = sessionStorage.getItem('teamshots.initialData')
-          if (initialDataStr) {
-            const initialData = JSON.parse(initialDataStr)
-            if (initialData.onboarding?.completedTours && Array.isArray(initialData.onboarding.completedTours)) {
-              initialData.onboarding.completedTours.forEach((tourName: string) => {
-                localStorage.setItem(`onboarding-${tourName}-seen`, 'true')
-              })
-            }
-          }
-        } catch {
-          // Ignore errors
-        }
-        
-        const newContext = {
-          ...baseContext,
-          ...updatedData,
-          userId: session?.user?.id || updatedData.userId,
-          _loaded: true,
-        }
-        setContext(newContext)
-        return // Exit early, don't fetch from API
-      }
-    }
-    
-    // Only fetch from API if:
-    // 1. We're on a generations page (need fresh data)
-    // 2. sessionStorage is empty or stale
-    // 3. Context hasn't been loaded yet
+    const pathnameChanged = pathname !== lastPathnameRef.current
+    lastPathnameRef.current = pathname
 
-    // Fetch from API (always on generations pages, or if no sessionStorage data)
+    // Always fetch from API - no localStorage caching
     const loadOnboardingContext = async () => {
+      // Prevent concurrent loads
+      if (isLoadingRef.current) {
+        return
+      }
+      
+      isLoadingRef.current = true
       try {
         const response = await fetch('/api/onboarding/context')
         if (response.ok) {
           const serverContext = await response.json()
+          
+          // Create a hash of the response to detect duplicates (React Strict Mode protection)
+          const responseHash = JSON.stringify({
+            completedTours: serverContext.completedTours,
+            pendingTours: serverContext.pendingTours,
+            isTeamAdmin: serverContext.isTeamAdmin,
+            isTeamMember: serverContext.isTeamMember,
+            hasUploadedSelfie: serverContext.hasUploadedSelfie,
+            hasGeneratedPhotos: serverContext.hasGeneratedPhotos,
+          })
+          
+          // Skip if this is the exact same response we just processed
+          if (lastResponseHashRef.current === responseHash && hasLoadedRef.current) {
+            isLoadingRef.current = false
+            return
+          }
+          
+          lastResponseHashRef.current = responseHash
 
           // Determine onboarding segment based on server response
           const determineSegment = (ctx: { isTeamAdmin?: boolean; isTeamMember?: boolean }): 'organizer' | 'individual' | 'invited' => {
@@ -150,53 +158,119 @@ export function useOnboardingState() {
             if (ctx.isTeamMember) return 'invited'
             return 'individual'
           }
-          
-          // Sync completed tours from database to localStorage
-          if (serverContext.completedTours && Array.isArray(serverContext.completedTours)) {
-            serverContext.completedTours.forEach((tourName: string) => {
-              localStorage.setItem(`onboarding-${tourName}-seen`, 'true')
-            })
-          }
-          
+
           const newContext = {
-            ...baseContext,
             ...serverContext,
             userId: session?.user?.id || serverContext.userId,
             onboardingSegment: determineSegment(serverContext),
+            completedTours: serverContext.completedTours || [], // Include completed tours from database
+            pendingTours: serverContext.pendingTours || [], // Include pending tours from database
             _loaded: true, // Mark as loaded after API fetch
           }
-          setContext(newContext)
+          
+          // Only update context if values actually changed (prevent unnecessary re-renders)
+          setContext(prev => {
+            // Double-check we haven't already processed this (race condition + React Strict Mode protection)
+            const currentHash = JSON.stringify({
+              completedTours: prev.completedTours,
+              pendingTours: prev.pendingTours,
+              isTeamAdmin: prev.isTeamAdmin,
+              isTeamMember: prev.isTeamMember,
+              hasUploadedSelfie: prev.hasUploadedSelfie,
+              hasGeneratedPhotos: prev.hasGeneratedPhotos,
+            })
+            
+            // If context already matches what we're trying to set, skip update (prevents duplicate logs in React Strict Mode)
+            if (currentHash === responseHash && prev._loaded) {
+              return prev // Silent return - no log needed
+            }
+            
+            const completedToursChanged = JSON.stringify(prev.completedTours) !== JSON.stringify(newContext.completedTours)
+            const pendingToursChanged = JSON.stringify(prev.pendingTours) !== JSON.stringify(newContext.pendingTours)
+            const otherPropsChanged = 
+              prev.isTeamAdmin !== newContext.isTeamAdmin ||
+              prev.isTeamMember !== newContext.isTeamMember ||
+              prev.hasUploadedSelfie !== newContext.hasUploadedSelfie ||
+              prev.hasGeneratedPhotos !== newContext.hasGeneratedPhotos ||
+              prev.accountMode !== newContext.accountMode ||
+              prev.isFreePlan !== newContext.isFreePlan ||
+              prev.onboardingSegment !== newContext.onboardingSegment ||
+              prev._loaded !== newContext._loaded
+            
+            // Only update if something actually changed
+            if (completedToursChanged || pendingToursChanged || otherPropsChanged || !prev._loaded) {
+              // Guard against React Strict Mode double-invocation
+              if (!isSettingContextRef.current) {
+                isSettingContextRef.current = true
+                // Reset guard after update completes
+                setTimeout(() => {
+                  isSettingContextRef.current = false
+                }, 50)
+              }
+              hasLoadedRef.current = true
+              return newContext
+            }
+            return prev
+          })
         } else {
           // Even on error, mark as loaded to prevent infinite waiting
-          setContext(prev => ({ ...prev, _loaded: true }))
+          setContext(prev => {
+            if (prev._loaded) return prev
+            hasLoadedRef.current = true
+            return { ...prev, _loaded: true }
+          })
         }
       } catch {
         // Even on error, mark as loaded to prevent infinite waiting
-        setContext(prev => ({ ...prev, _loaded: true }))
+        setContext(prev => {
+          if (prev._loaded) return prev
+          hasLoadedRef.current = true
+          return { ...prev, _loaded: true }
+        })
+      } finally {
+        isLoadingRef.current = false
       }
     }
 
     if (session?.user?.id) {
-      // Only fetch if context is not already loaded (from sessionStorage) or we're on a generations page
-      if (!context._loaded || isGenerationsPage) {
+      // Fetch if not loaded yet, or if pathname changed to a generations page
+      if (!hasLoadedRef.current || (isGenerationsPage && pathnameChanged)) {
         loadOnboardingContext()
       }
     }
-  }, [session?.user?.id, pathname, context._loaded]) // Re-check when pathname changes
+  }, [session?.user?.id, pathname]) // Removed context._loaded from dependencies to prevent circular updates
 
-  // Save context changes
+  // Update context (no localStorage persistence)
   const updateContext = (updates: Partial<OnboardingContext>) => {
-    const newContext = { ...context, ...updates }
-    setContext(newContext)
-    localStorage.setItem('onboarding-context', JSON.stringify(newContext))
+    setContext(prev => {
+      // Check if any values actually changed before updating
+      let hasChanges = false
+      for (const key in updates) {
+        const typedKey = key as keyof OnboardingContext
+        if (prev[typedKey] !== updates[typedKey]) {
+          hasChanges = true
+          break
+        }
+      }
+      
+      // Only update if something changed
+      if (hasChanges) {
+        return { ...prev, ...updates }
+      }
+      return prev
+    })
   }
 
   return { context, updateContext }
 }
 
 // Hook for managing tour progression and sidebar indicators
+// This hook should be used within OnboardingProvider context
 export function useOnbordaTours() {
-  const { context, updateContext } = useOnboardingState()
+  // Import dynamically to avoid circular dependency
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useOnboardingState: useOnboardingStateFromContext } = require('@/contexts/OnboardingContext')
+  const { context, updateContext } = useOnboardingStateFromContext()
   const t = useTranslations('app')
   const [currentTour, setCurrentTour] = useState<string | null>(null)
   const [pendingTour, setPendingTour] = useState<string | null>(null)
@@ -232,23 +306,17 @@ export function useOnbordaTours() {
 
   // Start a specific tour
   const startTour = (tourName: string) => {
-    console.log('[Tour Debug] startTour called', { tourName })
-    
-    // Check if tour has already been completed (persists across sessions via localStorage)
-    const hasCompleted = localStorage.getItem(`onboarding-${tourName}-seen`) === 'true'
+    // Check if tour has already been completed (check database via context.completedTours)
+    const completedTours = context.completedTours || []
+    const hasCompleted = completedTours.includes(tourName)
     if (hasCompleted) {
-      console.log('[Tour Debug] Tour already completed, skipping', { tourName })
       return
     }
     
     const tour = getTour(tourName, t, context)
-    console.log('[Tour Debug] Tour found?', { tourFound: !!tour, tourName })
     if (tour) {
-      console.log('[Tour Debug] Setting pendingTour', tourName)
       setPendingTour(tourName)
       trackTourStarted(tourName, context)
-    } else {
-      console.warn('[Tour Debug] Tour not found:', tourName)
     }
   }
 
@@ -259,19 +327,12 @@ export function useOnbordaTours() {
       // Track completion before updating context
       trackTourCompleted(tourName, context)
 
-      // Mark tour as seen in localStorage to prevent re-showing
-      localStorage.setItem(`onboarding-${tourName}-seen`, 'true')
+      // Mark tour as completed in database (not localStorage)
+      // The database update happens via API call in the component that triggers this
+      // We don't update localStorage anymore - database is source of truth
 
       // Clear pendingTour immediately to prevent TourStarter from restarting the tour
       setPendingTour(null)
-
-      // Also clear sessionStorage if this tour was pending there
-      if (typeof window !== 'undefined') {
-        const sessionPendingTour = sessionStorage.getItem('pending-tour')
-        if (sessionPendingTour === tourName) {
-          sessionStorage.removeItem('pending-tour')
-        }
-      }
 
       // Persist tour completion to database (Person.onboardingState)
       if (context.personId) {
@@ -281,44 +342,37 @@ export function useOnbordaTours() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tourName }),
           })
+          // Update local context to include this tour in completedTours
+          const currentCompletedTours = context.completedTours || []
+          if (!currentCompletedTours.includes(tourName)) {
+            updateContext({ completedTours: [...currentCompletedTours, tourName] })
+          }
         } catch {
           // Continue execution even if database update fails
+          // Still update local context optimistically
+          const currentCompletedTours = context.completedTours || []
+          if (!currentCompletedTours.includes(tourName)) {
+            updateContext({ completedTours: [...currentCompletedTours, tourName] })
+          }
+        }
+      } else {
+        // If no personId, still update local context optimistically
+        const currentCompletedTours = context.completedTours || []
+        if (!currentCompletedTours.includes(tourName)) {
+          updateContext({ completedTours: [...currentCompletedTours, tourName] })
         }
       }
 
       // Update context based on completed tour
       switch (tourName) {
-        case 'first-generation':
-          updateContext({ hasGeneratedPhotos: true })
-          // Set generation-detail tour as pending so it starts when user views their generated photos
-          sessionStorage.setItem('pending-tour', 'generation-detail')
+        case 'main-onboarding':
+          // Main onboarding tour completed - user has been introduced to the platform
           break
-        case 'team-admin-welcome':
-          // Team admin welcome tour completed - user should now set up their team
-          // No redirect needed as they're already on the team page
-          break
-        case 'team-setup':
-          updateContext({ teamId: context.teamId || 'completed' })
-          // After team setup tour, start invite tour
-          startTour('invite-team')
-          break
-        case 'team-photo-styles-page':
-          // Start generation tour immediately
-          startTour('first-generation')
-          break
-        case 'team-photo-styles-free':
-          // Start generation tour immediately
-          startTour('first-generation')
+        case 'generation-detail':
+          // User has seen how to interact with generated photos
           break
         case 'photo-style-creation':
-          // Start generation tour immediately
-          startTour('first-generation')
-          break
-        case 'test-generation':
-          // After test generation tour, mark as having generated photos
-          updateContext({ hasGeneratedPhotos: true })
-          // Set generation-detail tour as pending so it starts when user views their generated photos
-          sessionStorage.setItem('pending-tour', 'generation-detail')
+          // User has completed the photo style creation tour
           break
       }
     }

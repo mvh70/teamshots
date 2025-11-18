@@ -2,6 +2,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { Playfair_Display, Inter } from 'next/font/google'
 import { OnbordaProvider } from '@/components/onboarding/OnbordaProvider'
+import { OnboardingProvider } from '@/contexts/OnboardingContext'
 import '../globals.css'
 
 const displayFont = Playfair_Display({
@@ -29,11 +30,13 @@ export default async function InviteDashboardLayout({
   
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
-      <OnbordaProvider>
-      <div className={`${displayFont.variable} ${bodyFont.variable} font-body`}>
-      {children}
-      </div>
-      </OnbordaProvider>
+      <OnboardingProvider>
+        <OnbordaProvider>
+          <div className={`${displayFont.variable} ${bodyFont.variable} font-body`}>
+            {children}
+          </div>
+        </OnbordaProvider>
+      </OnboardingProvider>
     </NextIntlClientProvider>
   )
 }

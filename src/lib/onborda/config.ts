@@ -11,6 +11,7 @@ export interface TourConfig {
   name: string
   description: string
   triggerCondition?: (context: OnboardingContext) => boolean
+  startingPath?: string // Add this line for the starting path of the tour
 }
 
 export interface OnboardingContext {
@@ -28,6 +29,8 @@ export interface OnboardingContext {
   language: 'en' | 'es'
   isFreePlan: boolean
   onboardingSegment: 'organizer' | 'individual' | 'invited' // New: defines the user segment for onboarding
+  completedTours?: string[] // Array of completed tour names from database
+  pendingTours?: string[] // Array of pending tour names from database
   _loaded?: boolean // Internal flag to track if context has been loaded from server
 }
 
@@ -144,19 +147,27 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
     // Handle how-it-works-content with translations
     if (step === 'how-it-works-content') {
       if (segment === 'organizer') {
-        const step1 = t('dashboard.onboarding.howItWorks.organizer.step1.title')
-        const step2 = t('dashboard.onboarding.howItWorks.organizer.step2.title')
-        const step3 = t('dashboard.onboarding.howItWorks.organizer.step3.title')
-        const step4 = t('dashboard.onboarding.howItWorks.organizer.step4.title')
-        const step4Desc = t('dashboard.onboarding.howItWorks.organizer.step4.description')
-        return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n2. ${step2}\n3. ${step3}\n4. ${step4}\n\n${step4Desc}.`
+        if (context?.isFreePlan) {
+          const step1 = t('dashboard.onboarding.howItWorks.organizer.free.step1.title')
+          const step1Desc = t('dashboard.onboarding.howItWorks.organizer.free.step1.description')
+          const step2 = t('dashboard.onboarding.howItWorks.organizer.free.step2.title')
+          const step2Desc = t('dashboard.onboarding.howItWorks.organizer.free.step2.description')
+          return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n${step1Desc}\n\n2. ${step2}\n${step2Desc}`
+        } else {
+          const step1 = t('dashboard.onboarding.howItWorks.organizer.step1.title')
+          const step2 = t('dashboard.onboarding.howItWorks.organizer.step2.title')
+          const step4 = t('dashboard.onboarding.howItWorks.organizer.step4.title')
+          const step4Desc = t('dashboard.onboarding.howItWorks.organizer.step4.description')
+          return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n2. ${step2}\n3. ${step4}\n\n${step4Desc}.`
+        }
       }
       if (segment === 'individual') {
         const step1 = t('dashboard.onboarding.howItWorks.individual.step1.title')
-        const step2 = t('dashboard.onboarding.howItWorks.individual.step2.title')
         const step3 = t('dashboard.onboarding.howItWorks.individual.step3.title')
-        const step2Desc = t('dashboard.onboarding.howItWorks.individual.step2.description')
-        return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n2. ${step2}\n3. ${step3}\n\n${step2Desc}.`
+        const step3Desc = context?.isFreePlan 
+          ? t('dashboard.onboarding.howItWorks.individual.step3.descriptionFree')
+          : t('dashboard.onboarding.howItWorks.individual.step3.descriptionPaid')
+        return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n2. ${step3}\n\n${step3Desc}.`
       }
       if (segment === 'invited') {
         const step1 = t('dashboard.onboarding.howItWorks.invited.step1.title')
@@ -199,7 +210,7 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
   return {
     'main-onboarding': {
       name: 'main-onboarding',
-      description: 'Comprehensive onboarding flow with wow moment and systematic influence principles',
+      description: 'Main onboarding tour for team admins after team creation or individual users on first dashboard visit',
       triggerCondition: (context) => !context.hasGeneratedPhotos && (context._loaded ?? false),
       steps: [
         {
@@ -224,317 +235,28 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
           pointerPadding: 40,
           customActions: true,
         },
-      ]
+      ],
+      startingPath: '/app/dashboard'
     },
-    welcome: {
-      name: 'welcome',
-      description: 'Initial welcome flow explaining TeamShotsPro for individual users',
+    'generation-detail': {
+      name: 'generation-detail',
+      description: 'Tour after first photo generation explaining how to interact with generated photos',
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
+      triggerCondition: (_context) => false, // Triggered manually from invite dashboard
       steps: [
         {
-          selector: '#welcome-section',
-          title: t('onboarding.tours.welcome.title', { Firstname: '' }),
-          content: t('onboarding.tours.welcome.content'),
-          side: 'bottom',
-          pointerPadding: 40,
-        },
-        {
-          selector: '#sidebar-personal-styles-nav',
-          title: t('onboarding.tours.welcome.photoStylesTitle'),
-          content: t('onboarding.tours.welcome.photoStylesContent'),
-          side: 'right',
-          pointerPadding: 16,
-          customActions: true,
-        },
-      ]
-    },
-    'team-admin-welcome': {
-      name: 'team-admin-welcome',
-      description: 'Welcome flow for team administrators',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-      steps: [
-        {
-          selector: '#welcome-section',
-          title: t('onboarding.tours.teamAdminWelcome.title', { Firstname: '' }),
-          content: t('onboarding.tours.teamAdminWelcome.content'),
-          side: 'bottom',
-          pointerPadding: 40,
-        },
-        {
-          selector: '#teamName',
-          title: t('onboarding.tours.teamAdminWelcome.teamNameTitle'),
-          content: t('onboarding.tours.teamAdminWelcome.teamNameContent'),
-          side: 'bottom',
-          pointerPadding: 16,
-        },
-      ]
-    },
-    'first-generation': {
-      name: 'first-generation',
-      description: 'Guided tour for first photo generation',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-      steps: [
-        {
-          selector: '#upload-photo',
-          title: t('onboarding.tours.generationTour.uploadTitle'),
-          content: t('onboarding.tours.generationTour.uploadContent'),
-          side: 'bottom',
-          pointerPadding: 36,
-        },
-        {
-          selector: '#generation-type-selector',
-          title: t('onboarding.tours.generationTour.styleTitle'),
-          content: t('onboarding.tours.generationTour.styleContent'),
-          side: 'right',
-          pointerPadding: 40,
-        },
-        {
-          selector: '#credit-cost-display',
-          title: t('onboarding.tours.generationTour.creditsTitle'),
-          content: t('onboarding.tours.generationTour.creditsContent'),
+          selector: '[data-onborda="credits-info"]',
+          title: t('onboarding.tours.generationDetailTour.creditsInfoTitle1'),
+          content: t('onboarding.tours.generationDetailTour.creditsInfoContent1'),
           side: 'top',
-          pointerPadding: 32,
-        },
-        {
-          selector: '#generate-btn',
-          title: t('onboarding.tours.generationTour.generateTitle'),
-          content: t('onboarding.tours.generationTour.generateContent'),
-          side: 'bottom',
-          pointerPadding: 36,
-        },
-      ]
-    },
-    'team-setup': {
-      name: 'team-setup',
-      description: 'Guide for setting up a team',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-      steps: [
-        {
-          selector: '#team-create-btn',
-          title: t('onboarding.tours.teamSetupTour.createTitle'),
-          content: t('onboarding.tours.teamSetupTour.createContent'),
-          side: 'bottom',
-          pointerPadding: 40,
-        },
-        {
-          selector: '#photo-style-setup',
-          title: t('onboarding.tours.teamSetupTour.styleTitle'),
-          content: t('onboarding.tours.teamSetupTour.styleContent'),
-          side: 'right',
-          pointerPadding: 40,
-        },
-        {
-          selector: '#invite-members',
-          title: t('onboarding.tours.teamSetupTour.inviteTitle'),
-          content: t('onboarding.tours.teamSetupTour.inviteContent'),
-          side: 'left',
-          pointerPadding: 40,
-        },
-      ]
-    },
-    'team-photo-style-setup': {
-      name: 'team-photo-style-setup',
-      description: 'Guide for setting up team photo styles after team creation',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-      steps: [
-        {
-          selector: '#sidebar-team-styles-nav',
-          title: t('onboarding.tours.teamPhotoStyleSetupTour.title'),
-          content: t('onboarding.tours.teamPhotoStyleSetupTour.content'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-      ]
-    },
-    'team-photo-styles-page': {
-      name: 'team-photo-styles-page',
-      description: 'Explain team photo styles page for paid plans',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-      steps: [
-        {
-          selector: '#team-photo-styles-heading',
-          title: t('onboarding.tours.teamPhotoStylesPageTour.headingTitle'),
-          content: t('onboarding.tours.teamPhotoStylesPageTour.headingContent'),
-          side: 'bottom',
           pointerPadding: 20,
         },
         {
-          selector: '#create-team-style-btn',
-          title: t('onboarding.tours.teamPhotoStylesPageTour.createTitle'),
-          content: t('onboarding.tours.teamPhotoStylesPageTour.createContent'),
-          side: 'left',
-          pointerPadding: 16,
-        },
-      ]
-    },
-    'team-photo-styles-free': {
-      name: 'team-photo-styles-free',
-      description: 'Explain team photo styles page for free plans',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-      steps: [
-        {
-          selector: '#team-photo-styles-heading',
-          title: t('onboarding.tours.teamPhotoStylesFreeTour.headingTitle'),
-          content: t('onboarding.tours.teamPhotoStylesFreeTour.headingContent'),
-          side: 'bottom',
+          selector: '[data-onborda="credits-info"]',
+          title: t('onboarding.tours.generationDetailTour.creditsInfoTitle2'),
+          content: t('onboarding.tours.generationDetailTour.creditsInfoContent2'),
+          side: 'top',
           pointerPadding: 20,
-        },
-        {
-          selector: '[data-testid="free-plan-banner"]',
-          title: t('onboarding.tours.teamPhotoStylesFreeTour.freeTitle'),
-          content: t('onboarding.tours.teamPhotoStylesFreeTour.freeContent'),
-          side: 'bottom',
-          pointerPadding: 20,
-        },
-        {
-          selector: '#style-background',
-          title: t('onboarding.tours.teamPhotoStylesFreeTour.backgroundTitle'),
-          content: t('onboarding.tours.teamPhotoStylesFreeTour.backgroundContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#style-branding',
-          title: t('onboarding.tours.teamPhotoStylesFreeTour.brandingTitle'),
-          content: t('onboarding.tours.teamPhotoStylesFreeTour.brandingContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#style-shot-type',
-          title: t('onboarding.tours.teamPhotoStylesFreeTour.shotTypeTitle'),
-          content: t('onboarding.tours.teamPhotoStylesFreeTour.shotTypeContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#style-clothing-type',
-          title: t('onboarding.tours.teamPhotoStylesFreeTour.clothingTypeTitle'),
-          content: t('onboarding.tours.teamPhotoStylesFreeTour.clothingTypeContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#style-clothing-colors',
-          title: t('onboarding.tours.teamPhotoStylesFreeTour.clothingColorsTitle'),
-          content: t('onboarding.tours.teamPhotoStylesFreeTour.clothingColorsContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#style-expression',
-          title: t('onboarding.tours.teamPhotoStylesFreeTour.expressionTitle'),
-          content: t('onboarding.tours.teamPhotoStylesFreeTour.expressionContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#team-photo-styles-heading',
-          title: t('onboarding.tours.teamPhotoStylesFreeTour.readyTitle'),
-          content: t('onboarding.tours.teamPhotoStylesFreeTour.readyContent'),
-          side: 'bottom',
-          pointerPadding: 20,
-          customActions: true,
-        },
-      ]
-    },
-    'personal-photo-styles-page': {
-      name: 'personal-photo-styles-page',
-      description: 'Explain personal photo styles page for paid plans',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-      steps: [
-        {
-          selector: '#personal-photo-styles-heading',
-          title: t('onboarding.tours.personalPhotoStylesPageTour.headingTitle'),
-          content: t('onboarding.tours.personalPhotoStylesPageTour.headingContentIndividual'), // Will be overridden in generateTours based on accountMode
-          side: 'bottom',
-          pointerPadding: 20,
-        },
-        {
-          selector: '#create-personal-style-btn',
-          title: t('onboarding.tours.personalPhotoStylesPageTour.createTitle'),
-          content: t('onboarding.tours.personalPhotoStylesPageTour.createContentIndividual'), // Will be overridden in generateTours based on accountMode
-          side: 'left',
-          pointerPadding: 16,
-        },
-      ]
-    },
-    'personal-photo-styles-free': {
-      name: 'personal-photo-styles-free',
-      description: 'Explain personal photo styles page for free plans',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-      steps: [
-        {
-          selector: '#personal-photo-styles-heading',
-          title: t('onboarding.tours.personalPhotoStylesFreeTour.headingTitle'),
-          content: t('onboarding.tours.personalPhotoStylesFreeTour.headingContentIndividual'), // Will be overridden in generateTours based on accountMode
-          side: 'bottom',
-          pointerPadding: 20,
-        },
-        {
-          selector: '[data-testid="free-plan-banner"]',
-          title: t('onboarding.tours.personalPhotoStylesFreeTour.freeTitle'),
-          content: t('onboarding.tours.personalPhotoStylesFreeTour.freeContentIndividual'), // Will be overridden in generateTours based on accountMode
-          side: 'bottom',
-          pointerPadding: 20,
-        },
-        {
-          selector: '#style-background',
-          title: t('onboarding.tours.personalPhotoStylesFreeTour.backgroundTitle'),
-          content: t('onboarding.tours.personalPhotoStylesFreeTour.backgroundContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#style-branding',
-          title: t('onboarding.tours.personalPhotoStylesFreeTour.brandingTitle'),
-          content: t('onboarding.tours.personalPhotoStylesFreeTour.brandingContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#style-shot-type',
-          title: t('onboarding.tours.personalPhotoStylesFreeTour.shotTypeTitle'),
-          content: t('onboarding.tours.personalPhotoStylesFreeTour.shotTypeContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#style-clothing-type',
-          title: t('onboarding.tours.personalPhotoStylesFreeTour.clothingTypeTitle'),
-          content: t('onboarding.tours.personalPhotoStylesFreeTour.clothingTypeContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#style-clothing-colors',
-          title: t('onboarding.tours.personalPhotoStylesFreeTour.clothingColorsTitle'),
-          content: t('onboarding.tours.personalPhotoStylesFreeTour.clothingColorsContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#style-expression',
-          title: t('onboarding.tours.personalPhotoStylesFreeTour.expressionTitle'),
-          content: t('onboarding.tours.personalPhotoStylesFreeTour.expressionContent'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-        {
-          selector: '#primary-generate-btn',
-          title: t('onboarding.tours.personalPhotoStylesFreeTour.readyTitle'),
-          content: t('onboarding.tours.personalPhotoStylesFreeTour.readyContent'),
-          side: 'right',
-          pointerPadding: 16,
         },
       ]
     },
@@ -542,7 +264,7 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
       name: 'photo-style-creation',
       description: 'Comprehensive guide through creating a new photo style',
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
+      triggerCondition: (_context) => false, // Currently deactivated
       steps: [
         {
           selector: '#style-name-input',
@@ -619,83 +341,6 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
           title: t('onboarding.tours.photoStyleCreationTour.autosaveTitle'),
           content: t('onboarding.tours.photoStyleCreationTour.autosaveContent'),
           side: 'bottom',
-          pointerPadding: 20,
-        },
-      ]
-    },
-    'test-generation': {
-      name: 'test-generation',
-      description: 'Encourage testing the service with first photo generation',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-      steps: [
-        {
-          selector: '#primary-generate-btn',
-          title: t('onboarding.tours.testGenerationTour.title'),
-          content: t('onboarding.tours.testGenerationTour.content'),
-          side: 'right',
-          pointerPadding: 16,
-        },
-      ]
-    },
-    'invite-team': {
-      name: 'invite-team',
-      description: 'Guide for inviting team members',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated
-      steps: [
-        {
-          selector: '#team-name-header',
-          title: t('onboarding.tours.inviteTeamTour.pageTitle', { teamName: context?.teamName || 'your team' }),
-          content: t('onboarding.tours.inviteTeamTour.pageContent', { teamName: context?.teamName || 'your team' }),
-          side: 'bottom',
-          pointerPadding: 20,
-        },
-        {
-          selector: '#team-invites-table',
-          title: t('onboarding.tours.inviteTeamTour.tableTitle'),
-          content: t('onboarding.tours.inviteTeamTour.tableContent'),
-          side: 'bottom',
-          pointerPadding: 20,
-        },
-        {
-          selector: '#team-active-style, #team-free-plan-banner',
-          title: Boolean(context?.isFreePlan)
-            ? (t('onboarding.tours.inviteTeamTour.activeStyleTitleFree') || 'Free Package Style')
-            : (t('onboarding.tours.inviteTeamTour.activeStyleTitle') || 'Your active photo style'),
-          content: Boolean(context?.isFreePlan)
-            ? (t('onboarding.tours.inviteTeamTour.activeStyleContentFree') || 'Your team members will use the Free Package Style when generating photos. Upgrade to unlock custom backgrounds, branding, clothing styles, and more customization options.')
-            : (t('onboarding.tours.inviteTeamTour.activeStyleContent') || 'This is the photo style your invited team members will use when generating their photos. All their photos will match this style for consistent branding across your team.'),
-          side: 'bottom',
-          pointerPadding: 20,
-        },
-        {
-          selector: '#invite-team-member-btn',
-          title: t('onboarding.tours.inviteTeamTour.title'),
-          content: t('onboarding.tours.inviteTeamTour.content'),
-          side: 'left',
-          pointerPadding: 20,
-        },
-      ]
-    },
-    'generation-detail': {
-      name: 'generation-detail',
-      description: 'Tour explaining how to interact with generated photos',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  triggerCondition: (_context) => false, // Deactivated - triggered manually from invite dashboard
-      steps: [
-        {
-          selector: '[data-onborda="credits-info"]',
-          title: t('onboarding.tours.generationDetailTour.creditsInfoTitle1'),
-          content: t('onboarding.tours.generationDetailTour.creditsInfoContent1'),
-          side: 'top',
-          pointerPadding: 20,
-        },
-        {
-          selector: '[data-onborda="credits-info"]',
-          title: t('onboarding.tours.generationDetailTour.creditsInfoTitle2'),
-          content: t('onboarding.tours.generationDetailTour.creditsInfoContent2'),
-          side: 'top',
           pointerPadding: 20,
         },
       ]

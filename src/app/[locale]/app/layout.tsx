@@ -7,7 +7,7 @@ import { CreditsProvider } from '@/contexts/CreditsContext'
 import { getAccountMode } from '@/domain/account/accountMode'
 import { CreditService } from '@/domain/services/CreditService'
 import { getTeamOnboardingState } from '@/domain/team/onboarding'
-import { OnbordaProvider } from '@/components/onboarding/OnbordaProvider'
+import { OnboardingProvider } from '@/contexts/OnboardingContext'
 
 export default async function AppLayout({
   children,
@@ -62,15 +62,18 @@ export default async function AppLayout({
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <CreditsProvider initialCredits={creditBalances ? { individual: creditBalances.individual, team: creditBalances.team } : undefined}>
-        <OnbordaProvider>
-          <AppShell
-            initialAccountMode={accountModeResult.mode}
-            initialRole={initialRole}
-            initialSubscription={initialSubscription}
-          >
-            {children}
-          </AppShell>
-        </OnbordaProvider>
+        <OnboardingProvider>
+          {/* TODO: Re-enable OnbordaProvider after testing team page - temporarily removed to disable onboarding on team page */}
+          {/* <OnbordaProvider> */}
+            <AppShell
+              initialAccountMode={accountModeResult.mode}
+              initialRole={initialRole}
+              initialSubscription={initialSubscription}
+            >
+              {children}
+            </AppShell>
+          {/* </OnbordaProvider> */}
+        </OnboardingProvider>
       </CreditsProvider>
     </NextIntlClientProvider>
   )

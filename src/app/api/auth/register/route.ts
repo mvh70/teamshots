@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
       bcrypt,
       { prisma },
       { verifyOTP },
-      { createTeamVerificationRequest },
       { registrationSchema },
       { captureServerEvent },
       { sendAdminSignupNotificationEmail }
@@ -45,7 +44,6 @@ export async function POST(request: NextRequest) {
       import('bcryptjs').then(m => { Logger.debug('  - bcrypt loaded'); return m.default; }),
       import('@/lib/prisma').then(m => { Logger.debug('  - prisma loaded'); return m; }),
       import('@/domain/auth/otp').then(m => { Logger.debug('  - otp loaded'); return m; }),
-      import('@/domain/auth/team-verification').then(m => { Logger.debug('  - team-verification loaded'); return m; }),
       import('@/lib/validation').then(m => { Logger.debug('  - validation loaded'); return m; }),
       import('@/lib/analytics/server').then(m => { Logger.debug('  - analytics loaded'); return m; }),
       import('@/lib/email').then(m => { Logger.debug('  - email helpers loaded'); return m; })
@@ -142,8 +140,11 @@ export async function POST(request: NextRequest) {
     })
     Logger.debug('16. Existing person check complete')
 
-    // Determine initial role based on existing person/invite
-    const initialRole = existingPerson?.teamId ? 'team_member' : 'user'
+    // Determine initial role based on existing person/invite or userType
+    // If userType is 'team' and no existing person, set role to 'team_admin' so they can set up their team
+    const initialRole = existingPerson?.teamId 
+      ? 'team_member' 
+      : (userType === 'team' ? 'team_admin' : 'user')
 
     // Create user with correct role
     Logger.info('17. Creating user...')
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
         locale,
       }
     })
-    Logger.info('18. User created', { userId: user.id })
+    Logger.info('18. User created', { userId: user.id, role: initialRole })
 
     let person
     let teamId = null
@@ -208,35 +209,14 @@ export async function POST(request: NextRequest) {
 
     // Handle team registration (only if not from invite)
     if (userType === 'team' && teamWebsite && !teamId) {
-      Logger.info('21. Creating team...')
-      const teamResult = await createTeamVerificationRequest(
-        email,
-        teamWebsite,
-        user.id
-      )
+      // For team signups, just set the user role to team_admin
+      // Team creation will happen later when they complete the team setup form
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'team_admin' }
+      })
 
-      if (teamResult.success && teamResult.teamId) {
-        teamId = teamResult.teamId
-        
-        // Update person with team link
-        await prisma.person.update({
-          where: { id: person.id },
-          data: { teamId }
-        })
-        
-        // Update user role to team_admin since they created the team
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { role: 'team_admin' }
-        })
-        
-        Logger.info('22. team created', { teamId })
-      } else {
-        return NextResponse.json(
-          badRequest('team_CREATION_FAILED', 'auth.signup.Registration failed', teamResult.error || 'Failed to create team'),
-          { status: 400 }
-        )
-      }
+      Logger.info('21. User marked as team_admin, team creation deferred')
     }
 
     // Free trial grant (idempotent)

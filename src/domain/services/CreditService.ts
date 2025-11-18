@@ -85,6 +85,7 @@ export class CreditService {
       // Reserve credits using existing function
       // For team credits: pass personId AND teamId (both required for team credit deduction)
       // For individual credits: pass userId only (no personId, no teamId) to use getUserCreditBalance
+      // Credits are tracked per person, not per invite
       const transaction = await reserveCreditsForGeneration(
         creditSourceInfo.creditSource === 'team' ? personId : null,
         creditSourceInfo.creditSource === 'team' ? null : userId,

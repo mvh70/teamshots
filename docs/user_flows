@@ -537,18 +537,7 @@ TeamShots implements a comprehensive onboarding experience using the Onborda lib
 
 **Purpose**: Tour name: `test-generation`. Encourages team admins to test the generation process before inviting team members.
 
-#### 12. Invite Team Tour (`invite-team`)
-**Trigger**: `isTeamAdmin && teamId`  
-**Page**: `/app/team`  
-**Steps**: 4
-- `#team-name-header`: Page title with team name context
-- `#team-invites-table`: Invites table explanation
-- `#team-active-style` or `#team-free-plan-banner`: Active photo style explanation (varies by plan)
-- `#invite-team-member-btn`: Invite team members button
-
-**Purpose**: Tour name: `invite-team`. Guide team admins through inviting team members after team and style setup.
-
-#### 13. Generation Detail Tour (`generation-detail`)
+#### 12. Generation Detail Tour (`generation-detail`)
 **Trigger**: `hasGeneratedPhotos && (isRegularUser || isTeamAdmin)`  
 **Page**: `/app/generations/team` or `/app/generations/personal`  
 **Steps**: 2
@@ -565,12 +554,9 @@ TeamShots implements a comprehensive onboarding experience using the Onborda lib
 2. Welcome tour (`welcome`) triggers on dashboard
    - Highlights welcome section
    - Points to photo styles customization
-3. User navigates to `/app/styles/personal`
-   - If free plan: `personal-photo-styles-free` tour triggers (8 steps)
-   - If paid plan: `personal-photo-styles-page` tour triggers (2 steps)
-4. If paid plan and user navigates to `/app/styles/personal/create`:
-   - `photo-style-creation` tour triggers (11 steps)
-5. User navigates to generation page
+4. User creates first generation with own selfies
+      - If free plan: `free plan photo style`
+      - If paid plan: `freestyle photo style
 6. First generation tour (`first-generation`) triggers
    - Guides through upload, style selection, credits, generate
 7. After first generation: `hasGeneratedPhotos=true`
@@ -581,31 +567,23 @@ TeamShots implements a comprehensive onboarding experience using the Onborda lib
 #### Team Admin Onboarding Flow
 ```
 1. User signs up with "Team" account type
-2. Team admin welcome tour (`team-admin-welcome`) triggers
+2. User creates team (teamId assigned)
+3. Team admin welcome tour (`team-admin-welcome`) triggers
    - Welcome message
    - Prompts team name entry
-3. User creates team (teamId assigned)
-4. User navigates to `/app/styles/team`
-   - Photo style explanation tour triggers:
-     - If free plan: `team-photo-styles-free` tour (9 steps)
-     - If paid plan: `team-photo-styles-page` tour (2 steps)
-5. If paid plan and user navigates to `/app/styles/team/create`:
-   - `photo-style-creation` tour triggers (11 steps)
-6. User navigates to `/app/team`
-   - `invite-team` tour triggers (4 steps)
-7. Test generation tour (`test-generation`) may trigger
-   - Encourages admin to test before inviting
-8. After first generation: `hasGeneratedPhotos=true`
+4. User creates first generation with own selfies
+      - If free plan: `free plan photo style`
+      - If paid plan: `freestyle photo style
+7. After first generation: `hasGeneratedPhotos=true`
    - `generation-detail` tour triggers (2 steps) - explains how to interact with generated photos
-9. After generation detail tour: Tours no longer trigger automatically
+8. After generation detail tour: Tours no longer trigger automatically
 ```
 
 #### Invited Team Member Flow
 ```
 1. Team member receives invite link with token
 2. Token validation and consent screen
-3. First generation tour (`first-generation`) triggers
-   - Same 4-step flow as individual users
+3. Bring the user as quickly as possible to first generation
 4. After generation: `hasGeneratedPhotos=true`
    - `generation-detail` tour triggers (2 steps) - explains how to interact with generated photos
 5. After generation detail tour: Tours no longer trigger

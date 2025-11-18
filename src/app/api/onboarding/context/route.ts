@@ -24,8 +24,9 @@ export async function GET() {
     // OPTIMIZATION: Use shared UserService.getUserContext to get all user data in one call
     const userContext = await UserService.getUserContext(session.user.id)
 
-    // Load completed tours from Person.onboardingState
+    // Load completed and pending tours from Person.onboardingState
     let completedTours: string[] = []
+    let pendingTours: string[] = []
     if (userContext.user.person?.id) {
       const person = await prisma.person.findUnique({
         where: { id: userContext.user.person.id },
@@ -37,6 +38,9 @@ export async function GET() {
           const parsed = JSON.parse(person.onboardingState)
           if (parsed.completedTours && Array.isArray(parsed.completedTours)) {
             completedTours = parsed.completedTours
+          }
+          if (parsed.pendingTours && Array.isArray(parsed.pendingTours)) {
+            pendingTours = parsed.pendingTours
           }
         } catch {
           // If parsing fails, treat as empty (old format or invalid JSON)
@@ -52,7 +56,7 @@ export async function GET() {
     }
 
     // Build onboarding context using pre-fetched data
-    const context: OnboardingContext & { completedTours?: string[] } = {
+    const context: OnboardingContext & { completedTours?: string[]; pendingTours?: string[] } = {
       userId: userContext.user.id,
       personId: userContext.user.person?.id,
       firstName: userContext.user.person?.firstName,
@@ -69,6 +73,7 @@ export async function GET() {
       onboardingSegment: determineSegment(userContext.roles),
       _loaded: true,
       completedTours, // Include completed tours from database
+      pendingTours, // Include pending tours from database
     }
 
     return NextResponse.json(context)

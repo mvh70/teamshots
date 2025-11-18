@@ -66,6 +66,7 @@ export default function TeamPhotoStylesPage() {
   const [success] = useState<string | null>(null)
   const [freePackageContext, setFreePackageContext] = useState<{ id: string; settings?: Context['settings']; stylePreset?: string } | null>(null)
 
+
   const fetchContexts = useCallback(async () => {
     try {
       const data = await jsonFetcher<{ contexts?: Context[]; activeContext?: Context }>('/api/styles/team')

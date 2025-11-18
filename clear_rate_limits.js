@@ -24,6 +24,8 @@ async function clearRateLimits() {
       const rateLimitKeys = [
         `rate_limit:invite.validate:${ip}`,
         `rate_limit:invite.accept:${ip}`,
+        `rate_limit:otp.validate:${ip}`,
+        `rate_limit:otp.send:${ip}`,
       ]
       
       for (const key of rateLimitKeys) {
@@ -44,10 +46,10 @@ async function clearRateLimits() {
         console.log(`  (no block found): ${blockKey}`)
       }
     } else {
-      console.log('Clearing ALL invite rate limit keys...\n')
+      console.log('Clearing ALL rate limit keys...\n')
       
       // Find all rate limit keys matching the pattern
-      const rateLimitPattern = 'rate_limit:invite.*'
+      const rateLimitPattern = 'rate_limit:*'
       const blockPattern = 'rate_block:*'
       
       // Get all matching keys

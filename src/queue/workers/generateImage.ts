@@ -615,11 +615,12 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
               genCreditSource, 
               refundPersonId, 
               refundUserId, 
-              teamId, 
+              teamId,
               creditsRefunded: generationRecord.creditsUsed,
               personTeamId: generationRecord.person.teamId
             })
             
+            // Credits are tracked per person, not per invite
             await refundCreditsForFailedGeneration(
               refundPersonId,
               refundUserId,

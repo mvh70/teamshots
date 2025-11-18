@@ -9,6 +9,7 @@ import { useInvitedGenerations } from './useInvitedGenerations'
 import { GenerationGrid, ErrorBanner } from '@/components/ui'
 import { OnboardingLauncher } from '@/components/onboarding/OnboardingLauncher'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
+import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useOnborda } from 'onborda'
 
 export default function GenerationsPage() {
@@ -18,6 +19,7 @@ export default function GenerationsPage() {
   const token = params.token as string
   const { generations, loading, error } = useInvitedGenerations(token)
   const { startTour, pendingTour } = useOnbordaTours()
+  const { context: onboardingContext } = useOnboardingState()
   const onborda = useOnborda()
   const hasCheckedTourRef = useRef(false)
   
@@ -35,85 +37,58 @@ export default function GenerationsPage() {
       // Mark that we've checked to prevent re-running
       hasCheckedTourRef.current = true
       
-      // Check if tour has been completed (persists across sessions via localStorage)
-      // Uses same key format as completeTour function: 'onboarding-{tourName}-seen'
-      const hasSeenTour = localStorage.getItem('onboarding-generation-detail-seen')
-      const isFirstGeneration = generations.length === 1
-      
-      console.log('[Tour Debug] Checking tour conditions (once per page load):', {
-        loading,
-        generationsCount: generations.length,
-        isFirstGeneration,
-        hasSeenTour,
-        forceTour,
-        pendingTour: sessionStorage.getItem('pending-tour')
-      })
-      
+      // Check if tour has been completed using database (onboarding context)
+      // Only check for users who have accepted invites (have personId)
+      const hasSeenTour = onboardingContext.personId
+        ? onboardingContext.completedTours?.includes('generation-detail')
+        : false // Guests don't get onboarding tours
+
+      const isPendingTour = onboardingContext.personId
+        ? onboardingContext.pendingTours?.includes('generation-detail')
+        : false
+
       // If forceTour is true, always start the tour (ignore seen flag)
       if (forceTour) {
-        // Clear the seen flag to allow tour to start
-        localStorage.removeItem('onboarding-generation-detail-seen')
-        sessionStorage.removeItem('pending-tour')
-        console.log('[Tour Debug] Starting tour (forced via URL parameter)')
         // Start the tour after a delay to ensure DOM is ready
         setTimeout(() => {
           startTour('generation-detail')
         }, 1500)
         return
       }
-      
-      // Normal flow: only trigger for first generation and if tour hasn't been seen
-      if (isFirstGeneration && !hasSeenTour) {
-        // Check if there's a pending tour from generation completion
-        const sessionPendingTour = sessionStorage.getItem('pending-tour')
-        if (sessionPendingTour === 'generation-detail') {
-          // Clear the pending tour flag
-          sessionStorage.removeItem('pending-tour')
-          console.log('[Tour Debug] Starting tour from pending flag (first generation)')
-          // Start the tour after a delay to ensure DOM is ready
-          setTimeout(() => {
-            startTour('generation-detail')
-          }, 1500)
-        } else {
-          // If tour hasn't been seen and this is the first generation, start the tour
-          // This handles cases where user navigates directly to generations page after first generation
-          console.log('[Tour Debug] Starting tour for first generation (no pending flag)')
-          setTimeout(() => {
-            startTour('generation-detail')
-          }, 1500)
-        }
-      } else {
-        if (!isFirstGeneration) {
-          console.log('[Tour Debug] Tour skipped - not first generation', { generationsCount: generations.length })
-        } else {
-          console.log('[Tour Debug] Tour already seen, skipping')
-        }
+
+      // Normal flow: trigger if tour is pending or if this is first generation and tour hasn't been seen
+      if (!hasSeenTour && (isPendingTour || generations.length === 1)) {
+        // Start the tour after a delay to ensure DOM is ready
+        setTimeout(() => {
+          startTour('generation-detail')
+        }, 1500)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, generations.length, forceTour]) // Removed startTour from dependencies to prevent re-runs
+  }, [loading, generations.length, forceTour, onboardingContext.completedTours, onboardingContext.pendingTours]) // Added context dependencies
 
   // Directly start Onborda tour when pendingTour is set
   useEffect(() => {
     if (pendingTour === 'generation-detail' && onborda?.startOnborda && !onborda.isOnbordaVisible) {
-      // Check localStorage before starting (defense in depth)
-      const hasCompleted = localStorage.getItem('onboarding-generation-detail-seen') === 'true'
+      // Check database completion status before starting (defense in depth)
+      const hasCompleted = onboardingContext.personId
+        ? onboardingContext.completedTours?.includes('generation-detail')
+        : false
       if (hasCompleted) {
-        console.log('[Tour Debug] GenerationsPage: Tour already completed, skipping direct start', { pendingTour })
         return
       }
-      console.log('[Tour Debug] GenerationsPage: Starting Onborda tour directly', { pendingTour })
       setTimeout(() => {
-        // Check again before starting
-        const stillCompleted = localStorage.getItem('onboarding-generation-detail-seen') === 'true'
+        // Check again before starting (context might have updated)
+        const stillCompleted = onboardingContext.personId
+          ? onboardingContext.completedTours?.includes('generation-detail')
+          : false
         if (stillCompleted) {
-          console.log('[Tour Debug] GenerationsPage: Tour was completed during timeout, cancelling direct start')
           return
         }
         onborda.startOnborda('generation-detail')
       }, 2000)
     }
-  }, [pendingTour, onborda])
+  }, [pendingTour, onborda, onboardingContext.personId, onboardingContext.completedTours])
 
   if (loading) {
     return (
