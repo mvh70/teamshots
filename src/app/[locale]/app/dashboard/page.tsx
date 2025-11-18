@@ -96,12 +96,28 @@ export default function DashboardPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [showUploadFlow, setShowUploadFlow] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [preparingOnboarding, setPreparingOnboarding] = useState(false)
 
   // Onboarding state
   const { context: onboardingContext } = useOnboardingState()
   const [onboardingStep, setOnboardingStep] = useState(1)
   const [hasCompletedMainOnboarding, setHasCompletedMainOnboarding] = useState(false)
-  const shouldShowOnboarding = !hasCompletedMainOnboarding && onboardingContext._loaded
+  
+  // Check for transition flag immediately on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const showImmediately = sessionStorage.getItem('show-onboarding-immediately') === 'true'
+      if (showImmediately) {
+        // Clear flag immediately to prevent stale state
+        sessionStorage.removeItem('show-onboarding-immediately')
+        // Force onboarding to show
+        setHasCompletedMainOnboarding(false)
+        setPreparingOnboarding(true)
+      }
+    }
+  }, [])
+  
+  const shouldShowOnboarding = !hasCompletedMainOnboarding && onboardingContext._loaded && !preparingOnboarding
 
   // Onboarding handlers
   const handleStartAction = () => {
@@ -132,12 +148,17 @@ export default function DashboardPage() {
   }
 
   // Read onboarding completion status from localStorage (client-side only)
+  // Only check if we're not showing onboarding immediately
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !preparingOnboarding) {
       const completed = localStorage.getItem('onboarding-main-onboarding-seen') === 'true'
       setHasCompletedMainOnboarding(completed)
+      // Once onboarding context is loaded, clear preparing state
+      if (onboardingContext._loaded) {
+        setPreparingOnboarding(false)
+      }
     }
-  }, [])
+  }, [onboardingContext._loaded, preparingOnboarding])
 
   // Check for success parameter in URL
   useEffect(() => {
@@ -294,26 +315,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 md:space-y-8 max-w-7xl mx-auto">
-      {/* Success Message */}
-      {showSuccessMessage && (
-        <div className={`bg-brand-secondary-light border border-brand-secondary-lighter rounded-xl p-4 flex items-center transition-all duration-300 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}>
-          <CheckCircleIcon className="h-5 w-5 text-brand-secondary mr-3 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-brand-secondary-text-light">{successMessage}</p>
-          </div>
-          <button
-            onClick={() => setShowSuccessMessage(false)}
-            className="ml-4 text-brand-secondary/60 hover:text-brand-secondary flex-shrink-0 p-1 transition-colors"
-            aria-label="Close success message"
-          >
-            <XMarkIcon className="h-5 w-5" />
-          </button>
-        </div>
-      )}
-
-      {/* Onboarding Flow */}
+      {/* Onboarding Flow - Show first if applicable to prevent flickering */}
       {shouldShowOnboarding && (
-        <div className="bg-white rounded-xl shadow-depth-sm border border-gray-200 p-8">
+        <div className="bg-white rounded-xl shadow-depth-sm border border-gray-200 p-8 animate-fade-in">
           <OnboardingProgress
             currentStep={onboardingStep}
             totalSteps={3}
@@ -581,6 +585,23 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Success Message */}
+      {showSuccessMessage && (
+        <div className={`bg-brand-secondary-light border border-brand-secondary-lighter rounded-xl p-4 flex items-center transition-all duration-300 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}>
+          <CheckCircleIcon className="h-5 w-5 text-brand-secondary mr-3 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-brand-secondary-text-light">{successMessage}</p>
+          </div>
+          <button
+            onClick={() => setShowSuccessMessage(false)}
+            className="ml-4 text-brand-secondary/60 hover:text-brand-secondary flex-shrink-0 p-1 transition-colors"
+            aria-label="Close success message"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
       {/* Selfie Upload Flow */}
       {showUploadFlow && (
         <SelfieUploadFlow
@@ -593,7 +614,7 @@ export default function DashboardPage() {
         />
       )}
 
-      {!showUploadFlow && (
+      {!showUploadFlow && !shouldShowOnboarding && (
         <>
           {/* Welcome Section */}
           <div 

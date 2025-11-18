@@ -9,90 +9,133 @@ import { trackTourStarted, trackTourCompleted, trackTourSkipped, trackStepViewed
 // Export the utility functions
 export { getApplicableTours, getTour }
 
+// Helper function to read sessionStorage synchronously
+function getSessionStorageData(): Partial<OnboardingContext> | null {
+  if (typeof window === 'undefined') return null
+  
+  try {
+    const initialDataStr = sessionStorage.getItem('teamshots.initialData')
+    if (initialDataStr) {
+      const initialData = JSON.parse(initialDataStr)
+      // Check if data is fresh (within 5 minutes)
+      const timestamp = initialData._timestamp || 0
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+      if (timestamp < fiveMinutesAgo) {
+        // Data is stale, return null to trigger API fetch
+        return null
+      }
+      
+      if (initialData.onboarding && initialData.user?.id) {
+        const determineSegment = (roles: { isTeamAdmin?: boolean; isTeamMember?: boolean }): 'organizer' | 'individual' | 'invited' => {
+          if (roles?.isTeamAdmin) return 'organizer'
+          if (roles?.isTeamMember) return 'invited'
+          return 'individual'
+        }
+
+        return {
+          userId: initialData.user?.id,
+          personId: initialData.person?.id,
+          firstName: initialData.person?.firstName,
+          isTeamAdmin: initialData.roles?.isTeamAdmin || false,
+          isTeamMember: initialData.roles?.isTeamMember || false,
+          isRegularUser: initialData.roles?.isRegularUser || false,
+          teamId: initialData.roles?.teamId,
+          teamName: initialData.roles?.teamName,
+          hasUploadedSelfie: initialData.onboarding.hasUploadedSelfie || false,
+          hasGeneratedPhotos: initialData.onboarding.hasGeneratedPhotos || false,
+          accountMode: initialData.onboarding.accountMode || 'individual',
+          language: initialData.onboarding.language || 'en',
+          isFreePlan: initialData.onboarding.isFreePlan !== undefined ? initialData.onboarding.isFreePlan : true,
+          onboardingSegment: determineSegment(initialData.roles),
+          _loaded: true, // Mark as loaded immediately when using sessionStorage
+        }
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  
+  return null
+}
+
 // Hook for managing onboarding state
 export function useOnboardingState() {
   const { data: session } = useSession()
   const pathname = usePathname()
-  const [context, setContext] = useState<OnboardingContext>({
-    isTeamAdmin: false,
-    isTeamMember: false,
-    isRegularUser: true,
-    hasUploadedSelfie: false,
-    hasGeneratedPhotos: false,
-    accountMode: 'individual',
-    language: 'en',
-    isFreePlan: true,
-    onboardingSegment: 'individual', // Default segment
-    _loaded: false, // Internal flag to track if context has been loaded from server
+  
+  // Read sessionStorage synchronously in initializer to set _loaded immediately
+  const sessionStorageData = typeof window !== 'undefined' ? getSessionStorageData() : null
+  const baseContext = typeof window !== 'undefined' 
+    ? (localStorage.getItem('onboarding-context') ? JSON.parse(localStorage.getItem('onboarding-context')!) : {})
+    : {}
+  
+  const [context, setContext] = useState<OnboardingContext>(() => {
+    if (sessionStorageData) {
+      return {
+        ...baseContext,
+        ...sessionStorageData,
+        _loaded: true, // Ensure _loaded is true when using sessionStorage
+      }
+    }
+    
+    return {
+      isTeamAdmin: false,
+      isTeamMember: false,
+      isRegularUser: true,
+      hasUploadedSelfie: false,
+      hasGeneratedPhotos: false,
+      accountMode: 'individual',
+      language: 'en',
+      isFreePlan: true,
+      onboardingSegment: 'individual', // Default segment
+      _loaded: false, // Internal flag to track if context has been loaded from server
+    }
   })
 
   // Load onboarding context from localStorage and server
   // Also re-check when pathname changes to pick up updated sessionStorage data
   useEffect(() => {
-    // Get data from localStorage (client-side persistence)
-    const stored = localStorage.getItem('onboarding-context')
-    const baseContext = stored ? JSON.parse(stored) : {}
-
     // Check if we're on a generations page - if so, always refresh context to get latest hasGeneratedPhotos
     const isGenerationsPage = pathname === '/app/generations/team' || pathname === '/app/generations/personal'
     
-    // OPTIMIZATION: Check sessionStorage for initial data first (from /api/user/initial-data)
-    // Do this synchronously to set context immediately
-    // Re-check on pathname changes to pick up updates (e.g., after team creation)
-    // BUT: Skip sessionStorage on generations pages to force fresh API fetch
-    if (!isGenerationsPage) {
-      try {
-        const initialDataStr = sessionStorage.getItem('teamshots.initialData')
-        if (initialDataStr) {
-          const initialData = JSON.parse(initialDataStr)
-          if (initialData.onboarding && initialData.user?.id) {
-            // Determine onboarding segment based on user context
-            const determineSegment = (roles: { isTeamAdmin?: boolean; isTeamMember?: boolean }): 'organizer' | 'individual' | 'invited' => {
-              if (roles?.isTeamAdmin) return 'organizer'
-              if (roles?.isTeamMember) return 'invited'
-              return 'individual'
-            }
-
-            // Map initial data to onboarding context format and set immediately
-            const serverContext: Partial<OnboardingContext> = {
-              userId: initialData.user?.id,
-              personId: initialData.person?.id,
-              firstName: initialData.person?.firstName,
-              isTeamAdmin: initialData.roles?.isTeamAdmin || false,
-              isTeamMember: initialData.roles?.isTeamMember || false,
-              isRegularUser: initialData.roles?.isRegularUser || false,
-              teamId: initialData.roles?.teamId,
-              teamName: initialData.roles?.teamName,
-              hasUploadedSelfie: initialData.onboarding.hasUploadedSelfie || false,
-              hasGeneratedPhotos: initialData.onboarding.hasGeneratedPhotos || false,
-              accountMode: initialData.onboarding.accountMode || 'individual',
-              language: initialData.onboarding.language || 'en',
-              isFreePlan: initialData.onboarding.isFreePlan !== undefined ? initialData.onboarding.isFreePlan : true,
-              onboardingSegment: determineSegment(initialData.roles),
-              _loaded: true, // Mark as loaded immediately
-            }
-
-            // Sync completed tours from initial data to localStorage if available
+    // If we already have loaded data from sessionStorage (in initializer), skip API call unless on generations page
+    if (context._loaded && !isGenerationsPage) {
+      // Re-check sessionStorage on pathname changes to pick up updates (e.g., after team creation)
+      const updatedData = getSessionStorageData()
+      if (updatedData) {
+        const stored = localStorage.getItem('onboarding-context')
+        const baseContext = stored ? JSON.parse(stored) : {}
+        
+        // Sync completed tours from initial data to localStorage if available
+        try {
+          const initialDataStr = sessionStorage.getItem('teamshots.initialData')
+          if (initialDataStr) {
+            const initialData = JSON.parse(initialDataStr)
             if (initialData.onboarding?.completedTours && Array.isArray(initialData.onboarding.completedTours)) {
               initialData.onboarding.completedTours.forEach((tourName: string) => {
                 localStorage.setItem(`onboarding-${tourName}-seen`, 'true')
               })
             }
-            
-            const newContext = {
-              ...baseContext,
-              ...serverContext,
-              userId: session?.user?.id || serverContext.userId,
-              _loaded: true, // Ensure _loaded is always true when using sessionStorage
-            }
-            setContext(newContext)
-            return // Exit early, don't fetch from API
           }
+        } catch {
+          // Ignore errors
         }
-      } catch {
-        // Ignore parse errors, fall through to API call
+        
+        const newContext = {
+          ...baseContext,
+          ...updatedData,
+          userId: session?.user?.id || updatedData.userId,
+          _loaded: true,
+        }
+        setContext(newContext)
+        return // Exit early, don't fetch from API
       }
     }
+    
+    // Only fetch from API if:
+    // 1. We're on a generations page (need fresh data)
+    // 2. sessionStorage is empty or stale
+    // 3. Context hasn't been loaded yet
 
     // Fetch from API (always on generations pages, or if no sessionStorage data)
     const loadOnboardingContext = async () => {
@@ -134,9 +177,12 @@ export function useOnboardingState() {
     }
 
     if (session?.user?.id) {
-      loadOnboardingContext()
+      // Only fetch if context is not already loaded (from sessionStorage) or we're on a generations page
+      if (!context._loaded || isGenerationsPage) {
+        loadOnboardingContext()
+      }
     }
-  }, [session?.user?.id, pathname]) // Re-check when pathname changes
+  }, [session?.user?.id, pathname, context._loaded]) // Re-check when pathname changes
 
   // Save context changes
   const updateContext = (updates: Partial<OnboardingContext>) => {

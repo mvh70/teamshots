@@ -1731,7 +1731,8 @@
       "teamWebsiteLabel": "Company website (optional)",
       "teamWebsitePlaceholder": "https://yourcompany.com",
       "companyWebsitePlaceholder": "https://yourcompany.com",
-      "createButton": "Create team"
+      "createButton": "Create team",
+      "success": "Team created successfully!"
     }
   },
   "selfieApproval": {

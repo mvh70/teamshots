@@ -80,6 +80,7 @@ export default function TeamPage() {
   })
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [teamCreationSuccess, setTeamCreationSuccess] = useState(false)
   const [allocatedCredits, setAllocatedCredits] = useState<number>(PRICING_CONFIG.team.defaultInviteCredits)
   const [creditsInputValue, setCreditsInputValue] = useState(PRICING_CONFIG.team.defaultInviteCredits.toString())
   const [emailValue, setEmailValue] = useState('')
@@ -216,6 +217,7 @@ export default function TeamPage() {
         const data = await response.json()
         const teamName = formData.get('teamName') as string
         setNeedsTeamSetup(false)
+        setTeamCreationSuccess(true)
         
         // Update sessionStorage with new team data to avoid redundant API calls
         try {
@@ -243,6 +245,9 @@ export default function TeamPage() {
             localStorage.setItem('onboarding-context', JSON.stringify(context))
           }
           
+          // Set transition flag so dashboard knows to show onboarding immediately
+          sessionStorage.setItem('show-onboarding-immediately', 'true')
+          
         } catch {
           // Ignore errors, continue with redirect
         }
@@ -264,8 +269,10 @@ export default function TeamPage() {
           // Ignore errors, continue with redirect
         }
         
-        // Redirect to dashboard to show onboarding after team setup
-        router.push('/app/dashboard')
+        // Delay redirect by 300ms to ensure sessionStorage writes complete and show success feedback
+        setTimeout(() => {
+          router.push('/app/dashboard')
+        }, 300)
       } else {
         const data = await response.json()
         setError(data.error || 'Failed to create team.')
@@ -496,7 +503,19 @@ export default function TeamPage() {
           <h2 className="text-2xl font-bold text-gray-900">{t('setup.title')}</h2>
           <p className="mt-2 text-gray-600">{t('setup.subtitle')}</p>
         </div>
-        <form action={handleCreateTeam} className="mt-6 space-y-4 text-left">
+        {teamCreationSuccess ? (
+          <div className="mt-6 bg-brand-secondary-light border border-brand-secondary-lighter rounded-lg p-6">
+            <div className="flex items-center justify-center gap-3">
+              <CheckIcon className="h-6 w-6 text-brand-secondary" />
+              <div>
+                <p className="text-brand-secondary-text-light font-medium">{t('setup.success')}</p>
+                <p className="text-brand-secondary-text text-sm mt-1">Redirecting to dashboard...</p>
+              </div>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-secondary ml-2"></div>
+            </div>
+          </div>
+        ) : (
+          <form action={handleCreateTeam} className="mt-6 space-y-4 text-left">
           <div>
             <label htmlFor="teamName" className="block text-sm font-medium text-gray-700">
               {t('setup.teamNameLabel')}
@@ -529,6 +548,7 @@ export default function TeamPage() {
             {t('setup.createButton')}
           </button>
         </form>
+        )}
       </div>
     )
   }
