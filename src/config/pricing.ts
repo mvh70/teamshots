@@ -11,14 +11,14 @@ const TEST_STRIPE_PRICE_IDS = {
 } as const;
 
 const PROD_STRIPE_PRICE_IDS = {
-  TRY_ONCE: "price_1SNf1qENr8odIuXaFvdZpbvz",
-  INDIVIDUAL: "price_1SNf1sENr8odIuXaFh37KBgd",
-  PRO_SMALL: "price_1SNf1tENr8odIuXa2Avo6e3e",
-  PRO_LARGE: "price_1SNf1uENr8odIuXaaHbfAHbp",
-  INDIVIDUAL_TOP_UP: "price_1SNf1uENr8odIuXaN01qecY0",
-  PRO_SMALL_TOP_UP: "price_1SNf1vENr8odIuXaATPBupuL",
-  PRO_LARGE_TOP_UP: "price_1SNf1wENr8odIuXam77AKOKo",
-  TRY_ONCE_TOP_UP: "price_1SNf1xENr8odIuXaB77AKOKo",
+  TRY_ONCE: "price_1SVEzhENr8odIuXaB5GH9ols",
+  INDIVIDUAL: "price_1SVEzhENr8odIuXaRD0LmWRv",
+  PRO_SMALL: "price_1SVEziENr8odIuXagC8KXdWm",
+  PRO_LARGE: "price_1SVEzjENr8odIuXasqgEm3hL",
+  INDIVIDUAL_TOP_UP: "price_1SVEzjENr8odIuXasgnzDlZv",
+  PRO_SMALL_TOP_UP: "price_1SVEzkENr8odIuXaSbNmfuHf",
+  PRO_LARGE_TOP_UP: "price_1SVEzlENr8odIuXaIBqDLcGj",
+  TRY_ONCE_TOP_UP: "price_1SVEzlENr8odIuXazlEJJjXi",
 } as const;
 
 const IS_PRODUCTION =
