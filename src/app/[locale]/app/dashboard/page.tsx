@@ -20,11 +20,11 @@ import { useEffect, useState } from 'react'
 import { jsonFetcher } from '@/lib/fetcher'
 import { useCredits } from '@/contexts/CreditsContext'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
-import { WelcomeGallery } from '@/components/onboarding/WelcomeGallery'
 import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress'
 import { OnboardingBenefits } from '@/components/onboarding/OnboardingBenefits'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
+import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -142,7 +142,7 @@ export default function DashboardPage() {
         user_id: session.user.id,
         onboarding_segment: onboardingContext.onboardingSegment,
         is_free_plan: onboardingContext.isFreePlan,
-        total_steps: 3
+        total_steps: 2
       })
       setOnboardingStartedTracked(true)
     }
@@ -154,8 +154,7 @@ export default function DashboardPage() {
       track('onboarding_step_viewed', {
         user_id: session.user.id,
         step_number: onboardingStep,
-        step_name: onboardingStep === 1 ? 'welcome_gallery' :
-                   onboardingStep === 2 ? 'how_it_works' : 'first_action',
+        step_name: onboardingStep === 1 ? 'how_it_works' : 'first_action',
         onboarding_segment: onboardingContext.onboardingSegment,
         is_free_plan: onboardingContext.isFreePlan
       })
@@ -408,21 +407,14 @@ export default function DashboardPage() {
         <div className="bg-white rounded-xl shadow-depth-sm border border-gray-200 p-8 animate-fade-in">
           <OnboardingProgress
             currentStep={onboardingStep}
-            totalSteps={3}
+            totalSteps={2}
             className="mb-8"
           />
 
-          {/* Step 1: Welcome with Gallery */}
+          {/* Step 1: How It Works */}
           {onboardingStep === 1 && (
-            <div className="text-center space-y-8">
-              <WelcomeGallery />
-              <OnboardingBenefits />
-            </div>
-          )}
-
-          {/* Step 2: How It Works */}
-          {onboardingStep === 2 && (
             <div className="text-center space-y-6" id="how-it-works">
+              <OnboardingBenefits />
               <div className="max-w-md mx-auto">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">
                   {t('onboarding.howItWorks.title')}
@@ -567,8 +559,8 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Step 3: First Action */}
-          {onboardingStep === 3 && (
+          {/* Step 2: First Action */}
+          {onboardingStep === 2 && (
             <div className="text-center space-y-6" id="first-action">
               <div className="max-w-md mx-auto">
                 {onboardingContext.onboardingSegment === 'organizer' ? (
@@ -678,7 +670,7 @@ export default function DashboardPage() {
                 {t('onboarding.navigation.skip')}
               </button>
 
-              {onboardingStep < 3 && (
+              {onboardingStep < 2 && (
                 <button
                   onClick={() => setOnboardingStep(onboardingStep + 1)}
                   className="px-6 py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-primary-hover min-h-[40px]"
@@ -1074,6 +1066,9 @@ export default function DashboardPage() {
           </div>
         </>
       )}
+
+      {/* Feedback Button */}
+      <FeedbackButton context="dashboard" />
     </div>
   )
 }

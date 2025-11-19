@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { token, firstName, lastName } = await request.json()
+    const { token } = await request.json()
 
-    if (!token || !firstName || !lastName) {
-      return NextResponse.json({ error: 'Token, first name, and last name are required' }, { status: 400 })
+    if (!token) {
+      return NextResponse.json({ error: 'Token is required' }, { status: 400 })
     }
 
     // Find and validate invite
@@ -45,11 +45,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invite has already been used' }, { status: 410 })
     }
 
-    // Create person record
+    // Create person record using firstName from invite
     const person = await prisma.person.create({
       data: {
-        firstName,
-        lastName,
+        firstName: invite.firstName,
+        lastName: null, // No last name required for team invites
         email: invite.email,
         teamId: invite.teamId,
         inviteToken: token

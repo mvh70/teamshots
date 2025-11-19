@@ -59,6 +59,7 @@ model Person {
   user               User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
   selfies            Selfie[]
   teamInvite         TeamInvite?
+  feedback           Feedback[]
 
   @@index([email])
   @@index([teamId])
@@ -147,6 +148,7 @@ model Generation {
   context                Context?  @relation(fields: [contextId], references: [id])
   person                 Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
   selfie                 Selfie?   @relation(fields: [selfieId], references: [id])
+  feedback               Feedback[]
 
   @@index([personId])
   @@index([contextId])
@@ -413,4 +415,30 @@ model RevokedToken {
   @@index([jti])
   @@index([userId])
   @@index([expiresAt])
+}
+
+model Feedback {
+  id           String      @id @default(cuid())
+  personId     String?
+  email        String?
+  generationId String?
+  type         String      // 'general' | 'generation'
+  rating       String      // 'up' | 'down'
+  comment      String?
+  context      String      // 'landing' | 'dashboard' | 'generation'
+  options      Json?       // Array of selected feedback reasons
+  resolved     Boolean     @default(false)
+  resolvedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  person       Person?     @relation(fields: [personId], references: [id], onDelete: SetNull)
+  generation   Generation? @relation(fields: [generationId], references: [id], onDelete: SetNull)
+
+  @@index([personId])
+  @@index([generationId])
+  @@index([type])
+  @@index([rating])
+  @@index([resolved])
+  @@index([createdAt])
+  @@index([context])
 }

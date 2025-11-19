@@ -35,6 +35,9 @@ export function Toast({ message, type = 'info', duration = 6000, onDismiss }: To
         : 'bg-gray-900'
   const ariaLive = type === 'error' ? 'assertive' : 'polite'
 
+  // Ensure message is always a string
+  const displayMessage = message || 'Notification'
+
   return (
     <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-full mx-4">
       <div
@@ -43,7 +46,7 @@ export function Toast({ message, type = 'info', duration = 6000, onDismiss }: To
         aria-live={ariaLive}
         aria-atomic="true"
       >
-        <span className="flex-1">{message}</span>
+        <span className="flex-1">{displayMessage}</span>
         {onDismiss && (
           <button
             type="button"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { internal, badRequest } from '@/lib/api-response'
 import { Logger } from '@/lib/logger'
+import { getRequestDomain, getSignupTypeFromDomain } from '@/lib/domain'
 
 // Force this route to be dynamic (skip static generation)
 export const dynamic = 'force-dynamic'
@@ -80,10 +81,27 @@ export async function POST(request: NextRequest) {
       locale
     } = validationResult.data
 
+    // Domain-based signup restriction validation
+    Logger.info('9. Validating domain restrictions...')
+    const domain = getRequestDomain(request)
+    const domainRestrictedUserType = getSignupTypeFromDomain(domain)
+
+    if (domainRestrictedUserType && userType !== domainRestrictedUserType) {
+      Logger.warn('Domain restriction violation', {
+        domain,
+        domainRestrictedUserType,
+        requestedUserType: userType
+      })
+      return NextResponse.json(
+        badRequest('DOMAIN_RESTRICTION_VIOLATION', 'auth.signup.Domain restriction violation', `This domain only allows ${domainRestrictedUserType} subscription signup`),
+        { status: 400 }
+      )
+    }
+
     // Verify OTP
-    Logger.info('9. Verifying OTP...')
+    Logger.info('10. Verifying OTP...')
     const isOTPValid = await verifyOTP(email, otpCode)
-    Logger.debug('10. OTP verification result', { isOTPValid })
+    Logger.debug('11. OTP verification result', { isOTPValid })
     
     if (!isOTPValid) {
       return NextResponse.json(
@@ -93,11 +111,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    Logger.info('11. Checking existing user...')
+    Logger.info('12. Checking existing user...')
     const existingUser = await prisma.user.findUnique({
       where: { email }
     })
-    Logger.debug('12. Existing user check complete')
+    Logger.debug('13. Existing user check complete')
 
     if (existingUser) {
       // User may have been created via Stripe webhook during checkout.
@@ -126,19 +144,19 @@ export async function POST(request: NextRequest) {
 
     // Hash password with increased cost factor for better security
     // Cost factor 13 provides good security while maintaining reasonable performance
-    Logger.info('13. Hashing password...')
+    Logger.info('14. Hashing password...')
     const hashedPassword = await bcrypt.hash(password, 13)
-    Logger.debug('14. Password hashed')
+    Logger.debug('15. Password hashed')
 
     // Check if there's an existing person record from invite acceptance
-    Logger.info('15. Checking existing person...')
+    Logger.info('16. Checking existing person...')
     const existingPerson = await prisma.person.findFirst({
       where: { email },
       include: {
         team: true
       }
     })
-    Logger.debug('16. Existing person check complete')
+    Logger.debug('17. Existing person check complete')
 
     // Determine initial role based on existing person/invite or userType
     // If userType is 'team' and no existing person, set role to 'team_admin' so they can set up their team
@@ -147,7 +165,7 @@ export async function POST(request: NextRequest) {
       : (userType === 'team' ? 'team_admin' : 'user')
 
     // Create user with correct role
-    Logger.info('17. Creating user...')
+    Logger.info('18. Creating user...')
     const user = await prisma.user.create({
       data: {
         email,
@@ -156,13 +174,13 @@ export async function POST(request: NextRequest) {
         locale,
       }
     })
-    Logger.info('18. User created', { userId: user.id, role: initialRole })
+    Logger.info('19. User created', { userId: user.id, role: initialRole })
 
     let person
     let teamId = null
 
     if (existingPerson && !existingPerson.userId) {
-      Logger.info('19. Linking existing person...')
+      Logger.info('20. Linking existing person...')
       // Link existing person (from invite) to new user
       person = await prisma.person.update({
         where: { id: existingPerson.id },
@@ -192,9 +210,9 @@ export async function POST(request: NextRequest) {
           data: { convertedUserId: user.id }
         })
       }
-      Logger.info('20. Person linked')
+      Logger.info('21. Person linked')
     } else {
-      Logger.info('19. Creating new person...')
+      Logger.info('20. Creating new person...')
       // Create new person record
       person = await prisma.person.create({
         data: {
@@ -204,7 +222,7 @@ export async function POST(request: NextRequest) {
           userId: user.id,
         }
       })
-      Logger.info('20. Person created', { personId: person.id })
+      Logger.info('21. Person created', { personId: person.id })
     }
 
     // Handle team registration (only if not from invite)
@@ -216,7 +234,7 @@ export async function POST(request: NextRequest) {
         data: { role: 'team_admin' }
       })
 
-      Logger.info('21. User marked as team_admin, team creation deferred')
+      Logger.info('22. User marked as team_admin, team creation deferred')
     }
 
     // Free trial grant (idempotent)
@@ -297,7 +315,7 @@ export async function POST(request: NextRequest) {
       Logger.error('Default package grant failed', { error: e instanceof Error ? e.message : String(e) })
     }
 
-    Logger.info('23. Registration complete!')
+    Logger.info('24. Registration complete!')
     const emailDomain = email.split('@')[1] ?? null
 
     const [analyticsResult, adminEmailResult] = await Promise.allSettled([

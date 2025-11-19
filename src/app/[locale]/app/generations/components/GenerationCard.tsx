@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { formatDate } from '@/lib/format'
 import { LoadingSpinner } from '@/components/ui'
+import { GenerationRating } from '@/components/feedback/GenerationRating'
 
 export type GenerationListItem = {
   id: string
@@ -396,6 +397,17 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
           <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded bg-gray-900/80 text-white">Selfie</span>
         ) : (
           <span className="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded bg-brand-primary text-white">Generated</span>
+        )}
+
+        {/* Generation Rating - Overlay on photo, only for own generations */}
+        {!isIncomplete && item.isOwnGeneration && (
+          <div className="absolute bottom-2 left-2 z-20" data-onborda="feedback-rating">
+            <GenerationRating
+              generationId={item.id}
+              token={token}
+              generationStatus={item.status}
+            />
+          </div>
         )}
         </div>
       </div>

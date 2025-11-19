@@ -212,7 +212,10 @@ export function CheckoutButton({
   }
 
   const handleClick = (e?: React.MouseEvent<HTMLButtonElement>) => {
-    if (type && priceId) {
+    // For top_up, we don't need priceId (price is calculated dynamically)
+    // For subscription and try_once, we need priceId
+    const needsPriceId = type === 'subscription' || type === 'try_once'
+    if (type && (!needsPriceId || priceId)) {
       // If checkout props provided, handle checkout
       handleCheckout()
     } else {

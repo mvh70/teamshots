@@ -4,6 +4,8 @@ import { NextResponse, NextRequest } from 'next/server'
 import { getRequestHeader } from '@/lib/server-headers'
 import { auth } from '@/auth'
 
+export const runtime = 'nodejs'
+
 const PROTECTED_PATH_PREFIXES = ['/app']
 
 function removeLocalePrefix(pathname: string) {

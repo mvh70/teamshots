@@ -24,6 +24,9 @@ export const RATE_LIMITS = {
   // Increased significantly to allow legitimate users uploading/deleting photos and navigating
   inviteValidate: { limit: 1000, window: 60 }, // 1000 validations per minute per IP (very permissive for normal usage)
   inviteAccept: { limit: 20, window: 60 }, // 20 accepts per minute per IP
+  
+  // Feedback endpoints
+  feedback: { limit: 5, window: 60 }, // 5 submissions per minute per user/IP
 } as const
 
 export type RateLimitKey = keyof typeof RATE_LIMITS

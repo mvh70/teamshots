@@ -18,8 +18,11 @@ export function OnboardingLauncher() {
       // Check if we're in an invite flow (invite-dashboard path)
       const isInviteFlow = pathname?.includes('/invite-dashboard')
 
-      // Handle generation-detail tour for invite flows
-      if (databasePendingTours.includes('generation-detail') && isInviteFlow) {
+      // Check if we're on a generations page (main app flow)
+      const isGenerationsPage = pathname?.includes('/app/generations/team') || pathname?.includes('/app/generations/personal')
+
+      // Handle generation-detail tour for invite flows and main app generations pages
+      if (databasePendingTours.includes('generation-detail') && (isInviteFlow || isGenerationsPage)) {
         // Let the generations page handle this tour
         return
       }
@@ -33,10 +36,8 @@ export function OnboardingLauncher() {
 
         // Remove from pending tours in database after starting
         if (onboardingContext.personId) {
-          fetch('/api/onboarding/pending-tour', {
+          fetch(`/api/onboarding/pending-tour?tourName=${encodeURIComponent(tourToStart)}`, {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tourName: tourToStart }),
           }).catch(error => {
             console.error('Failed to remove pending tour from database:', error)
           })

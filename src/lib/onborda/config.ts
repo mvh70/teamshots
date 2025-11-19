@@ -214,13 +214,6 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
       triggerCondition: (context) => !context.hasGeneratedPhotos && (context._loaded ?? false),
       steps: [
         {
-          selector: '#welcome-section',
-          title: t('onboarding.tours.mainOnboarding.welcomeTitle'),
-          content: getSegmentSpecificContent('welcome-content', context?.onboardingSegment),
-          side: 'bottom',
-          pointerPadding: 40,
-        },
-        {
           selector: '#how-it-works',
           title: t('dashboard.onboarding.howItWorks.title'),
           content: getSegmentSpecificContent('how-it-works-content', context?.onboardingSegment),
@@ -243,9 +236,10 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
       description: 'Tour after first photo generation explaining how to interact with generated photos',
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       triggerCondition: (_context) => false, // Triggered manually from invite dashboard
+      startingPath: '/app/generations', // Allow on both /team and /personal pages
       steps: [
         {
-          selector: '[data-onborda="credits-info"]',
+          selector: '[data-onborda="regenerations-info"]',
           title: t('onboarding.tours.generationDetailTour.creditsInfoTitle1'),
           content: t('onboarding.tours.generationDetailTour.creditsInfoContent1'),
           side: 'top',
@@ -255,6 +249,13 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
           selector: '[data-onborda="credits-info"]',
           title: t('onboarding.tours.generationDetailTour.creditsInfoTitle2'),
           content: t('onboarding.tours.generationDetailTour.creditsInfoContent2'),
+          side: 'top',
+          pointerPadding: 20,
+        },
+        {
+          selector: '[data-onborda="feedback-rating"]',
+          title: t('onboarding.tours.generationDetailTour.feedbackTitle'),
+          content: t('onboarding.tours.generationDetailTour.feedbackContent'),
           side: 'top',
           pointerPadding: 20,
         },

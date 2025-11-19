@@ -11,6 +11,7 @@ import FAQ from '@/components/FAQ';
 import PricingPreview from '@/components/PricingPreview';
 import { TrackedLink } from '@/components/TrackedLink';
 import { prefersReducedMotion, ANIMATION_DELAYS } from '@/lib/animations';
+import { FeedbackButton } from '@/components/feedback/FeedbackButton';
 
 export default function LandingPage() {
   const t = useTranslations('hero');
@@ -241,6 +242,9 @@ export default function LandingPage() {
           {t('noCreditCard')}
         </p>
       </section>
+
+      {/* Feedback Button */}
+      <FeedbackButton context="landing" />
 
     </div>
   );

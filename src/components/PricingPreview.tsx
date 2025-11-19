@@ -1,25 +1,32 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getPricingDisplay } from '@/domain/pricing';
 import PricingCard from '@/components/pricing/PricingCard'
+import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
 
 export default function PricingPreview() {
   const t = useTranslations('pricing');
   const [isYearly, setIsYearly] = useState(false);
   const pricing = getPricingDisplay();
 
-  const proPlan = {
-    id: 'pro' as const,
-    price: pricing.pro.monthly.price,
-    yearlyPrice: pricing.pro.annual.price,
-    credits: pricing.pro.monthly.credits,
-    monthlyPricePerPhoto: pricing.pro.monthly.pricePerPhoto,
-    yearlyPricePerPhoto: pricing.pro.annual.pricePerPhoto,
-    regenerations: pricing.pro.monthly.regenerations,
-    annualSavings: pricing.pro.annual.savings,
-    popular: true,
+  // Domain-based pricing restriction
+  const [domainSignupType, setDomainSignupType] = useState<'individual' | 'team' | null>(null);
+
+  useEffect(() => {
+    const domain = getClientDomain();
+    const forcedType = getForcedSignupType();
+    const signupType = forcedType || getSignupTypeFromDomain(domain);
+    setDomainSignupType(signupType);
+  }, []);
+
+  const tryOncePlan = {
+    id: 'tryOnce' as const,
+    price: pricing.tryOnce.price,
+    credits: pricing.tryOnce.credits,
+    pricePerPhoto: pricing.tryOnce.pricePerPhoto,
+    regenerations: pricing.tryOnce.regenerations,
   }
 
   const individualPlan = {
@@ -33,13 +40,27 @@ export default function PricingPreview() {
     annualSavings: pricing.individual.annual.savings,
   }
 
-  const tryOncePlan = {
-    id: 'tryOnce' as const,
-    price: pricing.tryOnce.price,
-    credits: pricing.tryOnce.credits,
-    pricePerPhoto: pricing.tryOnce.pricePerPhoto,
-    regenerations: pricing.tryOnce.regenerations,
+  const proPlan = {
+    id: 'pro' as const,
+    price: pricing.pro.monthly.price,
+    yearlyPrice: pricing.pro.annual.price,
+    credits: pricing.pro.monthly.credits,
+    monthlyPricePerPhoto: pricing.pro.monthly.pricePerPhoto,
+    yearlyPricePerPhoto: pricing.pro.annual.pricePerPhoto,
+    regenerations: pricing.pro.monthly.regenerations,
+    annualSavings: pricing.pro.annual.savings,
+    popular: domainSignupType === 'team' || domainSignupType === null, // Popular only when team-restricted or no restriction
   }
+
+  // Filter plans based on domain restrictions
+  const plansToShow = [
+    // Always show Try Once
+    tryOncePlan,
+    // Show Pro if team domain or no domain restriction
+    ...(domainSignupType === 'team' || domainSignupType === null ? [proPlan] : []),
+    // Show Individual if individual domain or no domain restriction
+    ...(domainSignupType === 'individual' || domainSignupType === null ? [individualPlan] : []),
+  ]
 
   return (
     <section className="py-20 lg:py-32 bg-bg-gray-50 relative grain-texture">
@@ -84,28 +105,25 @@ export default function PricingPreview() {
         </div>
 
         {/* Pricing Cards (shared) */}
-        <div className="grid md:grid-cols-3 gap-8 lg:gap-10 overflow-visible">
+        <div className={`grid gap-8 lg:gap-10 overflow-visible ${
+          plansToShow.length === 3 ? 'md:grid-cols-3' :
+          plansToShow.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' :
+          'md:grid-cols-1 max-w-md mx-auto'
+        }`}>
+          {plansToShow.map((plan) => (
           <PricingCard
-            {...proPlan}
-            isYearly={isYearly}
+              key={plan.id}
+              {...plan}
+              isYearly={plan.id === 'tryOnce' ? false : isYearly}
             ctaMode="link"
-            href="/auth/signup?tier=team&period=monthly"
+              href={`/auth/signup?${
+                plan.id === 'pro' ? 'tier=team&period=monthly' :
+                plan.id === 'individual' ? 'tier=individual&period=monthly' :
+                'period=try_once'
+              }`}
             className="h-full"
           />
-          <PricingCard
-            {...individualPlan}
-            isYearly={isYearly}
-            ctaMode="link"
-            href="/auth/signup?tier=individual&period=monthly"
-            className="h-full"
-          />
-          <PricingCard
-            {...tryOncePlan}
-            isYearly={false}
-            ctaMode="link"
-            href="/auth/signup?period=try_once"
-            className="h-full"
-          />
+          ))}
         </div>
       </div>
     </section>

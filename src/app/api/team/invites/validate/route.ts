@@ -26,7 +26,16 @@ export async function POST(request: NextRequest) {
       include: {
         team: {
           include: {
-            admin: true
+          activeContext: true,
+          admin: {
+            include: {
+              person: {
+                select: {
+                  firstName: true
+                }
+              }
+            }
+          }
           }
         },
         context: true,
@@ -83,7 +92,8 @@ export async function POST(request: NextRequest) {
         hasActiveContext: Boolean(invite.context),
         contextId: invite.context?.id,
         firstName: invite.firstName,
-        isAdminOnFreePlan
+        isAdminOnFreePlan,
+        inviterFirstName: invite.team.admin.person?.firstName || invite.team.admin.email?.split('@')[0] || 'Team Admin'
       }
     })
 

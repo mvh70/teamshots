@@ -1,25 +1,42 @@
 'use client'
 
-import { createContext, useContext, ReactNode, useMemo } from 'react'
+import { createContext, useContext, ReactNode, useMemo, useState, useCallback } from 'react'
 import { OnboardingContext as OnboardingContextType } from '@/lib/onborda/config'
 import { useOnboardingState as useOnboardingStateHook } from '@/lib/onborda/hooks'
 
 interface OnboardingContextValue {
   context: OnboardingContextType
   updateContext: (updates: Partial<OnboardingContextType>) => void
+  pendingTour: string | null
+  setPendingTour: (tour: string | null) => void
+  clearPendingTour: () => void
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | undefined>(undefined)
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { context, updateContext } = useOnboardingStateHook()
+  const [pendingTour, setPendingTourState] = useState<string | null>(null)
+  
+  const setPendingTour = useCallback((tour: string | null) => {
+    console.log('[OnboardingContext] Setting pendingTour to:', tour)
+    setPendingTourState(tour)
+  }, [])
+  
+  const clearPendingTour = useCallback(() => {
+    console.log('[OnboardingContext] Clearing pendingTour')
+    setPendingTourState(null)
+  }, [])
   
   // Memoize the context value to prevent unnecessary re-renders
-  // Only recreate if context or updateContext reference changes
+  // Only recreate if context, updateContext, or pendingTour changes
   const contextValue = useMemo(() => ({
     context,
-    updateContext
-  }), [context, updateContext])
+    updateContext,
+    pendingTour,
+    setPendingTour,
+    clearPendingTour
+  }), [context, updateContext, pendingTour, setPendingTour, clearPendingTour])
 
   return (
     <OnboardingContext.Provider value={contextValue}>

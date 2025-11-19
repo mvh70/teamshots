@@ -11,9 +11,8 @@ import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
-import { calculatePhotosFromCredits } from '@/domain/pricing'
-import { PRICING_CONFIG } from '@/config/pricing'
 import { PlanSelection } from '@/components/auth/PlanSelection'
+import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
 
 export default function SignUpPage() {
   const t = useTranslations('auth.signup')
@@ -31,6 +30,9 @@ export default function SignUpPage() {
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
   const [infoMessage] = useState('')
+
+  // Domain-based signup restriction
+  const [domainRestrictedUserType, setDomainRestrictedUserType] = useState<'individual' | 'team' | null>(null)
 
   const router = useRouter()
   
@@ -50,6 +52,20 @@ export default function SignUpPage() {
       setFormData(prev => ({ ...prev, email: emailParam }))
     }
   }, [inferredTier, isTryOnce, searchParams])
+
+  // Domain-based signup restriction: auto-detect domain and restrict userType
+  useEffect(() => {
+    const domain = getClientDomain()
+    const forcedType = getForcedSignupType()
+    const restrictedType = forcedType || getSignupTypeFromDomain(domain)
+
+    if (restrictedType) {
+      setDomainRestrictedUserType(restrictedType)
+      setFormData(prev => ({ ...prev, userType: restrictedType }))
+    } else {
+      setDomainRestrictedUserType(null)
+    }
+  }, [])
 
   const handleSendOTP = async () => {
     setIsLoading(true)
@@ -213,24 +229,8 @@ export default function SignUpPage() {
         <div className="space-y-6 lg:space-y-7">
           {step === 1 && (
             <>
-              {/* Plan summary (inferred from entry point) */}
-              {inferredTier || isTryOnce ? (
-                <div className="rounded-xl border-2 border-brand-primary-lighter bg-bg-gray-50 px-5 py-4 text-sm lg:text-base text-text-body shadow-depth-sm">
-                  {isTryOnce ? (
-                    <div>
-                      <strong className="font-bold text-text-dark">{t('planTryOnce')}:</strong> {t('planSummaryTryOnce', { credits: PRICING_CONFIG.tryOnce.credits, photos: calculatePhotosFromCredits(PRICING_CONFIG.tryOnce.credits) })}
-                    </div>
-                  ) : inferredTier === 'team' ? (
-                    <div>
-                      <strong className="font-bold text-text-dark">{t('planPro')}:</strong> {t('planSummaryPro', { credits: PRICING_CONFIG.pro.includedCredits, photos: calculatePhotosFromCredits(PRICING_CONFIG.pro.includedCredits) })}
-                    </div>
-                  ) : (
-                    <div>
-                      <strong className="font-bold text-text-dark">{t('planIndividual')}:</strong> {t('planSummaryIndividual', { credits: PRICING_CONFIG.individual.includedCredits, photos: calculatePhotosFromCredits(PRICING_CONFIG.individual.includedCredits) })}
-                    </div>
-                  )}
-                </div>
-              ) : (
+              {/* Plan selection - only show when no domain restriction */}
+              {!domainRestrictedUserType && !inferredTier && !isTryOnce && (
                 <PlanSelection
                   selectedPlan={formData.userType}
                   onPlanSelect={(plan) => setFormData({ ...formData, userType: plan })}

@@ -84,6 +84,26 @@
   isolation: isolate !important;
 }
 
+/* Prevent highlight from affecting feedback rating position */
+[data-onborda="feedback-rating"] {
+  position: absolute !important;
+  isolation: isolate !important;
+  contain: layout style paint !important;
+  /* Ensure feedback buttons stay in place when highlighted */
+  z-index: 20 !important;
+}
+
+/* Ensure onborda highlight overlay doesn't affect feedback button positioning */
+[data-onborda-highlight] ~ [data-onborda="feedback-rating"],
+[data-onborda="feedback-rating"][data-onborda-highlight] {
+  position: absolute !important;
+  bottom: 0.5rem !important;
+  left: 0.5rem !important;
+  transform: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 /* Ensure highlight overlay doesn't affect parent layout */
 [data-onborda-highlight] ~ *,
 * [data-onborda-highlight] {
@@ -107,28 +127,45 @@
 [data-onborda-tour="generation-detail"][data-onborda-step="0"] {
   /* Step 1: Position in bottom left corner */
   position: absolute !important;
-  bottom: 0px !important;
-  left: -175px !important;
+  bottom: -10px !important;
+  left: -0px !important;
   right: auto !important;
   top: auto !important;
   transform: none !important;
 }
 
 [data-onborda-tour="generation-detail"][data-onborda-step="1"] {
-  /* Step 2: Position in bottom right corner */
-  position: absolute !important;
+  /* Step 2: Float on top of the generation image, near action buttons */
+  position: fixed !important;
+  z-index: 9999 !important;
+  /* Position near the action buttons (bottom right of image area) */
   bottom: 0px !important;
-  right: -250px !important;
+  right: -175px !important;
   left: auto !important;
   top: auto !important;
   transform: none !important;
+  /* Ensure it floats above everything */
+  pointer-events: auto !important;
+}
+
+[data-onborda-tour="generation-detail"][data-onborda-step="2"] {
+  /* Step 3: Float on top of the generation image */
+  position: fixed !important;
+  z-index: 9999 !important;
+  /* Position near the feedback buttons (bottom left of image area) */
+  bottom: 80px !important;
+  left: 20px !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+  /* Ensure it floats above everything */
+  pointer-events: auto !important;
 }
 
 /* Mobile responsive positioning for generation-detail tour */
 @media (max-width: 640px) {
-  [data-onborda-tour="generation-detail"][data-onborda-step="0"],
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"] {
-    /* On mobile, position cards above the target element */
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] {
+    /* Step 1: On mobile, position cards above the target element */
     position: absolute !important;
     bottom: auto !important;
     top: -20px !important;
@@ -136,6 +173,19 @@
     right: auto !important;
     transform: translateX(-50%) translateY(-100%) !important;
     max-width: calc(100vw - 2rem) !important;
+  }
+  
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] {
+    /* Steps 2 & 3: On mobile, position above action/feedback buttons */
+    position: fixed !important;
+    bottom: 80px !important;
+    left: 50% !important;
+    right: auto !important;
+    top: auto !important;
+    transform: translateX(-50%) !important;
+    max-width: calc(100vw - 2rem) !important;
+    z-index: 9999 !important;
   }
 }
 
@@ -169,7 +219,7 @@
   margin: 0 !important;
 }
 
-/* Step 2: Pointer on right side */
+/* Step 2: Pointer pointing to action buttons */
 [data-onborda-tour="generation-detail"][data-onborda-step="1"] .onborda-pointer,
 [data-onborda-tour="generation-detail"][data-onborda-step="1"] .onborda-arrow,
 [data-onborda-tour="generation-detail"][data-onborda-step="1"] [data-onborda-pointer],
@@ -178,9 +228,38 @@
 [data-onborda-tour="generation-detail"][data-onborda-step="1"] svg,
 [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position: absolute"],
 [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position:absolute"] {
-  /* Position at bottom right of card */
+  /* Position at bottom right of card, pointing down to action buttons */
   left: auto !important;
   right: 20px !important;
+  top: auto !important;
+  bottom: -8px !important;
+
+  /* Force down-facing pointer shape using borders */
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 8px solid transparent !important;
+  border-right: 8px solid transparent !important;
+  border-top: 8px solid #6366F1 !important; /* Brand primary color */
+  border-bottom: none !important;
+  background: none !important;
+
+  /* Override any transforms */
+  transform: none !important;
+  margin: 0 !important;
+}
+
+/* Step 3: Pointer pointing to feedback buttons */
+[data-onborda-tour="generation-detail"][data-onborda-step="2"] .onborda-pointer,
+[data-onborda-tour="generation-detail"][data-onborda-step="2"] .onborda-arrow,
+[data-onborda-tour="generation-detail"][data-onborda-step="2"] [data-onborda-pointer],
+[data-onborda-tour="generation-detail"][data-onborda-step="2"]::before,
+[data-onborda-tour="generation-detail"][data-onborda-step="2"]::after,
+[data-onborda-tour="generation-detail"][data-onborda-step="2"] svg,
+[data-onborda-tour="generation-detail"][data-onborda-step="2"] [style*="position: absolute"],
+[data-onborda-tour="generation-detail"][data-onborda-step="2"] [style*="position:absolute"] {
+  /* Position at bottom left of card, pointing down to feedback buttons */
+  left: 20px !important;
+  right: auto !important;
   top: auto !important;
   bottom: -8px !important;
 
@@ -215,7 +294,15 @@
   [data-onborda-tour="generation-detail"][data-onborda-step="1"]::after,
   [data-onborda-tour="generation-detail"][data-onborda-step="1"] svg,
   [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position: absolute"],
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position:absolute"] {
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position:absolute"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] .onborda-pointer,
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] .onborda-arrow,
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] [data-onborda-pointer],
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"]::before,
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"]::after,
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] svg,
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] [style*="position: absolute"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] [style*="position:absolute"] {
     /* On mobile, position pointer at bottom center of card (pointing down) */
     left: 50% !important;
     right: auto !important;

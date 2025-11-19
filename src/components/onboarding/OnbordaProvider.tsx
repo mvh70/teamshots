@@ -104,6 +104,7 @@ function TourStarter() {
   const lastCheckedTourRef = useRef<string | null>(null)
 
   useEffect(() => {
+    console.log('[TourStarter Debug] Effect running - pendingTour:', pendingTour, 'lastChecked:', lastCheckedTourRef.current, 'onborda available:', !!onborda, 'startOnborda available:', !!onborda?.startOnborda, 'isOnbordaVisible:', onborda?.isOnbordaVisible)
     // If a tour is visible but it's already completed, force close it (only once per tour)
     if (onborda?.isOnbordaVisible && onborda?.currentTour) {
       // Only check if we haven't already force-closed this specific tour
@@ -125,13 +126,25 @@ function TourStarter() {
     }
     
     // Only process pendingTour if it's different from what we last checked
+    console.log('[TourStarter Debug] Checking condition - pendingTour:', pendingTour, 'lastChecked:', lastCheckedTourRef.current, 'startOnborda exists:', !!onborda?.startOnborda, 'isOnbordaVisible:', onborda?.isOnbordaVisible)
+    console.log('[TourStarter Debug] Condition result:', {
+      hasPendingTour: !!pendingTour,
+      isDifferent: pendingTour !== lastCheckedTourRef.current,
+      hasStartOnborda: typeof onborda?.startOnborda === 'function',
+      notVisible: !onborda?.isOnbordaVisible,
+      allTrue: !!(pendingTour && pendingTour !== lastCheckedTourRef.current && typeof onborda?.startOnborda === 'function' && !onborda.isOnbordaVisible)
+    })
+    
     if (pendingTour && pendingTour !== lastCheckedTourRef.current && onborda?.startOnborda && !onborda.isOnbordaVisible) {
+      console.log('[TourStarter Debug] Condition met! Processing tour:', pendingTour)
       lastCheckedTourRef.current = pendingTour
       
       const tour = getTour(pendingTour, t, context)
+      console.log('[TourStarter Debug] Tour found:', !!tour, 'pendingTour:', pendingTour, 'pathname:', pathname)
       
-      // Add path check
-      if (tour?.startingPath && !pathname.endsWith(tour.startingPath)) {
+      // Add path check - allow matching if pathname starts with startingPath (for sub-paths)
+      if (tour?.startingPath && !pathname.startsWith(tour.startingPath)) {
+        console.log('[TourStarter Debug] Path mismatch - tour.startingPath:', tour.startingPath, 'pathname:', pathname)
         clearPendingTour()
         lastCheckedTourRef.current = null
         return
@@ -141,8 +154,16 @@ function TourStarter() {
       const completedTours = context.completedTours || []
       const hasCompleted = completedTours.includes(pendingTour)
       if (hasCompleted) {
+        console.log('[TourStarter Debug] Tour already completed, clearing')
         clearPendingTour()
         return
+      }
+      
+      console.log('[TourStarter Debug] Starting tour:', pendingTour, 'onborda available:', !!onborda, 'startOnborda available:', !!onborda?.startOnborda)
+      
+      // Close sidebar on mobile when generation-detail tour starts (dispatch early to give sidebar time to close)
+      if (pendingTour === 'generation-detail' && typeof window !== 'undefined' && window.innerWidth < 1024) {
+        window.dispatchEvent(new CustomEvent('close-sidebar-for-tour'))
       }
       
       // Start the tour using Onborda's API
@@ -152,17 +173,25 @@ function TourStarter() {
         const updatedCompletedTours = context.completedTours || []
         const stillCompleted = updatedCompletedTours.includes(pendingTour)
         if (stillCompleted) {
+          console.log('[TourStarter Debug] Tour completed before start, clearing')
           clearPendingTour()
           lastCheckedTourRef.current = null
           return
         }
         // Also check if tour is already visible (might have been started by something else)
         if (onborda.isOnbordaVisible) {
+          console.log('[TourStarter Debug] Tour already visible, clearing')
           clearPendingTour()
           lastCheckedTourRef.current = null
           return
         }
+        console.log('[TourStarter Debug] Calling onborda.startOnborda with:', pendingTour)
+        try {
         onborda.startOnborda(pendingTour)
+          console.log('[TourStarter Debug] startOnborda called successfully')
+        } catch (error) {
+          console.error('[TourStarter Debug] Error calling startOnborda:', error)
+        }
       }, 500)
     }
     

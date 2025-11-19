@@ -58,6 +58,10 @@ const envSchema = z.object({
   
   // Node Environment
   NODE_ENV: z.enum(['development', 'production', 'test']),
+
+  // Domain override for testing (localhost only)
+  FORCE_DOMAIN_SIGNUP_TYPE: z.enum(['team', 'individual']).optional(),
+  NEXT_PUBLIC_FORCE_DOMAIN_SIGNUP_TYPE: z.enum(['team', 'individual']).optional(),
 }).refine(
   (data) => {
     if (data.NODE_ENV === 'production' && data.NEXTAUTH_URL) {

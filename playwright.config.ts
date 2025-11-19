@@ -5,8 +5,9 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '.env.test' });
 
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL must be defined in .env.test');
+const DATABASE_URL = process.env.DATABASE_URL
+if (!DATABASE_URL) {
+  throw new Error('DATABASE_URL must be defined in .env.test')
 }
 
 (process.env as Record<string, string>).NODE_ENV = 'test';

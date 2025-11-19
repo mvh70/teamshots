@@ -380,11 +380,11 @@
       "questions": {
         "freeGen": {
           "question": "¿Tengo una generación gratis?",
-          "answer": "Sí. Cuentas nuevas reciben 1 generación de prueba gratis en estilo predefinido para ver la calidad. Cada generación usa 10 créditos y produce 4 variaciones."
+          "answer": "¡Sí! Damos a los nuevos usuarios una generación de prueba gratuita en un estilo establecido para que veas si nuestra IA cumple con las expectativas. Normalmente cuesta 10 créditos y te permite reintentar hasta 4 veces (dependiendo de tu paquete)."
         },
         "howCreditsWork": {
           "question": "¿Cómo funcionan los créditos?",
-          "answer": "Cada generación usa 10 créditos y produce 4 variaciones de alta calidad. Créditos se acumulan mensualmente y nunca caducan."
+          "answer": "Cada generación de foto usa 10 créditos y permite hasta 4 reintentos de alta calidad. Tus créditos se acumulan mes a mes y nunca expiran. ¡Sin prisa, son tuyos para siempre!"
         },
         "topUp": {
           "question": "¿Puedo recargar créditos?",
@@ -472,6 +472,8 @@
       "planSummaryTryOnce": "{credits} créditos, {photos} fotos",
       "planSummaryPro": "{credits} créditos/mes, {photos} fotos/mes",
       "planSummaryIndividual": "{credits} créditos/mes, {photos} fotos/mes",
+      "welcomeMessage": "Bienvenido",
+      "planSummaryWelcome": "{credits} créditos, {photos} fotos para comenzar",
       "selectPlanPrompt": "Selecciona un plan para continuar",
       "firstNameLabel": "Nombre",
       "userTypeLabel": "¿Cómo usarás TeamShotsPro?",
@@ -510,6 +512,13 @@
       "backToSignIn": "Volver a inicio",
       "loading": "Cargando…"
     }
+  },
+  "invite": {
+    "benefit1": "Fotos profesionales, con marca del equipo, desde tus selfies",
+    "benefit2": "Resultados en 60 segundos",
+    "benefit3": "Sin configuración de cuenta necesaria",
+    "mobileRequired": "Por favor, abre este enlace en tu dispositivo móvil",
+    "mobileReason": "Ahí es donde están las mejores selfies 📸"
   },
   "app": {
     "header": {
@@ -1120,6 +1129,8 @@
           "creditsInfoContent1": "No te preocupes. Obtienes reintentos gratuitos con cada generación. Revisa aquí para ver cuántos intentos te quedan.",
           "creditsInfoTitle2": "Tu foto, tu manera",
           "creditsInfoContent2": "¿Te encanta? Descárgala ↓. ¿Quieres otra? Reintenta ↻. ¿Cambiaste de opinión? Elimínala 🗑️. Tú tienes el control.",
+          "feedbackTitle": "Tu opinión importa",
+          "feedbackContent": "¿No estás contento con tu foto? Dinos por qué. Tu opinión nos ayuda a mejorar el servicio y la tecnología. Especialmente cuando algo no está bien, tu comentario moldea directamente mejores resultados para todos.",
           "manageTitle": "Gestiona tu generación",
           "manageContent": "Descarga tu foto en alta resolución, reintenta gratis usando la misma configuración o elimina si ya no la necesitas. Esto también muestra el costo de la generación (10 créditos) y cuántos reintentos gratuitos te quedan."
         }
@@ -1913,6 +1924,101 @@
       },
       "dashboard": {
         "failedToLoadMembers": "Error al cargar miembros"
+      }
+    }
+  },
+  "feedback": {
+    "button": "Comentarios",
+    "modal": {
+      "title": "Comparte tus comentarios",
+      "description": "Ayúdanos a mejorar TeamShots compartiendo tus pensamientos"
+    },
+    "categories": {
+      "bug": "Reporte de error",
+      "suggestion": "Sugerencia de función",
+      "question": "Pregunta",
+      "other": "Otro"
+    },
+    "rating": {
+      "up": "Pulgar arriba",
+      "down": "Pulgar abajo",
+      "thankYou": "¡Gracias por tus comentarios!",
+      "updated": "Comentario actualizado"
+    },
+    "form": {
+      "category": "¿Qué tipo de comentario es este?",
+      "rating": "¿Cómo calificarías tu experiencia?",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "tu@email.com",
+      "comment": "Comentarios adicionales",
+      "commentPlaceholder": "Cuéntanos más (opcional)",
+      "commentRequired": "El comentario es obligatorio",
+      "categoryRequired": "Por favor selecciona una categoría",
+      "ratingRequired": "Por favor selecciona una calificación",
+      "emailRequired": "El correo electrónico es obligatorio para comentarios anónimos",
+      "submit": "Enviar",
+      "cancel": "Cancelar"
+    },
+    "generation": {
+      "whatsWrong": "¿Qué está mal con esta imagen?",
+      "helpImprove": "Necesitamos esto para mejorar la calidad de las fotos",
+      "feedbackRequired": "Por favor selecciona al menos un problema o proporciona un comentario",
+      "commentPlaceholder": "Cuéntanos qué está mal...",
+      "reasons": {
+        "poorQuality": "Mala calidad",
+        "wrongStyle": "No coincide con el estilo",
+        "inaccurateFace": "Rostro inexacto",
+        "wrongBackground": "Fondo incorrecto",
+        "other": "Otro"
+      }
+    },
+    "success": "¡Gracias por tus comentarios!",
+    "error": "Error al enviar comentarios. Por favor, intenta de nuevo.",
+    "submitting": "Enviando...",
+    "admin": {
+      "title": "Gestión de Comentarios",
+      "description": "Ver y gestionar comentarios de usuarios",
+      "filters": {
+        "type": "Tipo",
+        "rating": "Calificación",
+        "status": "Estado",
+        "context": "Contexto",
+        "all": "Todos",
+        "general": "General",
+        "generation": "Generación",
+        "positive": "Positivo",
+        "negative": "Negativo",
+        "resolved": "Resuelto",
+        "unresolved": "Sin resolver",
+        "landing": "Página de inicio",
+        "dashboard": "Panel"
+      },
+      "table": {
+        "date": "Fecha",
+        "user": "Usuario",
+        "type": "Tipo",
+        "rating": "Calificación",
+        "comment": "Comentario",
+        "status": "Estado",
+        "actions": "Acciones",
+        "empty": "No se encontraron comentarios",
+        "anonymous": "Anónimo",
+        "noComment": "Sin comentario",
+        "viewGeneration": "Ver generación"
+      },
+      "status": {
+        "resolved": "Resuelto",
+        "unresolved": "Sin resolver"
+      },
+      "actions": {
+        "resolve": "Marcar como resuelto",
+        "unresolve": "Marcar como sin resolver"
+      },
+      "pagination": {
+        "page": "Página",
+        "of": "de",
+        "previous": "Anterior",
+        "next": "Siguiente"
       }
     }
   },

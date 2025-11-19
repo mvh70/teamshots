@@ -94,6 +94,23 @@ export default function AppShell({
     }
   }, [sidebarCollapsed, showSidebar])
 
+  // Close sidebar on mobile when generation-detail tour starts
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleCloseSidebarForTour = () => {
+      // Only close if we're on mobile and sidebar is currently open
+      if (window.innerWidth < 1024 && !sidebarCollapsed && showSidebar) {
+        setSidebarCollapsed(true)
+      }
+    }
+
+    window.addEventListener('close-sidebar-for-tour', handleCloseSidebarForTour)
+    return () => {
+      window.removeEventListener('close-sidebar-for-tour', handleCloseSidebarForTour)
+    }
+  }, [sidebarCollapsed, showSidebar])
+
   useEffect(() => {
     if (status === 'loading') return
     if (status === 'unauthenticated') {

@@ -2,13 +2,24 @@
 
 import { useTranslations } from 'next-intl';
 import { getPricingDisplay } from '@/domain/pricing';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PricingCard from '@/components/pricing/PricingCard'
+import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
 
 export default function PricingContent() {
   const t = useTranslations('pricing');
   const pricing = getPricingDisplay();
   const [isYearly, setIsYearly] = useState(false);
+
+  // Domain-based pricing restriction
+  const [domainSignupType, setDomainSignupType] = useState<'individual' | 'team' | null>(null);
+
+  useEffect(() => {
+    const domain = getClientDomain();
+    const forcedType = getForcedSignupType();
+    const signupType = forcedType || getSignupTypeFromDomain(domain);
+    setDomainSignupType(signupType);
+  }, []);
 
   const tryOncePlan = {
     id: 'tryOnce' as const,
@@ -38,8 +49,18 @@ export default function PricingContent() {
     yearlyPricePerPhoto: pricing.pro.annual.pricePerPhoto,
     regenerations: pricing.pro.monthly.regenerations,
     annualSavings: pricing.pro.annual.savings,
-    popular: true,
+    popular: domainSignupType === 'team' || domainSignupType === null, // Popular only when team-restricted or no restriction
   }
+
+  // Filter plans based on domain restrictions
+  const plansToShow = [
+    // Always show Try Once
+    tryOncePlan,
+    // Show Pro if team domain or no domain restriction
+    ...(domainSignupType === 'team' || domainSignupType === null ? [proPlan] : []),
+    // Show Individual if individual domain or no domain restriction
+    ...(domainSignupType === 'individual' || domainSignupType === null ? [individualPlan] : []),
+  ]
 
   return (
     <div className="min-h-screen bg-bg-gray-50 py-20 lg:py-32 relative grain-texture">
@@ -85,28 +106,25 @@ export default function PricingContent() {
         </div>
 
         {/* Pricing Cards (using shared component) */}
-        <div className="grid md:grid-cols-3 gap-8 lg:gap-10 mb-16 overflow-visible">
+        <div className={`grid gap-8 lg:gap-10 mb-16 overflow-visible ${
+          plansToShow.length === 3 ? 'md:grid-cols-3' :
+          plansToShow.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' :
+          'md:grid-cols-1 max-w-md mx-auto'
+        }`}>
+          {plansToShow.map((plan) => (
           <PricingCard
-            {...proPlan}
-            isYearly={isYearly}
+              key={plan.id}
+              {...plan}
+              isYearly={plan.id === 'tryOnce' ? false : isYearly}
             ctaMode="link"
-            href="/auth/signup?tier=team&period=monthly"
+              href={`/auth/signup?${
+                plan.id === 'pro' ? 'tier=team&period=monthly' :
+                plan.id === 'individual' ? 'tier=individual&period=monthly' :
+                'period=try_once'
+              }`}
             className="h-full"
           />
-          <PricingCard
-            {...individualPlan}
-            isYearly={isYearly}
-            ctaMode="link"
-            href="/auth/signup?tier=individual&period=monthly"
-            className="h-full"
-          />
-          <PricingCard
-            {...tryOncePlan}
-            isYearly={false}
-            ctaMode="link"
-            href="/auth/signup?period=try_once"
-            className="h-full"
-          />
+          ))}
         </div>
 
         {/* FAQ Section */}

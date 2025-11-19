@@ -147,39 +147,54 @@ export const authOptions = {
     updateAge: 0, // Force JWT callback to run on every request for rolling session refresh
   },
 
-  // Add cookie configuration for security - Strict SameSite for CSRF protection
-  cookies: {
-    sessionToken: {
-      name: `${Env.string('NODE_ENV') === 'production' ? '__Secure-' : ''}next-auth.session-token`,
+  // Add cookie configuration for security
+  // Using 'lax' SameSite to allow cookies on top-level navigations (e.g., Stripe redirects)
+  // while still protecting against CSRF attacks on POST requests
+  // Note: secure flag should be true for HTTPS (including localhost HTTPS)
+  cookies: (() => {
+    const isProduction = Env.string('NODE_ENV') === 'production'
+    const baseUrl = Env.string('NEXT_PUBLIC_BASE_URL', 'http://localhost:3000')
+    const isHttps = baseUrl.startsWith('https://')
+    const useSecureCookies = isProduction || isHttps
+    
+    return {
+      sessionToken: {
+      name: `${isProduction ? '__Secure-' : ''}next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: 'strict' as const, // Changed from 'lax' to 'strict' for stronger CSRF protection
+        sameSite: 'lax' as const, // 'lax' allows cookies on redirects while still protecting POST requests
         path: '/',
-        secure: Env.string('NODE_ENV') === 'production'
+        secure: useSecureCookies
       }
     },
     callbackUrl: {
-      name: `${Env.string('NODE_ENV') === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
+      name: `${isProduction ? '__Secure-' : ''}next-auth.callback-url`,
       options: {
         httpOnly: true,
-        sameSite: 'strict' as const, // Changed from 'lax' to 'strict'
+        sameSite: 'lax' as const,
         path: '/',
-        secure: Env.string('NODE_ENV') === 'production'
+        secure: useSecureCookies
       }
     },
     csrfToken: {
-      name: `${Env.string('NODE_ENV') === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
+      name: `${isProduction ? '__Host-' : ''}next-auth.csrf-token`,
       options: {
         httpOnly: true,
-        sameSite: 'strict' as const, // Changed from 'lax' to 'strict'
+        sameSite: 'lax' as const,
         path: '/',
-        secure: Env.string('NODE_ENV') === 'production'
+        secure: useSecureCookies
       }
     }
-  },
-
+    }
+  })(),
+  
   // Enable CSRF protection
-  useSecureCookies: Env.string('NODE_ENV') === 'production',
+  useSecureCookies: (() => {
+    const isProduction = Env.string('NODE_ENV') === 'production'
+    const baseUrl = Env.string('NEXT_PUBLIC_BASE_URL', 'http://localhost:3000')
+    const isHttps = baseUrl.startsWith('https://')
+    return isProduction || isHttps
+  })(),
   
   callbacks: {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

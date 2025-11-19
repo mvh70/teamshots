@@ -379,11 +379,11 @@
       "questions": {
         "freeGen": {
           "question": "Do I get a free generation?",
-          "answer": "Yes. New accounts receive 1 free test generation in a predefined style so you can see the quality. Each generation uses 10 credits and produces 4 variations."
+          "answer": "Yes! We give new users one free test generation in a set style so you can see if our AI lives up to the hype. It normally costs 10 credits and lets you retry up to 4 times (depending on your package)."
         },
         "howCreditsWork": {
           "question": "How do credits work?",
-          "answer": "Each photo generation uses 10 credits and produces 4 high-quality variations. Credits roll over month-to-month and never expire."
+          "answer": "Each photo generation uses 10 credits and allows up to 4 high-quality retries. Your credits roll over month-to-month and never expire. No rush, they're yours to keep!"
         },
         "topUp": {
           "question": "Can I top up credits?",
@@ -471,6 +471,8 @@
       "planSummaryTryOnce": "{credits} credits, {photos} photos",
       "planSummaryPro": "{credits} credits/month, {photos} photos/month",
       "planSummaryIndividual": "{credits} credits/month, {photos} photos/month",
+      "welcomeMessage": "Welcome",
+      "planSummaryWelcome": "{credits} credits, {photos} photos to get started",
       "selectPlanPrompt": "Select a plan to continue",
       "firstNameLabel": "First name",
       "userTypeLabel": "How will you use TeamShotsPro?",
@@ -509,6 +511,13 @@
       "backToSignIn": "Back to sign in",
       "loading": "Loading…"
     }
+  },
+  "invite": {
+    "benefit1": "Professional, team-branded headshots from your selfies",
+    "benefit2": "Results in 60 seconds",
+    "benefit3": "No account setup needed",
+    "mobileRequired": "Please open this link on your mobile device",
+    "mobileReason": "That's where all the good selfies are 📸"
   },
   "app": {
     "header": {
@@ -1119,6 +1128,8 @@
           "creditsInfoContent1": "No worries. You get free do-overs with every generation. Check here to see how many tries you have left.",
           "creditsInfoTitle2": "Your photo, your way",
           "creditsInfoContent2": "Love it? Download it ↓. Want another shot? Retry it ↻. Changed your mind? Delete it 🗑️. You're in control.",
+          "feedbackTitle": "Your feedback matters",
+          "feedbackContent": "Not happy with your photo? Let us know why. Your feedback helps us improve the service and technology. Especially when something isn't right, your input directly shapes better results for everyone.",
           "manageTitle": "Manage your generation",
           "manageContent": "Download your photo in high resolution, retry for free using the same settings, or delete if you no longer need it. This also shows the generation cost (10 credits) and how many free retries you have left."
         }
@@ -1913,6 +1924,101 @@
       },
       "dashboard": {
         "failedToLoadMembers": "Failed to load members"
+      }
+    }
+  },
+  "feedback": {
+    "button": "Feedback",
+    "modal": {
+      "title": "Share your feedback",
+      "description": "Help us improve TeamShots by sharing your thoughts"
+    },
+    "categories": {
+      "bug": "Bug report",
+      "suggestion": "Feature suggestion",
+      "question": "Question",
+      "other": "Other"
+    },
+    "rating": {
+      "up": "Thumbs up",
+      "down": "Thumbs down",
+      "thankYou": "Thank you for your feedback!",
+      "updated": "Feedback updated"
+    },
+    "form": {
+      "category": "What type of feedback is this?",
+      "rating": "How would you rate your experience?",
+      "email": "Email",
+      "emailPlaceholder": "your@email.com",
+      "comment": "Additional comments",
+      "commentPlaceholder": "Tell us more (optional)",
+      "commentRequired": "Comment is required",
+      "categoryRequired": "Please select a category",
+      "ratingRequired": "Please select a rating",
+      "emailRequired": "Email is required for anonymous feedback",
+      "submit": "Submit",
+      "cancel": "Cancel"
+    },
+    "generation": {
+      "whatsWrong": "What's wrong with this image?",
+      "helpImprove": "We need this to improve the quality of the pics",
+      "feedbackRequired": "Please select at least one issue or provide a comment",
+      "commentPlaceholder": "Tell us what's wrong...",
+      "reasons": {
+        "poorQuality": "Poor quality",
+        "wrongStyle": "Doesn't match style",
+        "inaccurateFace": "Inaccurate face",
+        "wrongBackground": "Wrong background",
+        "other": "Other"
+      }
+    },
+    "success": "Thank you for your feedback!",
+    "error": "Failed to submit feedback. Please try again.",
+    "submitting": "Submitting...",
+    "admin": {
+      "title": "Feedback Management",
+      "description": "View and manage user feedback",
+      "filters": {
+        "type": "Type",
+        "rating": "Rating",
+        "status": "Status",
+        "context": "Context",
+        "all": "All",
+        "general": "General",
+        "generation": "Generation",
+        "positive": "Positive",
+        "negative": "Negative",
+        "resolved": "Resolved",
+        "unresolved": "Unresolved",
+        "landing": "Landing",
+        "dashboard": "Dashboard"
+      },
+      "table": {
+        "date": "Date",
+        "user": "User",
+        "type": "Type",
+        "rating": "Rating",
+        "comment": "Comment",
+        "status": "Status",
+        "actions": "Actions",
+        "empty": "No feedback found",
+        "anonymous": "Anonymous",
+        "noComment": "No comment",
+        "viewGeneration": "View generation"
+      },
+      "status": {
+        "resolved": "Resolved",
+        "unresolved": "Unresolved"
+      },
+      "actions": {
+        "resolve": "Mark as resolved",
+        "unresolve": "Mark as unresolved"
+      },
+      "pagination": {
+        "page": "Page",
+        "of": "of",
+        "previous": "Previous",
+        "next": "Next"
       }
     }
   },

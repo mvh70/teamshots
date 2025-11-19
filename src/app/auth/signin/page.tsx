@@ -40,6 +40,27 @@ export default function SignInPage() {
 
   const router = useRouter()
 
+  // Helper function to safely redirect to callbackUrl if present
+  const redirectToCallbackOrDefault = (defaultPath: string) => {
+    const callbackUrl = searchParams.get('callbackUrl')
+    if (callbackUrl) {
+      try {
+        const url = new URL(callbackUrl, window.location.origin)
+        // Only allow same origin redirects for security
+        if (url.origin === window.location.origin) {
+          router.push(callbackUrl)
+          track('signin_success')
+          return true
+        }
+      } catch {
+        // Invalid URL, fall through to default redirect
+      }
+    }
+    router.push(defaultPath)
+    track('signin_success')
+    return false
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -89,22 +110,30 @@ export default function SignInPage() {
                   window.sessionStorage.setItem('teamshots.initialData', JSON.stringify(dataWithTimestamp))
                 } catch {}
                 
-                // Redirect based on onboarding state
-                if (data.onboarding?.needsTeamSetup) {
-                  router.push('/app/team')
-                } else {
-                  router.push('/app/dashboard')
+                // Check for callbackUrl from middleware redirect (e.g., after Stripe checkout)
+                // If callbackUrl exists, redirect there; otherwise use default based on onboarding
+                const defaultPath = data.onboarding?.needsTeamSetup ? '/app/team' : '/app/dashboard'
+                if (redirectToCallbackOrDefault(defaultPath)) {
+                  return
                 }
               } else {
-                router.push('/app/dashboard')
+                // Initial data fetch failed, but still check for callbackUrl
+                if (redirectToCallbackOrDefault('/app/dashboard')) {
+                  return
+                }
               }
             } catch {
-              router.push('/app/dashboard')
+              // Fetch failed, but still check for callbackUrl
+              if (redirectToCallbackOrDefault('/app/dashboard')) {
+                return
+              }
             }
           } else {
-            router.push('/app/dashboard')
+            // Session missing, but still check for callbackUrl
+            if (redirectToCallbackOrDefault('/app/dashboard')) {
+              return
+            }
           }
-          track('signin_success')
         }
       }
     } catch {

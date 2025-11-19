@@ -270,10 +270,9 @@ export function useOnbordaTours() {
   // Import dynamically to avoid circular dependency
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { useOnboardingState: useOnboardingStateFromContext } = require('@/contexts/OnboardingContext')
-  const { context, updateContext } = useOnboardingStateFromContext()
+  const { context, updateContext, pendingTour, setPendingTour, clearPendingTour: clearPendingTourFromContext } = useOnboardingStateFromContext()
   const t = useTranslations('app')
   const [currentTour, setCurrentTour] = useState<string | null>(null)
-  const [pendingTour, setPendingTour] = useState<string | null>(null)
   const [sidebarIndicators, setSidebarIndicators] = useState<Record<string, number>>({})
 
   // Update sidebar indicators based on context
@@ -306,17 +305,24 @@ export function useOnbordaTours() {
 
   // Start a specific tour
   const startTour = (tourName: string) => {
+    console.log('[startTour] Called with:', tourName, 'current pendingTour:', pendingTour)
     // Check if tour has already been completed (check database via context.completedTours)
     const completedTours = context.completedTours || []
     const hasCompleted = completedTours.includes(tourName)
     if (hasCompleted) {
+      console.log('[startTour] Tour already completed, returning')
       return
     }
     
     const tour = getTour(tourName, t, context)
+    console.log('[startTour] Tour found:', !!tour, 'tour name:', tour?.name)
     if (tour) {
+      console.log('[startTour] Setting pendingTour to:', tourName)
       setPendingTour(tourName)
       trackTourStarted(tourName, context)
+      console.log('[startTour] pendingTour set, trackTourStarted called')
+    } else {
+      console.log('[startTour] No tour found for:', tourName)
     }
   }
 
@@ -394,7 +400,7 @@ export function useOnbordaTours() {
     startTour,
     completeTour,
     skipTour,
-    clearPendingTour: () => setPendingTour(null),
+    clearPendingTour: clearPendingTourFromContext,
   }
 }
 

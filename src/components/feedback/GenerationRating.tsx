@@ -1,0 +1,382 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
+import { useAnalytics } from '@/hooks/useAnalytics'
+import { Toast } from '@/components/ui/Toast'
+import { ThumbsUp, ThumbsDown } from 'lucide-react'
+
+interface GenerationRatingProps {
+  generationId: string
+  token?: string
+  generationStatus: 'pending' | 'processing' | 'completed' | 'failed'
+}
+
+type Rating = 'up' | 'down'
+
+const FEEDBACK_REASONS = [
+  'poorQuality',
+  'wrongStyle',
+  'inaccurateFace',
+  'wrongBackground',
+  'other',
+] as const
+
+interface ExistingFeedback {
+  id: string
+  rating: 'up' | 'down'
+  comment: string | null
+  options: string[] | null
+  createdAt: Date
+}
+
+export function GenerationRating({
+  generationId,
+  token,
+  generationStatus,
+}: GenerationRatingProps) {
+  const t = useTranslations('feedback')
+  const { track } = useAnalytics()
+  
+  // All hooks must be declared at the top, before any conditional returns
+  const [rating, setRating] = useState<Rating | ''>('')
+  const [showForm, setShowForm] = useState(false)
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([])
+  const [comment, setComment] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastType, setToastType] = useState<'success' | 'error'>('success')
+  const [loadingExisting, setLoadingExisting] = useState(true)
+  const [showThankYou, setShowThankYou] = useState(false)
+  const [justSubmitted, setJustSubmitted] = useState(false) // Track if feedback was just submitted (not loaded)
+
+  // Load existing feedback on mount
+  useEffect(() => {
+    const loadExistingFeedback = async () => {
+      if (generationStatus !== 'completed') {
+        setLoadingExisting(false)
+        return
+      }
+
+      try {
+        const url = token
+          ? `/api/feedback?generationId=${encodeURIComponent(generationId)}&token=${encodeURIComponent(token)}`
+          : `/api/feedback?generationId=${encodeURIComponent(generationId)}`
+
+        const response = await fetch(url)
+        const data = await response.json()
+
+        if (data.feedback) {
+          const existing: ExistingFeedback = data.feedback
+          setRating(existing.rating)
+          setSubmitted(true) // Mark as submitted but don't show thank you (it's existing feedback)
+          if (existing.rating === 'down') {
+            setSelectedReasons((existing.options as string[]) || [])
+            setComment(existing.comment || '')
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load existing feedback:', error)
+      } finally {
+        setLoadingExisting(false)
+      }
+    }
+
+    void loadExistingFeedback()
+  }, [generationId, token, generationStatus])
+
+  // Show thank you message briefly after new submission (not for loaded existing feedback)
+  useEffect(() => {
+    if (justSubmitted) {
+      setShowThankYou(true)
+      const timer = setTimeout(() => {
+        setShowThankYou(false)
+        setJustSubmitted(false) // Reset after showing thank you
+      }, 3000) // Show thank you for 3 seconds
+      return () => clearTimeout(timer)
+    }
+  }, [justSubmitted])
+
+  // Only show rating for completed generations
+  if (generationStatus !== 'completed') {
+    return null
+  }
+
+  // Show loading state while checking for existing feedback
+  if (loadingExisting) {
+    return null // Or a small loading indicator if preferred
+  }
+
+  const handleThumbsUp = async () => {
+    // If already submitted with thumbs down, switch to thumbs up
+    if (submitted && rating === 'down') {
+      setShowForm(false)
+      setSelectedReasons([])
+      setComment('')
+    }
+    setRating('up')
+    setLoading(true)
+
+    try {
+      const url = token
+        ? `/api/feedback?token=${encodeURIComponent(token)}`
+        : '/api/feedback'
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'generation',
+          rating: 'up',
+          context: 'generation',
+          generationId,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || t('error'))
+      }
+
+      track('generation_rated', {
+        generationId,
+        rating: 'up',
+      })
+
+      const wasAlreadySubmitted = submitted
+      setSubmitted(true)
+      setJustSubmitted(!wasAlreadySubmitted) // Only show thank you for new submissions, not updates
+      const message = wasAlreadySubmitted 
+        ? 'Feedback updated' // Use direct string for now to ensure it displays
+        : t('success')
+      setToastMessage(message || 'Feedback submitted')
+      setToastType('success')
+      setShowToast(true)
+    } catch {
+      setToastMessage(t('error'))
+      setToastType('error')
+      setShowToast(true)
+      setRating('')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleThumbsDown = () => {
+    // If already submitted with thumbs up, switch to thumbs down and show form
+    // Otherwise just show form
+    if (submitted && rating === 'up') {
+      setRating('down')
+      setShowForm(true)
+      // Clear previous reasons/comment when switching
+      setSelectedReasons([])
+      setComment('')
+    } else {
+      setRating('down')
+      setShowForm(true)
+    }
+  }
+
+  const handleReasonToggle = (reason: string) => {
+    setSelectedReasons((prev) =>
+      prev.includes(reason)
+        ? prev.filter((r) => r !== reason)
+        : [...prev, reason]
+    )
+  }
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Validation: at least one reason or comment required
+    if (selectedReasons.length === 0 && !comment.trim()) {
+      setToastMessage(t('generation.feedbackRequired'))
+      setToastType('error')
+      setShowToast(true)
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const url = token
+        ? `/api/feedback?token=${encodeURIComponent(token)}`
+        : '/api/feedback'
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'generation',
+          rating: 'down',
+          context: 'generation',
+          generationId,
+          options: selectedReasons.length > 0 ? selectedReasons : undefined,
+          comment: comment.trim() || undefined,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || t('error'))
+      }
+
+      track('generation_rated', {
+        generationId,
+        rating: 'down',
+        has_reasons: selectedReasons.length > 0,
+        has_comment: !!comment.trim(),
+      })
+
+      const wasAlreadySubmitted = submitted
+      setSubmitted(true)
+      setJustSubmitted(!wasAlreadySubmitted) // Only show thank you for new submissions, not updates
+      setShowForm(false)
+      const message = wasAlreadySubmitted 
+        ? 'Feedback updated' // Use direct string for now to ensure it displays
+        : t('success')
+      setToastMessage(message || 'Feedback submitted')
+      setToastType('success')
+      setShowToast(true)
+    } catch {
+      setToastMessage(t('error'))
+      setToastType('error')
+      setShowToast(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Show thank you message briefly, then show persistent rating state
+  if (showThankYou && justSubmitted) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-gray-200/50 text-sm text-green-600 font-medium">
+        <span>✓</span>
+        <span>{t('rating.thankYou')}</span>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-1">
+        {!showForm ? (
+          <>
+            <button
+              onClick={handleThumbsUp}
+              disabled={loading}
+              className={`p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 transition-all ${
+                (submitted && rating === 'up') || rating === 'up'
+                  ? 'text-green-600 bg-green-50/90'
+                  : 'text-gray-600 hover:text-green-600 hover:bg-white'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              aria-label={t('rating.up')}
+              title={t('rating.up')}
+            >
+              <ThumbsUp className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleThumbsDown}
+              disabled={loading}
+              className={`p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 transition-all ${
+                (submitted && rating === 'down') || rating === 'down'
+                  ? 'text-red-600 bg-red-50/90'
+                  : 'text-gray-600 hover:text-red-600 hover:bg-white'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              aria-label={t('rating.down')}
+              title={t('rating.down')}
+            >
+              <ThumbsDown className="w-5 h-5" />
+            </button>
+          </>
+        ) : (
+          <form
+            onSubmit={handleSubmitFeedback}
+            className="bg-white/95 backdrop-blur-sm rounded-lg p-4 space-y-3 shadow-xl border border-gray-200 min-w-[280px] max-w-sm"
+          >
+            <div>
+              <p className="text-sm font-medium text-gray-900 mb-2">
+                {t('generation.whatsWrong')}
+              </p>
+              <p className="text-xs text-gray-600 mb-3">
+                {t('generation.helpImprove')}
+              </p>
+
+              <div className="space-y-2">
+                {FEEDBACK_REASONS.map((reason) => (
+                  <label
+                    key={reason}
+                    className="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-2 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedReasons.includes(reason)}
+                      onChange={() => handleReasonToggle(reason)}
+                      className="mr-2"
+                    />
+                    <span>{t(`generation.reasons.${reason}`)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="generation-comment" className="block text-sm font-medium text-gray-700 mb-1">
+                {t('form.comment')} <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="generation-comment"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary resize-none"
+                placeholder={t('generation.commentPlaceholder')}
+                required
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForm(false)
+                  setRating('')
+                  setSelectedReasons([])
+                  setComment('')
+                }}
+                className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                {t('form.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-3 py-1.5 text-sm bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? t('submitting') : t('form.submit')}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Toast Notification */}
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          onDismiss={() => setShowToast(false)}
+        />
+      )}
+    </>
+  )
+}
+
