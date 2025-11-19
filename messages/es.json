@@ -305,6 +305,8 @@
     "year": "año",
     "save": "Ahorra",
     "topUpTitle": "Recarga de créditos",
+    "topUpSuccessTitle": "¡Recarga exitosa!",
+    "topUpSuccessMessage": "{count} fotos agregadas a tu cuenta.",
     "individualTopUp": "Recarga individual",
     "proSmallTopUp": "Recarga Pro Pequeño",
     "proLargeTopUp": "Recarga Pro Grande",
@@ -401,27 +403,32 @@
       "subtitle": "Tu compra fue exitosa. Esto es lo que desbloqueaste:",
       "tryOnce": {
         "title": "Paquete Prueba Una Vez",
-        "credits": "{count} créditos ({uniquePhotos} foto)",
+        "credits": "{uniquePhotos} foto",
         "photos": "{count} fotos para generación de fotos",
         "retries": "{count} reintentos gratis para perfeccionar tus fotos"
       },
       "individual": {
         "title": "Plan Individual",
-        "credits": "{count} créditos ({uniquePhotos} fotos)",
+        "credits": "{uniquePhotos} fotos",
         "photos": "{count} fotos",
         "retriesAndVariations": "{retries} reintentos gratis por foto, así que {totalVariations} variaciones de fotos en total",
         "styles": "Fondos y estilos personalizados"
       },
       "pro": {
         "title": "Plan Pro",
-        "credits": "{count} créditos ({uniquePhotos} fotos)",
+        "credits": "{uniquePhotos} fotos",
         "photos": "{count} fotos",
         "retriesAndVariations": "{retries} reintentos gratis por generación, así que {totalVariations} variaciones de fotos en total",
         "styles": "Fondos y estilos personalizados para equipos",
         "team": "Funciones de colaboración en equipo"
       },
+      "topUp": {
+        "title": "Recarga de Créditos",
+        "credits": "{photos} fotos agregadas a tu cuenta"
+      },
       "continueToGenerate": "Empezar a Generar Fotos",
-      "continueToDashboard": "Ir al Panel"
+      "continueToDashboard": "Ir al Panel",
+      "continueToGeneration": "Continuar Generando"
     }
   },
   "auth": {
@@ -587,7 +594,10 @@
       "buyPhotos": "Comprar fotos",
       "requestPhotos": "Solicitar fotos",
       "usePersonalPhotos": "Usar fotos personales",
-      "backToDashboard": "Volver al panel"
+      "backToDashboard": "Volver al panel",
+      "noCreditsTitle": "Sin créditos disponibles",
+      "noCreditsMessage": "Necesitas créditos para generar fotos. Compra un plan o paquete de créditos para comenzar.",
+      "buyCredits": "Comprar créditos"
       },
       "profile": {
         "pro": "PRO",

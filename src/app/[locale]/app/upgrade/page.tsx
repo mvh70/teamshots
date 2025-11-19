@@ -25,9 +25,17 @@ export default function UpgradePage() {
   // Check for success state
   const isSuccess = searchParams.get('success') === 'true'
   const successType = searchParams.get('type')
+  // Get returnTo parameter if user came from another page (e.g., generation page)
+  const returnTo = searchParams.get('returnTo')
 
   // Check subscription and determine tier
   useEffect(() => {
+    // Don't check subscription or redirect if we're showing the success screen
+    if (isSuccess) {
+      setIsCheckingSubscription(false)
+      return
+    }
+
     const checkSubscription = async () => {
       try {
         const response = await fetch('/api/user/subscription')
@@ -38,7 +46,8 @@ export default function UpgradePage() {
             const uiTier = normalizePlanTierForUI(subscription.tier, subscription.period)
             
             // If user has an active paid subscription, redirect to top-up
-            if (uiTier !== 'free') {
+            // But only if we're not showing the success screen
+            if (uiTier !== 'free' && !isSuccess) {
               router.push('/app/top-up')
               return
             }
@@ -57,7 +66,7 @@ export default function UpgradePage() {
     }
 
     checkSubscription()
-  }, [router])
+  }, [router, isSuccess])
 
   // Clear success params from URL after display (prevents showing on refresh)
   useEffect(() => {
@@ -116,6 +125,11 @@ export default function UpgradePage() {
     return [tryOncePlan, proSmallPlan, proLargePlan]
   }, [selectedTier])
 
+  // If success state, show purchase success screen (check this first to avoid redirects)
+  if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
+    return <PurchaseSuccess />
+  }
+
   // Show loading while checking subscription
   if (isCheckingSubscription) {
     return (
@@ -126,11 +140,6 @@ export default function UpgradePage() {
         </div>
       </div>
     )
-  }
-
-  // If success state, show purchase success screen
-  if (isSuccess) {
-    return <PurchaseSuccess />
   }
 
   return (
@@ -158,6 +167,7 @@ export default function UpgradePage() {
                   loadingText={tAll('common.loading', { default: 'Loading...' })}
                   type="try_once"
                   priceId={PRICING_CONFIG.tryOnce.stripePriceId}
+                  returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined}
                 >
                   {t('plans.tryOnce.cta')}
                 </CheckoutButton>
@@ -176,6 +186,7 @@ export default function UpgradePage() {
                     tier: plan.id === 'individual' ? 'individual' : plan.id === 'proSmall' ? 'proSmall' : 'proLarge',
                     period: plan.id === 'individual' ? 'individual' : plan.id === 'proSmall' ? 'proSmall' : 'proLarge'
                   }}
+                  returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined}
                   useBrandCtaColors
                 >
                   {t('plans.' + plan.id + '.cta')}

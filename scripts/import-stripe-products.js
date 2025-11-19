@@ -169,7 +169,7 @@ async function createProducts() {
 
     const proSmallTopUpProduct = await stripe.products.create({
       name: 'Pro Small Top-Up - 5 photos',
-      description: 'One-time purchase of 50 credits (pro small)',
+      description: 'One-time purchase of 5 photos (pro small)',
       metadata: { type: 'top_up', tier: 'pro_small' }
     })
     const proSmallTopUpPrice = await stripe.prices.create({

@@ -302,6 +302,8 @@
     "year": "year",
     "save": "Save",
     "topUpTitle": "Photo top-up",
+    "topUpSuccessTitle": "Top-up successful!",
+    "topUpSuccessMessage": "{count} photos added to your account.",
     "individualTopUp": "Individual top-up",
     "proSmallTopUp": "Pro Small top-up",
     "proLargeTopUp": "Pro Large top-up",
@@ -397,26 +399,31 @@
       "subtitle": "Your purchase was successful. Here's what you unlocked:",
       "tryOnce": {
         "title": "Try Once Package",
-        "credits": "{count} credits ({uniquePhotos} photo)",
+        "credits": "{uniquePhotos} photo",
         "photos": "{count} photos for photo generation",
         "retries": "{count} free retries to perfect your photos"
       },
       "individual": {
         "title": "Individual Plan",
-        "credits": "{count} credits ({uniquePhotos} photos)",
+        "credits": "{uniquePhotos} photos",
         "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
         "styles": "Custom backgrounds and styles"
       },
       "pro": {
         "title": "Pro Plan",
-        "credits": "{count} credits ({uniquePhotos} photos)",
+        "credits": "{uniquePhotos} photos",
         "photos": "{count} photos per month",
         "retriesAndVariations": "{retries} free retries per generation, so {totalVariations} photo variations in total",
         "styles": "Custom backgrounds and team styles",
         "team": "Team collaboration features"
       },
+      "topUp": {
+        "title": "Credit Top-Up",
+        "credits": "{photos} photos added to your account"
+      },
       "continueToGenerate": "Start Generating Photos",
-      "continueToDashboard": "Go to Dashboard"
+      "continueToDashboard": "Go to Dashboard",
+      "continueToGeneration": "Continue Generating"
     }
   },
   "auth": {
@@ -582,7 +589,10 @@
       "buyPhotos": "Buy photos",
       "requestPhotos": "Request photos",
       "usePersonalPhotos": "Use personal photos",
-      "backToDashboard": "Back to dashboard"
+      "backToDashboard": "Back to dashboard",
+      "noCreditsTitle": "No credits available",
+      "noCreditsMessage": "You need credits to generate photos. Purchase a plan or credit package to get started.",
+      "buyCredits": "Buy credits"
       },
       "profile": {
         "pro": "PRO",

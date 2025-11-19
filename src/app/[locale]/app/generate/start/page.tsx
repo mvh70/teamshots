@@ -1,6 +1,6 @@
 'use client'
 
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
@@ -24,24 +24,38 @@ import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam
 import GenerateButton from '@/components/generation/GenerateButton'
 import { hasUserDefinedFields } from '@/domain/style/userChoice'
 import { useAnalytics } from '@/hooks/useAnalytics'
+import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
 
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
 
 export default function StartGenerationPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const pathname = usePathname()
   const { data: session } = useSession()
   const { track } = useAnalytics()
   const t = useTranslations('app.sidebar.generate')
   const { isFreePlan, uiTier, tier: subscriptionTier } = usePlanInfo()
   const keyFromQuery = useMemo(() => searchParams.get('key') || '', [searchParams])
   const skipUpload = useMemo(() => searchParams.get('skipUpload') === '1', [searchParams])
+  
+  // Check for success state after checkout
+  const isSuccess = searchParams.get('success') === 'true'
+  const successType = searchParams.get('type')
+  
   const [key, setKey] = useState<string>('')
   const [, setSelfieId] = useState<string | null>(null)
   const [isApproved, setIsApproved] = useState<boolean>(Boolean(keyFromQuery))
   const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
   const { credits: userCredits, loading: creditsLoading } = useCredits()
   const { href: buyCreditsHref } = useBuyCreditsLink()
+  // Add returnTo parameter to buy credits link so we can return here after checkout
+  const buyCreditsHrefWithReturn = useMemo(() => {
+    // Use current pathname (includes locale) so we return to the exact same page
+    const returnTo = encodeURIComponent(pathname)
+    const separator = buyCreditsHref.includes('?') ? '&' : '?'
+    return `${buyCreditsHref}${separator}returnTo=${returnTo}`
+  }, [buyCreditsHref, pathname])
   const personalFallbackLabel = t('fallbackPersonalStyle', { default: 'Personal Style' })
   const teamFallbackLabel = t('fallbackTeamStyle', { default: 'Team Style' })
   type ContextOption = {
@@ -67,7 +81,14 @@ export default function StartGenerationPage() {
     stylePreset?: string
   } | null>(null)
   const [availableContexts, setAvailableContexts] = useState<ContextOption[]>([])
-  const [contextLoaded, setContextLoaded] = useState(false)
+  const [contextLoaded, setContextLoaded] = useState(() => {
+    // Check if context was already loaded in this session
+    // This prevents showing loading screen after returning from purchase success
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('teamshots.contextLoaded') === 'true'
+    }
+    return false
+  })
   const [photoStyleSettings, setPhotoStyleSettings] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
   const [selectedPackageId, setSelectedPackageId] = useState<string>('')
@@ -138,10 +159,16 @@ export default function StartGenerationPage() {
       try {
         // Credits are now managed by CreditsContext
         setContextLoaded(true)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('teamshots.contextLoaded', 'true')
+        }
       } catch (err) {
         console.error('Failed to fetch data:', err)
         // Credits are handled by CreditsContext
         setContextLoaded(true)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('teamshots.contextLoaded', 'true')
+        }
       }
     }
 
@@ -156,13 +183,15 @@ export default function StartGenerationPage() {
         setSelectedSelfies(selfies)
         
         // If no skipUpload flag and we have less than 2 selfies selected, redirect to selection page
-        if (!skipUpload && selfies.length < 2 && !keyFromQuery) {
+        // BUT: don't redirect if we're showing the success screen after purchase
+        if (!skipUpload && selfies.length < 2 && !keyFromQuery && !isSuccess) {
           router.push('/app/generate/selfie')
         }
       } catch {
         setSelectedSelfies([])
         // If no skipUpload flag, redirect to selection page
-        if (!skipUpload && !keyFromQuery) {
+        // BUT: don't redirect if we're showing the success screen after purchase
+        if (!skipUpload && !keyFromQuery && !isSuccess) {
           router.push('/app/generate/selfie')
         }
       }
@@ -170,7 +199,7 @@ export default function StartGenerationPage() {
     if (session?.user?.id) {
       fetchSelected()
     }
-  }, [session?.user?.id, skipUpload, keyFromQuery, router])
+  }, [session?.user?.id, skipUpload, keyFromQuery, router, isSuccess])
 
   const normalizeContextName = useCallback((rawName: string | null | undefined, index: number, total: number, type: 'personal' | 'team'): string => {
     const trimmed = (rawName ?? '').trim()
@@ -442,11 +471,17 @@ export default function StartGenerationPage() {
   }, [creditsLoading, contextLoaded, isApproved, generationType, subscriptionTier, session?.user?.role, hasTeamAccess, hasIndividualAccess, hasTeamCredits])
 
   // If not coming from selection page and we don't have enough selfies, redirect immediately
+  // BUT: don't redirect if we're showing the success screen after purchase
   useEffect(() => {
-    if (!skipUpload && selectedSelfies.length < 2 && !keyFromQuery && contextLoaded) {
+    if (!skipUpload && selectedSelfies.length < 2 && !keyFromQuery && contextLoaded && !isSuccess) {
       router.push('/app/generate/selfie')
     }
-  }, [skipUpload, selectedSelfies.length, keyFromQuery, contextLoaded, router])
+  }, [skipUpload, selectedSelfies.length, keyFromQuery, contextLoaded, router, isSuccess])
+
+  // If success state, show purchase success screen
+  if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
+    return <PurchaseSuccess />
+  }
 
   // Show upsell window if no credits available
   if (!creditsLoading && !hasAnyCredits) {
@@ -463,7 +498,7 @@ export default function StartGenerationPage() {
             <p className="text-gray-600 mb-6">{t('noCreditsMessage')}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
-                href={buyCreditsHref}
+                href={buyCreditsHrefWithReturn}
                 className="px-6 py-3 rounded-md text-white font-medium transition-colors"
                 style={{ backgroundColor: BRAND_CONFIG.colors.cta }}
                 onMouseEnter={(e) => {
@@ -598,7 +633,7 @@ export default function StartGenerationPage() {
                       })}
                     </p>
                     <Link
-                      href={buyCreditsHref}
+                      href={buyCreditsHrefWithReturn}
                       className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white rounded-md transition-colors"
                       style={{ backgroundColor: BRAND_CONFIG.colors.cta }}
                       onMouseEnter={(e) => {

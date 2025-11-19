@@ -1,10 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, usePathname } from '@/i18n/routing'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
+import { useCredits } from '@/contexts/CreditsContext'
 
 interface PurchaseSuccessProps {
   className?: string
@@ -13,8 +16,11 @@ interface PurchaseSuccessProps {
 export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
   const t = useTranslations('pricing.purchaseSuccess')
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [planType, setPlanType] = useState<'try_once' | 'individual' | 'proSmall' | null>(null)
+  const { refetch: refetchCredits, loading: creditsLoading } = useCredits()
+  const [planType, setPlanType] = useState<'try_once' | 'individual' | 'proSmall' | 'proLarge' | 'topUp' | null>(null)
+  const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
     const successType = searchParams.get('type')
@@ -23,10 +29,37 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
       setPlanType('try_once')
     } else if (successType === 'individual_success') {
       setPlanType('individual')
-    } else if (successType === 'pro_small_success' || successType === 'pro_large_success') {
+    } else if (successType === 'pro_small_success') {
       setPlanType('proSmall')
+    } else if (successType === 'pro_large_success') {
+      setPlanType('proLarge')
+    } else if (successType === 'top_up_success') {
+      setPlanType('topUp')
     }
   }, [searchParams])
+
+  // Refresh credits when component mounts (user just completed purchase)
+  useEffect(() => {
+    // Aggressively clear all cached credit data to ensure fresh fetch
+    try {
+      // Clear sessionStorage cache
+      const stored = sessionStorage.getItem('teamshots.initialData')
+      if (stored) {
+        const initialData = JSON.parse(stored)
+        delete initialData.credits
+        initialData._timestamp = 0
+        sessionStorage.setItem('teamshots.initialData', JSON.stringify(initialData))
+      }
+      
+      // Also remove any other credit-related cache keys
+      sessionStorage.removeItem('teamshots.credits')
+    } catch {
+      // Ignore errors
+    }
+    
+    // Now fetch fresh credits from the API
+    refetchCredits()
+  }, [refetchCredits])
 
   if (!planType) return null
 
@@ -42,7 +75,7 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
         return {
           title: t('tryOnce.title'),
           features: [
-            t('tryOnce.credits', { count: credits, uniquePhotos }),
+            t('tryOnce.credits', { uniquePhotos }),
             t('tryOnce.retries', { count: regenerations })
           ]
         }
@@ -57,7 +90,7 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
         return {
           title: t('individual.title'),
           features: [
-            t('individual.credits', { count: credits, uniquePhotos }),
+            t('individual.credits', { uniquePhotos }),
             t('individual.retriesAndVariations', { retries: regenerations, totalVariations }),
             t('individual.styles')
           ]
@@ -69,14 +102,43 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
         const uniquePhotos = credits / creditsPerGeneration // 20 unique photos
         const variationsPerPhoto = regenerations + 1 // 1 original + retries = 5 variations
         const totalVariations = uniquePhotos * variationsPerPhoto // 20 × 5 = 100
-        
+
         return {
           title: t('pro.title'),
           features: [
-            t('pro.credits', { count: credits, uniquePhotos }),
+            t('pro.credits', { uniquePhotos }),
             t('pro.retriesAndVariations', { retries: regenerations, totalVariations }),
             t('pro.styles'),
             t('pro.team')
+          ]
+        }
+      }
+      case 'proLarge': {
+        const credits = PRICING_CONFIG.proLarge.credits
+        const regenerations = PRICING_CONFIG.regenerations.proLarge
+        const uniquePhotos = credits / creditsPerGeneration // 200 credits / 10 per generation = 20 photos
+        const variationsPerPhoto = regenerations + 1 // 1 original + retries = 5 variations
+        const totalVariations = uniquePhotos * variationsPerPhoto // 20 × 5 = 100
+
+        return {
+          title: t('pro.title'),
+          features: [
+            t('pro.credits', { uniquePhotos }),
+            t('pro.retriesAndVariations', { retries: regenerations, totalVariations }),
+            t('pro.styles'),
+            t('pro.team')
+          ]
+        }
+      }
+      case 'topUp': {
+        const creditsParam = searchParams.get('credits')
+        const credits = creditsParam ? parseInt(creditsParam, 10) : 0
+        const photos = calculatePhotosFromCredits(credits)
+
+        return {
+          title: t('topUp.title'), // Add translation key
+          features: [
+            t('topUp.credits', { photos }) // Add translation key
           ]
         }
       }
@@ -85,11 +147,107 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
 
   const planDetails = getPlanDetails()
 
-  const handleContinue = () => {
+  // Determine where to redirect and what button text to show
+  const getRedirectInfo = () => {
+    // Check for finalDestination parameter (set when checkout is from upgrade/top-up)
+    const finalDestination = searchParams.get('finalDestination')
+    if (finalDestination === 'dashboard') {
+      // Check if we're already on dashboard (compare without locale prefix)
+      const currentPathNormalized = pathname.replace(/^\/(en|es)/, '') || pathname
+      if (currentPathNormalized === '/app/dashboard') {
+        return { path: null, buttonText: t('continueToDashboard'), clearParams: true }
+      }
+      return { path: '/app/dashboard', buttonText: t('continueToDashboard'), clearParams: false }
+    }
+
+    // Check for returnTo parameter (set when checkout is from elsewhere)
+    const returnTo = searchParams.get('returnTo')
+    if (returnTo) {
+      try {
+        const decodedUrl = decodeURIComponent(returnTo)
+        // Validate it's a relative path or same origin for security
+        if (decodedUrl.startsWith('/') || decodedUrl.startsWith(window.location.origin)) {
+          // Extract pathname from URL (remove query params and hash)
+          const returnToPath = decodedUrl.split('?')[0].split('#')[0]
+          const returnToPathNormalized = returnToPath.replace(/^\/(en|es)/, '') || returnToPath
+          const currentPathNormalized = pathname.replace(/^\/(en|es)/, '') || pathname
+
+          // Check if we're already on the destination page
+          if (returnToPathNormalized === currentPathNormalized) {
+            // We're already here, just clear the success params
+            const isGenerationPage = returnToPath.includes('/app/generate/start')
+            return {
+              path: null,
+              buttonText: isGenerationPage ? t('continueToGeneration') : t('continueToDashboard'),
+              clearParams: true
+            }
+          }
+
+          // Determine button text based on destination
+          const isGenerationPage = decodedUrl.includes('/app/generate/start')
+          return {
+            path: decodedUrl,
+            buttonText: isGenerationPage ? t('continueToGeneration') : t('continueToDashboard'),
+            clearParams: false
+          }
+        }
+      } catch (e) {
+        // If decoding fails, fall through to default behavior
+        console.error('Failed to decode returnTo URL:', e)
+      }
+    }
+
+    // Fallback to default behavior
+    const currentPathNormalized = pathname.replace(/^\/(en|es)/, '') || pathname
+    
+    // Check if we're already on the generation page
+    if (currentPathNormalized === '/app/generate/start') {
+      // Already on generation page, just clear params
+      return { path: null, buttonText: t('continueToGenerate'), clearParams: true }
+    }
+    
+    // Check if we're already on the dashboard
+    if (currentPathNormalized === '/app/dashboard') {
+      // Already on dashboard, just clear params
+      return { path: null, buttonText: t('continueToDashboard'), clearParams: true }
+    }
+    
+    // Not on either page - decide where to go based on plan type
     if (planType === 'try_once') {
-      router.push('/app/generate/start')
+      // Try Once users go to generation page
+      return { path: '/app/generate/start', buttonText: t('continueToGenerate'), clearParams: false }
     } else {
-      router.push('/app/dashboard')
+      // Other plan types go to dashboard
+      return { path: '/app/dashboard', buttonText: t('continueToDashboard'), clearParams: false }
+    }
+  }
+
+  const redirectInfo = getRedirectInfo()
+
+  const handleContinue = async () => {
+    setIsNavigating(true)
+    
+    // Force a fresh credit fetch and wait for it to complete
+    await refetchCredits()
+    
+    // Additional delay to ensure React has fully updated the credits context
+    // This is critical to prevent the generation page from showing loading state
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    if (redirectInfo.clearParams) {
+      // Clear success params from URL and stay on current page
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete('success')
+      params.delete('type')
+      params.delete('returnTo')
+      params.delete('finalDestination')
+      params.delete('tier')
+      params.delete('credits')
+      const newUrl = `${pathname}${params.toString() ? `?${params.toString()}` : ''}`
+      router.replace(newUrl)
+    } else if (redirectInfo.path) {
+      // Redirect to clean path without success params to prevent target page from showing success banner
+      router.push(redirectInfo.path)
     }
   }
 
@@ -126,9 +284,20 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
 
         <button
           onClick={handleContinue}
-          className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px]"
+          disabled={creditsLoading || isNavigating}
+          className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {planType === 'try_once' ? t('continueToGenerate') : t('continueToDashboard')}
+          {creditsLoading || isNavigating ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              {creditsLoading ? 'Loading credits...' : 'Preparing...'}
+            </>
+          ) : (
+            redirectInfo.buttonText
+          )}
         </button>
       </div>
     </div>

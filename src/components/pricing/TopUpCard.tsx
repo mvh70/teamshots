@@ -13,9 +13,10 @@ interface TopUpCardProps {
   className?: string
   onError?: (message: string) => void
   regenerationsOverride?: number
+  returnUrl?: string
 }
 
-export default function TopUpCard({ tier, className = '', onError, regenerationsOverride }: TopUpCardProps) {
+export default function TopUpCard({ tier, className = '', onError, regenerationsOverride, returnUrl }: TopUpCardProps) {
   const t = useTranslations('pricing')
   const tAll = useTranslations()
 
@@ -126,6 +127,7 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
         loadingText={tAll('common.loading', { default: 'Loading...' })}
         type="top_up"
         metadata={{ tier, credits: details.credits }}
+        returnUrl={returnUrl}
         className="mt-auto"
         onError={onError}
         useBrandCtaColors

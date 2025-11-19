@@ -15,7 +15,20 @@ const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { type, priceId, quantity = 1, metadata = {}, unauth = false, email } = body as { type: string; priceId?: string; quantity?: number; metadata?: Record<string, string>; unauth?: boolean; email?: string };
+    const { type, priceId, quantity = 1, metadata = {}, unauth = false, email, returnUrl: explicitReturnUrl } = body as { type: string; priceId?: string; quantity?: number; metadata?: Record<string, string>; unauth?: boolean; email?: string; returnUrl?: string };
+
+    // If explicitReturnUrl is not provided, try to get returnTo from referer URL
+    // This handles the multi-step flow: Generation → Upgrade/Top-up?returnTo=... → Checkout
+    let effectiveReturnUrl = explicitReturnUrl
+    if (!effectiveReturnUrl && request.headers.get('referer')) {
+      try {
+        const refererUrl = new URL(request.headers.get('referer')!)
+        const returnToParam = refererUrl.searchParams.get('returnTo')
+        if (returnToParam) {
+          effectiveReturnUrl = decodeURIComponent(returnToParam)
+        }
+      } catch {}
+    }
 
     const session = unauth ? null : await auth();
     if (!session?.user?.id && !unauth) {
@@ -59,7 +72,6 @@ export async function POST(request: NextRequest) {
     
     // Prefer returning to the page that initiated checkout. Accept explicit body.returnUrl or Referer header.
     // Validate to prevent open redirects: must start with our baseUrl; otherwise, fall back to dashboard.
-    // Special case: if checkout is initiated from upgrade or top-up pages, always return to dashboard.
     const requestedReturnUrl = (body as Record<string, unknown>)?.returnUrl as string | undefined;
     const referer = request.headers.get('referer') || undefined;
     const preferredReturnUrl = requestedReturnUrl || referer || '';
@@ -78,26 +90,14 @@ export async function POST(request: NextRequest) {
     } catch {}
     
     // Check if checkout was initiated from upgrade or top-up pages
-    let shouldRedirectToDashboard = false;
-    try {
-      if (preferredReturnUrl && preferredReturnUrl.startsWith(baseUrl)) {
-        const url = new URL(preferredReturnUrl);
-        const pathParts = url.pathname.split('/').filter(Boolean);
-        // Remove locale if present to check the actual route
-        const routePath = pathParts[0] === 'en' || pathParts[0] === 'es' 
-          ? pathParts.slice(1).join('/')
-          : pathParts.join('/');
-        
-        // If initiated from upgrade or top-up, always redirect to dashboard
-        if (routePath === 'app/upgrade' || routePath === 'app/top-up') {
-          shouldRedirectToDashboard = true;
-        }
-      }
-    } catch {}
+    // We'll use this to set finalDestination=dashboard, but still return to the page to show success screen
+    let isFromUpgradeOrTopUp = false;
     
+    // Determine the return URL - always return to the page that initiated checkout
+    // (so success screens can show), but we'll add finalDestination param for post-success redirect
     let safeReturnUrl = `${baseUrl}/${locale}/app/dashboard`;
     try {
-      if (!shouldRedirectToDashboard && preferredReturnUrl && preferredReturnUrl.startsWith(baseUrl)) {
+      if (preferredReturnUrl && preferredReturnUrl.startsWith(baseUrl)) {
         // Strip hash to avoid losing search params when we add ours
         const urlWithoutHash = preferredReturnUrl.split('#')[0];
         // Ensure locale is present in the URL
@@ -108,6 +108,17 @@ export async function POST(request: NextRequest) {
           url.pathname = `/${locale}${url.pathname}`;
         }
         safeReturnUrl = url.toString();
+        
+        // Check if checkout was initiated from upgrade or top-up pages
+        // Remove locale if present to check the actual route
+        const routePath = pathParts[0] === 'en' || pathParts[0] === 'es' 
+          ? pathParts.slice(1).join('/')
+          : pathParts.join('/');
+        
+        // If initiated from upgrade or top-up, mark it but still return to that page
+        if (routePath === 'app/upgrade' || routePath === 'app/top-up') {
+          isFromUpgradeOrTopUp = true;
+        }
       }
     } catch {}
 
@@ -148,13 +159,74 @@ export async function POST(request: NextRequest) {
     
     // Use successTier (determined from priceId) for success URL, not metadata.tier
     // metadata.tier may be 'pro' (UI tier), but we need the actual tier ('proSmall'/'proLarge')
-    const queryExtras = type === 'plan' && successTier
-      ? { tier: encodeURIComponent(successTier) }
-      : {}
+    const queryExtras: Record<string, string> = {}
+    
+    if (type === 'plan' && successTier) {
+      queryExtras.tier = encodeURIComponent(successTier)
+    }
+    
+    // For top-ups, calculate and pass credits amount
+    if (type === 'top_up') {
+      const { tier, credits: requestedCredits } = metadata as { tier?: string; credits?: number };
+      let creditsPerPackage = 0;
+      if (tier === 'individual') {
+        creditsPerPackage = PRICING_CONFIG.individual.topUp.credits;
+      } else if (tier === 'proSmall') {
+        creditsPerPackage = PRICING_CONFIG.proSmall.topUp.credits;
+      } else if (tier === 'proLarge') {
+        creditsPerPackage = PRICING_CONFIG.proLarge.topUp.credits;
+      } else {
+        creditsPerPackage = PRICING_CONFIG.tryOnce.topUp.credits;
+      }
+      const totalCredits = typeof requestedCredits === 'number' 
+        ? Math.max(creditsPerPackage, Math.ceil(requestedCredits / creditsPerPackage) * creditsPerPackage)
+        : creditsPerPackage;
+      queryExtras.credits = String(totalCredits)
+      queryExtras.tier = encodeURIComponent(tier || 'try_once')
+    }
+
+    // Add redirect parameters:
+    // - If effective returnUrl provided (explicit or from referer), redirect directly to it with success params
+    // - If from upgrade/top-up without effective returnUrl: show success on upgrade/top-up page, then redirect to dashboard
+    // - If from elsewhere: return to origin page with success params
+    
+    let finalSuccessUrl: string
+    
+    if (effectiveReturnUrl && effectiveReturnUrl.trim()) {
+      // User came from another page (e.g., generation) via upgrade/top-up with returnTo parameter
+      // Skip the intermediate success screen and go directly to the destination with success params
+      const isAbsoluteUrl = effectiveReturnUrl.startsWith(baseUrl)
+      const isRelativePath = effectiveReturnUrl.startsWith('/')
+
+      if (isAbsoluteUrl || isRelativePath) {
+        // Build the final destination URL with success parameters
+        const destinationUrl = isRelativePath 
+          ? `${baseUrl}${effectiveReturnUrl.startsWith('/') ? '' : '/'}${effectiveReturnUrl}`
+          : effectiveReturnUrl
+        
+        // We're going directly to the final destination, so we need to tell PurchaseSuccess
+        // that we're already at the destination by NOT including returnTo
+        // Instead, we indicate we should stay here by setting a flag in the URL
+        const finalQueryExtras = { ...queryExtras }
+        delete finalQueryExtras.returnTo // Remove returnTo since we're already at the destination
+        
+        finalSuccessUrl = withParams(destinationUrl, { success: 'true', type: successMessage, ...finalQueryExtras })
+      } else {
+        // Invalid returnUrl, fallback to upgrade/top-up page
+        finalSuccessUrl = withParams(safeReturnUrl, { success: 'true', type: successMessage, ...queryExtras })
+      }
+    } else if (isFromUpgradeOrTopUp) {
+      // Direct purchase from upgrade/top-up without returnTo - show success there, then go to dashboard
+      queryExtras.finalDestination = 'dashboard'
+      finalSuccessUrl = withParams(safeReturnUrl, { success: 'true', type: successMessage, ...queryExtras })
+    } else {
+      // From other pages - return to origin
+      finalSuccessUrl = withParams(safeReturnUrl, { success: 'true', type: successMessage, ...queryExtras })
+    }
 
     const successUrl = unauth
       ? `${baseUrl}/auth/verify?success=true&type=${successMessage}${type === 'plan' && successTier ? `&tier=${encodeURIComponent(successTier)}` : ''}&email=${encodeURIComponent(email || '')}`
-      : withParams(safeReturnUrl, { success: 'true', type: successMessage, ...(queryExtras as Record<string, string>) })
+      : finalSuccessUrl
 
     const cancelUrl = unauth
       ? `${baseUrl}/auth/signup?canceled=true`

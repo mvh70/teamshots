@@ -4,6 +4,7 @@
  * Starts all background workers for processing jobs
  */
 
+import { fileURLToPath } from 'url'
 import './workers/generateImage' // Import to register the worker
 import { initializeQueues } from './index'
 
@@ -35,7 +36,7 @@ async function startWorkers() {
 }
 
 // Start workers if this file is run directly
-if (require.main === module) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   startWorkers()
 }
 

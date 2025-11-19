@@ -3,16 +3,15 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { BRAND_CONFIG } from '@/config/brand'
 import { useRouter } from '@/i18n/routing'
 import StripeNotice from '@/components/stripe/StripeNotice'
 import { useSearchParams } from 'next/navigation'
 import TopUpCard from '@/components/pricing/TopUpCard'
 import { normalizePlanTierForUI, type PlanPeriod, type UIPlanTier } from '@/domain/subscription/utils'
+import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
 
 export default function TopUpPage() {
   const t = useTranslations()
-  const tDashboard = useTranslations('app.dashboard')
   const router = useRouter()
   const searchParams = useSearchParams()
   const [planTier, setPlanTier] = useState<UIPlanTier | null>(null)
@@ -84,29 +83,12 @@ export default function TopUpPage() {
 
   const isSuccess = searchParams.get('success') === 'true'
   const successType = searchParams.get('type')
+  const returnTo = searchParams.get('returnTo')
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
       {isSuccess && successType === 'top_up_success' ? (
-        <div className="border rounded-lg p-6 shadow-sm bg-brand-secondary-light border-brand-secondary-lighter">
-          <h1 className="text-2xl font-semibold mb-2 text-brand-secondary-text-light">
-            {tDashboard('successMessages.titleTopUp', { default: 'Credits loaded! ⚡' })}
-          </h1>
-          <p className="text-brand-secondary-text-light mb-4">
-            {tDashboard('successMessages.topUp', { default: 'Credit top-up completed successfully! Your credits have been added to your account.' })}
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => router.push('/app/dashboard')}
-              className="px-4 py-2 text-white rounded-md"
-              style={{ backgroundColor: BRAND_CONFIG.colors.cta }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.ctaHover }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.cta }}
-            >
-              {t('app.sidebar.nav.dashboard', { default: 'Dashboard' })}
-            </button>
-          </div>
-        </div>
+        <PurchaseSuccess />
       ) : (
         <>
         <StripeNotice className="mb-4" />
@@ -114,7 +96,7 @@ export default function TopUpPage() {
           {t('pricing.topUpTitle', { default: 'Credit top-up' })}
         </h1>
         {planTier && planTier !== 'free' && topUpDetails ? (
-          <TopUpCard tier={topUpDetails.tier} />
+          <TopUpCard tier={topUpDetails.tier} returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined} />
         ) : (
           <div className="text-center py-8 text-gray-500">
             {t('common.loading', { default: 'Loading...' })}
