@@ -20,13 +20,13 @@
     "subtitleMain": "Convierte cualquier selfie en retratos consistentes y acordes a tu marca. Sin fotógrafo, sin coordinación.",
     "instantTransformation": "⚡ Transformación instantánea (en serio, es así de rápido)",
     "finalCtaTitle": "¿Listo para transformar las fotos de tu equipo?",
-    "finalCtaSubtitle": "Obtén tu retrato profesional gratis y ve la diferencia en 60 segundos.",
+    "finalCtaSubtitle": "Obtén retratos profesionales para tu equipo y ve la diferencia en 60 segundos.",
     "getStartedFree": "Regístrate ahora",
     "getStarted": "Empezar",
     "viewPricing": "Ver precios",
-    "joinWaitlist": "Obtén mi generación de prueba gratis",
-    "freeCtaSubtext": "Obtén 1 generación de prueba gratis en un estilo predefinido al registrarte. Lo entendemos, quieres probar antes de comprometerte.",
-    "freeCtaAria": "Obtén una generación de prueba gratis en un estilo predefinido al registrarte. Sin compromiso.",
+    "joinWaitlist": "Obtén retratos profesionales para tu equipo",
+    "freeCtaSubtext": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Lo entendemos, quieres probar antes de comprometerte.",
+    "freeCtaAria": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso.",
     "urgency": "Deja de esperar semanas por fotos de equipo",
     "guarantee": "Tu primera generación de prueba es gratis en un estilo predefinido. Sin compromiso, no se requiere tarjeta de crédito. Pruébalo con tu equipo sin riesgo.",
     "secure": "Cifrado SSL y seguro",
@@ -123,8 +123,8 @@
     "subtitle": "Sin dolores de cabeza de coordinación. Sin proveedores externos. Solo cinco pasos simples y listo.",
     "totalTime": "Tiempo total:",
     "totalTimeValue": "5 minutos",
-    "cta": "¡Obtén mi foto profesional gratis!",
-    "guarantee": "Sin riesgo: Obtén 1 foto profesional gratis para probarlo. Sin tarjeta de crédito, sin compromiso, sin tonterías.",
+    "cta": "¡Obtén retratos profesionales para tu equipo!",
+    "guarantee": "Sin riesgo: Obtén retratos profesionales para tu equipo para probarlo. Sin tarjeta de crédito, sin compromiso, sin tonterías.",
     "steps": {
       "1": {
         "title": "Configura tu estilo de marca",
@@ -241,8 +241,7 @@
           "1": "Descargas de alta resolución 1024x1024px",
           "2": "Retención de foto por 30 días",
           "3": "Créditos se acumulan, nunca caducan",
-          "4": "Recarga a $0.90 por 4 créditos",
-          "5": "Soporte prioritario por correo"
+          "4": "Recarga a $0.90 por 4 créditos"
         },
         "cta": "Empieza a ahorrar ahora",
         "savings": "Ahorra $43/año"
@@ -258,8 +257,7 @@
           "1": "Descargas de alta resolución 1024x1024px",
           "2": "Retención de foto por 30 días",
           "3": "Créditos se acumulan, nunca caducan",
-          "4": "Recarga a $0.60 por 4 créditos",
-          "5": "Soporte prioritario con gerente dedicado"
+          "4": "Recarga a $0.60 por 4 créditos"
         },
         "cta": "Eleva a tu equipo",
         "savings": "Ahorra $108/año"
@@ -294,10 +292,8 @@
     "description": "Diseñado para equipos y fundadores de startups. Convierte selfies en retratos acordes a tu marca sin sesiones. Rápido, consistente y perfecto para remotos."
   },
   "pricing": {
-    "monthly": "Mensual",
-    "yearly": "Anual",
-    "perPhotoVariation": "por variación de foto",
-    "includesVariationsPerPhoto": "Incluye {count} variaciones por foto",
+    "perPhotoVariation": "por reintento de foto",
+    "includesVariationsPerPhoto": "Incluye {count} reintentos por foto",
     "variationsBullet": "Regenera hasta {count} veces para perfeccionar cada foto",
     "freeIntro": "¡Tu generación gratuita está lista para deslumbrar! Actualiza para desbloquear acceso ilimitado y funciones de equipo. Hagamos magia suceder en 60 segundos.",
     "title": "Precios simples y transparentes",
@@ -310,34 +306,33 @@
     "save": "Ahorra",
     "topUpTitle": "Recarga de créditos",
     "individualTopUp": "Recarga individual",
-    "proTopUp": "Recarga Pro",
+    "proSmallTopUp": "Recarga Pro Pequeño",
+    "proLargeTopUp": "Recarga Pro Grande",
     "tryOnceTopUp": "Recarga Prueba Una Vez",
     "topUpSubtitle": "Para uso ocasional",
     "topUpPackageLabel": "Paquete de recarga",
     "confirmTopUp": "Recargar mis créditos",
     "photoGenerations": "generaciones de fotos",
     "variations": "variaciones",
+    "photos": "fotos",
+    "photo": "foto",
+    "photoCount": "{count, plural, one {# foto} other {# fotos}}",
     "photosRetained30": "Fotos retenidas por 30 días desde generación",
     "photosRetainedAfterSubscription": "Fotos retenidas mientras activo + 30 días después",
     "topUpCreditsAvailable": "Recarga de créditos disponible",
+    "topUpPhotosAvailable": "Recarga de fotos disponible",
     "noSupport": "Sin soporte",
     "checkoutCanceled": "Pago cancelado. No se realizaron cargos. (¿Cambiaste de idea? Te entendemos, pasa a los mejores)",
     "checkoutError": "¡Ups! Algo salió mal. Vuelve a intentar. (Si persiste, avísanos—estamos para ayudar)",
     "checkoutApiError": "Error al crear sesión de pago",
-    "actions": {
-      "upgradeToYearly": "Cambiar a anual",
-      "downgradeToMonthly": "Bajar a mensual",
-      "effectiveOn": "Efectivo el {date}"
-    },
     "plans": {
       "tryOnce": {
         "name": "Prueba Una Vez",
         "period": "pago único",
         "description": "Perfecto para probar el servicio",
         "features": [
-          "<strong>{photos}</strong> generación de foto",
           "Regenera hasta 2 veces para perfeccionar cada foto",
-          "Fotos retenidas por 30 días desde generación",
+          "Fotos retenidas hasta el cierre de la cuenta",
           "Recarga de créditos disponible",
           "Soporte por correo"
         ],
@@ -345,34 +340,39 @@
       },
       "individual": {
         "name": "Individual",
-        "period": "por mes",
+        "period": "pago único",
         "description": "Para profesionales independientes que quieren lucir bien",
         "features": [
-          "<strong>{photos}</strong> generaciones de fotos",
           "Regenera hasta 3 veces para perfeccionar cada foto",
-          "Fotos retenidas mientras activo + 30 días después",
-          "Créditos se acumulan, nunca caducan",
-          "Recarga de créditos disponible",
-          "Soporte prioritario por correo"
+          "Fotos retenidas hasta el cierre de la cuenta",
+          "Recarga de créditos disponible"
         ],
-        "cta": "Súbeme de nivel"
+        "cta": "Obtén mis fotos"
       },
-      "pro": {
-        "name": "Pro",
-        "period": "por mes",
-        "description": "Para equipos que quieren que todos luzcan igualmente increíbles",
+      "proSmall": {
+        "name": "Pro Pequeño",
+        "period": "pago único",
+        "description": "Para equipos pequeños hasta 5 miembros",
         "features": [
-          "<strong>{photos}</strong> generaciones de fotos",
           "Regenera hasta 4 veces para perfeccionar cada foto",
-          "Todas las funciones Individual, más:",
-          "Invitaciones a miembros del equipo",
+          "Fotos retenidas hasta el cierre de la cuenta",
+          "Gestión de fotos del equipo",
+          "Recarga de créditos disponible"
+        ],
+        "cta": "Obtén fotos del equipo"
+      },
+      "proLarge": {
+        "name": "Pro Grande",
+        "period": "pago único",
+        "description": "Para equipos más grandes",
+        "features": [
+          "Regenera hasta 4 veces para perfeccionar cada foto",
+          "Fotos retenidas hasta el cierre de la cuenta",
           "Gestión de fotos del equipo",
           "Plantillas de estilo de empresa",
-          "Flujo de aprobación de administrador",
-          "Créditos de recarga con descuento",
-          "Soporte prioritario con gerente dedicado"
+          "Recarga de créditos disponible"
         ],
-        "cta": "Eleva al equipo"
+        "cta": "Escala al equipo"
       }
     },
     "faq": {
@@ -401,21 +401,24 @@
       "subtitle": "Tu compra fue exitosa. Esto es lo que desbloqueaste:",
       "tryOnce": {
         "title": "Paquete Prueba Una Vez",
-        "credits": "{count} créditos para generación de fotos, suficiente para {uniquePhotos} foto única",
+        "credits": "{count} créditos ({uniquePhotos} foto)",
+        "photos": "{count} fotos para generación de fotos",
         "retries": "{count} reintentos gratis para perfeccionar tus fotos"
       },
       "individual": {
         "title": "Plan Individual",
-        "credits": "{count} créditos por mes, suficiente para {uniquePhotos} fotos únicas",
+        "credits": "{count} créditos ({uniquePhotos} fotos)",
+        "photos": "{count} fotos",
         "retriesAndVariations": "{retries} reintentos gratis por foto, así que {totalVariations} variaciones de fotos en total",
         "styles": "Fondos y estilos personalizados"
       },
       "pro": {
         "title": "Plan Pro",
-        "credits": "{count} créditos por mes, suficiente para {uniquePhotos} fotos únicas",
+        "credits": "{count} créditos ({uniquePhotos} fotos)",
+        "photos": "{count} fotos",
         "retriesAndVariations": "{retries} reintentos gratis por generación, así que {totalVariations} variaciones de fotos en total",
         "styles": "Fondos y estilos personalizados para equipos",
-        "team": "Invitaciones y gestión de miembros del equipo"
+        "team": "Funciones de colaboración en equipo"
       },
       "continueToGenerate": "Empezar a Generar Fotos",
       "continueToDashboard": "Ir al Panel"
@@ -470,7 +473,7 @@
       "planGeneric": "tu plan",
       "planTryOnce": "Prueba una vez",
       "planSummaryTryOnce": "{credits} créditos, {photos} fotos",
-      "planSummaryPro": "{credits} créditos/mes, {photos} fotos/mes",
+      "planSummaryPro": "{credits} créditos, {photos} fotos",
       "planSummaryIndividual": "{credits} créditos/mes, {photos} fotos/mes",
       "welcomeMessage": "Bienvenido",
       "planSummaryWelcome": "{credits} créditos, {photos} fotos para comenzar",
@@ -532,11 +535,11 @@
         "dashboard": "Panel",
         "team": "Equipo",
         "personalGenerations": "Generaciones Personales",
-        "teamGenerations": "Generaciones Equipo",
+        "teamGenerations": "Fotos generadas",
         "selfies": "Selfies",
         "contexts": "Estilos Fotos",
         "personalPhotoStyles": "Estilos Personales",
-        "teamPhotoStyles": "Estilos Equipo",
+        "teamPhotoStyles": "Estilos de foto predefinidos",
         "analytics": "Analítica",
         "settings": "Ajustes"
       },
@@ -548,15 +551,15 @@
         "individual": "Plan individual",
         "pro": "Plan Pro"
       },
-      "credits": {
-        "label": "Créditos",
-        "title": "Créditos disponibles",
-        "individual": "Créditos personales",
-        "team": "Créditos equipo",
+      "photos": {
+        "label": "Fotos",
+        "title": "Fotos disponibles",
+        "individual": "Fotos personales",
+        "team": "Fotos equipo",
         "allocated": "de los cuales asignados a invitaciones",
         "monthlyReset": "Reinicio mensual",
         "progress": "{used}/{total}",
-        "buyMore": "Comprar más créditos"
+        "buyMore": "Comprar más fotos"
       },
       "generate": {
         "getSelfie": "Obtener selfie",
@@ -573,17 +576,17 @@
         "fallbackPersonalStyle": "Estilo personal",
         "fallbackTeamStyle": "Estilo de equipo",
         "predefinedStyle": "Estilo predefinido con preajustes",
-        "insufficientCredits": "Créditos insuficientes",
-        "insufficientCreditsMessage": "Necesitas {required} créditos para generar. Tienes {current}. ¡Recarga!",
+        "insufficientPhotos": "Fotos insuficientes",
+        "insufficientPhotosMessage": "Necesitas {required} fotos para generar. Tienes {current}. ¡Recarga!",
     "generatePhoto": "Generar foto",
-    "buyMoreCredits": "Comprar más créditos",
-      "noCreditsTitle": "Sin créditos disponibles",
-        "noCreditsMessage": "Necesitas créditos para generar (piénsalos como tickets para lucir increíble). Compra para empezar.",
-        "noTeamCreditsTitle": "Sin créditos equipo disponibles",
-        "noTeamCreditsMessage": "Tu equipo no tiene créditos para generaciones equipo. Contacta admin para solicitar (amablemente) o usa personales.",
-      "buyCredits": "Comprar créditos",
-      "requestCredits": "Solicitar créditos",
-      "usePersonalCredits": "Usar créditos personales",
+    "buyMorePhotos": "Comprar más fotos",
+        "noPhotosTitle": "Sin fotos disponibles",
+        "noPhotosMessage": "Necesitas fotos para generar (piénsalos como tickets para lucir increíble). Compra para empezar.",
+        "noTeamPhotosTitle": "Sin fotos equipo disponibles",
+        "noTeamPhotosMessage": "Tu equipo no tiene fotos para generaciones equipo. Contacta admin para solicitar (amablemente) o usa personales.",
+      "buyPhotos": "Comprar fotos",
+      "requestPhotos": "Solicitar fotos",
+      "usePersonalPhotos": "Usar fotos personales",
       "backToDashboard": "Volver al panel"
       },
       "profile": {
@@ -618,11 +621,11 @@
         "photosGenerated": "Fotos Generadas",
         "activeTemplates": "Estilos de Foto Activos",
         "unlockPhotoStyles": "Desbloquear estilos de foto",
-        "creditsUsed": "Créditos Usados",
-        "credits": "Créditos",
-        "creditsUnit": "créditos",
+        "photosUsed": "Fotos Usadas",
+        "photos": "Fotos",
+        "photosUnit": "fotos",
         "generationsAvailable": "{count, plural, =0 {Sin generaciones} =1 {generación} other {generaciones}} disponibles",
-        "buyMore": "Comprar más créditos"
+        "buyMore": "Comprar más fotos"
       },
       "recentActivity": {
         "title": "Actividad Reciente",
@@ -781,7 +784,7 @@
       "subtitle": "Gestiona las preferencias de tu cuenta y configuraciones de la empresa",
         "tabs": {
           "teamInformation": "Información del equipo",
-          "subscription": "Suscripción",
+          "subscription": "Plan de precios",
           "billing": "Facturación",
           "adminTools": "Herramientas de administrador",
           "accountInfo": "Información de la cuenta"
@@ -793,7 +796,7 @@
           "features": {
             "title": "Características del Modo Individual:",
             "personal": "Generación de fotos personales",
-            "credits": "Gestión de créditos individuales",
+            "photos": "Gestión de fotos individuales",
             "contexts": "Estilos y configuraciones de fotos personales",
             "analytics": "Analíticas para tu propio uso"
           }
@@ -803,7 +806,7 @@
           "features": {
             "title": "Características del Modo Empresa:",
             "team": "Gestión de miembros del equipo e invitaciones",
-            "credits": "Asignación de créditos a nivel de empresa",
+            "photos": "Asignación de fotos a nivel de empresa",
             "contexts": "Estilos y configuraciones de fotos compartidos",
             "analytics": "Analíticas del equipo completo",
             "admin": "Controles y permisos de administrador"
@@ -838,8 +841,8 @@
           "description": "El camino menos transitado... ¡pero con menos ahorros! 🗺️",
           "button": "Proceder de todos modos (¡lo intentamos!) 😅"
         },
-        "title": "Suscripción",
-        "noSubscription": "No hay suscripción activa. Elige un plan para comenzar y comenzar a lucir increíble.",
+        "title": "Plan de precios",
+        "noSubscription": "Elige un plan para comenzar y comenzar a lucir increíble.",
         "upgradeOptions": "Opciones de Actualización",
         "plan": {
           "individual": "Suscripción individual",
@@ -995,8 +998,8 @@
           "uploadContent": "Suelta tu selfie aquí y presencia la transformación. Convertimos instantáneas casuales en retratos que te hacen brillar como una leyenda de LinkedIn.",
           "styleTitle": "Elige tu estilo",
           "styleContent": "Fotos personales para tu imagen profesional, o fotos de equipo si quieres coordinar la consistencia visual de tu equipo.",
-          "creditsTitle": "Tus créditos",
-          "creditsContent": "Cada generación cuesta 10 créditos. Créenos, querrás usarlos todos una vez que veas lo impresionante que luces.",
+          "photosTitle": "Tus fotos",
+          "photosContent": "Cada generación cuesta 1 foto. Créenos, querrás usarlas todas una vez que veas lo impresionante que luces.",
           "generateTitle": "Genera tus fotos",
           "generateContent": "Haz clic aquí para comenzar tu transformación. Tus retratos profesionales estarán listos antes de que puedas decir 'queso'."
         },
@@ -1123,6 +1126,12 @@
           "regenerateContent": "Puedes reintentar esta foto gratis usando la misma configuración. Cada generación viene con reintentos gratuitos para que puedas perfeccionar tus resultados.",
           "downloadTitle": "Descargar tu foto",
           "downloadContent": "Descarga tu foto profesional en alta resolución. Perfecta para LinkedIn, tu sitio web, tarjetas de presentación y más.",
+          "photosTitle": "Costo de generación y reintentos",
+          "photosContent": "Esto muestra el costo de la generación (1 foto) y cuántos reintentos gratuitos te quedan. Usa los reintentos para perfeccionar tus resultados sin gastar más fotos.",
+          "photosInfoTitle1": "¿No te gusta tu foto?",
+          "photosInfoContent1": "No te preocupes. Obtienes reintentos gratuitos con cada generación. Revisa aquí para ver cuántos intentos te quedan.",
+          "photosInfoTitle2": "Tu foto, tu manera",
+          "photosInfoContent2": "¿Te encanta? Descárgala ↓. ¿Quieres otra? Reintenta ↻. ¿Cambiaste de opinión? Elimínala 🗑️. Tú tienes el control.",
           "creditsTitle": "Costo de generación y reintentos",
           "creditsContent": "Esto muestra el costo de la generación (10 créditos) y cuántos reintentos gratuitos te quedan. Usa los reintentos para perfeccionar tus resultados sin gastar más créditos.",
           "creditsInfoTitle1": "¿No te gusta tu foto?",
@@ -1213,7 +1222,7 @@
         "all": "Todos los contextos"
       }
     },
-    "creditHint": "4 créditos por generación",
+    "photoHint": "1 foto por generación",
     "generating": "Generando...",
     "empty": {
       "generated": {
@@ -1330,8 +1339,9 @@
         "fullControl": "Control creativo completo",
         "private": "Privado para ti",
         "anyStyle": "Cualquier estilo/fondo",
-        "cost": "Usa {credits} créditos",
-        "remaining": "{credits} créditos individuales restantes",
+        "cost": "Usa {photos} fotos",
+        "remaining": "{photos} fotos individuales restantes",
+        "insufficientPhotos": "Fotos individuales insuficientes",
         "insufficientCredits": "Créditos individuales insuficientes"
       },
       "team": {
@@ -1339,8 +1349,9 @@
         "presetStyles": "Estilos preestablecidos de empresa",
         "branded": "Con marca y logo",
         "adminVisible": "Visible para el administrador",
-        "cost": "Usa {credits} créditos",
-        "remaining": "{credits} créditos del equipo restantes",
+        "cost": "Usa {photos} fotos",
+        "remaining": "{photos} fotos del equipo restantes",
+        "insufficientPhotos": "Fotos del equipo insuficientes",
         "insufficientCredits": "Créditos del equipo insuficientes",
         "noAccess": "Sin acceso del equipo"
       },
@@ -1457,6 +1468,7 @@
       "greeting": "Has sido invitado a unirte al equipo de {teamName} en TeamShotsPro. La buena noticia: no necesitas sesiones de fotos incómodas en la oficina.",
       "greetingWithName": "Hola {firstName}, has sido invitado a unirte al equipo de {teamName} en TeamShotsPro. La buena noticia: no necesitas sesiones de fotos incómodas en la oficina.",
       "whatYouGet": "Lo que obtienes:",
+      "photos": "{photos} fotos profesionales ({variations} variaciones)",
       "credits": "{photos} fotos profesionales ({variations} variaciones)",
       "teamBranded": "Generación de fotos con marca del equipo",
       "photosDescription": "Has recibido {credits} créditos, suficientes para {photos} fotos. Desde solo un selfie. Tu selfie no tiene que ser perfecto. Nosotros nos encargamos del acabado profesional.",
@@ -1714,9 +1726,12 @@
         "selfies": "Selfies",
         "generations": "Generaciones",
         "personal": "Personal",
+        "personalPhotos": "Fotos personales",
         "personalCredits": "Créditos personales",
         "team": "Equipo",
+        "teamPhotos": "Fotos del equipo",
         "teamCredits": "Créditos del equipo",
+        "availablePhotos": "Fotos disponibles",
         "availableCredits": "Créditos disponibles",
         "status": "Estado",
         "actions": "Acciones"
@@ -1748,8 +1763,10 @@
         "subtitle": "Invita miembros del equipo para comenzar a generar fotos del equipo",
         "button": "Enviar Primera Invitación"
       },
-      "creditsAllocated": "{count} créditos asignados",
-      "creditsUsed": "{count} usados",
+      "photosAllocated": "{count} fotos asignadas",
+      "photosUsed": "{count} usadas",
+      "creditsAllocated": "{count, plural, one {# foto asignada} other {# fotos asignadas}}",
+      "creditsUsed": "{count, plural, one {# usada} other {# usadas}}",
       "status": {
         "accepted": "Aceptado",
         "expired": "Expirado",
@@ -1765,6 +1782,11 @@
         "resendSuccess": "Invitación reenviada exitosamente",
         "revoke": "Revocar",
         "revoking": "Revocando..."
+      },
+      "noPhotos": {
+        "title": "Sin Fotos del Equipo",
+        "subtitle": "Necesitas añadir fotos a tu cuenta del equipo antes de poder invitar a nuevos miembros al equipo.",
+        "button": "Recargar Fotos"
       },
       "noCredits": {
         "title": "Sin Créditos del Equipo",
@@ -1782,11 +1804,12 @@
         "label": "Nombre",
         "placeholder": "Juan"
       },
-      "credits": {
-        "label": "Créditos a Asignar",
-        "hint": "Cada generación de foto usa {credits} créditos"
+      "photos": {
+        "label": "Fotos a asignar",
+        "hint": "Cada foto se puede regenerar hasta {count} veces gratis"
       },
       "success": "Invitación enviada exitosamente a {email}",
+      "insufficientCreditsModal": "Necesitas {required} créditos pero solo tienes {available} disponibles. Por favor reduce la asignación de fotos o compra más créditos.",
       "photoStyle": {
         "label": "Estilo de Foto",
         "useActiveStyle": "Usar Estilo de Foto Activo",
@@ -1808,8 +1831,9 @@
         "sending": "Enviando...",
         "cancel": "Cancelar"
       },
-      "insufficientCredits": "No hay suficientes créditos del equipo. Disponibles: {available}, Requeridos: {required}",
-      "insufficientCreditsModal": "No tienes suficientes créditos del equipo para asignar {required} créditos. Disponibles: {available}"
+      "insufficientPhotos": "No hay suficientes fotos del equipo. Disponibles: {available}, Requeridas: {required}",
+      "insufficientPhotosModal": "No tienes suficientes fotos del equipo para asignar {required} fotos. Disponibles: {available}",
+      "insufficientCredits": "No hay suficientes créditos del equipo. Disponibles: {available}, Requeridos: {required}"
     },
     "buttons": {
       "inviteTeamMember": "Invitar Miembro del Equipo"
@@ -1890,8 +1914,14 @@
         "notAuthorized": "No tienes permiso para esa acción del equipo. Consulta con tu administrador del equipo si crees que es un error.",
         "notPartOfTeam": "No eres parte de un equipo. Pide a tu administrador del equipo que te invite.",
         "noActiveContext": "Necesitas crear y establecer un estilo de foto activo antes de invitar miembros del equipo. Configúralo primero, ¡luego vuelve!",
+        "insufficientTeamPhotos": "No hay suficientes fotos del equipo. Tienes {available} disponibles, pero necesitas {required}. ¡Es hora de recargar!",
+        "invalidPhotoAllocation": "Las fotos deben asignarse en múltiplos de {photos} (el costo por generación de foto). Por ejemplo: {photos}, {photos2}, {photos3}, etc.",
         "insufficientTeamCredits": "No hay suficientes créditos del equipo. Tienes {available} disponibles, pero necesitas {required}. ¡Es hora de recargar!",
-        "invalidCreditAllocation": "Los créditos deben asignarse en múltiplos de {credits} (el costo por generación de foto). Por ejemplo: {credits}, {credits2}, {credits3}, etc."
+        "invalidCreditAllocation": "Los créditos deben asignarse en múltiplos de {credits} (el costo por generación de foto). Por ejemplo: {credits}, {credits2}, {credits3}, etc.",
+        "teamSizeLimitReached": "Tu plan Pro Small permite hasta {limit} miembros del equipo. Actualiza a Pro Large para miembros ilimitados."
+      },
+      "photos": {
+        "invalidType": "Parámetro de tipo inválido"
       },
       "credits": {
         "invalidType": "Parámetro de tipo inválido"

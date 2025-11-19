@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { CheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 
 interface StripeNoticeProps {
   className?: string
@@ -66,13 +67,35 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
       let msg = tDashboard('successMessages.default', { default: 'Payment completed successfully.' })
       switch (params.type) {
         case 'try_once_success':
-          msg = tDashboard('successMessages.tryOnce', { default: 'Your purchase was successful! Credits added to your account.', credits: PRICING_CONFIG.tryOnce.credits })
+          msg = tDashboard('successMessages.tryOnce', { 
+            default: 'Your purchase was successful! Credits added to your account.', 
+            photos: calculatePhotosFromCredits(PRICING_CONFIG.tryOnce.credits)
+          })
           break
         case 'individual_success':
-          msg = tDashboard('successMessages.individual', { default: 'Subscription activated successfully.', credits: PRICING_CONFIG.individual.includedCredits })
+          msg = tDashboard('successMessages.individual', { 
+            default: 'Subscription activated successfully.', 
+            photos: calculatePhotosFromCredits(PRICING_CONFIG.individual.credits)
+          })
+          break
+        case 'pro_small_success':
+          msg = tDashboard('successMessages.pro', { 
+            default: 'Pro subscription activated successfully.', 
+            photos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits)
+          })
+          break
+        case 'pro_large_success':
+          msg = tDashboard('successMessages.pro', { 
+            default: 'Pro subscription activated successfully.', 
+            photos: calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits)
+          })
           break
         case 'pro_success':
-          msg = tDashboard('successMessages.pro', { default: 'Pro subscription activated successfully.', credits: PRICING_CONFIG.pro.includedCredits })
+          // Legacy support - default to proSmall
+          msg = tDashboard('successMessages.pro', { 
+            default: 'Pro subscription activated successfully.', 
+            photos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits)
+          })
           break
         case 'top_up_success':
           msg = tDashboard('successMessages.topUp', { default: 'Credit top-up completed successfully! Your credits have been added to your account.' })

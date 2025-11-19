@@ -1,15 +1,14 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { getPricingDisplay } from '@/domain/pricing';
 import { useState, useEffect } from 'react';
 import PricingCard from '@/components/pricing/PricingCard'
 import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
+import { PRICING_CONFIG } from '@/config/pricing'
+import { getPricePerPhoto, formatPrice } from '@/domain/pricing/utils'
 
 export default function PricingContent() {
   const t = useTranslations('pricing');
-  const pricing = getPricingDisplay();
-  const [isYearly, setIsYearly] = useState(false);
 
   // Domain-based pricing restriction
   const [domainSignupType, setDomainSignupType] = useState<'individual' | 'team' | null>(null);
@@ -23,43 +22,45 @@ export default function PricingContent() {
 
   const tryOncePlan = {
     id: 'tryOnce' as const,
-    price: pricing.tryOnce.price,
-    credits: pricing.tryOnce.credits,
-    pricePerPhoto: pricing.tryOnce.pricePerPhoto,
-    regenerations: pricing.tryOnce.regenerations,
+    price: `$${PRICING_CONFIG.tryOnce.price}`,
+    credits: PRICING_CONFIG.tryOnce.credits,
+    regenerations: PRICING_CONFIG.regenerations.tryOnce,
+    pricePerPhoto: formatPrice(getPricePerPhoto('tryOnce')),
   }
 
   const individualPlan = {
     id: 'individual' as const,
-    price: pricing.individual.monthly.price,
-    yearlyPrice: pricing.individual.annual.price,
-    credits: pricing.individual.monthly.credits,
-    monthlyPricePerPhoto: pricing.individual.monthly.pricePerPhoto,
-    yearlyPricePerPhoto: pricing.individual.annual.pricePerPhoto,
-    regenerations: pricing.individual.monthly.regenerations,
-    annualSavings: pricing.individual.annual.savings,
+    price: `$${PRICING_CONFIG.individual.price}`,
+    credits: PRICING_CONFIG.individual.credits,
+    regenerations: PRICING_CONFIG.regenerations.individual,
+    pricePerPhoto: formatPrice(getPricePerPhoto('individual')),
   }
 
-  const proPlan = {
-    id: 'pro' as const,
-    price: pricing.pro.monthly.price,
-    yearlyPrice: pricing.pro.annual.price,
-    credits: pricing.pro.monthly.credits,
-    monthlyPricePerPhoto: pricing.pro.monthly.pricePerPhoto,
-    yearlyPricePerPhoto: pricing.pro.annual.pricePerPhoto,
-    regenerations: pricing.pro.monthly.regenerations,
-    annualSavings: pricing.pro.annual.savings,
+  const proSmallPlan = {
+    id: 'proSmall' as const,
+    price: `$${PRICING_CONFIG.proSmall.price}`,
+    credits: PRICING_CONFIG.proSmall.credits,
+    regenerations: PRICING_CONFIG.regenerations.proSmall,
     popular: domainSignupType === 'team' || domainSignupType === null, // Popular only when team-restricted or no restriction
+    pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
+  }
+
+  const proLargePlan = {
+    id: 'proLarge' as const,
+    price: `$${PRICING_CONFIG.proLarge.price}`,
+    credits: PRICING_CONFIG.proLarge.credits,
+    regenerations: PRICING_CONFIG.regenerations.proLarge,
+    pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
   }
 
   // Filter plans based on domain restrictions
   const plansToShow = [
     // Always show Try Once
     tryOncePlan,
-    // Show Pro if team domain or no domain restriction
-    ...(domainSignupType === 'team' || domainSignupType === null ? [proPlan] : []),
     // Show Individual if individual domain or no domain restriction
     ...(domainSignupType === 'individual' || domainSignupType === null ? [individualPlan] : []),
+    // Show Pro Small and Pro Large if team domain or no domain restriction
+    ...(domainSignupType === 'team' || domainSignupType === null ? [proSmallPlan, proLargePlan] : []),
   ]
 
   return (
@@ -74,8 +75,8 @@ export default function PricingContent() {
             {t('subtitle')}
           </p>
           
-          {/* Monthly/Yearly Toggle */}
-          <div className="flex items-center justify-center mt-10 mb-8">
+          {/* Billing toggle hidden - now transactional pricing only */}
+          {/* <div className="flex items-center justify-center mt-10 mb-8">
             <div className="relative bg-bg-white p-1.5 rounded-2xl inline-flex shadow-depth-lg border-2 border-brand-primary-lighter hover:border-brand-primary transition-all duration-300">
               <button
                 onClick={() => setIsYearly(false)}
@@ -102,7 +103,7 @@ export default function PricingContent() {
                 {t('yearly')}
               </button>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Pricing Cards (using shared component) */}
@@ -115,12 +116,12 @@ export default function PricingContent() {
           <PricingCard
               key={plan.id}
               {...plan}
-              isYearly={plan.id === 'tryOnce' ? false : isYearly}
             ctaMode="link"
               href={`/auth/signup?${
-                plan.id === 'pro' ? 'tier=team&period=monthly' :
-                plan.id === 'individual' ? 'tier=individual&period=monthly' :
-                'period=try_once'
+                plan.id === 'proSmall' ? 'tier=team&period=proSmall' :
+                plan.id === 'proLarge' ? 'tier=team&period=proLarge' :
+                plan.id === 'individual' ? 'tier=individual&period=individual' :
+                'period=tryOnce'
               }`}
             className="h-full"
           />

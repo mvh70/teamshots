@@ -30,9 +30,9 @@ This guide walks you through building and deploying the AI Team Photo Generator 
 
 **Payments**
 10. Stripe integration
-11. Credit system implementation
-12. Purchase flows (Try Once, subscriptions, top-ups)
-13. Credit balance display
+11. Photo package system implementation
+12. Purchase flows (Try Once, photo packages)
+13. Photo balance display
 
 ### Phase 2: Core Feature + Launch
 
@@ -499,70 +499,51 @@ Create `config/pricing.ts`:
 // In src/config/pricing.ts
 const PRICE_IDS = {
   TRY_ONCE: ['price_...'],
-  INDIVIDUAL_MONTHLY: ['price_...'],
-  INDIVIDUAL_ANNUAL: ['price_...'],
-  PRO_MONTHLY: ['price_...'],
-  PRO_ANNUAL: ['price_...'],
+  INDIVIDUAL: ['price_...'],
+  TEAM_SMALL: ['price_...'],
+  TEAM_LARGE: ['price_...'],
 } as const;
 
 export const PRICING_CONFIG = {
-  // Credits system
-  credits: {
-    perGeneration: 4,
-    rollover: true,
-    rolloverLimit: null, // unlimited rollover
+  // Photo-based system (changed from credits)
+  photos: {
+    perGeneration: 1, // Each generation uses 1 photo
   },
-  
+
   // Try Once (one-time purchase)
   tryOnce: {
     price: 5.00,
-    credits: 4,
+    photos: 1,
     stripePriceIds: PRICE_IDS.TRY_ONCE,
     stripePriceId: PRICE_IDS.TRY_ONCE[0] || '',
   },
-  
-  // Individual tier
+
+  // Individual tier (Personal - one-time purchase)
   individual: {
-    monthly: {
-      price: 24.00,
-      includedCredits: 100,
-      stripePriceIds: PRICE_IDS.INDIVIDUAL_MONTHLY,
-      stripePriceId: PRICE_IDS.INDIVIDUAL_MONTHLY[0] || '',
-    },
-    annual: {
-      price: 245.00,
-      includedCredits: 100, // per month
-      stripePriceIds: PRICE_IDS.INDIVIDUAL_ANNUAL,
-      stripePriceId: PRICE_IDS.INDIVIDUAL_ANNUAL[0] || '',
-    },
-    topUp: {
-      pricePerPackage: 0.90,
-      creditsPerPackage: 4,
-      minimumPurchase: 20,
-    },
+    price: 19.99,
+    photos: 5,
+    stripePriceIds: PRICE_IDS.INDIVIDUAL,
+    stripePriceId: PRICE_IDS.INDIVIDUAL[0] || '',
   },
-  
-  // Pro tier
-  pro: {
-    monthly: {
-      price: 59.00,
-      includedCredits: 280,
-      stripePriceIds: PRICE_IDS.PRO_MONTHLY,
-      stripePriceId: PRICE_IDS.PRO_MONTHLY[0] || '',
-    },
-    annual: {
-      price: 600.00,
-      includedCredits: 280, // per month
-      stripePriceIds: PRICE_IDS.PRO_ANNUAL,
-      stripePriceId: PRICE_IDS.PRO_ANNUAL[0] || '',
-    },
-    topUp: {
-      pricePerPackage: 0.60,
-      creditsPerPackage: 4,
-      minimumPurchase: 20,
-    },
+
+  // Team Small tier (Business - up to 5 team members)
+  teamSmall: {
+    price: 19.99,
+    photos: 5,
+    maxTeamMembers: 5,
+    stripePriceIds: PRICE_IDS.TEAM_SMALL,
+    stripePriceId: PRICE_IDS.TEAM_SMALL[0] || '',
   },
-  
+
+  // Team Large tier (Business - unlimited team members)
+  teamLarge: {
+    price: 59.99,
+    photos: 20,
+    maxTeamMembers: null, // unlimited
+    stripePriceIds: PRICE_IDS.TEAM_LARGE,
+    stripePriceId: PRICE_IDS.TEAM_LARGE[0] || '',
+  },
+
   // Cost tracking
   costs: {
     geminiApiPerGeneration: 0.10,
@@ -570,17 +551,12 @@ export const PRICING_CONFIG = {
 }
 
 // Helper functions
-export function getCreditsForTier(tier: 'individual' | 'pro', period: 'monthly' | 'annual') {
-  return PRICING_CONFIG[tier][period].includedCredits
+export function getPhotosForTier(tier: 'individual' | 'teamSmall' | 'teamLarge') {
+  return PRICING_CONFIG[tier].photos
 }
 
-export function getTopUpPrice(tier: 'individual' | 'pro') {
-  return PRICING_CONFIG[tier].topUp.pricePerPackage
-}
-
-export function formatCreditsDisplay(credits: number) {
-  const generations = Math.floor(credits / PRICING_CONFIG.credits.perGeneration)
-  return `${credits} credits (${generations} generations)`
+export function formatPhotosDisplay(photos: number) {
+  return `${photos} photos`
 }
 ```
 

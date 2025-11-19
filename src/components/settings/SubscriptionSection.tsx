@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { formatTierName } from '@/domain/subscription/utils'
+import { formatTierName, PlanPeriod } from '@/domain/subscription/utils'
 import { CreditCardIcon } from '@heroicons/react/24/outline'
 import { jsonFetcher } from '@/lib/fetcher'
 import SubscriptionPanel from '@/components/subscription/SubscriptionPanel'
@@ -31,6 +31,30 @@ const formatSubscriptionTier = (tier: unknown): 'individual' | 'pro' | null => {
   return null
 }
 
+// Helper to normalize period from API format to PlanPeriod type
+const normalizePeriod = (period: unknown): PlanPeriod => {
+  if (period === 'free' || period === 'tryOnce' || period === 'individual' || period === 'proSmall' || period === 'proLarge') {
+    return period as PlanPeriod
+  }
+  // Convert legacy API format to new format
+  if (period === 'try_once') return 'tryOnce'
+  // Legacy subscription periods map to null (transactional pricing doesn't use monthly/annual)
+  if (period === 'monthly' || period === 'annual') return null
+  return null
+}
+
+// Helper to normalize planPeriod for nextChange (must exclude null/free/tryOnce)
+const normalizeNextChangePeriod = (period: unknown): Exclude<PlanPeriod, 'free' | 'tryOnce' | null> => {
+  if (period === 'individual' || period === 'proSmall' || period === 'proLarge') {
+    return period as Exclude<PlanPeriod, 'free' | 'tryOnce' | null>
+  }
+  // Legacy periods: map monthly/annual to individual (default fallback)
+  // This is a best-effort mapping since transactional pricing doesn't have monthly/annual
+  if (period === 'monthly' || period === 'annual') return 'individual'
+  // Default fallback
+  return 'individual'
+}
+
 export default function SubscriptionSection({ 
   userId,
   userMode = 'individual',
@@ -56,7 +80,7 @@ export default function SubscriptionSection({
   }
 
   const currentTier = subscription?.tier
-  const currentPeriod = subscription?.period || null
+  const currentPeriod = normalizePeriod(subscription?.period)
 
   const handleCheckoutError = (message: string) => {
     alert(`Failed to create checkout: ${message}`)
@@ -164,13 +188,22 @@ export default function SubscriptionSection({
         <div className="flex items-center gap-3">
           <CreditCardIcon className="h-6 w-6 text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900">
-            {t('title', { default: 'Subscription' })}
+            {t('title', { default: 'Pricing plan' })}
           </h2>
         </div>
       </div>
 
       <SubscriptionPanel
-        subscription={{ status: subscription?.status || null, tier: formatSubscriptionTier(currentTier) || null, period: currentPeriod, nextRenewal: subscription?.nextRenewal ?? null, nextChange: subscription?.nextChange ?? null }}
+        subscription={{
+          status: subscription?.status || null,
+          tier: formatSubscriptionTier(currentTier) || null,
+          period: currentPeriod,
+          nextRenewal: subscription?.nextRenewal ?? null,
+          nextChange: subscription?.nextChange ? {
+            ...subscription.nextChange,
+            planPeriod: normalizeNextChangePeriod(subscription.nextChange.planPeriod)
+          } : null
+        }}
         userMode={userMode === 'team' ? 'team' : 'user'}
         onCancel={handleCancel}
         onUpgrade={(to) => handleUpgrade(to)}

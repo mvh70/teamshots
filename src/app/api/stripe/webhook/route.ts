@@ -70,27 +70,8 @@ export async function POST(request: NextRequest) {
     Logger.info(`Processing webhook event: ${event.type}`);
     
     switch (event.type) {
-      case 'subscription_schedule.created':
-      case 'subscription_schedule.updated': {
-        const schedule = event.data.object as Stripe.SubscriptionSchedule
-        await handleSubscriptionScheduleEvent(schedule)
-        break
-      }
       case 'checkout.session.completed':
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
-        break;
-        
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
-        break;
-        
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
-        break;
-        
-      case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
         break;
         
       case 'payment_intent.succeeded':
@@ -101,10 +82,9 @@ export async function POST(request: NextRequest) {
         await handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
         break;
         
-      case 'invoice_payment.paid': {
-        // No-op: informational event; renewal credits handled by invoice.payment_succeeded
+      case 'invoice.payment_succeeded':
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
         break;
-      }
       default:
         Logger.warn(`Unhandled event type: ${event.type}`);
     }
@@ -168,73 +148,69 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   });
 
   try {
-    if (purchaseType === 'subscription') {
-      // Handle subscription signup
-      const subscriptionId = checkoutSession.subscription as string;
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    if (purchaseType === 'plan') {
+      // Handle one-time plan purchase
+      const priceId = checkoutSession.line_items?.data[0]?.price?.id;
+      const tier = determineTier(priceId);
       
-      const price = subscription.items.data[0]?.price;
-      const tier = determineTier(price?.id);
-
-      // Determine period using configured price IDs rather than Stripe interval.
-      // Annual contracts are billed monthly, so interval === 'month' isn't reliable.
-      const isAnnualConfiguredPrice = (
-        price?.id === PRICING_CONFIG.individual.annual.stripePriceId ||
-        price?.id === PRICING_CONFIG.pro.annual.stripePriceId
-      );
-      const planPeriod = isAnnualConfiguredPrice ? 'annual' : 'monthly';
+      if (!tier) {
+        Logger.error('Could not determine tier for plan purchase', { 
+          priceId, 
+          sessionId: session.id,
+          lineItems: checkoutSession.line_items?.data 
+        });
+        throw new Error(`Unable to determine tier for price ID: ${priceId}`);
+      }
       
       // Determine credits based on tier
       let credits = 0;
       if (tier === 'individual') {
-        credits = PRICING_CONFIG.individual.includedCredits;
-      } else if (tier === 'pro') {
-        credits = PRICING_CONFIG.pro.includedCredits;
+        credits = PRICING_CONFIG.individual.credits;
+      } else if (tier === 'proSmall') {
+        credits = PRICING_CONFIG.proSmall.credits;
+      } else if (tier === 'proLarge') {
+        credits = PRICING_CONFIG.proLarge.credits;
+      }
+      
+      if (credits === 0) {
+        Logger.error('Credits are 0 for plan purchase', { tier, priceId, sessionId: session.id });
+        throw new Error(`No credits configured for tier: ${tier}`);
       }
       
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
-        // Update user subscription info
+        // Update user plan info
         await tx.user.update({
           where: { id: userId },
           data: {
             subscriptionStatus: 'active',
-            stripeSubscriptionId: subscriptionId,
             planTier: tier,
-            planPeriod,
+            planPeriod: tier, // Use tier as period for one-time purchases
           },
         });
+        
+        // For proSmall/proLarge tiers, get teamId from person
+        const person = await tx.person.findUnique({ where: { userId: userId || '' } })
+        const teamId = (tier === 'proSmall' || tier === 'proLarge') ? person?.teamId || null : null
         
         // Record credit transaction
         await tx.creditTransaction.create({
           data: {
             userId,
+            teamId: teamId || undefined,
             credits: credits,
             type: 'purchase',
-            description: `Subscription signup - ${tier}`,
-            amount: price?.unit_amount ? price.unit_amount / 100 : 0,
+            description: `Plan purchase - ${tier}`,
+            amount: session.amount_total ? session.amount_total / 100 : 0,
             currency: 'USD',
-            stripePaymentId: subscription.latest_invoice as string,
-            stripeSubscriptionId: subscriptionId,
+            stripePaymentId: session.payment_intent as string,
             planTier: tier,
-            planPeriod,
+            planPeriod: tier,
             metadata: {
-              stripePriceId: price?.id,
-              subscriptionId: subscriptionId,
+              stripePriceId: priceId,
+              sessionId: session.id,
             },
           },
         });
-        type PrismaWithSubscriptionChange = typeof prisma & { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
-        const txEx = tx as unknown as PrismaWithSubscriptionChange
-        await txEx.subscriptionChange.create({
-          data: {
-            userId,
-            planTier: tier || 'individual',
-            planPeriod,
-            action: 'start',
-            stripeSubscriptionId: subscriptionId,
-            metadata: { priceId: price?.id },
-          }
-        })
       });
       
     } else if (purchaseType === 'try_once') {
@@ -284,20 +260,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     } else if (purchaseType === 'top_up') {
       // Handle credit top-up
       const credits = parseInt(session.metadata?.credits || '0');
-      const tier = session.metadata?.tier as 'individual' | 'pro' | undefined;
+      const tier = session.metadata?.tier as 'individual' | 'proSmall' | 'proLarge' | undefined;
       
       let price = 0;
       if (tier === 'individual') {
         price = PRICING_CONFIG.individual.topUp.price;
-      } else if (tier === 'pro') {
-        price = PRICING_CONFIG.pro.topUp.price;
+      } else if (tier === 'proSmall') {
+        price = PRICING_CONFIG.proSmall.topUp.price;
+      } else if (tier === 'proLarge') {
+        price = PRICING_CONFIG.proLarge.topUp.price;
       }
       
       // Allow repeat top-ups; do not block subsequent purchases
 
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
         const person = await tx.person.findUnique({ where: { userId: userId || '' } })
-        const teamId = (tier === 'pro') ? person?.teamId || null : null
+        const teamId = (tier === 'proSmall' || tier === 'proLarge') ? person?.teamId || null : null
         
         await tx.creditTransaction.create({
           data: {
@@ -306,7 +284,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             credits: credits,
             type: 'purchase',
             description: `Credit top-up - ${credits} credits`,
-            amount: price * Math.ceil(credits / (tier === 'individual' ? PRICING_CONFIG.individual.topUp.credits : PRICING_CONFIG.pro.topUp.credits)),
+            amount: price * Math.ceil(credits / (tier === 'individual' ? PRICING_CONFIG.individual.topUp.credits :
+              tier === 'proSmall' ? PRICING_CONFIG.proSmall.topUp.credits :
+              tier === 'proLarge' ? PRICING_CONFIG.proLarge.topUp.credits : 50)),
             currency: 'USD',
             stripePaymentId: session.payment_intent as string,
             planTier: tier,
@@ -326,183 +306,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 }
 
-async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
-  try {
-    Logger.info('Processing subscription update', { subscriptionId: subscription.id });
-    
-    // Try to get userId from metadata first (for new subscriptions)
-    let userId = subscription.metadata?.userId;
-    
-    if (!userId) {
-      // For existing subscriptions (upgrades), find user by customer ID
-      const customerId = typeof subscription.customer === 'string' 
-        ? subscription.customer 
-        : subscription.customer.id;
-      
-      Logger.debug('Looking up user by customer ID', { customerId });
-      
-      const user = await prisma.user.findUnique({
-        where: { stripeCustomerId: customerId },
-        select: { id: true }
-      });
-      
-      if (!user) {
-        Logger.error('User not found for customer ID', { customerId });
-        return;
-      }
-      
-      userId = user.id;
-      Logger.info('Found user', { userId });
-    }
 
-    const price = subscription.items.data[0]?.price;
-    const tier = determineTier(price?.id);
-    
-    Logger.debug('Subscription details', { userId, tier, status: subscription.status, priceId: price?.id });
-    
-    // Determine planPeriod by configured price IDs (not interval) to support annual contracts billed monthly
-    const planPeriodFromConfig = ((): 'annual' | 'monthly' => {
-      const pid = price?.id
-      if (!pid) return 'monthly'
-      if (
-        pid === PRICING_CONFIG.individual.annual.stripePriceId ||
-        pid === PRICING_CONFIG.pro.annual.stripePriceId
-      ) return 'annual'
-      return 'monthly'
-    })()
-
-    // Check for pending scheduled changes (schedule or cancel) that should prevent immediate updates
-    const pendingSchedule = await (prisma as unknown as { subscriptionChange: { findFirst: (args: unknown) => Promise<unknown> } }).subscriptionChange.findFirst({
-      where: { userId, action: { in: ['schedule', 'cancel'] }, effectiveDate: { gt: new Date() } },
-      orderBy: { effectiveDate: 'asc' }
-    }) as unknown as { action?: string; effectiveDate?: Date } | null
-
-    // Check if subscription is scheduled to cancel at period end
-    const cancelAtPeriodEnd = (subscription as unknown as { cancel_at_period_end?: boolean }).cancel_at_period_end || false
-
-    // If there's a pending schedule/cancel, don't update planPeriod yet
-    // If cancel_at_period_end is true, don't create a 'change' record (cancellation is already recorded)
-    if (!pendingSchedule && !cancelAtPeriodEnd) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          subscriptionStatus: subscription.status === 'active' ? 'active' : 'cancelled',
-          stripeSubscriptionId: subscription.id,
-          planTier: tier,
-          planPeriod: planPeriodFromConfig,
-        },
-      });
-      try {
-        const planPeriod = planPeriodFromConfig
-        const sc = prisma as unknown as { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
-        await sc.subscriptionChange.create({
-          data: {
-            userId,
-            planTier: tier || 'individual',
-            planPeriod,
-            action: 'change',
-            stripeSubscriptionId: subscription.id,
-            metadata: { priceId: subscription.items.data[0]?.price?.id },
-          }
-        })
-      } catch {}
-    } else {
-      if (pendingSchedule) {
-        Logger.info('Pending schedule/cancel exists; skipping immediate planPeriod update', { 
-          userId, 
-          action: pendingSchedule.action,
-          effectiveDate: pendingSchedule.effectiveDate 
-        })
-      }
-      if (cancelAtPeriodEnd) {
-        Logger.info('Subscription scheduled to cancel at period end; skipping planPeriod update', { userId })
-      }
-    }
-    
-    Logger.info('Subscription updated successfully');
-  } catch (error) {
-    Logger.error('Error in handleSubscriptionUpdate', { error: error instanceof Error ? error.message : String(error) });
-    throw error;
-  }
-}
-
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  try {
-    Logger.info('Processing subscription deletion', { subscriptionId: subscription.id });
-    
-    // Try to get userId from metadata first
-    let userId = subscription.metadata?.userId;
-    
-    if (!userId) {
-      // For existing subscriptions, find user by customer ID
-      const customerId = typeof subscription.customer === 'string' 
-        ? subscription.customer 
-        : subscription.customer.id;
-      
-      Logger.debug('Looking up user by customer ID for deletion', { customerId });
-      
-      const user = await prisma.user.findUnique({
-        where: { stripeCustomerId: customerId },
-        select: { id: true, planTier: true, planPeriod: true }
-      });
-      
-      if (!user) {
-        Logger.error('User not found for customer ID during deletion', { customerId });
-        return;
-      }
-      
-      userId = user.id;
-      Logger.info('Found user for deletion', { userId });
-    }
-
-    // Get current tier/period before clearing
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { planTier: true, planPeriod: true }
-    });
-
-    const currentTier = (user?.planTier || 'individual') as 'individual' | 'pro'
-    const currentPlanPeriod = ((): 'monthly' | 'annual' => {
-      const p = user?.planPeriod
-      if (p === 'year') return 'annual'
-      if (p === 'month') return 'monthly'
-      return (p as 'monthly' | 'annual') || 'monthly'
-    })()
-
-    // Update user to cancelled status and clear subscription fields, set planPeriod to 'free'
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        subscriptionStatus: 'cancelled',
-        stripeSubscriptionId: null,
-        planPeriod: 'free',
-      },
-    });
-
-    // Record cancellation in ledger (effective now, since subscription is deleted)
-    try {
-      const prismaEx = prisma as unknown as { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
-      await prismaEx.subscriptionChange.create({
-        data: {
-          userId,
-          planTier: currentTier,
-          planPeriod: currentPlanPeriod,
-          action: 'cancel',
-          effectiveDate: new Date(),
-          stripeSubscriptionId: subscription.id,
-          metadata: { reason: 'subscription_deleted_at_period_end' },
-        }
-      })
-    } catch (error) {
-      Logger.error('Failed to record cancellation in ledger', { error: error instanceof Error ? error.message : String(error) })
-    }
-
-    Logger.info('Subscription deleted successfully', { userId });
-  } catch (error) {
-    Logger.error('Error in handleSubscriptionDeleted', { error: error instanceof Error ? error.message : String(error) });
-    throw error;
-  }
-}
 
 async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   // Payment succeeded - additional logging or notification
@@ -568,9 +372,11 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     // Get credits for this tier
     let credits = 0;
     if (tier === 'individual') {
-      credits = PRICING_CONFIG.individual.includedCredits;
-    } else if (tier === 'pro') {
-      credits = PRICING_CONFIG.pro.includedCredits;
+      credits = PRICING_CONFIG.individual.credits;
+    } else if (tier === 'proSmall') {
+      credits = PRICING_CONFIG.proSmall.credits;
+    } else if (tier === 'proLarge') {
+      credits = PRICING_CONFIG.proLarge.credits;
     }
     
     // Add credits to user account
@@ -680,69 +486,24 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
   }
 }
 
-async function handleSubscriptionScheduleEvent(schedule: Stripe.SubscriptionSchedule) {
-  try {
-    const subId = typeof schedule.subscription === 'string' ? schedule.subscription : schedule.subscription?.id
-    if (!subId) return
-    const subscription = await stripe.subscriptions.retrieve(subId)
-    const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
-
-    const user = await prisma.user.findUnique({ where: { stripeCustomerId: customerId } })
-    if (!user) return
-
-    const contract_start = schedule.metadata?.contract_start || subscription.metadata?.contract_start
-    const contract_end = schedule.metadata?.contract_end || subscription.metadata?.contract_end
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        metadata: {
-          ...(user.metadata as Record<string, unknown>),
-          contract: {
-            contract_start,
-            contract_end,
-            scheduleId: schedule.id,
-          },
-        },
-      },
-    })
-    try {
-      const sc = prisma as unknown as { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
-      if (contract_end) {
-        await sc.subscriptionChange.create({
-          data: {
-            userId: user.id,
-            planTier: (user.planTier || 'individual') as string,
-            planPeriod: (user.planPeriod || 'monthly') as string,
-            action: 'schedule',
-            effectiveDate: new Date(contract_end),
-            stripeSubscriptionId: subscription.id,
-            stripeScheduleId: schedule.id,
-            metadata: { contract_start, contract_end },
-          }
-        })
-      }
-    } catch {}
-  } catch (error) {
-    console.error('Error handling subscription schedule event', error)
-  }
-}
 
 function determineTier(priceId: string | undefined): string | null {
   if (!priceId) return null;
   
-  if (
-    priceId === PRICING_CONFIG.individual.monthly.stripePriceId ||
-    priceId === PRICING_CONFIG.individual.annual.stripePriceId
-  ) {
+  if (priceId === PRICING_CONFIG.individual.stripePriceId) {
     return 'individual';
   }
   
-  if (
-    priceId === PRICING_CONFIG.pro.monthly.stripePriceId ||
-    priceId === PRICING_CONFIG.pro.annual.stripePriceId
-  ) {
-    return 'pro';
+  if (priceId === PRICING_CONFIG.proSmall.stripePriceId) {
+    return 'proSmall';
+  }
+
+  if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
+    return 'proLarge';
+  }
+
+  if (priceId === PRICING_CONFIG.tryOnce.stripePriceId) {
+    return 'tryOnce';
   }
   
   return null;

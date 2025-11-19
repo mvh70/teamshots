@@ -1,10 +1,6 @@
-import { PRICING_CONFIG, type PricingPeriod, type PricingTier } from '@/config/pricing'
+import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
 
-export function calculateAnnualSavings(tier: PricingTier): number {
-  const monthlyTotal = PRICING_CONFIG[tier].monthly.price * 12
-  const annualPrice = PRICING_CONFIG[tier].annual.price
-  return monthlyTotal - annualPrice
-}
+// Removed: calculateAnnualSavings - no longer needed for transactional pricing
 
 export function formatPrice(price: number, currency: string = 'USD'): string {
   if (currency === 'USD') {
@@ -13,10 +9,8 @@ export function formatPrice(price: number, currency: string = 'USD'): string {
   return `${price.toFixed(2)} ${currency}`
 }
 
-export function getRegenerationCount(
-  userType: 'tryOnce' | 'personal' | 'business' | 'invited'
-): number {
-  return PRICING_CONFIG.regenerations[userType]
+export function getRegenerationCount(tier: PricingTier): number {
+  return PRICING_CONFIG.regenerations[tier]
 }
 
 export function calculatePhotosFromCredits(credits: number): number {
@@ -32,30 +26,13 @@ export function calculatePricePerPhoto(
   return (price / credits) * (creditsPerGeneration / regenerations)
 }
 
-export function getPricePerPhoto(
-  tier: 'tryOnce' | 'individual' | 'pro',
-  period?: PricingPeriod
-): number {
-  if (tier === 'tryOnce') {
-    return calculatePricePerPhoto(
-      PRICING_CONFIG.tryOnce.price,
-      PRICING_CONFIG.tryOnce.credits,
-      PRICING_CONFIG.regenerations.tryOnce
-    )
-  }
-
+export function getPricePerPhoto(tier: PricingTier): number {
   const tierConfig = PRICING_CONFIG[tier]
-  const userType = tier === 'individual' ? 'personal' : 'business'
-  const regenerations = PRICING_CONFIG.regenerations[userType]
-
-  if (period && tierConfig[period]) {
-    const credits = period === 'annual' ? tierConfig.includedCredits * 12 : tierConfig.includedCredits
-    return calculatePricePerPhoto(tierConfig[period].price, credits, regenerations)
-  }
+  const regenerations = PRICING_CONFIG.regenerations[tier]
 
   return calculatePricePerPhoto(
-    tierConfig.monthly.price,
-    tierConfig.includedCredits,
+    tierConfig.price,
+    tierConfig.credits,
     regenerations
   )
 }
@@ -69,36 +46,22 @@ export function getPricingDisplay() {
       regenerations: PRICING_CONFIG.regenerations.tryOnce,
     },
     individual: {
-      monthly: {
-        price: formatPrice(PRICING_CONFIG.individual.monthly.price),
-        credits: PRICING_CONFIG.individual.includedCredits,
-        pricePerPhoto: formatPrice(getPricePerPhoto('individual', 'monthly')),
-        regenerations: PRICING_CONFIG.regenerations.personal,
-      },
-      annual: {
-        price: formatPrice(PRICING_CONFIG.individual.annual.price),
-        credits: PRICING_CONFIG.individual.includedCredits,
-        pricePerPhoto: formatPrice(getPricePerPhoto('individual', 'annual')),
-        regenerations: PRICING_CONFIG.regenerations.personal,
-        savings: formatPrice(calculateAnnualSavings('individual')),
-      },
-      topUp: formatPrice(PRICING_CONFIG.individual.topUp.price),
+      price: formatPrice(PRICING_CONFIG.individual.price),
+      credits: PRICING_CONFIG.individual.credits,
+      pricePerPhoto: formatPrice(getPricePerPhoto('individual')),
+      regenerations: PRICING_CONFIG.regenerations.individual,
     },
-    pro: {
-      monthly: {
-        price: formatPrice(PRICING_CONFIG.pro.monthly.price),
-        credits: PRICING_CONFIG.pro.includedCredits,
-        pricePerPhoto: formatPrice(getPricePerPhoto('pro', 'monthly')),
-        regenerations: PRICING_CONFIG.regenerations.business,
+    proSmall: {
+      price: formatPrice(PRICING_CONFIG.proSmall.price),
+      credits: PRICING_CONFIG.proSmall.credits,
+      pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
+      regenerations: PRICING_CONFIG.regenerations.proSmall,
       },
-      annual: {
-        price: formatPrice(PRICING_CONFIG.pro.annual.price),
-        credits: PRICING_CONFIG.pro.includedCredits,
-        pricePerPhoto: formatPrice(getPricePerPhoto('pro', 'annual')),
-        regenerations: PRICING_CONFIG.regenerations.business,
-        savings: formatPrice(calculateAnnualSavings('pro')),
-      },
-      topUp: formatPrice(PRICING_CONFIG.pro.topUp.price),
+    proLarge: {
+      price: formatPrice(PRICING_CONFIG.proLarge.price),
+      credits: PRICING_CONFIG.proLarge.credits,
+      pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
+      regenerations: PRICING_CONFIG.regenerations.proLarge,
     },
   }
 }

@@ -6,7 +6,7 @@ import { CheckoutButton } from '@/components/ui'
 import { calculatePricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing'
 import { PRICING_CONFIG } from '@/config/pricing'
 
-type Tier = 'individual' | 'pro' | 'try_once'
+type Tier = 'individual' | 'proSmall' | 'proLarge' | 'try_once'
 
 interface TopUpCardProps {
   tier: Tier
@@ -20,8 +20,11 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
   const tAll = useTranslations()
 
   const details = useMemo(() => {
-    if (tier === 'pro') {
-      return { price: PRICING_CONFIG.pro.topUp.price, credits: PRICING_CONFIG.pro.topUp.credits }
+    if (tier === 'proSmall') {
+      return { price: PRICING_CONFIG.proSmall.topUp.price, credits: PRICING_CONFIG.proSmall.topUp.credits }
+    }
+    if (tier === 'proLarge') {
+      return { price: PRICING_CONFIG.proLarge.topUp.price, credits: PRICING_CONFIG.proLarge.topUp.credits }
     }
     if (tier === 'individual') {
       return { price: PRICING_CONFIG.individual.topUp.price, credits: PRICING_CONFIG.individual.topUp.credits }
@@ -33,10 +36,12 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
   const displayPricePerPhoto = useMemo(() => {
     const regenerations = typeof regenerationsOverride === 'number'
       ? regenerationsOverride
-      : (tier === 'pro'
-          ? PRICING_CONFIG.regenerations.business
+      : (tier === 'proSmall'
+          ? PRICING_CONFIG.regenerations.proSmall
+          : tier === 'proLarge'
+            ? PRICING_CONFIG.regenerations.proLarge
           : tier === 'individual'
-            ? PRICING_CONFIG.regenerations.personal
+              ? PRICING_CONFIG.regenerations.individual
             : PRICING_CONFIG.regenerations.tryOnce)
     const ppf = calculatePricePerPhoto(details.price, details.credits, regenerations)
     return { value: formatPrice(ppf), regenerations }
@@ -46,8 +51,10 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
     <div className={`relative bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-200 flex flex-col h-full ${className}`}>
       <div className="mb-6">
         <h3 className="text-2xl font-bold text-gray-900 mb-1">
-          {tier === 'pro'
-            ? t('proTopUp', { defaultMessage: 'Pro top-up' })
+          {tier === 'proSmall'
+            ? t('proSmallTopUp', { defaultMessage: 'Pro Small top-up' })
+            : tier === 'proLarge'
+              ? t('proLargeTopUp', { defaultMessage: 'Pro Large top-up' })
             : tier === 'individual'
               ? t('individualTopUp', { defaultMessage: 'Individual top-up' })
               : t('tryOnceTopUp', { defaultMessage: 'Try Once top-up' })}
@@ -60,7 +67,7 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
           <span className="text-gray-600 whitespace-nowrap text-sm leading-none"></span>
         </div>
         <p className="text-sm text-brand-primary font-semibold mt-2">
-          {details.credits} {t('credits', { defaultMessage: 'credits' })}
+          {calculatePhotosFromCredits(details.credits)} {t('photos', { defaultMessage: 'photos' })}
         </p>
 
         <div className="mt-4 relative group">
@@ -87,10 +94,12 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
         {(() => {
           const regenerations = typeof regenerationsOverride === 'number'
             ? regenerationsOverride
-            : (tier === 'pro'
-                ? PRICING_CONFIG.regenerations.business
+            : (tier === 'proSmall'
+                ? PRICING_CONFIG.regenerations.proSmall
+                : tier === 'proLarge'
+                  ? PRICING_CONFIG.regenerations.proLarge
                 : tier === 'individual'
-                  ? PRICING_CONFIG.regenerations.personal
+                    ? PRICING_CONFIG.regenerations.individual
                   : PRICING_CONFIG.regenerations.tryOnce)
           const photos = calculatePhotosFromCredits(details.credits)
           const regenerationText = t('variationsBullet', { count: regenerations })

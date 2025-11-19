@@ -294,7 +294,7 @@ export default function AdminFeedbackPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {item.rating === 'up' ? (
-                        <span className="text-green-600">👍 {tFeedback('rating.up')}</span>
+                        <span className="text-brand-secondary-hover">👍 {tFeedback('rating.up')}</span>
                       ) : (
                         <span className="text-red-600">👎 {tFeedback('rating.down')}</span>
                       )}
@@ -311,7 +311,7 @@ export default function AdminFeedbackPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {item.resolved ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-secondary-lighter text-brand-secondary-text">
                           {t('status.resolved')}
                         </span>
                       ) : (
@@ -326,7 +326,7 @@ export default function AdminFeedbackPage() {
                         className={`px-3 py-1 rounded text-xs font-medium ${
                           item.resolved
                             ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                            : 'bg-green-100 text-green-800 hover:bg-green-200'
+                            : 'bg-brand-secondary-lighter text-brand-secondary-text hover:bg-brand-secondary-border'
                         }`}
                       >
                         {item.resolved ? t('actions.unresolve') : t('actions.resolve')}

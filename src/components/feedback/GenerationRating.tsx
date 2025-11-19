@@ -258,7 +258,7 @@ export function GenerationRating({
   // Show thank you message briefly, then show persistent rating state
   if (showThankYou && justSubmitted) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-gray-200/50 text-sm text-green-600 font-medium">
+      <div className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-gray-200/50 text-sm text-brand-secondary-hover font-medium">
         <span>✓</span>
         <span>{t('rating.thankYou')}</span>
       </div>
@@ -275,8 +275,8 @@ export function GenerationRating({
               disabled={loading}
               className={`p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border border-gray-200/50 transition-all ${
                 (submitted && rating === 'up') || rating === 'up'
-                  ? 'text-green-600 bg-green-50/90'
-                  : 'text-gray-600 hover:text-green-600 hover:bg-white'
+                  ? 'text-brand-secondary-hover bg-brand-secondary-light/90'
+                  : 'text-gray-600 hover:text-brand-secondary-hover hover:bg-white'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
               aria-label={t('rating.up')}
               title={t('rating.up')}

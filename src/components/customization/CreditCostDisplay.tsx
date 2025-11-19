@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { useEffect, useState } from 'react'
 
 interface CreditCostDisplayProps {
@@ -51,6 +52,9 @@ export default function CreditCostDisplay({
     fetchCredits()
   }, [creditType, remainingCredits])
 
+  // Convert credits to photos for display
+  const photoCost = calculatePhotosFromCredits(creditCost)
+  const remainingPhotos = credits !== undefined ? calculatePhotosFromCredits(credits) : undefined
   const hasEnoughCredits = credits !== undefined && credits >= creditCost
 
   // Compact variant for inline display
@@ -58,11 +62,11 @@ export default function CreditCostDisplay({
     return (
       <div className={`inline-flex items-center gap-2 text-sm ${className}`}>
         <span className="font-medium text-gray-700">
-          {creditCost} {t('credits', { default: 'credits' })}
+          {photoCost} {t('photos', { default: 'photos' })}
         </span>
-        {showRemaining && !isLoading && (
+        {showRemaining && !isLoading && remainingPhotos !== undefined && (
           <span className="text-gray-500">
-            ({t('remaining', { default: 'Remaining' })}: {credits})
+            ({t('remaining', { default: 'Remaining' })}: {remainingPhotos})
           </span>
         )}
       </div>
@@ -78,16 +82,16 @@ export default function CreditCostDisplay({
             {t('cost', { default: 'Cost' })}:
           </span>
           <span className={`font-medium ${hasEnoughCredits ? 'text-gray-900' : 'text-red-600'}`}>
-            {creditCost} {t('credits', { default: 'credits' })}
+            {photoCost} {t('photos', { default: 'photos' })}
           </span>
         </div>
-        {showRemaining && !isLoading && (
+        {showRemaining && !isLoading && remainingPhotos !== undefined && (
           <div className="flex items-center justify-between text-sm mt-2 pt-2 border-t border-gray-200">
             <span className="text-gray-600">
               {t('remaining', { default: 'Remaining' })}:
             </span>
             <span className={`font-medium ${hasEnoughCredits ? 'text-brand-secondary' : 'text-red-600'}`}>
-              {credits} {t('credits', { default: 'credits' })}
+              {remainingPhotos} {t('photos', { default: 'photos' })}
             </span>
           </div>
         )}
@@ -124,23 +128,23 @@ export default function CreditCostDisplay({
                 {t('costPerGeneration', { default: 'Cost per generation' })}:
               </span>
               <span className={`text-sm font-bold ${hasEnoughCredits ? 'text-blue-900' : 'text-red-600'}`}>
-                {creditCost} {t('credits', { default: 'credits' })}
+                {photoCost} {t('photos', { default: 'photos' })}
               </span>
             </div>
-            {showRemaining && !isLoading && (
+            {showRemaining && !isLoading && remainingPhotos !== undefined && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-blue-700">
                   {t('yourBalance', { default: 'Your balance' })}:
                 </span>
                 <span className={`text-sm font-bold ${hasEnoughCredits ? 'text-brand-secondary-text' : 'text-red-600'}`}>
-                  {credits} {t('credits', { default: 'credits' })}
+                  {remainingPhotos} {t('photos', { default: 'photos' })}
                 </span>
               </div>
             )}
             {!hasEnoughCredits && credits !== undefined && (
               <div className="mt-2 pt-2 border-t border-blue-200">
                 <p className="text-xs text-red-700 font-medium">
-                  ⚠️ {t('insufficientCredits', { default: 'You need {credits} more credits to generate', credits: creditCost - credits })}
+                  ⚠️ {t('insufficientPhotos', { default: 'You need {photos} more photos to generate', photos: calculatePhotosFromCredits(creditCost - credits) })}
                 </p>
               </div>
             )}

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 
 interface InviteDashboardHeaderProps {
   title: string
@@ -110,13 +111,8 @@ export default function InviteDashboardHeader({
             </button>
           ) : creditsRemaining !== undefined ? (
             <div className="flex-shrink-0 text-right">
-              <p className="text-xs text-gray-500">Credits</p>
-              <p className="text-xl font-bold text-brand-primary">{creditsRemaining}</p>
-              {photosAffordable !== undefined && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Good for {photosAffordable} photo{photosAffordable === 1 ? '' : 's'}
-                </p>
-              )}
+              <p className="text-xs text-gray-500">Photos</p>
+              <p className="text-xl font-bold text-brand-primary">{calculatePhotosFromCredits(creditsRemaining)}</p>
             </div>
           ) : null}
         </div>
@@ -156,11 +152,8 @@ export default function InviteDashboardHeader({
               {right}
               {showCredits && (
                 <div className="text-right">
-                  <p className="text-sm text-gray-500 mb-1">Available Credits</p>
-                  <p className="text-2xl font-bold text-brand-primary">{creditsRemaining}</p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Good for {photosAffordable} photo{photosAffordable === 1 ? '' : 's'}
-                  </p>
+                  <p className="text-sm text-gray-500 mb-1">Available Photos</p>
+                  <p className="text-2xl font-bold text-brand-primary">{calculatePhotosFromCredits(creditsRemaining)}</p>
                 </div>
               )}
             </div>

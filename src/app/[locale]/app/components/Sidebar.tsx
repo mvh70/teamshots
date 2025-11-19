@@ -5,6 +5,7 @@ import { usePathname } from '@/i18n/routing'
 import { Link } from '@/i18n/routing'
 import { useCredits } from '@/contexts/CreditsContext'
 import { jsonFetcher } from '@/lib/fetcher'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { 
   HomeIcon, 
   UsersIcon, 
@@ -23,7 +24,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import {useTranslations} from 'next-intl'
 import { BRAND_CONFIG } from '@/config/brand'
-import { normalizePlanTierForUI, isFreePlan, type PlanPeriod } from '@/domain/subscription/utils'
+import { normalizePlanTierForUI, isFreePlan, type PlanPeriod, type UIPlanTier } from '@/domain/subscription/utils'
 import { AccountMode, fetchAccountMode } from '@/domain/account/accountMode'
 import { SubscriptionInfo } from '@/domain/subscription/subscription'
 
@@ -46,6 +47,24 @@ import {
 } from '@heroicons/react/24/solid'
 
 type TeamOnboardingStep = 'team_setup' | 'style_setup' | 'invite_members'
+
+/**
+ * Map UIPlanTier to the simplified state type used in the sidebar
+ */
+function mapUITierToStateTier(uiTier: UIPlanTier): 'free' | 'individual' | 'pro' {
+  switch (uiTier) {
+    case 'free':
+    case 'tryOnce':
+      return 'free'
+    case 'individual':
+      return 'individual'
+    case 'proSmall':
+    case 'proLarge':
+      return 'pro'
+    default:
+      return 'free'
+  }
+}
 
 interface SidebarRoleState {
   isTeamAdmin: boolean
@@ -112,22 +131,24 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
   useEffect(() => {
     if (initialSubscription) {
       const tierRaw = initialSubscription.tier ?? null
-      const period = initialSubscription.period ?? null
+      const period = (initialSubscription.period as PlanPeriod) ?? null
 
       // Normalize tier for UI (checks period first to determine free plan)
       const normalized = normalizePlanTierForUI(tierRaw, period)
-      setPlanTier(normalized)
+      setPlanTier(mapUITierToStateTier(normalized))
 
-      // Compute human-readable label based on tier + period
-      let label = 'Individual Free package'
+      // Compute human-readable label based on tier (transactional pricing)
+      let label = 'Free package'
       if (isFreePlan(period)) {
-        label = tierRaw === 'pro' ? 'Pro Free package' : 'Individual Free package'
-      } else if (period === 'try_once') {
-        label = tierRaw === 'pro' ? 'Pro try-once' : 'Individual try-once'
-      } else if (period === 'monthly') {
-        label = tierRaw === 'pro' ? 'Pro monthly' : 'Individual monthly'
-      } else if (period === 'annual') {
-        label = tierRaw === 'pro' ? 'Pro annual' : 'Individual annual'
+        label = 'Free package'
+      } else if (period === 'tryOnce') {
+        label = 'Try Once'
+      } else if (tierRaw === 'individual') {
+        label = 'Individual'
+      } else if ((tierRaw as string) === 'proSmall') {
+        label = 'Pro Small'
+      } else if ((tierRaw as string) === 'proLarge') {
+        label = 'Pro Large'
       }
       setPlanLabel(label)
     }
@@ -256,18 +277,20 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
 
             // Normalize tier for UI (checks period first to determine free plan)
             const normalized = normalizePlanTierForUI(tierRaw, period)
-            setPlanTier(normalized)
+            setPlanTier(mapUITierToStateTier(normalized))
 
-            // Compute human-readable label based on tier + period
-            let label = 'Individual Free package'
+            // Compute human-readable label based on tier (transactional pricing)
+            let label = 'Free package'
             if (isFreePlan(period)) {
-              label = tierRaw === 'pro' ? 'Pro Free package' : 'Individual Free package'
-            } else if (period === 'try_once') {
-              label = tierRaw === 'pro' ? 'Pro try-once' : 'Individual try-once'
-            } else if (period === 'monthly') {
-              label = tierRaw === 'pro' ? 'Pro monthly' : 'Individual monthly'
-            } else if (period === 'annual') {
-              label = tierRaw === 'pro' ? 'Pro annual' : 'Individual annual'
+              label = 'Free package'
+            } else if (period === 'tryOnce') {
+              label = 'Try Once'
+            } else if ((tierRaw as string) === 'individual') {
+              label = 'Individual'
+            } else if ((tierRaw as string) === 'proSmall') {
+              label = 'Pro Small'
+            } else if ((tierRaw as string) === 'proLarge') {
+              label = 'Pro Large'
             }
             setPlanLabel(label)
             
@@ -280,17 +303,19 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                   const freshTier = data?.subscription?.tier ?? null
                   const freshPeriod = data?.subscription?.period ?? null
                   const normalized = normalizePlanTierForUI(freshTier, freshPeriod)
-                  setPlanTier(normalized)
+                  setPlanTier(mapUITierToStateTier(normalized))
                   // Update label if needed
-                  let label = 'Individual Free package'
+                  let label = 'Free package'
                   if (isFreePlan(freshPeriod)) {
-                    label = freshTier === 'pro' ? 'Pro Free package' : 'Individual Free package'
-                  } else if (freshPeriod === 'try_once') {
-                    label = freshTier === 'pro' ? 'Pro try-once' : 'Individual try-once'
-                  } else if (freshPeriod === 'monthly') {
-                    label = freshTier === 'pro' ? 'Pro monthly' : 'Individual monthly'
-                  } else if (freshPeriod === 'annual') {
-                    label = freshTier === 'pro' ? 'Pro annual' : 'Individual annual'
+                    label = 'Free package'
+                  } else if (freshPeriod === 'tryOnce') {
+                    label = 'Try Once'
+                  } else if (freshTier === 'individual') {
+                    label = 'Individual'
+                  } else if (freshTier === 'proSmall') {
+                    label = 'Pro Small'
+                  } else if (freshTier === 'proLarge') {
+                    label = 'Pro Large'
                   }
                   setPlanLabel(label)
                 })
@@ -312,23 +337,25 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
 
         // Normalize tier for UI (checks period first to determine free plan)
         const normalized = normalizePlanTierForUI(tierRaw, period)
-        setPlanTier(normalized)
+        setPlanTier(mapUITierToStateTier(normalized))
 
-        // Compute human-readable label based on tier + period
-        let label = 'Individual Free package'
+        // Compute human-readable label based on tier (transactional pricing)
+        let label = 'Free package'
         if (isFreePlan(period)) {
-          label = tierRaw === 'pro' ? 'Pro Free package' : 'Individual Free package'
-        } else if (period === 'try_once') {
-          label = tierRaw === 'pro' ? 'Pro try-once' : 'Individual try-once'
-        } else if (period === 'monthly') {
-          label = tierRaw === 'pro' ? 'Pro monthly' : 'Individual monthly'
-        } else if (period === 'annual') {
-          label = tierRaw === 'pro' ? 'Pro annual' : 'Individual annual'
+          label = 'Free package'
+        } else if (period === 'tryOnce') {
+          label = 'Try Once'
+        } else if (tierRaw === 'individual') {
+          label = 'Individual'
+        } else if (tierRaw === 'proSmall') {
+          label = 'Pro Small'
+        } else if (tierRaw === 'proLarge') {
+          label = 'Pro Large'
         }
         setPlanLabel(label)
       } catch {
         setPlanTier('free')
-        setPlanLabel('Individual Free package')
+        setPlanLabel('Free package')
       }
     }
     if (session?.user?.id) fetchSubscription()
@@ -608,21 +635,21 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
               )}
               {!effectiveCollapsed && (
                 <h3 className="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-                  {t('credits.title')}
+                  {t('photos.title')}
                 </h3>
               )}
               <div className={`space-y-2 ${effectiveCollapsed ? 'text-center' : ''}`}>
                 {accountMode === 'individual' && (
                   <div className={`relative group flex items-center justify-between ${effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
                     <span className={`text-xs font-medium text-gray-500 ${effectiveCollapsed ? 'text-center' : ''}`}>
-                      {t('credits.individual')}
+                      {t('photos.individual')}
                     </span>
                     <span className={`text-sm font-semibold ${effectiveCollapsed ? 'text-lg' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
-                      {credits.individual ?? 0}
+                      {calculatePhotosFromCredits(credits.individual ?? 0)}
                     </span>
                     {effectiveCollapsed && (
                       <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
-                        {t('credits.individual')}: {credits.individual ?? 0}
+                        {t('photos.individual')}: {calculatePhotosFromCredits(credits.individual ?? 0)}
                       </span>
                     )}
                   </div>
@@ -632,28 +659,28 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                   <>
                     <div className={`relative group flex items-center justify-between ${effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
                       <span className={`text-xs font-medium text-gray-500 ${effectiveCollapsed ? 'text-center' : ''}`}>
-                        {t('credits.team')}
+                        {t('photos.team')}
                       </span>
                       <span className={`text-sm font-semibold ${effectiveCollapsed ? 'text-lg' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
-                        {credits.team ?? 0}
+                        {calculatePhotosFromCredits(credits.team ?? 0)}
                       </span>
                       {effectiveCollapsed && (
                         <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
-                          {t('credits.team')}: {credits.team ?? 0}
+                          {t('photos.team')}: {calculatePhotosFromCredits(credits.team ?? 0)}
                         </span>
                       )}
                     </div>
                     {isTeamAdmin && allocatedCredits > 0 && (
                       <div className={`relative group flex items-center justify-between ${effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
                         <span className={`text-xs font-medium text-gray-500 ${effectiveCollapsed ? 'text-center' : ''}`}>
-                          {t('credits.allocated')}
+                          {t('photos.allocated')}
                         </span>
                         <span className={`text-sm font-semibold ${effectiveCollapsed ? 'text-lg' : ''} text-brand-cta`}>
-                          {allocatedCredits}
+                          {calculatePhotosFromCredits(allocatedCredits)}
                         </span>
                         {effectiveCollapsed && (
                           <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
-                            {t('credits.allocated')}: {allocatedCredits}
+                            {t('photos.allocated')}: {calculatePhotosFromCredits(allocatedCredits)}
                           </span>
                         )}
                       </div>
@@ -682,12 +709,12 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                     className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs md:text-xs font-medium text-white rounded-md transition-colors bg-brand-cta hover:bg-brand-cta-hover min-h-[44px] md:min-h-0"
                   >
                     <PlusIcon className="h-4 w-4 md:h-3 md:w-3 mr-1" />
-                    {t('credits.buyMore')}
+                    {t('photos.buyMore')}
                   </Link>
                 )}
                 {effectiveCollapsed && (
                   <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] shadow-lg">
-                    {t('credits.buyMore')}
+                    {t('photos.buyMore')}
                   </span>
                 )}
               </div>

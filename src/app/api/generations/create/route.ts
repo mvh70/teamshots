@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
 import { Env } from '@/lib/env'
 import { getPersonCreditBalance } from '@/domain/credits/credits'
-import { PRICING_CONFIG } from '@/config/pricing'
+import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
 import { getRegenerationCount } from '@/domain/pricing'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
@@ -401,28 +401,69 @@ export async function POST(request: NextRequest) {
         }
       })
     } else {
-      // This is a new generation - determine user type for regeneration limits
-      let userType: 'tryOnce' | 'personal' | 'business' | 'invited' = 'tryOnce'
+      // This is a new generation - determine regeneration limits
+      // 3 types: Individual, Team admin (proSmall/proLarge), Invited (not on a plan, credits assigned by team admin)
       
-      // Check if user has a subscription
-      if (session.user.id) {
+      // Check if person was invited (has inviteToken) - they're not on a plan
+      if (ownerPerson.inviteToken && ownerPerson.teamId) {
+        // Invited users get regeneration count from their team admin's plan
+        const team = await prisma.team.findUnique({
+          where: { id: ownerPerson.teamId },
+          select: {
+            admin: {
+              select: {
+                planPeriod: true,
+                planTier: true
+              }
+            }
+          }
+        })
+        
+        if (team?.admin) {
+          const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
+          const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier
+          
+          // Determine team admin's PricingTier to get regeneration count
+          let adminPricingTier: PricingTier = 'proSmall' // Default fallback
+          if (adminPlanPeriod === 'proLarge' || adminPlanTier === 'proLarge') {
+            adminPricingTier = 'proLarge'
+          } else if (adminPlanPeriod === 'proSmall' || adminPlanTier === 'pro' || adminPlanTier === 'proSmall') {
+            adminPricingTier = 'proSmall'
+          }
+          
+          maxRegenerations = getRegenerationCount(adminPricingTier)
+        } else {
+          // Fallback if team admin not found
+          maxRegenerations = PRICING_CONFIG.regenerations.invited
+        }
+      } else if (session.user.id) {
+        // Check user's subscription to determine plan
         const user = await prisma.user.findUnique({
           where: { id: session.user.id }
         })
         const userPlanTier = (user as unknown as { planTier?: string | null })?.planTier
+        const userPlanPeriod = (user as unknown as { planPeriod?: string | null })?.planPeriod
+        
+        let pricingTier: PricingTier = 'tryOnce' // Default fallback
+        
         if (userPlanTier === 'individual') {
-          userType = 'personal'
-        } else if (userPlanTier === 'pro') {
-          userType = 'business'
+          // Individual user - 1 plan only
+          pricingTier = 'individual'
+        } else if (userPlanTier === 'pro' || userPlanPeriod === 'proSmall' || userPlanPeriod === 'proLarge') {
+          // Team admin - determine proSmall vs proLarge from planPeriod
+          if (userPlanPeriod === 'proLarge') {
+            pricingTier = 'proLarge'
+          } else {
+            // Default to proSmall for 'pro' tier or proSmall period
+            pricingTier = 'proSmall'
+          }
         }
+        
+        maxRegenerations = getRegenerationCount(pricingTier)
+      } else {
+        // No user session - default to tryOnce
+        maxRegenerations = getRegenerationCount('tryOnce')
       }
-      
-      // Check if person was invited (has inviteToken)
-      if (ownerPerson.inviteToken) {
-        userType = 'invited'
-      }
-      
-      maxRegenerations = getRegenerationCount(userType)
     }
 
     // Handle generation grouping

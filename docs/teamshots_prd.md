@@ -29,20 +29,19 @@ Upload any photo â†’ Get professional team photos in 60 seconds using AI.
 - Generation type selection (personal vs team use)
 - Automated team scraping from team website
 - 5 style presets + custom backgrounds
-- Credit-based pricing: Try Once + 2 subscription tiers with top-ups
-- Credits roll over, never expire
+- Domain-based pricing: photoshotspro.com (individual) / teamshotspro.com (team)
+- Photo packages: Try Once + Individual + Team Small + Team Large
 - **Photo retention policy:**
-  - Try Once: 30 days from generation
-  - Subscriptions: Active period + 30 days after expiration
-- Per-team-member credit allocation (5 default, admin adjustable)
+  - All plans: Photos retained indefinitely
+- Per-team-member photo allocation (5 default, admin adjustable)
 - Photo consent & approval workflow (consent before upload, approval before save)
 - Logo placement variations (multiple positions generated)
-- Team-level credit pool for bulk operations
-- **Enhanced Credit System**: Separate team credits (admin-allocated) and individual credits (user-owned)
+- Team-level photo pool for bulk operations
+- **Enhanced Photo System**: Separate team photos (admin-allocated) and individual photos (user-owned)
 - **Content Moderation**: LLM-based validation for inappropriate content (nudity/obscenity filtering)
 - Admin views approved photos only
 - Context regeneration (admin can regenerate all team photos with new contexts)
-- Audit trail for credit usage (tracks rejections without storing photos)
+- Audit trail for photo usage (tracks rejections without storing photos)
 - Email/password authentication with OTP verification and magic links
 - Team domain verification
 - Bilingual support (EN/ES) with next-intl (machine translation for beta)

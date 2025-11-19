@@ -20,13 +20,13 @@
     "subtitleMain": "Turn any selfie into consistent, on-brand headshots. No photographer, no coordination.",
     "instantTransformation": "⚡ Turn any selfie into a professional headshot in 60 seconds",
     "finalCtaTitle": "Ready to transform your team photos?",
-    "finalCtaSubtitle": "Get your free professional headshot and see the difference in 60 seconds.",
+    "finalCtaSubtitle": "Get your team's professional headshots and see the difference in 60 seconds.",
     "getStartedFree": "Sign up now",
     "getStarted": "Get Started",
     "viewPricing": "View pricing",
-    "joinWaitlist": "Get MY free professional headshot",
-    "freeCtaSubtext": "Get 1 free professional headshot in a predefined style when you sign up. No commitment, no credit card.",
-    "freeCtaAria": "Get one free professional headshot in a predefined style when you sign up. No commitment.",
+    "joinWaitlist": "Get your team's professional headshots",
+    "freeCtaSubtext": "Get your team's professional headshots in a predefined style when you sign up. No commitment, no credit card.",
+    "freeCtaAria": "Get your team's professional headshots in a predefined style when you sign up. No commitment.",
     "urgency": "Your website looks unprofessional right now",
     "guarantee": "100% free test. No credit card required. Professional results guaranteed.",
     "secure": "SSL encrypted & secure",
@@ -122,8 +122,8 @@
     "subtitle": "Stop wasting weeks coordinating photoshoots. Here's exactly how modern teams get professional headshots instantly.",
     "totalTime": "Total time:",
     "totalTimeValue": "5 minutes",
-    "cta": "Get MY free headshot now",
-    "guarantee": "Risk-free: Get 1 free professional headshot to prove it works. No credit card, no commitment, no BS.",
+    "cta": "Get your team's professional headshots now",
+    "guarantee": "Risk-free: Get your team's professional headshots to prove it works. No credit card, no commitment, no BS.",
     "steps": {
       "1": {
         "title": "Set your brand style",
@@ -240,8 +240,7 @@
           "1": "1024x1024px high-res downloads",
           "2": "30-day photo retention",
           "3": "Credits roll over, never expire",
-          "4": "Top-up at $0.90 per 4 credits",
-          "5": "Priority email support"
+          "4": "Top-up at $0.90 per 4 credits"
         },
         "cta": "Start saving now",
         "savings": "Save $43/year vs annual"
@@ -257,8 +256,7 @@
           "1": "1024x1024px high-res downloads",
           "2": "30-day photo retention",
           "3": "Credits roll over, never expire",
-          "4": "Top-up at $0.60 per 4 credits",
-          "5": "Priority support with dedicated account manager"
+          "4": "Top-up at $0.60 per 4 credits"
         },
         "cta": "Level up your team",
         "savings": "Save $108/year vs annual"
@@ -293,47 +291,41 @@
     "description": "Built for teams and startup founders. Turn team selfies into on-brand headshots without photoshoots. Fast, consistent, and perfect for remote teams."
   },
   "pricing": {
-    "monthly": "Monthly",
-    "yearly": "Yearly",
     "freeIntro": "Your free test generation is ready. Upgrade to unlock unlimited access and team features. Get started in 60 seconds.",
     "title": "Simple, Transparent Pricing",
     "subtitle": "You're one click from professional team photos that make everyone look great. Choose a plan and get going.",
     "mostPopular": "Most Popular",
-    "credits": "credits",
-    "creditsPerMonth": "credits monthly",
+    "photos": "photos",
+    "photo": "photo",
+    "photoCount": "{count, plural, one {# photo} other {# photos}}",
     "generations": "generations",
     "year": "year",
     "save": "Save",
-    "topUpTitle": "Credit top-up",
+    "topUpTitle": "Photo top-up",
     "individualTopUp": "Individual top-up",
-    "proTopUp": "Pro top-up",
+    "proSmallTopUp": "Pro Small top-up",
+    "proLargeTopUp": "Pro Large top-up",
     "tryOnceTopUp": "Try Once top-up",
     "topUpSubtitle": "For occasional use",
     "topUpPackageLabel": "Top-up package",
-    "confirmTopUp": "Refill my credits",
+    "confirmTopUp": "Refill my photos",
     "photoGenerations": "photo generations",
     "variations": "variations",
     "photosRetained30": "Photos retained for 30 days from generation",
     "photosRetainedAfterSubscription": "Photos retained while active + 30 days after",
-    "topUpCreditsAvailable": "Top-up credits available",
+    "topUpPhotosAvailable": "Top-up photos available",
     "noSupport": "No support",
       "checkoutCanceled": "Checkout canceled. No charges were made. (Changed your mind? We get it, happens to the best of us)",
       "checkoutError": "Oops! Something went wrong. Please try again. (If it keeps happening, let us know-we're here to help)",
       "checkoutApiError": "Failed to create checkout session",
-    "actions": {
-      "upgradeToYearly": "Change to yearly",
-      "downgradeToMonthly": "Downgrade to monthly",
-      "effectiveOn": "Effective on {date}"
-    },
     "plans": {
       "tryOnce": {
         "name": "Try Once",
         "period": "one-time",
         "description": "Perfect for testing the service",
         "features": [
-          "<strong>{photos}</strong> photo generation",
           "Retry up to 2 times to perfect each photo",
-          "Photos retained for 30 days from generation",
+          "Photos retained until account closure",
           "Top-up credits available",
           "Email support"
         ],
@@ -341,38 +333,43 @@
       },
       "individual": {
         "name": "Individual",
-        "period": "per month",
+        "period": "one-time",
         "description": "For solo professionals who like to look good",
         "features": [
-          "<strong>{photos}</strong> photo generations",
           "Retry up to 3 times to perfect each photo",
-          "Photos retained while active + 30 days after",
-          "Credits roll over, never expire",
-          "Top-up credits available",
-          "Priority email support"
+          "Photos retained until account closure",
+          "Top-up credits available"
         ],
-        "cta": "Level me up"
+        "cta": "Get my photos"
       },
-      "pro": {
-        "name": "Pro",
-        "period": "per month",
-        "description": "For teams who want everyone to look equally amazing",
+      "proSmall": {
+        "name": "Pro Small",
+        "period": "one-time",
+        "description": "For small teams up to 5 members",
         "features": [
-          "<strong>{photos}</strong> photo generations",
           "Retry up to 4 times to perfect each photo",
-          "All Individual features, plus:",
-          "Team member invitations",
+          "Photos retained until account closure",
+          "Team photo management",
+          "Top-up credits available"
+        ],
+        "cta": "Get team photos"
+      },
+      "proLarge": {
+        "name": "Pro Large",
+        "period": "one-time",
+        "description": "For larger teams",
+        "features": [
+          "Retry up to 4 times to perfect each photo",
+          "Photos retained until account closure",
           "Team photo management",
           "Company style templates",
-          "Admin approval workflow",
-          "Discounted top-up credits",
-          "Priority support with dedicated account manager"
+          "Top-up credits available"
         ],
-        "cta": "Level up the team"
+        "cta": "Scale the team"
       }
     },
-    "perPhotoVariation": "per photo variation",
-    "includesVariationsPerPhoto": "Includes {count} variations per photo",
+    "perPhotoVariation": "per photo retry",
+    "includesVariationsPerPhoto": "Includes {count} retries per photo",
     "variationsBullet": "Retry up to {count} times to perfect each photo",
     "faq": {
       "title": "Frequently Asked Questions",
@@ -400,21 +397,23 @@
       "subtitle": "Your purchase was successful. Here's what you unlocked:",
       "tryOnce": {
         "title": "Try Once Package",
-        "credits": "{count} credits for photo generation, good for {uniquePhotos} unique photo",
+        "credits": "{count} credits ({uniquePhotos} photo)",
+        "photos": "{count} photos for photo generation",
         "retries": "{count} free retries to perfect your photos"
       },
       "individual": {
         "title": "Individual Plan",
-        "credits": "{count} credits per month, good for {uniquePhotos} unique photos",
+        "credits": "{count} credits ({uniquePhotos} photos)",
         "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
         "styles": "Custom backgrounds and styles"
       },
       "pro": {
         "title": "Pro Plan",
-        "credits": "{count} credits per month, good for {uniquePhotos} unique photos",
+        "credits": "{count} credits ({uniquePhotos} photos)",
+        "photos": "{count} photos per month",
         "retriesAndVariations": "{retries} free retries per generation, so {totalVariations} photo variations in total",
         "styles": "Custom backgrounds and team styles",
-        "team": "Team member invitations and management"
+        "team": "Team collaboration features"
       },
       "continueToGenerate": "Start Generating Photos",
       "continueToDashboard": "Go to Dashboard"
@@ -469,8 +468,8 @@
       "planGeneric": "your plan",
       "planTryOnce": "Try Once",
       "planSummaryTryOnce": "{credits} credits, {photos} photos",
-      "planSummaryPro": "{credits} credits/month, {photos} photos/month",
-      "planSummaryIndividual": "{credits} credits/month, {photos} photos/month",
+      "planSummaryPro": "{credits} credits, {photos} photos",
+      "planSummaryIndividual": "{credits} credits, {photos} photos",
       "welcomeMessage": "Welcome",
       "planSummaryWelcome": "{credits} credits, {photos} photos to get started",
       "selectPlanPrompt": "Select a plan to continue",
@@ -531,11 +530,11 @@
         "dashboard": "Dashboard",
         "team": "Team",
         "personalGenerations": "Personal generations",
-        "teamGenerations": "Team generations",
+        "teamGenerations": "Generated photos",
         "selfies": "Selfies",
         "contexts": "Photo styles",
         "personalPhotoStyles": "Personal photo styles",
-        "teamPhotoStyles": "Team photo styles",
+        "teamPhotoStyles": "Predefined photo styles",
         "analytics": "Analytics",
         "settings": "Settings"
       },
@@ -547,15 +546,15 @@
         "individual": "Individual plan",
         "pro": "Pro plan"
       },
-      "credits": {
-        "label": "Credits",
-        "title": "Available credits",
-        "individual": "Personal credits",
-        "team": "Team credits",
+      "photos": {
+        "label": "Photos",
+        "title": "Available photos",
+        "individual": "Personal photos",
+        "team": "Team photos",
         "allocated": "of which allocated to invites",
         "monthlyReset": "Monthly reset",
         "progress": "{used}/{total}",
-        "buyMore": "Buy more credits"
+        "buyMore": "Buy more photos"
       },
       "generate": {
         "getSelfie": "Get selfie",
@@ -572,17 +571,17 @@
     "fallbackPersonalStyle": "Personal Style",
     "fallbackTeamStyle": "Team Style",
     "predefinedStyle": "Predefined style with preset settings",
-        "insufficientCredits": "Insufficient credits",
-        "insufficientCreditsMessage": "You need {required} credits to generate a photo. You currently have {current} credits. Time to top up!",
+        "insufficientPhotos": "Insufficient photos",
+        "insufficientPhotosMessage": "You need {required} photos to generate a photo. You currently have {current} photos. Time to top up!",
     "generatePhoto": "Generate photo",
-    "buyMoreCredits": "Buy more credits",
-        "noCreditsTitle": "No credits available",
-        "noCreditsMessage": "You need credits to generate photos (think of them as tickets to looking amazing). Purchase credits to get started with photo generation.",
-        "noTeamCreditsTitle": "No team credits available",
-        "noTeamCreditsMessage": "Your team has no credits available for team generations. Contact your team admin to request credits (nicely, please) or use your personal credits instead.",
-      "buyCredits": "Buy credits",
-      "requestCredits": "Request credits",
-      "usePersonalCredits": "Use personal credits",
+    "buyMorePhotos": "Buy more photos",
+        "noPhotosTitle": "No photos available",
+        "noPhotosMessage": "You need photos to generate photos (think of them as tickets to looking amazing). Purchase photos to get started with photo generation.",
+        "noTeamPhotosTitle": "No team photos available",
+        "noTeamPhotosMessage": "Your team has no photos available for team generations. Contact your team admin to request photos (nicely, please) or use your personal photos instead.",
+      "buyPhotos": "Buy photos",
+      "requestPhotos": "Request photos",
+      "usePersonalPhotos": "Use personal photos",
       "backToDashboard": "Back to dashboard"
       },
       "profile": {
@@ -617,11 +616,11 @@
         "photosGenerated": "Photos generated",
         "activeTemplates": "Active photo styles",
         "unlockPhotoStyles": "Unlock photo styles",
-        "creditsUsed": "Credits used",
-        "credits": "Credits",
-        "creditsUnit": "credits",
+        "photosUsed": "Photos used",
+        "photos": "Photos",
+        "photosUnit": "photos",
         "generationsAvailable": "{count, plural, =0 {No generations} =1 {generation} other {generations}} available",
-        "buyMore": "Buy more credits"
+        "buyMore": "Buy more photos"
       },
       "recentActivity": {
         "title": "Recent activity",
@@ -654,15 +653,15 @@
         "manageTeam": "Manage team"
       },
       "successMessages": {
-        "tryOnce": "Try Once package purchased successfully! {credits} credits have been added to your account.",
-        "individual": "Individual plan activated successfully! {credits} credits have been added to your account.",
-        "pro": "Pro plan activated successfully! {credits} credits have been added to your account.",
-        "topUp": "Credit top-up completed successfully! Your credits have been added to your account.",
-        "default": "Purchase completed successfully! Your credits have been added to your account.",
+        "tryOnce": "Try Once package purchased successfully! {photos} photos have been added to your account.",
+        "individual": "Individual plan activated successfully! {photos} photos have been added to your account.",
+        "pro": "Pro plan activated successfully! {photos} photos have been added to your account.",
+        "topUp": "Photo top-up completed successfully! Your photos have been added to your account.",
+        "default": "Purchase completed successfully! Your photos have been added to your account.",
         "titleTryOnce": "All set! 🎉",
         "titleIndividual": "You're in! 🚀",
         "titlePro": "Pro unlocked! 🎯",
-        "titleTopUp": "Credits loaded! ⚡"
+        "titleTopUp": "Photos loaded! ⚡"
       },
       "timeAgo": {
         "justNow": "Just now",
@@ -780,7 +779,7 @@
       "subtitle": "Manage your account preferences and company settings",
         "tabs": {
           "teamInformation": "Team information",
-          "subscription": "Subscription",
+          "subscription": "Pricing plan",
           "billing": "Billing",
           "adminTools": "Admin tools",
           "accountInfo": "Account info"
@@ -792,7 +791,7 @@
           "features": {
             "title": "Individual mode features:",
             "personal": "Personal photo generation",
-            "credits": "Individual credit management",
+            "photos": "Individual photo management",
             "contexts": "Personal photo styles and settings",
             "analytics": "Analytics for your own usage"
           }
@@ -802,7 +801,7 @@
           "features": {
             "title": "Company mode features:",
             "team": "Team member management and invitations",
-            "credits": "Team-wide credit allocation",
+            "photos": "Team-wide photo allocation",
             "contexts": "Shared photo styles and settings",
             "analytics": "Team analytics and reporting",
             "admin": "Admin controls and permissions"
@@ -837,8 +836,8 @@
           "description": "The path less traveled... but with fewer savings! 🗺️",
           "button": "Proceed anyway (we tried!) 😅"
         },
-        "title": "Subscription",
-        "noSubscription": "No active subscription yet. Choose a plan to get started and start looking amazing!",
+        "title": "Pricing plan",
+        "noSubscription": "Choose a plan to get started and start looking amazing!",
         "upgradeOptions": "Upgrade options",
         "plan": {
           "individual": "Individual subscription",
@@ -994,8 +993,8 @@
           "uploadContent": "Drop your selfie here and witness the transformation. We turn casual snapshots into headshots that make you shine like a LinkedIn legend.",
           "styleTitle": "Choose your style",
           "styleContent": "Personal photos for your professional image, or team photos if you want to coordinate your team's visual consistency.",
-          "creditsTitle": "Your credits",
-          "creditsContent": "Each generation costs 10 credits. Trust us, you'll want to use them all once you see how impressive you look.",
+          "photosTitle": "Your photos",
+          "photosContent": "Each generation costs 1 photo. Trust us, you'll want to use them all once you see how impressive you look.",
           "generateTitle": "Generate your photos",
           "generateContent": "Click here to begin your transformation. Your professional headshots will be ready before you can say 'cheese.'"
         },
@@ -1101,9 +1100,9 @@
         },
         "inviteTeamTour": {
           "pageTitle": "Your {teamName} Team Hub",
-          "pageContent": "Welcome to your {teamName} command center! Track who's joined the photo party, who's generated their pro shots (and who needs a nudge), and manage credits with ease. (Pro tip: More credits mean more smiles... or at least more headshots!)",
-          "tableTitle": "Manage invites and credits",
-          "tableContent": "Here's where the magic happens! See all your team members and pending invites in one place. Track who's joined, who's still waiting, and how many credits everyone has. It's like a mission control center, but for professional photos.",
+          "pageContent": "Welcome to your {teamName} command center! Track who's joined the photo party, who's generated their pro shots (and who needs a nudge), and manage photos with ease. (Pro tip: More photos mean more smiles... or at least more headshots!)",
+          "tableTitle": "Manage invites and photos",
+          "tableContent": "Here's where the magic happens! See all your team members and pending invites in one place. Track who's joined, who's still waiting, and how many photos everyone has. It's like a mission control center, but for professional photos.",
           "activeStyleTitle": "Your active photo style",
           "activeStyleContent": "This is the photo style your invited team members will use when generating their photos. All their photos will match this style for consistent branding across your team.",
           "activeStyleTitleFree": "Free Package Style",
@@ -1122,8 +1121,12 @@
           "regenerateContent": "You can retry this photo for free using the same settings. Each generation comes with free retries so you can perfect your results.",
           "downloadTitle": "Download your photo",
           "downloadContent": "Download your professional headshot in high resolution. Perfect for LinkedIn, your website, business cards, and more.",
-          "creditsTitle": "Generation cost and retries",
-          "creditsContent": "This shows the cost of the generation (10 credits) and how many free retries you have left. Use retries to perfect your results without spending more credits.",
+          "photosTitle": "Generation cost and retries",
+          "photosContent": "This shows the cost of the generation (1 photo) and how many free retries you have left. Use retries to perfect your results without spending more photos.",
+          "photosInfoTitle1": "Not thrilled with your photo?",
+          "photosInfoContent1": "No worries. You get free do-overs with every generation. Check here to see how many tries you have left.",
+          "photosInfoTitle2": "Your photo, your way",
+          "photosInfoContent2": "Love it? Download it ↓. Want another shot? Retry it ↻. Changed your mind? Delete it 🗑️. You're in control.",
           "creditsInfoTitle1": "Not thrilled with your photo?",
           "creditsInfoContent1": "No worries. You get free do-overs with every generation. Check here to see how many tries you have left.",
           "creditsInfoTitle2": "Your photo, your way",
@@ -1131,7 +1134,7 @@
           "feedbackTitle": "Your feedback matters",
           "feedbackContent": "Not happy with your photo? Let us know why. Your feedback helps us improve the service and technology. Especially when something isn't right, your input directly shapes better results for everyone.",
           "manageTitle": "Manage your generation",
-          "manageContent": "Download your photo in high resolution, retry for free using the same settings, or delete if you no longer need it. This also shows the generation cost (10 credits) and how many free retries you have left."
+          "manageContent": "Download your photo in high resolution, retry for free using the same settings, or delete if you no longer need it. This also shows the generation cost (1 photo) and how many free retries you have left."
         }
       },
       "indicators": {
@@ -1212,7 +1215,7 @@
         "all": "All contexts"
       }
     },
-    "creditHint": "4 credits per generation",
+    "photoHint": "1 photo per generation",
     "generating": "Generating...",
     "empty": {
       "generated": {
@@ -1266,7 +1269,7 @@
       "name": "Generated by {name}"
     },
     "toasts": {
-      "generationFailed": "We couldn't finish that photo. Your credits are back in your balance."
+      "generationFailed": "We couldn't finish that photo. Your photos are back in your balance."
     }
   },
   "selfies": {
@@ -1329,18 +1332,18 @@
         "fullControl": "Full creative control",
         "private": "Private to you",
         "anyStyle": "Any style/background",
-        "cost": "Uses {credits} credits",
-        "remaining": "{credits} individual credits remaining",
-        "insufficientCredits": "Insufficient individual credits"
+        "cost": "Uses {photos} photos",
+        "remaining": "{photos} individual photos remaining",
+        "insufficientPhotos": "Insufficient individual photos"
       },
       "team": {
         "title": "Company use",
         "presetStyles": "Company style presets",
         "branded": "Branded with logo",
         "adminVisible": "Visible to admin",
-        "cost": "Uses {credits} credits",
-        "remaining": "{credits} company credits remaining",
-        "insufficientCredits": "Insufficient company credits",
+        "cost": "Uses {photos} photos",
+        "remaining": "{photos} company photos remaining",
+        "insufficientPhotos": "Insufficient company photos",
         "noAccess": "No company access"
       },
       "continue": "Continue",
@@ -1452,14 +1455,14 @@
     },
     "teamInvite": {
       "subject": "Team invitation from {teamName}",
-      "text": "You've been invited to join {teamName} on TeamShotsPro.\n\nUse this link to accept: {inviteLink}\n\nYou have {creditsAllocated} credits to get started.",
+      "text": "You've been invited to join {teamName} on TeamShotsPro.\n\nUse this link to accept: {inviteLink}\n\nYou have {photosAllocated} photos to get started.",
       "title": "Team invitation",
       "greeting": "You've been invited to join {teamName}'s team on TeamShotsPro. Good news: no awkward office photo sessions required.",
       "greetingWithName": "Hi {firstName}, you've been invited to join {teamName}'s team on TeamShotsPro. Good news: no awkward office photo sessions required.",
       "whatYouGet": "What you get:",
-      "credits": "{photos} professional photos ({variations} variations)",
+      "photos": "{photos} professional photos ({variations} variations)",
       "teamBranded": "Team-branded photo generation",
-      "photosDescription": "You have received {credits} credits, good for {photos} photos. From just a selfie. Your selfie doesn't need to be perfect. We'll handle the professional polish.",
+      "photosDescription": "You have received {photos} photos. From just a selfie. Your selfie doesn't need to be perfect. We'll handle the professional polish.",
       "noSignup": "No signup required",
       "directAccess": "Direct access to upload your selfie",
       "acceptButton": "Accept invitation",
@@ -1714,9 +1717,10 @@
         "selfies": "Selfies",
         "generations": "Generations",
         "personal": "Personal",
-        "personalCredits": "Personal credits",
+        "personalPhotos": "Personal photos",
         "team": "Team",
-        "teamCredits": "Team credits",
+        "teamPhotos": "Team photos",
+        "availablePhotos": "Available photos",
         "availableCredits": "Available credits",
         "status": "Status",
         "actions": "Actions"
@@ -1748,8 +1752,10 @@
         "subtitle": "Invite team members to start generating team photos",
         "button": "Send first invite"
       },
-      "creditsAllocated": "{count} credits allocated",
-      "creditsUsed": "{count} used",
+      "photosAllocated": "{count} photos allocated",
+      "photosUsed": "{count} used",
+      "creditsAllocated": "{count, plural, one {# photo allocated} other {# photos allocated}}",
+      "creditsUsed": "{count, plural, one {# used} other {# used}}",
       "status": {
         "accepted": "Accepted",
         "expired": "Expired",
@@ -1766,10 +1772,10 @@
         "revoke": "Revoke",
         "revoking": "Revoking..."
       },
-      "noCredits": {
-        "title": "No Team Credits",
-        "subtitle": "You need to add credits to your team account before you can invite new team members.",
-        "button": "Top Up Credits"
+      "noPhotos": {
+        "title": "No Team Photos",
+        "subtitle": "You need to add photos to your team account before you can invite new team members.",
+        "button": "Top Up Photos"
       }
     },
     "inviteForm": {
@@ -1782,11 +1788,12 @@
         "label": "First name",
         "placeholder": "John"
       },
-      "credits": {
-        "label": "Credits to allocate",
-        "hint": "Each photo generation uses {credits} credits"
+      "photos": {
+        "label": "Photos to allocate",
+        "hint": "Each photo can be retried up to {count} times for free"
       },
       "success": "Invitation sent successfully to {email}",
+      "insufficientCreditsModal": "You need {required} credits but only have {available} available. Please reduce the photo allocation or purchase more credits.",
       "photoStyle": {
         "label": "Photo style",
         "useActiveStyle": "Use active photo style",
@@ -1808,8 +1815,8 @@
         "sending": "Sending...",
         "cancel": "Cancel"
       },
-      "insufficientCredits": "Not enough company credits. Available: {available}, Required: {required}",
-      "insufficientCreditsModal": "You don't have enough company credits to allocate {required} credits. Available: {available}"
+      "insufficientPhotos": "Not enough company photos. Available: {available}, Required: {required}",
+      "insufficientPhotosModal": "You don't have enough company photos to allocate {required} photos. Available: {available}"
     },
     "buttons": {
       "inviteTeamMember": "Invite team member"
@@ -1890,10 +1897,11 @@
         "notAuthorized": "You don't have permission for that team action. Check with your team admin if you think this is a mistake.",
         "notPartOfTeam": "You're not part of a team. Ask your team admin to invite you.",
         "noActiveContext": "You need to create and set an active photo style before inviting team members. Set it up first, then come back!",
-        "insufficientTeamCredits": "Not enough team credits. You have {available} available, but need {required}. Time to top up!",
-        "invalidCreditAllocation": "Credits must be allocated in multiples of {credits} (the cost per photo generation). For example: {credits}, {credits2}, {credits3}, etc."
+        "insufficientTeamPhotos": "Not enough team photos. You have {available} available, but need {required}. Time to top up!",
+        "invalidPhotoAllocation": "Photos must be allocated in multiples of {photos} (the cost per photo generation). For example: {photos}, {photos2}, {photos3}, etc.",
+        "teamSizeLimitReached": "Your Pro Small plan allows up to {limit} team members. Upgrade to Pro Large for unlimited team members."
       },
-      "credits": {
+      "photos": {
         "invalidType": "Invalid type parameter"
       },
       "generations": {

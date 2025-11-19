@@ -5,7 +5,7 @@ import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
-import { PRICING_CONFIG } from '@/config/pricing'
+import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
 import { getPersonCreditBalance, getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { getPackageConfig } from '@/domain/style/packages'
 import { Env } from '@/lib/env'
@@ -153,8 +153,38 @@ export async function POST(request: NextRequest) {
     } as Record<string, unknown>
 
     // Create generation
-    // Determine regeneration allowances for invited users
-    const invitedRegenerations = getRegenerationCount('invited')
+    // Determine regeneration allowances for invited users - they get the same as their team admin's plan
+    let invitedRegenerations: number = PRICING_CONFIG.regenerations.invited // Fallback
+    
+    if (invite.person.teamId) {
+      // Fetch team admin's plan to determine regeneration count
+      const team = await prisma.team.findUnique({
+        where: { id: invite.person.teamId },
+        select: {
+          admin: {
+            select: {
+              planPeriod: true,
+              planTier: true
+            }
+          }
+        }
+      })
+      
+      if (team?.admin) {
+        const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
+        const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier
+        
+        // Determine team admin's PricingTier to get regeneration count
+        let adminPricingTier: PricingTier = 'proSmall' // Default fallback
+        if (adminPlanPeriod === 'proLarge' || adminPlanTier === 'proLarge') {
+          adminPricingTier = 'proLarge'
+        } else if (adminPlanPeriod === 'proSmall' || adminPlanTier === 'pro' || adminPlanTier === 'proSmall') {
+          adminPricingTier = 'proSmall'
+        }
+        
+        invitedRegenerations = getRegenerationCount(adminPricingTier)
+      }
+    }
 
     const generation = await prisma.generation.create({
       data: {

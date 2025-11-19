@@ -3,7 +3,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { OnboardingContext } from '@/lib/onborda/config'
 import { UserService } from '@/domain/services/UserService'
-import { isFreePlan } from '@/domain/subscription/utils'
+import { isFreePlan, type PlanPeriod } from '@/domain/subscription/utils'
 import type { Prisma } from '@prisma/client'
 
 const isJsonObject = (value: unknown): value is Prisma.JsonObject =>
@@ -55,6 +55,18 @@ export async function GET() {
       return 'individual'
     }
 
+    // Normalize period from subscription.ts format to utils.ts format
+    const normalizePeriod = (period: unknown): PlanPeriod => {
+      if (period === 'free' || period === 'tryOnce' || period === 'individual' || period === 'proSmall' || period === 'proLarge') {
+        return period as PlanPeriod
+      }
+      // Convert legacy API format to new format
+      if (period === 'try_once') return 'tryOnce'
+      // Legacy subscription periods map to null (transactional pricing doesn't use monthly/annual)
+      if (period === 'monthly' || period === 'annual') return null
+      return null
+    }
+
     // Build onboarding context using pre-fetched data
     const context: OnboardingContext & { completedTours?: string[]; pendingTours?: string[] } = {
       userId: userContext.user.id,
@@ -69,7 +81,7 @@ export async function GET() {
       hasGeneratedPhotos: userContext.onboarding.hasGeneratedPhotos,
       accountMode: userContext.onboarding.accountMode,
       language: userContext.onboarding.language,
-      isFreePlan: isFreePlan(userContext.subscription?.period),
+      isFreePlan: isFreePlan(normalizePeriod(userContext.subscription?.period)),
       onboardingSegment: determineSegment(userContext.roles),
       _loaded: true,
       completedTours, // Include completed tours from database

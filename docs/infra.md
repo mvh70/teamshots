@@ -7,11 +7,16 @@
 - Pricing page
 - Public-facing content
 
-**Application:** app.teamshots.vip
-- Dashboard (post-login)
-- Photo generation
-- Account management
-- All authenticated features
+**Individual Application:** photoshotspro.com
+- Individual photo generation
+- Personal account management
+- Single user features
+
+**Team Application:** teamshotspro.com
+- Team photo generation
+- Team management features
+- Multi-user collaboration
+- Admin controls
 
 ## Internationalization Architecture
 
@@ -347,10 +352,9 @@ await prisma.generation.create({
   name?: string
   image?: string // OAuth profile picture
   locale: 'en' | 'es' // Language preference
-  credits: number
-  subscription_tier: 'starter' | 'pro' | null
-  subscription_period: 'monthly' | 'annual' | null
-  subscription_status: 'active' | 'cancelled' | null
+  photos: number // Photo balance instead of credits
+  planType: 'individual' | 'teamSmall' | 'teamLarge' | null
+  stripeCustomerId: string?  @unique
   created_at: timestamp
 }
 ```
@@ -364,7 +368,7 @@ await prisma.generation.create({
   style_preset: string
   background_option: string
   variations: string[] // URLs
-  credits_used: number
+  photos_used: number // Changed from credits_used
   actual_cost: number // USD cost from provider (e.g., 0.10)
   provider: string // 'gemini'
   status: 'processing' | 'completed' | 'failed'
@@ -377,9 +381,9 @@ await prisma.generation.create({
 {
   id: string
   user_id: string
-  type: 'try_once' | 'subscription' | 'top_up' | 'generation'
+  type: 'try_once' | 'individual' | 'teamSmall' | 'teamLarge' | 'generation'
   amount: number // USD
-  credits_delta: number // positive for purchases, negative for usage
+  photos_delta: number // positive for purchases, negative for usage
   stripe_payment_id?: string
   created_at: timestamp
 }

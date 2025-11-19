@@ -19,7 +19,7 @@ All features below
 
 ### How it works (8 steps)
 1. Team admin creates team context (background, logo, style, expression)
-2. Team admin invites team members with 24hr tokens + credit allocation
+2. Team admin invites team members with 24hr tokens + photo allocation
 3. Team members upload selfies (no signup required)
 4. Team members choose: Personal use OR Team use
 5. System generates photos with selected context
@@ -52,10 +52,10 @@ All features below
 - The styles UI adapts based on the active `packageId`. Packages control which fields are visible, how settings are persisted, and how prompts are generated.
 
 ### 3. Generation Type Selection
-- **Personal Use**: Individual credits, full style control, private photos
-- **Team Use**: Team credits, preset styles, admin visible
+- **Personal Use**: Individual photos, full style control, private photos
+- **Team Use**: Team photos, preset styles, admin visible
 - Same uploaded photo can be used for both types
-- Clear credit cost display (10 credits per generation)
+- Clear photo usage display (1 photo per generation)
 
 ### 4. Photo Style Management
 **Team Users:**
@@ -74,7 +74,7 @@ All features below
 - Up to 60 second processing
 - Preview generated photos and logo placement options
 - Download selected image (1024x1024px)
-- Regenerate with style changes (costs 1 credit)
+- Regenerate with style changes (uses 1 photo)
 - Team admin can bulk regenerate all photos with new context
 
 ### 6. Account & Billing
@@ -84,31 +84,26 @@ All features below
 - Context templates (reusable settings)
 - Automated team scraping from team website
 - Team domain verification
-- Credit balance display (individual + team credits)
+- Photo balance display (individual + team photos)
 - Try Once purchase option
-- Subscription plans (monthly/annual)
-- Subscription management:
-  - Upgrade plan (Try Once → Individual, Try Once → Pro, Individual → Pro)
-  - Downgrade plan (Pro → Individual, effective at end of billing period)
-  - Cancel subscription (immediate effect)
-- Credit top-ups
-- Credits roll over month-to-month
+- Domain-based plans: photoshotspro.com (individual) / teamshotspro.com (team)
+- Package management:
+  - Team Small (5 photos, up to 5 members)
+  - Team Large (20 photos, unlimited members)
 - Download history
 - Language preference (EN/ES)
 
-*See [Business Model](business_model) for detailed pricing structure including specific costs, credit packages, and subscription tiers.*  
+*See [Business Model](business_model) for detailed pricing structure including specific costs, photo packages, and domain-based tiers.*
 *See [User Flows](user_flows) for authentication sign-up process and [Getting Started](getting_started_updated.md) for technical implementation details.*
 
-### 6.5 Enhanced Team Member Credit System
-- **Transaction-Based Credits**: All credit movements tracked in dedicated `CreditTransaction` table
-- **Credit Types**: Team credits (admin-allocated) and individual credits (user-owned)
-- **Full Audit Trail**: Every credit allocation, transfer, and usage is recorded with timestamps
-- **Team Invites**: Credits automatically allocated when team members accept invites
-- **Transfer System**: Team admins can transfer credits between team pool and team members
-- **Real-time Balances**: Credit balances calculated from transaction history for accuracy
-- **Admin Dashboard**: Credit management with bulk allocation and individual adjustments
+### 6.5 Enhanced Team Member Photo System
+- **Photo Allocation**: Photos allocated to team members upon invitation acceptance
+- **Photo Types**: Team photos (admin-managed) and individual photos (user-owned)
+- **Usage Tracking**: Photo usage tracked per generation with clear balances
+- **Team Invites**: Photos automatically allocated when team members accept invites
+- **Admin Dashboard**: Photo management with allocation and usage monitoring
 
-*See [Business Model](business_model) for detailed credit system specifications including default allocations, usage rules, and prioritization logic.*
+*See [Business Model](business_model) for detailed photo system specifications including default allocations and usage rules.*
 
 ### 6.6 Photo Consent & Approval Workflow
 - Consent required before selfie upload
@@ -116,7 +111,7 @@ All features below
 - Team member must approve generated photo before database save
 - Original selfie retained if photo rejected
 - Generated photo deleted if rejected
-- Audit log records rejection events for credit accounting
+- Audit log records rejection events for photo accounting
 
 ### 6.7 Content Moderation System
 - **LLM-Based Validation**: Automated filtering for nudity and obscenity
@@ -136,8 +131,8 @@ All features below
 
 ### 6.9 Team Admin Controls
 - View approved team photos only
-- Bulk regeneration with new contexts (uses team credit pool)
-- Manual credit adjustment per team member
+- Bulk regeneration with new contexts (uses team photo allocation)
+- Manual photo adjustment per team member
 - View team progress and approval status
 - **Team Member Management**:
   - Promote/demote team members to/from admin roles

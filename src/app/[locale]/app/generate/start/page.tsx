@@ -203,7 +203,7 @@ export default function StartGenerationPage() {
   // Fetch contexts when generation type is determined
   useEffect(() => {
     const fetchContexts = async () => {
-      const contextType: 'personal' | 'team' | null = uiTier === 'pro' ? generationType : 'personal'
+      const contextType: 'personal' | 'team' | null = isProUser ? generationType : 'personal'
       if (!session?.user?.id || !contextType) return
       
       try {
@@ -308,7 +308,7 @@ export default function StartGenerationPage() {
     }
 
     fetchContexts()
-  }, [session?.user?.id, generationType, isFreePlan, selectedPackageId, uiTier, normalizeContextName, effectiveGenerationType])
+  }, [session?.user?.id, generationType, isFreePlan, selectedPackageId, uiTier, normalizeContextName, effectiveGenerationType, isProUser])
 
 
 
@@ -511,7 +511,7 @@ export default function StartGenerationPage() {
             <p className="mt-2 text-sm text-gray-600">Loading...</p>
           </div>
         </div>
-      ) : (!activeContext && effectiveGenerationType === 'team' && uiTier === 'pro' && hasTeamAccess) ? (
+      ) : (!activeContext && effectiveGenerationType === 'team' && isProUser && hasTeamAccess) ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">No Active Context</h2>
@@ -639,7 +639,7 @@ export default function StartGenerationPage() {
                           // Fetch and deserialize the context properly using loadStyleByContextId
                           const { ui, pkg, context } = await loadStyleByContextId(selectedContext.id)
                           const contextIndex = availableContexts.findIndex((ctx) => ctx.id === selectedContext.id)
-                          const effectiveType = uiTier === 'pro' ? (generationType ?? 'personal') : 'personal'
+                          const effectiveType = isProUser ? (generationType ?? 'personal') : 'personal'
                           const updatedName = normalizeContextName(
                             context?.name ?? selectedContext.name,
                             contextIndex === -1 ? availableContexts.length : contextIndex,

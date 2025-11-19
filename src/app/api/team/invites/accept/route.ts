@@ -45,6 +45,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invite has already been used' }, { status: 410 })
     }
 
+    // Check team size limits based on admin's plan tier
+    const team = invite.team
+    const adminTier = (team?.adminId ? await prisma.user.findUnique({ where: { id: team.adminId }, select: { planTier: true } }) : null)?.planTier ?? null
+    if (adminTier === 'proSmall') {
+      // Count current team members (including admin)
+      const currentMemberCount = await prisma.person.count({
+        where: { teamId: team.id }
+      })
+
+      if (currentMemberCount >= 5) {
+        return NextResponse.json({
+          error: 'Team size limit reached. This team has reached its maximum of 5 members.',
+          errorCode: 'TEAM_SIZE_LIMIT_REACHED'
+        }, { status: 400 })
+      }
+    }
+    // proLarge has no team size limit
+
     // Create person record using firstName from invite
     const person = await prisma.person.create({
       data: {

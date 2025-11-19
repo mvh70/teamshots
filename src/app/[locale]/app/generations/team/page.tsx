@@ -20,6 +20,7 @@ export default function TeamGenerationsPage() {
   const { data: session } = useSession()
   const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
+  const [rolesLoaded, setRolesLoaded] = useState(false)
   const currentUserId = session?.user?.id
   const currentPersonId = session?.user?.person?.id
   const currentUserName = session?.user?.name || ''
@@ -40,25 +41,34 @@ export default function TeamGenerationsPage() {
           const data = await response.json()
           setIsTeamAdmin(data.userRole?.isTeamAdmin ?? false)
         }
+        setRolesLoaded(true)
       } catch (err) {
         console.error('Failed to fetch roles:', err)
         // Default to false on error
         setIsTeamAdmin(false)
+        setRolesLoaded(true)
       }
     }
 
     fetchRoles()
   }, [session?.user?.id])
-  // Initialize filter to 'team' by default for team pages (optimistic for team admins)
+  // Initialize filter to 'team' by default for team pages (shows "All users")
   // This prevents the delay of showing "me" first, then switching to "team"
   const { timeframe, context, userFilter, selectedUserId, setTimeframe, setContext, setUserFilter, setSelectedUserId, filterGenerated } = useGenerationFilters('team')
+  const filterInitializedRef = useRef(false)
   
-  // Adjust filter if user is not a team admin (they should only see their own)
+  // Adjust filter based on team admin status once roles have been loaded
   useEffect(() => {
-    if (isTeamAdmin === false && userFilter === 'team') {
-      setUserFilter('me')
+    // Only adjust filter once, after roles have been loaded
+    if (rolesLoaded && !filterInitializedRef.current) {
+      filterInitializedRef.current = true
+      // If user is not an admin, restrict to their own generations
+      if (isTeamAdmin === false) {
+        setUserFilter('me')
+      }
+      // If user is an admin, keep the default 'team' (All users) - no change needed
     }
-  }, [isTeamAdmin, userFilter, setUserFilter])
+  }, [rolesLoaded, isTeamAdmin, setUserFilter])
   const { href: buyCreditsHref } = useBuyCreditsLink()
   const [teamView] = useState<'mine' | 'team'>('mine')
   

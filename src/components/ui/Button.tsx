@@ -162,7 +162,7 @@ export function CheckoutButton({
   onError,
   ...props
 }: Omit<ButtonProps, 'variant' | 'type'> & {
-  type?: 'subscription' | 'try_once' | 'top_up'
+  type?: 'subscription' | 'try_once' | 'top_up' | 'plan'
   priceId?: string
   metadata?: Record<string, unknown>
   returnUrl?: string

@@ -59,14 +59,55 @@ export async function POST(request: NextRequest) {
     
     // Prefer returning to the page that initiated checkout. Accept explicit body.returnUrl or Referer header.
     // Validate to prevent open redirects: must start with our baseUrl; otherwise, fall back to dashboard.
+    // Special case: if checkout is initiated from upgrade or top-up pages, always return to dashboard.
     const requestedReturnUrl = (body as Record<string, unknown>)?.returnUrl as string | undefined;
     const referer = request.headers.get('referer') || undefined;
     const preferredReturnUrl = requestedReturnUrl || referer || '';
-    let safeReturnUrl = `${baseUrl}/en/app/dashboard`;
+    
+    // Extract locale from referer or use default
+    let locale = 'en';
+    try {
+      if (preferredReturnUrl) {
+        const url = new URL(preferredReturnUrl);
+        const pathParts = url.pathname.split('/').filter(Boolean);
+        // Check if first part is a locale (en or es)
+        if (pathParts[0] === 'en' || pathParts[0] === 'es') {
+          locale = pathParts[0];
+        }
+      }
+    } catch {}
+    
+    // Check if checkout was initiated from upgrade or top-up pages
+    let shouldRedirectToDashboard = false;
     try {
       if (preferredReturnUrl && preferredReturnUrl.startsWith(baseUrl)) {
+        const url = new URL(preferredReturnUrl);
+        const pathParts = url.pathname.split('/').filter(Boolean);
+        // Remove locale if present to check the actual route
+        const routePath = pathParts[0] === 'en' || pathParts[0] === 'es' 
+          ? pathParts.slice(1).join('/')
+          : pathParts.join('/');
+        
+        // If initiated from upgrade or top-up, always redirect to dashboard
+        if (routePath === 'app/upgrade' || routePath === 'app/top-up') {
+          shouldRedirectToDashboard = true;
+        }
+      }
+    } catch {}
+    
+    let safeReturnUrl = `${baseUrl}/${locale}/app/dashboard`;
+    try {
+      if (!shouldRedirectToDashboard && preferredReturnUrl && preferredReturnUrl.startsWith(baseUrl)) {
         // Strip hash to avoid losing search params when we add ours
-        safeReturnUrl = preferredReturnUrl.split('#')[0];
+        const urlWithoutHash = preferredReturnUrl.split('#')[0];
+        // Ensure locale is present in the URL
+        const url = new URL(urlWithoutHash);
+        const pathParts = url.pathname.split('/').filter(Boolean);
+        if (pathParts[0] !== 'en' && pathParts[0] !== 'es') {
+          // Insert locale if missing
+          url.pathname = `/${locale}${url.pathname}`;
+        }
+        safeReturnUrl = url.toString();
       }
     } catch {}
 
@@ -86,34 +127,33 @@ export async function POST(request: NextRequest) {
     // Create specific success messages based on purchase type
     let successMessage = ''
     let successTier = ''
-    let successPeriod = ''
     if (type === 'try_once') {
       successMessage = 'try_once_success'
-    } else if (type === 'subscription') {
-      const isIndividual = (
-        priceId === PRICING_CONFIG.individual.monthly.stripePriceId ||
-        priceId === PRICING_CONFIG.individual.annual.stripePriceId
-      );
-      const isAnnual = (
-        priceId === PRICING_CONFIG.individual.annual.stripePriceId ||
-        priceId === PRICING_CONFIG.pro.annual.stripePriceId
-      );
-      const tier = isIndividual ? 'individual' : 'pro'
-      successMessage = tier === 'individual' ? 'individual_success' : 'pro_success'
-      successTier = tier
-      successPeriod = isAnnual ? 'annual' : 'monthly'
+      successTier = 'tryOnce'
+    } else if (type === 'plan') {
+      // Determine tier from price ID
+      if (priceId === PRICING_CONFIG.individual.stripePriceId) {
+        successMessage = 'individual_success'
+        successTier = 'individual'
+      } else if (priceId === PRICING_CONFIG.proSmall.stripePriceId) {
+        successMessage = 'pro_small_success'
+        successTier = 'proSmall'
+      } else if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
+        successMessage = 'pro_large_success'
+        successTier = 'proLarge'
+      }
     } else if (type === 'top_up') {
       successMessage = 'top_up_success'
     }
     
-    const tierMeta = (metadata as Record<string, string>)?.tier || successTier
-    const periodMeta = (metadata as Record<string, string>)?.period || successPeriod
-    const queryExtras = type === 'subscription'
-      ? { tier: encodeURIComponent(tierMeta), period: encodeURIComponent(periodMeta) }
+    // Use successTier (determined from priceId) for success URL, not metadata.tier
+    // metadata.tier may be 'pro' (UI tier), but we need the actual tier ('proSmall'/'proLarge')
+    const queryExtras = type === 'plan' && successTier
+      ? { tier: encodeURIComponent(successTier) }
       : {}
 
     const successUrl = unauth
-      ? `${baseUrl}/auth/verify?success=true&type=${successMessage}${type === 'subscription' ? `&tier=${encodeURIComponent(tierMeta)}&period=${encodeURIComponent(periodMeta)}` : ''}&email=${encodeURIComponent(email || '')}`
+      ? `${baseUrl}/auth/verify?success=true&type=${successMessage}${type === 'plan' && successTier ? `&tier=${encodeURIComponent(successTier)}` : ''}&email=${encodeURIComponent(email || '')}`
       : withParams(safeReturnUrl, { success: 'true', type: successMessage, ...(queryExtras as Record<string, string>) })
 
     const cancelUrl = unauth
@@ -125,7 +165,7 @@ export async function POST(request: NextRequest) {
       customer: stripeCustomerId,
       customer_email: unauth ? (email as string | undefined) : undefined,
       payment_method_types: ['card'],
-      mode: type === 'try_once' || type === 'top_up' ? 'payment' : 'subscription',
+      mode: 'payment', // All purchases are now one-time payments
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
@@ -136,8 +176,8 @@ export async function POST(request: NextRequest) {
     };
 
     // Add line items based on type
-    if (type === 'try_once' || type === 'subscription') {
-      // Use provided price ID for subscriptions and try once
+    if (type === 'try_once' || type === 'plan') {
+      // Use provided price ID for plans and try once
       if (priceId) {
         sessionParams.line_items = [
           {
@@ -162,7 +202,7 @@ export async function POST(request: NextRequest) {
         ];
       }
     } else if (type === 'top_up') {
-      // For top-ups, create a one-time payment. Support tiers: 'individual' | 'pro' | 'try_once'
+      // For top-ups, create a one-time payment. Support tiers: 'individual' | 'proSmall' | 'proLarge' | 'try_once'
       const { tier, credits } = metadata as { tier?: string; credits?: number };
       // Allow repeat purchases of top-ups; no one-per-tier restriction
       let pricePerPackage = 0;
@@ -170,9 +210,12 @@ export async function POST(request: NextRequest) {
       if (tier === 'individual') {
         pricePerPackage = PRICING_CONFIG.individual.topUp.price;
         creditsPerPackage = PRICING_CONFIG.individual.topUp.credits;
-      } else if (tier === 'pro') {
-        pricePerPackage = PRICING_CONFIG.pro.topUp.price;
-        creditsPerPackage = PRICING_CONFIG.pro.topUp.credits;
+      } else if (tier === 'proSmall') {
+        pricePerPackage = PRICING_CONFIG.proSmall.topUp.price;
+        creditsPerPackage = PRICING_CONFIG.proSmall.topUp.credits;
+      } else if (tier === 'proLarge') {
+        pricePerPackage = PRICING_CONFIG.proLarge.topUp.price;
+        creditsPerPackage = PRICING_CONFIG.proLarge.topUp.credits;
       } else {
         pricePerPackage = PRICING_CONFIG.tryOnce.topUp.price;
         creditsPerPackage = PRICING_CONFIG.tryOnce.topUp.credits;

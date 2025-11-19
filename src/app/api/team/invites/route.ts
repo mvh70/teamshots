@@ -147,6 +147,25 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Check team size limits based on admin's plan tier
+    const adminTier = (team?.admin as unknown as { planTier?: string | null })?.planTier ?? null
+    if (adminTier === 'proSmall') {
+      // Count current team members (including admin)
+      const currentMemberCount = await prisma.person.count({
+        where: { teamId: team.id }
+      })
+
+      if (currentMemberCount >= 5) {
+        return NextResponse.json({
+          error: getTranslation('api.errors.teamInvites.teamSizeLimitReached', locale, { limit: '5' }),
+          errorCode: 'TEAM_SIZE_LIMIT_REACHED',
+          currentMembers: currentMemberCount,
+          maxMembers: 5
+        }, { status: 400 })
+      }
+    }
+    // proLarge has no team size limit
+
     // Check if team has sufficient credits (uses centralized function)
     const teamCredits = await getEffectiveTeamCreditBalance(user.id, team.id)
     

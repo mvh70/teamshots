@@ -217,9 +217,11 @@ export default function SettingsPage() {
         }
       }
     }
-    return 'subscription'
+    return 'team'
   })
   const [userRoles, setUserRoles] = useState<{ isTeamAdmin: boolean; isPlatformAdmin: boolean }>({ isTeamAdmin: false, isPlatformAdmin: false })
+  const [rolesLoaded, setRolesLoaded] = useState(false)
+  const [initialTabSet, setInitialTabSet] = useState(false)
   
   // Persist tab selection to localStorage whenever it changes
   useEffect(() => {
@@ -248,7 +250,11 @@ export default function SettingsPage() {
             isTeamAdmin: (session?.user?.person?.team?.adminId === session?.user?.id) || false,
             isPlatformAdmin: session?.user?.isAdmin || false
           })
+        } finally {
+          setRolesLoaded(true)
         }
+      } else {
+        setRolesLoaded(true)
       }
     }
     fetchRoles()
@@ -266,14 +272,23 @@ export default function SettingsPage() {
     // If user needs to purchase, switch to subscription tab
     if (needsPurchase) {
       setActiveTab('subscription')
+      setInitialTabSet(true)
+      return
     }
     
-    // Ensure non team_admin users don't land on the team tab
-    // Use the effective role from state (includes pro subscription check)
-    if (!userRoles.isTeamAdmin && activeTab === 'team') {
-      setActiveTab('account')
+    // Only set initial default tab once when roles are loaded (not on every tab change)
+    if (rolesLoaded && !initialTabSet) {
+      // Team admins should default to 'team' tab (unless there's a specific reason not to)
+      if (userRoles.isTeamAdmin && activeTab === 'subscription' && searchParams.get('success') !== 'true') {
+        setActiveTab('team')
+      }
+      // Non team_admin users shouldn't be on the team tab
+      else if (!userRoles.isTeamAdmin && activeTab === 'team') {
+        setActiveTab('subscription')
+      }
+      setInitialTabSet(true)
     }
-  }, [needsPurchase, session, activeTab, userRoles.isTeamAdmin])
+  }, [needsPurchase, session, activeTab, userRoles.isTeamAdmin, rolesLoaded, initialTabSet, searchParams])
 
   // If success present, show subscription tab so banner is contextually relevant
   useEffect(() => {
@@ -438,7 +453,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => setActiveTab('subscription')}
-            className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'subscription' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+            className={`px-4 py-2 text-sm font-medium ${isTeamAdmin ? 'border-r border-gray-200' : 'rounded-l-lg border-r border-gray-200'} ${activeTab === 'subscription' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
           >
             {t('tabs.subscription')}
           </button>

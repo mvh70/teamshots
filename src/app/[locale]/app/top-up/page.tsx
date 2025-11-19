@@ -40,11 +40,18 @@ export default function TopUpPage() {
   }, [])
 
   const topUpDetails = useMemo(() => {
-    if (planTier === 'pro') {
+    if (planTier === 'proSmall') {
       return {
-        tier: 'pro' as const,
-        price: PRICING_CONFIG.pro.topUp.price,
-        credits: PRICING_CONFIG.pro.topUp.credits,
+        tier: 'proSmall' as const,
+        price: PRICING_CONFIG.proSmall.topUp.price,
+        credits: PRICING_CONFIG.proSmall.topUp.credits,
+      }
+    }
+    if (planTier === 'proLarge') {
+      return {
+        tier: 'proLarge' as const,
+        price: PRICING_CONFIG.proLarge.topUp.price,
+        credits: PRICING_CONFIG.proLarge.topUp.credits,
       }
     }
     if (planTier === 'individual') {
@@ -52,6 +59,13 @@ export default function TopUpPage() {
         tier: 'individual' as const,
         price: PRICING_CONFIG.individual.topUp.price,
         credits: PRICING_CONFIG.individual.topUp.credits,
+      }
+    }
+    if (planTier === 'tryOnce') {
+      return {
+        tier: 'try_once' as const,
+        price: PRICING_CONFIG.tryOnce.topUp.price,
+        credits: PRICING_CONFIG.tryOnce.topUp.credits,
       }
     }
     return null

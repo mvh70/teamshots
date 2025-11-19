@@ -6,23 +6,18 @@ import { comingSoonBadge } from '@/lib/ui/comingSoon'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { TrackedLink } from '@/components/TrackedLink'
 
-type PlanId = 'pro' | 'individual' | 'tryOnce'
+type PlanId = 'pro' | 'proSmall' | 'proLarge' | 'individual' | 'tryOnce'
 
 interface PricingCardProps {
   id: PlanId
   price: string
-  yearlyPrice?: string
   previousPrice?: string
   credits: number
-  monthlyPricePerPhoto?: string
-  yearlyPricePerPhoto?: string
   pricePerPhoto?: string
   regenerations?: number
-  annualSavings?: string
   popular?: boolean
   popularLabel?: string
   popularLabelKey?: string
-  isYearly?: boolean
   ctaMode?: 'link' | 'button'
   href?: string
   onCta?: () => void
@@ -35,18 +30,13 @@ interface PricingCardProps {
 export default function PricingCard({
   id,
   price,
-  yearlyPrice,
   previousPrice,
   credits,
-  monthlyPricePerPhoto,
-  yearlyPricePerPhoto,
   pricePerPhoto,
   regenerations,
-  annualSavings,
   popular,
   popularLabel,
   popularLabelKey,
-  isYearly = false,
   ctaMode = 'link',
   href,
   onCta,
@@ -61,18 +51,11 @@ export default function PricingCard({
 
   // Match pricing page calculations
   const numberOfPhotos = calculatePhotosFromCredits(credits)
-  const displayPrice = isYearly && yearlyPrice
-    ? `$${(parseFloat(yearlyPrice.replace('$', '')) / 12).toFixed(2)}`
-    : price
+  const displayPrice = price
   const displayPeriod = id === 'tryOnce'
     ? t(`plans.${id}.period`)
-    : (isYearly ? 'billed monthly' : 'monthly')
-  const displaySavings = isYearly && annualSavings ? `Save ${annualSavings}/year` : null
-  const displayPricePerPhoto = id === 'tryOnce'
-    ? pricePerPhoto
-    : isYearly
-      ? yearlyPricePerPhoto
-      : monthlyPricePerPhoto
+    : 'one-time'
+  const displayPricePerPhoto = pricePerPhoto
 
   const rawFeatures = t.raw(`plans.${id}.features`) as string[]
   const features = rawFeatures.map(feature =>
@@ -92,7 +75,7 @@ export default function PricingCard({
 
   const borderColor = popular
     ? 'ring-3 ring-brand-cta-ring border-2 border-brand-cta-ring scale-105 shadow-brand-cta-shadow'
-    : (id === 'pro'
+    : (id === 'proLarge'
         ? 'ring-2 ring-brand-premium-ring border-2 border-brand-premium-ring'
         : 'border-2 border-brand-primary-lighter')
 
@@ -117,14 +100,9 @@ export default function PricingCard({
           )}
           <span className="text-5xl font-bold text-text-dark">{displayPrice}</span>
           <span className="text-text-body whitespace-nowrap text-sm leading-none">{displayPeriod}</span>
-          {displaySavings && (
-            <span className="ml-3 relative z-20 inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-depth-md">
-              {displaySavings}
-            </span>
-          )}
         </div>
         <p className="text-sm text-brand-primary font-semibold mt-2">
-          {credits} {id === 'tryOnce' ? t('credits') : t('creditsPerMonth')}
+          {calculatePhotosFromCredits(credits)} {calculatePhotosFromCredits(credits) === 1 ? t('photo') : t('photos')}
         </p>
 
         <div className="mt-6 relative group">
@@ -168,7 +146,6 @@ export default function PricingCard({
             eventProperties={{
               placement: 'pricing_card',
               plan: id,
-              billing: isYearly ? 'annual' : 'monthly',
               mode: 'link',
             }}
             className={`block w-full text-center px-6 py-4 lg:py-5 rounded-xl font-bold text-base lg:text-lg transition-all duration-300 mt-auto ${
@@ -189,7 +166,6 @@ export default function PricingCard({
             track('cta_clicked', {
               placement: 'pricing_card',
               plan: id,
-              billing: isYearly ? 'annual' : 'monthly',
               mode: 'button',
             })
             onCta()

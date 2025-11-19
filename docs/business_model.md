@@ -1,84 +1,88 @@
 # Business Model
 
 ## Pricing Model
-**Dual Credit-based system with subscriptions + top-ups**
+**Domain-based plan system with photo packages**
 
-No free tier. All features require credits.
+**Updated from credit-based system to photo-based pricing for simplicity and transparency.**
 
-**Credit Types:**
-- **Team Credits**: Allocated by team admins for team photo generations
-- **Individual Credits**: User-owned credits for personal photo generations
-- **Usage Rules**: Team credits can only be used for team generations, individual credits for personal use
+Plans are determined by domain:
+- **photoshotspro.com**: Individual plans for personal use
+- **teamshotspro.com**: Team plans for business use
 
-**Credit Management:**
-- **Transaction-Based System**: All credit movements tracked in `CreditTransaction` table
-- **Full Audit Trail**: Every allocation, transfer, and usage recorded with timestamps
-- **Real-time Balances**: Credit balances calculated from transaction history
-- **Team Invite Integration**: Credits automatically allocated when team members accept invites
+All features are included with each plan - no additional charges.
 
 ## Pricing Structure
 
-### Credits System
-- **1 generation = 10 credits** (produces 4 photo variations)
-- **Credits roll over** month-to-month (never expire)
-- **Display format:** "60 credits (6 generations)" - emphasize credits for psychological impact
+### Individual Plans (photoshotspro.com)
 
-### Try Once (One-time Purchase)
+#### Try Once (One-time Purchase)
 ```
 Price: $5
-Credits: 10 (1 generation)
+Photos: 1 photo
 Purpose: Low-friction proof of concept
 ```
 
-### Individual Subscription
+#### Individual Package
 ```
-Monthly: $24/month â†’ 60 credits/month (6 generations)
-Annual: $228/year â†’ 60 credits/month (Save $60/year, ~21% discount)
+Price: $19.99
+Photos: 5 photos
+Purpose: Personal professional headshots
+```
 
-Top-ups: $9.99 per 30 credits (minimum purchase 30 credits)
+### Team Plans (teamshotspro.com)
+
+#### Team Small
+```
+Price: $19.99
+Photos: 5 photos
+Team Size: Up to 5 team members
+Purpose: Small teams and startups
 ```
 
-### Pro Subscription  
+#### Team Large
 ```
-Monthly: $59/month â†’ 200 credits/month (20 generations)
-Annual: $588/year â†’ 200 credits/month (Save $120/year, ~17% discount)
+Price: $59.99
+Photos: 20 photos
+Team Size: Unlimited team members
+Purpose: Larger organizations and enterprises
+```
 
-Top-ups: $24.99 per 100 credits (minimum purchase 100 credits)
-Pro users get a lower price per generation than Individual
-```
+## Domain-Based Access Control
+
+**photoshotspro.com:**
+- Individual signup only
+- Personal photo generation
+- Single user accounts
+
+**teamshotspro.com:**
+- Team signup only
+- Team photo generation
+- Team management features
+- Member invitation system
 
 ## Pricing Psychology
 
-**Why Credits (not just "generations"):**
-- Larger numbers feel more valuable (100 > 25)
-- Gamification effect increases engagement  
-- Creates psychological distance from money (like casino chips)
-- Users less likely to cancel with accumulated credits (sunk cost)
+**Why Domain Separation:**
+- Clear value proposition for each audience
+- Individual vs team use cases are fundamentally different
+- Prevents feature confusion and misuse
 
-**Why Rollover:**
-- Reduces anxiety ("use it or lose it")
-- Increases perceived value
-- Reduces churn (users stay even in low-usage months)
-- Builds loyalty (accumulated credits = switching cost)
+**Why Photo-Based Pricing:**
+- Transparent and simple (5 photos = $19.99)
+- No complex credit systems or rollover confusion
+- Direct correlation between price and value
 
-**Why Annual Discount:**
-- 15% = industry standard, feels meaningful
-- Upfront cash improves business cash flow
-- Higher commitment = better retention
-- Display as dollar savings: "Save $108/year" (not "15% off")
-
-**Top-up Strategy:**
-- Tier-based pricing encourages upgrades
-- Minimum purchase (20 credits) prevents micro-transactions
-- Pro discount (33% off) rewards commitment
+**Package Strategy:**
+- Small packages encourage trying the service
+- Larger packages provide volume discounts
+- Team Large offers unlimited members for scale
 
 ## Revenue Streams
 
 ### Primary
-1. **Subscriptions** - Recurring monthly/annual revenue (individual + team plans)
-2. **Top-ups** - Additional revenue when users exceed base credits
-3. **Try Once** - Acquisition funnel entry point
-4. **Team/team plans** - B2B recurring revenue
+1. **Photo Packages** - One-time purchases for photo generation
+2. **Try Once** - Acquisition funnel entry point
+3. **Team Plans** - B2B photo packages
 
 ### Future (Post-MVP)
 - Enterprise pricing
@@ -88,67 +92,35 @@ Pro users get a lower price per generation than Individual
 
 **Using direct Gemini API (not Replicate) = 30-50% cost savings**
 
-### Per Generation Costs & Margins
+### Per Photo Costs & Margins
 
 | Item | Cost | Revenue | Margin |
 |------|------|---------|--------|
 | Gemini API (4 variations) | $0.10 | - | - |
 | Infrastructure (monthly/user) | ~$0.50 | - | - |
 | **Try Once** | $0.10 | $5.00 | 98% |
-| **Starter base** | $0.10 | $0.96/gen | 90% |
-| **Starter top-up** | $0.10 | $0.90/4cr | 89% |
-| **Pro base** | $0.10 | $0.84/gen | 88% |
-| **Pro top-up** | $0.10 | $0.60/4cr | 83% |
+| **Individual (5 photos)** | $0.50 | $19.99 | 97% |
+| **Team Small (5 photos)** | $0.50 | $19.99 | 97% |
+| **Team Large (20 photos)** | $2.00 | $59.99 | 97% |
 
-### Monthly User Economics (Starter)
-
-Assumptions:
-- User on Starter monthly: $24/month
-- Uses all 60 credits (6 generations)
-- Buys 1 top-up (30 credits, 3 generations): $9.99
-
-```
-Monthly Revenue:        $33.99
-Gemini API costs:       $0.90 (9 generations Ã— $0.10)
-Infrastructure costs:   $0.50
-Total costs:            $1.40
-Gross Margin:           96%
-```
-
-### Monthly User Economics (Pro)
-
-Assumptions:
-- User on Pro monthly: $59/month
-- Uses all 200 credits (20 generations)
-- Buys 1 top-up (100 credits, 10 generations): $24.99
-
-```
-Monthly Revenue:        $83.99
-Gemini API costs:       $3.00 (30 generations Ã— $0.10)
-Infrastructure costs:   $0.50
-Total costs:            $3.50
-Gross Margin:           96%
-```
-
-**All scenarios maintain 85%+ gross margins.**
+**All scenarios maintain 95%+ gross margins.**
 
 ## Conversion Funnel Strategy
 
 ```
-Try Once ($5) 
-    â†“ 
-User sees quality, wants more
-    â†“
-"Subscribe to Starter - Save 81%"
-$24/mo seems reasonable vs. $5 per generation
-    â†“
-Heavy users exceed 100 credits
-    â†“
-Top-ups at $0.90 feel expensive
-    â†“
-"Upgrade to Pro - Get 180 more credits + 33% off top-ups"
-    â†“
-Pro subscription ($59/mo)
+Try Once ($5)
+    ↓
+User sees quality, wants more photos
+    ↓
+"Buy Individual Package - 5 photos for $19.99"
+    ↓
+Small teams need team features
+    ↓
+"Buy Team Small - 5 photos for $19.99 + team features"
+    ↓
+Growing teams need more photos
+    ↓
+"Upgrade to Team Large - 20 photos for $59.99"
 ```
 
 ## Pricing Configuration
@@ -157,49 +129,41 @@ All pricing stored in `config/pricing.ts`:
 
 ```typescript
 export const PRICING_CONFIG = {
-  credits: {
-    perGeneration: 4,
-    rollover: true,
-    rolloverLimit: null, // unlimited
+  // Photo-based system (changed from credits)
+  photos: {
+    perGeneration: 1, // Each generation uses 1 photo
   },
-  
+
+  // Try Once (one-time purchase)
   tryOnce: {
     price: 5.00,
-    credits: 4,
+    photos: 1,
+    stripePriceId: STRIPE_PRICE_IDS.TRY_ONCE || '',
   },
-  
-  starter: {
-    monthly: {
-      price: 24.00,
-      includedCredits: 100,
-    },
-    annual: {
-      price: 245.00,
-      includedCredits: 100, // per month
-    },
-    topUp: {
-      pricePerPackage: 0.90,
-      creditsPerPackage: 4,
-      minimumPurchase: 20,
-    },
+
+  // Individual tier (Personal - one-time purchase)
+  individual: {
+    price: 19.99,
+    photos: 5,
+    stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL || '',
   },
-  
-  pro: {
-    monthly: {
-      price: 59.00,
-      includedCredits: 280,
-    },
-    annual: {
-      price: 600.00,
-      includedCredits: 280, // per month
-    },
-    topUp: {
-      pricePerPackage: 0.60,
-      creditsPerPackage: 4,
-      minimumPurchase: 20,
-    },
+
+  // Team Small tier (Business - up to 5 team members)
+  teamSmall: {
+    price: 19.99,
+    photos: 5,
+    maxTeamMembers: 5,
+    stripePriceId: STRIPE_PRICE_IDS.PRO_SMALL || '',
   },
-  
+
+  // Team Large tier (Business - unlimited team members)
+  teamLarge: {
+    price: 59.99,
+    photos: 20,
+    maxTeamMembers: null, // unlimited
+    stripePriceId: STRIPE_PRICE_IDS.PRO_LARGE || '',
+  },
+
   costs: {
     geminiApiPerGeneration: 0.10,
   },
@@ -210,13 +174,13 @@ export const PRICING_CONFIG = {
 
 **vs. Traditional Photography:**
 - 100x faster (60 seconds vs. weeks)
-- 20x cheaper ($0.96/generation vs. $50-200/person)
+- 20x cheaper ($4/photo vs. $50-200/person)
 - 100% remote
 
 **vs. Competitor AI Tools:**
 - Lower entry ($5 vs. $29)
-- Subscription model = better for regular users
-- Credits never expire (unique advantage)
+- Package model = clear value proposition
+- Domain separation for individual vs team use cases
 
 **vs. DIY Photoshop:**
 - No skills required
@@ -226,7 +190,6 @@ export const PRICING_CONFIG = {
 ## Open Questions
 
 - [ ] Validate Gemini API actual costs per generation
-- [ ] Test conversion rate from Try Once â†’ Starter
-- [ ] Monitor average top-up frequency
-- [ ] Test annual vs. monthly uptake
-- [ ] Optimal credit rollover cap (if any)
+- [ ] Test conversion rate from Try Once → Individual Package
+- [ ] Monitor average package utilization
+- [ ] Test domain-based signup effectiveness

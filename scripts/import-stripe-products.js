@@ -1,11 +1,17 @@
 #!/usr/bin/env node
 
-// Load environment variables from .env.local
-import 'dotenv/config';
+// Load environment variables from .env
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env' });
 
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import Stripe from 'stripe';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -34,27 +40,28 @@ function readPricingConfigTs() {
     prices: {
       tryOnce: { price: num(/tryOnce:\s*\{[\s\S]*?price:\s*([0-9.]+)/), credits: num(/tryOnce:[\s\S]*?credits:\s*([0-9]+)/) },
       tryOnceTopUp: { price: num(/tryOnce:[\s\S]*?topUp:\s*\{[\s\S]*?price:\s*([0-9.]+)/), credits: num(/tryOnce:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
-      individualMonthly: { price: num(/individual:[\s\S]*?monthly:[\s\S]*?price:\s*([0-9.]+)/), credits: num(/individual:[\s\S]*?includedCredits:\s*([0-9]+)/) },
-      individualAnnual: { price: num(/individual:[\s\S]*?annual:[\s\S]*?price:\s*([0-9.]+)/), credits: num(/individual:[\s\S]*?includedCredits:\s*([0-9]+)/) },
-      individualTopUp: { price: num(/individual:[\s\S]*?topUp:[\s\S]*?price:\s*([0-9.]+)/), credits: num(/individual:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
-      proMonthly: { price: num(/pro:[\s\S]*?monthly:[\s\S]*?price:\s*([0-9.]+)/), credits: num(/pro:[\s\S]*?includedCredits:\s*([0-9]+)/) },
-      proAnnual: { price: num(/pro:[\s\S]*?annual:[\s\S]*?price:\s*([0-9.]+)/), credits: num(/pro:[\s\S]*?includedCredits:\s*([0-9]+)/) },
-      proTopUp: { price: num(/pro:[\s\S]*?topUp:[\s\S]*?price:\s*([0-9.]+)/), credits: num(/pro:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
+      individual: { price: num(/individual:\s*\{[\s\S]*?price:\s*([0-9.]+)/), credits: num(/individual:[\s\S]*?credits:\s*([0-9]+)/) },
+      individualTopUp: { price: num(/individual:[\s\S]*?topUp:\s*\{[\s\S]*?price:\s*([0-9.]+)/), credits: num(/individual:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
+      proSmall: { price: num(/proSmall:\s*\{[\s\S]*?price:\s*([0-9.]+)/), credits: num(/proSmall:[\s\S]*?credits:\s*([0-9]+)/) },
+      proSmallTopUp: { price: num(/proSmall:[\s\S]*?topUp:\s*\{[\s\S]*?price:\s*([0-9.]+)/), credits: num(/proSmall:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
+      proLarge: { price: num(/proLarge:\s*\{[\s\S]*?price:\s*([0-9.]+)/), credits: num(/proLarge:[\s\S]*?credits:\s*([0-9]+)/) },
+      proLargeTopUp: { price: num(/proLarge:[\s\S]*?topUp:\s*\{[\s\S]*?price:\s*([0-9.]+)/), credits: num(/proLarge:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
     }
   }
 }
 
 async function createProducts() {
-  console.log('🚀 Creating Stripe products and prices...');
+  console.log('🚀 Creating Stripe products and prices (one-time transactional)...');
 
   try {
     // Read pricing from src/config/pricing.ts to avoid drift
     const read = readPricingConfigTs()
+
     // 1. Try Once Product
     console.log('📦 Creating Try Once product...');
     const tryOnceProduct = await stripe.products.create({
-      name: 'Try Once - 10 Credits',
-      description: 'One-time purchase of 10 credits for photo generation',
+      name: 'Try Once - 1 photo',
+      description: 'One-time purchase of 1 photo for photo generation',
       metadata: {
         type: 'try_once',
         credits: '10'
@@ -73,135 +80,138 @@ async function createProducts() {
 
     console.log(`✅ Try Once - Price ID: ${tryOncePrice.id}`);
 
-    // 2. Individual/Starter Products
-    console.log('📦 Creating Individual/Starter products...');
+    // 2. Individual Product (one-time)
+    console.log('📦 Creating Individual product...');
     const individualProduct = await stripe.products.create({
-      name: 'Individual Plan',
-      description: 'Personal photo generation plan',
+      name: 'Individual Plan - 5 photos',
+      description: 'One-time purchase for personal photo generation (5 photos)',
       metadata: {
         type: 'individual',
-        credits: '60'
+        credits: '50'
       }
     });
 
-    // Monthly
-    const individualMonthlyPrice = await stripe.prices.create({
+    const individualPrice = await stripe.prices.create({
       product: individualProduct.id,
-      unit_amount: toCents(read.prices.individualMonthly?.price ?? 24.00),
+      unit_amount: toCents(read.prices.individual?.price ?? 19.99),
       currency: 'usd',
-      recurring: { interval: 'month' },
       metadata: {
         type: 'individual',
-        period: 'monthly',
-        credits: '60'
+        credits: '50'
       }
     });
 
-    // Annual-contract monthly (discounted per-month for yearly contract)
-    const individualAnnualMonthly = (read.prices.individualAnnual?.price ?? 228.00) / 12
-    const individualAnnualMonthlyPrice = await stripe.prices.create({
-      product: individualProduct.id,
-      unit_amount: toCents(individualAnnualMonthly),
+    console.log(`✅ Individual - Price ID: ${individualPrice.id}`);
+
+    // 3. Pro Small Product (up to 5 team members - one-time)
+    console.log('📦 Creating Pro Small product...');
+    const proSmallProduct = await stripe.products.create({
+      name: 'Pro Small Plan - 5 photos',
+      description: 'One-time purchase for teams up to 5 members (5 photos)',
+      metadata: {
+        type: 'pro_small',
+        credits: '50',
+        maxTeamMembers: '5'
+      }
+    });
+
+    const proSmallPrice = await stripe.prices.create({
+      product: proSmallProduct.id,
+      unit_amount: toCents(read.prices.proSmall?.price ?? 19.99),
       currency: 'usd',
-      recurring: { interval: 'month' },
       metadata: {
-        type: 'individual',
-        period: 'annual_monthly',
-        credits: '60'
+        type: 'pro_small',
+        credits: '50',
+        maxTeamMembers: '5'
       }
     });
 
-    console.log(`✅ Individual Monthly - Price ID: ${individualMonthlyPrice.id}`);
-    console.log(`✅ Individual Annual (monthly charge) - Price ID: ${individualAnnualMonthlyPrice.id}`);
+    console.log(`✅ Pro Small - Price ID: ${proSmallPrice.id}`);
 
-    // 3. Pro/Business Products
-    console.log('📦 Creating Pro/Business products...');
-    const proProduct = await stripe.products.create({
-      name: 'Pro Plan',
-      description: 'Business photo generation plan',
+    // 4. Pro Large Product (more than 5 team members - one-time)
+    console.log('📦 Creating Pro Large product...');
+    const proLargeProduct = await stripe.products.create({
+      name: 'Pro Large Plan - 20 photos',
+      description: 'One-time purchase for teams with more than 5 members (20 photos)',
       metadata: {
-        type: 'pro',
+        type: 'pro_large',
+        credits: '200',
+        maxTeamMembers: 'unlimited'
+      }
+    });
+
+    const proLargePrice = await stripe.prices.create({
+      product: proLargeProduct.id,
+      unit_amount: toCents(read.prices.proLarge?.price ?? 59.99),
+      currency: 'usd',
+      metadata: {
+        type: 'pro_large',
         credits: '200'
       }
     });
 
-    // Monthly
-    const proMonthlyPrice = await stripe.prices.create({
-      product: proProduct.id,
-      unit_amount: toCents(read.prices.proMonthly?.price ?? 59.00),
-      currency: 'usd',
-      recurring: { interval: 'month' },
-      metadata: {
-        type: 'pro',
-        period: 'monthly',
-        credits: '200'
-      }
-    });
+    console.log(`✅ Pro Large - Price ID: ${proLargePrice.id}`);
 
-    // Annual-contract monthly (discounted per-month for yearly contract)
-    const proAnnualMonthly = (read.prices.proAnnual?.price ?? 588.00) / 12
-    const proAnnualMonthlyPrice = await stripe.prices.create({
-      product: proProduct.id,
-      unit_amount: toCents(proAnnualMonthly),
-      currency: 'usd',
-      recurring: { interval: 'month' },
-      metadata: {
-        type: 'pro',
-        period: 'annual_monthly',
-        credits: '200'
-      }
-    });
-
-    console.log(`✅ Pro Monthly - Price ID: ${proMonthlyPrice.id}`);
-    console.log(`✅ Pro Annual (monthly charge) - Price ID: ${proAnnualMonthlyPrice.id}`);
-
-    // 4. Top-up products
+    // 5. Top-up products (one-time)
     console.log('📦 Creating Top-Up products...')
+
     const individualTopUpProduct = await stripe.products.create({
-      name: 'Individual Top-Up',
-      description: 'One-time purchase of credits (individual)',
+      name: 'Individual Top-Up - 5 photos',
+      description: 'One-time purchase of 5 photos (individual)',
       metadata: { type: 'top_up', tier: 'individual' }
     })
     const individualTopUpPrice = await stripe.prices.create({
       product: individualTopUpProduct.id,
-      unit_amount: toCents(read.prices.individualTopUp?.price ?? 9.99),
+      unit_amount: toCents(read.prices.individualTopUp?.price ?? 19.99),
       currency: 'usd',
-      metadata: { type: 'top_up', tier: 'individual', credits: '30' }
+      metadata: { type: 'top_up', tier: 'individual', credits: '50' }
     })
 
-    const proTopUpProduct = await stripe.products.create({
-      name: 'Pro Top-Up',
-      description: 'One-time purchase of credits (pro)',
-      metadata: { type: 'top_up', tier: 'pro' }
+    const proSmallTopUpProduct = await stripe.products.create({
+      name: 'Pro Small Top-Up - 5 photos',
+      description: 'One-time purchase of 50 credits (pro small)',
+      metadata: { type: 'top_up', tier: 'pro_small' }
     })
-    const proTopUpPrice = await stripe.prices.create({
-      product: proTopUpProduct.id,
-      unit_amount: toCents(read.prices.proTopUp?.price ?? 24.99),
+    const proSmallTopUpPrice = await stripe.prices.create({
+      product: proSmallTopUpProduct.id,
+      unit_amount: toCents(read.prices.proSmallTopUp?.price ?? 19.99),
       currency: 'usd',
-      metadata: { type: 'top_up', tier: 'pro', credits: '100' }
+      metadata: { type: 'top_up', tier: 'pro_small', credits: '50' }
+    })
+
+    const proLargeTopUpProduct = await stripe.products.create({
+      name: 'Pro Large Top-Up - 10 Photos',
+      description: 'One-time purchase of 10 photos for Pro Large users',
+      metadata: { type: 'top_up', tier: 'pro_large' }
+    })
+    const proLargeTopUpPrice = await stripe.prices.create({
+      product: proLargeTopUpProduct.id,
+      unit_amount: toCents(read.prices.proLargeTopUp?.price ?? 29.99),
+      currency: 'usd',
+      metadata: { type: 'top_up', tier: 'pro_large', credits: '100' }
     })
 
     const tryOnceTopUpProduct = await stripe.products.create({
-      name: 'Try Once Top-Up',
-      description: 'One-time purchase of credits for Try Once users',
+      name: 'Try Once Top-Up - 5 Photos',
+      description: 'One-time purchase of 5 photos for Try Once users',
       metadata: { type: 'top_up', tier: 'try_once' }
     })
     const tryOnceTopUpPrice = await stripe.prices.create({
       product: tryOnceTopUpProduct.id,
-      unit_amount: toCents(read.prices.tryOnceTopUp?.price ?? 8.90),
+      unit_amount: toCents(read.prices.tryOnceTopUp?.price ?? 24.99),
       currency: 'usd',
-      metadata: { type: 'top_up', tier: 'try_once', credits: '20' }
+      metadata: { type: 'top_up', tier: 'try_once', credits: '50' }
     })
 
     // Output config snippet for PRICE_IDS in src/config/pricing.ts
     console.log('\n📋 Add these IDs to PRICE_IDS in src/config/pricing.ts:');
     console.log('TRY_ONCE:', `"${tryOncePrice.id}"`);
-    console.log('INDIVIDUAL_MONTHLY:', `"${individualMonthlyPrice.id}"`);
-    console.log('INDIVIDUAL_ANNUAL_MONTHLY:', `"${individualAnnualMonthlyPrice.id}"`);
-    console.log('PRO_MONTHLY:', `"${proMonthlyPrice.id}"`);
-    console.log('PRO_ANNUAL_MONTHLY:', `"${proAnnualMonthlyPrice.id}"`);
+    console.log('INDIVIDUAL:', `"${individualPrice.id}"`);
+    console.log('PRO_SMALL:', `"${proSmallPrice.id}"`);
+    console.log('PRO_LARGE:', `"${proLargePrice.id}"`);
     console.log('INDIVIDUAL_TOP_UP:', `"${individualTopUpPrice.id}"`);
-    console.log('PRO_TOP_UP:', `"${proTopUpPrice.id}"`);
+    console.log('PRO_SMALL_TOP_UP:', `"${proSmallTopUpPrice.id}"`);
+    console.log('PRO_LARGE_TOP_UP:', `"${proLargeTopUpPrice.id}"`);
     console.log('TRY_ONCE_TOP_UP:', `"${tryOnceTopUpPrice.id}"`);
 
     console.log('\n✅ All products and prices created successfully!');
@@ -217,23 +227,23 @@ async function checkAlignment() {
   const { ids, prices } = readPricingConfigTs()
 
   const results = []
-  async function check(name, idKey, expected, recurringInterval) {
+  async function check(name, idKey, expected) {
     const priceId = ids[idKey]
     if (!priceId) { results.push({ name, ok: false, reason: `Missing price ID for ${idKey}` }); return }
     const price = await stripe.prices.retrieve(priceId)
     const amountOk = price.unit_amount === toCents(expected)
     const currencyOk = (price.currency || 'usd') === 'usd'
-    const intervalOk = recurringInterval ? price.recurring?.interval === recurringInterval : !price.recurring
-    results.push({ name, ok: amountOk && currencyOk && intervalOk, amountOk, currencyOk, intervalOk, current: price.unit_amount, expected: toCents(expected) })
+    const noRecurringOk = !price.recurring // Should be one-time, no recurring
+    results.push({ name, ok: amountOk && currencyOk && noRecurringOk, amountOk, currencyOk, noRecurringOk, current: price.unit_amount, expected: toCents(expected) })
   }
 
   await check('Try Once', 'TRY_ONCE', prices.tryOnce.price)
-  await check('Individual Monthly', 'INDIVIDUAL_MONTHLY', prices.individualMonthly.price, 'month')
-  await check('Individual Annual (monthly charge)', 'INDIVIDUAL_ANNUAL_MONTHLY', (prices.individualAnnual.price / 12), 'month')
-  await check('Pro Monthly', 'PRO_MONTHLY', prices.proMonthly.price, 'month')
-  await check('Pro Annual (monthly charge)', 'PRO_ANNUAL_MONTHLY', (prices.proAnnual.price / 12), 'month')
+  await check('Individual', 'INDIVIDUAL', prices.individual.price)
+  await check('Pro Small', 'PRO_SMALL', prices.proSmall.price)
+  await check('Pro Large', 'PRO_LARGE', prices.proLarge.price)
   await check('Individual Top-Up', 'INDIVIDUAL_TOP_UP', prices.individualTopUp.price)
-  await check('Pro Top-Up', 'PRO_TOP_UP', prices.proTopUp.price)
+  await check('Pro Small Top-Up', 'PRO_SMALL_TOP_UP', prices.proSmallTopUp.price)
+  await check('Pro Large Top-Up', 'PRO_LARGE_TOP_UP', prices.proLargeTopUp.price)
   await check('Try Once Top-Up', 'TRY_ONCE_TOP_UP', prices.tryOnceTopUp.price)
 
   let ok = true

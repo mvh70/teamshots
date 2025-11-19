@@ -4,19 +4,14 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 
-type PlanId = 'pro' | 'individual' | 'tryOnce'
+type PlanId = 'proSmall' | 'proLarge' | 'individual' | 'tryOnce'
 
 interface PlanCardProps {
   id: PlanId
   price: string
-  yearlyPrice?: string
   credits: number
-  monthlyPricePerPhoto?: string
-  yearlyPricePerPhoto?: string
   pricePerPhoto?: string
-  annualSavings?: string
   popular?: boolean
-  isYearly?: boolean
   actionMode?: 'link' | 'button'
   href?: string
   onSelect?: () => void
@@ -26,14 +21,9 @@ interface PlanCardProps {
 export default function PlanCard({
   id,
   price,
-  yearlyPrice,
   credits,
-  monthlyPricePerPhoto,
-  yearlyPricePerPhoto,
   pricePerPhoto,
-  annualSavings,
   popular,
-  isYearly = false,
   actionMode = 'link',
   href,
   onSelect,
@@ -41,21 +31,12 @@ export default function PlanCard({
 }: PlanCardProps) {
   const t = useTranslations('pricing')
 
-  const numberOfPhotos = calculatePhotosFromCredits(credits)
-
-  const displayPrice = isYearly && yearlyPrice
-    ? `$${(parseFloat(yearlyPrice.replace('$', '')) / 12).toFixed(2)}`
-    : price
+  const displayPrice = price
 
   const displayPeriod = id === 'tryOnce'
     ? t(`plans.${id}.period`)
-    : (isYearly ? 'billed monthly' : 'monthly')
-  const displaySavings = isYearly && annualSavings ? `Save ${annualSavings}/year` : null
-  const displayPricePerPhoto = id === 'tryOnce'
-    ? pricePerPhoto
-    : isYearly
-      ? yearlyPricePerPhoto
-      : monthlyPricePerPhoto
+    : 'one-time'
+  const displayPricePerPhoto = pricePerPhoto
 
   const borderColor = id === 'tryOnce'
     ? 'border-2 border-gray-200'
@@ -81,21 +62,15 @@ export default function PlanCard({
         <div className="flex items-baseline gap-2">
           <span className="text-4xl font-bold text-gray-900">{displayPrice}</span>
           <span className="text-gray-600 whitespace-nowrap text-sm leading-none">{displayPeriod}</span>
-          {displaySavings && (
-            <span className="ml-3 relative inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-lg">
-              {displaySavings}
-            </span>
-          )}
         </div>
         <p className="text-sm text-brand-primary font-semibold mt-2">
-          {credits} {id === 'tryOnce' ? t('credits') : t('creditsPerMonth')}
+          {t('photoCount', { count: calculatePhotosFromCredits(credits) })}
         </p>
         {displayPricePerPhoto && (
           <div className="mt-4">
             <span className="text-sm text-gray-700 font-semibold">
               {displayPricePerPhoto} {t('perPhotoVariation')}
             </span>
-            <span className="ml-2 text-xs text-gray-500">({numberOfPhotos} photos)</span>
           </div>
         )}
       </div>

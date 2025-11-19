@@ -14,12 +14,17 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
   const t = useTranslations('pricing.purchaseSuccess')
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [planType, setPlanType] = useState<'try_once' | 'individual' | 'pro' | null>(null)
+  const [planType, setPlanType] = useState<'try_once' | 'individual' | 'proSmall' | null>(null)
 
   useEffect(() => {
     const successType = searchParams.get('type')
-    if (successType === 'try_once' || successType === 'individual' || successType === 'pro') {
-      setPlanType(successType)
+    // Map success types from checkout to plan types
+    if (successType === 'try_once_success') {
+      setPlanType('try_once')
+    } else if (successType === 'individual_success') {
+      setPlanType('individual')
+    } else if (successType === 'pro_small_success' || successType === 'pro_large_success') {
+      setPlanType('proSmall')
     }
   }, [searchParams])
 
@@ -43,8 +48,8 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
         }
       }
       case 'individual': {
-        const credits = PRICING_CONFIG.individual.includedCredits
-        const regenerations = PRICING_CONFIG.regenerations.personal
+        const credits = PRICING_CONFIG.individual.credits
+        const regenerations = PRICING_CONFIG.regenerations.individual
         const uniquePhotos = credits / creditsPerGeneration // 6 unique photos
         const variationsPerPhoto = regenerations + 1 // 1 original + retries = 4 variations
         const totalVariations = uniquePhotos * variationsPerPhoto // 6 × 4 = 24
@@ -58,9 +63,9 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
           ]
         }
       }
-      case 'pro': {
-        const credits = PRICING_CONFIG.pro.includedCredits
-        const regenerations = PRICING_CONFIG.regenerations.business
+      case 'proSmall': {
+        const credits = PRICING_CONFIG.proSmall.credits
+        const regenerations = PRICING_CONFIG.regenerations.proSmall
         const uniquePhotos = credits / creditsPerGeneration // 20 unique photos
         const variationsPerPhoto = regenerations + 1 // 1 original + retries = 5 variations
         const totalVariations = uniquePhotos * variationsPerPhoto // 20 × 5 = 100
@@ -89,11 +94,11 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4 ${className}`}>
+    <div className={`min-h-screen bg-gradient-to-br from-brand-secondary-light to-brand-primary-light flex items-center justify-center p-4 ${className}`}>
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
         <div className="mb-6">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircleIcon className="w-8 h-8 text-green-600" />
+          <div className="w-16 h-16 bg-brand-secondary-lighter rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircleIcon className="w-8 h-8 text-brand-secondary-hover" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             {t('title')}

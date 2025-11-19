@@ -167,9 +167,10 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
  */
 export function getCreditsForTier(tier: PlanTier): number {
   if (tier === 'individual') {
-    return PRICING_CONFIG.individual.includedCredits
+    return PRICING_CONFIG.individual.credits
   } else if (tier === 'pro') {
-    return PRICING_CONFIG.pro.includedCredits
+    // Legacy 'pro' tier - default to proSmall credits
+    return PRICING_CONFIG.proSmall.credits
   } else if (tier === 'try_once') {
     return PRICING_CONFIG.tryOnce.credits
   }
@@ -234,15 +235,16 @@ export function formatTierName(tier: PlanTier): string {
 export function getTierFeatures(tier: PlanTier) {
   if (tier === 'individual') {
     return {
-      credits: PRICING_CONFIG.individual.includedCredits,
-      regenerations: PRICING_CONFIG.regenerations.personal,
+      credits: PRICING_CONFIG.individual.credits,
+      regenerations: PRICING_CONFIG.regenerations.individual,
       topUpPrice: PRICING_CONFIG.individual.topUp.price,
     }
   } else if (tier === 'pro') {
+    // Legacy 'pro' tier - default to proSmall features
     return {
-      credits: PRICING_CONFIG.pro.includedCredits,
-      regenerations: PRICING_CONFIG.regenerations.business,
-      topUpPrice: PRICING_CONFIG.pro.topUp.price,
+      credits: PRICING_CONFIG.proSmall.credits,
+      regenerations: PRICING_CONFIG.regenerations.proSmall,
+      topUpPrice: PRICING_CONFIG.proSmall.topUp.price,
     }
   } else if (tier === 'try_once') {
     return {

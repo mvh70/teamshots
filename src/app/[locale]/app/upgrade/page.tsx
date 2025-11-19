@@ -5,9 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/routing'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { getPricingDisplay } from '@/domain/pricing'
+import { getPricePerPhoto, formatPrice } from '@/domain/pricing/utils'
 import { CheckoutButton } from '@/components/ui'
-import BillingToggle from '@/components/pricing/BillingToggle'
 import StripeNotice from '@/components/stripe/StripeNotice'
 import PricingCard from '@/components/pricing/PricingCard'
 import { normalizePlanTierForUI } from '@/domain/subscription/utils'
@@ -20,9 +19,6 @@ export default function UpgradePage() {
   const tAll = useTranslations()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const pricing = getPricingDisplay()
-
-  const [isYearly, setIsYearly] = useState(false)
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
   const [selectedTier, setSelectedTier] = useState<Tier>('individual')
 
@@ -65,7 +61,7 @@ export default function UpgradePage() {
 
   // Clear success params from URL after display (prevents showing on refresh)
   useEffect(() => {
-    if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_success')) {
+    if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('success')
       newUrl.searchParams.delete('type')
@@ -75,46 +71,50 @@ export default function UpgradePage() {
     }
   }, [isSuccess, successType])
 
-  const subscriptionPriceId = useMemo(() => {
-    if (selectedTier === 'individual') {
-      return isYearly ? PRICING_CONFIG.individual.annual.stripePriceId : PRICING_CONFIG.individual.monthly.stripePriceId
-    }
-    return isYearly ? PRICING_CONFIG.pro.annual.stripePriceId : PRICING_CONFIG.pro.monthly.stripePriceId
-  }, [selectedTier, isYearly])
-
   // Checkout handled via CheckoutButton components below
 
-  const tryOncePlan = {
-    id: 'tryOnce' as const,
-    price: pricing.tryOnce.price,
-    credits: pricing.tryOnce.credits,
-    pricePerPhoto: pricing.tryOnce.pricePerPhoto,
-    regenerations: pricing.tryOnce.regenerations,
-  }
+  // Determine which plans to show based on selected tier
+  const plansToShow = useMemo(() => {
+    const tryOncePlan = {
+      id: 'tryOnce' as const,
+      price: `$${PRICING_CONFIG.tryOnce.price}`,
+      credits: PRICING_CONFIG.tryOnce.credits,
+      regenerations: PRICING_CONFIG.regenerations.tryOnce,
+      pricePerPhoto: formatPrice(getPricePerPhoto('tryOnce')),
+    }
 
-  const subscriptionPlan = selectedTier === 'individual'
-    ? {
-        id: 'individual' as const,
-        price: pricing.individual.monthly.price,
-        yearlyPrice: pricing.individual.annual.price,
-        credits: pricing.individual.monthly.credits,
-        monthlyPricePerPhoto: pricing.individual.monthly.pricePerPhoto,
-        yearlyPricePerPhoto: pricing.individual.annual.pricePerPhoto,
-        regenerations: pricing.individual.monthly.regenerations,
-        annualSavings: pricing.individual.annual.savings,
-        popular: true,
-      }
-    : {
-        id: 'pro' as const,
-        price: pricing.pro.monthly.price,
-        yearlyPrice: pricing.pro.annual.price,
-        credits: pricing.pro.monthly.credits,
-        monthlyPricePerPhoto: pricing.pro.monthly.pricePerPhoto,
-        yearlyPricePerPhoto: pricing.pro.annual.pricePerPhoto,
-        regenerations: pricing.pro.monthly.regenerations,
-        annualSavings: pricing.pro.annual.savings,
-        popular: true,
-      }
+    const individualPlan = {
+      id: 'individual' as const,
+      price: `$${PRICING_CONFIG.individual.price}`,
+      credits: PRICING_CONFIG.individual.credits,
+      regenerations: PRICING_CONFIG.regenerations.individual,
+      popular: true,
+      pricePerPhoto: formatPrice(getPricePerPhoto('individual')),
+    }
+
+    const proSmallPlan = {
+      id: 'proSmall' as const,
+      price: `$${PRICING_CONFIG.proSmall.price}`,
+      credits: PRICING_CONFIG.proSmall.credits,
+      regenerations: PRICING_CONFIG.regenerations.proSmall,
+      popular: true,
+      pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
+    }
+
+    const proLargePlan = {
+      id: 'proLarge' as const,
+      price: `$${PRICING_CONFIG.proLarge.price}`,
+      credits: PRICING_CONFIG.proLarge.credits,
+      regenerations: PRICING_CONFIG.regenerations.proLarge,
+      pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
+    }
+
+    if (selectedTier === 'individual') {
+      return [tryOncePlan, individualPlan]
+    }
+    // For 'pro' tier, show both proSmall and proLarge
+    return [tryOncePlan, proSmallPlan, proLargePlan]
+  }, [selectedTier])
 
   // Show loading while checking subscription
   if (isCheckingSubscription) {
@@ -139,43 +139,53 @@ export default function UpgradePage() {
       <div className="text-center mb-10">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">{t('title')}</h1>
         <p className="text-gray-600 mt-2">{t('subtitle')}</p>
-        <BillingToggle isYearly={isYearly} onChange={setIsYearly} className="mt-6" />
+        {/* Billing toggle hidden - now transactional pricing only */}
+        {/* <BillingToggle isYearly={isYearly} onChange={setIsYearly} className="mt-6" /> */}
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <PricingCard
-          {...tryOncePlan}
-          isYearly={false}
-          ctaSlot={
-            <CheckoutButton
-              loadingText={tAll('common.loading', { default: 'Loading...' })}
-              type="try_once"
-              priceId={PRICING_CONFIG.tryOnce.stripePriceId}
-            >
-              {t('plans.tryOnce.cta')}
-            </CheckoutButton>
-          }
-          className="h-full"
-        />
-
-        <PricingCard
-          {...subscriptionPlan}
-          isYearly={isYearly}
-          previousPrice={isYearly ? subscriptionPlan.price : undefined}
-          ctaSlot={
-            <CheckoutButton
-              loadingText={tAll('common.loading', { default: 'Loading...' })}
-              type="subscription"
-              priceId={subscriptionPriceId}
-              metadata={{ tier: selectedTier, period: isYearly ? 'annual' : 'monthly' }}
-              useBrandCtaColors
-            >
-              {t('plans.' + subscriptionPlan.id + '.cta')}
-            </CheckoutButton>
-          }
-          popularLabelKey="pricingPreview.recommended"
-          className="h-full"
-        />
+      <div className={`grid gap-8 ${
+        plansToShow.length === 3 ? 'md:grid-cols-3' :
+        plansToShow.length === 2 ? 'md:grid-cols-2' :
+        'md:grid-cols-1'
+      }`}>
+        {plansToShow.map((plan) => (
+          <PricingCard
+            key={plan.id}
+            {...plan}
+            ctaSlot={
+              plan.id === 'tryOnce' ? (
+                <CheckoutButton
+                  loadingText={tAll('common.loading', { default: 'Loading...' })}
+                  type="try_once"
+                  priceId={PRICING_CONFIG.tryOnce.stripePriceId}
+                >
+                  {t('plans.tryOnce.cta')}
+                </CheckoutButton>
+              ) : (
+                <CheckoutButton
+                  loadingText={tAll('common.loading', { default: 'Loading...' })}
+                  type="plan"
+                  priceId={
+                    plan.id === 'individual'
+                      ? PRICING_CONFIG.individual.stripePriceId
+                      : plan.id === 'proSmall'
+                        ? PRICING_CONFIG.proSmall.stripePriceId
+                        : PRICING_CONFIG.proLarge.stripePriceId
+                  }
+                  metadata={{
+                    tier: plan.id === 'individual' ? 'individual' : plan.id === 'proSmall' ? 'proSmall' : 'proLarge',
+                    period: plan.id === 'individual' ? 'individual' : plan.id === 'proSmall' ? 'proSmall' : 'proLarge'
+                  }}
+                  useBrandCtaColors
+                >
+                  {t('plans.' + plan.id + '.cta')}
+                </CheckoutButton>
+              )
+            }
+            popularLabelKey={(plan.id === 'individual' || plan.id === 'proSmall') ? "pricingPreview.recommended" : undefined}
+            className="h-full"
+          />
+        ))}
       </div>
     </div>
   )

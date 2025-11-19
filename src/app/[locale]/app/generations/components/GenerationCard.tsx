@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { formatDate } from '@/lib/format'
 import { LoadingSpinner } from '@/components/ui'
 import { GenerationRating } from '@/components/feedback/GenerationRating'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 
 export type GenerationListItem = {
   id: string
@@ -431,9 +432,9 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
           <span className="text-xs text-gray-500">{formatDate(item.createdAt)}</span>
         </div>
         <p className="text-sm text-gray-900 truncate">Photo style: {item.contextName || 'Freestyle'}</p>
-        <div className="flex items-center justify-between" data-onborda="credits-info">
-          <div className="text-xs text-gray-500" id={`credits-info-${item.id}`}>
-            {item.isOriginal && `${item.costCredits} credits`}
+        <div className="flex items-center justify-between" data-onborda="photos-info">
+          <div className="text-xs text-gray-500" id={`photos-info-${item.id}`}>
+            {item.isOriginal && `${calculatePhotosFromCredits(item.costCredits)} photos`}
             {item.remainingRegenerations > 0 && (
               <span className="ml-2 text-brand-secondary" data-onborda="regenerations-info">
                 • {t('actions.retriesLeft', { count: item.remainingRegenerations })}

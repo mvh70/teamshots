@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline'
 import {useTranslations} from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 import dynamic from 'next/dynamic'
 import { useRouter } from '@/i18n/routing'
 import { useEffect, useState } from 'react'
@@ -255,10 +256,14 @@ export default function DashboardPage() {
           message = t('successMessages.tryOnce', { credits: PRICING_CONFIG.tryOnce.credits })
           break
         case 'individual_success':
-          message = t('successMessages.individual', { credits: PRICING_CONFIG.individual.includedCredits })
+          message = t('successMessages.individual', { credits: PRICING_CONFIG.individual.credits })
           break
         case 'pro_success':
-          message = t('successMessages.pro', { credits: PRICING_CONFIG.pro.includedCredits })
+        case 'pro_small_success':
+          message = t('successMessages.proSmall', { credits: PRICING_CONFIG.proSmall.credits })
+          break
+        case 'pro_large_success':
+          message = t('successMessages.proLarge', { credits: PRICING_CONFIG.proLarge.credits })
           break
         case 'top_up_success':
           message = t('successMessages.topUp')
@@ -372,14 +377,14 @@ export default function DashboardPage() {
     router.push(`/app/generate/start?key=${encodeURIComponent(selfieKey)}`)
   }
 
-  // Calculate total credits and generations available
-  // For team admins/members: only show team credits (individual credits are unmigrated pro credits already included in team balance)
-  // For individual users: show individual credits only
+  // Calculate total photos
+  // For team admins/members: only show team credits converted to photos (individual credits are unmigrated pro credits already included in team balance)
+  // For individual users: show individual credits converted to photos
   const totalCredits = credits && (userPermissions.isTeamAdmin || userPermissions.isTeamMember)
     ? (credits.team || 0)
     : (credits?.individual || 0)
-  
-  const generationsAvailable = Math.floor(totalCredits / PRICING_CONFIG.credits.perGeneration)
+
+  const totalPhotos = calculatePhotosFromCredits(totalCredits)
 
   // Stats configuration (excluding credits which gets special treatment)
   const statsConfig = [
@@ -795,13 +800,10 @@ export default function DashboardPage() {
                   <div className="w-10 h-10 bg-brand-primary-light rounded-lg flex items-center justify-center">
                     <SparklesIcon className="h-6 w-6 text-brand-primary" />
                   </div>
-                  <p className="ml-4 text-sm font-medium text-text-muted">{t('stats.credits')}</p>
+                  <p className="ml-4 text-sm font-medium text-text-muted">{t('stats.photos')}</p>
                 </div>
-                <p className="text-3xl font-bold text-text-dark mb-1 leading-tight">{totalCredits}</p>
-                <p className="text-sm text-text-muted mb-4">{t('stats.creditsUnit')}</p>
-                <p className="text-xs text-text-muted mb-4">
-                  {generationsAvailable} {t('stats.generationsAvailable', { count: generationsAvailable })}
-                </p>
+                <p className="text-3xl font-bold text-text-dark mb-1 leading-tight">{totalPhotos}</p>
+                <p className="text-sm text-text-muted mb-4">{t('stats.photosUnit')}</p>
                 <button
                   onClick={() => router.push('/app/top-up')}
                   className="text-sm font-medium text-brand-cta hover:text-brand-cta-hover transition-colors flex items-center group"

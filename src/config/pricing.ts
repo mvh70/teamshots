@@ -1,24 +1,24 @@
 // Define Stripe Price IDs per environment (test vs production)
 const TEST_STRIPE_PRICE_IDS = {
-  TRY_ONCE: "price_1SQ5yBENr8odIuXavrO8Mdoj",
-  INDIVIDUAL_MONTHLY: "price_1SQ5yCENr8odIuXaSZWd1HmH",
-  INDIVIDUAL_ANNUAL_MONTHLY: "price_1SQ5yCENr8odIuXawTDntLGO",
-  PRO_MONTHLY: "price_1SQ5yDENr8odIuXayMnwCrFK",
-  PRO_ANNUAL_MONTHLY: "price_1SQ5yEENr8odIuXaUkDMJtjX",
-  INDIVIDUAL_TOP_UP: "price_1SQ5yEENr8odIuXa0xQmW0Fj",
-  PRO_TOP_UP: "price_1SQ5yFENr8odIuXaaPqPn0mY",
-  TRY_ONCE_TOP_UP: "price_1SQ5yGENr8odIuXaXfKd8zRk",
+  TRY_ONCE: "price_1SVDRqENr8odIuXa8iteYR8v",
+  INDIVIDUAL: "price_1SVDRqENr8odIuXaUsejcC0Y",
+  PRO_SMALL: "price_1SVDRrENr8odIuXam20q1Y0H",
+  PRO_LARGE: "price_1SVDRsENr8odIuXaI58rONjp",
+  INDIVIDUAL_TOP_UP: "price_1SVDRsENr8odIuXauWVusJRu",
+  PRO_SMALL_TOP_UP: "price_1SVDRtENr8odIuXa51JORKHM",
+  PRO_LARGE_TOP_UP: "price_1SVDRtENr8odIuXasuxkKPYU",
+  TRY_ONCE_TOP_UP: "price_1SVDRuENr8odIuXaZofhMLDy",
 } as const;
 
 const PROD_STRIPE_PRICE_IDS = {
   TRY_ONCE: "price_1SNf1qENr8odIuXaFvdZpbvz",
-  INDIVIDUAL_MONTHLY: "price_1SNf1sENr8odIuXaFh37KBgd",
-  INDIVIDUAL_ANNUAL_MONTHLY: "price_1SNf1sENr8odIuXa6Akt2ZyK",
-  PRO_MONTHLY: "price_1SNf1tENr8odIuXa2Avo6e3e",
-  PRO_ANNUAL_MONTHLY: "price_1SNf1uENr8odIuXaaHbfAHbp",
+  INDIVIDUAL: "price_1SNf1sENr8odIuXaFh37KBgd",
+  PRO_SMALL: "price_1SNf1tENr8odIuXa2Avo6e3e",
+  PRO_LARGE: "price_1SNf1uENr8odIuXaaHbfAHbp",
   INDIVIDUAL_TOP_UP: "price_1SNf1uENr8odIuXaN01qecY0",
-  PRO_TOP_UP: "price_1SNf1vENr8odIuXaATPBupuL",
-  TRY_ONCE_TOP_UP: "price_1SNf1wENr8odIuXam77AKOKo",
+  PRO_SMALL_TOP_UP: "price_1SNf1vENr8odIuXaATPBupuL",
+  PRO_LARGE_TOP_UP: "price_1SNf1wENr8odIuXam77AKOKo",
+  TRY_ONCE_TOP_UP: "price_1SNf1xENr8odIuXaB77AKOKo",
 } as const;
 
 const IS_PRODUCTION =
@@ -27,12 +27,12 @@ const IS_PRODUCTION =
 
 type StripePriceIds = {
   readonly TRY_ONCE: string;
-  readonly INDIVIDUAL_MONTHLY: string;
-  readonly INDIVIDUAL_ANNUAL_MONTHLY: string;
-  readonly PRO_MONTHLY: string;
-  readonly PRO_ANNUAL_MONTHLY: string;
+  readonly INDIVIDUAL: string;
+  readonly PRO_SMALL: string;
+  readonly PRO_LARGE: string;
   readonly INDIVIDUAL_TOP_UP: string;
-  readonly PRO_TOP_UP: string;
+  readonly PRO_SMALL_TOP_UP: string;
+  readonly PRO_LARGE_TOP_UP: string;
   readonly TRY_ONCE_TOP_UP: string;
 };
 const STRIPE_PRICE_IDS: StripePriceIds = IS_PRODUCTION ? PROD_STRIPE_PRICE_IDS : TEST_STRIPE_PRICE_IDS;
@@ -44,63 +44,66 @@ export const PRICING_CONFIG = {
     rollover: true,
     rolloverLimit: null, // unlimited rollover
   },
-  
+
   // Regeneration system
   regenerations: {
     tryOnce: 2,
-    personal: 3,
-    business: 4,
+    individual: 3,
+    proSmall: 4,
+    proLarge: 4,
     invited: 4,
   },
-  
+
   // Try Once (one-time purchase)
   tryOnce: {
     price: 5.00,
     credits: 10,
     stripePriceId: STRIPE_PRICE_IDS.TRY_ONCE || '',
     topUp: {
-      price: 8.90,
-      credits: 20,
+      price: 24.99,
+      credits: 50,
       stripePriceId: STRIPE_PRICE_IDS.TRY_ONCE_TOP_UP || '',
     },
   },
-  
-  // Individual tier (Personal)
+
+  // Individual tier (Personal - one-time purchase)
   individual: {
-    includedCredits: 60, // per month
-    monthly: {
-      price: 24.00,
-      stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL_MONTHLY || '',
-    },
-    annual: {
-      price: 228.00,
-      stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL_ANNUAL_MONTHLY || '',
-    },
+    price: 19.99,
+    credits: 50, // 5 photos at 10 credits each
+    stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL || '',
     topUp: {
-      price: 9.99,
-      credits: 30,
+      price: 19.99,
+      credits: 50,
       stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL_TOP_UP || '',
     },
   },
-  
-  // Pro tier (Business)
-  pro: {
-    includedCredits: 200, // per month
-    monthly: {
-      price: 59.00,
-      stripePriceId: STRIPE_PRICE_IDS.PRO_MONTHLY || '',
-    },
-    annual: {
-      price: 588.00,
-      stripePriceId: STRIPE_PRICE_IDS.PRO_ANNUAL_MONTHLY || '',
-    },
+
+  // Pro Small tier (Business - up to 5 team members - one-time purchase)
+  proSmall: {
+    price: 19.99,
+    credits: 50, // 5 photos at 10 credits each
+    maxTeamMembers: 5,
+    stripePriceId: STRIPE_PRICE_IDS.PRO_SMALL || '',
     topUp: {
-      price: 24.99,
-      credits: 100,
-      stripePriceId: STRIPE_PRICE_IDS.PRO_TOP_UP || '',
+      price: 19.99,
+      credits: 50,
+      stripePriceId: STRIPE_PRICE_IDS.PRO_SMALL_TOP_UP || '',
     },
   },
-  
+
+  // Pro Large tier (Business - more than 5 team members - one-time purchase)
+  proLarge: {
+    price: 59.99,
+    credits: 200, // 20 photos at 10 credits each
+    maxTeamMembers: null, // unlimited
+    stripePriceId: STRIPE_PRICE_IDS.PRO_LARGE || '',
+    topUp: {
+      price: 29.99,
+      credits: 100, // 10 photos at 10 credits each
+      stripePriceId: STRIPE_PRICE_IDS.PRO_LARGE_TOP_UP || '',
+    },
+  },
+
   // Cost tracking
   costs: {
     geminiApiPerGeneration: 0.10, // Estimated cost per generation
@@ -110,17 +113,16 @@ export const PRICING_CONFIG = {
   team: {
     defaultInviteCredits: 10,
   },
-  
+
   // Free trial credits (granted on signup)
   freeTrial: {
     individual: 10,  // Credits for individual users on free plan
     pro: 30,         // Credits for pro users (teams) on free plan
   },
-  
+
   // Default package granted on signup (folder name in src/domain/style/packages/)
   defaultSignupPackage: 'headshot1',
 } as const;
 
 // Pricing tier type
-export type PricingTier = 'individual' | 'pro';
-export type PricingPeriod = 'monthly' | 'annual';
+export type PricingTier = 'tryOnce' | 'individual' | 'proSmall' | 'proLarge';
