@@ -243,8 +243,19 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
       params.delete('finalDestination')
       params.delete('tier')
       params.delete('credits')
+      
+      // If we're on the generation page, ensure skipUpload=1 is preserved/added
+      // This ensures the page shows the generation UI instead of redirecting to selfie selection
+      const currentPathNormalized = pathname.replace(/^\/(en|es)/, '') || pathname
+      if (currentPathNormalized === '/app/generate/start' && !params.has('skipUpload')) {
+        params.set('skipUpload', '1')
+      }
+      
       const newUrl = `${pathname}${params.toString() ? `?${params.toString()}` : ''}`
-      router.replace(newUrl)
+      
+      // Use push instead of replace to force a proper navigation and re-render
+      // This ensures the generation page properly resets its state
+      router.push(newUrl)
     } else if (redirectInfo.path) {
       // Redirect to clean path without success params to prevent target page from showing success banner
       router.push(redirectInfo.path)

@@ -84,7 +84,8 @@ export default function StartGenerationPage() {
   const [contextLoaded, setContextLoaded] = useState(() => {
     // Check if context was already loaded in this session
     // This prevents showing loading screen after returning from purchase success
-    if (typeof window !== 'undefined') {
+    // BUT: if we're showing the success screen, don't use cached state
+    if (typeof window !== 'undefined' && !isSuccess) {
       return sessionStorage.getItem('teamshots.contextLoaded') === 'true'
     }
     return false
