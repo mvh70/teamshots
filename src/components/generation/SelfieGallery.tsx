@@ -285,21 +285,38 @@ export default function SelfieGallery({
                 <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"><rect x="3" y="3" width="14" height="14" rx="2" ry="2" strokeWidth="2" /></svg>
               )}
             </button>
-            <div className={`aspect-square bg-gray-100 rounded-lg overflow-hidden ${isSelected ? 'ring-2 ring-brand-secondary' : ''} relative`}>
+            <div className={`md:aspect-square bg-gray-100 rounded-lg overflow-hidden ${isSelected ? 'ring-2 ring-brand-secondary' : ''} relative`}>
               {!isLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
                   <LoadingSpinner />
                 </div>
               )}
-              <Image
-                src={selfie.url}
-                alt="Selfie"
-                fill
-                className="object-cover"
-                unoptimized
-                onLoad={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
-                onError={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
-              />
+              {/* Mobile: Natural aspect ratio, Desktop: Square with fill */}
+              <div className="block md:hidden">
+                <Image
+                  src={selfie.url}
+                  alt="Selfie"
+                  width={400}
+                  height={600}
+                  className="w-full h-auto object-contain"
+                  sizes="100vw"
+                  unoptimized
+                  onLoad={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
+                  onError={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
+                />
+              </div>
+              <div className="hidden md:block absolute inset-0">
+                <Image
+                  src={selfie.url}
+                  alt="Selfie"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 50vw, 33vw"
+                  unoptimized
+                  onLoad={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
+                  onError={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
+                />
+              </div>
               {selfie.used && hoveredDeleteId === selfie.id && (
                 <div className="absolute inset-x-0 bottom-0 bg-black/70 text-white text-[11px] leading-tight px-2 py-1 flex items-center gap-1">
                   <InformationCircleIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

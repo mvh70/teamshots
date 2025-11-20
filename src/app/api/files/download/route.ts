@@ -51,9 +51,12 @@ export async function GET(req: NextRequest) {
     if (!ownership) return NextResponse.json({ error: 'File not found' }, { status: 404 })
 
     let invitePersonId: string | null = null
+    let inviteTeamId: string | null = null
     if (!session?.user?.id && token) {
-      invitePersonId = await validateInviteToken(token)
-      if (!invitePersonId) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+      const inviteData = await validateInviteToken(token)
+      if (!inviteData) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+      invitePersonId = inviteData.personId
+      inviteTeamId = inviteData.teamId
     }
 
     let userWithRoles = null
@@ -70,7 +73,7 @@ export async function GET(req: NextRequest) {
       roles = await getUserEffectiveRoles(user, subscription)
     }
 
-    const authorized = isFileAuthorized(ownership, userWithRoles, roles, invitePersonId)
+    const authorized = isFileAuthorized(ownership, userWithRoles, roles, invitePersonId, inviteTeamId)
     if (!authorized) {
       if (session?.user?.id) {
         await SecurityLogger.logPermissionDenied(session.user.id, 'files.download', key)

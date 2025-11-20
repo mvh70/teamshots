@@ -69,11 +69,14 @@ export async function GET(req: NextRequest) {
     }
 
     let invitePersonId: string | null = null
+    let inviteTeamId: string | null = null
     if (!session?.user?.id && token) {
-      invitePersonId = await validateInviteToken(token)
-      if (!invitePersonId) {
+      const inviteData = await validateInviteToken(token)
+      if (!inviteData) {
         return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
       }
+      invitePersonId = inviteData.personId
+      inviteTeamId = inviteData.teamId
     }
 
     let userWithRoles = null
@@ -97,7 +100,7 @@ export async function GET(req: NextRequest) {
       return fileNotFoundResponse()
     }
 
-    const authorized = isFileAuthorized(ownership, userWithRoles, roles, invitePersonId)
+    const authorized = isFileAuthorized(ownership, userWithRoles, roles, invitePersonId, inviteTeamId)
 
     if (!authorized) {
       if (session?.user?.id) {

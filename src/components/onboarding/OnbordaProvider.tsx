@@ -143,20 +143,38 @@ function TourStarter() {
       console.log('[TourStarter Debug] Tour found:', !!tour, 'pendingTour:', pendingTour, 'pathname:', pathname)
       
       // Add path check - allow matching if pathname starts with startingPath (for sub-paths)
-      if (tour?.startingPath && !pathname.startsWith(tour.startingPath)) {
-        console.log('[TourStarter Debug] Path mismatch - tour.startingPath:', tour.startingPath, 'pathname:', pathname)
-        clearPendingTour()
-        lastCheckedTourRef.current = null
-        return
+      // Special handling for generation-detail tour: also allow invite-dashboard paths
+      if (tour?.startingPath) {
+        const isGenerationDetailTour = pendingTour === 'generation-detail'
+        const matchesStartingPath = pathname.startsWith(tour.startingPath)
+        const matchesInvitePath = isGenerationDetailTour && pathname.includes('/invite-dashboard') && pathname.includes('/generations')
+        
+        if (!matchesStartingPath && !matchesInvitePath) {
+          console.log('[TourStarter Debug] Path mismatch - tour.startingPath:', tour.startingPath, 'pathname:', pathname)
+          clearPendingTour()
+          lastCheckedTourRef.current = null
+          return
+        }
       }
       
       // Double-check database before starting (defense in depth)
-      const completedTours = context.completedTours || []
-      const hasCompleted = completedTours.includes(pendingTour)
-      if (hasCompleted) {
-        console.log('[TourStarter Debug] Tour already completed, clearing')
-        clearPendingTour()
-        return
+      // BUT: If pendingTour is set (via startTour), it means the tour was explicitly started
+      // and should be shown regardless of completion status (may be force-started or user wants to see it again)
+      // Only check completion for tours that are in the database pendingTours array (auto-triggered)
+      const isInDatabasePending = context.pendingTours?.includes(pendingTour)
+      if (isInDatabasePending) {
+        // Tour is in database pendingTours (auto-triggered), check if already completed
+        const completedTours = context.completedTours || []
+        const hasCompleted = completedTours.includes(pendingTour)
+        if (hasCompleted) {
+          console.log('[TourStarter Debug] Auto-triggered tour already completed, clearing. completedTours:', completedTours)
+          clearPendingTour()
+          return
+        }
+      } else {
+        // Tour was explicitly started via startTour() (not in database pendingTours)
+        // Skip completion check - if it was explicitly started, we should show it
+        console.log('[TourStarter Debug] Tour explicitly started (not in database pendingTours), skipping completion check to allow force-start')
       }
       
       console.log('[TourStarter Debug] Starting tour:', pendingTour, 'onborda available:', !!onborda, 'startOnborda available:', !!onborda?.startOnborda)

@@ -103,9 +103,9 @@ export default function SelfieApproval({
 
 
   return (
-    <div className="space-y-6 md:space-y-6" data-testid="approval-screen">
+    <div className="md:space-y-6" data-testid="approval-screen">
       {/* Main content container */}
-      <div className="bg-white rounded-xl md:rounded-lg shadow-sm border border-gray-200 p-5 sm:p-6 md:p-6">
+      <div className="bg-white rounded-xl md:rounded-lg shadow-sm border border-gray-200 p-5 sm:p-6 md:p-6 md:mb-6">
         <h1 className="text-xl sm:text-lg font-semibold text-gray-900 mb-5 sm:mb-4" data-testid="approval-title">
           {t('title')}
         </h1>
@@ -134,7 +134,7 @@ export default function SelfieApproval({
       </div>
 
       {/* Action Buttons - Responsive */}
-      <div className="bg-white rounded-t-xl md:rounded-xl md:rounded-lg shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] border-t border-x md:border border-gray-200 pt-5 px-5 pb-5 sm:pt-6 sm:px-6 sm:pb-6 md:pb-6" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))' }}>
+      <div className="bg-white rounded-t-xl md:rounded-lg shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] border-t border-x md:border border-gray-200 pt-4 px-4 pb-4 sm:pt-6 sm:px-6 sm:pb-4 md:pb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:gap-3 sm:justify-center">
           <button
             onClick={handleApprove}

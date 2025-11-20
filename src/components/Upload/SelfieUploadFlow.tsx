@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import { useSelfieUpload } from '@/hooks/useSelfieUpload'
@@ -204,7 +205,7 @@ export default function SelfieUploadFlow({
   // Show approval screen for camera captures
   if (pendingApproval) {
     return (
-      <div data-testid="approval-flow" className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto bg-white md:bg-transparent" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div data-testid="approval-flow" className="md:static fixed inset-x-0 bottom-0 z-50 md:z-auto bg-white md:bg-transparent" style={{ transform: 'translateZ(0)' }}>
         <SelfieApproval
           uploadedPhotoKey={pendingApproval.key}
           previewUrl={pendingApproval.previewUrl}
@@ -219,9 +220,9 @@ export default function SelfieUploadFlow({
   // When hideHeader is true, render a minimal wrapper for mobile (no padding/border)
   // PhotoUpload component handles all its own styling
   if (hideHeader) {
-    return (
-      <div data-testid="upload-flow" className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto bg-white md:bg-transparent" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <div data-testid="mobile-upload-interface" className="[&>div]:!pb-0 md:[&>div]:!pb-6">
+    const mobileContent = (
+      <div data-testid="upload-flow" className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white pt-4 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]" style={{ transform: 'translateZ(0)' }}>
+        <div data-testid="mobile-upload-interface" className="[&>div]:!p-0">
           <PhotoUpload
             key={cameraKey}
             multiple
@@ -234,6 +235,26 @@ export default function SelfieUploadFlow({
           />
         </div>
       </div>
+    )
+
+    return (
+      <>
+        {/* Mobile: Fixed at bottom of viewport using portal to ensure it's not affected by parent containers */}
+        {typeof window !== 'undefined' && createPortal(mobileContent, document.body)}
+        {/* Desktop: Static positioning */}
+        <div data-testid="upload-flow-desktop" className="hidden md:block">
+          <PhotoUpload
+            key={cameraKey}
+            multiple
+            onUpload={handlePhotoUploadWrapper}
+            onUploaded={handlePhotoUploadedWrapper}
+            onProcessingCompleteRef={onProcessingCompleteRef}
+            testId="desktop-file-input"
+            autoOpenCamera={shouldOpenCamera}
+            isProcessing={isProcessing}
+          />
+        </div>
+      </>
     )
   }
 

@@ -70,7 +70,13 @@ export async function POST(request: NextRequest) {
         lastName: null, // No last name required for team invites
         email: invite.email,
         teamId: invite.teamId,
-        inviteToken: token
+        inviteToken: token,
+        onboardingState: JSON.stringify({
+          state: 'not_started',
+          completedTours: [],
+          pendingTours: [],
+          lastUpdated: new Date().toISOString(),
+        }),
       }
     })
 

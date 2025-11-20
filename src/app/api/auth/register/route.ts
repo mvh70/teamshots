@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
       SELECT
         u.id as "userId", u.email as "userEmail", u.role as "userRole", u.locale as "userLocale",
         p.id as "personId", p."firstName", p."lastName", p."userId" as "personUserId", p."teamId",
+        p."onboardingState",
         t.id as "teamId", t.name as "teamName"
       FROM "User" u
       FULL OUTER JOIN "Person" p ON u.email = p.email
@@ -139,6 +140,7 @@ export async function POST(request: NextRequest) {
       lastName: string | null
       personUserId: string | null
       teamId: string | null
+      onboardingState: string | null
       teamName: string | null
     }>
     Logger.debug('13. Batched existence check complete')
@@ -156,6 +158,7 @@ export async function POST(request: NextRequest) {
       lastName: existingRecords[0].lastName,
       userId: existingRecords[0].personUserId,
       teamId: existingRecords[0].teamId,
+      onboardingState: existingRecords[0].onboardingState,
       team: existingRecords[0].teamId ? { id: existingRecords[0].teamId, name: existingRecords[0].teamName } : null
     } : null
 
@@ -215,13 +218,26 @@ export async function POST(request: NextRequest) {
       Logger.info('20. Linking existing person...')
       // Link existing person (from invite) to new user and convert invite in single transaction
       const result = await prisma.$transaction(async (tx) => {
+        // Initialize onboardingState if it's still in old format (plain string) or null
+        let onboardingState = existingPerson.onboardingState
+        if (!onboardingState || (onboardingState === 'not_started' || onboardingState === 'in_progress' || onboardingState === 'completed')) {
+          // Convert old format to new JSON format
+          onboardingState = JSON.stringify({
+            state: onboardingState === 'in_progress' ? 'in_progress' : onboardingState === 'completed' ? 'completed' : 'not_started',
+            completedTours: [],
+            pendingTours: [],
+            lastUpdated: new Date().toISOString(),
+          })
+        }
+        
         // Link person to user
         const linkedPerson = await tx.person.update({
           where: { id: existingPerson.id },
           data: {
             userId: user.id,
             firstName,
-            lastName: lastName || null
+            lastName: lastName || null,
+            onboardingState
           },
           include: {
             team: true
@@ -251,13 +267,19 @@ export async function POST(request: NextRequest) {
       Logger.info('21. Person linked')
     } else {
       Logger.info('20. Creating new person...')
-      // Create new person record
+      // Create new person record with properly initialized onboardingState (JSON format)
       person = await prisma.person.create({
         data: {
           firstName,
           lastName: lastName || null,
           email,
           userId: user.id,
+          onboardingState: JSON.stringify({
+            state: 'not_started',
+            completedTours: [],
+            pendingTours: [],
+            lastUpdated: new Date().toISOString(),
+          }),
         }
       })
       Logger.info('21. Person created', { personId: person.id })

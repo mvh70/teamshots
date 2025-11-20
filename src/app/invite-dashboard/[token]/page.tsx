@@ -143,7 +143,14 @@ export default function InviteDashboardPage() {
       // Extract packageId from API response or context settings
       const extractedPackageId = data.packageId || (data.context.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1'
       
-      // Normalize context to PhotoStyleSettings, which handles legacy backgroundUrl/logoUrl fields
+      // Get package config and deserialize settings using package deserializer
+      // This properly handles all fields including clothingColors and shotType
+      const pkg = getPackageConfig(extractedPackageId)
+      const deserializedSettings = data.context.settings 
+        ? pkg.persistenceAdapter.deserialize(data.context.settings as Record<string, unknown>)
+        : pkg.defaultSettings
+      
+      // Normalize context to PhotoStyleSettings for legacy backgroundUrl/logoUrl fields
       // This ensures custom backgrounds and logos are properly extracted from URLs
       const normalizedSettings = normalizeContextToPhotoStyleSettings({
         id: data.context.id,
@@ -156,10 +163,14 @@ export default function InviteDashboardPage() {
         customPrompt: null
       })
       
-      // If settings exist in the normalized result, merge them with package defaults
-      // Otherwise use package defaults
-      const pkg = getPackageConfig(extractedPackageId)
-      const ui: PhotoStyleSettingsType = normalizedSettings || pkg.defaultSettings
+      // Merge deserialized settings (which includes clothingColors, shotType, etc.) 
+      // with normalized settings (which handles legacy background/branding URLs)
+      const ui: PhotoStyleSettingsType = {
+        ...deserializedSettings,
+        background: normalizedSettings.background,
+        branding: normalizedSettings.branding,
+        style: normalizedSettings.style
+      }
       
       setPhotoStyleSettings(ui)
       setOriginalContextSettings(ui)

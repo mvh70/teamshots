@@ -3,7 +3,7 @@ import { useOnborda } from 'onborda'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { usePathname } from '@/i18n/routing'
-import { OnboardingContext, getApplicableTours, getTour } from './config'
+import { OnboardingContext, getApplicableTours, getTour, createTranslatedTours } from './config'
 import { trackTourStarted, trackTourCompleted, trackTourSkipped, trackStepViewed } from './analytics'
 
 // Export the utility functions
@@ -130,7 +130,17 @@ export function useOnboardingState() {
       
       isLoadingRef.current = true
       try {
-        const response = await fetch('/api/onboarding/context')
+        // Check if we're in an invite flow - extract token from pathname
+        // Pathname format: /invite-dashboard/[token]/...
+        const inviteMatch = pathname?.match(/^\/invite-dashboard\/([^/]+)/)
+        const inviteToken = inviteMatch ? inviteMatch[1] : null
+        
+        // Build API URL with token if in invite flow
+        const apiUrl = inviteToken 
+          ? `/api/onboarding/context?token=${encodeURIComponent(inviteToken)}`
+          : '/api/onboarding/context'
+        
+        const response = await fetch(apiUrl)
         if (response.ok) {
           const serverContext = await response.json()
           
@@ -304,25 +314,47 @@ export function useOnbordaTours() {
   )
 
   // Start a specific tour
-  const startTour = (tourName: string) => {
-    console.log('[startTour] Called with:', tourName, 'current pendingTour:', pendingTour)
-    // Check if tour has already been completed (check database via context.completedTours)
-    const completedTours = context.completedTours || []
-    const hasCompleted = completedTours.includes(tourName)
-    if (hasCompleted) {
-      console.log('[startTour] Tour already completed, returning')
-      return
-    }
-    
-    const tour = getTour(tourName, t, context)
-    console.log('[startTour] Tour found:', !!tour, 'tour name:', tour?.name)
-    if (tour) {
-      console.log('[startTour] Setting pendingTour to:', tourName)
-      setPendingTour(tourName)
-      trackTourStarted(tourName, context)
-      console.log('[startTour] pendingTour set, trackTourStarted called')
-    } else {
-      console.log('[startTour] No tour found for:', tourName)
+  const startTour = (tourName: string, force: boolean = false) => {
+    try {
+      console.log('[startTour] Called with:', tourName, 'force:', force, 'current pendingTour:', pendingTour, 'context.personId:', context.personId)
+      // Check if tour has already been completed (check database via context.completedTours)
+      // Skip check if force is true (explicit call from page that already validated conditions)
+      if (!force) {
+        const completedTours = context.completedTours || []
+        console.log('[startTour] completedTours from context:', completedTours, 'checking for:', tourName)
+        const hasCompleted = completedTours.includes(tourName)
+        if (hasCompleted) {
+          console.log('[startTour] Tour already completed, returning. completedTours:', completedTours)
+          return
+        }
+      } else {
+        console.log('[startTour] Force mode - bypassing completion check')
+        // When forcing, also remove from completedTours in local context to fix stale data
+        // This ensures the tour can proceed even if context has stale completion data
+        const currentCompletedTours = context.completedTours || []
+        if (currentCompletedTours.includes(tourName)) {
+          console.log('[startTour] Force mode - removing tour from local completedTours to fix stale data')
+          const updatedCompletedTours = currentCompletedTours.filter((t: string) => t !== tourName)
+          updateContext({ completedTours: updatedCompletedTours })
+          console.log('[startTour] Updated local context completedTours:', updatedCompletedTours)
+        }
+      }
+      
+      console.log('[startTour] Getting tour config for:', tourName)
+      const tour = getTour(tourName, t, context)
+      console.log('[startTour] Tour found:', !!tour, 'tour name:', tour?.name, 'tour object:', tour ? { name: tour.name, startingPath: tour.startingPath } : 'null')
+      
+      if (tour) {
+        console.log('[startTour] Tour exists, setting pendingTour to:', tourName)
+        setPendingTour(tourName)
+        console.log('[startTour] setPendingTour called, tracking tour started')
+        trackTourStarted(tourName, context)
+        console.log('[startTour] Complete - pendingTour should now be:', tourName)
+      } else {
+        console.error('[startTour] ERROR: No tour found for:', tourName, 'Available tours:', Object.keys(createTranslatedTours(t, context)))
+      }
+    } catch (error) {
+      console.error('[startTour] ERROR calling startTour:', error)
     }
   }
 

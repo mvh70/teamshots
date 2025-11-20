@@ -157,7 +157,13 @@ export async function POST(request: NextRequest) {
                   lastName: session.user.name?.split(' ').slice(1).join(' ') || null,
                   email: session.user.email!,
                   userId: user.id,
-                  teamId: team.id
+                  teamId: team.id,
+                  onboardingState: JSON.stringify({
+                    state: 'not_started',
+                    completedTours: [],
+                    pendingTours: [],
+                    lastUpdated: new Date().toISOString(),
+                  }),
                 }
               })
             }

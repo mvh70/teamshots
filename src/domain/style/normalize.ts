@@ -20,7 +20,15 @@ type LegacyContext = {
 function extractKeyFromUrl(url: string | null | undefined): string | undefined {
   if (!url) return undefined
   try {
-    const urlObj = new URL(url)
+    // Handle both absolute and relative URLs
+    let urlObj: URL
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      urlObj = new URL(url)
+    } else {
+      // Relative URL - use a dummy base
+      urlObj = new URL(url, 'http://dummy.com')
+    }
+    
     if (urlObj.pathname === '/api/files/get') {
       return urlObj.searchParams.get('key') || undefined
     }
@@ -47,11 +55,13 @@ export function normalizeContextToPhotoStyleSettings(context: LegacyContext): Ph
   }
 
   const bgKey = settings.background?.key || extractKeyFromUrl(context.backgroundUrl)
-  const bgType = settings.background?.type || (context.backgroundUrl ? 'custom' : 'office')
+  // If we have a key (from settings or extracted from URL), ensure type is 'custom'
+  const bgType = bgKey ? 'custom' : (settings.background?.type || (context.backgroundUrl ? 'custom' : 'office'))
   const bgPrompt = settings.background?.prompt || context.backgroundPrompt || undefined
 
   const brandingLogoKey = settings.branding?.logoKey || extractKeyFromUrl(context.logoUrl)
-  const brandingType = settings.branding?.type || (context.logoUrl ? 'include' : 'exclude')
+  // If we have a logoKey (from settings or extracted from URL), ensure type is 'include'
+  const brandingType = brandingLogoKey ? 'include' : (settings.branding?.type || (context.logoUrl ? 'include' : 'exclude'))
 
   const stylePresetVal: StyleSettings['preset'] =
     (settings.style?.preset as StyleSettings['preset'] | undefined) || context.stylePreset || 'corporate'

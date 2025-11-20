@@ -230,7 +230,7 @@ export default function SelfiesPage() {
       {!uploadOnly && (
         <>
           {/* Mobile: Direct content, no wrapper, with padding */}
-          <div className="md:hidden bg-white">
+          <div className={`md:hidden bg-white ${showUploadFlow ? 'pb-40' : ''}`}>
             <div className="px-4 pt-4 flex items-center justify-between gap-3">
               <SelfieSelectionInfoBanner selectedCount={selectedCount} className="flex-1 mb-0" />
               {isInGenerationFlow && (
@@ -261,35 +261,36 @@ export default function SelfiesPage() {
                 showUploadTile={!showUploadFlow && !(isMobile && isInGenerationFlow)}
                 onUploadClick={() => setShowUploadFlow(true)}
                 onAfterChange={handleSelectionChange}
-                    onDeleted={async (selfieId: string) => {
-                      // Reload selfies list after deletion
-                      await loadUploads()
-                      // Also reload selected state to ensure consistency
-                      await loadSelected()
-                    }}
+                onDeleted={async () => {
+                  // Reload selfies list after deletion
+                  await loadUploads()
+                  // Also reload selected state to ensure consistency
+                  await loadSelected()
+                }}
               />
             </div>
           </div>
         </>
       )}
 
+      {/* Upload Flow - Fixed at bottom on mobile, static on desktop */}
+      {/* On mobile in generation flow, keep showing even after approval */}
+      {/* Hide when approved (approval is handled inside SelfieUploadFlow) */}
+      {showUploadFlow && !isApproved && (
+        <SelfieUploadFlow
+          hideHeader={true}
+          uploadEndpoint={handlePhotoUpload}
+          saveEndpoint={saveSelfieEndpoint}
+          onSelfiesApproved={handleSelfiesApproved!}
+          onCancel={handleCancelUpload}
+          onRetake={handleRetake}
+        />
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && <ErrorBanner message={error} className="mb-6" />}
 
         <div className="space-y-6">
-          {/* Upload Flow - use SelfieUploadFlow component */}
-          {/* On mobile in generation flow, keep showing even after approval */}
-          {/* Hide when approved (approval is handled inside SelfieUploadFlow) */}
-          {showUploadFlow && !isApproved && (
-            <SelfieUploadFlow
-              hideHeader={true}
-              uploadEndpoint={handlePhotoUpload}
-              saveEndpoint={saveSelfieEndpoint}
-              onSelfiesApproved={handleSelfiesApproved!}
-              onCancel={handleCancelUpload}
-              onRetake={handleRetake}
-            />
-          )}
 
           {/* Success Message - Desktop only (mobile version is above selfies section) */}
           {isApproved && !showUploadFlow && (
@@ -336,12 +337,12 @@ export default function SelfiesPage() {
                     showUploadTile={!showUploadFlow && !(isMobile && isInGenerationFlow)}
                     onUploadClick={() => setShowUploadFlow(true)}
                     onAfterChange={handleSelectionChange}
-                    onDeleted={async (selfieId: string) => {
-                      // Reload selfies list after deletion
-                      await loadUploads()
-                      // Also reload selected state to ensure consistency
-                      await loadSelected()
-                    }}
+                onDeleted={async () => {
+                  // Reload selfies list after deletion
+                  await loadUploads()
+                  // Also reload selected state to ensure consistency
+                  await loadSelected()
+                }}
                   />
                 </div>
               </div>

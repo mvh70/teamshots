@@ -104,9 +104,9 @@ export async function findFileOwnership(key: string): Promise<OwnershipRecord | 
 }
 
 /**
- * Validate invite token and return person ID if valid
+ * Validate invite token and return person ID and team ID if valid
  */
-export async function validateInviteToken(token: string | null): Promise<string | null> {
+export async function validateInviteToken(token: string | null): Promise<{ personId: string; teamId: string | null } | null> {
   if (!token) {
     return null
   }
@@ -120,6 +120,7 @@ export async function validateInviteToken(token: string | null): Promise<string 
       person: {
         select: {
           id: true,
+          teamId: true,
         },
       },
     },
@@ -129,17 +130,27 @@ export async function validateInviteToken(token: string | null): Promise<string 
     return null
   }
 
-  return invite.person.id
+  return {
+    personId: invite.person.id,
+    teamId: invite.person.teamId
+  }
 }
 
 /**
  * Check if invite token authorizes access to file
  */
-export function isInviteAuthorized(ownership: OwnershipRecord, invitePersonId: string): boolean {
-  if (!ownership.personId) {
-    return false
+export function isInviteAuthorized(ownership: OwnershipRecord, invitePersonId: string, inviteTeamId: string | null): boolean {
+  // For selfies and generations, check personId match
+  if (ownership.personId) {
+    return ownership.personId === invitePersonId
   }
-  return ownership.personId === invitePersonId
+  
+  // For context files (backgrounds/logos), check teamId match
+  if (ownership.type === 'context' && ownership.teamId && inviteTeamId) {
+    return ownership.teamId === inviteTeamId
+  }
+  
+  return false
 }
 
 /**
@@ -202,10 +213,11 @@ export function isFileAuthorized(
   ownership: OwnershipRecord,
   user: Awaited<ReturnType<typeof getUserWithRoles>> | null,
   roles: Awaited<ReturnType<typeof getUserEffectiveRoles>> | null,
-  invitePersonId: string | null
+  invitePersonId: string | null,
+  inviteTeamId: string | null = null
 ): boolean {
   if (invitePersonId) {
-    return isInviteAuthorized(ownership, invitePersonId)
+    return isInviteAuthorized(ownership, invitePersonId, inviteTeamId)
   }
   return isSessionAuthorized(ownership, user, roles)
 }

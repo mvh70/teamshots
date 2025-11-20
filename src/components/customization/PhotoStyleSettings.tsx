@@ -353,7 +353,7 @@ export default function PhotoStyleSettings({
         id={`${category.key}-settings`}
         className={`transition ${
           isPredefined
-            ? 'md:rounded-lg md:border md:shadow-sm md:bg-white md:border-gray-200'
+            ? 'rounded-lg border shadow-sm bg-white border-gray-200'
             : isUserChoice
               ? 'rounded-lg border shadow-sm bg-brand-primary-light border-brand-primary/50 hover:ring-1 hover:ring-brand-primary/60'
               : 'rounded-lg border shadow-sm bg-white border-gray-200'
@@ -362,7 +362,7 @@ export default function PhotoStyleSettings({
         {/* Category Header */}
         <div className={`${
           isPredefined 
-            ? 'p-0 md:p-4 md:border-b border-gray-200' 
+            ? 'p-4 border-b border-gray-200' 
             : 'p-5 md:p-4 border-b border-gray-200'
         }`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between overflow-hidden">
