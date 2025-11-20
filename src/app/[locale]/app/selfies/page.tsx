@@ -2,64 +2,22 @@
 
 import { useTranslations } from 'next-intl'
 import SelfieGallery from '@/components/generation/SelfieGallery'
-import { useSession } from 'next-auth/react'
 import { useState, useEffect, useCallback } from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
+import { useSelfieUploads } from '@/hooks/useSelfieUploads'
 import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
-import { jsonFetcher } from '@/lib/fetcher'
 
-interface UploadListItem {
-  id: string
-  uploadedKey: string
-  validated: boolean
-  createdAt: string
-  hasGenerations: boolean
-  selected?: boolean
-}
 
 function SelfiesPageContent() {
   const t = useTranslations('selfies')
-  const { data: session } = useSession()
   const [error, setError] = useState<string | null>(null)
-  const [uploads, setUploads] = useState<UploadListItem[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const loadUploads = useCallback(async () => {
-    if (!session?.user?.id) {
-      setUploads([])
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      const data = await jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list', {
-        credentials: 'include'
-      })
-
-      // Fetch selected selfie IDs and merge selection state
-      const selectedRes = await jsonFetcher<{ selfies: { id: string }[] }>('/api/selfies/selected', {
-        credentials: 'include'
-      }).catch(() => ({ selfies: [] as { id: string }[] }))
-
-      const selectedSet = new Set((selectedRes.selfies || []).map(s => s.id))
-      const items = (data.items || []).map(it => ({ ...it, selected: selectedSet.has(it.id) }))
-
-      setUploads(items)
-    } catch (err) {
-      console.error('Error loading uploads:', err)
-      setUploads([])
-    } finally {
-      setLoading(false)
-    }
-  }, [session?.user?.id])
+  const { uploads, loading, loadUploads } = useSelfieUploads()
 
   useEffect(() => {
     loadUploads()
-  }, [session?.user?.id, loadUploads])
+  }, [loadUploads])
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleSelfiesApproved = async (_results: { key: string; selfieId?: string }[]) => {
+  const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
     // Reload uploads after successful upload
     await loadUploads()
     setError(null)
