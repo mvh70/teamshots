@@ -58,8 +58,36 @@ export default function SelfieUploadFlow({
       // Normalize to array for consistent handling
       const uploads = Array.isArray(result) ? result : [result]
 
-      // Process all uploads in parallel (works for both single and multiple)
-      const successfulResults = await promoteUploads(uploads)
+      let successfulResults: { key: string; selfieId?: string }[]
+
+      // Check if saveEndpoint is provided (indicates invite flow with direct uploads)
+      if (saveEndpoint) {
+        // Invite flow: Handle direct uploads (non-temp keys) separately
+        const directUploads = uploads.filter(upload => !upload.key.startsWith('temp:'))
+        const tempUploads = uploads.filter(upload => upload.key.startsWith('temp:'))
+
+        // Process direct uploads by calling saveEndpoint directly
+        const directResults = await Promise.all(
+          directUploads.map(async (upload) => {
+            try {
+              const selfieId = await saveEndpoint(upload.key)
+              return { key: upload.key, selfieId }
+            } catch (error) {
+              console.error('Failed to save direct upload:', error)
+              return { key: upload.key, selfieId: undefined }
+            }
+          })
+        )
+
+        // Process temp uploads through promoteUploads (for authenticated users)
+        const tempResults = tempUploads.length > 0 ? await promoteUploads(tempUploads) : []
+
+        // Combine results
+        successfulResults = [...directResults, ...tempResults]
+      } else {
+        // Standard flow: Use promoteUploads for all uploads (authenticated users)
+        successfulResults = await promoteUploads(uploads)
+      }
 
       // Small delay to ensure database is ready
       await new Promise(resolve => setTimeout(resolve, 200))

@@ -281,7 +281,7 @@ export default function SelfiesPage() {
               <SelfieUploadFlow
                 hideHeader={true}
                 uploadEndpoint={handlePhotoUpload}
-                saveEndpoint={undefined} // Handled by hook
+                saveEndpoint={saveSelfieEndpoint}
                 onSelfiesApproved={handleSelfiesApproved!}
                 onCancel={handleCancelUpload}
                 onRetake={handleRetake}

@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:status": "prisma migrate status",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "worker": "tsx src/queue/worker.ts",

@@ -639,21 +639,7 @@ export default function PhotoUpload({
           } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
           data-testid="dropzone"
         >
-          <div className="w-full flex flex-col items-center justify-center space-y-3">
-            {/* Icon */}
-            <div className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full bg-brand-primary/10 flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            
-            {/* Text */}
-            <div className="text-center space-y-1">
-              <p className="text-xs font-medium text-gray-700 hidden md:block">Drag & drop {multiple ? 'photos' : 'a photo'} here</p>
-              <p className="text-xs font-medium text-gray-700 md:hidden">Upload your {multiple ? 'selfies' : 'selfie'}</p>
-              <p className="text-xs text-gray-500">or click to choose files</p>
-            </div>
-            
+          <div className="w-full flex flex-col items-center justify-center">
             {/* Buttons - vertically stacked */}
             <div className="flex flex-col gap-2 w-full">
               <button
@@ -705,30 +691,30 @@ export default function PhotoUpload({
       {cameraOpen && typeof window !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] bg-black/60" data-testid="camera-interface">
           {/* Mobile: Top sheet - fixed to top */}
-          <div className="md:hidden fixed top-0 left-0 right-0 bg-white rounded-b-lg p-4 shadow-lg z-[10000] max-h-[90vh] overflow-y-auto">
-            <div className="relative w-full">
+          <div className="md:hidden fixed top-0 left-0 right-0 bottom-0 bg-white z-[10000] flex flex-col">
+            <div className="relative w-full flex-1 min-h-0">
               <video 
                 ref={videoRefMobile} 
-                className="w-full rounded-md bg-black aspect-video object-cover" 
+                className="w-full h-full rounded-none bg-black object-cover" 
                 playsInline 
                 muted 
                 autoPlay
                 width="100%"
-                style={{ minHeight: '200px', display: 'block' }}
+                style={{ display: 'block' }}
               />
               <canvas ref={canvasRef} className="hidden" />
             </div>
-            <div className="mt-3 flex items-center justify-between">
+            <div className="p-4 bg-white border-t border-gray-200 flex items-center justify-between">
               <button
                 type="button"
-                className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
+                className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
                 onClick={closeCamera}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className={`px-3 py-2 text-sm rounded-md ${cameraReady ? 'bg-brand-primary text-white hover:bg-brand-primary-hover' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+                className={`px-4 py-2 text-sm rounded-md ${cameraReady ? 'bg-brand-primary text-white hover:bg-brand-primary-hover' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
                 onClick={capturePhoto}
                 disabled={!cameraReady}
               >
