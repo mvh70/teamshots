@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useCallback, useEffect, useRef, useState} from "react";
+import React, {useCallback, useEffect, useRef, useState, startTransition} from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { InlineError, LoadingSpinner } from "@/components/ui";
@@ -60,16 +60,6 @@ export default function PhotoUpload({
     };
   }, [previewUrl, previewUrls, stream]);
 
-  // Scroll to top on mobile when camera opens
-  useEffect(() => {
-    if (cameraOpen && typeof window !== 'undefined') {
-      // Check if mobile (viewport width < 768px)
-      const isMobile = window.innerWidth < 768;
-      if (isMobile) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
-  }, [cameraOpen]);
 
   // Simple: show spinner if uploading OR parent is processing
   const showSpinner = isUploading || isProcessing;
@@ -471,6 +461,11 @@ export default function PhotoUpload({
       setStream(s);
       setCameraOpen(true);
       setCameraReady(false);
+
+      // Scroll to top on mobile when camera opens
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } catch (error) {
       console.error("Camera access error:", error);
       if (error instanceof Error) {
@@ -507,15 +502,14 @@ export default function PhotoUpload({
     setStream(null);
   };
 
-  // Auto-open camera if requested (placed after openCamera declaration to avoid TDZ)
-  useEffect(() => {
-    if (autoOpenCamera && !hasAutoOpenedRef.current) {
-      hasAutoOpenedRef.current = true;
-      setTimeout(() => {
-        openCamera();
-      }, 0);
-    }
-  }, [autoOpenCamera, openCamera]);
+  // Auto-open camera if requested (direct call to avoid unnecessary useEffect)
+  if (autoOpenCamera && !hasAutoOpenedRef.current && typeof window !== 'undefined') {
+    hasAutoOpenedRef.current = true;
+    // Use startTransition for non-urgent update
+    startTransition(() => {
+      openCamera();
+    });
+  }
 
   // Attach stream to video after modal renders
   useEffect(() => {

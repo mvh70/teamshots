@@ -51,20 +51,15 @@ export default function SelfieGallery({
   // Note: useSelfieUpload hook removed - handling uploads directly
 
   const [isProcessingMultiple, setIsProcessingMultiple] = useState(false)
-  const [forceCamera, setForceCamera] = useState<boolean>(false)
   // Approval screen state for camera captures
   const [pendingApproval, setPendingApproval] = useState<{ key: string; previewUrl?: string } | null>(null)
   // Use ref to track camera captures to avoid closure issues
   const pendingApprovalRef = useRef<{ key: string; previewUrl?: string } | null>(null)
 
+  // Use key to force PhotoUpload remount when retaking camera
+  const cameraKeyRef = useRef(0)
 
-  // Reset forceCamera after a short delay to allow PhotoUpload to use it
-  useEffect(() => {
-    if (forceCamera) {
-      const timer = setTimeout(() => setForceCamera(false), 100)
-      return () => clearTimeout(timer)
-    }
-  }, [forceCamera])
+
 
   // Custom upload handler that uses temp storage (required for promotion flow)
   const handlePhotoUpload = async (file: File): Promise<{ key: string; url?: string }> => {
@@ -236,10 +231,10 @@ export default function SelfieGallery({
           }
         }}
         onRetake={() => {
-          // Clear approval state and allow retake
+          // Clear approval state and allow retake by forcing remount
           setPendingApproval(null)
           pendingApprovalRef.current = null
-          setForceCamera(true)
+          cameraKeyRef.current += 1
         }}
         onCancel={() => {
           // Cancel - delete temp file and reset
@@ -327,11 +322,12 @@ export default function SelfieGallery({
         <div className="aspect-square">
           {onSelfiesApproved ? (
             <PhotoUpload
+              key={`camera-${cameraKeyRef.current}`}
               multiple
               onUpload={handlePhotoUpload}
               onUploaded={handlePhotoUploadedWrapper}
               testId="gallery-upload-input"
-              autoOpenCamera={forceCamera}
+              autoOpenCamera={cameraKeyRef.current > 0}
               isProcessing={isProcessingMultiple}
             />
           ) : (

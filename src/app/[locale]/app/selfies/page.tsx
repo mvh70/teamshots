@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import SelfieGallery from '@/components/generation/SelfieGallery'
 import { useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
 import { jsonFetcher } from '@/lib/fetcher'
@@ -17,46 +17,52 @@ interface UploadListItem {
   selected?: boolean
 }
 
-export default function SelfiesPage() {
+function SelfiesPageContent() {
   const t = useTranslations('selfies')
   const { data: session } = useSession()
+  const [error, setError] = useState<string | null>(null)
   const [uploads, setUploads] = useState<UploadListItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  // Load uploads from API
   const loadUploads = async () => {
-    setLoading(true)
+    if (!session?.user?.id) {
+      setUploads([])
+      setLoading(false)
+      return
+    }
+
     try {
+      setLoading(true)
       const data = await jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list', {
-        credentials: 'include' // Required for Safari to send cookies
+        credentials: 'include'
       })
-      let items = data.items || []
+
       // Fetch selected selfie IDs and merge selection state
       const selectedRes = await jsonFetcher<{ selfies: { id: string }[] }>('/api/selfies/selected', {
         credentials: 'include'
       }).catch(() => ({ selfies: [] as { id: string }[] }))
+
       const selectedSet = new Set((selectedRes.selfies || []).map(s => s.id))
-      items = items.map(it => ({ ...it, selected: selectedSet.has(it.id) }))
+      const items = (data.items || []).map(it => ({ ...it, selected: selectedSet.has(it.id) }))
+
       setUploads(items)
-    } catch (error) {
-      console.error('Failed to load uploads:', error)
+    } catch (err) {
+      console.error('Error loading uploads:', err)
+      setUploads([])
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (session?.user?.id) {
-      loadUploads()
-    }
+    loadUploads()
   }, [session?.user?.id])
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleSelfiesApproved = async (_results: { key: string; selfieId?: string }[]) => {
-    // Reload uploads to show the new selfies
+    // Reload uploads after successful upload
     await loadUploads()
-    setError(null) // Clear any previous error on successful upload
+    setError(null)
   }
 
   const handleUploadError = (errorMessage: string) => {
@@ -111,10 +117,14 @@ export default function SelfiesPage() {
             showUploadTile
             onSelfiesApproved={handleSelfiesApproved}
             onUploadError={handleUploadError}
-            onDeleted={() => { void loadUploads() }}
+            onDeleted={loadUploads}
           />
         </div>
       )}
     </div>
   )
+}
+
+export default function SelfiesPage() {
+  return <SelfiesPageContent />
 }
