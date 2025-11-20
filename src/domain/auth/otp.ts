@@ -40,7 +40,11 @@ export async function sendOTPVerificationEmail(email: string, locale: SupportedL
   }
 }
 
-export async function verifyOTP(email: string, code: string): Promise<boolean> {
+export type OTPVerificationResult =
+  | { success: true }
+  | { success: false, reason: 'invalid_code' | 'expired' | 'already_verified' | 'technical_error' }
+
+export async function verifyOTP(email: string, code: string): Promise<OTPVerificationResult> {
   try {
     const otp = await prisma.oTP.findFirst({
       where: {
@@ -54,7 +58,36 @@ export async function verifyOTP(email: string, code: string): Promise<boolean> {
     })
 
     if (!otp) {
-      return false
+      // Check if there's an OTP with this code/email combination that was already verified
+      const verifiedOtp = await prisma.oTP.findFirst({
+        where: {
+          email,
+          code,
+          verified: true
+        }
+      })
+
+      if (verifiedOtp) {
+        return { success: false, reason: 'already_verified' }
+      }
+
+      // Check if there's an expired OTP
+      const expiredOtp = await prisma.oTP.findFirst({
+        where: {
+          email,
+          code,
+          expires: {
+            lt: new Date()
+          }
+        }
+      })
+
+      if (expiredOtp) {
+        return { success: false, reason: 'expired' }
+      }
+
+      // If no OTP found at all, it's an invalid code
+      return { success: false, reason: 'invalid_code' }
     }
 
     await prisma.oTP.update({
@@ -70,10 +103,10 @@ export async function verifyOTP(email: string, code: string): Promise<boolean> {
       }
     })
 
-    return true
+    return { success: true }
   } catch (error) {
     Logger.error('Error verifying OTP', { error: error instanceof Error ? error.message : String(error) })
-    return false
+    return { success: false, reason: 'technical_error' }
   }
 }
 

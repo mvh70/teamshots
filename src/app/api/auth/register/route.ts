@@ -100,22 +100,64 @@ export async function POST(request: NextRequest) {
 
     // Verify OTP
     Logger.info('10. Verifying OTP...')
-    const isOTPValid = await verifyOTP(email, otpCode)
-    Logger.debug('11. OTP verification result', { isOTPValid })
-    
-    if (!isOTPValid) {
+    const otpResult = await verifyOTP(email, otpCode)
+    Logger.debug('11. OTP verification result', otpResult)
+
+    if (!otpResult.success) {
+      const errorMessages = {
+        invalid_code: 'The verification code you entered is incorrect. Please check and try again.',
+        expired: 'The verification code has expired. Please request a new code.',
+        already_verified: 'This verification code has already been used. Please request a new code.',
+        technical_error: 'Oops! Something went wrong. Please try again, and if it keeps happening, let us know.'
+      }
+
       return NextResponse.json(
-        badRequest('OTP_INVALID', 'auth.signup.Invalid OTP', 'Invalid or expired OTP'),
+        badRequest('OTP_INVALID', 'auth.signup.Invalid OTP', errorMessages[otpResult.reason]),
         { status: 400 }
       )
     }
 
-    // Check if user already exists
-    Logger.info('12. Checking existing user...')
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    })
-    Logger.debug('13. Existing user check complete')
+    // Batch existence check for user and person
+    Logger.info('12. Checking existing user and person...')
+    const existingRecords = await prisma.$queryRaw`
+      SELECT
+        u.id as "userId", u.email as "userEmail", u.role as "userRole", u.locale as "userLocale",
+        p.id as "personId", p."firstName", p."lastName", p."userId" as "personUserId", p."teamId",
+        t.id as "teamId", t.name as "teamName"
+      FROM "User" u
+      FULL OUTER JOIN "Person" p ON u.email = p.email
+      LEFT JOIN "Team" t ON p."teamId" = t.id
+      WHERE u.email = ${email} OR p.email = ${email}
+      LIMIT 1
+    ` as Array<{
+      userId: string | null
+      userEmail: string | null
+      userRole: string | null
+      userLocale: string | null
+      personId: string | null
+      firstName: string | null
+      lastName: string | null
+      personUserId: string | null
+      teamId: string | null
+      teamName: string | null
+    }>
+    Logger.debug('13. Batched existence check complete')
+
+    const existingUser = existingRecords[0]?.userId ? {
+      id: existingRecords[0].userId,
+      email: existingRecords[0].userEmail,
+      role: existingRecords[0].userRole,
+      locale: existingRecords[0].userLocale
+    } : null
+
+    const existingPerson = existingRecords[0]?.personId ? {
+      id: existingRecords[0].personId,
+      firstName: existingRecords[0].firstName,
+      lastName: existingRecords[0].lastName,
+      userId: existingRecords[0].personUserId,
+      teamId: existingRecords[0].teamId,
+      team: existingRecords[0].teamId ? { id: existingRecords[0].teamId, name: existingRecords[0].teamName } : null
+    } : null
 
     if (existingUser) {
       // User may have been created via Stripe webhook during checkout.
@@ -148,16 +190,6 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 13)
     Logger.debug('15. Password hashed')
 
-    // Check if there's an existing person record from invite acceptance
-    Logger.info('16. Checking existing person...')
-    const existingPerson = await prisma.person.findFirst({
-      where: { email },
-      include: {
-        team: true
-      }
-    })
-    Logger.debug('17. Existing person check complete')
-
     // Determine initial role based on existing person/invite or userType
     // If userType is 'team' and no existing person, set role to 'team_admin' so they can set up their team
     const initialRole = existingPerson?.teamId 
@@ -181,35 +213,41 @@ export async function POST(request: NextRequest) {
 
     if (existingPerson && !existingPerson.userId) {
       Logger.info('20. Linking existing person...')
-      // Link existing person (from invite) to new user
-      person = await prisma.person.update({
-        where: { id: existingPerson.id },
-        data: {
-          userId: user.id,
-          firstName,
-          lastName: lastName || null
-        },
-        include: {
-          team: true
-        }
-      })
-      
-      teamId = existingPerson.teamId
-      
-      // Link the invite to the user
-      const invite = await prisma.teamInvite.findFirst({
-        where: { 
-          email,
-          usedAt: { not: null }
-        }
-      })
-      
-      if (invite) {
-        await prisma.teamInvite.update({
-          where: { id: invite.id },
-          data: { convertedUserId: user.id }
+      // Link existing person (from invite) to new user and convert invite in single transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // Link person to user
+        const linkedPerson = await tx.person.update({
+          where: { id: existingPerson.id },
+          data: {
+            userId: user.id,
+            firstName,
+            lastName: lastName || null
+          },
+          include: {
+            team: true
+          }
         })
-      }
+
+        // Find and convert the invite atomically
+        const invite = await tx.teamInvite.findFirst({
+          where: {
+            email,
+            usedAt: { not: null }
+          }
+        })
+
+        if (invite) {
+          await tx.teamInvite.update({
+            where: { id: invite.id },
+            data: { convertedUserId: user.id }
+          })
+        }
+
+        return linkedPerson
+      })
+
+      person = result
+      teamId = existingPerson.teamId
       Logger.info('21. Person linked')
     } else {
       Logger.info('20. Creating new person...')
@@ -237,31 +275,38 @@ export async function POST(request: NextRequest) {
       Logger.info('22. User marked as team_admin, team creation deferred')
     }
 
-    // Free trial grant (idempotent)
+    // Consolidated signup grants (free trial + default package) in single transaction
     try {
-      const hasFreeGrant = await prisma.creditTransaction.findFirst({
-        where: { userId: user.id, type: 'free_grant' }
-      })
-      if (!hasFreeGrant) {
-        await prisma.$transaction(async (tx) => {
-          const freePlanTier = userType === 'team' ? 'pro' : 'individual'
-          // Get free credits from pricing config
-          const { PRICING_CONFIG } = await import('@/config/pricing')
-          const freeCredits = userType === 'team' 
-            ? PRICING_CONFIG.freeTrial.pro 
-            : PRICING_CONFIG.freeTrial.individual
-          
-          // If user has a team (created during signup), assign credits to team
-          // Otherwise assign to userId
-          const personWithTeam = await tx.person.findUnique({
-            where: { userId: user.id },
-            select: { teamId: true }
+      await prisma.$transaction(async (tx) => {
+        const { PRICING_CONFIG } = await import('@/config/pricing')
+        const defaultPackageId = PRICING_CONFIG.defaultSignupPackage
+        const freePlanTier = userType === 'team' ? 'pro' : 'individual'
+        const freeCredits = userType === 'team'
+          ? PRICING_CONFIG.freeTrial.pro
+          : PRICING_CONFIG.freeTrial.individual
+
+        // Get person's team association for credit assignment
+        const personWithTeam = await tx.person.findUnique({
+          where: { userId: user.id },
+          select: { teamId: true }
+        })
+
+        // Check existing grants in single query
+        const [existingFreeGrant, existingPackage] = await Promise.all([
+          tx.creditTransaction.findFirst({
+            where: { userId: user.id, type: 'free_grant' }
+          }),
+          tx.userPackage.findFirst({
+            where: { userId: user.id, packageId: defaultPackageId }
           })
-          
+        ])
+
+        // Free trial grant (only if not already granted)
+        if (!existingFreeGrant) {
           await tx.creditTransaction.create({
             data: {
               userId: user.id,
-              teamId: personWithTeam?.teamId || undefined, // Assign to team if exists
+              teamId: personWithTeam?.teamId || undefined,
               credits: freeCredits,
               type: 'free_grant',
               description: 'Free trial credits',
@@ -269,6 +314,7 @@ export async function POST(request: NextRequest) {
               planPeriod: 'free',
             }
           })
+
           type PrismaWithSubscriptionChange = typeof prisma & { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
           const txEx = tx as unknown as PrismaWithSubscriptionChange
           await txEx.subscriptionChange.create({
@@ -279,40 +325,29 @@ export async function POST(request: NextRequest) {
               action: 'start',
             }
           })
+
           await tx.user.update({
             where: { id: user.id },
             data: { planTier: freePlanTier, planPeriod: 'free', freeTrialGrantedAt: new Date() }
           })
-        })
-      }
-    } catch (e) {
-      Logger.error('Free trial grant failed', { error: e instanceof Error ? e.message : String(e) })
-    }
 
-    // Grant default package on signup (idempotent)
-    try {
-      const { PRICING_CONFIG } = await import('@/config/pricing')
-      const defaultPackageId = PRICING_CONFIG.defaultSignupPackage
-      
-      type PrismaWithUserPackage = typeof prisma & { userPackage: { findFirst: (...args: unknown[]) => Promise<unknown>; create: (...args: unknown[]) => Promise<unknown> } }
-      const prismaEx = prisma as unknown as PrismaWithUserPackage
-      
-      const hasPackage = await prismaEx.userPackage.findFirst({
-        where: { userId: user.id, packageId: defaultPackageId }
+          Logger.info('Free trial granted', { userId: user.id, credits: freeCredits, planTier: freePlanTier })
+        }
+
+        // Default package grant (only if not already granted)
+        if (!existingPackage) {
+          await tx.userPackage.create({
+            data: {
+              userId: user.id,
+              packageId: defaultPackageId,
+              purchasedAt: new Date()
+            }
+          })
+          Logger.info('Default package granted', { userId: user.id, packageId: defaultPackageId })
+        }
       })
-      
-      if (!hasPackage) {
-        await prismaEx.userPackage.create({
-          data: {
-            userId: user.id,
-            packageId: defaultPackageId,
-            purchasedAt: new Date()
-          }
-        })
-        Logger.info('Default package granted', { userId: user.id, packageId: defaultPackageId })
-      }
     } catch (e) {
-      Logger.error('Default package grant failed', { error: e instanceof Error ? e.message : String(e) })
+      Logger.error('Signup grants failed', { error: e instanceof Error ? e.message : String(e) })
     }
 
     Logger.info('24. Registration complete!')

@@ -4,8 +4,7 @@ import { useTranslations } from 'next-intl'
 import SelfieGallery from '@/components/generation/SelfieGallery'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
-import SelfieUploadFlow from '@/components/Upload/SelfieUploadFlow'
-import { PrimaryButton, SecondaryButton, LoadingGrid } from '@/components/ui'
+import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
 import { jsonFetcher } from '@/lib/fetcher'
 
@@ -23,7 +22,6 @@ export default function SelfiesPage() {
   const { data: session } = useSession()
   const [uploads, setUploads] = useState<UploadListItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [showUploadFlow, setShowUploadFlow] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Load uploads from API
@@ -54,26 +52,14 @@ export default function SelfiesPage() {
     }
   }, [session?.user?.id])
 
-  const handleSelfieApproved = async () => {
-    // Reload uploads to show the new selfie
+  const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
+    // Reload uploads to show the new selfies
     await loadUploads()
-    setShowUploadFlow(false)
     setError(null) // Clear any previous error on successful upload
-  }
-
-  const handleCancelUpload = () => {
-    setShowUploadFlow(false)
-    setError(null)
   }
 
   const handleUploadError = (errorMessage: string) => {
     setError(errorMessage)
-    setShowUploadFlow(false)
-  }
-
-  const handleRetake = () => {
-    // Keep upload flow open for retake
-    setError(null)
   }
 
   return (
@@ -83,18 +69,7 @@ export default function SelfiesPage() {
         <h1 className="text-2xl font-semibold text-gray-900" data-testid="selfies-title">{t('title')}</h1>
       </div>
 
-      {!showUploadFlow && (
-        <SelfieInfoBanner variant="detailed" />
-      )}
-
-      {showUploadFlow && (
-        <SelfieUploadFlow
-          onSelfieApproved={handleSelfieApproved}
-          onCancel={handleCancelUpload}
-          onError={handleUploadError}
-          onRetake={handleRetake}
-        />
-      )}
+      <SelfieInfoBanner variant="detailed" />
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4" data-testid="error-message">
@@ -125,28 +100,18 @@ export default function SelfiesPage() {
         </div>
       )}
 
-      {!showUploadFlow && loading ? (
+      {loading ? (
         <LoadingGrid cols={4} rows={2} />
-      ) : !showUploadFlow && uploads.length > 0 ? (
+      ) : (
         <div>
           <SelfieGallery
             selfies={uploads.map(u => ({ id: u.id, key: u.uploadedKey, url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`, uploadedAt: u.createdAt, used: u.hasGenerations }))}
             allowDelete
             showUploadTile
-            onUploadClick={() => setShowUploadFlow(true)}
+            onSelfiesApproved={handleSelfiesApproved}
+            onUploadError={handleUploadError}
             onDeleted={() => { void loadUploads() }}
           />
-        </div>
-      ) : !showUploadFlow && (
-        <div className="text-center py-16 bg-white rounded-lg border" data-testid="empty-state">
-          <p className="text-gray-700 mb-2" data-testid="empty-title">{t('empty.title')}</p>
-          <p className="text-gray-500 text-sm mb-4" data-testid="empty-subtitle">{t('empty.subtitle')}</p>
-          <PrimaryButton 
-            onClick={() => setShowUploadFlow(true)}
-            data-testid="upload-cta"
-          >
-            {t('empty.cta')}
-          </PrimaryButton>
         </div>
       )}
     </div>

@@ -19,7 +19,6 @@ interface UploadListItem {
   validated: boolean
   createdAt: string
   hasGenerations: boolean
-  selected?: boolean
 }
 
 export default function SelfieSelectionPage() {
@@ -35,12 +34,9 @@ export default function SelfieSelectionPage() {
   const loadUploads = async () => {
     setLoading(true)
     try {
-      const [data, selectedRes] = await Promise.all([
-        jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list', { credentials: 'include' }),
-        jsonFetcher<{ selfies: { id: string }[] }>('\/api\/selfies\/selected', { credentials: 'include' }).catch(() => ({ selfies: [] as { id: string }[] }))
-      ])
-      const selectedSet = new Set((selectedRes.selfies || []).map(s => s.id))
-      const items = (data.items || []).map(it => ({ ...it, selected: selectedSet.has(it.id) }))
+      const data = await jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list', { credentials: 'include' })
+      // No longer need to fetch selected state here since gallery gets it from props
+      const items = data.items || []
       setUploads(items)
     } catch (error) {
       console.error('Failed to load uploads:', error)
@@ -62,75 +58,33 @@ export default function SelfieSelectionPage() {
     }
   }, [loading, uploads.length])
 
-  const handleSelfieApproved = async (selfieKey: string, selfieId?: string) => {
-    console.log('handleSelfieApproved called', { selfieKey, selfieId })
-    
+  const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
+    console.log('=== handleSelfiesApproved CALLED ===', { count: results.length, results })
+
     // Hide upload flow first
     setShowUpload(false)
-    
-    // Automatically select the newly uploaded selfie
-    // Try to find the selfie ID if not provided
-    let resolvedSelfieId = selfieId
-    
-    if (!resolvedSelfieId) {
-      console.log('No selfieId provided, trying to find it by key:', selfieKey)
-      // Wait a moment for the selfie to be fully saved, then try to find it
-      // Retry up to 3 times with increasing delays
-      for (let attempt = 0; attempt < 3; attempt++) {
-        await new Promise(resolve => setTimeout(resolve, 300 * (attempt + 1)))
-        
+
+    // Auto-select the newly uploaded selfies for consistency with invited user flows
+    const validSelfieIds = results
+      .map(r => r.selfieId)
+      .filter((id): id is string => id !== undefined && id !== null)
+
+    if (validSelfieIds.length > 0) {
+      // Auto-select each new selfie
+      for (const selfieId of validSelfieIds) {
         try {
-          const findRes = await jsonFetcher<{ id: string }>(`/api/uploads/find-by-key?key=${encodeURIComponent(selfieKey)}`, {
-            credentials: 'include'
-          })
-          if (findRes.id) {
-            resolvedSelfieId = findRes.id
-            console.log('Found selfie ID:', resolvedSelfieId)
-            break
-          }
+          await toggleSelect(selfieId, true)
+          await new Promise(resolve => setTimeout(resolve, 200))
+          await loadSelected()
         } catch (error) {
-          console.log(`Attempt ${attempt + 1} failed to find selfie:`, error)
-          if (attempt === 2) {
-            console.error('Error finding selfie by key after retries:', error)
-            // Final fallback: try to find it in the uploads list
-            try {
-              const updatedUploads = await jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list', { credentials: 'include' })
-              const foundSelfie = (updatedUploads.items || []).find(u => u.uploadedKey === selfieKey)
-              if (foundSelfie) {
-                resolvedSelfieId = foundSelfie.id
-                console.log('Found selfie in uploads list:', resolvedSelfieId)
-              }
-            } catch (fallbackError) {
-              console.error('Error finding selfie in uploads list:', fallbackError)
-            }
-          }
+          console.error('Error selecting newly uploaded selfie:', error)
         }
       }
-    } else {
-      console.log('Using provided selfieId:', resolvedSelfieId)
+      console.log(`Auto-selected ${validSelfieIds.length} newly uploaded selfie(s)`)
     }
-    
-    // Select the selfie if we have an ID
-    if (resolvedSelfieId) {
-      try {
-        console.log('Selecting selfie:', resolvedSelfieId)
-        await toggleSelect(resolvedSelfieId, true)
-        // Wait a moment for the selection to persist
-        await new Promise(resolve => setTimeout(resolve, 200))
-        // Reload selected list to ensure it's up to date
-        await loadSelected()
-        console.log('Selfie selected successfully')
-      } catch (error) {
-        console.error('Error selecting newly uploaded selfie:', error)
-      }
-    } else {
-      console.warn('Could not find selfie ID for key:', selfieKey, 'selfieId provided:', selfieId)
-    }
-    
-    // Always reload uploads to show the new selfie and selection state
-    console.log('Reloading uploads list...')
+
+    // Reload uploads list
     await loadUploads()
-    console.log('Uploads list reloaded')
   }
 
   // Use a ref to prevent infinite loops
@@ -180,7 +134,7 @@ export default function SelfieSelectionPage() {
 
       {showUpload && (
         <SelfieUploadFlow
-          onSelfieApproved={handleSelfieApproved}
+          onSelfiesApproved={handleSelfiesApproved}
           onCancel={() => setShowUpload(false)}
           onError={(error) => {
             console.error('Selfie upload error:', error)

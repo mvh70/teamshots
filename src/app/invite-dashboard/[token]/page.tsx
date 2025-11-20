@@ -699,7 +699,9 @@ export default function InviteDashboardPage() {
               {!uploadKey && availableSelfies.length === 0 && (
                 <SelfieUploadFlow
                   hideHeader={true}
-                  onSelfieApproved={async (key, selfieId) => {
+                  onSelfiesApproved={async (results) => {
+                    if (results.length === 0) return
+                    const { key, selfieId } = results[0]
                     setUploadKey(key)
                     setIsApproved(true)
                     setGenerationType('team')
@@ -742,6 +744,27 @@ export default function InviteDashboardPage() {
                   onRetake={() => {
                     setUploadKey('')
                     setIsApproved(false)
+                  }}
+                  uploadEndpoint={async (file: File) => {
+                    const ext = file.name.split('.')?.pop()?.toLowerCase() || ''
+                    const res = await fetch(`/api/uploads/proxy?token=${encodeURIComponent(token)}`, {
+                      method: 'POST',
+                      headers: {
+                        'x-file-content-type': file.type,
+                        'x-file-extension': ext,
+                        'x-file-type': 'selfie'
+                      },
+                      body: file,
+                      credentials: 'include'
+                    })
+                    if (!res.ok) {
+                      const errorData = await res.json().catch(() => ({}))
+                      throw new Error(errorData.error || 'Upload failed')
+                    }
+                    const { key } = await res.json() as { key: string }
+                    // Provide a local preview url for UX
+                    const preview = URL.createObjectURL(file)
+                    return { key, url: preview }
                   }}
                   saveEndpoint={async (key: string) => {
                     const response = await fetch('/api/team/member/selfies', {

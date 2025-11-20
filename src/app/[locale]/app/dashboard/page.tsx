@@ -372,9 +372,11 @@ export default function DashboardPage() {
     setMounted(true)
   }, [])
 
-  const handleSelfieApproved = async (selfieKey: string) => {
-    // Redirect to generation start with approved selfie
-    router.push(`/app/generate/start?key=${encodeURIComponent(selfieKey)}`)
+  const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
+    // Redirect to generation start with the first approved selfie
+    if (results.length > 0) {
+      router.push(`/app/generate/start?key=${encodeURIComponent(results[0].key)}`)
+    }
   }
 
   // Calculate total photos
@@ -708,7 +710,7 @@ export default function DashboardPage() {
       {/* Selfie Upload Flow */}
       {showUploadFlow && (
         <SelfieUploadFlow
-          onSelfieApproved={handleSelfieApproved}
+          onSelfiesApproved={handleSelfiesApproved}
           onCancel={() => setShowUploadFlow(false)}
           onError={(error) => {
             console.error('Selfie upload error:', error)

@@ -1,6 +1,8 @@
 {
   "common": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "processingImage": "Processing image...",
+    "processingImages": "Processing {count} images..."
   },
   "nav": {
     "home": "Home",
@@ -1297,9 +1299,9 @@
       "uploadNew": "Take or Upload Selfie"
     },
     "infoBanner": {
-      "selected": "Selfies with a green check are included in your next generation.",
-      "recommendation": "For best results, select at least 3 selfies in different lighting and angles.",
-      "recommendationDetailed": "For the most realistic results, select at least 3 selfies in different lighting and angles. More variety usually improves quality."
+      "selected": "Green checks? You're all set. These selfies will train your AI.",
+      "recommendation": "Pro tip: Pick at least 2 selfies with different lighting and angles.",
+      "recommendationDetailed": "Here's the secret sauce: Choose 2+ selfies with varied lighting, angles, and poses. Throw in a full-body shot to nail the proportions. The more variety, the better your professional photos."
     },
     "selectionHint": {
       "text": "Select at least 2 selfies for best results."

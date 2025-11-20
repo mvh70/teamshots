@@ -3,29 +3,39 @@
 import React, {useCallback, useEffect, useRef, useState} from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { ProgressBar, InlineError } from "@/components/ui";
+import { useTranslations } from "next-intl";
+import { ProgressBar, InlineError, LoadingSpinner } from "@/components/ui";
 
 type PhotoUploadProps = {
   disabled?: boolean;
   maxFileSizeMb?: number;
   accept?: string;
-  onSelect?: (file: File) => void;
+  multiple?: boolean;
+  onSelect?: (file: File | File[]) => void;
   onUpload?: (file: File) => Promise<{ url?: string; key?: string } | void>;
-  onUploaded?: (result: { key: string; url?: string }) => void;
+  onUploaded?: (result: { key: string; url?: string } | { key: string; url?: string }[]) => void;
+  onProcessingCompleteRef?: React.MutableRefObject<(() => void) | null>;
   testId?: string;
   autoOpenCamera?: boolean;
+  isProcessing?: boolean;
+  processingText?: string;
 };
 
 export default function PhotoUpload({
   disabled,
   maxFileSizeMb = 25,
   accept = "image/*",
+  multiple = false,
   onSelect,
   onUpload,
   onUploaded,
+  onProcessingCompleteRef,
   testId = "file-input",
-  autoOpenCamera = false
+  autoOpenCamera = false,
+  isProcessing = false,
+  processingText
 }: PhotoUploadProps) {
+  const t = useTranslations("common");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoRefMobile = useRef<HTMLVideoElement | null>(null);
@@ -38,18 +48,20 @@ export default function PhotoUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState<number>(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [uploadingFileCount, setUploadingFileCount] = useState<number>(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const hasAutoOpenedRef = useRef(false);
 
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
-  }, [previewUrl, stream]);
+  }, [previewUrl, previewUrls, stream]);
 
   // Scroll to top on mobile when camera opens
   useEffect(() => {
@@ -61,6 +73,9 @@ export default function PhotoUpload({
       }
     }
   }, [cameraOpen]);
+
+  // Simple: show spinner if uploading OR parent is processing
+  const showSpinner = isUploading || isProcessing;
 
   // Auto-open camera if requested (moved below openCamera declaration)
 
@@ -163,15 +178,24 @@ export default function PhotoUpload({
       return;
     }
     
-    setPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(file);
-    });
+    const preview = URL.createObjectURL(file);
+    if (multiple) {
+      setPreviewUrls((prev) => {
+        prev.forEach(url => URL.revokeObjectURL(url));
+        return [...prev, preview];
+      });
+    } else {
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return preview;
+      });
+    }
     onSelect?.(file);
 
     if (onUpload) {
       setIsUploading(true);
       setProgress(0);
+      setUploadingFileCount(1);
       try {
         // Add timeout handling for upload
         const uploadPromise = onUpload(file);
@@ -182,9 +206,14 @@ export default function PhotoUpload({
         const result = await Promise.race([uploadPromise, timeoutPromise]) as { key: string; url?: string } | void;
         setProgress(100);
         if (result && result.key) {
-          onUploaded?.({ key: result.key, url: result.url || previewUrl || undefined });
-          setToast('Upload successful');
-          setTimeout(() => setToast(null), 3000);
+          // Call onUploaded - parent will set isProcessing=true and keep spinner visible
+          // Keep isUploading true until parent hides component
+          onUploaded?.({ key: result.key, url: result.url || preview });
+          return;
+        } else {
+          // No result - reset state
+          setIsUploading(false);
+          setUploadingFileCount(0);
         }
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Upload failed";
@@ -193,16 +222,22 @@ export default function PhotoUpload({
         } else {
           setError(errorMessage);
         }
-      } finally {
         setIsUploading(false);
+        setUploadingFileCount(0);
       }
     } else {
+      setIsUploading(true);
+      setUploadingFileCount(1);
       try {
         const result = await defaultUpload(file);
         if (result && result.key) {
-          onUploaded?.({ key: result.key, url: previewUrl || undefined });
-          setToast('Upload successful');
-          setTimeout(() => setToast(null), 3000);
+          // Call onUploaded - parent will set isProcessing=true and keep spinner visible
+          // Keep isUploading true until parent hides component
+          onUploaded?.({ key: result.key, url: preview });
+        } else {
+          // No result - reset state
+          setIsUploading(false);
+          setUploadingFileCount(0);
         }
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Upload failed";
@@ -211,8 +246,140 @@ export default function PhotoUpload({
         } else {
           setError(errorMessage);
         }
-      } finally {
         setIsUploading(false);
+        setUploadingFileCount(0);
+      }
+    }
+  };
+
+  const handleFiles = async (files: File[]) => {
+    setError(null);
+    setErrorType(null);
+    setIsUploading(true);
+    setProgress(0);
+    
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+    const previews: string[] = [];
+    const uploadResults: { key: string; url?: string }[] = [];
+    
+    // Track the number of files being uploaded
+    setUploadingFileCount(files.length);
+
+    // Validate all files first
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const err = validateFile(file);
+      if (err) {
+        errors.push(`${file.name}: ${err}`);
+        continue;
+      }
+      
+      // Check for face detection
+      const hasFace = await detectFace(file);
+      if (!hasFace) {
+        if (file.name.toLowerCase().includes('multiple')) {
+          errors.push(`${file.name}: Multiple faces detected. Please upload a photo with only one face.`);
+        } else {
+          errors.push(`${file.name}: No face detected. Please upload a photo with a clear face.`);
+        }
+        continue;
+      }
+      
+      validFiles.push(file);
+      const preview = URL.createObjectURL(file);
+      previews.push(preview);
+    }
+
+    // Show errors if any
+    if (errors.length > 0) {
+      setError(errors.join('; '));
+      setErrorType('validation-error');
+      // Still process valid files if any
+      if (validFiles.length === 0) {
+        setIsUploading(false);
+        setUploadingFileCount(0);
+        return;
+      }
+      // If there are valid files, continue processing them
+    }
+
+    // Update previews
+    setPreviewUrls((prev) => {
+      prev.forEach(url => URL.revokeObjectURL(url));
+      return previews;
+    });
+
+    // Call onSelect with all valid files
+    onSelect?.(validFiles);
+
+    // Upload all valid files
+    if (onUpload) {
+      try {
+        for (let i = 0; i < validFiles.length; i++) {
+          const file = validFiles[i];
+          setProgress(Math.round((i / validFiles.length) * 100));
+          
+          const uploadPromise = onUpload(file);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Upload timeout. Please try again.")), 10000)
+          );
+          
+          const result = await Promise.race([uploadPromise, timeoutPromise]) as { key: string; url?: string } | void;
+          if (result && result.key) {
+            uploadResults.push({ key: result.key, url: result.url || previews[i] });
+          }
+        }
+        setProgress(100);
+        if (uploadResults.length > 0) {
+          // Call onUploaded - parent will set isProcessing=true and keep spinner visible
+          // Keep isUploading true until parent hides component
+          onUploaded?.(multiple ? uploadResults : uploadResults[0]);
+        } else {
+          // No successful uploads - reset state
+          setIsUploading(false);
+          setUploadingFileCount(0);
+        }
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : "Upload failed";
+        if (errorMessage.includes("timeout")) {
+          setError("Upload timeout. Please check your connection and try again.");
+        } else {
+          setError(errorMessage);
+        }
+        setIsUploading(false);
+        setUploadingFileCount(0);
+      }
+    } else {
+      try {
+        for (let i = 0; i < validFiles.length; i++) {
+          const file = validFiles[i];
+          setProgress(Math.round((i / validFiles.length) * 100));
+          
+          const result = await defaultUpload(file);
+          if (result && result.key) {
+            uploadResults.push({ key: result.key, url: previews[i] });
+          }
+        }
+        setProgress(100);
+        if (uploadResults.length > 0) {
+          // Call onUploaded - parent will set isProcessing=true and keep spinner visible
+          // Keep isUploading true until parent hides component
+          onUploaded?.(multiple ? uploadResults : uploadResults[0]);
+        } else {
+          // No successful uploads - reset state
+          setIsUploading(false);
+          setUploadingFileCount(0);
+        }
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : "Upload failed";
+        if (errorMessage.includes("timeout")) {
+          setError("Upload timeout. Please check your connection and try again.");
+        } else {
+          setError(errorMessage);
+        }
+        setIsUploading(false);
+        setUploadingFileCount(0);
       }
     }
   };
@@ -243,8 +410,19 @@ export default function PhotoUpload({
   };
 
   const onInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await handleFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    if (multiple && files.length > 1) {
+      await handleFiles(files);
+    } else {
+      await handleFile(files[0]);
+    }
+    
+    // Reset input so same file can be selected again
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
   };
 
   const onDrop = async (e: React.DragEvent<HTMLDivElement>) => {
@@ -252,8 +430,15 @@ export default function PhotoUpload({
     e.stopPropagation();
     setDragOver(false);
     if (disabled) return;
-    const file = e.dataTransfer.files?.[0];
-    if (file) await handleFile(file);
+    
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length === 0) return;
+    
+    if (multiple && files.length > 1) {
+      await handleFiles(files);
+    } else {
+      await handleFile(files[0]);
+    }
   };
 
   const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -437,72 +622,97 @@ export default function PhotoUpload({
   };
 
   return (
-    <div className="w-full">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={openFilePicker}
-        onKeyDown={(e) => { if (e.key === "Enter") openFilePicker(); }}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        aria-disabled={disabled}
-        aria-label="Upload photo by clicking or dragging and dropping"
-        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer focus:outline-none ${dragOver ? "border-brand-primary bg-brand-primary-light" : "border-gray-300"} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
-        data-testid="dropzone"
-      >
-        <div className="hidden md:block">
-          <p className="text-sm text-gray-700">Drag & drop a photo here</p>
-          <p className="text-xs text-gray-500">or click to choose a file</p>
+    <div className="w-full h-full min-h-[200px]">
+      {showSpinner ? (
+        <div
+          className="rounded-2xl p-4 md:p-8 h-full flex items-center justify-center text-center bg-gradient-to-br from-white via-gray-50 to-gray-100 border border-gray-200"
+          data-testid="upload-progress"
+        >
+          <div className="flex flex-col items-center justify-center space-y-6">
+            <LoadingSpinner size="lg" />
+            <p className="text-lg text-gray-700 font-medium">
+            {processingText ||
+              (uploadingFileCount > 1
+                ? t("processingImages", { count: uploadingFileCount })
+                : t("processingImage"))
+            }
+            </p>
+          </div>
         </div>
-        <div className="md:hidden">
-          <p className="text-base text-gray-700 font-medium">Upload your selfie</p>
-          <p className="text-sm text-gray-500">Tap to choose from camera or gallery</p>
-        </div>
-        <input
-          ref={inputRef}
-          type="file"
-          accept={accept}
-          className="hidden"
-          onChange={onInputChange}
-          disabled={disabled}
-          data-testid={testId}
-        />
-        <div className="mt-4 flex flex-col gap-3 md:flex-row md:justify-center md:gap-3">
-          <button
-            type="button"
-            className="w-full md:w-auto px-6 py-4 md:px-4 md:py-2 text-base md:text-sm font-semibold md:font-medium rounded-xl md:rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover border border-brand-primary"
-            onClick={(e) => { e.stopPropagation(); openCamera(); }}
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={openFilePicker}
+          onKeyDown={(e) => { if (e.key === "Enter") openFilePicker(); }}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          aria-disabled={disabled}
+          aria-label="Upload photo by clicking or dragging and dropping"
+          className={`rounded-2xl p-4 md:p-6 lg:p-8 h-full flex flex-col items-center justify-center text-center cursor-pointer focus:outline-none transition-all duration-200 ${
+            dragOver 
+              ? "border-2 border-brand-primary bg-brand-primary/5 shadow-lg scale-[1.01]" 
+              : "border border-gray-200 bg-gradient-to-br from-white via-gray-50 to-gray-100 hover:shadow-lg"
+          } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+          data-testid="dropzone"
+        >
+          <div className="w-full flex flex-col items-center justify-center space-y-3">
+            {/* Icon */}
+            <div className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full bg-brand-primary/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            
+            {/* Text */}
+            <div className="text-center space-y-1">
+              <p className="text-xs font-medium text-gray-700 hidden md:block">Drag & drop {multiple ? 'photos' : 'a photo'} here</p>
+              <p className="text-xs font-medium text-gray-700 md:hidden">Upload your {multiple ? 'selfies' : 'selfie'}</p>
+              <p className="text-xs text-gray-500">or click to choose files</p>
+            </div>
+            
+            {/* Buttons - vertically stacked */}
+            <div className="flex flex-col gap-2 w-full">
+              <button
+                type="button"
+                className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-brand-primary text-white hover:bg-brand-primary-hover transition-colors duration-200 flex items-center justify-center gap-2"
+                onClick={(e) => { e.stopPropagation(); openCamera(); }}
+                disabled={disabled}
+                aria-label="Open camera to take a photo"
+                data-testid="camera-button"
+              >
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>Use Camera</span>
+              </button>
+              <button
+                type="button"
+                className="w-full px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center gap-2"
+                onClick={(e) => { e.stopPropagation(); openFilePicker(); }}
+                disabled={disabled}
+                aria-label="Choose a file from your device"
+                data-testid="file-picker-button"
+              >
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Choose from Gallery</span>
+              </button>
+            </div>
+          </div>
+          <input
+            ref={inputRef}
+            type="file"
+            accept={accept}
+            multiple={multiple}
+            className="hidden"
+            onChange={onInputChange}
             disabled={disabled}
-            aria-label="Open camera to take a photo"
-            data-testid="camera-button"
-          >
-            📷 Use Camera
-          </button>
-          <button
-            type="button"
-            className="w-full md:w-auto px-6 py-4 md:px-4 md:py-2 text-base md:text-sm font-medium rounded-xl md:rounded-md border-2 md:border border-gray-300 hover:bg-gray-50"
-            onClick={(e) => { e.stopPropagation(); openFilePicker(); }}
-            disabled={disabled}
-            aria-label="Choose a file from your device"
-            data-testid="file-picker-button"
-          >
-            📁 Choose from Gallery
-          </button>
-        </div>
-        
-      </div>
-
-      {previewUrl && (
-        <div className="mt-4">
-          <p className="text-sm font-medium text-gray-700 mb-2">Preview</p>
-          <Image src={previewUrl} alt="preview" width={400} height={256} className="max-h-64 rounded-md border" />
-        </div>
-      )}
-
-      {isUploading && (
-        <div className="mt-3" data-testid="upload-progress">
-          <ProgressBar progress={progress} text={`Uploading… ${progress}%`} />
+            data-testid={testId}
+          />
         </div>
       )}
 
@@ -582,13 +792,6 @@ export default function PhotoUpload({
         document.body
       )}
 
-      {toast && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <div className="bg-brand-secondary text-white text-sm px-4 py-2 rounded shadow">
-            {toast}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

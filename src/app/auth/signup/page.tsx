@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn, getSession } from 'next-auth/react'
 import {useTranslations} from 'next-intl'
@@ -18,54 +18,48 @@ export default function SignUpPage() {
   const t = useTranslations('auth.signup')
   const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    otpCode: '',
-    userType: 'individual' as 'individual' | 'team',
-  })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
   const [infoMessage] = useState('')
 
-  // Domain-based signup restriction
-  const [domainRestrictedUserType, setDomainRestrictedUserType] = useState<'individual' | 'team' | null>(null)
-
   const router = useRouter()
-  
+
   // Derived: infer plan from URL params
   const tierParam = searchParams.get('tier') as 'individual' | 'team' | null
   const periodParam = (searchParams.get('period') || 'monthly') as 'monthly' | 'annual' | 'try_once'
   const isTryOnce = periodParam === 'try_once'
   const inferredTier: 'individual' | 'team' | null = tierParam ? tierParam : null
 
-  // Handle URL parameters to pre-select options and post-checkout OTP step
-  useEffect(() => {
-    if (inferredTier) {
-      setFormData(prev => ({ ...prev, userType: inferredTier }))
-    }
+  // Initialize formData with URL params
+  const initialFormData = useMemo(() => {
     const emailParam = searchParams.get('email')
-    if (emailParam) {
-      setFormData(prev => ({ ...prev, email: emailParam }))
+
+    return {
+      email: emailParam || '',
+      password: '',
+      confirmPassword: '',
+      firstName: '',
+      otpCode: '',
+      userType: inferredTier || 'individual',
     }
-  }, [inferredTier, isTryOnce, searchParams])
+  }, [searchParams, inferredTier])
+
+  const [formData, setFormData] = useState(initialFormData)
 
   // Domain-based signup restriction: auto-detect domain and restrict userType
-  useEffect(() => {
+  const [domainRestrictedUserType] = useState(() => {
     const domain = getClientDomain()
     const forcedType = getForcedSignupType()
-    const restrictedType = forcedType || getSignupTypeFromDomain(domain)
+    return forcedType || getSignupTypeFromDomain(domain)
+  })
 
-    if (restrictedType) {
-      setDomainRestrictedUserType(restrictedType)
-      setFormData(prev => ({ ...prev, userType: restrictedType }))
-    } else {
-      setDomainRestrictedUserType(null)
+  // Sync domain restriction to formData
+  useEffect(() => {
+    if (domainRestrictedUserType) {
+      setFormData(prev => ({ ...prev, userType: domainRestrictedUserType }))
     }
-  }, [])
+  }, [domainRestrictedUserType])
 
   const handleSendOTP = async () => {
     setIsLoading(true)

@@ -164,15 +164,17 @@ export default function SelfiesPage() {
     return data.selfie?.id
   }
 
-  const handleSelfieApproved = async (selfieKey: string, selfieId?: string) => {
-    // Automatically select the newly uploaded selfie
-    if (selfieId) {
-      try {
-        await toggleSelect(selfieId, true)
-        await new Promise(resolve => setTimeout(resolve, 200))
-        await loadSelected()
-      } catch (error) {
-        console.error('Error selecting newly uploaded selfie:', error)
+  const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
+    // Automatically select the newly uploaded selfies
+    for (const { selfieId } of results) {
+      if (selfieId) {
+        try {
+          await toggleSelect(selfieId, true)
+          await new Promise(resolve => setTimeout(resolve, 200))
+          await loadSelected()
+        } catch (error) {
+          console.error('Error selecting newly uploaded selfie:', error)
+        }
       }
     }
 
@@ -310,7 +312,7 @@ export default function SelfiesPage() {
                 hideHeader={true}
                 uploadEndpoint={onUploadWithToken}
                 saveEndpoint={saveSelfieEndpoint}
-                onSelfieApproved={handleSelfieApproved}
+                onSelfiesApproved={handleSelfiesApproved}
                 onCancel={handleCancelUpload}
                 onError={(error) => {
                   setError(error)

@@ -51,15 +51,14 @@ export default function SelfieSelectionGrid({
                 </svg>
               )}
             </button>
-            <div className={`aspect-square bg-gray-100 rounded-lg overflow-hidden transition-all ${
+            <div className={`aspect-square bg-gray-100 rounded-lg overflow-hidden transition-all relative ${
               isSelected ? 'ring-4 ring-brand-secondary ring-offset-2' : ''
             }`}>
               <Image
                 src={selfie.url}
                 alt="Selfie"
-                width={400}
-                height={400}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
                 unoptimized
               />
             </div>

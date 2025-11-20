@@ -46,11 +46,13 @@ export async function POST(req: NextRequest) {
     const firstName = sanitizeNameForS3(person.firstName || 'unknown')
 
     // Create selfie record first to get the ID
+    // For batch uploads, mark as selected by default
     const selfie = await prisma.selfie.create({
       data: {
         personId: person.id,
         key: `temp-${Date.now()}`, // Temporary key, will be updated
         uploadedByUser: session.user.id,
+        selected: true, // Mark as selected by default for batch uploads
       },
     })
 

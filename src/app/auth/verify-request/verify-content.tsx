@@ -1,19 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {useTranslations} from 'next-intl'
 
 export default function VerifyContent() {
   const t = useTranslations('auth.verify')
-  const [email, setEmail] = useState('')
   const searchParams = useSearchParams()
-
-  useEffect(() => {
-    const emailParam = searchParams.get('email')
-    if (emailParam) setEmail(emailParam)
-  }, [searchParams])
+  const email = searchParams.get('email') || ''
 
   return (
     <div className="text-center">

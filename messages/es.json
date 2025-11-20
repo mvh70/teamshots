@@ -1,6 +1,8 @@
 {
   "common": {
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "processingImage": "Procesando imagen...",
+    "processingImages": "Procesando {count} imágenes..."
   },
   "nav": {
     "home": "Inicio",
@@ -1304,9 +1306,9 @@
       "uploadNew": "Tomar o Subir Selfie"
     },
     "infoBanner": {
-      "selected": "Las selfies con una marca verde se incluyen en tu próxima generación.",
-      "recommendation": "Para mejores resultados, selecciona al menos 3 selfies con diferentes iluminaciones y ángulos.",
-      "recommendationDetailed": "Para los resultados más realistas, selecciona al menos 3 selfies con diferentes iluminaciones y ángulos. Más variedad generalmente mejora la calidad."
+      "selected": "¿Marcas verdes? Todo listo. Estas selfies entrenarán tu IA.",
+      "recommendation": "Consejo pro: Elige al menos 2 selfies con diferente iluminación y ángulos.",
+      "recommendationDetailed": "Aquí está el truco: Elige 2+ selfies con iluminación, ángulos y poses variadas. Incluye una foto de cuerpo completo para mejores proporciones. Más variedad = mejor gemelo digital."
     },
     "selectionHint": {
       "text": "Selecciona al menos 2 selfies para mejores resultados."

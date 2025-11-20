@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {useTranslations} from 'next-intl'
 import { signIn, getSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -23,19 +23,14 @@ export default function SignInPage() {
       }
     } catch {}
   }
-  const [email, setEmail] = useState('')
+  const emailParam = searchParams.get('email')
+  const initialEmail = emailParam || ''
+  const initialError = emailParam ? 'auth.signup.accountExists' : ''
+
+  const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  // Pre-fill email from URL parameter
-  useEffect(() => {
-    const emailParam = searchParams.get('email')
-    if (emailParam) {
-      setEmail(emailParam)
-      setError('auth.signup.accountExists')
-    }
-  }, [searchParams])
+  const [error, setError] = useState(initialError)
   const [useMagicLink, setUseMagicLink] = useState(false)
 
   const router = useRouter()

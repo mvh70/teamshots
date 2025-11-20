@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { signIn, getSession } from 'next-auth/react'
@@ -19,52 +19,54 @@ export default function VerifyPage() {
   const [otpCode, setOtpCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [infoMessage, setInfoMessage] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
 
   const email = searchParams.get('email') || ''
   const tier = searchParams.get('tier') || ''
 
-  // Load pending signup fields from sessionStorage
-  const [pending, setPending] = useState<{ email: string; firstName: string; password: string; userType: 'individual' | 'team' } | null>(null)
-
-  useEffect(() => {
+  // Load pending signup fields from sessionStorage (lazy initializer)
+  const [pending] = useState<{ email: string; firstName: string; password: string; userType: 'individual' | 'team' } | null>(() => {
+    if (typeof window === 'undefined') return null
     try {
-      const raw = typeof window !== 'undefined' ? window.sessionStorage.getItem('teamshots.pendingSignup') : null
-      if (raw) {
-        const parsed = JSON.parse(raw) as { email: string; firstName: string; password: string; userType: 'individual' | 'team' }
-        setPending(parsed)
+      const raw = window.sessionStorage.getItem('teamshots.pendingSignup')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })
+
+  // Info message derived from tier and email
+  const infoMessage = useMemo(() => {
+    const planKey = tier === 'pro' ? 'planPro' : tier === 'individual' ? 'planIndividual' : 'planGeneric'
+    return t('info.checkoutSuccess', { plan: t(planKey), email: email || pending?.email || '' })
+  }, [tier, email, pending?.email, t])
+
+  // Auto-send OTP on mount
+  useEffect(() => {
+    const targetEmail = email || pending?.email
+    if (!targetEmail) return
+
+    // Check cooldown
+    try {
+      const lastSentAtStr = typeof window !== 'undefined' ? window.sessionStorage.getItem('teamshots.otpLastSentAt') : null
+      const lastSentAt = lastSentAtStr ? parseInt(lastSentAtStr, 10) : 0
+      const secondsSince = lastSentAt ? Math.floor((Date.now() - lastSentAt) / 1000) : Number.MAX_SAFE_INTEGER
+      if (secondsSince < 60) {
+        setResendCooldown(Math.max(60 - secondsSince, 1))
+        return
       }
     } catch {}
 
-    // Info banner and auto-send OTP
-    const planKey = tier === 'pro' ? 'planPro' : tier === 'individual' ? 'planIndividual' : 'planGeneric'
-    setInfoMessage(
-      t('info.checkoutSuccess', { plan: t(planKey), email })
-    )
-    const targetEmail = email || (typeof window !== 'undefined' ? (window.sessionStorage.getItem('teamshots.pendingSignup') ? (JSON.parse(window.sessionStorage.getItem('teamshots.pendingSignup') as string) as {email: string}).email : '') : '')
-    if (targetEmail) {
-      try {
-        const lastSentAtStr = typeof window !== 'undefined' ? window.sessionStorage.getItem('teamshots.otpLastSentAt') : null
-        const lastSentAt = lastSentAtStr ? parseInt(lastSentAtStr, 10) : 0
-        const secondsSince = lastSentAt ? Math.floor((Date.now() - lastSentAt) / 1000) : Number.MAX_SAFE_INTEGER
-        if (secondsSince < 60) {
-          setResendCooldown(Math.max(60 - secondsSince, 1))
-          return
-        }
-      } catch {}
-
-      jsonFetcher<{ throttled?: boolean; wait?: number; message?: string }>('/api/auth/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: targetEmail, locale: 'en' }),
-      }).then((data) => {
-        const wait = data?.throttled && typeof data.wait === 'number' ? data.wait : 30
-        setResendCooldown(wait)
-        try { if (typeof window !== 'undefined') window.sessionStorage.setItem('teamshots.otpLastSentAt', String(Date.now())) } catch {}
-      }).catch(() => {})
-    }
-  }, [email, tier, t])
+    jsonFetcher<{ throttled?: boolean; wait?: number; message?: string }>('/api/auth/otp/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: targetEmail, locale: 'en' }),
+    }).then((data) => {
+      const wait = data?.throttled && typeof data.wait === 'number' ? data.wait : 30
+      setResendCooldown(wait)
+      try { if (typeof window !== 'undefined') window.sessionStorage.setItem('teamshots.otpLastSentAt', String(Date.now())) } catch {}
+    }).catch(() => {})
+  }, [email, pending?.email])
 
   // Countdown timer for resend
   useEffect(() => {
