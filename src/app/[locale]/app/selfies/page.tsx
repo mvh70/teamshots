@@ -2,22 +2,31 @@
 
 import { useTranslations } from 'next-intl'
 import SelfieGallery from '@/components/generation/SelfieGallery'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
-import { useSelfieUploads } from '@/hooks/useSelfieUploads'
+import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
+
+interface UploadListItem {
+  id: string
+  uploadedKey: string
+  validated: boolean
+  createdAt: string
+  hasGenerations: boolean
+}
 
 
 function SelfiesPageContent() {
   const t = useTranslations('selfies')
   const [error, setError] = useState<string | null>(null)
-  const { uploads, loading, loadUploads } = useSelfieUploads()
+  const { uploads, loading, loadUploads } = useSelfieManagement() as { uploads: UploadListItem[], loading: boolean, loadUploads: () => void }
 
+  // Hook handles initialization internally, no need for manual call
   useEffect(() => {
-    loadUploads()
-  }, [loadUploads])
+    // Initial load is handled by the hook
+  }, [])
 
-  const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
+  const handleSelfiesApproved = async () => {
     // Reload uploads after successful upload
     await loadUploads()
     setError(null)

@@ -7,7 +7,6 @@ interface UploadListItem {
   validated: boolean
   createdAt: string
   hasGenerations: boolean
-  selected?: boolean
 }
 
 export function useSelfieUploads() {
@@ -25,15 +24,8 @@ export function useSelfieUploads() {
         credentials: 'include'
       })
 
-      // Fetch selected selfie IDs and merge selection state
-      const selectedRes = await jsonFetcher<{ selfies: { id: string }[] }>('/api/selfies/selected', {
-        credentials: 'include'
-      }).catch(() => ({ selfies: [] as { id: string }[] }))
-
-      const selectedSet = new Set((selectedRes.selfies || []).map(s => s.id))
-      const items = (data.items || []).map(it => ({ ...it, selected: selectedSet.has(it.id) }))
-
-      setUploads(items)
+      // Just return the raw uploads - selection state is managed separately
+      setUploads(data.items || [])
     } catch (err) {
       console.error('Error loading uploads:', err)
       setUploads([])

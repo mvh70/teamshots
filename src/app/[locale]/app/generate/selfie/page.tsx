@@ -1,54 +1,37 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import SelfieGallery from '@/components/generation/SelfieGallery'
 import { LoadingGrid } from '@/components/ui'
-import { useSelfieSelection } from '@/hooks/useSelfieSelection'
-import { useSelfieUploads } from '@/hooks/useSelfieUploads'
+import { useSelfieManagement } from '@/hooks/useSelfieManagement'
+
 import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
+
+interface UploadListItem {
+  id: string
+  uploadedKey: string
+  validated: boolean
+  createdAt: string
+  hasGenerations: boolean
+}
 
 function SelfieSelectionPageContent() {
   const t = useTranslations('generate.selfie')
   const router = useRouter()
-  const { uploads, loading, loadUploads } = useSelfieUploads()
-  const { selectedIds, loadSelected, toggleSelect } = useSelfieSelection({})
-
-  useEffect(() => {
-    loadUploads()
-  }, [loadUploads])
-
-  const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
-    console.log('=== handleSelfiesApproved CALLED ===', { count: results.length, results })
-
-    // Auto-select the newly uploaded selfies for consistency with invited user flows
-    const validSelfieIds = results
-      .map(r => r.selfieId)
-      .filter((id): id is string => id !== undefined && id !== null)
-
-    if (validSelfieIds.length > 0) {
-      // Auto-select each new selfie
-      for (const selfieId of validSelfieIds) {
-        try {
-          await toggleSelect(selfieId, true)
-          await new Promise(resolve => setTimeout(resolve, 200))
-          await loadSelected()
-        } catch (error) {
-          console.error('Error selecting newly uploaded selfie:', error)
-        }
-      }
-      console.log(`Auto-selected ${validSelfieIds.length} newly uploaded selfie(s)`)
+  const { uploads, selectedIds, loading, loadSelected, handleSelfiesApproved, handleUploadError } = useSelfieManagement({
+    autoSelectNewUploads: true,
+    onSelfiesApproved: (results) => {
+      console.log('=== handleSelfiesApproved CALLED ===', { count: results.length, results })
+      // Auto-selection and reload are handled by the hook
+    },
+    onUploadError: (error) => {
+      console.error('Selfie upload error:', error)
+      alert(`Error: ${error}`)
     }
+  }) as { uploads: UploadListItem[], selectedIds: string[], loading: boolean, loadSelected: () => Promise<void>, handleSelfiesApproved?: (results: { key: string; selfieId?: string }[]) => Promise<void>, handleUploadError?: (error: string) => void }
 
-    // Reload uploads
-    await loadUploads()
-  }
-
-  const handleUploadError = (error: string) => {
-    console.error('Selfie upload error:', error)
-    alert(`Error: ${error}`)
-  }
 
   // Use a ref to prevent infinite loops
   const isLoadingRef = useRef(false)

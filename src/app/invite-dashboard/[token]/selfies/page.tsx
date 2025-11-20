@@ -6,7 +6,7 @@ import SelfieGallery from '@/components/generation/SelfieGallery'
 import dynamic from 'next/dynamic'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { ErrorBanner } from '@/components/ui'
-import { useSelfieSelection } from '@/hooks/useSelfieSelection'
+import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
 import SelfieUploadSuccess from '@/components/Upload/SelfieUploadSuccess'
 
@@ -28,8 +28,6 @@ export default function SelfiesPage() {
   const token = params.token as string
   const uploadOnly = (searchParams?.get('mode') || '') === 'upload'
 
-  const [selfies, setSelfies] = useState<Selfie[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
   // Upload flow state
@@ -37,39 +35,95 @@ export default function SelfiesPage() {
   const [isApproved, setIsApproved] = useState<boolean>(false)
   // Header resolves invite info internally; no local invite state needed
 
+  // Custom uploader that passes the invite token to the proxy so uploads work without a session
+  const onUploadWithToken = async (file: File): Promise<{ key: string; url?: string }> => {
+    const ext = file.name.split('.')?.pop()?.toLowerCase() || ''
+    const res = await fetch(`/api/uploads/proxy?token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      headers: {
+        'x-file-content-type': file.type,
+        'x-file-extension': ext,
+        'x-file-type': 'selfie'
+      },
+      body: file,
+      credentials: 'include'
+    })
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      throw new Error(errorData.error || 'Upload failed')
+    }
+    const { key } = await res.json() as { key: string }
+    // Provide a local preview url for UX
+    const preview = URL.createObjectURL(file)
+    return { key, url: preview }
+  }
+
+  // Custom save endpoint that creates DB record for invite flow
+  const saveSelfieEndpoint = async (key: string): Promise<string | undefined> => {
+    const response = await fetch('/api/team/member/selfies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token,
+        selfieKey: key
+      }),
+      credentials: 'include'
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to save selfie')
+    }
+
+    const data = await response.json() as { selfie?: { id: string } }
+    return data.selfie?.id
+  }
+
   // Multi-select: load and manage selected selfies
-  const { selectedIds, loadSelected, toggleSelect } = useSelfieSelection({ token })
-
-  const fetchSelfies = useCallback(async () => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/team/member/selfies?token=${token}`, {
-        credentials: 'include' // Required for Safari to send cookies
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setSelfies(data.selfies)
-      } else {
-        setError('Failed to fetch selfies')
+  const { uploads: hookSelfies, selectedIds, loading, loadSelected, handlePhotoUpload, handleSelfiesApproved } = useSelfieManagement({
+    token,
+    inviteMode: true,
+    customUploadEndpoint: onUploadWithToken,
+    customSaveEndpoint: saveSelfieEndpoint,
+    autoSelectNewUploads: true,
+    onSelfiesApproved: () => {
+      // Handle navigation and approval state for invited flow
+      // Only navigate away if in upload-only mode
+      if (uploadOnly) {
+        router.push(`/invite-dashboard/${token}`)
+        return
       }
-    } catch {
-      setError('Failed to fetch selfies')
-    } finally {
-      setLoading(false)
-    }
-  }, [token])
 
-  useEffect(() => {
-    fetchSelfies()
-  }, [fetchSelfies])
+      // Show success briefly, then handle mobile/desktop differences
+      setIsApproved(true)
 
-  // Reload selected selfies when selfies list changes
-  useEffect(() => {
-    if (!loading && selfies.length > 0) {
-      loadSelected()
+      // On mobile in generation flow, keep upload flow open after approval
+      if (isMobile && isInGenerationFlow) {
+        // Keep upload flow open but clear approval state after delay
+        setTimeout(() => {
+          setIsApproved(false)
+          // Upload flow stays open (showUploadFlow remains true)
+        }, 1500)
+      } else {
+        // Desktop or non-generation flow: close upload flow after success
+        setTimeout(() => {
+          setShowUploadFlow(false)
+          setIsApproved(false)
+        }, 1500)
+      }
+    },
+    onUploadError: (error) => {
+      setError(error)
+      setShowUploadFlow(false)
     }
-  }, [loading, selfies.length, loadSelected])
+  }) as {
+    uploads: Selfie[],
+    selectedIds: string[],
+    loading: boolean,
+    loadSelected: () => Promise<void>,
+    handlePhotoUpload: (file: File) => Promise<{ key: string; url?: string }>,
+    handleSelfiesApproved: (results: { key: string; selfieId?: string }[]) => void
+  }
+
 
   // Handle selection changes from SelfieGallery
   const handleSelectionChange = useCallback(() => {
@@ -79,7 +133,7 @@ export default function SelfiesPage() {
 
   // Filter selectedIds to only include selfies that actually exist in the current list
   // This prevents stale selections from showing incorrect counts
-  const validSelectedIds = selectedIds.filter(id => selfies.some(s => s.id === id))
+  const validSelectedIds = selectedIds.filter(id => hookSelfies.some(s => s.id === id))
   const selectedCount = validSelectedIds.length
   const canContinue = selectedCount >= 2
 
@@ -121,90 +175,6 @@ export default function SelfiesPage() {
     }
   }
 
-  // Custom uploader that passes the invite token to the proxy so uploads work without a session
-  const onUploadWithToken = async (file: File): Promise<{ key: string; url?: string }> => {
-    const ext = file.name.split('.')?.pop()?.toLowerCase() || ''
-    const res = await fetch(`/api/uploads/proxy?token=${encodeURIComponent(token)}`, {
-      method: 'POST',
-      headers: {
-        'x-file-content-type': file.type,
-        'x-file-extension': ext,
-        'x-file-type': 'selfie'
-      },
-      body: file,
-      credentials: 'include'
-    })
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}))
-      throw new Error(errorData.error || 'Upload failed')
-    }
-    const { key } = await res.json() as { key: string }
-    // Provide a local preview url for UX
-    const preview = URL.createObjectURL(file)
-    return { key, url: preview }
-  }
-
-  // Custom save endpoint that creates DB record for invite flow
-  const saveSelfieEndpoint = async (key: string): Promise<string | undefined> => {
-    const response = await fetch('/api/team/member/selfies', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        token,
-        selfieKey: key
-      }),
-      credentials: 'include'
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to save selfie')
-    }
-
-    const data = await response.json() as { selfie?: { id: string } }
-    return data.selfie?.id
-  }
-
-  const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
-    // Automatically select the newly uploaded selfies
-    for (const { selfieId } of results) {
-      if (selfieId) {
-        try {
-          await toggleSelect(selfieId, true)
-          await new Promise(resolve => setTimeout(resolve, 200))
-          await loadSelected()
-        } catch (error) {
-          console.error('Error selecting newly uploaded selfie:', error)
-        }
-      }
-    }
-
-    // Reload selfies list
-    await fetchSelfies()
-
-    // Only navigate away if in upload-only mode
-    if (uploadOnly) {
-      router.push(`/invite-dashboard/${token}`)
-      return
-    }
-
-    // Show success briefly, then handle mobile/desktop differences
-    setIsApproved(true)
-    
-    // On mobile in generation flow, keep upload flow open after approval
-    if (isMobile && isInGenerationFlow) {
-      // Keep upload flow open but clear approval state after delay
-      setTimeout(() => {
-        setIsApproved(false)
-        // Upload flow stays open (showUploadFlow remains true)
-      }, 1500)
-    } else {
-      // Desktop or non-generation flow: close upload flow after success
-      setTimeout(() => {
-        setShowUploadFlow(false)
-        setIsApproved(false)
-      }, 1500)
-    }
-  }
 
   const handleCancelUpload = () => {
     setShowUploadFlow(false)
@@ -216,7 +186,7 @@ export default function SelfiesPage() {
     setIsApproved(false)
   }
 
-  if (loading) {
+  if (loading) { // loading comes from useSelfieManagement hook
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -277,22 +247,22 @@ export default function SelfiesPage() {
               )}
             </div>
             <div className="px-4 pt-2 pb-4">
-              <SelfieGallery
-                selfies={selfies.map(s => ({ 
-                  id: s.id, 
-                  key: s.key, 
-                  url: s.url, 
-                  uploadedAt: s.uploadedAt,
-                  used: s.used 
-                }))}
+                  <SelfieGallery
+                    selfies={hookSelfies.map(s => ({
+                      id: s.id,
+                      key: s.key,
+                      url: s.url,
+                      uploadedAt: s.uploadedAt,
+                      used: s.used
+                    }))}
                 token={token}
                 allowDelete
                 showUploadTile={!showUploadFlow && !(isMobile && isInGenerationFlow)}
                 onUploadClick={() => setShowUploadFlow(true)}
                 onAfterChange={handleSelectionChange}
-                onDeleted={async () => { 
-                  await fetchSelfies()
-                  await loadSelected()
+                onDeleted={async () => {
+                  // The hook's loadUploads will reload both selfies and selected state
+                  // loadSelected() // Not needed - hook handles this
                 }}
               />
             </div>
@@ -310,14 +280,10 @@ export default function SelfiesPage() {
             <div className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto">
               <SelfieUploadFlow
                 hideHeader={true}
-                uploadEndpoint={onUploadWithToken}
-                saveEndpoint={saveSelfieEndpoint}
-                onSelfiesApproved={handleSelfiesApproved}
+                uploadEndpoint={handlePhotoUpload}
+                saveEndpoint={undefined} // Handled by hook
+                onSelfiesApproved={handleSelfiesApproved!}
                 onCancel={handleCancelUpload}
-                onError={(error) => {
-                  setError(error)
-                  setShowUploadFlow(false)
-                }}
                 onRetake={handleRetake}
               />
             </div>
@@ -356,20 +322,20 @@ export default function SelfiesPage() {
                 </div>
                 <div className="px-6 pt-2 pb-6">
                   <SelfieGallery
-                    selfies={selfies.map(s => ({ 
-                      id: s.id, 
-                      key: s.key, 
-                      url: s.url, 
+                    selfies={hookSelfies.map(s => ({
+                      id: s.id,
+                      key: s.key,
+                      url: s.url,
                       uploadedAt: s.uploadedAt,
-                      used: s.used 
+                      used: s.used
                     }))}
                     token={token}
                     allowDelete
                     showUploadTile={!showUploadFlow && !(isMobile && isInGenerationFlow)}
                     onUploadClick={() => setShowUploadFlow(true)}
                     onAfterChange={handleSelectionChange}
-                    onDeleted={async () => { 
-                      await fetchSelfies()
+                    onDeleted={async () => {
+                      // The hook will reload both selfies and selected state
                       await loadSelected()
                     }}
                   />
