@@ -49,6 +49,7 @@ export default function SelfieUploadFlow({
   const [isProcessing, setIsProcessing] = useState(false)
   const [pendingApproval, setPendingApproval] = useState<{ key: string; previewUrl: string } | null>(null)
   const pendingApprovalRef = useRef<{ key: string; previewUrl: string } | null>(null)
+  const [cameraKey, setCameraKey] = useState(0) // Key to force PhotoUpload remount for retake
 
   // Wrapper for handlePhotoUpload - detect camera captures and show approval
   const handlePhotoUploadWrapper = async (file: File): Promise<{ key: string; url?: string }> => {
@@ -178,6 +179,8 @@ export default function SelfieUploadFlow({
   const handleRetake = () => {
     setPendingApproval(null)
     pendingApprovalRef.current = null
+    // Force PhotoUpload remount to restart camera
+    setCameraKey(prev => prev + 1)
     if (onRetake) {
       onRetake()
     }
@@ -203,14 +206,15 @@ export default function SelfieUploadFlow({
   if (hideHeader) {
     return (
       <div data-testid="upload-flow" className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto bg-white md:bg-transparent">
-        <div data-testid="mobile-upload-interface">
+        <div data-testid="mobile-upload-interface" className="[&>div]:!pb-0 md:[&>div]:!pb-6">
           <PhotoUpload
+            key={cameraKey}
             multiple
             onUpload={handlePhotoUploadWrapper}
             onUploaded={handlePhotoUploadedWrapper}
             onProcessingCompleteRef={onProcessingCompleteRef}
             testId="desktop-file-input"
-            autoOpenCamera={false}
+            autoOpenCamera={cameraKey > 0}
             isProcessing={isProcessing}
           />
         </div>
@@ -233,12 +237,13 @@ export default function SelfieUploadFlow({
         </div>
         <p className="text-sm text-gray-600" data-testid="upload-description">{t('upload.description')}</p>
         <PhotoUpload
+          key={cameraKey}
           multiple
           onUpload={handlePhotoUploadWrapper}
           onUploaded={handlePhotoUploadedWrapper}
           onProcessingCompleteRef={onProcessingCompleteRef}
           testId="desktop-file-input"
-          autoOpenCamera={false}
+          autoOpenCamera={cameraKey > 0}
           isProcessing={isProcessing}
         />
       </div>

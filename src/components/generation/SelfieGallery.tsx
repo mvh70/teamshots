@@ -296,7 +296,7 @@ export default function SelfieGallery({
             </div>
             {allowDelete && (
               <div
-                className={`absolute top-2 right-2 inline-flex items-center justify-center rounded-full transition-opacity ${
+                className={`absolute top-2 right-2 z-20 inline-flex items-center justify-center rounded-full transition-opacity ${
                   selfie.used 
                     ? 'bg-gray-300 text-white cursor-not-allowed opacity-70' 
                     : 'bg-red-500 text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 md:hover:opacity-100'
@@ -309,12 +309,20 @@ export default function SelfieGallery({
               >
                 <button
                   type="button"
-                  onClick={selfie.used ? undefined : () => handleDelete(selfie.id, selfie.key)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (!selfie.used) {
+                      handleDelete(selfie.id, selfie.key)
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation()
+                  }}
                   disabled={Boolean(selfie.used)}
                   aria-disabled={selfie.used ? 'true' : 'false'}
                   aria-label={selfie.used ? t('deleteDisabledAria') : t('deleteAria')}
                   className="p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 touch-manipulation"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                  style={{ WebkitTapHighlightColor: 'transparent', pointerEvents: 'auto' }}
                 >
                   <TrashIcon className="h-4 w-4" />
                 </button>
