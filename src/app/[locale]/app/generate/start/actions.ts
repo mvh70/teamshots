@@ -296,21 +296,21 @@ async function fetchStyleData(params: {
   }
 
   // Personal contexts
-  const userWithContexts = await prisma.user.findUnique({
-    where: { id: params.userId },
-    select: {
-      metadata: true,
-      contexts: {
-        where: {
-          userId: params.userId,
-          teamId: null
-        },
-        orderBy: { createdAt: 'desc' }
-      }
-    }
-  })
+  const [user, rawContexts] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: params.userId },
+      select: { metadata: true }
+    }),
+    prisma.context.findMany({
+      where: {
+        userId: params.userId,
+        teamId: null
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  ])
 
-  const rawContexts = userWithContexts?.contexts || []
+  const userWithContexts = user ? { ...user, contexts: rawContexts } : null
   const contexts: ContextOption[] = rawContexts.map((ctx, index) => ({
     id: ctx.id,
     name: ctx.name || `Personal Style ${rawContexts.length - index}`,
