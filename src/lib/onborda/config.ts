@@ -246,7 +246,7 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
           pointerPadding: 20,
         },
         {
-          selector: '[data-onborda="credits-info"]',
+          selector: '[data-onborda="photos-info"]',
           title: t('onboarding.tours.generationDetailTour.creditsInfoTitle2'),
           content: t('onboarding.tours.generationDetailTour.creditsInfoContent2'),
           side: 'top',

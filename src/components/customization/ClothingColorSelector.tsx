@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { ClothingColorSettings } from '@/types/photo-style'
+import { colornames } from 'color-name-list'
 
 interface ClothingColorSelectorProps {
   value: ClothingColorSettings
@@ -11,6 +12,63 @@ interface ClothingColorSelectorProps {
   className?: string
   showHeader?: boolean
   showPredefinedBadge?: boolean // If true, show the badge even when editable
+}
+
+// Common color name variations used in presets that need explicit mapping
+const COMMON_COLOR_MAPPINGS: Record<string, string> = {
+  'dark blue': '#00008B',
+  'navy': '#000080',
+  'white': '#FFFFFF',
+  'black': '#000000',
+  'gray': '#808080',
+  'grey': '#808080',
+  'charcoal': '#36454F',
+  'brown': '#8B4513',
+  'beige': '#F5F5DC',
+  'burgundy': '#800020',
+  'blue': '#0000FF',
+  'light blue': '#ADD8E6',
+  'red': '#FF0000',
+  'green': '#008000',
+  'yellow': '#FFFF00',
+  'orange': '#FFA500',
+  'purple': '#800080',
+  'pink': '#FFC0CB',
+  'tan': '#D2B48C',
+  'cream': '#FFFDD0',
+  'khaki': '#F0E68C',
+  'olive': '#808000',
+  'maroon': '#800000',
+  'teal': '#008080',
+  'silver': '#C0C0C0'
+}
+
+// Create a lookup map for fast color name to hex conversion from the full database
+const colorMap = new Map(
+  colornames.map(color => [color.name.toLowerCase(), color.hex])
+)
+
+/**
+ * Normalizes a color value to hex format
+ * @param color - Color name (e.g., "Dark blue") or hex value (e.g., "#00008B")
+ * @returns Hex color value
+ */
+function normalizeColorToHex(color: string | undefined): string {
+  if (!color) return '#ffffff'
+  
+  // If it's already a hex color, return it
+  if (color.startsWith('#')) return color
+  
+  const lowerColor = color.toLowerCase()
+  
+  // First check common mappings for exact matches (faster)
+  const commonMapping = COMMON_COLOR_MAPPINGS[lowerColor]
+  if (commonMapping) return commonMapping
+  
+  // Then look up in the full color database
+  const hex = colorMap.get(lowerColor)
+  
+  return hex || '#ffffff' // fallback to white if not found
 }
 
 export default function ClothingColorSelector({
@@ -65,7 +123,7 @@ export default function ClothingColorSelector({
           <div className="flex items-center gap-2">
             <input
               type="color"
-              value={value.colors?.topCover || '#000000'}
+              value={normalizeColorToHex(value.colors?.topCover)}
               onChange={(e) => handleColorChange('topCover', e.target.value)}
               disabled={isPredefined || isDisabled}
               className="h-8 w-12 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -87,7 +145,7 @@ export default function ClothingColorSelector({
           <div className="flex items-center gap-2">
             <input
               type="color"
-              value={value.colors?.topBase || '#ffffff'}
+              value={normalizeColorToHex(value.colors?.topBase)}
               onChange={(e) => handleColorChange('topBase', e.target.value)}
               disabled={isPredefined || isDisabled}
               className="h-8 w-12 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -109,7 +167,7 @@ export default function ClothingColorSelector({
           <div className="flex items-center gap-2">
             <input
               type="color"
-              value={value.colors?.bottom || '#000000'}
+              value={normalizeColorToHex(value.colors?.bottom)}
               onChange={(e) => handleColorChange('bottom', e.target.value)}
               disabled={isPredefined || isDisabled}
               className="h-8 w-12 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -131,7 +189,7 @@ export default function ClothingColorSelector({
           <div className="flex items-center gap-2">
             <input
               type="color"
-              value={value.colors?.shoes || '#000000'}
+              value={normalizeColorToHex(value.colors?.shoes)}
               onChange={(e) => handleColorChange('shoes', e.target.value)}
               disabled={isPredefined || isDisabled}
               className="h-8 w-12 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"

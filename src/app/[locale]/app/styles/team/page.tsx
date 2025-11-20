@@ -8,7 +8,7 @@ import UserStyleSummary from '@/components/styles/UserStyleSummary'
 import { jsonFetcher } from '@/lib/fetcher'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
-import { CardGrid, ErrorCard, Grid } from '@/components/ui'
+import { ErrorCard } from '@/components/ui'
 
 interface Context {
   id: string
@@ -136,19 +136,19 @@ export default function TeamPhotoStylesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 id="team-photo-styles-heading" className="text-2xl font-bold text-gray-900">
+        <div className="space-y-2">
+          <div className="flex items-center gap-4">
+            <h1 id="team-photo-styles-heading" className="text-3xl font-bold text-gray-900">
               Team Photo Styles
             </h1>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-brand-primary-light text-brand-primary">
+            <span className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-sm">
               Team Styles
             </span>
           </div>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 text-lg">
             {t('subtitle')}
           </p>
         </div>
@@ -156,7 +156,11 @@ export default function TeamPhotoStylesPage() {
           id="create-team-style-btn"
           onClick={() => { if (!isFreePlan) window.location.href = '/app/styles/team/create' }}
           disabled={isFreePlan}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg ${isFreePlan ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-brand-primary text-white hover:bg-brand-primary-hover'}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+            isFreePlan 
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white hover:shadow-lg hover:scale-105'
+          }`}
         >
           <PlusIcon className="h-5 w-5" />
           Create Team Style
@@ -189,102 +193,125 @@ export default function TeamPhotoStylesPage() {
 
       {/* Contexts List */}
       {isFreePlan ? (
-        <CardGrid gap="lg">
-          <FreePlanBanner variant="team" className="col-span-1 md:col-span-2 lg:col-span-3" />
-          <div className="rounded-lg border-2 p-6 border-brand-secondary bg-white">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-gray-900">Free Package Style</h3>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-primary-light text-brand-primary">
-                  Team
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-secondary/10 text-brand-secondary">
-                  Default
+        <div className="space-y-6">
+          <FreePlanBanner variant="team" />
+          <div className="relative overflow-hidden rounded-2xl border-2 border-brand-secondary/30 bg-white shadow-lg max-w-5xl">
+            {/* Decorative background */}
+            <div className="absolute top-0 right-0 -mt-8 -mr-8 h-32 w-32 rounded-full bg-gradient-to-br from-brand-secondary/10 to-brand-primary/10 blur-2xl" />
+            <div className="absolute bottom-0 left-0 -mb-8 -ml-8 h-32 w-32 rounded-full bg-gradient-to-tr from-brand-primary/5 to-brand-secondary/5 blur-2xl" />
+            
+            <div className="relative p-8">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-8 pb-6 border-b border-gray-200">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="text-2xl font-bold text-gray-900">Free Package Style</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-sm">
+                      Team
+                    </span>
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-sm">
+                      Default
+                    </span>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold border-2 border-brand-cta/30 bg-gradient-to-r from-brand-cta-light to-orange-50 text-brand-cta uppercase tracking-wider shadow-sm">
+                  {t('freePlan.stamp')}
                 </span>
               </div>
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold border border-brand-cta/30 bg-brand-cta-light text-brand-cta uppercase tracking-wide">
-                {t('freePlan.stamp')}
-              </span>
+              
+              {/* Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <StyleSummaryCard
+                  settings={freePackageContext?.settings}
+                  stylePreset={freePackageContext?.stylePreset || 'corporate'}
+                />
+                <UserStyleSummary settings={freePackageContext?.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
+              </div>
             </div>
-            <Grid cols={{ mobile: 2 }} gap="md" className="text-sm text-gray-600">
-              <StyleSummaryCard
-                settings={freePackageContext?.settings}
-                stylePreset={freePackageContext?.stylePreset || 'corporate'}
-              />
-              <UserStyleSummary settings={freePackageContext?.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
-            </Grid>
-            
           </div>
-        </CardGrid>
+        </div>
       ) : (
-        <CardGrid gap="lg">
+        <div className="space-y-6">
         {contextsData?.contexts.map((context) => (
           <div
             key={context.id}
-            className={`rounded-lg border-2 p-6 ${
+            className={`relative overflow-hidden rounded-2xl border-2 shadow-lg transition-all hover:shadow-xl max-w-5xl ${
               contextsData.activeContext?.id === context.id
-                ? 'border-brand-secondary bg-white'
+                ? 'border-brand-secondary/40 bg-white'
                 : 'border-gray-200 bg-white'
             }`}
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-gray-900">{context.name}</h3>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-primary-light text-brand-primary">
-                  Team
-                </span>
-                {contextsData.activeContext?.id === context.id && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-secondary/10 text-brand-secondary">
-                    Default
-                  </span>
-                )}
+            {/* Decorative background */}
+            {contextsData.activeContext?.id === context.id && (
+              <>
+                <div className="absolute top-0 right-0 -mt-8 -mr-8 h-32 w-32 rounded-full bg-gradient-to-br from-brand-secondary/10 to-brand-primary/10 blur-2xl" />
+                <div className="absolute bottom-0 left-0 -mb-8 -ml-8 h-32 w-32 rounded-full bg-gradient-to-tr from-brand-primary/5 to-brand-secondary/5 blur-2xl" />
+              </>
+            )}
+            
+            <div className="relative p-8">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-8 pb-6 border-b border-gray-200">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="text-2xl font-bold text-gray-900">{context.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-sm">
+                      Team
+                    </span>
+                    {contextsData.activeContext?.id === context.id && (
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-sm">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      window.location.href = `/app/styles/team/${context.id}/edit`
+                    }}
+                    className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    title="Edit style"
+                  >
+                    <PencilIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteContext(context.id)}
+                    className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Delete style"
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    window.location.href = `/app/styles/team/${context.id}/edit`
-                  }}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                >
-                  <PencilIcon className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleDeleteContext(context.id)}
-                  className="p-1 text-gray-400 hover:text-red-600"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
 
-            <Grid cols={{ mobile: 2 }} gap="md" className="text-sm text-gray-600">
-              {/* Left Column - Photo Style Settings */}
-              <StyleSummaryCard
-                settings={context.settings}
-                stylePreset={context.stylePreset}
-                legacyBackgroundUrl={context.backgroundUrl}
-                legacyBackgroundPrompt={context.backgroundPrompt}
-                legacyLogoUrl={context.logoUrl}
-              />
+                                            {/* Grid */}
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                 <StyleSummaryCard
+                   settings={context.settings}
+                   stylePreset={context.stylePreset}
+                   legacyBackgroundUrl={context.backgroundUrl}
+                   legacyBackgroundPrompt={context.backgroundPrompt}
+                   legacyLogoUrl={context.logoUrl}
+                 />
+                 <UserStyleSummary settings={context.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
+               </div>
 
-              {/* Right Column - User Style Settings */}
-              <UserStyleSummary settings={context.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
-            </Grid>
-
-
-            <div className="mt-4 flex gap-2">
+              {/* Actions */}
               {contextsData.activeContext?.id !== context.id && (
-                <button
-                  onClick={() => handleActivateContext(context.id)}
-                  className="flex-1 px-3 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-hover text-sm"
-                >
-                  Set as Default
-                </button>
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => handleActivateContext(context.id)}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white rounded-xl hover:shadow-lg transition-all font-semibold"
+                  >
+                    Set as Default
+                  </button>
+                </div>
               )}
             </div>
           </div>
         ))}
-      </CardGrid>
+      </div>
       )}
 
     </div>

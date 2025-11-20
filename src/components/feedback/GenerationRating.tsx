@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { Toast } from '@/components/ui/Toast'
@@ -10,6 +10,7 @@ interface GenerationRatingProps {
   generationId: string
   token?: string
   generationStatus: 'pending' | 'processing' | 'completed' | 'failed'
+  photoContainerRef?: React.RefObject<HTMLDivElement | null> // Accept the new ref
 }
 
 type Rating = 'up' | 'down'
@@ -34,6 +35,7 @@ export function GenerationRating({
   generationId,
   token,
   generationStatus,
+  photoContainerRef, // Destructure the new prop
 }: GenerationRatingProps) {
   const t = useTranslations('feedback')
   const { track } = useAnalytics()
@@ -51,6 +53,8 @@ export function GenerationRating({
   const [loadingExisting, setLoadingExisting] = useState(true)
   const [showThankYou, setShowThankYou] = useState(false)
   const [justSubmitted, setJustSubmitted] = useState(false) // Track if feedback was just submitted (not loaded)
+  const pendingToastMessage = useRef<string>('') // Store toast message to prevent it from being lost
+  const feedbackControlRef = useRef<HTMLDivElement>(null) // Ref for the button container
 
   // Load existing feedback on mount
   useEffect(() => {
@@ -91,13 +95,21 @@ export function GenerationRating({
   useEffect(() => {
     if (justSubmitted) {
       setShowThankYou(true)
+      // Hide toast while showing thank you message
+      setShowToast(false)
       const timer = setTimeout(() => {
         setShowThankYou(false)
         setJustSubmitted(false) // Reset after showing thank you
+        // Show toast after thank you message disappears, using ref as backup if state was lost
+        const msgToShow = toastMessage?.trim() || pendingToastMessage.current?.trim()
+        if (msgToShow) {
+          setToastMessage(msgToShow) // Ensure state is set
+          setShowToast(true)
+        }
       }, 3000) // Show thank you for 3 seconds
       return () => clearTimeout(timer)
     }
-  }, [justSubmitted])
+  }, [justSubmitted, toastMessage])
 
   // Only show rating for completed generations
   if (generationStatus !== 'completed') {
@@ -152,13 +164,29 @@ export function GenerationRating({
       setSubmitted(true)
       setJustSubmitted(!wasAlreadySubmitted) // Only show thank you for new submissions, not updates
       const message = wasAlreadySubmitted 
-        ? 'Feedback updated' // Use direct string for now to ensure it displays
-        : t('success')
-      setToastMessage(message || 'Feedback submitted')
+        ? t('rating.updated')
+        : t('rating.submitted')
+      console.log('[GenerationRating] Setting toast message (thumbs up):', {
+        wasAlreadySubmitted,
+        message,
+        messageLength: message?.length,
+        messageType: typeof message
+      })
+      // Set the translated message
+      setToastMessage(message)
+      pendingToastMessage.current = message // Store in ref as backup
       setToastType('success')
-      setShowToast(true)
+      // Only show toast immediately if not showing thank you message (i.e., if updating existing feedback)
+      if (wasAlreadySubmitted) {
+        setShowToast(true)
+      } else {
+        // For new submissions, toast will show after thank you message disappears (handled in useEffect)
+        setShowToast(false)
+      }
     } catch {
-      setToastMessage(t('error'))
+      const errorMsg = t('error')
+      setToastMessage(errorMsg)
+      pendingToastMessage.current = errorMsg
       setToastType('error')
       setShowToast(true)
       setRating('')
@@ -241,13 +269,29 @@ export function GenerationRating({
       setJustSubmitted(!wasAlreadySubmitted) // Only show thank you for new submissions, not updates
       setShowForm(false)
       const message = wasAlreadySubmitted 
-        ? 'Feedback updated' // Use direct string for now to ensure it displays
-        : t('success')
-      setToastMessage(message || 'Feedback submitted')
+        ? t('rating.updated')
+        : t('rating.submitted')
+      console.log('[GenerationRating] Setting toast message (thumbs down):', {
+        wasAlreadySubmitted,
+        message,
+        messageLength: message?.length,
+        messageType: typeof message
+      })
+      // Set the translated message
+      setToastMessage(message)
+      pendingToastMessage.current = message // Store in ref as backup
       setToastType('success')
-      setShowToast(true)
+      // Only show toast immediately if not showing thank you message (i.e., if updating existing feedback)
+      if (wasAlreadySubmitted) {
+        setShowToast(true)
+      } else {
+        // For new submissions, toast will show after thank you message disappears (handled in useEffect)
+        setShowToast(false)
+      }
     } catch {
-      setToastMessage(t('error'))
+      const errorMsg = t('error')
+      setToastMessage(errorMsg)
+      pendingToastMessage.current = errorMsg
       setToastType('error')
       setShowToast(true)
     } finally {
@@ -267,7 +311,7 @@ export function GenerationRating({
 
   return (
     <>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" ref={feedbackControlRef}>
         {!showForm ? (
           <>
             <button
@@ -369,13 +413,23 @@ export function GenerationRating({
       </div>
 
       {/* Toast Notification */}
-      {showToast && (
+      {showToast && toastMessage && toastMessage.trim() ? (
         <Toast
-          message={toastMessage}
+          message={toastMessage.trim()}
           type={toastType}
-          onDismiss={() => setShowToast(false)}
+          anchorRef={photoContainerRef || feedbackControlRef} // Use photo ref if available
+          onDismiss={() => {
+            setShowToast(false)
+            setToastMessage('')
+          }}
         />
-      )}
+      ) : showToast ? (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-full mx-4">
+          <div className="rounded-md shadow-lg px-4 py-3 text-sm bg-yellow-500 text-black">
+            Toast triggered but message is: &quot;{toastMessage}&quot; (length: {toastMessage?.length || 0})
+          </div>
+        </div>
+      ) : null}
     </>
   )
 }

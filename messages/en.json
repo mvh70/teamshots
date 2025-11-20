@@ -300,6 +300,7 @@
     "photos": "photos",
     "photo": "photo",
     "photoCount": "{count, plural, one {# photo} other {# photos}}",
+    "perPhoto": "per photo",
     "generations": "generations",
     "year": "year",
     "save": "Save",
@@ -583,6 +584,7 @@
         "insufficientPhotos": "Insufficient photos",
         "insufficientPhotosMessage": "You need {required} photos to generate a photo. You currently have {current} photos. Time to top up!",
     "generatePhoto": "Generate photo",
+    "customizeFirstTooltip": "Customize your photo with the editable sections below",
     "buyMorePhotos": "Buy more photos",
         "noPhotosTitle": "No photos available",
         "noPhotosMessage": "You need photos to generate photos (think of them as tickets to looking amazing). Purchase photos to get started with photo generation.",
@@ -1963,7 +1965,8 @@
       "up": "Thumbs up",
       "down": "Thumbs down",
       "thankYou": "Thank you for your feedback!",
-      "updated": "Feedback updated"
+      "updated": "Feedback updated",
+      "submitted": "Feedback submitted"
     },
     "form": {
       "category": "What type of feedback is this?",

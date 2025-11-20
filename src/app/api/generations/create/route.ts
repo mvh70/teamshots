@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma'
 import { Env } from '@/lib/env'
 import { getPersonCreditBalance } from '@/domain/credits/credits'
 import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
+import { PACKAGES_CONFIG } from '@/config/packages'
 import { getRegenerationCount } from '@/domain/pricing'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
@@ -247,7 +248,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate package ownership
-    const requestedPackageId = (styleSettings?.['packageId'] as string) || PRICING_CONFIG.defaultSignupPackage
+    const requestedPackageId = (styleSettings?.['packageId'] as string) || PACKAGES_CONFIG.defaultPlanPackage
     
     // Free package is always accessible to everyone (no ownership check needed)
     if (requestedPackageId !== 'freepackage') {

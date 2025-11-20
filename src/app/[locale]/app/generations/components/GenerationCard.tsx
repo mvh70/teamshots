@@ -99,6 +99,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const [canScrollDown, setCanScrollDown] = useState(false)
   const imgRef = useRef<HTMLImageElement | null>(null)
+  const photoContainerRef = useRef<HTMLDivElement>(null) // Ref for the photo container
 
   const handleRegenerate = async () => {
     if (isRegenerating) return
@@ -253,7 +254,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
 
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
-        <div className="relative aspect-square">
+        <div className="relative aspect-square" ref={photoContainerRef}>
         {/* Image container */}
         <div
           ref={containerRef}
@@ -407,6 +408,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
               generationId={item.id}
               token={token}
               generationStatus={item.status}
+              photoContainerRef={photoContainerRef} // Pass the ref here
             />
           </div>
         )}

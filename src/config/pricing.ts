@@ -119,9 +119,6 @@ export const PRICING_CONFIG = {
     individual: 10,  // Credits for individual users on free plan
     pro: 30,         // Credits for pro users (teams) on free plan
   },
-
-  // Default package granted on signup (folder name in src/domain/style/packages/)
-  defaultSignupPackage: 'headshot1',
 } as const;
 
 // Pricing tier type

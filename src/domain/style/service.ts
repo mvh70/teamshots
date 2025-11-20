@@ -9,7 +9,9 @@ export async function loadStyle(params: { scope: Scope }) {
   const defaultPackageId = params.scope === 'freePackage' ? 'freepackage' : 'headshot1'
   if (!res.ok) return { contextId: null, pkg: getPackageConfig(defaultPackageId), ui: getPackageConfig(defaultPackageId).defaultSettings }
   const data = await res.json() as { context?: { id: string; settings?: Record<string, unknown>; stylePreset?: string }, packageId?: string | null }
-  const packageId = data.packageId || (data.context?.settings?.['packageId'] as string | undefined) || defaultPackageId
+  // For freePackage scope, always use 'freepackage' regardless of what's stored in the context
+  // This ensures we always use the correct deserializer and defaults
+  const packageId = params.scope === 'freePackage' ? 'freepackage' : (data.packageId || (data.context?.settings?.['packageId'] as string | undefined) || defaultPackageId)
   const pkg = getPackageConfig(packageId)
   const ui: PhotoStyleSettings = data.context?.settings ? pkg.persistenceAdapter.deserialize(data.context.settings as Record<string, unknown>) : pkg.defaultSettings
   return { contextId: data.context?.id ?? null, pkg, ui }

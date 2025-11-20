@@ -14,6 +14,7 @@ interface StyleSettingsSectionProps {
   className?: string
   noContainer?: boolean
   teamContext?: boolean
+  isFreePlan?: boolean
 }
 
 export default function StyleSettingsSection({
@@ -27,7 +28,8 @@ export default function StyleSettingsSection({
   packageId,
   className = '',
   noContainer = false,
-  teamContext = false
+  teamContext = false,
+  isFreePlan = false
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -43,6 +45,7 @@ export default function StyleSettingsSection({
         showToggles={showToggles}
         packageId={packageId}
         teamContext={teamContext}
+        isFreePlan={isFreePlan}
       />
     </>
   )

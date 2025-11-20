@@ -279,7 +279,8 @@ export async function POST(request: NextRequest) {
     try {
       await prisma.$transaction(async (tx) => {
         const { PRICING_CONFIG } = await import('@/config/pricing')
-        const defaultPackageId = PRICING_CONFIG.defaultSignupPackage
+        const { PACKAGES_CONFIG } = await import('@/config/packages')
+        const defaultPackageId = PACKAGES_CONFIG.defaultPlanPackage
         const freePlanTier = userType === 'team' ? 'pro' : 'individual'
         const freeCredits = userType === 'team'
           ? PRICING_CONFIG.freeTrial.pro

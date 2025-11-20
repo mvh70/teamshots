@@ -36,6 +36,7 @@ model User {
   subscriptionChanges  SubscriptionChange[]
   userPackages         UserPackage[]
   revokedTokens        RevokedToken[]
+  contexts             Context[]
 
   @@index([email])
 }
@@ -106,6 +107,7 @@ model Context {
   settings         Json         @default("{}")
   activeForTeam    Team?        @relation("ActiveContext")
   team             Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user             User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   generations      Generation[]
   teamInvites      TeamInvite[]
 

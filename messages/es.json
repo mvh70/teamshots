@@ -321,6 +321,7 @@
     "photos": "fotos",
     "photo": "foto",
     "photoCount": "{count, plural, one {# foto} other {# fotos}}",
+    "perPhoto": "por foto",
     "photosRetained30": "Fotos retenidas por 30 días desde generación",
     "photosRetainedAfterSubscription": "Fotos retenidas mientras activo + 30 días después",
     "topUpCreditsAvailable": "Recarga de créditos disponible",
@@ -588,6 +589,7 @@
         "insufficientPhotos": "Fotos insuficientes",
         "insufficientPhotosMessage": "Necesitas {required} fotos para generar. Tienes {current}. ¡Recarga!",
     "generatePhoto": "Generar foto",
+    "customizeFirstTooltip": "Personaliza tu foto con las secciones editables a continuación",
     "buyMorePhotos": "Comprar más fotos",
         "noPhotosTitle": "Sin fotos disponibles",
         "noPhotosMessage": "Necesitas fotos para generar (piénsalos como tickets para lucir increíble). Compra para empezar.",
@@ -1985,7 +1987,8 @@
       "up": "Pulgar arriba",
       "down": "Pulgar abajo",
       "thankYou": "¡Gracias por tus comentarios!",
-      "updated": "Comentario actualizado"
+      "updated": "Comentario actualizado",
+      "submitted": "Comentario enviado"
     },
     "form": {
       "category": "¿Qué tipo de comentario es este?",

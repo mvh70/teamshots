@@ -38,6 +38,7 @@ interface PhotoStyleSettingsProps {
   showToggles?: boolean // If false, hide toggles entirely (for direct photo definition)
   packageId?: string // Optional package to control visible categories/overrides
   teamContext?: boolean
+  isFreePlan?: boolean
 }
 
 type CategoryConfig = {
@@ -104,7 +105,9 @@ export default function PhotoStyleSettings({
   showToggles = true,
   packageId,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  teamContext: _teamContext = false
+  teamContext: _teamContext = false,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  isFreePlan = false
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   // All categories are always expanded per UX requirement
@@ -162,20 +165,6 @@ export default function PhotoStyleSettings({
     },
     []
   )
-
-  React.useEffect(() => {
-    const shotTypeValue = value.shotType?.type
-    if (!shotTypeValue || shotTypeValue === 'user-choice') {
-      return
-    }
-    const expectedAspectRatio = defaultAspectRatioForShot(shotTypeValue).id
-    if (value.aspectRatio !== expectedAspectRatio) {
-      onChange({
-        ...value,
-        aspectRatio: expectedAspectRatio
-      })
-    }
-  }, [value, value.aspectRatio, value.shotType?.type, onChange])
 
   const handleCategoryToggle = (category: CategoryType, isPredefined: boolean, event?: React.MouseEvent) => {
     if (event) {
@@ -274,9 +263,10 @@ export default function PhotoStyleSettings({
   }
 
   const handleCategorySettingsChange = (category: CategoryType, settings: unknown) => {
+    // When showToggles is true (admin setting style), allow all changes
     // Don't allow changes if in readonly mode and the category is predefined
     // Allow changes to user-choice fields even when readonlyPredefined is true
-    if (readonlyPredefined && isCategoryPredefined(category)) {
+    if (!showToggles && readonlyPredefined && isCategoryPredefined(category)) {
       return
     }
     
@@ -290,6 +280,20 @@ export default function PhotoStyleSettings({
   }
 
   const isCategoryPredefined = (category: CategoryType) => {
+    // When showToggles is true (admin setting style), always check current value
+    // to reflect the admin's active changes, not the original context
+    if (showToggles) {
+      const categorySettings = value[category]
+      if (category === 'clothing') {
+        return !!(
+          categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
+        )
+      }
+      return !!(
+        categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
+      )
+    }
+
     // If we have original context settings, check if this category was predefined in the original context
     if (originalContextSettings) {
       const originalSettings = originalContextSettings[category]
@@ -332,8 +336,9 @@ export default function PhotoStyleSettings({
     const status = getCategoryStatus(category.key)
     const isPredefined = isCategoryPredefined(category.key)
     const isUserChoice = status === 'user-choice'
-    const isLockedByPreset = readonlyPredefined && isPredefined
-  const isLocked = isLockedByPreset
+    // When showToggles is true (admin setting style), nothing is locked
+    const isLockedByPreset = !showToggles && readonlyPredefined && isPredefined
+    const isLocked = isLockedByPreset
     const chipLabel = isUserChoice
       ? t('legend.editableChip', { default: 'Editable' })
       : isLockedByPreset
@@ -358,7 +363,7 @@ export default function PhotoStyleSettings({
             ? 'p-0 md:p-4 md:border-b border-gray-200' 
             : 'p-5 md:p-4 border-b border-gray-200'
         }`}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between overflow-hidden">
             {/* Mobile: Icon, title, and badge on same line */}
             <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-none">
               <Icon className="h-6 w-6 md:h-5 md:w-5 text-gray-600 flex-shrink-0" />
@@ -367,19 +372,21 @@ export default function PhotoStyleSettings({
                 <h3 className="text-xl md:text-lg font-semibold text-gray-900 break-words">
                   {t(`categories.${category.key}.title`, { default: category.label })}
                 </h3>
-                  {/* Status badge - inline with title on mobile only */}
-                  <span className={`md:hidden inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium flex-shrink-0 ${
-                    isUserChoice ? 'bg-purple-100 text-purple-800' :
-                    isLockedByPreset ? 'bg-red-50 text-red-600 border border-red-200' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
-                    {isUserChoice ? (
-                      <SparklesIcon className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <LockClosedIcon className={`h-4 w-4 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
-                    )}
-                    {chipLabel}
-                  </span>
+                  {/* Status badge - inline with title on mobile only - hide when showToggles is true (admin setting style) */}
+                  {!showToggles && (
+                    <span className={`md:hidden inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium flex-shrink-0 ${
+                      isUserChoice ? 'bg-purple-100 text-purple-800' :
+                      isLockedByPreset ? 'bg-red-50 text-red-600 border border-red-200' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      {isUserChoice ? (
+                        <SparklesIcon className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <LockClosedIcon className={`h-4 w-4 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
+                      )}
+                      {chipLabel}
+                    </span>
+                  )}
                 </div>
                 <p className={`text-base md:text-sm text-gray-600 mt-1 md:mt-0 ${
                   category.key === 'background' && isPredefined ? 'hidden' : 'hidden md:block'
@@ -389,55 +396,55 @@ export default function PhotoStyleSettings({
               </div>
             </div>
             {/* Desktop: Badge and toggle on the right */}
-            <div className="hidden md:flex items-center gap-3 flex-shrink-0">
-              {/* Status badges */}
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                isUserChoice ? 'bg-purple-100 text-purple-800' :
-                isLockedByPreset ? 'bg-red-50 text-red-600 border border-red-200' :
-                'bg-gray-100 text-gray-600'
-              }`}>
-                {isUserChoice ? (
-                  <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                ) : (
-                  <LockClosedIcon className={`h-3.5 w-3.5 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
-                )}
-                {chipLabel}
-              </span>
+            <div className="hidden md:flex items-center gap-3 flex-shrink-0 max-w-full">
+              {/* Status badges - hide when showToggles is true (admin setting style) */}
+              {!showToggles && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+                  isUserChoice ? 'bg-purple-100 text-purple-800' :
+                  isLockedByPreset ? 'bg-red-50 text-red-600 border border-red-200' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {isUserChoice ? (
+                    <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <LockClosedIcon className={`h-3.5 w-3.5 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
+                  )}
+                  {chipLabel}
+                </span>
+              )}
 
-              {/* Toggle switch */}
-              {showToggles && !readonlyPredefined && (
+              {/* Toggle switch - show when showToggles is true (admin setting style) */}
+              {showToggles && (
                 <button
                   id={`${category.key}-toggle`}
                   type="button"
                   onClick={(e) => handleCategoryToggle(category.key, !isPredefined, e)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors border border-gray-200 hover:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1"
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1 flex-shrink-0"
                 >
-                  <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${
                     isPredefined ? 'bg-brand-primary' : 'bg-gray-300'
                   }`}>
                     <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
                       isPredefined ? 'translate-x-5' : 'translate-x-1'
                     }`} />
                   </div>
-                  <span className={isPredefined ? 'text-brand-primary' : 'text-gray-600'}>
-                    {isPredefined
+                  <span className={isPredefined ? 'text-brand-primary' : 'text-gray-600'}>{isPredefined
                       ? t('toggle.predefined', { default: 'Predefined' })
                       : t('toggle.userChoice', { default: 'User Choice' })
-                    }
-                  </span>
+                    }</span>
                 </button>
               )}
             </div>
             {/* Mobile: Toggle below title/badge */}
-            {showToggles && !readonlyPredefined && (
-              <div className="md:hidden">
+            {showToggles && (
+              <div className="md:hidden w-full">
                 <button
                   id={`${category.key}-toggle`}
                   type="button"
                   onClick={(e) => handleCategoryToggle(category.key, !isPredefined, e)}
-                  className="flex items-center gap-2 px-4 py-2 text-base font-medium rounded-md transition-colors border border-gray-200 hover:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1"
+                  className="flex items-center gap-2 px-4 py-2 text-base font-medium rounded-md transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1 w-full"
                 >
-                  <div className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                  <div className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors flex-shrink-0 ${
                     isPredefined ? 'bg-brand-primary' : 'bg-gray-300'
                   }`}>
                     <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
@@ -466,8 +473,8 @@ export default function PhotoStyleSettings({
             <EnhancedBackgroundSelector
               value={value.background || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('background', settings)}
-              isPredefined={readonlyPredefined && isPredefined}
-              isDisabled={readonlyPredefined && isPredefined}
+              isPredefined={!showToggles && readonlyPredefined && isPredefined}
+              isDisabled={!showToggles && readonlyPredefined && isPredefined}
               availableBackgrounds={pkg.availableBackgrounds}
               showHeader={false}
             />
@@ -477,8 +484,8 @@ export default function PhotoStyleSettings({
             <ClothingStyleSelector
               value={value.clothing || { style: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('clothing', settings)}
-              isPredefined={readonlyPredefined && isPredefined}
-              isDisabled={readonlyPredefined && isPredefined}
+              isPredefined={!showToggles && readonlyPredefined && isPredefined}
+              isDisabled={!showToggles && readonlyPredefined && isPredefined}
             />
           )}
 
@@ -486,8 +493,8 @@ export default function PhotoStyleSettings({
             <ClothingColorSelector
               value={resolvedClothingColors}
               onChange={(settings) => handleCategorySettingsChange('clothingColors', settings)}
-              isDisabled={readonlyPredefined && isPredefined}
-              isPredefined={readonlyPredefined && isPredefined}
+              isDisabled={!showToggles && readonlyPredefined && isPredefined}
+              isPredefined={!showToggles && readonlyPredefined && isPredefined}
               showPredefinedBadge={isPredefined}
               showHeader
             />
@@ -497,8 +504,8 @@ export default function PhotoStyleSettings({
             <ShotTypeSelector
               value={value.shotType || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('shotType', settings)}
-              isPredefined={readonlyPredefined && isPredefined}
-              isDisabled={readonlyPredefined && isPredefined}
+              isPredefined={!showToggles && readonlyPredefined && isPredefined}
+              isDisabled={!showToggles && readonlyPredefined && isPredefined}
             />
           )}
           
@@ -506,8 +513,8 @@ export default function PhotoStyleSettings({
             <BrandingSelector
               value={value.branding || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('branding', settings)}
-              isPredefined={readonlyPredefined && isPredefined}
-              isDisabled={readonlyPredefined && isPredefined}
+              isPredefined={!showToggles && readonlyPredefined && isPredefined}
+              isDisabled={!showToggles && readonlyPredefined && isPredefined}
             />
           )}
           
@@ -515,8 +522,8 @@ export default function PhotoStyleSettings({
             <ExpressionSelector
               value={value.expression || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('expression', settings)}
-              isPredefined={readonlyPredefined && isPredefined}
-              isDisabled={readonlyPredefined && isPredefined}
+              isPredefined={!showToggles && readonlyPredefined && isPredefined}
+              isDisabled={!showToggles && readonlyPredefined && isPredefined}
             />
           )}
           
@@ -604,18 +611,21 @@ export default function PhotoStyleSettings({
                 {t('sections.compositionDesc', { default: 'Background, branding, and shot type' })}
               </p>
             </div>
-            <div className="text-sm text-right">
-              <div className="flex items-center justify-end gap-2 text-brand-primary">
-                <SparklesIcon className="h-4 w-4 text-brand-primary" aria-hidden="true" />
-                <span className="text-brand-primary">{t('legend.editable', { default: 'Editable sections highlight what you can customize.' })}</span>
+            {/* Hide legend when showToggles is true (admin setting style) */}
+            {!showToggles && (
+              <div className="text-sm text-right">
+                <div className="flex items-center justify-end gap-2 text-brand-primary">
+                  <SparklesIcon className="h-4 w-4 text-brand-primary" aria-hidden="true" />
+                  <span className="text-brand-primary">{t('legend.editable', { default: 'Editable sections highlight what you can customize.' })}</span>
+                </div>
+                <div className="flex items-center justify-end gap-2 mt-1">
+                  <LockClosedIcon className="h-4 w-4 text-red-600" aria-hidden="true" />
+                  <span className="text-red-600">
+                    {t('legend.locked', { default: 'Pre-set by your team admin.' })}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-end gap-2 mt-1">
-                <LockClosedIcon className="h-4 w-4 text-red-600" aria-hidden="true" />
-                <span className="text-red-600">
-                  {t('legend.locked', { default: 'Pre-set by your team admin.' })}
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
         <CardGrid>

@@ -6,6 +6,7 @@ import { Telemetry } from '@/lib/telemetry'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { RATE_LIMITS } from '@/config/rate-limit-config'
 import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
+import { PACKAGES_CONFIG } from '@/config/packages'
 import { getPersonCreditBalance, getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { getPackageConfig } from '@/domain/style/packages'
 import { Env } from '@/lib/env'
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare style settings (serialize via package adapter if provided)
-    const finalPackageId = (styleSettings?.['packageId'] as string) || PRICING_CONFIG.defaultSignupPackage
+    const finalPackageId = (styleSettings?.['packageId'] as string) || PACKAGES_CONFIG.defaultPlanPackage
     const pkg = getPackageConfig(finalPackageId)
     const serializedStyleSettingsBase = pkg.persistenceAdapter.serialize(
       (styleSettings || {}) as Record<string, unknown>

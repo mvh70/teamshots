@@ -1,5 +1,6 @@
 import React from 'react'
 import { SparklesIcon } from '@heroicons/react/24/outline'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 
 interface GenerationSummaryTeamProps {
   type?: 'team' | 'personal'
@@ -20,6 +21,7 @@ export default function GenerationSummaryTeam({
   type = 'team',
   styleLabel,
   remainingCredits,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   perGenCredits,
   onGenerate,
   generateLabel,
@@ -30,13 +32,15 @@ export default function GenerationSummaryTeam({
   plain = false,
   inlineHint = false,
 }: GenerationSummaryTeamProps) {
+  const remainingPhotos = calculatePhotosFromCredits(remainingCredits)
+  
   const summaryBlock = (
     <div className="text-sm text-gray-600 space-y-1">
       <p><strong>Type:</strong> {type === 'team' ? `${teamName || 'Team'} use` : 'Personal use'}</p>
       <p><strong>Style:</strong> {styleLabel}</p>
       <p>
-        <strong>Remaining:</strong>{' '}
-        <span className="text-gray-900 font-semibold">{remainingCredits} credits</span>
+        <strong>Remaining photocredits:</strong>{' '}
+        <span className="text-gray-900">{remainingPhotos}</span>
       </p>
     </div>
   )
@@ -79,7 +83,7 @@ export default function GenerationSummaryTeam({
           onClick={onGenerate}
           className="w-full px-6 py-4 md:px-4 md:py-3 bg-brand-primary text-white rounded-xl md:rounded-md hover:bg-brand-primary/90 text-lg md:text-sm font-semibold md:font-medium transition-colors"
         >
-          {generateLabel || `Generate Professional Photo (${perGenCredits} credits)`}
+          {generateLabel || 'Generate'}
         </button>
       )}
     </div>

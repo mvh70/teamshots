@@ -29,8 +29,8 @@ export const PACKAGES_CONFIG = {
     } as PackageMetadata,
   },
   
-  // Default package granted on signup
-  defaultSignupPackage: 'headshot1' as const,
+  // Default package for paid plans (free plans always use 'freepackage')
+  defaultPlanPackage: 'headshot1' as const,
   
   // Package purchase prices (for future purchases)
   prices: {

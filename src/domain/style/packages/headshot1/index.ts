@@ -32,7 +32,7 @@ const DEFAULTS = {
     colors: {
       topBase: 'White',
       topCover: 'Dark blue',
-      shoes: 'white',
+      shoes: 'brown',
       bottom: 'Gray'
     }
   }
