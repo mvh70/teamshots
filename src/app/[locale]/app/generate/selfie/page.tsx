@@ -69,7 +69,7 @@ function SelfieSelectionPageContent() {
 
   useEffect(() => {
     loadUploads()
-  }, [session?.user?.id])
+  }, [session?.user?.id, loadUploads])
 
   // Compute whether to show upload interface (derived state)
   const shouldShowUpload = (!loading && uploads.length === 0) || forceShowUpload

@@ -2,7 +2,7 @@
 import Image from 'next/image'
 import { TrashIcon, CameraIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
-import { useCallback, useState, useEffect, useRef } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { LoadingSpinner, SelfieGrid } from '@/components/ui'
 import dynamic from 'next/dynamic'

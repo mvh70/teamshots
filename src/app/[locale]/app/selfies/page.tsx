@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import SelfieGallery from '@/components/generation/SelfieGallery'
 import { useSession } from 'next-auth/react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
 import { jsonFetcher } from '@/lib/fetcher'
@@ -24,7 +24,7 @@ function SelfiesPageContent() {
   const [uploads, setUploads] = useState<UploadListItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  const loadUploads = async () => {
+  const loadUploads = useCallback(async () => {
     if (!session?.user?.id) {
       setUploads([])
       setLoading(false)
@@ -52,11 +52,11 @@ function SelfiesPageContent() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [session?.user?.id])
 
   useEffect(() => {
     loadUploads()
-  }, [session?.user?.id])
+  }, [session?.user?.id, loadUploads])
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleSelfiesApproved = async (_results: { key: string; selfieId?: string }[]) => {
