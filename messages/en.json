@@ -1308,6 +1308,12 @@
     "selectionHint": {
       "text": "Select at least 2 selfies for best results."
     },
+    "selectionInfo": {
+      "title": "Select at least 2 selfies",
+      "noneSelected": "Take a fresh selfie or grab one from your gallery. Your call.",
+      "oneSelected": "You've got 1 selected. Add one more to continue.",
+      "enoughSelected": "You've selected {count} selfie{count, plural, =1 {} other {s}}. You can continue or select more."
+    },
     "gallery": {
       "deleteTooltip": "Delete selfie",
       "deleteAria": "Delete selfie",

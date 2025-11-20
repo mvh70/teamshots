@@ -276,17 +276,16 @@ export default function SelfiesPage() {
         <div className="space-y-6">
           {/* Upload Flow - use SelfieUploadFlow component */}
           {/* On mobile in generation flow, keep showing even after approval */}
-          {showUploadFlow && (!isApproved || (isMobile && isInGenerationFlow)) && (
-            <div className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto">
-              <SelfieUploadFlow
-                hideHeader={true}
-                uploadEndpoint={handlePhotoUpload}
-                saveEndpoint={saveSelfieEndpoint}
-                onSelfiesApproved={handleSelfiesApproved!}
-                onCancel={handleCancelUpload}
-                onRetake={handleRetake}
-              />
-            </div>
+          {/* Hide when approved (approval is handled inside SelfieUploadFlow) */}
+          {showUploadFlow && !isApproved && (
+            <SelfieUploadFlow
+              hideHeader={true}
+              uploadEndpoint={handlePhotoUpload}
+              saveEndpoint={saveSelfieEndpoint}
+              onSelfiesApproved={handleSelfiesApproved!}
+              onCancel={handleCancelUpload}
+              onRetake={handleRetake}
+            />
           )}
 
           {/* Success Message - Desktop only (mobile version is above selfies section) */}

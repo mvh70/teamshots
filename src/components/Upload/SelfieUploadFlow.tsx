@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import { useSelfieUpload } from '@/hooks/useSelfieUpload'
 import { promoteUploads } from '@/lib/uploadHelpers'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
+const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
 
 interface SelfieUploadFlowProps {
   onSelfiesApproved: (results: { key: string; selfieId?: string }[]) => void
@@ -23,8 +24,7 @@ export default function SelfieUploadFlow({
   onSelfiesApproved,
   onCancel,
   onError,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onRetake: _onRetake,
+  onRetake,
   saveEndpoint,
   uploadEndpoint,
   hideHeader = false,
@@ -47,17 +47,43 @@ export default function SelfieUploadFlow({
   })
 
   const [isProcessing, setIsProcessing] = useState(false)
+  const [pendingApproval, setPendingApproval] = useState<{ key: string; previewUrl: string } | null>(null)
+  const pendingApprovalRef = useRef<{ key: string; previewUrl: string } | null>(null)
+
+  // Wrapper for handlePhotoUpload - detect camera captures and show approval
+  const handlePhotoUploadWrapper = async (file: File): Promise<{ key: string; url?: string }> => {
+    const isFromCamera = file.name.startsWith('capture-')
+    const result = await handlePhotoUpload(file)
+    
+    // Store file and preview URL for camera captures
+    if (isFromCamera && result.url) {
+      const approvalData = { key: result.key, previewUrl: result.url }
+      setPendingApproval(approvalData)
+      pendingApprovalRef.current = approvalData
+    }
+    
+    return result
+  }
 
   // Wrapper for handlePhotoUploaded - both single and multiple uploads process directly
   const handlePhotoUploadedWrapper = async (result: { key: string; url?: string } | { key: string; url?: string }[]) => {
+    // If this is a camera capture, don't process yet - wait for approval
+    const uploads = Array.isArray(result) ? result : [result]
+    const hasCameraCapture = uploads.some(upload => {
+      // Check if we have pending approval for this key
+      return pendingApprovalRef.current?.key === upload.key
+    })
+    
+    if (hasCameraCapture) {
+      // Don't process yet - approval screen will handle it
+      return
+    }
+
     // Set processing state IMMEDIATELY and SYNCHRONOUSLY before any async operations
     // This ensures spinner stays visible without any gaps
     setIsProcessing(true)
     
     try {
-      // Normalize to array for consistent handling
-      const uploads = Array.isArray(result) ? result : [result]
-
       let successfulResults: { key: string; selfieId?: string }[]
 
       // Check if saveEndpoint is provided (indicates invite flow with direct uploads)
@@ -103,17 +129,84 @@ export default function SelfieUploadFlow({
     }
   }
 
-  // No approval screen - all uploads process directly
+  // Handle approval for camera captures
+  const handleApprove = async () => {
+    const approvalData = pendingApprovalRef.current
+    if (!approvalData) {
+      console.error('Approval data not found')
+      setPendingApproval(null)
+      return
+    }
+
+    setIsProcessing(true)
+    
+    try {
+      let successfulResults: { key: string; selfieId?: string }[]
+
+      // Check if saveEndpoint is provided (indicates invite flow with direct uploads)
+      if (saveEndpoint) {
+        // Invite flow: Direct upload - call saveEndpoint
+        try {
+          const selfieId = await saveEndpoint(approvalData.key)
+          successfulResults = [{ key: approvalData.key, selfieId }]
+        } catch (error) {
+          console.error('Failed to save direct upload:', error)
+          throw error
+        }
+      } else {
+        // Standard flow: Promote temp file
+        const results = await promoteUploads([approvalData])
+        successfulResults = results
+      }
+
+      // Small delay to ensure database is ready
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      // Clear approval state
+      setPendingApproval(null)
+      pendingApprovalRef.current = null
+
+      // Call parent callback
+      onSelfiesApproved(successfulResults)
+    } catch (error) {
+      console.error('Failed to approve camera capture:', error)
+      onError?.('Failed to approve selfie. Please try again.')
+      setIsProcessing(false)
+    }
+  }
+
+  const handleRetake = () => {
+    setPendingApproval(null)
+    pendingApprovalRef.current = null
+    if (onRetake) {
+      onRetake()
+    }
+  }
+
+  // Show approval screen for camera captures
+  if (pendingApproval) {
+    return (
+      <div data-testid="approval-flow" className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto bg-white md:bg-transparent">
+        <SelfieApproval
+          uploadedPhotoKey={pendingApproval.key}
+          previewUrl={pendingApproval.previewUrl}
+          onApprove={handleApprove}
+          onRetake={handleRetake}
+          onCancel={onCancel}
+        />
+      </div>
+    )
+  }
 
   // When hideHeader is true, render a minimal wrapper for mobile (no padding/border)
   // PhotoUpload component handles all its own styling
   if (hideHeader) {
     return (
-      <div data-testid="upload-flow">
+      <div data-testid="upload-flow" className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto bg-white md:bg-transparent">
         <div data-testid="mobile-upload-interface">
           <PhotoUpload
             multiple
-            onUpload={handlePhotoUpload}
+            onUpload={handlePhotoUploadWrapper}
             onUploaded={handlePhotoUploadedWrapper}
             onProcessingCompleteRef={onProcessingCompleteRef}
             testId="desktop-file-input"
@@ -141,7 +234,7 @@ export default function SelfieUploadFlow({
         <p className="text-sm text-gray-600" data-testid="upload-description">{t('upload.description')}</p>
         <PhotoUpload
           multiple
-          onUpload={handlePhotoUpload}
+          onUpload={handlePhotoUploadWrapper}
           onUploaded={handlePhotoUploadedWrapper}
           onProcessingCompleteRef={onProcessingCompleteRef}
           testId="desktop-file-input"
