@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {useTranslations} from 'next-intl'

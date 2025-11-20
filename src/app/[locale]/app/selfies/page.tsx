@@ -52,7 +52,8 @@ export default function SelfiesPage() {
     }
   }, [session?.user?.id])
 
-  const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleSelfiesApproved = async (_results: { key: string; selfieId?: string }[]) => {
     // Reload uploads to show the new selfies
     await loadUploads()
     setError(null) // Clear any previous error on successful upload

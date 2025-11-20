@@ -2,9 +2,8 @@
 
 import React, {useCallback, useEffect, useRef, useState} from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { ProgressBar, InlineError, LoadingSpinner } from "@/components/ui";
+import { InlineError, LoadingSpinner } from "@/components/ui";
 
 type PhotoUploadProps = {
   disabled?: boolean;
@@ -29,7 +28,6 @@ export default function PhotoUpload({
   onSelect,
   onUpload,
   onUploaded,
-  onProcessingCompleteRef,
   testId = "file-input",
   autoOpenCamera = false,
   isProcessing = false,
@@ -46,7 +44,6 @@ export default function PhotoUpload({
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState<number>(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [uploadingFileCount, setUploadingFileCount] = useState<number>(0);
@@ -194,7 +191,6 @@ export default function PhotoUpload({
 
     if (onUpload) {
       setIsUploading(true);
-      setProgress(0);
       setUploadingFileCount(1);
       try {
         // Add timeout handling for upload
@@ -204,7 +200,6 @@ export default function PhotoUpload({
         );
         
         const result = await Promise.race([uploadPromise, timeoutPromise]) as { key: string; url?: string } | void;
-        setProgress(100);
         if (result && result.key) {
           // Call onUploaded - parent will set isProcessing=true and keep spinner visible
           // Keep isUploading true until parent hides component
@@ -256,7 +251,6 @@ export default function PhotoUpload({
     setError(null);
     setErrorType(null);
     setIsUploading(true);
-    setProgress(0);
     
     const validFiles: File[] = [];
     const errors: string[] = [];
@@ -318,7 +312,6 @@ export default function PhotoUpload({
       try {
         for (let i = 0; i < validFiles.length; i++) {
           const file = validFiles[i];
-          setProgress(Math.round((i / validFiles.length) * 100));
           
           const uploadPromise = onUpload(file);
           const timeoutPromise = new Promise((_, reject) => 
@@ -330,7 +323,6 @@ export default function PhotoUpload({
             uploadResults.push({ key: result.key, url: result.url || previews[i] });
           }
         }
-        setProgress(100);
         if (uploadResults.length > 0) {
           // Call onUploaded - parent will set isProcessing=true and keep spinner visible
           // Keep isUploading true until parent hides component
@@ -354,14 +346,12 @@ export default function PhotoUpload({
       try {
         for (let i = 0; i < validFiles.length; i++) {
           const file = validFiles[i];
-          setProgress(Math.round((i / validFiles.length) * 100));
           
           const result = await defaultUpload(file);
           if (result && result.key) {
             uploadResults.push({ key: result.key, url: previews[i] });
           }
         }
-        setProgress(100);
         if (uploadResults.length > 0) {
           // Call onUploaded - parent will set isProcessing=true and keep spinner visible
           // Keep isUploading true until parent hides component
@@ -388,7 +378,6 @@ export default function PhotoUpload({
     // Server-side proxy upload to avoid CORS issues
     const ext = file.name.split('.')?.pop()?.toLowerCase();
     setIsUploading(true);
-    setProgress(10);
     const res = await fetch('/api/uploads/proxy', {
       method: 'POST',
       headers: {
@@ -404,7 +393,6 @@ export default function PhotoUpload({
       throw new Error(errorData.error || 'Upload failed');
     }
     const { key } = await res.json();
-    setProgress(100);
     setIsUploading(false);
     return { key } as { key: string };
   };

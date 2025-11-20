@@ -19,7 +19,17 @@ interface SelfieUploadFlowProps {
   onProcessingCompleteRef?: React.MutableRefObject<(() => void) | null> // Ref to call when upload processing is complete
 }
 
-export default function SelfieUploadFlow({ onSelfiesApproved, onCancel, onError, onRetake, saveEndpoint, uploadEndpoint, hideHeader = false, onProcessingCompleteRef }: SelfieUploadFlowProps) {
+export default function SelfieUploadFlow({
+  onSelfiesApproved,
+  onCancel,
+  onError,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onRetake: _onRetake,
+  saveEndpoint,
+  uploadEndpoint,
+  hideHeader = false,
+  onProcessingCompleteRef
+}: SelfieUploadFlowProps) {
   // Debug: always log hideHeader value to verify prop is received
   if (typeof window !== 'undefined') {
     console.log('[SelfieUploadFlow] hideHeader prop value:', hideHeader)

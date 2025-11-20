@@ -50,8 +50,11 @@ export default function UploadPage() {
     }
   }, [personId, token])
 
-  const onPhotoUploaded = ({ key }: { key: string; url?: string }) => {
-    setKey(key)
+  const onPhotoUploaded = (result: { key: string; url?: string } | { key: string; url?: string }[]) => {
+    const key = Array.isArray(result) ? result[0]?.key : result.key;
+    if (key) {
+      setKey(key);
+    }
   }
 
   const onApprove = () => {

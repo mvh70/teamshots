@@ -50,9 +50,7 @@ export default function SelfieGallery({
 
   // Note: useSelfieUpload hook removed - handling uploads directly
 
-  const [multipleUploads, setMultipleUploads] = useState<{ key: string; url?: string }[]>([])
   const [isProcessingMultiple, setIsProcessingMultiple] = useState(false)
-  const [isProcessingSingle, setIsProcessingSingle] = useState(false)
   const [forceCamera, setForceCamera] = useState<boolean>(false)
   // Approval screen state for camera captures
   const [pendingApproval, setPendingApproval] = useState<{ key: string; previewUrl?: string } | null>(null)
@@ -71,8 +69,6 @@ export default function SelfieGallery({
   // Custom upload handler that uses temp storage (required for promotion flow)
   const handlePhotoUpload = async (file: File): Promise<{ key: string; url?: string }> => {
     const isFromCamera = file.name.startsWith('capture-')
-    
-    setIsProcessingSingle(true)
     try {
       const ext = file.name.split('.')?.pop()?.toLowerCase()
       const res = await fetch('/api/uploads/temp', {
@@ -101,7 +97,6 @@ export default function SelfieGallery({
       
       return { key: data.tempKey, url }
     } catch (error) {
-      setIsProcessingSingle(false)
       setPendingApproval(null)
       pendingApprovalRef.current = null
       throw error
@@ -113,7 +108,6 @@ export default function SelfieGallery({
     try {
       // Handle multiple uploads - auto-approve and skip approval screen
       if (Array.isArray(result) && result.length > 1) {
-        setMultipleUploads(result)
         setIsProcessingMultiple(true)
 
         // Process all uploads in parallel for better performance
@@ -143,7 +137,6 @@ export default function SelfieGallery({
         // If pending approval exists, it means it's a camera capture - show approval screen
         // Use ref to avoid closure/stale state issues
         if (pendingApprovalRef.current && pendingApprovalRef.current.key === singleResult.key) {
-          setIsProcessingSingle(false)
           // Don't auto-approve - wait for user approval
           return
         }
@@ -163,13 +156,11 @@ export default function SelfieGallery({
           console.log('onSelfiesApproved completed')
         }
         
-        setIsProcessingSingle(false)
       }
     } catch (error) {
       console.error('Failed to handle upload:', error)
       onUploadError?.('Selfie upload failed. Please try again.')
       setIsProcessingMultiple(false)
-      setIsProcessingSingle(false)
       setPendingApproval(null)
       pendingApprovalRef.current = null
     }
@@ -221,7 +212,6 @@ export default function SelfieGallery({
             if (!approvalData) {
               console.error('Approval data not found')
               setPendingApproval(null)
-              setIsProcessingSingle(false)
               return
             }
 
@@ -238,20 +228,17 @@ export default function SelfieGallery({
             // Clear approval state AFTER approval completes
             setPendingApproval(null)
             pendingApprovalRef.current = null
-            setIsProcessingSingle(false)
           } catch (error) {
             console.error('Error approving camera capture:', error)
             onUploadError?.('Failed to approve selfie. Please try again.')
             setPendingApproval(null)
             pendingApprovalRef.current = null
-            setIsProcessingSingle(false)
           }
         }}
         onRetake={() => {
           // Clear approval state and allow retake
           setPendingApproval(null)
           pendingApprovalRef.current = null
-          setIsProcessingSingle(false)
           setForceCamera(true)
         }}
         onCancel={() => {
@@ -259,7 +246,6 @@ export default function SelfieGallery({
           const tempKey = pendingApprovalRef.current?.key
           setPendingApproval(null)
           pendingApprovalRef.current = null
-          setIsProcessingSingle(false)
           // Optionally delete the temp file
           if (tempKey && tempKey.startsWith('temp:')) {
             fetch(`/api/uploads/temp?key=${encodeURIComponent(tempKey)}`, {

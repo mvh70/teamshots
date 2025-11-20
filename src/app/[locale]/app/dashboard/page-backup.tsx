@@ -415,8 +415,11 @@ export default function DashboardPage() {
               </div>
               <PhotoUpload
                 onSelect={() => {}}
-                onUploaded={({ key }) => {
-                  router.push(`/app/generate/start?key=${encodeURIComponent(key)}`)
+                onUploaded={(result) => {
+                  const key = Array.isArray(result) ? result[0]?.key : result.key;
+                  if (key) {
+                    router.push(`/app/generate/start?key=${encodeURIComponent(key)}`)
+                  }
                 }}
               />
             </div>
