@@ -79,7 +79,7 @@ export default function SelfiesPage() {
   }
 
   // Multi-select: load and manage selected selfies
-  const { uploads: hookSelfies, selectedIds, loading, loadSelected, handlePhotoUpload, handleSelfiesApproved } = useSelfieManagement({
+  const { uploads: hookSelfies, selectedIds, loading, loadSelected, loadUploads, handlePhotoUpload, handleSelfiesApproved } = useSelfieManagement({
     token,
     inviteMode: true,
     customUploadEndpoint: onUploadWithToken,
@@ -120,6 +120,7 @@ export default function SelfiesPage() {
     selectedIds: string[],
     loading: boolean,
     loadSelected: () => Promise<void>,
+    loadUploads: () => void,
     handlePhotoUpload: (file: File) => Promise<{ key: string; url?: string }>,
     handleSelfiesApproved: (results: { key: string; selfieId?: string }[]) => void
   }
@@ -260,10 +261,12 @@ export default function SelfiesPage() {
                 showUploadTile={!showUploadFlow && !(isMobile && isInGenerationFlow)}
                 onUploadClick={() => setShowUploadFlow(true)}
                 onAfterChange={handleSelectionChange}
-                onDeleted={async () => {
-                  // The hook's loadUploads will reload both selfies and selected state
-                  // loadSelected() // Not needed - hook handles this
-                }}
+                    onDeleted={async () => {
+                      // Reload selfies list after deletion
+                      loadUploads()
+                      // Also reload selected state to ensure consistency
+                      await loadSelected()
+                    }}
               />
             </div>
           </div>
@@ -334,7 +337,9 @@ export default function SelfiesPage() {
                     onUploadClick={() => setShowUploadFlow(true)}
                     onAfterChange={handleSelectionChange}
                     onDeleted={async () => {
-                      // The hook will reload both selfies and selected state
+                      // Reload selfies list after deletion
+                      loadUploads()
+                      // Also reload selected state to ensure consistency
                       await loadSelected()
                     }}
                   />

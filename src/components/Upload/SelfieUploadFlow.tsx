@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import { useSelfieUpload } from '@/hooks/useSelfieUpload'
@@ -50,11 +50,25 @@ export default function SelfieUploadFlow({
   const [pendingApproval, setPendingApproval] = useState<{ key: string; previewUrl: string } | null>(null)
   const pendingApprovalRef = useRef<{ key: string; previewUrl: string } | null>(null)
   const [cameraKey, setCameraKey] = useState(0) // Key to force PhotoUpload remount for retake
+  const [shouldOpenCamera, setShouldOpenCamera] = useState(false) // Track if camera should open
+  
+  // Reset shouldOpenCamera after a short delay to allow camera to open
+  useEffect(() => {
+    if (shouldOpenCamera) {
+      const timer = setTimeout(() => {
+        setShouldOpenCamera(false)
+      }, 1000) // Reset after 1 second to allow camera to open
+      return () => clearTimeout(timer)
+    }
+  }, [shouldOpenCamera])
 
   // Wrapper for handlePhotoUpload - detect camera captures and show approval
   const handlePhotoUploadWrapper = async (file: File): Promise<{ key: string; url?: string }> => {
     const isFromCamera = file.name.startsWith('capture-')
     const result = await handlePhotoUpload(file)
+    
+    // Reset camera open flag after capture
+    setShouldOpenCamera(false)
     
     // Store file and preview URL for camera captures
     if (isFromCamera && result.url) {
@@ -179,8 +193,9 @@ export default function SelfieUploadFlow({
   const handleRetake = () => {
     setPendingApproval(null)
     pendingApprovalRef.current = null
-    // Force PhotoUpload remount to restart camera
+    // Force PhotoUpload remount and trigger camera to reopen
     setCameraKey(prev => prev + 1)
+    setShouldOpenCamera(true)
     if (onRetake) {
       onRetake()
     }
@@ -214,7 +229,7 @@ export default function SelfieUploadFlow({
             onUploaded={handlePhotoUploadedWrapper}
             onProcessingCompleteRef={onProcessingCompleteRef}
             testId="desktop-file-input"
-            autoOpenCamera={cameraKey > 0}
+            autoOpenCamera={shouldOpenCamera}
             isProcessing={isProcessing}
           />
         </div>
@@ -243,7 +258,7 @@ export default function SelfieUploadFlow({
           onUploaded={handlePhotoUploadedWrapper}
           onProcessingCompleteRef={onProcessingCompleteRef}
           testId="desktop-file-input"
-          autoOpenCamera={cameraKey > 0}
+          autoOpenCamera={shouldOpenCamera}
           isProcessing={isProcessing}
         />
       </div>

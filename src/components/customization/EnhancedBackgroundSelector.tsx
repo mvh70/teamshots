@@ -15,6 +15,7 @@ interface EnhancedBackgroundSelectorProps {
   className?: string
   availableBackgrounds?: string[] // Optional: filter backgrounds by package
   showHeader?: boolean
+  token?: string // Optional token for invite-based access to custom assets
 }
 
 const BACKGROUND_TYPES = [
@@ -57,7 +58,8 @@ export default function EnhancedBackgroundSelector({
   isDisabled = false,
   className = '',
   availableBackgrounds,
-  showHeader = false
+  showHeader = false,
+  token
 }: EnhancedBackgroundSelectorProps) {
   const t = useTranslations('customization.photoStyle.background')
   const [showColorPicker, setShowColorPicker] = useState(false)
@@ -153,7 +155,8 @@ export default function EnhancedBackgroundSelector({
     
     // Only set preview if key changed and we haven't set it yet
     if (currentKey && previewSetRef.current !== currentKey) {
-      setPreviewUrl(`/api/files/get?key=${encodeURIComponent(currentKey)}`)
+      const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
+      setPreviewUrl(`/api/files/get?key=${encodeURIComponent(currentKey)}${tokenParam}`)
       setImageLoaded(true)
       previewSetRef.current = currentKey
     } else if (!currentKey && previewSetRef.current) {
@@ -162,7 +165,7 @@ export default function EnhancedBackgroundSelector({
       setImageLoaded(false)
       previewSetRef.current = null
     }
-  }, [value.type, value.key])
+  }, [value.type, value.key, token])
 
   useEffect(() => {
     return () => {

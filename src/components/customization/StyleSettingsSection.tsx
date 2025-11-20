@@ -15,6 +15,7 @@ interface StyleSettingsSectionProps {
   noContainer?: boolean
   teamContext?: boolean
   isFreePlan?: boolean
+  token?: string // Optional token for invite-based access to custom assets
 }
 
 export default function StyleSettingsSection({
@@ -29,7 +30,8 @@ export default function StyleSettingsSection({
   className = '',
   noContainer = false,
   teamContext = false,
-  isFreePlan = false
+  isFreePlan = false,
+  token
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -46,6 +48,7 @@ export default function StyleSettingsSection({
         packageId={packageId}
         teamContext={teamContext}
         isFreePlan={isFreePlan}
+        token={token}
       />
     </>
   )

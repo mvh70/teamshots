@@ -39,6 +39,7 @@ interface PhotoStyleSettingsProps {
   packageId?: string // Optional package to control visible categories/overrides
   teamContext?: boolean
   isFreePlan?: boolean
+  token?: string // Optional token for invite-based access to custom assets
 }
 
 type CategoryConfig = {
@@ -107,7 +108,8 @@ export default function PhotoStyleSettings({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   teamContext: _teamContext = false,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  isFreePlan = false
+  isFreePlan = false,
+  token
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   // All categories are always expanded per UX requirement
@@ -477,6 +479,7 @@ export default function PhotoStyleSettings({
               isDisabled={!showToggles && readonlyPredefined && isPredefined}
               availableBackgrounds={pkg.availableBackgrounds}
               showHeader={false}
+              token={token}
             />
           )}
           
@@ -515,6 +518,7 @@ export default function PhotoStyleSettings({
               onChange={(settings) => handleCategorySettingsChange('branding', settings)}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
               isDisabled={!showToggles && readonlyPredefined && isPredefined}
+              token={token}
             />
           )}
           

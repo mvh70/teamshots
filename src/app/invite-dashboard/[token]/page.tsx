@@ -809,6 +809,7 @@ export default function InviteDashboardPage() {
                       packageId={packageId || 'headshot1'}
                       noContainer
                       teamContext
+                      token={token}
                     />
                     <div className="md:border-t md:border-gray-200 md:pt-5 pt-5">
                       <div className="hidden md:flex items-center justify-between mb-4">
@@ -908,6 +909,7 @@ export default function InviteDashboardPage() {
                     noContainer
                     teamContext
                     className="hidden md:block mt-6 pt-6 border-t border-gray-200"
+                    token={token}
                   />
                 </div>
               )}
@@ -957,6 +959,7 @@ export default function InviteDashboardPage() {
                     packageId={packageId || 'headshot1'}
                     noContainer
                     teamContext
+                    token={token}
                   />
 
                 </div>

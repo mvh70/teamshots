@@ -14,6 +14,7 @@ interface BrandingSelectorProps {
   isDisabled?: boolean // If true, controls are visually greyed and inactive
   className?: string
   showHeader?: boolean
+  token?: string // Optional token for invite-based access to custom assets
 }
 
 
@@ -23,7 +24,8 @@ export default function BrandingSelector({
   isPredefined = false,
   isDisabled = false,
   className = '',
-  showHeader = false
+  showHeader = false,
+  token
 }: BrandingSelectorProps) {
   const t = useTranslations('customization.photoStyle.branding')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -99,7 +101,8 @@ export default function BrandingSelector({
   useEffect(() => {
     // Only set preview if logoKey changed and we haven't set it yet
     if (value.logoKey && previewSetRef.current !== value.logoKey) {
-      setPreviewUrl(`/api/files/get?key=${encodeURIComponent(value.logoKey)}`)
+      const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
+      setPreviewUrl(`/api/files/get?key=${encodeURIComponent(value.logoKey)}${tokenParam}`)
       setImageLoaded(true)
       previewSetRef.current = value.logoKey
     } else if (!value.logoKey && previewSetRef.current) {
@@ -108,7 +111,7 @@ export default function BrandingSelector({
       setImageLoaded(false)
       previewSetRef.current = null
     }
-  }, [value.logoKey])
+  }, [value.logoKey, token])
 
   return (
     <div className={`${className}`}>

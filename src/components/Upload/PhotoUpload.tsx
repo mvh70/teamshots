@@ -57,6 +57,8 @@ export default function PhotoUpload({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       previewUrls.forEach(url => URL.revokeObjectURL(url));
       if (stream) stream.getTracks().forEach((t) => t.stop());
+      // Reset auto-open ref on unmount so camera can reopen on remount
+      hasAutoOpenedRef.current = false;
     };
   }, [previewUrl, previewUrls, stream]);
 
@@ -500,16 +502,20 @@ export default function PhotoUpload({
     setCameraOpen(false);
     if (stream) stream.getTracks().forEach((t) => t.stop());
     setStream(null);
+    // Reset auto-open ref when camera closes so it can reopen on retake
+    hasAutoOpenedRef.current = false;
   };
 
-  // Auto-open camera if requested (direct call to avoid unnecessary useEffect)
-  if (autoOpenCamera && !hasAutoOpenedRef.current && typeof window !== 'undefined') {
-    hasAutoOpenedRef.current = true;
-    // Use startTransition for non-urgent update
-    startTransition(() => {
-      openCamera();
-    });
-  }
+  // Auto-open camera if requested - use useEffect to handle prop changes properly
+  useEffect(() => {
+    if (autoOpenCamera && !hasAutoOpenedRef.current && typeof window !== 'undefined' && !cameraOpen) {
+      hasAutoOpenedRef.current = true;
+      // Use startTransition for non-urgent update
+      startTransition(() => {
+        openCamera();
+      });
+    }
+  }, [autoOpenCamera, cameraOpen, openCamera]);
 
   // Attach stream to video after modal renders
   useEffect(() => {
