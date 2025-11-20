@@ -58,11 +58,10 @@ export function useSelfieSelection({ token }: UseSelfieSelectionOptions) {
     }
   }, [token, loadSelected])
 
-  // Only load initially, not on every loadSelected change
-  useEffect(() => { 
-    void loadSelected() 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Empty deps - only run on mount
+  // Load selected selfies on mount
+  useEffect(() => {
+    void loadSelected()
+  }, [loadSelected])
 
   return { selectedSet, selectedIds, loading, error, loadSelected, toggleSelect, setSelectedSet }
 }

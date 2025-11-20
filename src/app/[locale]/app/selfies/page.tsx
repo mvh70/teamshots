@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import SelfieGallery from '@/components/generation/SelfieGallery'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
@@ -21,10 +21,7 @@ function SelfiesPageContent() {
   const [error, setError] = useState<string | null>(null)
   const { uploads, loading, loadUploads } = useSelfieManagement() as { uploads: UploadListItem[], loading: boolean, loadUploads: () => void }
 
-  // Hook handles initialization internally, no need for manual call
-  useEffect(() => {
-    // Initial load is handled by the hook
-  }, [])
+  // Hook handles initialization internally
 
   const handleSelfiesApproved = async () => {
     // Reload uploads after successful upload

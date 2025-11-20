@@ -564,7 +564,7 @@
         "label": "Fotos",
         "title": "Fotos disponibles",
         "individual": "Fotos personales",
-        "team": "Fotos equipo",
+        "team": "Créditos de foto del equipo",
         "allocated": "de los cuales asignados a invitaciones",
         "monthlyReset": "Reinicio mensual",
         "progress": "{used}/{total}",
@@ -634,10 +634,10 @@
         "activeTemplates": "Estilos de Foto Activos",
         "unlockPhotoStyles": "Desbloquear estilos de foto",
         "photosUsed": "Fotos Usadas",
-        "photos": "Fotos",
-        "photosUnit": "fotos",
+        "photos": "Créditos de foto",
+        "photosUnit": "créditos de foto",
         "generationsAvailable": "{count, plural, =0 {Sin generaciones} =1 {generación} other {generaciones}} disponibles",
-        "buyMore": "Comprar más fotos"
+        "buyMore": "Comprar más créditos de foto"
       },
       "recentActivity": {
         "title": "Actividad Reciente",

@@ -210,13 +210,7 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Empty deps - only run on mount
 
-  // Invite flow: reload selected after selfies change - ONLY RUN ONCE
-  useEffect(() => {
-    if (inviteMode && !inviteLoading && inviteUploads.length > 0) {
-      selectionHook.loadSelected()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inviteUploads.length]) // Only when uploads length changes, not on hook function changes
+  // Selected selfies reload is handled in handleInviteSelfiesApproved callback
 
   // Wrap returned functions with stable callbacks to prevent infinite loops
   const stableToggleSelect = useCallback((id: string, selected: boolean) => {

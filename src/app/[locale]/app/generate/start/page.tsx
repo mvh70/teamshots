@@ -28,7 +28,7 @@ import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
 
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
 
-export default function StartGenerationPage() {
+function StartGenerationPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -43,9 +43,8 @@ export default function StartGenerationPage() {
   const isSuccess = searchParams.get('success') === 'true'
   const successType = searchParams.get('type')
   
-  const [key, setKey] = useState<string>('')
   const [, setSelfieId] = useState<string | null>(null)
-  const [isApproved, setIsApproved] = useState<boolean>(Boolean(keyFromQuery))
+  const [selectedSelfies, setSelectedSelfies] = useState<Array<{ id: string; key: string }>>([])
   const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
   const { credits: userCredits, loading: creditsLoading } = useCredits()
   const { href: buyCreditsHref } = useBuyCreditsLink()
@@ -64,6 +63,53 @@ export default function StartGenerationPage() {
     customPrompt?: string | null
     settings?: Record<string, unknown>
   }
+
+  // Function to find selfie by key
+  const findSelfieByKey = async (key: string): Promise<string | undefined> => {
+    try {
+      const { id } = await jsonFetcher<{ id: string }>(`/api/uploads/find-by-key?key=${encodeURIComponent(key)}`, {
+        credentials: 'include' // Required for Safari to send cookies
+      })
+      return id
+    } catch (error) {
+      console.error('Error finding selfie by key:', error)
+      return undefined
+    }
+  }
+
+  // Function to fetch selected selfies
+  const fetchSelectedSelfies = async (): Promise<{ id: string; key: string }[]> => {
+    const res = await jsonFetcher<{ selfies: { id: string; key: string }[] }>('/api/selfies/selected', { credentials: 'include' })
+    return res.selfies || []
+  }
+
+  // Load selected selfies on mount
+  useEffect(() => {
+    const loadSelected = async () => {
+      if (!session?.user?.id) return
+
+      try {
+        const selfies = await fetchSelectedSelfies()
+        setSelectedSelfies(selfies)
+      } catch (error) {
+        console.error('Error loading selected selfies:', error)
+        setSelectedSelfies([])
+      }
+    }
+
+    loadSelected()
+  }, [session?.user?.id])
+
+  // Load selfie ID when keyFromQuery changes
+  useEffect(() => {
+    if (keyFromQuery) {
+      findSelfieByKey(keyFromQuery).then((id) => {
+        if (id) {
+          setSelfieId(id)
+        }
+      })
+    }
+  }, [keyFromQuery])
 
   const [activeContext, setActiveContext] = useState<{
     id: string
@@ -93,64 +139,13 @@ export default function StartGenerationPage() {
   const [photoStyleSettings, setPhotoStyleSettings] = useState<PhotoStyleSettingsType>(DEFAULT_PHOTO_STYLE_SETTINGS)
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(undefined)
   const [selectedPackageId, setSelectedPackageId] = useState<string>('')
-  const [selectedSelfies, setSelectedSelfies] = useState<Array<{ id: string; key: string }>>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const headerThumbs = useMemo(() => {
-    const items = selectedSelfies.length > 0 ? selectedSelfies : (key ? [{ id: 'legacy', key }] : [])
+    const items = selectedSelfies.length > 0 ? selectedSelfies : (keyFromQuery ? [{ id: 'legacy', key: keyFromQuery }] : [])
     return items
-  }, [selectedSelfies, key])
+  }, [selectedSelfies, keyFromQuery])
 
   // use shared hasUserDefinedFields utility
-
-  useEffect(() => {
-    // Keep local state in sync if query changes
-    if (keyFromQuery && !key) {
-      setKey(keyFromQuery)
-      
-      // Find existing selfie by key
-      findSelfieByKey(keyFromQuery).then((id) => {
-        if (id) {
-          setSelfieId(id)
-        }
-      })
-      
-      // Check if we have enough selected selfies before approving
-      // This will be checked again when selectedSelfies is loaded
-    }
-  }, [keyFromQuery, key])
-  
-  // Check if we should approve based on selected selfies count
-  // Only auto-approve if we have keyFromQuery AND at least 2 selfies
-  // Don't override manual approval state from onSelfieApproved
-  useEffect(() => {
-    if (keyFromQuery && selectedSelfies.length >= 2) {
-      setIsApproved(true)
-    } else if (keyFromQuery && selectedSelfies.length < 2) {
-      // If we have a key from query but not enough selfies, keep upload flow open
-      setIsApproved(false)
-    }
-  }, [keyFromQuery, selectedSelfies.length])
-
-  useEffect(() => {
-    // If coming from selection step, check if we have enough selfies before approving
-    if (skipUpload && !isApproved) {
-      if (selectedSelfies.length >= 2) {
-        setIsApproved(true)
-      }
-    }
-  }, [skipUpload, isApproved, selectedSelfies.length])
-
-  const findSelfieByKey = async (key: string): Promise<string | undefined> => {
-    try {
-      const { id } = await jsonFetcher<{ id: string }>(`/api/uploads/find-by-key?key=${encodeURIComponent(key)}`, {
-        credentials: 'include' // Required for Safari to send cookies
-      })
-      return id
-    } catch (error) {
-      console.error('Error finding selfie by key:', error)
-      return undefined
-    }
-  }
 
   // Fetch user credits and active context
   useEffect(() => {
@@ -176,31 +171,14 @@ export default function StartGenerationPage() {
     fetchData()
   }, [session?.user?.id])
 
+  // Handle redirects based on selected selfies count
   useEffect(() => {
-    const fetchSelected = async () => {
-      try {
-        const res = await jsonFetcher<{ selfies: { id: string; key: string }[] }>('/api/selfies/selected', { credentials: 'include' })
-        const selfies = res.selfies || []
-        setSelectedSelfies(selfies)
-        
-        // If no skipUpload flag and we have less than 2 selfies selected, redirect to selection page
-        // BUT: don't redirect if we're showing the success screen after purchase
-        if (!skipUpload && selfies.length < 2 && !keyFromQuery && !isSuccess) {
-          router.push('/app/generate/selfie')
-        }
-      } catch {
-        setSelectedSelfies([])
-        // If no skipUpload flag, redirect to selection page
-        // BUT: don't redirect if we're showing the success screen after purchase
-        if (!skipUpload && !keyFromQuery && !isSuccess) {
-          router.push('/app/generate/selfie')
-        }
-      }
+    // Only redirect if we came directly to this page (not from selection) and don't have enough selfies
+    // When skipUpload=1, user already went through selection, so don't redirect even if count is low
+    if (!skipUpload && selectedSelfies.length < 2 && !keyFromQuery && !isSuccess && contextLoaded) {
+      router.push('/app/generate/selfie')
     }
-    if (session?.user?.id) {
-      fetchSelected()
-    }
-  }, [session?.user?.id, skipUpload, keyFromQuery, router, isSuccess])
+  }, [skipUpload, selectedSelfies.length, keyFromQuery, router, isSuccess, contextLoaded])
 
   const normalizeContextName = useCallback((rawName: string | null | undefined, index: number, total: number, type: 'personal' | 'team'): string => {
     const trimmed = (rawName ?? '').trim()
@@ -431,53 +409,8 @@ export default function StartGenerationPage() {
   // No client-side choice: server enforces mode
   const shouldShowGenerationTypeSelector = false
 
-  // Determine generation type based on strict rules:
-  // - Pro users and team admins ALWAYS use team credits
-  // - Invited team members ALWAYS use team credits
-  // - Individual users ALWAYS use personal credits
-  useEffect(() => {
-    if (!creditsLoading && contextLoaded && isApproved && !generationType) {
-      // Check if user is a team admin - they always use team credits (regardless of hasTeamAccess)
-      const checkIsTeamAdmin = session?.user?.role === 'team_admin'
-      if (checkIsTeamAdmin) {
-        setGenerationType('team')
-        return
-      }
+  // Generation type is determined by effectiveGenerationType useMemo above
 
-      // Check if user is an invited team member - they always use team credits
-      const checkIsTeamMember = session?.user?.role === 'team_member'
-      if (checkIsTeamMember) {
-        setGenerationType('team')
-        return
-      }
-
-      // Check if user has pro subscription - they always use team credits (check actual tier, not UI tier)
-      if (subscriptionTier === 'pro') {
-          setGenerationType('team')
-          return
-      }
-
-      // Individual users use personal credits
-      if (hasIndividualAccess) {
-        setGenerationType('personal')
-        return
-      }
-
-      // Fallback: if individual user has no personal credits but has team access and team credits
-      if (hasTeamAccess && hasTeamCredits) {
-        setGenerationType('team')
-        return
-      }
-    }
-  }, [creditsLoading, contextLoaded, isApproved, generationType, subscriptionTier, session?.user?.role, hasTeamAccess, hasIndividualAccess, hasTeamCredits])
-
-  // If not coming from selection page and we don't have enough selfies, redirect immediately
-  // BUT: don't redirect if we're showing the success screen after purchase
-  useEffect(() => {
-    if (!skipUpload && selectedSelfies.length < 2 && !keyFromQuery && contextLoaded && !isSuccess) {
-      router.push('/app/generate/selfie')
-    }
-  }, [skipUpload, selectedSelfies.length, keyFromQuery, contextLoaded, router, isSuccess])
 
   // If success state, show purchase success screen
   if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
@@ -525,7 +458,8 @@ export default function StartGenerationPage() {
   }
 
   // If not coming from selection page and we don't have enough selfies, show loading while redirecting
-  if (!skipUpload && selectedSelfies.length < 2 && !keyFromQuery) {
+  // Only show this for direct navigation (skipUpload=false) and when context is loaded
+  if (!skipUpload && selectedSelfies.length < 2 && !keyFromQuery && contextLoaded && !isSuccess) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -562,7 +496,7 @@ export default function StartGenerationPage() {
         </div>
       ) : skipUpload && shouldShowGenerationTypeSelector && !generationType ? (
         <GenerationTypeSelector
-          uploadedPhotoKey={key}
+          uploadedPhotoKey={keyFromQuery}
           onTypeSelected={onTypeSelected}
           userCredits={userCredits}
           hasTeamAccess={hasTeamAccess}
@@ -775,4 +709,6 @@ export default function StartGenerationPage() {
   )
 }
 
-
+export default function StartGenerationPage() {
+  return <StartGenerationPageContent />
+}

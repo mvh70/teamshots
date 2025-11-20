@@ -559,7 +559,7 @@
         "label": "Photos",
         "title": "Available photos",
         "individual": "Personal photos",
-        "team": "Team photos",
+        "team": "Team photo credits",
         "allocated": "of which allocated to invites",
         "monthlyReset": "Monthly reset",
         "progress": "{used}/{total}",
@@ -629,10 +629,10 @@
         "activeTemplates": "Active photo styles",
         "unlockPhotoStyles": "Unlock photo styles",
         "photosUsed": "Photos used",
-        "photos": "Photos",
-        "photosUnit": "photos",
+        "photos": "Photocredits",
+        "photosUnit": "photocredits",
         "generationsAvailable": "{count, plural, =0 {No generations} =1 {generation} other {generations}} available",
-        "buyMore": "Buy more photos"
+        "buyMore": "Buy more photocredits"
       },
       "recentActivity": {
         "title": "Recent activity",
