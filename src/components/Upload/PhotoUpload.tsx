@@ -710,7 +710,7 @@ export default function PhotoUpload({
               />
               <canvas ref={canvasRef} className="hidden" />
             </div>
-            <div className="p-4 bg-white border-t border-gray-200 flex items-center justify-between">
+            <div className="p-4 bg-white border-t border-gray-200 flex items-center justify-between" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
               <button
                 type="button"
                 className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"

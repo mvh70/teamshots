@@ -204,7 +204,7 @@ export default function SelfieUploadFlow({
   // Show approval screen for camera captures
   if (pendingApproval) {
     return (
-      <div data-testid="approval-flow" className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto bg-white md:bg-transparent">
+      <div data-testid="approval-flow" className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto bg-white md:bg-transparent" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <SelfieApproval
           uploadedPhotoKey={pendingApproval.key}
           previewUrl={pendingApproval.previewUrl}
@@ -220,7 +220,7 @@ export default function SelfieUploadFlow({
   // PhotoUpload component handles all its own styling
   if (hideHeader) {
     return (
-      <div data-testid="upload-flow" className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto bg-white md:bg-transparent">
+      <div data-testid="upload-flow" className="md:static fixed bottom-0 left-0 right-0 z-50 md:z-auto bg-white md:bg-transparent" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div data-testid="mobile-upload-interface" className="[&>div]:!pb-0 md:[&>div]:!pb-6">
           <PhotoUpload
             key={cameraKey}

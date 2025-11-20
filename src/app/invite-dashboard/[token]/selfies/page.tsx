@@ -261,9 +261,9 @@ export default function SelfiesPage() {
                 showUploadTile={!showUploadFlow && !(isMobile && isInGenerationFlow)}
                 onUploadClick={() => setShowUploadFlow(true)}
                 onAfterChange={handleSelectionChange}
-                    onDeleted={async () => {
+                    onDeleted={async (selfieId: string) => {
                       // Reload selfies list after deletion
-                      loadUploads()
+                      await loadUploads()
                       // Also reload selected state to ensure consistency
                       await loadSelected()
                     }}
@@ -336,9 +336,9 @@ export default function SelfiesPage() {
                     showUploadTile={!showUploadFlow && !(isMobile && isInGenerationFlow)}
                     onUploadClick={() => setShowUploadFlow(true)}
                     onAfterChange={handleSelectionChange}
-                    onDeleted={async () => {
+                    onDeleted={async (selfieId: string) => {
                       // Reload selfies list after deletion
-                      loadUploads()
+                      await loadUploads()
                       // Also reload selected state to ensure consistency
                       await loadSelected()
                     }}

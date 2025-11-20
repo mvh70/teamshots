@@ -57,11 +57,15 @@ export async function GET(request: NextRequest) {
     const packageId = (finalContext.settings as Record<string, unknown> | null)?.['packageId'] ?? 'headshot1'
 
     // Return context with packageId extracted from settings
+    // Include backgroundUrl and logoUrl for legacy field normalization
     return NextResponse.json({
       context: {
         id: finalContext.id,
         settings: finalContext.settings,
-        stylePreset: finalContext.stylePreset
+        stylePreset: finalContext.stylePreset,
+        backgroundUrl: finalContext.backgroundUrl,
+        logoUrl: finalContext.logoUrl,
+        backgroundPrompt: finalContext.backgroundPrompt
       },
       packageId
     })

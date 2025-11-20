@@ -24,6 +24,7 @@ import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { hasUserDefinedFields } from '@/domain/style/userChoice'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { getPackageConfig } from '@/domain/style/packages'
+import { normalizeContextToPhotoStyleSettings } from '@/domain/style/normalize'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 
@@ -124,7 +125,14 @@ export default function InviteDashboardPage() {
       }
 
       const data = await response.json() as {
-        context?: { id: string; settings?: Record<string, unknown>; stylePreset?: string }
+        context?: { 
+          id: string
+          settings?: Record<string, unknown>
+          stylePreset?: string
+          backgroundUrl?: string | null
+          logoUrl?: string | null
+          backgroundPrompt?: string | null
+        }
         packageId?: string
       }
 
@@ -135,11 +143,23 @@ export default function InviteDashboardPage() {
       // Extract packageId from API response or context settings
       const extractedPackageId = data.packageId || (data.context.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1'
       
-      // Load the package config and deserialize settings
+      // Normalize context to PhotoStyleSettings, which handles legacy backgroundUrl/logoUrl fields
+      // This ensures custom backgrounds and logos are properly extracted from URLs
+      const normalizedSettings = normalizeContextToPhotoStyleSettings({
+        id: data.context.id,
+        name: '',
+        settings: data.context.settings,
+        stylePreset: (data.context.stylePreset as 'corporate' | 'casual' | 'creative' | 'modern' | 'classic' | 'artistic' | null | undefined) || null,
+        backgroundUrl: data.context.backgroundUrl || null,
+        logoUrl: data.context.logoUrl || null,
+        backgroundPrompt: data.context.backgroundPrompt || null,
+        customPrompt: null
+      })
+      
+      // If settings exist in the normalized result, merge them with package defaults
+      // Otherwise use package defaults
       const pkg = getPackageConfig(extractedPackageId)
-      const ui: PhotoStyleSettingsType = data.context.settings 
-        ? pkg.persistenceAdapter.deserialize(data.context.settings as Record<string, unknown>)
-        : pkg.defaultSettings
+      const ui: PhotoStyleSettingsType = normalizedSettings || pkg.defaultSettings
       
       setPhotoStyleSettings(ui)
       setOriginalContextSettings(ui)

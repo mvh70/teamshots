@@ -47,6 +47,7 @@ export default function SelfieGallery({
   const { selectedSet, toggleSelect } = useSelfieSelection({ token })
   const [loadedSet, setLoadedSet] = useState<Set<string>>(new Set())
   const [hoveredDeleteId, setHoveredDeleteId] = useState<string | null>(null)
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
 
   // Note: useSelfieUpload hook removed - handling uploads directly
 
@@ -174,6 +175,9 @@ export default function SelfieGallery({
   }, [toggleSelect, onAfterChange])
 
   const handleDelete = useCallback(async (selfieId: string, key?: string) => {
+    // Optimistically remove from UI immediately
+    setDeletedIds(prev => new Set(prev).add(selfieId))
+    
     try {
       if (token) {
         await fetch(`/api/team/member/selfies/${selfieId}`, {
@@ -191,6 +195,12 @@ export default function SelfieGallery({
       if (onDeleted) onDeleted(selfieId)
     } catch (e) {
       console.error('Failed to delete selfie', e)
+      // Revert optimistic update on error
+      setDeletedIds(prev => {
+        const next = new Set(prev)
+        next.delete(selfieId)
+        return next
+      })
     }
   }, [token, onDeleted])
 
@@ -253,9 +263,12 @@ export default function SelfieGallery({
     )
   }
 
+  // Filter out deleted selfies optimistically
+  const visibleSelfies = selfies.filter(selfie => !deletedIds.has(selfie.id))
+
   return (
     <SelfieGrid>
-      {selfies.map((selfie) => {
+      {visibleSelfies.map((selfie) => {
         const isSelected = selectedSet.has(selfie.id)
         const isLoaded = loadedSet.has(selfie.id)
         return (
