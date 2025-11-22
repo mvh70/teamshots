@@ -1,0 +1,904 @@
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
+import { generateWithGemini } from './gemini'
+import {
+  evaluatePersonGeneration,
+  evaluateBackgroundPreparation,
+  evaluateComposition,
+  type V2EvaluationResult
+} from './evaluator-v2'
+import { getProgressMessage, formatProgressMessage } from '@/lib/generation-progress-messages'
+import sharp from 'sharp'
+import { promises as fs } from 'fs'
+import path from 'path'
+import type { PhotoStyleSettings } from '@/types/photo-style'
+import type { Job } from 'bullmq'
+
+export interface V2WorkflowInput {
+  job: Job
+  generationId: string
+  personId: string
+  userId?: string
+  selfieReferences: { label: string; base64: string; mimeType: string }[]
+  styleSettings: PhotoStyleSettings
+  prompt: string
+  aspectRatio: string
+  resolution?: '1K' | '2K' | '4K'
+  downloadAsset: (key: string) => Promise<{ base64: string; mimeType: string } | null>
+  currentAttempt: number
+  maxAttempts: number
+  debugMode?: boolean // If true, log prompts without calling Gemini
+  stopAfterStep?: number // If set, stop workflow after this step (1-4). Useful for testing intermediate results.
+}
+
+export interface V2WorkflowResult {
+  approvedImageBuffers: Buffer[]
+}
+
+/**
+ * Save intermediate file for debugging
+ */
+async function saveIntermediateFile(
+  buffer: Buffer,
+  stepName: string,
+  generationId: string,
+  debugMode: boolean
+): Promise<void> {
+  if (!debugMode) return
+
+  try {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const filename = `${stepName}-${generationId}-${timestamp}.png`
+    const tmpDir = path.join(process.cwd(), 'tmp', 'v2-debug')
+
+    // Ensure directory exists
+    await fs.mkdir(tmpDir, { recursive: true })
+
+    const filePath = path.join(tmpDir, filename)
+    await fs.writeFile(filePath, buffer)
+
+    Logger.info(`Saved intermediate file: ${filePath}`, {
+      step: stepName,
+      generationId,
+      filePath
+    })
+  } catch (error) {
+    Logger.warn('Failed to save intermediate file', {
+      step: stepName,
+      generationId,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+}
+
+/**
+ * Execute the V2 4-step image generation workflow
+ */
+export async function executeV2Workflow({
+  job,
+  generationId,
+  personId,
+  userId,
+  selfieReferences,
+  styleSettings,
+  prompt,
+  aspectRatio,
+  resolution,
+  downloadAsset,
+  currentAttempt,
+  maxAttempts,
+  debugMode = false,
+  stopAfterStep
+}: V2WorkflowInput): Promise<V2WorkflowResult> {
+  Logger.info('Starting V2 image generation workflow', { generationId, debugMode })
+
+  // Helper to format progress messages with attempt info
+  const formatProgressWithAttempt = (progressMessage: { message: string; emoji?: string }, progress: number): string => {
+    const formatted = formatProgressMessage(progressMessage)
+    const result = `Generation #${currentAttempt}\n${progress}% - ${formatted}`
+    Logger.debug('V2 Progress message formatted', {
+      progress,
+      attempt: currentAttempt,
+      messagePreview: formatted.substring(0, 50)
+    })
+    return result
+  }
+
+  // Step 1: Generate person on white background
+  await job.updateProgress({
+    progress: 10,
+    message: formatProgressWithAttempt(getProgressMessage('v2-generating-person'), 10)
+  })
+
+  const step1Result = await executeStep1({
+    selfieReferences,
+    styleSettings,
+    prompt,
+    aspectRatio,
+    resolution,
+    downloadAsset,
+    debugMode,
+    generationId
+  })
+
+  Logger.info('V2 Step 1 completed', {
+    generationId,
+    personGenerated: step1Result.buffers.length > 0,
+    debugMode
+  })
+
+  // Save intermediate file for debugging
+  if (step1Result.buffers.length > 0) {
+    await saveIntermediateFile(step1Result.buffers[0], 'step1-person', generationId, debugMode)
+  }
+
+  // If stopAfterStep is set to 1, return early with Step 1 results
+  if (stopAfterStep === 1) {
+    Logger.info('V2 workflow stopping after Step 1 (test mode)', { generationId })
+    await job.updateProgress({
+      progress: 100,
+      message: formatProgressWithAttempt({
+        message: 'Step 1 complete (test mode)',
+        emoji: '✅'
+      }, 100)
+    })
+    return {
+      approvedImageBuffers: step1Result.buffers
+    }
+  }
+
+  // Step 2: Prepare background
+  await job.updateProgress({
+    progress: 30,
+    message: formatProgressWithAttempt(getProgressMessage('v2-preparing-background'), 30)
+  })
+
+  const step2Result = await executeStep2({
+    styleSettings,
+    downloadAsset,
+    debugMode,
+    generationId
+  })
+
+  Logger.info('V2 Step 2 completed', {
+    generationId,
+    hasBackground: !!step2Result.backgroundBuffer,
+    hasLogo: !!step2Result.logoBuffer,
+    debugMode
+  })
+
+  if (debugMode) {
+    Logger.info('V2 DEBUG MODE - Step 2 Assets:', {
+      generationId,
+      step: 2,
+      brandingType: styleSettings.branding?.type,
+      brandingPosition: styleSettings.branding?.position,
+      backgroundType: styleSettings.background?.type,
+      hasLogo: !!step2Result.logoBuffer,
+      hasBackground: !!step2Result.backgroundBuffer
+    })
+
+    // Save intermediate assets
+    if (step2Result.backgroundBuffer) {
+      await saveIntermediateFile(step2Result.backgroundBuffer, 'step2-background', generationId, debugMode)
+    }
+    if (step2Result.logoBuffer) {
+      await saveIntermediateFile(step2Result.logoBuffer, 'step2-logo', generationId, debugMode)
+    }
+  }
+
+  // Step 3: Compose person + background
+  await job.updateProgress({
+    progress: 60,
+    message: formatProgressWithAttempt(getProgressMessage('v2-compositing'), 60)
+  })
+
+  const step3Result = await executeStep3({
+    personBuffer: step1Result.buffers[0], // Use first approved person image
+    backgroundBuffer: step2Result.backgroundBuffer,
+    logoBuffer: step2Result.logoBuffer,
+    styleSettings,
+    prompt,
+    aspectRatio,
+    resolution,
+    debugMode,
+    generationId
+  })
+
+  Logger.info('V2 Step 3 completed', {
+    generationId,
+    compositionGenerated: step3Result.buffers.length > 0
+  })
+
+  // Save intermediate file for debugging
+  if (step3Result.buffers.length > 0) {
+    await saveIntermediateFile(step3Result.buffers[0], 'step3-composition', generationId, debugMode)
+  }
+
+  // Step 4: Final refinement with face matching
+  await job.updateProgress({
+    progress: 85,
+    message: formatProgressWithAttempt(getProgressMessage('v2-refining'), 85)
+  })
+
+  const step4Result = await executeStep4({
+    compositionBuffer: step3Result.buffers[0], // Use first approved composition
+    selfieReferences,
+    styleSettings,
+    prompt,
+    aspectRatio,
+    resolution,
+    debugMode,
+    generationId
+  })
+
+  Logger.info('V2 Step 4 completed', {
+    generationId,
+    refinementCompleted: step4Result.buffers.length > 0
+  })
+
+  // Save intermediate file for debugging
+  if (step4Result.buffers.length > 0) {
+    await saveIntermediateFile(step4Result.buffers[0], 'step4-final', generationId, debugMode)
+  }
+
+  return {
+    approvedImageBuffers: step4Result.buffers
+  }
+}
+
+/**
+ * Step 1: Generate person on white background
+ */
+async function executeStep1({
+  selfieReferences,
+  styleSettings,
+  prompt,
+  aspectRatio,
+  resolution,
+  downloadAsset,
+  debugMode = false,
+  generationId
+}: {
+  selfieReferences: { label: string; base64: string; mimeType: string }[]
+  styleSettings: PhotoStyleSettings
+  prompt: string
+  aspectRatio: string
+  resolution?: '1K' | '2K' | '4K'
+  downloadAsset: (key: string) => Promise<{ base64: string; mimeType: string } | null>
+  debugMode?: boolean
+  generationId: string
+}): Promise<{ buffers: Buffer[] }> {
+  const step1Prompt = buildStep1Prompt(prompt, styleSettings)
+
+  const referenceImages = selfieReferences.map(ref => ({
+    description: `Reference ${ref.label}`,
+    base64: ref.base64,
+    mimeType: ref.mimeType
+  }))
+
+  // Include logo reference if branding is on clothing
+  if (styleSettings.branding?.type === 'include' && styleSettings.branding.position === 'clothing' && styleSettings.branding.logoKey) {
+    try {
+      const logoAsset = await downloadAsset(styleSettings.branding.logoKey)
+      if (logoAsset) {
+        referenceImages.push({
+          description: 'Company logo for clothing branding',
+          base64: logoAsset.base64,
+          mimeType: logoAsset.mimeType
+        })
+      }
+    } catch (error) {
+      Logger.warn('Failed to load logo for Step 1 clothing branding', { error })
+      // Continue without logo - the prompt should still work
+    }
+  }
+
+  Logger.debug('V2 Step 1: Generating person on white background', {
+    promptLength: step1Prompt.length,
+    referenceCount: referenceImages.length,
+    debugMode
+  })
+
+  if (debugMode) {
+    Logger.info('V2 DEBUG MODE - Step 1 Prompt:', {
+      generationId,
+      step: 1,
+      prompt: step1Prompt,
+      referenceCount: referenceImages.length,
+      brandingOnClothing: styleSettings.branding?.position === 'clothing'
+    })
+    // Return mock valid PNG buffer for debugging (1x1 transparent PNG)
+    const mockPng = await sharp({
+      create: {
+        width: 1,
+        height: 1,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 0 }
+      }
+    }).png().toBuffer()
+    return { buffers: [mockPng] }
+  }
+
+  const generatedBuffers = await generateWithGemini(step1Prompt, referenceImages, aspectRatio, resolution)
+
+  if (!generatedBuffers.length) {
+    throw new Error('Step 1: AI generation returned no images')
+  }
+
+  // Convert to PNG and validate
+  const processedVariants = await Promise.all(
+    generatedBuffers.map(async (buffer, index) => {
+      const pngBuffer = await sharp(buffer).png().toBuffer()
+      const metadata = await sharp(pngBuffer).metadata()
+
+      return {
+        buffer: pngBuffer,
+        base64: pngBuffer.toString('base64'),
+        width: metadata.width ?? null,
+        height: metadata.height ?? null,
+        index
+      }
+    })
+  )
+
+  // Evaluate Step 1 results
+  let approvedBuffer: Buffer | null = null
+
+  for (const variant of processedVariants) {
+    const evaluation = await evaluatePersonGeneration({
+      imageBase64: variant.base64,
+      imageIndex: variant.index,
+      actualWidth: variant.width,
+      actualHeight: variant.height,
+      generationPrompt: step1Prompt,
+      selfieReferences
+    })
+
+    Logger.info('V2 Step 1 evaluation result', {
+      variantIndex: variant.index,
+      status: evaluation.status,
+      reason: evaluation.reason.slice(0, 100)
+    })
+
+    if (evaluation.status === 'Approved') {
+      approvedBuffer = variant.buffer
+      break
+    }
+  }
+
+  if (!approvedBuffer) {
+    throw new Error('Step 1: No person generation variants passed evaluation')
+  }
+
+  return { buffers: [approvedBuffer] }
+}
+
+/**
+ * Step 2: Prepare background assets
+ */
+async function executeStep2({
+  styleSettings,
+  downloadAsset,
+  debugMode = false,
+  generationId
+}: {
+  styleSettings: PhotoStyleSettings
+  downloadAsset: (key: string) => Promise<{ base64: string; mimeType: string } | null>
+  debugMode?: boolean
+  generationId: string
+}): Promise<{ backgroundBuffer?: Buffer; logoBuffer?: Buffer }> {
+  const result: { backgroundBuffer?: Buffer; logoBuffer?: Buffer } = {}
+
+  // Check if we need branding/logo
+  if (styleSettings.branding?.type === 'include') {
+    Logger.debug('V2 Step 2: Including branding/logo')
+
+    if (styleSettings.branding.logoKey) {
+      try {
+        const logoAsset = await downloadAsset(styleSettings.branding.logoKey)
+        if (logoAsset) {
+          const logoBuffer = Buffer.from(logoAsset.base64, 'base64')
+          result.logoBuffer = await sharp(logoBuffer).png().toBuffer()
+        }
+      } catch (error) {
+        Logger.error('Failed to download logo asset', { error, key: styleSettings.branding.logoKey })
+        throw new Error('Step 2: Failed to download logo asset')
+      }
+    }
+  }
+
+  // Check if we need custom background
+  if (styleSettings.background?.type === 'custom' && styleSettings.background.key) {
+    try {
+      const backgroundAsset = await downloadAsset(styleSettings.background.key)
+      if (backgroundAsset) {
+        const backgroundBuffer = Buffer.from(backgroundAsset.base64, 'base64')
+        result.backgroundBuffer = await sharp(backgroundBuffer).png().toBuffer()
+      }
+    } catch (error) {
+      Logger.error('Failed to download background asset', { error, key: styleSettings.background.key })
+      throw new Error('Step 2: Failed to download background asset')
+    }
+  } else if (styleSettings.background?.type === 'office' ||
+             styleSettings.background?.type === 'neutral' ||
+             styleSettings.background?.type === 'gradient' ||
+             styleSettings.background?.type === 'tropical-beach' ||
+             styleSettings.background?.type === 'busy-city') {
+    // Generate background if needed
+    const backgroundPrompt = buildBackgroundPrompt(styleSettings.background)
+    const generatedBackgrounds = await generateWithGemini(backgroundPrompt, [], '1:1') // Square background
+
+    if (generatedBackgrounds.length > 0) {
+      result.backgroundBuffer = await sharp(generatedBackgrounds[0]).png().toBuffer()
+    }
+  }
+
+  // Basic validation
+  const validation = await evaluateBackgroundPreparation({
+    backgroundReference: result.backgroundBuffer ? {
+      base64: result.backgroundBuffer.toString('base64'),
+      mimeType: 'image/png',
+      description: 'Generated or uploaded background'
+    } : undefined,
+    logoReference: result.logoBuffer ? {
+      base64: result.logoBuffer.toString('base64'),
+      mimeType: 'image/png',
+      description: 'Branding logo'
+    } : undefined
+  })
+
+  if (validation.status !== 'Approved') {
+    Logger.warn('V2 Step 2 validation warning', { reason: validation.reason })
+    // Don't throw - basic validation, continue if possible
+  }
+
+  return result
+}
+
+/**
+ * Step 3: Compose person + background
+ */
+async function executeStep3({
+  personBuffer,
+  backgroundBuffer,
+  logoBuffer,
+  styleSettings,
+  prompt,
+  aspectRatio,
+  resolution,
+  debugMode = false,
+  generationId
+}: {
+  personBuffer: Buffer
+  backgroundBuffer?: Buffer
+  logoBuffer?: Buffer
+  styleSettings: PhotoStyleSettings
+  prompt: string
+  aspectRatio: string
+  resolution?: '1K' | '2K' | '4K'
+  debugMode?: boolean
+  generationId: string
+}): Promise<{ buffers: Buffer[] }> {
+  const step3Prompt = buildStep3Prompt(prompt, styleSettings, !!backgroundBuffer, !!logoBuffer)
+
+  const referenceImages: { description?: string; base64: string; mimeType: string }[] = [
+    {
+      description: 'Person from Step 1 (white background)',
+      base64: personBuffer.toString('base64'),
+      mimeType: 'image/png'
+    }
+  ]
+
+  if (backgroundBuffer) {
+    referenceImages.push({
+      description: 'Background asset from Step 2',
+      base64: backgroundBuffer.toString('base64'),
+      mimeType: 'image/png'
+    })
+  }
+
+  if (logoBuffer) {
+    referenceImages.push({
+      description: 'Logo asset from Step 2',
+      base64: logoBuffer.toString('base64'),
+      mimeType: 'image/png'
+    })
+  }
+
+  Logger.debug('V2 Step 3: Composing person + background', {
+    promptLength: step3Prompt.length,
+    referenceCount: referenceImages.length,
+    hasBackground: !!backgroundBuffer,
+    hasLogo: !!logoBuffer,
+    debugMode
+  })
+
+  if (debugMode) {
+    Logger.info('V2 DEBUG MODE - Step 3 Prompt:', {
+      generationId,
+      step: 3,
+      prompt: step3Prompt,
+      referenceCount: referenceImages.length,
+      hasBackground: !!backgroundBuffer,
+      hasLogo: !!logoBuffer
+    })
+    // Return mock valid PNG buffer for debugging (1x1 transparent PNG)
+    const mockPng = await sharp({
+      create: {
+        width: 1,
+        height: 1,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 0 }
+      }
+    }).png().toBuffer()
+    return { buffers: [mockPng] }
+  }
+
+  const generatedBuffers = await generateWithGemini(step3Prompt, referenceImages, aspectRatio, resolution)
+
+  if (!generatedBuffers.length) {
+    throw new Error('Step 3: AI composition returned no images')
+  }
+
+  // Convert to PNG and validate
+  const processedVariants = await Promise.all(
+    generatedBuffers.map(async (buffer, index) => {
+      const pngBuffer = await sharp(buffer).png().toBuffer()
+      const metadata = await sharp(pngBuffer).metadata()
+
+      return {
+        buffer: pngBuffer,
+        base64: pngBuffer.toString('base64'),
+        width: metadata.width ?? null,
+        height: metadata.height ?? null,
+        index
+      }
+    })
+  )
+
+  // Evaluate Step 3 results
+  let approvedBuffer: Buffer | null = null
+
+  for (const variant of processedVariants) {
+    const evaluation = await evaluateComposition({
+      imageBase64: variant.base64,
+      imageIndex: variant.index,
+      actualWidth: variant.width,
+      actualHeight: variant.height,
+      generationPrompt: step3Prompt,
+      selfieReferences: [], // Not needed for Step 3 evaluation
+      personReference: {
+        base64: personBuffer.toString('base64'),
+        mimeType: 'image/png',
+        description: 'Person reference from Step 1'
+      },
+      backgroundReference: backgroundBuffer ? {
+        base64: backgroundBuffer.toString('base64'),
+        mimeType: 'image/png',
+        description: 'Background reference'
+      } : undefined,
+      logoReference: logoBuffer ? {
+        base64: logoBuffer.toString('base64'),
+        mimeType: 'image/png',
+        description: 'Logo reference'
+      } : undefined
+    })
+
+    Logger.info('V2 Step 3 evaluation result', {
+      variantIndex: variant.index,
+      status: evaluation.status,
+      reason: evaluation.reason.slice(0, 100)
+    })
+
+    if (evaluation.status === 'Approved') {
+      approvedBuffer = variant.buffer
+      break
+    }
+  }
+
+  if (!approvedBuffer) {
+    throw new Error('Step 3: No composition variants passed evaluation')
+  }
+
+  return { buffers: [approvedBuffer] }
+}
+
+/**
+ * Step 4: Final refinement with face matching
+ */
+async function executeStep4({
+  compositionBuffer,
+  selfieReferences,
+  styleSettings,
+  prompt,
+  aspectRatio,
+  resolution,
+  debugMode = false,
+  generationId
+}: {
+  compositionBuffer: Buffer
+  selfieReferences: { label: string; base64: string; mimeType: string }[]
+  styleSettings: PhotoStyleSettings
+  prompt: string
+  aspectRatio: string
+  resolution?: '1K' | '2K' | '4K'
+  debugMode?: boolean
+  generationId: string
+}): Promise<{ buffers: Buffer[] }> {
+  const step4Prompt = `I have uploaded an image generated from the 2 selfies. Can you now do another pass to ensure the face characteristics of the generated image are the same as the selfies, especially specific characteristics of the face, like moles, freckles, scars the form of the eyes, very important. Do not beautify the resulting image, it should resemble as much as possible the selfies:\n\n${prompt}`
+
+  const referenceImages: { description?: string; base64: string; mimeType: string }[] = [
+    {
+      description: 'Composition from Step 3',
+      base64: compositionBuffer.toString('base64'),
+      mimeType: 'image/png'
+    },
+    ...selfieReferences.map(ref => ({
+      description: `Reference ${ref.label}`,
+      base64: ref.base64,
+      mimeType: ref.mimeType
+    }))
+  ]
+
+  Logger.debug('V2 Step 4: Final face refinement', {
+    promptLength: step4Prompt.length,
+    referenceCount: referenceImages.length,
+    debugMode
+  })
+
+  if (debugMode) {
+    Logger.info('V2 DEBUG MODE - Step 4 Prompt:', {
+      generationId,
+      step: 4,
+      prompt: step4Prompt,
+      referenceCount: referenceImages.length
+    })
+    // Return mock valid PNG buffer for debugging (1x1 transparent PNG)
+    const mockPng = await sharp({
+      create: {
+        width: 1,
+        height: 1,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 0 }
+      }
+    }).png().toBuffer()
+    return { buffers: [mockPng] }
+  }
+
+  const generatedBuffers = await generateWithGemini(step4Prompt, referenceImages, aspectRatio, resolution)
+
+  if (!generatedBuffers.length) {
+    throw new Error('Step 4: AI refinement returned no images')
+  }
+
+  // Convert to PNG (no evaluation for Step 4)
+  const processedVariants = await Promise.all(
+    generatedBuffers.map(async (buffer) => {
+      return await sharp(buffer).png().toBuffer()
+    })
+  )
+
+  Logger.info('V2 Step 4: Refinement completed without evaluation', {
+    bufferCount: processedVariants.length
+  })
+
+  return { buffers: processedVariants }
+}
+
+/**
+ * Build Step 1 prompt: Person on white background
+ * Preserves all style details from basePrompt and appends custom Step 1 instructions
+ */
+function buildStep1Prompt(basePrompt: string, styleSettings: PhotoStyleSettings): string {
+  // The basePrompt contains all style details (pose, clothing, expression, lighting, camera, etc.)
+  // We preserve everything and append clear Step 1-specific instructions
+  
+  let jsonPrompt = ''
+  let labelInstructionText = ''
+
+  // Try to extract JSON and text portions
+  // The prompt may be pure JSON, or JSON followed by text instructions
+  const instructionStart = basePrompt.indexOf('Reference images are supplied')
+  
+  if (instructionStart > 0) {
+    // Has text instructions after JSON
+    jsonPrompt = basePrompt.substring(0, instructionStart).trim()
+    labelInstructionText = basePrompt.substring(instructionStart)
+  } else {
+    // No text instructions found, treat entire prompt as JSON
+    jsonPrompt = basePrompt
+  }
+
+  // Try to parse and modify JSON portion
+  try {
+    const promptObj = JSON.parse(jsonPrompt)
+    
+    // Ensure scene.environment exists and modify it to specify white background only
+    if (!promptObj.scene) {
+      promptObj.scene = {}
+    }
+    if (!promptObj.scene.environment) {
+      promptObj.scene.environment = {}
+    }
+    
+    // Override location_type to white background (this is the key field)
+    promptObj.scene.environment.location_type = 'Clean white background, no environment or backdrop elements. The subject should be isolated on pure white.'
+    
+    // Remove background-related fields that don't apply to white background
+    delete promptObj.scene.environment.distance_from_background_ft
+    delete promptObj.scene.environment.description
+    delete promptObj.scene.environment.color_palette
+    delete promptObj.scene.environment.branding
+    
+    // Remove any background-related notes
+    if (promptObj.scene.environment.notes && Array.isArray(promptObj.scene.environment.notes)) {
+      promptObj.scene.environment.notes = promptObj.scene.environment.notes.filter(
+        (note: string) => {
+          const lowerNote = String(note).toLowerCase()
+          return !lowerNote.includes('background') && 
+                 !lowerNote.includes('backdrop') &&
+                 !lowerNote.includes('distance') &&
+                 !lowerNote.includes('falloff')
+        }
+      )
+      
+      // If notes array is empty after filtering, remove it
+      if (promptObj.scene.environment.notes.length === 0) {
+        delete promptObj.scene.environment.notes
+      }
+    }
+    
+    // Stringify back to JSON
+    jsonPrompt = JSON.stringify(promptObj, null, 2)
+    
+  } catch (error) {
+    // JSON parsing failed, keep jsonPrompt as-is (might not be JSON format)
+    // Log error in debug mode to help diagnose issues
+    Logger.warn('Failed to parse JSON prompt for Step 1 modification', {
+      error: error instanceof Error ? error.message : String(error),
+      promptPreview: jsonPrompt.substring(0, 200)
+    })
+  }
+
+  // If we have labelInstruction text, filter out background and format frame instructions
+  // These are for Step 3/4, not Step 1
+  if (labelInstructionText) {
+    const lines = labelInstructionText.split('\n')
+    const filteredLines = lines.filter(line => {
+      const trimmedLine = line.trim()
+      const lowerLine = trimmedLine.toLowerCase()
+      
+      // Remove lines that specifically mention custom backgrounds or format frames
+      // Keep selfie and branding instructions
+      if (trimmedLine.startsWith('- **Custom Background:**')) {
+        return false
+      }
+      if (trimmedLine.startsWith('- **Format Frame')) {
+        return false
+      }
+      if (lowerLine.includes('format frame') && lowerLine.includes('empty frame')) {
+        return false
+      }
+      if (lowerLine.includes('match the background to the final aspect ratio')) {
+        return false
+      }
+      if (lowerLine.includes('respect the requested shot type') && lowerLine.includes('format frame')) {
+        return false
+      }
+      
+      // Keep all other lines (selfie instructions, branding instructions, etc.)
+      return true
+    })
+    labelInstructionText = filteredLines.join('\n').trim()
+  }
+
+  // Build the final prompt
+  let prompt = jsonPrompt
+
+  // Append custom Step 1 instructions (these override any conflicting instructions in basePrompt)
+  prompt += '\n\n=== STEP 1: PERSON GENERATION ON WHITE BACKGROUND ===\n'
+  prompt += '\nGenerate ONLY the person isolated on a clean white background.\n'
+  prompt += '\nREQUIREMENTS:'
+  prompt += '\n- Background: Pure white background only. No environments, backdrops, or background elements.'
+  prompt += '\n- Person: Generate the person with all pose, clothing, expression, and lighting details from the style settings above.'
+  prompt += '\n- Body Composition: Pay special attention to body composition and proportions. Ensure the head is properly proportioned relative to the rest of the body. The head size should be natural and realistic - not too large or too small compared to the torso, shoulders, and overall body frame. Maintain correct anatomical proportions throughout the entire body.'
+  prompt += '\n- Selfies: Use the provided selfie references to match facial features, identity, and characteristics exactly.'
+  
+  if (styleSettings.branding?.type === 'include' && styleSettings.branding.position === 'clothing') {
+    prompt += '\n- Branding: Include the company logo/branding on the clothing as shown in the reference images.'
+  } else {
+    prompt += '\n- Branding: Do NOT include any logos or branding elements.'
+  }
+  
+  prompt += '\n- Composition: Focus on the person only. No background composition needed in this step.'
+  prompt += '\n- Format: Match the requested aspect ratio and shot type from the style settings.'
+  
+  // Append filtered labelInstruction if it exists (only selfie/branding instructions, no background/format)
+  if (labelInstructionText) {
+    prompt += '\n\n' + labelInstructionText
+  }
+  
+  prompt += '\n\nIgnore any instructions above that mention background images, custom backgrounds, format frames, or background composition. This step generates ONLY the person on white background.'
+
+  return prompt
+}
+
+/**
+ * Build Step 3 prompt: Composition
+ */
+function buildStep3Prompt(
+  basePrompt: string,
+  styleSettings: PhotoStyleSettings,
+  hasBackground: boolean,
+  hasLogo: boolean
+): string {
+  let prompt = `${basePrompt}
+
+Compose the person from the first image`
+
+  if (hasBackground) {
+    prompt += ' with the background from the second image'
+  }
+
+  if (hasLogo) {
+    prompt += '. Include the logo/branding appropriately positioned'
+  }
+
+  prompt += '. Ensure natural integration and professional appearance.'
+
+  return prompt
+}
+
+/**
+ * Build background generation prompt
+ */
+function buildBackgroundPrompt(backgroundSettings: NonNullable<PhotoStyleSettings['background']>): string {
+  let prompt = 'Generate a professional background: '
+
+  switch (backgroundSettings.type) {
+    case 'office':
+      prompt += backgroundSettings.prompt || 'modern office environment'
+      break
+    case 'neutral':
+      prompt += `solid ${backgroundSettings.color || '#f5f5f5'} background`
+      break
+    case 'gradient':
+      prompt += `gradient background from ${backgroundSettings.color || '#ffffff'} to a complementary shade`
+      break
+    case 'tropical-beach':
+      prompt += 'tropical beach setting'
+      break
+    case 'busy-city':
+      prompt += 'urban city environment'
+      break
+    default:
+      prompt += 'clean professional setting'
+  }
+
+  return prompt
+}
+
+/**
+ * Build clothing description from style settings
+ */
+function buildClothingDescription(styleSettings: PhotoStyleSettings): string {
+  if (styleSettings.clothing?.style === 'user-choice') {
+    return 'in professional business attire'
+  }
+
+  // Add more detailed clothing logic based on style settings
+  return 'in professional attire'
+}
+
+/**
+ * Build pose description from style settings
+ */
+function buildPoseDescription(styleSettings: PhotoStyleSettings): string {
+  if (styleSettings.pose?.type === 'user-choice') {
+    return 'with a confident, professional pose'
+  }
+
+  // Add more detailed pose logic based on style settings
+  return 'in a natural, professional stance'
+}

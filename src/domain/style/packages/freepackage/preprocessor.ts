@@ -52,7 +52,7 @@ export async function preprocessFreepackage(
   additionalContext?: {
     backgroundS3Key?: string
     logoS3Key?: string
-    onStepProgress?: (stepName: string) => void
+    onStepProgress?: (stepName: string) => Promise<void>
   }
 ): Promise<PreprocessorResult> {
   const steps: string[] = []
@@ -60,7 +60,7 @@ export async function preprocessFreepackage(
   
   try {
     // Notify that preprocessing is starting
-    additionalContext?.onStepProgress?.('starting-preprocessing')
+    await additionalContext?.onStepProgress?.('starting-preprocessing')
     
     let processedSelfie = selfieBuffer
     let processedBackground: Buffer | undefined
@@ -72,7 +72,7 @@ export async function preprocessFreepackage(
       
       if (backgroundBuffer) {
         Logger.debug('Processing background: removing person if present')
-        additionalContext?.onStepProgress?.('background-person-removed')
+        await additionalContext?.onStepProgress?.('background-person-removed')
         const bgResult = await removePersonFromBackground(backgroundBuffer)
         
         if (bgResult.processed) {
@@ -93,7 +93,7 @@ export async function preprocessFreepackage(
     // Step 3: Combine processed images if we have both background and selfie
     if (processedBackground && processedSelfie) {
       Logger.debug('Combining preprocessed images')
-      additionalContext?.onStepProgress?.('images-combined')
+      await additionalContext?.onStepProgress?.('images-combined')
       const combined = await combinePreprocessedImages(processedSelfie, processedBackground, intermediateResults)
       processedSelfie = combined
       steps.push('images-combined')
@@ -101,7 +101,7 @@ export async function preprocessFreepackage(
     
     // Notify that preprocessing is complete
     if (steps.length > 0) {
-      additionalContext?.onStepProgress?.('completed-preprocessing')
+      await additionalContext?.onStepProgress?.('completed-preprocessing')
     }
     
     return {

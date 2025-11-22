@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { ExclamationTriangleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
 import { resolveShotType } from '@/domain/style/packages/camera-presets'
+import { useTranslations } from 'next-intl'
 
 export interface PhotoStyleSummarySettings {
   background?: {
@@ -21,6 +22,9 @@ export interface PhotoStyleSummarySettings {
     preset?: string
   }
   shotType?: {
+    type?: string
+  }
+  pose?: {
     type?: string
   }
 }
@@ -47,6 +51,7 @@ function getThumbnailUrl(key: string): string {
 }
 
 export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBackgroundPrompt, legacyLogoUrl }: StyleSummaryProps) {
+  const t = useTranslations('customization.photoStyle.pose')
   const backgroundKey = settings?.background?.key || extractKeyFromUrl(legacyBackgroundUrl)
   const backgroundPrompt = settings?.background?.prompt || legacyBackgroundPrompt || undefined
   const backgroundType = settings?.background?.type
@@ -64,6 +69,7 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
   const shotType = settings?.shotType?.type
   const shotTypeConfig =
     shotType && shotType !== 'user-choice' ? resolveShotType(shotType) : undefined
+  const poseType = settings?.pose?.type
 
   return (
     <div className="space-y-3">
@@ -216,6 +222,38 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
                     <QuestionMarkCircleIcon className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600 transition-colors" />
                     <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 w-56 -translate-x-1/2 rounded-lg bg-gray-900 px-3 py-2 text-[10px] leading-snug text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100">
                       {shotTypeConfig.framingDescription}
+                    </span>
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {poseType && (
+        <div id="style-pose" className="flex flex-col space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-gray-700 underline">Pose</span>
+          </div>
+          <div className="ml-6 text-xs text-gray-600">
+            {poseType === 'user-choice' ? (
+              <span className="inline-flex items-center gap-1">
+                <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
+                User choice
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-gray-700">
+                <span className="font-medium">
+                  {t(`poses.${poseType}.label`, { 
+                    default: poseType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                  })}
+                </span>
+                {t(`poses.${poseType}.description`, { default: '' }) && (
+                  <span className="relative inline-flex group">
+                    <QuestionMarkCircleIcon className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600 transition-colors" />
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 w-56 -translate-x-1/2 rounded-lg bg-gray-900 px-3 py-2 text-[10px] leading-snug text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100">
+                      {t(`poses.${poseType}.description`, { default: '' })}
                     </span>
                   </span>
                 )}

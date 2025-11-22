@@ -68,18 +68,17 @@ function generateTours(t: (key: string, values?: Record<string, any>) => string,
       let adjustedPointerPadding = step.pointerPadding
 
       if (isMobile) {
-        // On mobile, prefer bottom positioning to avoid keyboard interference
-        // Only change if current side would cause issues (left/right on small screens)
-        if (step.side === 'left' || step.side === 'right') {
-          // Keep left/right for elements that need it, but increase padding
-          adjustedPointerPadding = Math.max(step.pointerPadding || 20, 40)
-        } else if (step.side === 'top') {
-          // Top positioning can be problematic on mobile, prefer bottom
+        if (tour.name === 'generation-detail') {
+          // For the generation detail tour, the targets are at the bottom of the generation card,
+          // so we must force the tour card to appear on top to be visible.
+          adjustedSide = 'top'
+        } else if (step.side === 'top' || step.side === 'bottom') {
+          // For other tours on mobile, prefer bottom positioning to avoid keyboard interference
           adjustedSide = 'bottom'
-          adjustedPointerPadding = Math.max(step.pointerPadding || 20, 40)
-        } else {
-          // Bottom is already good, just ensure adequate padding
-          adjustedPointerPadding = Math.max(step.pointerPadding || 20, 40)
+        }
+        
+        if (step.pointerPadding) {
+          adjustedPointerPadding = Math.max(step.pointerPadding, 30) // Ensure at least 30px padding
         }
       }
 

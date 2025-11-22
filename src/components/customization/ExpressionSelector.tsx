@@ -16,27 +16,37 @@ const EXPRESSIONS = [
   {
     value: 'friendly',
     label: 'Genuine smile (teeth) *',
-    description: 'Approachable, friendly'
+    description: 'Approachable, friendly',
+    icon: '😁',
+    color: 'from-yellow-400 to-orange-400'
   },
   {
     value: 'professional',
     label: 'Soft smile (no teeth)',
-    description: 'Professional, subtle'
+    description: 'Professional, subtle',
+    icon: '🙂',
+    color: 'from-blue-500 to-indigo-500'
   },
   {
     value: 'serious',
     label: 'Neutral / serious',
-    description: 'Executive, dramatic'
+    description: 'Executive, dramatic',
+    icon: '😐',
+    color: 'from-gray-600 to-gray-800'
   },
   {
     value: 'happy',
     label: 'Laugh / joy',
-    description: 'Lifestyle, authentic'
+    description: 'Lifestyle, authentic',
+    icon: '😆',
+    color: 'from-pink-400 to-rose-500'
   },
   {
     value: 'thoughtful',
     label: 'Contemplative',
-    description: 'Editorial, artistic'
+    description: 'Editorial, artistic',
+    icon: '🤔',
+    color: 'from-purple-500 to-violet-600'
   }
 ] as const
 
@@ -79,11 +89,12 @@ export default function ExpressionSelector({
         </div>
       )}
 
-      <div className={`space-y-3 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
+      <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
         {EXPRESSIONS.map((expr) => {
           const isSelected = value.type === expr.value
           // On mobile, hide unselected options when predefined
           const shouldHide = isPredefined && !isSelected
+          
           return (
             <button
               type="button"
@@ -93,21 +104,38 @@ export default function ExpressionSelector({
                 handleChange(expr.value as ExpressionSettings['type'], e)
               }
               disabled={isPredefined || isDisabled}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+              className={`w-full bg-gray-50 rounded-lg p-4 border-2 transition-all ${
                 isSelected
-                  ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
+                  ? 'border-brand-primary bg-brand-primary-light shadow-sm'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-white hover:shadow-sm'
               } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
                 shouldHide ? 'hidden md:block' : ''
               }`}
             >
-              <div className="flex flex-col items-start text-left gap-1">
-                <span className="text-sm font-medium">{expr.label}</span>
-                <span className="text-xs text-gray-500">{expr.description}</span>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl ${
+                  isSelected 
+                    ? `bg-gradient-to-br ${expr.color}` 
+                    : 'bg-gray-200'
+                }`}>
+                  {expr.icon}
+                </div>
+                <div className="flex-1 text-left">
+                  <div className={`text-sm font-semibold ${isSelected ? 'text-brand-primary' : 'text-gray-900'}`}>
+                    {expr.label}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-0.5">
+                    {expr.description}
+                  </div>
+                </div>
+                {isSelected && (
+                  <div className="w-5 h-5 bg-brand-primary rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
               </div>
-              {isSelected && (
-                <div className="ml-auto w-2 h-2 bg-brand-primary rounded-full" />
-              )}
             </button>
           )
         })}

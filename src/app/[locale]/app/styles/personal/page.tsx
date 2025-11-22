@@ -42,6 +42,12 @@ interface Context {
     lighting?: {
       type?: string
     }
+    pose?: {
+      type?: string
+    }
+    shotType?: {
+      type?: string
+    }
   }
   // Legacy fields for backward compatibility
   backgroundUrl?: string

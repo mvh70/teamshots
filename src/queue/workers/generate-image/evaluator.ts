@@ -93,7 +93,16 @@ export async function evaluateGeneratedImage({
   logoReference,
   backgroundReference
 }: ImageEvaluationInput): Promise<ImageEvaluationResult> {
-  const modelName = Env.string('GEMINI_EVAL_MODEL', Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash'))
+  const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
+  const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
+  const modelName = evalModel || imageModel || 'gemini-2.5-flash'
+  
+  Logger.debug('Using evaluation model', {
+    GEMINI_EVAL_MODEL: evalModel || '(not set)',
+    GEMINI_IMAGE_MODEL: imageModel || '(not set)',
+    selectedModel: modelName
+  })
+  
   const model = await getVertexGenerativeModel(modelName)
 
   const expectedRatio = expectedWidth / expectedHeight
@@ -147,8 +156,10 @@ export async function evaluateGeneratedImage({
     '   - Is facial identity consistent and recognizable?',
     '',
     '5. proportions_realistic',
-    '   - Is head size consistent with body, limbs, and torso?',
+    '   - Is head size proportional and realistic compared to the rest of the body?',
+    '   - Does the head appear neither too large (like a caricature) nor too small relative to torso, limbs, and overall body?',
     '   - Are there NO exaggerated or shrunken anatomical features?',
+    '   - Pay special attention to head-to-body ratio - it should match realistic human proportions',
     '',
     '6. no_unauthorized_accessories',
     '   - Compare the reference selfies to the generated image',
@@ -168,9 +179,12 @@ export async function evaluateGeneratedImage({
     baseInstructions.push(
       '',
       '8. custom_background_matches',
-      '   - Does the background in the generated image match the provided custom background reference?',
-      '   - Are key visual elements, colors, textures, and overall scene from the reference background present?',
-      '   - The background should be recognizable as derived from the reference (exact match not required)'
+      '   - Does the background in the generated image reflect the style, mood, and key characteristics of the reference background?',
+      '   - For close-up shots (headshot, tight framing), partial views are acceptable - not all elements need to be visible',
+      '   - Focus on: overall color palette, lighting atmosphere, texture/material quality, and general environment type',
+      '   - Answer YES if the background clearly derives from the reference, even if cropped or partially visible',
+      '   - Answer NO only if the background is completely different or unrelated to the reference',
+      '   - Missing specific elements (e.g., a window, door, or object) in close-ups should NOT trigger rejection'
     )
   } else {
     baseInstructions.push(
@@ -183,16 +197,23 @@ export async function evaluateGeneratedImage({
     baseInstructions.push(
       '',
       '9. branding_logo_matches',
-      '   - Does the logo in the generated image match the provided brand asset?',
-      '   - Are colors, proportions, and design elements preserved (no distortion)?',
+      '   - Does the logo in the generated image EXACTLY match the provided brand asset?',
+      '   - Are colors, proportions, and design elements preserved with NO distortion or modifications?',
+      '   - Is the logo the SAME SIZE (dimensions/aspect ratio) as the reference, not enlarged or shrunk?',
+      '   - Are there NO additional elements added to the logo (no boxes, borders, labels, text overlays, backgrounds)?',
+      '   - Look specifically for: reference label artifacts (e.g., "LOGO", "BRAND"), white/colored boxes around the logo, or any UI elements',
+      '   - The logo should appear clean and isolated, exactly as provided in the reference',
       '',
       '10. branding_positioned_correctly',
-      '   - Is the logo placed in the designated location shown in reference assets?',
-      '   - Does it appear exactly ONCE (not duplicated or missing)?',
+      '   - Check the generation prompt for the EXACT placement instruction (e.g., "left chest", "center chest", "sleeve")',
+      '   - Is the logo placed in EXACTLY the location specified in the prompt?',
+      '   - Does it appear exactly ONCE (not duplicated, not missing)?',
+      '   - Is the positioning accurate (not shifted, not rotated incorrectly, not placed on wrong body part)?',
       '',
       '11. branding_scene_aligned',
-      '   - Is the logo integrated naturally into the scene?',
-      '   - Does lighting, perspective, and scale match the environment?'
+      '   - Is the logo integrated naturally into the scene without looking pasted or composited?',
+      '   - Does lighting, perspective, and scale match the environment realistically?',
+      '   - Does the logo follow the contours of the clothing/surface it\'s placed on?'
     )
   } else {
     baseInstructions.push(

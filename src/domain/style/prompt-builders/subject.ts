@@ -23,6 +23,7 @@ const rendering = {
   texture: 'retain fabric weave and hair detail and facial features like wrinkles, freckles, moles, etc.',
   cleanliness: 'no text, labels, borders, or UI artifacts',
   framing: 'the original selfies of the subject should not be shown in the final image',
+  proportions: 'pay special attention to size of the head compared to the rest of the body - maintain realistic head-to-body proportions',
   quality: 'high resolution, print-ready'
 } as const
 

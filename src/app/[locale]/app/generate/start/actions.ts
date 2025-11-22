@@ -134,11 +134,13 @@ export async function getGenerationPageData(keyFromQuery?: string): Promise<Gene
   })
 
   // Fetch style data based on plan
+  // Team admins and team members should use team generation type, regardless of tier
+  const shouldUseTeamGeneration = isTeamAdmin || isTeamMember || (isProUser && person?.teamId)
   const styleData = await fetchStyleData({
     userId: session.user.id,
     isFreePlan,
     isProUser,
-    generationType: isProUser ? 'team' : 'personal',
+    generationType: shouldUseTeamGeneration ? 'team' : 'personal',
     teamId: person?.teamId ?? null
   })
 
@@ -237,6 +239,13 @@ async function fetchStyleData(params: {
 
   // Paid users: fetch contexts based on generation type
   if (params.generationType === 'team' && params.teamId) {
+    // Diagnostic logging: verify teamId is valid
+    console.log('[Server Action] Fetching team style data:', {
+      teamId: params.teamId,
+      generationType: params.generationType,
+      userId: params.userId
+    })
+
     // Fetch team contexts
     const team = await prisma.team.findUnique({
       where: { id: params.teamId },
@@ -252,6 +261,16 @@ async function fetchStyleData(params: {
       }
     })
 
+    // Diagnostic logging: check team query result
+    console.log('[Server Action] Team query result:', {
+      teamExists: !!team,
+      teamId: team?.id,
+      activeContextId: team?.activeContextId,
+      activeContextExists: !!team?.activeContext,
+      activeContextIdFromRelation: team?.activeContext?.id,
+      contextsCount: team?.contexts?.length || 0
+    })
+
     const rawContexts = team?.contexts || []
     const contexts: ContextOption[] = rawContexts.map((ctx, index) => ({
       id: ctx.id,
@@ -260,30 +279,68 @@ async function fetchStyleData(params: {
       settings: ctx.settings as Record<string, unknown>
     }))
 
-    const activeContextData = team?.activeContext
+    let activeContextData = team?.activeContext
+
+    // Fallback: if activeContextId exists but relation didn't load, fetch directly
+    if (team && team.activeContextId && !activeContextData) {
+      console.log('[Server Action] ActiveContext relation not loaded, fetching directly:', {
+        activeContextId: team.activeContextId
+      })
+      try {
+        const fallbackContext = await prisma.context.findUnique({
+          where: { id: team.activeContextId },
+          select: { id: true, name: true, customPrompt: true, settings: true, stylePreset: true }
+        })
+        if (fallbackContext) {
+          console.log('[Server Action] Fallback context fetched successfully:', {
+            contextId: fallbackContext.id,
+            contextName: fallbackContext.name
+          })
+          // Cast to match the expected type (we only need the selected fields)
+          activeContextData = fallbackContext as typeof team.activeContext
+        } else {
+          console.log('[Server Action] Fallback context not found for activeContextId:', team.activeContextId)
+        }
+      } catch (error) {
+        console.error('[Server Action] Error fetching fallback context:', error)
+      }
+    }
     
     if (activeContextData) {
-      // Deserialize the context settings directly
-      const packageId = (activeContextData.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1'
-      const pkg = getPackageConfig(packageId)
-      const ui = pkg.persistenceAdapter.deserialize(
-        (activeContextData.settings as Record<string, unknown>) || {}
-      )
-      
-      return {
-        photoStyleSettings: ui,
-        originalContextSettings: ui,
-        selectedPackageId: pkg.id,
-        activeContext: {
-          id: activeContextData.id,
-          name: activeContextData.name || 'Team Style',
-          customPrompt: activeContextData.customPrompt,
-          settings: ui as Record<string, unknown>,
-          backgroundPrompt: (activeContextData.settings as Record<string, unknown> | undefined)?.['backgroundPrompt'] as string | undefined,
-          stylePreset: activeContextData.stylePreset ?? undefined
-        },
-        availableContexts: contexts
+      try {
+        // Deserialize the context settings directly
+        const packageId = (activeContextData.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1'
+        const pkg = getPackageConfig(packageId)
+        const ui = pkg.persistenceAdapter.deserialize(
+          (activeContextData.settings as Record<string, unknown>) || {}
+        )
+        
+        console.log('[Server Action] Active context loaded successfully:', {
+          contextId: activeContextData.id,
+          contextName: activeContextData.name,
+          packageId: pkg.id
+        })
+        
+        return {
+          photoStyleSettings: ui,
+          originalContextSettings: ui,
+          selectedPackageId: pkg.id,
+          activeContext: {
+            id: activeContextData.id,
+            name: activeContextData.name || 'Team Style',
+            customPrompt: activeContextData.customPrompt,
+            settings: ui as Record<string, unknown>,
+            backgroundPrompt: (activeContextData.settings as Record<string, unknown> | undefined)?.['backgroundPrompt'] as string | undefined,
+            stylePreset: activeContextData.stylePreset ?? undefined
+          },
+          availableContexts: contexts
+        }
+      } catch (error) {
+        console.error('[Server Action] Error deserializing active context:', error)
+        // Fall through to default settings
       }
+    } else {
+      console.log('[Server Action] No active context found, using default settings')
     }
 
     return {

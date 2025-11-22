@@ -1,0 +1,455 @@
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
+import { getVertexGenerativeModel } from './gemini'
+import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
+
+export interface V2EvaluationInput {
+  imageBase64: string
+  imageIndex: number
+  actualWidth: number | null
+  actualHeight: number | null
+  generationPrompt: string
+  selfieReferences: { label: string; base64: string; mimeType: string }[]
+  backgroundReference?: { base64: string; mimeType: string; description?: string }
+  logoReference?: { base64: string; mimeType: string; description?: string }
+  personReference?: { base64: string; mimeType: string; description?: string }
+}
+
+export interface V2EvaluationResult {
+  status: 'Approved' | 'Not Approved'
+  reason: string
+  rawResponse?: unknown
+}
+
+/**
+ * Evaluate Step 1: Person generation on white background
+ * Checks: person present, white background, correct pose/clothing, no reference labels
+ */
+export async function evaluatePersonGeneration({
+  imageBase64,
+  imageIndex,
+  actualWidth,
+  actualHeight,
+  generationPrompt,
+  selfieReferences
+}: V2EvaluationInput): Promise<V2EvaluationResult> {
+  const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
+  const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
+  const modelName = evalModel || imageModel || 'gemini-2.5-flash'
+  
+  Logger.debug('Using evaluation model (Step 1)', {
+    GEMINI_EVAL_MODEL: evalModel || '(not set)',
+    GEMINI_IMAGE_MODEL: imageModel || '(not set)',
+    selectedModel: modelName
+  })
+  
+  const model = await getVertexGenerativeModel(modelName)
+
+  const instructions = [
+    `You are evaluating Step 1 of a 4-step image generation process: Person generation on white background.`,
+    `Answer each question with ONLY: YES (criterion fully met), NO (criterion failed), UNCERTAIN (cannot determine)`,
+    '',
+    'Questions:',
+    '',
+    '1. person_present',
+    '   - Is there a clearly visible human subject in the image?',
+    '   - The person should be the main focus and well-defined',
+    '',
+    '2. white_background',
+    '   - Is the background pure white or very close to white?',
+    '   - Should be clean and isolated, no other colors or patterns',
+    '',
+    '3. correct_pose_and_clothing',
+    '   - Does the person\'s pose and clothing match the generation prompt?',
+    '   - Check for professional attire, posture, and positioning as requested',
+    '',
+    '4. no_reference_labels',
+    '   - Are there NO visible labels, text overlays, or bordered text boxes?',
+    '   - Look specifically for reference markers, labels, or UI elements',
+    '',
+    'Return ONLY valid JSON with all fields and explanations.',
+    'Example format:',
+    '{',
+    '  "person_present": "YES",',
+    '  "white_background": "YES",',
+    '  "correct_pose_and_clothing": "YES",',
+    '  "no_reference_labels": "YES",',
+    '  "explanations": {',
+    '    "person_present": "Clear human subject visible",',
+    '    "white_background": "Clean white background",',
+    '    ...',
+    '  }',
+    '}'
+  ]
+
+  const parts: Part[] = [{ text: instructions.join('\n') }]
+
+  parts.push({ text: `Generation prompt used:\n${generationPrompt}` })
+  parts.push({
+    text: `Step 1 candidate image ${imageIndex + 1}`
+  })
+  parts.push({
+    inlineData: { mimeType: 'image/png', data: imageBase64 }
+  })
+
+  for (const selfie of selfieReferences) {
+    parts.push({ text: `Reference ${selfie.label}` })
+    parts.push({
+      inlineData: { mimeType: selfie.mimeType, data: selfie.base64 }
+    })
+  }
+
+  const contents: Content[] = [
+    {
+      role: 'user',
+      parts
+    }
+  ]
+
+  let rawResponse: unknown = null
+
+  try {
+    const response: GenerateContentResult = await model.generateContent({
+      contents,
+      generationConfig: {
+        temperature: 0.1
+      }
+    })
+
+    const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
+    const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+    rawResponse = textPart
+
+    if (textPart) {
+      const evaluation = parseStep1Evaluation(textPart)
+      if (evaluation) {
+        const autoReject = [
+          evaluation.person_present === 'NO',
+          evaluation.correct_pose_and_clothing === 'NO',
+          evaluation.no_reference_labels === 'NO'
+        ].some(Boolean)
+
+        const allApproved =
+          evaluation.person_present === 'YES' &&
+          evaluation.white_background === 'YES' &&
+          evaluation.correct_pose_and_clothing === 'YES' &&
+          evaluation.no_reference_labels === 'YES'
+
+        const finalStatus: 'Approved' | 'Not Approved' = autoReject || !allApproved ? 'Not Approved' : 'Approved'
+
+        const failedCriteria: string[] = []
+        Object.entries(evaluation).forEach(([key, value]) => {
+          if (key === 'explanations') return
+          if (value === 'NO' || value === 'UNCERTAIN') {
+            const explanation = evaluation.explanations[key] || 'No explanation provided'
+            failedCriteria.push(`${key}: ${value} (${explanation})`)
+          }
+        })
+
+        return {
+          status: finalStatus,
+          reason: failedCriteria.length > 0 ? failedCriteria.join(' | ') : 'All criteria met',
+          rawResponse
+        }
+      }
+    }
+  } catch (error) {
+    Logger.error('Failed to run Step 1 evaluation for generated image', {
+      error: error instanceof Error ? error.message : String(error),
+      imageIndex
+    })
+    throw error
+  }
+
+  return {
+    status: 'Not Approved',
+    reason: 'Evaluation did not return a valid structured response.',
+    rawResponse
+  }
+}
+
+/**
+ * Evaluate Step 2: Background preparation
+ * Basic validation: assets are valid and not empty/corrupted
+ */
+export async function evaluateBackgroundPreparation({
+  backgroundReference,
+  logoReference
+}: Pick<V2EvaluationInput, 'backgroundReference' | 'logoReference'>): Promise<V2EvaluationResult> {
+  // Basic validation - check if assets exist and are not obviously corrupted
+  const issues: string[] = []
+
+  if (backgroundReference) {
+    try {
+      // Check if base64 is valid and not empty
+      const buffer = Buffer.from(backgroundReference.base64, 'base64')
+      if (buffer.length < 100) { // Very small file
+        issues.push('Background image appears to be corrupted or too small')
+      }
+    } catch (error) {
+      issues.push('Background image base64 is invalid')
+    }
+  }
+
+  if (logoReference) {
+    try {
+      const buffer = Buffer.from(logoReference.base64, 'base64')
+      if (buffer.length < 50) { // Very small logo
+        issues.push('Logo image appears to be corrupted or too small')
+      }
+    } catch (error) {
+      issues.push('Logo image base64 is invalid')
+    }
+  }
+
+  if (issues.length > 0) {
+    return {
+      status: 'Not Approved',
+      reason: issues.join(' | ')
+    }
+  }
+
+  return {
+    status: 'Approved',
+    reason: 'Background assets validated successfully'
+  }
+}
+
+/**
+ * Evaluate Step 3: Composition of person + background
+ * Checks: coherence, natural integration, branding placement
+ */
+export async function evaluateComposition({
+  imageBase64,
+  imageIndex,
+  actualWidth,
+  actualHeight,
+  generationPrompt,
+  selfieReferences,
+  backgroundReference,
+  logoReference,
+  personReference
+}: V2EvaluationInput): Promise<V2EvaluationResult> {
+  const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
+  const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
+  const modelName = evalModel || imageModel || 'gemini-2.5-flash'
+  
+  Logger.debug('Using evaluation model (Step 3)', {
+    GEMINI_EVAL_MODEL: evalModel || '(not set)',
+    GEMINI_IMAGE_MODEL: imageModel || '(not set)',
+    selectedModel: modelName
+  })
+  
+  const model = await getVertexGenerativeModel(modelName)
+
+  const instructions = [
+    `You are evaluating Step 3 of a 4-step image generation process: Person + background composition.`,
+    `Answer each question with ONLY: YES (criterion fully met), NO (criterion failed), UNCERTAIN (cannot determine)`,
+    '',
+    'Questions:',
+    '',
+    '1. natural_integration',
+    '   - Does the person blend naturally with the background?',
+    '   - Are there no visible seams, cut/paste artifacts, or unnatural boundaries?',
+    '   - Does lighting and perspective appear consistent?',
+    '',
+    '2. person_background_coherence',
+    '   - Is the person appropriately scaled and positioned for the background?',
+    '   - Does the composition look balanced and professional?',
+    '',
+    '3. no_visible_artifacts',
+    '   - Are there no visible glitches, distortions, or compositing errors?',
+    '   - Look for halo effects, mismatched colors, or unnatural shadows'
+  ]
+
+  if (logoReference) {
+    instructions.push(
+      '',
+      '4. branding_placement',
+      '   - If branding is present, is the logo positioned correctly?',
+      '   - Does it appear natural and professionally placed?',
+      '   - Is the logo clearly visible but not distracting?'
+    )
+  } else {
+    instructions.push(
+      '',
+      '4. branding_placement: N/A (no branding required)'
+    )
+  }
+
+  instructions.push(
+    '',
+    'Return ONLY valid JSON with all fields and explanations.',
+    'Example format:',
+    '{',
+    '  "natural_integration": "YES",',
+    '  "person_background_coherence": "YES",',
+    '  "no_visible_artifacts": "YES",',
+    '  "branding_placement": "N/A",',
+    '  "explanations": {',
+    '    "natural_integration": "Seamless integration achieved",',
+    '    ...',
+    '  }',
+    '}'
+  )
+
+  const parts: Part[] = [{ text: instructions.join('\n') }]
+
+  parts.push({ text: `Generation prompt used:\n${generationPrompt}` })
+  parts.push({
+    text: `Step 3 candidate image ${imageIndex + 1}`
+  })
+  parts.push({
+    inlineData: { mimeType: 'image/png', data: imageBase64 }
+  })
+
+  if (personReference) {
+    parts.push({
+      text: personReference.description ?? 'Person reference from Step 1'
+    })
+    parts.push({
+      inlineData: { mimeType: personReference.mimeType, data: personReference.base64 }
+    })
+  }
+
+  if (backgroundReference) {
+    parts.push({
+      text: backgroundReference.description ?? 'Background reference'
+    })
+    parts.push({
+      inlineData: { mimeType: backgroundReference.mimeType, data: backgroundReference.base64 }
+    })
+  }
+
+  if (logoReference) {
+    parts.push({
+      text: logoReference.description ?? 'Branding reference'
+    })
+    parts.push({
+      inlineData: { mimeType: logoReference.mimeType, data: logoReference.base64 }
+    })
+  }
+
+  const contents: Content[] = [
+    {
+      role: 'user',
+      parts
+    }
+  ]
+
+  let rawResponse: unknown = null
+
+  try {
+    const response: GenerateContentResult = await model.generateContent({
+      contents,
+      generationConfig: {
+        temperature: 0.1
+      }
+    })
+
+    const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
+    const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+    rawResponse = textPart
+
+    if (textPart) {
+      const evaluation = parseStep3Evaluation(textPart, !!logoReference)
+      if (evaluation) {
+        const autoReject = [
+          evaluation.natural_integration === 'NO',
+          evaluation.person_background_coherence === 'NO',
+          evaluation.no_visible_artifacts === 'NO',
+          logoReference && evaluation.branding_placement === 'NO'
+        ].some(Boolean)
+
+        const allApproved =
+          evaluation.natural_integration === 'YES' &&
+          evaluation.person_background_coherence === 'YES' &&
+          evaluation.no_visible_artifacts === 'YES' &&
+          (!logoReference || evaluation.branding_placement === 'YES')
+
+        const finalStatus: 'Approved' | 'Not Approved' = autoReject || !allApproved ? 'Not Approved' : 'Approved'
+
+        const failedCriteria: string[] = []
+        Object.entries(evaluation).forEach(([key, value]) => {
+          if (key === 'explanations') return
+          if (value === 'NO' || value === 'UNCERTAIN') {
+            const explanation = evaluation.explanations[key] || 'No explanation provided'
+            failedCriteria.push(`${key}: ${value} (${explanation})`)
+          }
+        })
+
+        return {
+          status: finalStatus,
+          reason: failedCriteria.length > 0 ? failedCriteria.join(' | ') : 'All criteria met',
+          rawResponse
+        }
+      }
+    }
+  } catch (error) {
+    Logger.error('Failed to run Step 3 evaluation for composed image', {
+      error: error instanceof Error ? error.message : String(error),
+      imageIndex
+    })
+    throw error
+  }
+
+  return {
+    status: 'Not Approved',
+    reason: 'Evaluation did not return a valid structured response.',
+    rawResponse
+  }
+}
+
+// Parsing functions for different evaluation types
+function parseStep1Evaluation(text: string) {
+  const trimmed = text.trim()
+  const jsonMatch = trimmed.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) return null
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>
+    return {
+      person_present: normalizeYesNoUncertain(parsed.person_present),
+      white_background: normalizeYesNoUncertain(parsed.white_background),
+      correct_pose_and_clothing: normalizeYesNoUncertain(parsed.correct_pose_and_clothing),
+      no_reference_labels: normalizeYesNoUncertain(parsed.no_reference_labels),
+      explanations: (parsed.explanations as Record<string, string>) || {}
+    }
+  } catch (error) {
+    Logger.warn('Failed to parse Step 1 evaluation JSON', {
+      error: error instanceof Error ? error.message : String(error)
+    })
+    return null
+  }
+}
+
+function parseStep3Evaluation(text: string, hasBranding: boolean) {
+  const trimmed = text.trim()
+  const jsonMatch = trimmed.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) return null
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>
+    const evaluation: any = {
+      natural_integration: normalizeYesNoUncertain(parsed.natural_integration),
+      person_background_coherence: normalizeYesNoUncertain(parsed.person_background_coherence),
+      no_visible_artifacts: normalizeYesNoUncertain(parsed.no_visible_artifacts),
+      branding_placement: hasBranding ? normalizeYesNoUncertain(parsed.branding_placement) : 'N/A',
+      explanations: (parsed.explanations as Record<string, string>) || {}
+    }
+    return evaluation
+  } catch (error) {
+    Logger.warn('Failed to parse Step 3 evaluation JSON', {
+      error: error instanceof Error ? error.message : String(error)
+    })
+    return null
+  }
+}
+
+function normalizeYesNoUncertain(value: unknown): 'YES' | 'NO' | 'UNCERTAIN' {
+  if (typeof value !== 'string') return 'UNCERTAIN'
+  const normalized = value.trim().toUpperCase()
+  if (normalized === 'YES') return 'YES'
+  if (normalized === 'NO') return 'NO'
+  return 'UNCERTAIN'
+}

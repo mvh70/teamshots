@@ -8,7 +8,9 @@ export interface PreprocessParams {
   selfieKey: string
   styleSettings: PhotoStyleSettings
   downloadSelfie: DownloadSelfieFn
-  onStepProgress?: (stepName: string) => void
+  onStepProgress?: (stepName: string) => Promise<void>
+  skipLogoPlacement?: boolean // Skip logo placement (for V2 workflow where Step 1 handles it)
+  skipBackgroundProcessing?: boolean // Skip background processing (for V2 workflow where Step 2 handles it)
 }
 
 export async function preprocessSelfie({
@@ -16,7 +18,9 @@ export async function preprocessSelfie({
   selfieKey,
   styleSettings,
   downloadSelfie,
-  onStepProgress
+  onStepProgress,
+  skipLogoPlacement = false,
+  skipBackgroundProcessing = false
 }: PreprocessParams): Promise<Buffer> {
   try {
     const preprocessor = await loadPreprocessor(packageId)
@@ -28,21 +32,37 @@ export async function preprocessSelfie({
 
     const selfieBuffer = await downloadSelfieBuffer(selfieKey, downloadSelfie)
 
-    const backgroundKey = styleSettings.background?.key
-    const logoKey = styleSettings.branding?.logoKey
+    // For V2 workflow, temporarily modify styleSettings to skip background/logo processing
+    const modifiedStyleSettings = { ...styleSettings }
+    if (skipBackgroundProcessing) {
+      // Remove background to prevent preprocessor from processing it
+      modifiedStyleSettings.background = undefined
+    }
+    if (skipLogoPlacement) {
+      // Remove logo key to prevent preprocessor from placing it
+      if (modifiedStyleSettings.branding) {
+        modifiedStyleSettings.branding = {
+          ...modifiedStyleSettings.branding,
+          logoKey: undefined
+        }
+      }
+    }
+
+    const backgroundKey = modifiedStyleSettings.background?.key
+    const logoKey = modifiedStyleSettings.branding?.logoKey
 
     const usesExtendedSignature = preprocessor.length > 2
     const preprocessResult = usesExtendedSignature
       ? await preprocessor(
           selfieBuffer,
-          styleSettings,
+          modifiedStyleSettings,
           {
             backgroundS3Key: backgroundKey,
             logoS3Key: logoKey,
             onStepProgress
           }
         )
-      : await preprocessor(selfieBuffer, styleSettings)
+      : await preprocessor(selfieBuffer, modifiedStyleSettings)
 
     Logger.debug('Applied package-specific preprocessing', {
       packageId,
@@ -67,7 +87,7 @@ type Preprocessor =
   | ((
       selfieBuffer: Buffer,
       styleSettings: PhotoStyleSettings,
-      context?: { backgroundS3Key?: string; logoS3Key?: string; onStepProgress?: (stepName: string) => void }
+      context?: { backgroundS3Key?: string; logoS3Key?: string; onStepProgress?: (stepName: string) => Promise<void> }
     ) => Promise<{ processedBuffer: Buffer; metadata?: Record<string, unknown> }>)
 
 async function loadPreprocessor(packageId: string): Promise<Preprocessor | null> {

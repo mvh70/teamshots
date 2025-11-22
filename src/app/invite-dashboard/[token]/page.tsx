@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { BRAND_CONFIG } from '@/config/brand'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { 
   PhotoIcon, 
   CheckCircleIcon,
@@ -21,7 +22,7 @@ import GenerateButton from '@/components/generation/GenerateButton'
 import Panel from '@/components/common/Panel'
 import { Grid } from '@/components/ui'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
-import { hasUserDefinedFields } from '@/domain/style/userChoice'
+import { hasUserDefinedFields, areAllCustomizableSectionsCustomized } from '@/domain/style/userChoice'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { getPackageConfig } from '@/domain/style/packages'
 import { normalizeContextToPhotoStyleSettings } from '@/domain/style/normalize'
@@ -351,10 +352,27 @@ export default function InviteDashboardPage() {
     }
   }
 
+  // Check if all customizable sections are customized (composable - works with any package)
+  const allCustomizableSectionsCustomized = areAllCustomizableSectionsCustomized(
+    photoStyleSettings as Record<string, unknown>,
+    packageId || 'headshot1',
+    originalContextSettings as Record<string, unknown> | undefined
+  )
+
+  const canGenerate = validSelectedIds.length >= 2 && 
+                      stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration &&
+                      allCustomizableSectionsCustomized
+
   const onProceed = async () => {
     // Require at least 2 selfies for generation
     if (validSelectedIds.length < 2) {
       alert(t('alerts.selectAtLeastTwoSelfies'))
+      return
+    }
+    
+    // Validate all customizable sections are customized
+    if (!allCustomizableSectionsCustomized) {
+      alert(t('alerts.customizePhoto', { default: 'Please customize your photo settings before generating' }))
       return
     }
 
@@ -394,7 +412,10 @@ export default function InviteDashboardPage() {
         styleSettings: { ...photoStyleSettings, packageId },
         // Generate a prompt from the photo style settings
         prompt: generatePromptFromSettings(photoStyleSettings),
-        selfieIds: validSelectedIds
+        selfieIds: validSelectedIds,
+        // V2 workflow and debug flags
+        useV2: true, // Enable the new 4-step workflow
+        debugMode: true // Enable debug mode (logs prompts, saves intermediate files)
       }
       
       // Use token-authenticated endpoint for invite dashboard flows
@@ -846,7 +867,9 @@ export default function InviteDashboardPage() {
                       <div className="hidden md:flex items-center justify-between mb-4">
                         <div>
                           <div className="text-sm text-gray-600">{t('styleSelection.costPerGeneration')}</div>
-                          <div className="text-3xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} {t('common.credits')}</div>
+                          <div className="text-3xl font-bold text-gray-900">
+                            {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)} {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration) === 1 ? t('common.photoCredit') : t('common.photoCredits')}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -856,9 +879,10 @@ export default function InviteDashboardPage() {
                   <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-4 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
                     <GenerateButton
                       onClick={onProceed}
-                      disabled={validSelectedIds.length < 2 || stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
+                      disabled={!canGenerate}
                       isGenerating={isGenerating}
                       size="md"
+                      disabledReason={!allCustomizableSectionsCustomized ? t('alerts.customizePhoto', { default: 'Please customize your photo settings before generating' }) : undefined}
                     >
                       {t('styleSelection.generateButton')}
                     </GenerateButton>
@@ -909,7 +933,9 @@ export default function InviteDashboardPage() {
                       <div className="flex items-center justify-between md:flex-col md:items-end mb-4 md:mb-0">
                         <div>
                           <div className="text-sm text-gray-600 md:text-right">{t('styleSelection.costPerGeneration')}</div>
-                          <div className="text-3xl md:text-2xl font-bold text-gray-900">{PRICING_CONFIG.credits.perGeneration} {t('common.credits')}</div>
+                          <div className="text-3xl md:text-2xl font-bold text-gray-900">
+                            {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)} {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration) === 1 ? t('common.photoCredit') : t('common.photoCredits')}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -921,9 +947,10 @@ export default function InviteDashboardPage() {
                       <div className="w-60">
                         <GenerateButton
                           onClick={onProceed}
-                          disabled={validSelectedIds.length < 2 || stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
+                          disabled={!canGenerate}
                           isGenerating={isGenerating}
                           size="md"
+                          disabledReason={!allCustomizableSectionsCustomized ? t('alerts.customizePhoto', { default: 'Please customize your photo settings before generating' }) : undefined}
                         >
                           {t('styleSelection.generateButton')}
                         </GenerateButton>

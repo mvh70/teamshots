@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/format'
 import { LoadingSpinner } from '@/components/ui'
 import { GenerationRating } from '@/components/feedback/GenerationRating'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
+import { useGenerationStatus } from '../hooks/useGenerationStatus'
 
 export type GenerationListItem = {
   id: string
@@ -68,6 +69,42 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const normalizedBeforeKey = beforeKey && beforeKey !== 'undefined' ? beforeKey : null
   const normalizedAfterKey = afterKey && afterKey !== 'undefined' ? afterKey : null
 
+  // Use real-time status polling for potentially incomplete generations
+  const shouldPoll = (item.status === 'pending' || item.status === 'processing') || (!item.generatedKey && !item.acceptedKey)
+  const { generation: liveGeneration } = useGenerationStatus({
+    generationId: shouldPoll ? item.id : '',
+    enabled: shouldPoll,
+    pollInterval: 1000, // Poll every second for active generations
+  })
+
+  // Use live data if available, otherwise fall back to static item data
+  const currentJobStatus = liveGeneration?.jobStatus || item.jobStatus
+  const currentStatus = liveGeneration?.status || item.status
+
+  const isIncomplete = (currentStatus === 'pending' || currentStatus === 'processing') || (!item.generatedKey && !item.acceptedKey)
+
+  // Debug live generation data
+  console.log('GenerationCard live data:', {
+    id: item.id,
+    hasLiveGeneration: !!liveGeneration,
+    liveStatus: liveGeneration?.status,
+    liveJobStatus: liveGeneration?.jobStatus,
+    currentJobStatus: currentJobStatus,
+    currentStatus: currentStatus,
+    isIncomplete
+  })
+
+
+  // Update pos when live generation status changes
+  useEffect(() => {
+    if (isIncomplete) {
+      // Show at least 10% progress when processing to ensure spinner is visible
+      setPos(Math.max(currentJobStatus?.progress || 0, 10))
+    } else {
+      setPos(100)
+    }
+  }, [isIncomplete, currentJobStatus?.progress])
+
   useEffect(() => {
     setBeforeImageError(false)
     setBeforeRetryCount(0)
@@ -94,7 +131,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   }, [afterSrc])
   const containerRef = useRef<HTMLDivElement | null>(null)
   // Start fully on Generated side by default (if present)
-  const [pos, setPos] = useState(100) // handle position from left (0-100); 100 = Generated only
+  const [pos, setPos] = useState(() => isIncomplete ? (currentJobStatus?.progress || 10) : 100) // handle position from left (0-100); 100 = Generated only
   const draggingRef = useRef(false)
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const [canScrollDown, setCanScrollDown] = useState(false)
@@ -187,7 +224,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   }
   
   // Check if generation is incomplete
-  const isIncomplete = (item.status === 'processing' || item.status === 'pending') && !item.generatedKey
+  // isIncomplete is now defined above with live data
 
   const updateFromEvent = (clientX: number) => {
     const el = containerRef.current
@@ -310,18 +347,22 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
         )}
 
         {/* FOREGROUND: Generated clipped to handle position OR placeholder */}
-        <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
-          {isIncomplete ? (
-            // Placeholder for incomplete generation
-            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-              <div className="text-center px-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
-                <p className="text-xs text-gray-600 whitespace-pre-line">
-                  {item.jobStatus?.message || t('generating', { default: 'Generating...' })}
-                </p>
-              </div>
+        {isIncomplete ? (
+          // Placeholder for incomplete generation - show full spinner
+          <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+            <div className="text-center px-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
+              <p className="text-xs text-gray-600 whitespace-pre-line">
+                {currentJobStatus?.message || t('generating', { default: 'Generating...' })}
+              </p>
             </div>
-          ) : (
+          </div>
+        ) : (
+          // Generated image with progress reveal
+          <div
+            className="absolute inset-0"
+            style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
+          >
             <div
               ref={scrollContainerRef}
               className="w-full h-full overflow-y-auto overflow-x-hidden relative"
@@ -366,8 +407,8 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
               }}
             />
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Scroll hint arrow when content overflows */}
         {!isIncomplete && canScrollDown && (
@@ -407,7 +448,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
             <GenerationRating
               generationId={item.id}
               token={token}
-              generationStatus={item.status}
+              generationStatus={currentStatus}
               photoContainerRef={photoContainerRef} // Pass the ref here
             />
           </div>

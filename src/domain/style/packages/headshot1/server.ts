@@ -27,7 +27,9 @@ export const headshot1Server: Headshot1ServerPackage = {
       styleSettings
     )
 
-    const shotTypeConfig = resolveShotType(effectiveSettings.shotType?.type)
+    // Fixed to medium-shot for headshot1
+    effectiveSettings.shotType = { type: 'medium-shot' }
+    const shotTypeConfig = resolveShotType('medium-shot')
     const shotText = shotTypeConfig.label
 
     const explicitAspectRatio = (effectiveSettings.aspectRatio as AspectRatioId | undefined) || undefined
@@ -78,7 +80,8 @@ export const headshot1Server: Headshot1ServerPackage = {
       generationId,
       shotDescription: shotText,
       aspectRatioDescription,
-      aspectRatioSize: { width: ratioConfig.width, height: ratioConfig.height }
+      aspectRatioSize: { width: ratioConfig.width, height: ratioConfig.height },
+      skipLogoInComposite: options.skipLogoInComposite ?? false
     })
     const referenceImages = payload.referenceImages
     const labelInstruction = payload.labelInstruction

@@ -3,6 +3,7 @@
 import React, {useCallback, useEffect, useRef, useState, startTransition} from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import { PlusIcon } from "@heroicons/react/24/outline";
 import { InlineError, LoadingSpinner } from "@/components/ui";
 
 type PhotoUploadProps = {
@@ -638,14 +639,18 @@ export default function PhotoUpload({
           onDragLeave={onDragLeave}
           aria-disabled={disabled}
           aria-label="Upload photo by clicking or dragging and dropping"
-          className={`rounded-2xl p-4 md:p-6 lg:p-8 h-full flex flex-col items-center justify-center text-center cursor-pointer focus:outline-none transition-all duration-200 ${
+          className={`rounded-2xl p-3 md:p-6 lg:p-8 h-full flex flex-col items-center justify-center text-center cursor-pointer focus:outline-none transition-all duration-200 ${
             dragOver 
               ? "border-2 border-brand-primary bg-brand-primary/5 shadow-lg scale-[1.01]" 
               : "border border-gray-200 bg-gradient-to-br from-white via-gray-50 to-gray-100 hover:shadow-lg"
           } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
           data-testid="dropzone"
         >
-          <div className="w-full flex flex-col items-center justify-center">
+          <div className="w-full flex flex-col items-center">
+            {/* Plus icon */}
+            <div className="mb-2 flex items-center justify-center">
+              <PlusIcon className="w-12 h-12 md:w-16 md:h-16 text-gray-400" />
+            </div>
             {/* Buttons - vertically stacked */}
             <div className="flex flex-col gap-2 w-full">
               <button

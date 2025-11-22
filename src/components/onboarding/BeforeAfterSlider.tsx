@@ -86,28 +86,8 @@ export function BeforeAfterSlider({
       className={`relative w-full max-w-md mx-auto overflow-hidden rounded-lg shadow-lg ${className}`}
       style={{ aspectRatio: '4/3' }}
     >
-      {/* Before Image (Full Width) */}
+      {/* After Image (Full Width - Background) */}
       <div className="absolute inset-0">
-        <Image
-          src={beforeImage}
-          alt={beforeLabel}
-          fill
-          className="object-cover"
-          loading="lazy"
-        />
-        {/* Before Label */}
-        <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
-          {beforeLabel}
-        </div>
-      </div>
-
-      {/* After Image (Clipped) */}
-      <div
-        className="absolute inset-0"
-        style={{
-          clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`
-        }}
-      >
         <Image
           src={afterImage}
           alt={afterLabel}
@@ -115,10 +95,35 @@ export function BeforeAfterSlider({
           className="object-cover"
           loading="lazy"
         />
-        {/* After Label */}
-        <div className="absolute top-4 right-4 bg-brand-primary text-white px-3 py-1 rounded-full text-sm font-medium">
-          {afterLabel}
-        </div>
+      </div>
+
+      {/* Before Image (Clipped - Foreground) */}
+      <div
+        className="absolute inset-0"
+        style={{
+          clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`
+        }}
+      >
+        <Image
+          src={beforeImage}
+          alt={beforeLabel}
+          fill
+          className="object-cover"
+          loading="lazy"
+        />
+      </div>
+
+      {/* Labels - Dynamic based on slider position */}
+      <div className="pointer-events-none">
+        {sliderPosition > 50 ? (
+          <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
+            {beforeLabel}
+          </div>
+        ) : (
+          <div className="absolute top-4 right-4 bg-brand-primary text-white px-3 py-1 rounded-full text-sm font-medium">
+            {afterLabel}
+          </div>
+        )}
       </div>
 
       {/* Slider Handle */}

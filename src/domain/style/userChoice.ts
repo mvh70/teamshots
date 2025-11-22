@@ -1,3 +1,5 @@
+import { getPackageConfig } from './packages'
+
 export function hasUserDefinedFields(obj: unknown): boolean {
   const seen = new Set<unknown>()
   const normalize = (s: unknown) =>
@@ -81,4 +83,88 @@ export function hasUneditedEditableFields(
   }
 
   return walk(current, original)
+}
+
+/**
+ * Validates that all customizable sections (type: 'user-choice') have been customized.
+ * This function is composable and works with any package configuration.
+ * 
+ * @param photoStyleSettings - The current photo style settings
+ * @param packageId - The package ID to determine which categories are visible
+ * @param originalSettings - Optional original settings to determine which categories were initially customizable
+ * @returns true if all customizable sections are customized, false otherwise
+ */
+export function areAllCustomizableSectionsCustomized(
+  photoStyleSettings: Record<string, unknown>,
+  packageId: string,
+  originalSettings?: Record<string, unknown>
+): boolean {
+  if (!photoStyleSettings) return true // No settings means nothing to customize
+  
+  // Get package config to determine visible categories
+  const pkg = getPackageConfig(packageId)
+  
+  // Get visible categories from package config
+  const visibleCategories = pkg.visibleCategories || []
+  
+  // Determine which categories were initially customizable (user-choice)
+  // Use originalSettings if provided, otherwise check current settings
+  const initiallyCustomizable = new Set<string>()
+  
+  const settingsToCheck = originalSettings || photoStyleSettings
+  
+  for (const categoryKey of visibleCategories) {
+    const categorySettings = settingsToCheck[categoryKey]
+    if (!categorySettings || typeof categorySettings !== 'object') continue
+    
+    const settings = categorySettings as Record<string, unknown>
+    
+    // Check if this category is user-choice (customizable)
+    let isUserChoice = false
+    if (categoryKey === 'clothing') {
+      isUserChoice = settings.style === 'user-choice'
+    } else {
+      isUserChoice = settings.type === 'user-choice'
+    }
+    
+    if (isUserChoice) {
+      initiallyCustomizable.add(categoryKey)
+    }
+  }
+  
+  // If no customizable sections, return true
+  if (initiallyCustomizable.size === 0) return true
+  
+  // Check that all initially customizable categories have been customized
+  for (const categoryKey of initiallyCustomizable) {
+    const currentSettings = photoStyleSettings[categoryKey]
+    if (!currentSettings || typeof currentSettings !== 'object') {
+      return false // Category missing, not customized
+    }
+    
+    const settings = currentSettings as Record<string, unknown>
+    
+    if (categoryKey === 'clothingColors') {
+      // For clothingColors, check if colors are set
+      const colors = (settings.colors as Record<string, unknown>) || {}
+      const hasColors = !!(colors.topCover || colors.topBase || colors.bottom || colors.shoes)
+      if (!hasColors) {
+        return false // clothingColors is user-choice but no colors set
+      }
+    } else {
+      // For other categories, if type/style is still 'user-choice', it means not customized
+      // When user selects an option, type changes from 'user-choice' to the actual value
+      if (categoryKey === 'clothing') {
+        if (settings.style === 'user-choice') {
+          return false // Still 'user-choice', not customized
+        }
+      } else {
+        if (settings.type === 'user-choice') {
+          return false // Still 'user-choice', not customized
+        }
+      }
+    }
+  }
+  
+  return true // All customizable sections are customized
 }

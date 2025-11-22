@@ -22,7 +22,6 @@ import { jsonFetcher } from '@/lib/fetcher'
 import { useCredits } from '@/contexts/CreditsContext'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
 import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress'
-import { OnboardingBenefits } from '@/components/onboarding/OnboardingBenefits'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
@@ -421,7 +420,6 @@ export default function DashboardPage() {
           {/* Step 1: How It Works */}
           {onboardingStep === 1 && (
             <div className="text-center space-y-6" id="how-it-works">
-              <OnboardingBenefits />
               <div className="max-w-md mx-auto">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">
                   {t('onboarding.howItWorks.title')}

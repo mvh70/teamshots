@@ -14,6 +14,8 @@ interface JobData {
   providerOptions: {
     model: string;
     numVariations: number;
+    useV2?: boolean;
+    debugMode?: boolean;
   };
   creditSource: 'team';
   selfieId: string;
@@ -163,8 +165,10 @@ export async function POST(request: NextRequest) {
       styleSettings: finalStyleSettings,
       prompt: 'Professional headshot with same style as original',
       providerOptions: {
-        model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
+        model: Env.string('GEMINI_IMAGE_MODEL'),
         numVariations: 4,
+        useV2: false, // Default to V1 for regenerations
+        debugMode: false,
       },
       creditSource: 'team',
       selfieId: sourceGeneration.selfieId,

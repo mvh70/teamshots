@@ -27,7 +27,9 @@ export const freepackageServer: FreePackageServerPackage = {
       styleSettings
     )
 
-    const shotTypeConfig = resolveShotType(effectiveSettings.shotType?.type)
+    // Fixed to medium-shot for freepackage
+    effectiveSettings.shotType = { type: 'medium-shot' }
+    const shotTypeConfig = resolveShotType('medium-shot')
     const shotText = shotTypeConfig.label
 
     const explicitAspectRatio = (effectiveSettings.aspectRatio as AspectRatioId | undefined) || undefined
@@ -78,7 +80,8 @@ export const freepackageServer: FreePackageServerPackage = {
       generationId,
       shotDescription: shotText,
       aspectRatioDescription,
-      aspectRatioSize: { width: ratioConfig.width, height: ratioConfig.height }
+      aspectRatioSize: { width: ratioConfig.width, height: ratioConfig.height },
+      skipLogoInComposite: options.skipLogoInComposite ?? false
     })
     const referenceImages = payload.referenceImages
     const labelInstruction = payload.labelInstruction

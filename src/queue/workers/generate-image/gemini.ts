@@ -1,7 +1,7 @@
 import { readFile as fsReadFile } from 'node:fs/promises'
 
-import { VertexAI } from '@google-cloud/vertexai'
-import type { Content, GenerateContentResult, Part, GenerativeModel } from '@google-cloud/vertexai'
+import { VertexAI, HarmCategory, HarmBlockThreshold } from '@google-cloud/vertexai'
+import type { Content, GenerateContentResult, Part, GenerativeModel, SafetySetting } from '@google-cloud/vertexai'
 
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
@@ -14,34 +14,7 @@ export interface GeminiReferenceImage {
 
 const MODEL_CACHE = new Map<string, GenerativeModel>()
 let cachedProjectId: string | null = null
-
-function normalizeModelName(modelName: string): string {
-  const trimmed = modelName.trim()
-  const lower = trimmed.toLowerCase()
-
-  const aliasMap: Record<string, string> = {
-    'gemini-flash-2.0': 'gemini-2.0-flash',
-    'gemini-flash-2.0-latest': 'gemini-2.0-flash',
-    'gemini-flash-2.5': 'gemini-2.5-flash',
-    'gemini-flash-2.5-latest': 'gemini-2.5-flash',
-    'gemini-pro-1.5': 'gemini-1.5-pro',
-    'gemini-pro-1.5-latest': 'gemini-1.5-pro'
-  }
-
-  if (aliasMap[lower]) {
-    return aliasMap[lower]
-  }
-
-  const swappedPattern = /^gemini-(flash|pro)-(\d+(?:\.\d+)?)(.*)$/
-  const swappedMatch = lower.match(swappedPattern)
-  if (swappedMatch) {
-    const [, family, version, suffix] = swappedMatch
-    const normalized = `gemini-${version}-${family}${suffix}`
-    return normalized
-  }
-
-  return trimmed
-}
+let cachedLocation: string | null = null
 
 async function resolveProjectId(): Promise<string> {
   if (cachedProjectId) {
@@ -82,14 +55,8 @@ async function resolveProjectId(): Promise<string> {
 }
 
 export async function getVertexGenerativeModel(modelName: string): Promise<GenerativeModel> {
-  const normalizedModelName = normalizeModelName(modelName)
-
-  if (normalizedModelName !== modelName) {
-    Logger.warn('Normalized Gemini model name for Vertex AI request', {
-      originalModelName: modelName,
-      normalizedModelName
-    })
-  }
+  // Use model name exactly as provided - trust .env values are correct
+  const normalizedModelName = modelName.trim()
 
   const cached = MODEL_CACHE.get(normalizedModelName)
   if (cached) {
@@ -97,21 +64,59 @@ export async function getVertexGenerativeModel(modelName: string): Promise<Gener
   }
 
   const projectId = await resolveProjectId()
-  const location = Env.string('GOOGLE_LOCATION', 'us-central1')
+  const location = Env.string('GOOGLE_LOCATION', 'global')
+  
+  // Clear cache if location changed (models are location-specific)
+  if (cachedLocation !== null && cachedLocation !== location) {
+    Logger.warn('Location changed, clearing model cache', {
+      oldLocation: cachedLocation,
+      newLocation: location
+    })
+    MODEL_CACHE.clear()
+  }
+  cachedLocation = location
+  
+  // Log model initialization attempt for debugging
+  Logger.debug('Initializing Vertex AI model', {
+    modelName: normalizedModelName,
+    location,
+    projectId: projectId.substring(0, 8) + '...' // Partial project ID for security
+  })
+  
   const vertexAI = new VertexAI({ project: projectId, location })
-  const model = vertexAI.getGenerativeModel({ model: normalizedModelName })
+  
+  try {
+    const model = vertexAI.getGenerativeModel({ model: normalizedModelName })
+    MODEL_CACHE.set(normalizedModelName, model)
+    Logger.debug('Successfully initialized Vertex AI model', { modelName: normalizedModelName, location })
+    return model
+  } catch (error) {
+    Logger.error('Failed to initialize Vertex AI model', {
+      modelName: normalizedModelName,
+      location,
+      error: error instanceof Error ? error.message : String(error),
+      note: 'If using gemini-3-pro-image-preview, verify it is available in Vertex AI. It may only be available via REST API (ai.google.dev) currently.'
+    })
+    throw error
+  }
+}
 
-  MODEL_CACHE.set(normalizedModelName, model)
-  Logger.debug('Initialized Vertex AI model', { modelName: normalizedModelName, location })
-  return model
+export interface GenerationOptions {
+  temperature?: number
+  topK?: number
+  topP?: number
+  seed?: number
+  safetySettings?: SafetySetting[]
 }
 
 export async function generateWithGemini(
   prompt: string,
   images: GeminiReferenceImage[],
-  aspectRatio?: string
+  aspectRatio?: string,
+  resolution?: '1K' | '2K' | '4K',
+  options?: GenerationOptions
 ): Promise<Buffer[]> {
-  const modelName = Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
+  const modelName = Env.string('GEMINI_IMAGE_MODEL')
   const model = await getVertexGenerativeModel(modelName)
 
   const parts: Part[] = [{ text: prompt }]
@@ -129,18 +134,203 @@ export async function generateWithGemini(
     }
   ]
 
-  void aspectRatio
-
-  const response: GenerateContentResult = await model.generateContent({ contents })
-
-  const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
-  const generatedImages: Buffer[] = []
-  for (const part of responseParts) {
-    if (part.inlineData?.data) {
-      generatedImages.push(Buffer.from(part.inlineData.data, 'base64'))
+  // Build generation config with imageConfig if aspectRatio or resolution is provided
+  // Note: Resolution is primarily supported by Gemini 3 Pro Image Preview models
+  // Vertex AI API uses camelCase (imageSize) to match aspectRatio pattern
+  const normalizedModelName = modelName.toLowerCase()
+  const supportsResolution = normalizedModelName.includes('gemini-3-pro-image') || 
+                             normalizedModelName.includes('gemini-3-pro-image-preview')
+  
+  const generationConfig: {
+    temperature?: number
+    topK?: number
+    topP?: number
+    candidateCount?: number
+    imageConfig?: {
+      aspectRatio?: string
+      imageSize?: '1K' | '2K' | '4K'
+    }
+  } = {}
+  
+  // Add generation parameters if provided
+  if (options?.temperature !== undefined) generationConfig.temperature = options.temperature
+  if (options?.topK !== undefined) generationConfig.topK = options.topK
+  if (options?.topP !== undefined) generationConfig.topP = options.topP
+  
+  if (aspectRatio || (resolution && supportsResolution)) {
+    generationConfig.imageConfig = {}
+    if (aspectRatio) {
+      generationConfig.imageConfig.aspectRatio = aspectRatio
+    }
+    if (resolution && supportsResolution) {
+      generationConfig.imageConfig.imageSize = resolution
+    } else if (resolution && !supportsResolution) {
+      Logger.warn('Resolution parameter ignored - not supported by model', {
+        modelName,
+        requestedResolution: resolution
+      })
     }
   }
 
-  return generatedImages
+  // Default safety settings - permissive to match likely AI Studio behavior for creative tasks
+  // Unless overridden by options
+  const defaultSafetySettings: SafetySetting[] = [
+    {
+      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+      threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+      threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+      threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+      threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    },
+  ]
+
+  const safetySettings = options?.safetySettings || defaultSafetySettings
+
+  // Log request structure for debugging (without sensitive data)
+  Logger.debug('Sending Gemini image generation request', {
+    modelName: normalizedModelName,
+    partsCount: parts.length,
+    hasTextPrompt: parts.some(p => 'text' in p),
+    imageCount: parts.filter(p => 'inlineData' in p).length,
+    hasAspectRatio: !!aspectRatio,
+    hasResolution: !!resolution,
+    generationConfig: Object.keys(generationConfig).length > 0 ? generationConfig : undefined,
+    safetySettings: safetySettings.map(s => ({ category: s.category, threshold: s.threshold }))
+  })
+
+  try {
+    const response: GenerateContentResult = await model.generateContent({
+      contents,
+      safetySettings,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(Object.keys(generationConfig).length > 0 ? { generationConfig: generationConfig as any } : {})
+    })
+
+    const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
+    const generatedImages: Buffer[] = []
+    for (const part of responseParts) {
+      if (part.inlineData?.data) {
+        generatedImages.push(Buffer.from(part.inlineData.data, 'base64'))
+      }
+    }
+
+    return generatedImages
+  } catch (error) {
+    // Extract comprehensive error details
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
+    // Build detailed error info
+    const errorDetails: Record<string, unknown> = {
+      message: errorMessage,
+      name: error instanceof Error ? error.name : 'Unknown',
+      stack: errorStack,
+    }
+    
+    // Extract all enumerable properties from error object
+    if (error && typeof error === 'object') {
+      // Capture common error properties
+      if ('status' in error) errorDetails.status = error.status
+      if ('statusCode' in error) errorDetails.statusCode = error.statusCode
+      if ('statusText' in error) errorDetails.statusText = error.statusText
+      if ('code' in error) errorDetails.code = error.code
+      if ('response' in error) {
+        try {
+          // Try to stringify response, but handle circular refs
+          const responseStr = typeof error.response === 'string' 
+            ? error.response 
+            : JSON.stringify(error.response, null, 2)
+          errorDetails.response = responseStr.length > 2000 
+            ? responseStr.substring(0, 2000) + '...[truncated]' 
+            : responseStr
+        } catch {
+          errorDetails.response = String(error.response).substring(0, 2000)
+        }
+      }
+      if ('cause' in error) {
+        try {
+          errorDetails.cause = typeof error.cause === 'string'
+            ? error.cause
+            : JSON.stringify(error.cause, null, 2)
+        } catch {
+          errorDetails.cause = String(error.cause)
+        }
+      }
+      if ('details' in error) {
+        try {
+          errorDetails.details = typeof error.details === 'string'
+            ? error.details
+            : JSON.stringify(error.details, null, 2)
+        } catch {
+          errorDetails.details = String(error.details)
+        }
+      }
+      
+      // Capture any other enumerable properties
+      for (const [key, value] of Object.entries(error)) {
+        if (!['message', 'name', 'stack'].includes(key) && !(key in errorDetails)) {
+          try {
+            errorDetails[key] = typeof value === 'string' 
+              ? value 
+              : JSON.stringify(value, null, 2)
+          } catch {
+            errorDetails[key] = String(value)
+          }
+        }
+      }
+    }
+    
+    // Check if this is a JSON parsing error (likely HTML response)
+    if (errorMessage.includes('Unexpected token') && (errorMessage.includes('<!DOCTYPE') || errorMessage.includes('<!doctype'))) {
+      const location = Env.string('GOOGLE_LOCATION', 'global')
+      
+      // Log full error details
+      Logger.error('Vertex AI returned HTML instead of JSON - possible location/endpoint issue', {
+        modelName,
+        location,
+        ...errorDetails,
+        suggestion: location === 'global' 
+          ? 'The "global" location may not be supported by the Vertex AI SDK. Try using a regional location like "us-central1" instead.'
+          : 'Verify that the location and model are available in your project.'
+      })
+      
+      // Also log to console with full details for debugging
+      console.error('\n=== FULL ERROR DETAILS ===')
+      console.error('Error Object:', error)
+      console.error('Error Details:', JSON.stringify(errorDetails, null, 2))
+      console.error('========================\n')
+      
+      throw new Error(
+        `Vertex AI API error: Received HTML response instead of JSON. ` +
+        `This may indicate an invalid location or endpoint configuration. ` +
+        `Current location: "${location}". ` +
+        `If using "global", try switching to a regional location like "us-central1". ` +
+        `Original error: ${errorMessage}`
+      )
+    }
+    
+    // Log all other errors with full details
+    Logger.error('Gemini image generation failed', {
+      modelName,
+      ...errorDetails
+    })
+    
+    // Also log to console for full visibility
+    console.error('\n=== FULL ERROR DETAILS ===')
+    console.error('Error Object:', error)
+    console.error('Error Details:', JSON.stringify(errorDetails, null, 2))
+    console.error('========================\n')
+    
+    throw error
+  }
 }
 

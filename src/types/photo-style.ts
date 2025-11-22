@@ -123,6 +123,19 @@ export interface LightingSettings {
   type: 'natural' | 'studio' | 'soft' | 'dramatic' | 'user-choice'
 }
 
+export interface PoseSettings {
+  type:
+    | 'power_classic'
+    | 'power_crossed'
+    | 'casual_confident'
+    | 'approachable_cross'
+    | 'walking_confident'
+    | 'sitting_engaged'
+    | 'executive_seated'
+    | 'thinker'
+    | 'user-choice'
+}
+
 export type BodyAngleSetting = 'square' | 'slight-angle' | 'angle-45' | 'user-choice'
 export type HeadPositionSetting = 'straight-level' | 'slight-tilt' | 'face-turn' | 'user-choice'
 export type ShoulderPositionSetting = 'front-shoulder-dropped' | 'both-relaxed' | 'level' | 'user-choice'
@@ -161,6 +174,7 @@ export interface PhotoStyleSettings {
   style?: StyleSettings
   expression?: ExpressionSettings
   lighting?: LightingSettings
+  pose?: PoseSettings
   subjectCount?: SubjectCountSetting
   usageContext?: UsageContextSetting
 }
@@ -186,6 +200,7 @@ export type CategoryType =
   | 'style'
   | 'expression'
   | 'lighting'
+  | 'pose'
 
 export interface CategoryToggle {
   category: CategoryType
@@ -229,6 +244,9 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
     type: 'user-choice'
   },
   lighting: {
+    type: 'user-choice'
+  },
+  pose: {
     type: 'user-choice'
   },
   subjectCount: '1',

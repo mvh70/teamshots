@@ -1,12 +1,13 @@
 "use client"
 import Image from 'next/image'
-import { TrashIcon, CameraIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 import { useCallback, useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { LoadingSpinner, SelfieGrid } from '@/components/ui'
 import dynamic from 'next/dynamic'
 import SelfieApproval from '@/components/Upload/SelfieApproval'
+import SelfieUploadPlaceholder from './SelfieUploadPlaceholder'
 import { promoteUploads } from '@/lib/uploadHelpers'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
@@ -285,33 +286,20 @@ export default function SelfieGallery({
                 <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"><rect x="3" y="3" width="14" height="14" rx="2" ry="2" strokeWidth="2" /></svg>
               )}
             </button>
-            <div className={`md:aspect-square bg-gray-100 rounded-lg overflow-hidden ${isSelected ? 'ring-2 ring-brand-secondary' : ''} relative`}>
+            <div className={`aspect-square bg-gray-100 rounded-lg overflow-hidden ${isSelected ? 'ring-2 ring-brand-secondary' : ''} relative`}>
               {!isLoaded && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
                   <LoadingSpinner />
                 </div>
               )}
-              {/* Mobile: Natural aspect ratio, Desktop: Square with fill */}
-              <div className="block md:hidden">
-                <Image
-                  src={selfie.url}
-                  alt="Selfie"
-                  width={400}
-                  height={600}
-                  className="w-full h-auto object-contain"
-                  sizes="100vw"
-                  unoptimized
-                  onLoad={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
-                  onError={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
-                />
-              </div>
-              <div className="hidden md:block absolute inset-0">
+              {/* Fill square on all screen sizes */}
+              <div className="absolute inset-0">
                 <Image
                   src={selfie.url}
                   alt="Selfie"
                   fill
                   className="object-cover"
-                  sizes="(max-width: 1024px) 50vw, 33vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   unoptimized
                   onLoad={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
                   onError={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
@@ -362,7 +350,7 @@ export default function SelfieGallery({
         )
       })}
       {showUploadTile && (
-        <div className="aspect-square">
+        <div className="md:aspect-square">
           {onSelfiesApproved ? (
             <PhotoUpload
               key={`camera-${cameraKeyRef.current}`}
@@ -373,15 +361,9 @@ export default function SelfieGallery({
               autoOpenCamera={cameraKeyRef.current > 0}
               isProcessing={isProcessingMultiple}
             />
-          ) : (
-            <button
-              onClick={onUploadClick}
-              className="w-full h-full rounded-2xl bg-gradient-to-br from-white via-gray-50 to-gray-100 border border-gray-200 hover:shadow-lg transition-all duration-200 flex flex-col items-center justify-center text-sm text-gray-600 hover:text-brand-primary"
-            >
-              <CameraIcon className="w-7 h-7 mb-2" />
-              <span>Upload/Take new selfie</span>
-            </button>
-          )}
+          ) : onUploadClick ? (
+            <SelfieUploadPlaceholder onUploadClick={onUploadClick} />
+          ) : null}
         </div>
       )}
     </SelfieGrid>

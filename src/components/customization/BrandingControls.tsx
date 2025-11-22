@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 
 interface BrandingControlsProps {
   includeLogo: boolean
@@ -28,6 +29,9 @@ export default function BrandingControls({
 }: BrandingControlsProps) {
   const t = useTranslations('customization')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  // Convert credits to photos for display
+  const photoCost = calculatePhotosFromCredits(creditCost)
 
   useEffect(() => {
     if (logoFile) {
@@ -94,14 +98,14 @@ export default function BrandingControls({
       )}
 
       <p className="text-xs text-gray-500 mt-2">
-        {t('branding.cost', { default: 'Cost' })}: {creditCost} {t('branding.credits', { default: 'credits' })}
+        {t('branding.cost', { default: 'Cost' })}: {photoCost} {photoCost === 1 ? t('photo', { default: 'photo' }) : t('photos', { default: 'photos' })}
       </p>
       {onGenerate && (
         <button
           onClick={onGenerate}
           className="mt-4 px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm"
         >
-          {generateButtonText} ({creditCost} {t('branding.credits', { default: 'credits' })})
+          {generateButtonText} ({photoCost} {photoCost === 1 ? t('photo', { default: 'photo' }) : t('photos', { default: 'photos' })})
         </button>
       )}
     </div>

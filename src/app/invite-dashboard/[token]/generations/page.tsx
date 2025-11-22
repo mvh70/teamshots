@@ -1,8 +1,9 @@
 'use client'
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PhotoIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import GenerationCard from '@/app/[locale]/app/generations/components/GenerationCard'
 import { useInvitedGenerations } from './useInvitedGenerations'
@@ -11,6 +12,9 @@ import { OnboardingLauncher } from '@/components/onboarding/OnboardingLauncher'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useOnborda } from 'onborda'
+import { BRAND_CONFIG } from '@/config/brand'
+import { PRICING_CONFIG } from '@/config/pricing'
+import { calculatePhotosFromCredits } from '@/domain/pricing'
 
 export default function GenerationsPage() {
   const params = useParams()
@@ -23,8 +27,28 @@ export default function GenerationsPage() {
   const onborda = useOnborda()
   const hasCheckedTourRef = useRef(false)
   
+  // Filter state
+  const [timeframe, setTimeframe] = useState<'all'|'7d'|'30d'>('all')
+  const [context, setContext] = useState('all')
+  
   // Check for forceTour URL parameter
   const forceTour = searchParams?.get('forceTour') === 'true'
+  
+  // Get unique style options from generations
+  const styleOptions = Array.from(new Set(generations.map(g => g.contextName).filter(Boolean))) as string[]
+  
+  // Filter generations based on selected filters
+  const filteredGenerations = generations.filter(gen => {
+    if (timeframe !== 'all') {
+      const genDate = new Date(gen.createdAt)
+      const now = new Date()
+      const daysDiff = Math.floor((now.getTime() - genDate.getTime()) / (1000 * 60 * 60 * 24))
+      if (timeframe === '7d' && daysDiff > 7) return false
+      if (timeframe === '30d' && daysDiff > 30) return false
+    }
+    if (context !== 'all' && gen.contextName !== context) return false
+    return true
+  })
 
   // Trigger generation-detail tour after first generation is completed (only once per page load)
   useEffect(() => {
@@ -42,7 +66,12 @@ export default function GenerationsPage() {
       return
     }
     
-    if (generations.length > 0) {
+    // Only check for completed generations (status === 'completed')
+    const completedGenerations = generations.filter(g => g.status === 'completed')
+    
+    console.log('[GenerationsPage Tour] Completed generations:', completedGenerations.length, 'Total:', generations.length)
+    
+    if (completedGenerations.length > 0) {
       // Mark that we've checked to prevent re-running
       hasCheckedTourRef.current = true
       
@@ -58,7 +87,7 @@ export default function GenerationsPage() {
         ? pendingTours.includes('generation-detail')
         : false
 
-      console.log('[GenerationsPage Tour] Tour check - hasSeenTour:', hasSeenTour, 'isPendingTour:', isPendingTour, 'personId:', onboardingContext.personId, 'generations.length:', generations.length, 'forceTour:', forceTour)
+      console.log('[GenerationsPage Tour] Tour check - hasSeenTour:', hasSeenTour, 'isPendingTour:', isPendingTour, 'personId:', onboardingContext.personId, 'completedGenerations.length:', completedGenerations.length, 'forceTour:', forceTour)
       console.log('[GenerationsPage Tour] Context data - completedTours:', completedTours, 'pendingTours:', pendingTours)
 
       // If forceTour is true, always start the tour (ignore seen flag)
@@ -82,12 +111,12 @@ export default function GenerationsPage() {
         return
       }
 
-      // Priority 2: If this is first generation, start the tour (even if previously seen - this is first time viewing generations)
+      // Priority 2: If this is first completed generation, start the tour (even if previously seen - this is first time viewing completed generations)
       // This handles the case where the tour was completed in a previous session but user is seeing generations for first time
-      if (generations.length === 1) {
-        console.log('[GenerationsPage Tour] First generation detected, starting tour (hasSeenTour:', hasSeenTour, ')')
+      if (completedGenerations.length === 1) {
+        console.log('[GenerationsPage Tour] First completed generation detected, starting tour (hasSeenTour:', hasSeenTour, ')')
         const timeoutId = setTimeout(() => {
-          console.log('[GenerationsPage Tour] setTimeout fired, calling startTour (first generation)')
+          console.log('[GenerationsPage Tour] setTimeout fired, calling startTour (first completed generation)')
           try {
             startTour('generation-detail', true) // Force bypasses completion check since we've already validated conditions
             console.log('[GenerationsPage Tour] startTour call completed')
@@ -97,10 +126,10 @@ export default function GenerationsPage() {
         }, 1500)
         console.log('[GenerationsPage Tour] setTimeout scheduled with ID:', timeoutId, 'will fire in 1500ms')
       } else {
-        console.log('[GenerationsPage Tour] Conditions not met - hasSeenTour:', hasSeenTour, 'isPendingTour:', isPendingTour, 'generations.length:', generations.length)
+        console.log('[GenerationsPage Tour] Conditions not met - hasSeenTour:', hasSeenTour, 'isPendingTour:', isPendingTour, 'completedGenerations.length:', completedGenerations.length)
       }
     }
-  }, [loading, generations.length, forceTour, onboardingContext._loaded, onboardingContext.completedTours, onboardingContext.pendingTours, onboardingContext.personId, startTour]) // Added _loaded, personId, and startTour to dependencies
+  }, [loading, generations, forceTour, onboardingContext._loaded, onboardingContext.completedTours, onboardingContext.pendingTours, onboardingContext.personId, startTour]) // Changed dependency from generations.length to generations to track status changes
 
   // Directly start Onborda tour when pendingTour is set
   useEffect(() => {
@@ -146,9 +175,73 @@ export default function GenerationsPage() {
         {error && <ErrorBanner message={error} className="mb-6" />}
 
         <div className="space-y-6">
-          {generations.length > 0 ? (
+          {generations.length > 0 && (
+            <>
+              {/* Filters and Generate Button Row */}
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <select value={timeframe} onChange={(e) => setTimeframe(e.target.value as 'all'|'7d'|'30d')} className="border rounded-md px-2 py-1 text-sm">
+                    <option value="all">All time</option>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                  </select>
+                  {styleOptions.length > 0 && (
+                    <select value={context} onChange={(e) => setContext(e.target.value)} className="border rounded-md px-2 py-1 text-sm">
+                      <option value="all">All photo styles</option>
+                      {styleOptions.map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Prominent Generate Button with Cost Info */}
+                <div className="flex flex-col items-end md:items-center gap-2 w-full md:w-auto">
+                  <Link 
+                    href={`/invite-dashboard/${token}`}
+                    className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-lg font-semibold text-base md:text-lg lg:text-xl shadow-sm transition-all hover:shadow-md flex items-center gap-2 whitespace-nowrap"
+                    style={{
+                      backgroundColor: BRAND_CONFIG.colors.primary,
+                      color: 'white'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
+                    }}
+                  >
+                    <svg 
+                      className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      strokeWidth={2.5} 
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 4.5v15m7.5-7.5h-15"
+                      />
+                    </svg>
+                    New generation
+                  </Link>
+                  
+                  {/* Cost information */}
+                  <div className="text-xs md:text-sm text-gray-600 text-right md:text-center space-y-0.5">
+                    <div>
+                      <span className="font-medium" style={{ color: BRAND_CONFIG.colors.primary }}>
+                        {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)} {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration) === 1 ? 'photo' : 'photos'}
+                      </span>
+                      <span> per generation</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             <GenerationGrid>
-              {generations.map((generation) => (
+                {filteredGenerations.map((generation) => (
                 <GenerationCard
                   key={generation.id}
                   item={generation}
@@ -156,7 +249,16 @@ export default function GenerationsPage() {
                 />
               ))}
             </GenerationGrid>
-          ) : (
+              
+              {filteredGenerations.length === 0 && generations.length > 0 && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 py-12 text-center">
+                  <p className="text-gray-500">No generations match your filters.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {generations.length === 0 && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="text-center py-12">
                 <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />

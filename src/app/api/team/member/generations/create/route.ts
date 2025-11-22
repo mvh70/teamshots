@@ -23,6 +23,8 @@ const createSchema = z.object({
   contextId: z.string().optional(),
   styleSettings: z.record(z.string(), z.unknown()).optional(),
   prompt: z.string().min(1),
+  useV2: z.boolean().optional().default(false), // Enable V2 workflow
+  debugMode: z.boolean().optional().default(false), // Enable debug mode
 })
 
 export async function POST(request: NextRequest) {
@@ -55,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { selfieKey, selfieKeys, selfieIds, contextId, styleSettings, prompt } = createSchema.parse(body)
+    const { selfieKey, selfieKeys, selfieIds, contextId, styleSettings, prompt, useV2, debugMode } = createSchema.parse(body)
 
     // Check invite's remaining credits first (invited members have their own allocation)
     const inviteCreditsRemaining = await getTeamInviteRemainingCredits(invite.id)
@@ -217,7 +219,15 @@ export async function POST(request: NextRequest) {
 
       if (!reservationResult.success) {
         Logger.error('Credit reservation failed for team member', { error: reservationResult.error })
-        await prisma.generation.delete({ where: { id: generation.id } })
+        try {
+          await prisma.generation.delete({ where: { id: generation.id } })
+        } catch (deleteError) {
+          // Ignore if generation was already deleted or doesn't exist
+          Logger.warn('Failed to delete generation after credit reservation failure', {
+            generationId: generation.id,
+            error: deleteError instanceof Error ? deleteError.message : String(deleteError)
+          })
+        }
         throw new Error(reservationResult.error || 'Credit reservation failed')
       }
 
@@ -227,7 +237,15 @@ export async function POST(request: NextRequest) {
         teamCreditsUsed: reservationResult.teamCreditsUsed
       })
     } catch (creditError) {
-      await prisma.generation.delete({ where: { id: generation.id } })
+      try {
+        await prisma.generation.delete({ where: { id: generation.id } })
+      } catch (deleteError) {
+        // Ignore if generation was already deleted or doesn't exist
+        Logger.warn('Failed to delete generation after credit reservation failure', {
+          generationId: generation.id,
+          error: deleteError instanceof Error ? deleteError.message : String(deleteError)
+        })
+      }
       throw creditError
     }
 
@@ -245,8 +263,10 @@ export async function POST(request: NextRequest) {
         styleSettings: serializedStyleSettings,
         prompt,
         providerOptions: {
-          model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
+          model: Env.string('GEMINI_IMAGE_MODEL'),
           numVariations: 4,
+          useV2,
+          debugMode,
         },
         creditSource: 'team',
       },

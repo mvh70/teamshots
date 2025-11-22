@@ -87,23 +87,36 @@ export async function GET(
         const { imageGenerationQueue } = await import('@/queue')
         const job = await imageGenerationQueue.getJob(`gen-${generationId}`)
         if (job) {
+          console.log('API: Raw job progress data:', {
+            generationId,
+            jobId: job.id,
+            rawProgress: job.progress,
+            progressType: typeof job.progress
+          })
           // Handle progress as either number or object { progress: number, message?: string }
-          const progressData = typeof job.progress === 'object' && job.progress !== null 
+          const progressData = typeof job.progress === 'object' && job.progress !== null
             ? job.progress as { progress?: number; message?: string }
             : { progress: job.progress as number }
           jobStatus = {
             id: job.id,
-            progress: typeof progressData === 'object' && 'progress' in progressData && typeof progressData.progress === 'number' 
-              ? progressData.progress 
+            progress: typeof progressData === 'object' && 'progress' in progressData && typeof progressData.progress === 'number'
+              ? progressData.progress
               : (typeof job.progress === 'number' ? job.progress : 0),
-            message: typeof progressData === 'object' && 'message' in progressData && typeof progressData.message === 'string' 
-              ? progressData.message 
+            message: typeof progressData === 'object' && 'message' in progressData && typeof progressData.message === 'string'
+              ? progressData.message
               : undefined,
             attemptsMade: job.attemptsMade,
             processedOn: job.processedOn,
             finishedOn: job.finishedOn,
             failedReason: job.failedReason,
           }
+          console.log('API: Processed job status:', {
+            generationId,
+            progress: jobStatus.progress,
+            message: jobStatus.message?.substring(0, 50)
+          })
+        } else {
+          console.log('API: No job found for generation', generationId)
         }
       } catch (error) {
         Logger.warn('Failed to get job status', { error: error instanceof Error ? error.message : String(error) })

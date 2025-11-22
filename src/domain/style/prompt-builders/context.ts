@@ -96,18 +96,21 @@ const applyResolvedToPayload = (
   payload: NestedRecord,
   preset: StandardPresetConfig,
   resolved: ResolvedConfig,
-  expressionLabel: string
+  expressionLabel: string,
+  skipPoseFields = false
 ) => {
-  setPath(payload, 'subject.pose.body_angle', resolved.pose.body.description)
-  setPath(payload, 'subject.pose.head_position', resolved.pose.head.description)
-  setPath(payload, 'subject.pose.shoulder_position', resolved.pose.shoulder.description)
-  setPath(payload, 'subject.pose.weight_distribution', resolved.pose.weight.description)
-  setPath(payload, 'subject.pose.arms', resolved.pose.arm.description)
-  setPath(payload, 'subject.pose.sitting_position', resolved.pose.sitting?.description)
+  // Skip pose fields if a pose preset is being used (will be set by generatePosePrompt)
+  if (!skipPoseFields) {
+    setPath(payload, 'subject.pose.body_angle', resolved.pose.body.description)
+    setPath(payload, 'subject.pose.head_position', resolved.pose.head.description)
+    setPath(payload, 'subject.pose.shoulder_position', resolved.pose.shoulder.description)
+    setPath(payload, 'subject.pose.weight_distribution', resolved.pose.weight.description)
+    setPath(payload, 'subject.pose.arms', resolved.pose.arm.description)
+    setPath(payload, 'subject.pose.sitting_position', resolved.pose.sitting?.description)
+  }
 
   setPath(payload, 'framing.shot_type', resolved.shotType.label)
   setPath(payload, 'framing.crop_points', resolved.shotType.framingDescription)
-  setPath(payload, 'framing.shows', resolved.shotType.framingDescription)
   setPath(payload, 'framing.composition', resolved.shotType.compositionNotes ?? resolved.shotType.framingDescription)
 
   setPath(payload, 'camera.lens', {
@@ -160,21 +163,26 @@ export function buildStandardPrompt({
   })
 
   const presetResolved = resolveConfig(presetDefaults)
-  applyResolvedToPayload(payload, preset, presetResolved, expressionLabel)
+  const hasPosePreset = effectiveSettings.pose?.type && effectiveSettings.pose.type !== 'user-choice'
+  applyResolvedToPayload(payload, preset, presetResolved, expressionLabel, hasPosePreset)
 
   const activeResolved = resolveConfig(effectiveSettings)
 
   setPath(payload, 'framing.shot_type', activeResolved.shotType.label)
   setPath(payload, 'framing.crop_points', activeResolved.shotType.framingDescription)
-  setPath(payload, 'framing.shows', activeResolved.shotType.framingDescription)
   setPath(payload, 'framing.composition', activeResolved.shotType.compositionNotes ?? activeResolved.shotType.framingDescription)
 
-  setPath(payload, 'subject.pose.body_angle', activeResolved.pose.body.description)
-  setPath(payload, 'subject.pose.head_position', activeResolved.pose.head.description)
-  setPath(payload, 'subject.pose.shoulder_position', activeResolved.pose.shoulder.description)
-  setPath(payload, 'subject.pose.weight_distribution', activeResolved.pose.weight.description)
-  setPath(payload, 'subject.pose.arms', activeResolved.pose.arm.description)
-  setPath(payload, 'subject.pose.sitting_position', activeResolved.pose.sitting?.description)
+  // Only set pose fields from resolved components if no pose preset is selected
+  // Pose presets will be handled by generatePosePrompt in the package-specific buildPrompt functions
+  // This prevents component-based resolution from overriding template-based pose instructions
+  if (!hasPosePreset) {
+    setPath(payload, 'subject.pose.body_angle', activeResolved.pose.body.description)
+    setPath(payload, 'subject.pose.head_position', activeResolved.pose.head.description)
+    setPath(payload, 'subject.pose.shoulder_position', activeResolved.pose.shoulder.description)
+    setPath(payload, 'subject.pose.weight_distribution', activeResolved.pose.weight.description)
+    setPath(payload, 'subject.pose.arms', activeResolved.pose.arm.description)
+    setPath(payload, 'subject.pose.sitting_position', activeResolved.pose.sitting?.description)
+  }
 
   return {
     preset,

@@ -167,7 +167,10 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
         contextId: activeContext?.id,
         styleSettings: { ...photoStyleSettings, packageId },
         prompt: activeContext?.customPrompt || 'Professional headshot',
-        selfieIds: selectedSelfies.map(s => s.id)
+        selfieIds: selectedSelfies.map(s => s.id),
+        // V2 workflow and debug flags
+        useV2: true, // Enable the new 8-step workflow
+        debugMode: true // Enable debug mode (logs prompts, saves intermediate files)
       }
       
       const response = await jsonFetcher<{ 
@@ -212,7 +215,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   const effectivePackageId = isFreePlan ? 'freepackage' : (selectedPackageId || PACKAGES_CONFIG.defaultPlanPackage)
   const selectedPackage = getPackageConfig(effectivePackageId)
-  const selectedPhotoStyleLabel = selectedPackage.label
+  const selectedPhotoStyleLabel = activeContext?.name || selectedPackage.label
   const remainingCreditsForType = effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual
   const photoCreditsPerGeneration = calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)
   
@@ -347,42 +350,43 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
               {/* Right Section: Credits and Generate Action */}
               <div className="lg:flex-none lg:w-80 xl:w-96">
-                <div className="bg-gray-50 rounded-lg p-4 lg:p-5 border border-gray-200">
+                <div className={`rounded-lg p-4 lg:p-5 border transition-all ${
+                  !hasEnoughCredits 
+                    ? 'bg-amber-50 border-amber-200' 
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
                   <div className="text-sm text-gray-600 mb-3">Cost per generation</div>
                   <div className="mb-4">
                     <div className="text-2xl lg:text-3xl font-bold text-gray-900">{photoCreditsPerGeneration}</div>
                     <div className="text-sm text-gray-600 mt-1">photo credits</div>
                   </div>
-                  <div>
-                    <GenerateButton
-                      onClick={onProceed}
-                      disabled={!canGenerate || isPending}
-                      isGenerating={isGenerating || isPending}
-                      size="sm"
-                      className="w-full"
-                      disabledReason={hasUneditedFields ? t('customizeFirstTooltip') : undefined}
-                      integrateInPopover={hasUneditedFields}
-                    >
-                      Generate
-                    </GenerateButton>
-                  </div>
+                  
                   {!hasEnoughCredits && (
-                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                      <div className="flex items-center mb-2">
-                        <svg className="h-4 w-4 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    <div className="mb-4 p-3 bg-white border border-amber-300 rounded-lg">
+                      <div className="flex items-start gap-2.5">
+                        <svg className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                         </svg>
-                        <span className="text-sm font-medium text-red-800">{t('insufficientCredits')}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-amber-900 mb-1">
+                            {t('insufficientCredits')}
+                          </p>
+                          <p className="text-xs text-amber-800 leading-relaxed">
+                            {t('insufficientCreditsMessage', {
+                              required: calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration),
+                              current: calculatePhotosFromCredits(effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual)
+                            })}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-red-700 mb-2">
-                        {t('insufficientCreditsMessage', {
-                          required: PRICING_CONFIG.credits.perGeneration,
-                          current: effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual
-                        })}
-                      </p>
+                    </div>
+                  )}
+                  
+                  <div>
+                    {!hasEnoughCredits ? (
                       <Link
                         href={buyCreditsHrefWithReturn}
-                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white rounded-md transition-colors"
+                        className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-all shadow-sm hover:shadow"
                         style={{ backgroundColor: BRAND_CONFIG.colors.cta }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.ctaHover
@@ -391,11 +395,23 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                           e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.cta
                         }}
                       >
-                        <PlusIcon className="h-3 w-3 mr-1" />
+                        <PlusIcon className="h-4 w-4 mr-2" />
                         {t('buyMoreCredits')}
                       </Link>
-                    </div>
-                  )}
+                    ) : (
+                      <GenerateButton
+                        onClick={onProceed}
+                        disabled={!canGenerate || isPending}
+                        isGenerating={isGenerating || isPending}
+                        size="sm"
+                        className="w-full"
+                        disabledReason={hasUneditedFields ? t('customizeFirstTooltip') : undefined}
+                        integrateInPopover={hasUneditedFields}
+                      >
+                        Generate
+                      </GenerateButton>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -489,9 +505,10 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             onChange={setPhotoStyleSettings}
             readonlyPredefined={!!activeContext}
             originalContextSettings={originalContextSettings}
-            showToggles={!!activeContext && !isFreePlan && effectivePackageId !== 'freepackage'}
+            showToggles={false}
             packageId={effectivePackageId}
             isFreePlan={isFreePlan}
+            teamContext={effectiveGenerationType === 'team'}
           />
 
           {/* Custom Prompt */}

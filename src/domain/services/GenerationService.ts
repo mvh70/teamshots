@@ -3,6 +3,7 @@ import { UserService } from './UserService'
 import { CreditService } from './CreditService'
 import { randomUUID } from 'crypto'
 import type { PhotoStyleSettings } from '@/types/photo-style'
+import { Logger } from '@/lib/logger'
 
 /**
  * Consolidated generation management service
@@ -135,7 +136,15 @@ export class GenerationService {
 
         if (!creditResult.success) {
           // Clean up generation record if credit reservation failed
-          await prisma.generation.delete({ where: { id: generationId } })
+          try {
+            await prisma.generation.delete({ where: { id: generationId } })
+          } catch (deleteError) {
+            // Ignore if generation was already deleted or doesn't exist
+            Logger.warn('Failed to delete generation after credit reservation failure', {
+              generationId,
+              error: deleteError instanceof Error ? deleteError.message : String(deleteError)
+            })
+          }
           return { success: false, error: creditResult.error }
         }
 

@@ -120,3 +120,13 @@ export function deserializeExpression(
   return rawExpression ?? presetDefaults
 }
 
+/**
+ * Deserializes pose settings from raw data
+ */
+export function deserializePose(
+  raw: Record<string, unknown>,
+  defaults: PhotoStyleSettings['pose']
+): PhotoStyleSettings['pose'] {
+  return (raw.pose as PhotoStyleSettings['pose']) || defaults
+}
+

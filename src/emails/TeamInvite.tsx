@@ -8,6 +8,7 @@ interface TeamInviteEmailProps {
   inviteLink: string;
   creditsAllocated: number;
   firstName?: string;
+  inviterFirstName?: string;
   locale?: 'en' | 'es';
 }
 
@@ -16,6 +17,7 @@ export default function TeamInviteEmail({
   inviteLink,
   creditsAllocated,
   firstName,
+  inviterFirstName,
   locale = 'en'
 }: TeamInviteEmailProps) {
   // Calculate number of photos and variations from credits
@@ -24,7 +26,7 @@ export default function TeamInviteEmail({
   // Use personalized greeting if firstName is available
   const greetingKey = firstName ? 'teamInvite.greetingWithName' : 'teamInvite.greeting';
   const greetingParams: Record<string, string> = firstName 
-    ? { firstName, teamName } 
+    ? { firstName, teamName, inviterFirstName: inviterFirstName || 'your colleague' } 
     : { teamName };
 
   return (
@@ -39,6 +41,10 @@ export default function TeamInviteEmail({
             credits: creditsAllocated.toString(),
             photos: numberOfPhotos.toString()
           })}
+        </p>
+
+        <p style={{ lineHeight: '1.6', marginBottom: '20px' }}>
+          {getEmailTranslation('teamInvite.mobileAdvice', locale)}
         </p>
 
         <div style={{ marginBottom: '25px' }}>

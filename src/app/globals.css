@@ -123,69 +123,101 @@
 }
 
 /* Onborda card positioning overrides for generation-detail tour */
-/* Position generation-detail tour cards in corners */
-[data-onborda-tour="generation-detail"][data-onborda-step="0"] {
-  /* Step 1: Position in bottom left corner */
-  position: absolute !important;
-  bottom: -10px !important;
-  left: -0px !important;
-  right: auto !important;
-  top: auto !important;
-  transform: none !important;
-}
-
-[data-onborda-tour="generation-detail"][data-onborda-step="1"] {
-  /* Step 2: Float on top of the generation image, near action buttons */
-  position: fixed !important;
-  z-index: 9999 !important;
-  /* Position near the action buttons (bottom right of image area) */
-  bottom: 0px !important;
-  right: -175px !important;
-  left: auto !important;
-  top: auto !important;
-  transform: none !important;
-  /* Ensure it floats above everything */
-  pointer-events: auto !important;
-}
-
+/* Position generation-detail tour cards - responsive approach */
+[data-onborda-tour="generation-detail"][data-onborda-step="0"],
+[data-onborda-tour="generation-detail"][data-onborda-step="1"],
 [data-onborda-tour="generation-detail"][data-onborda-step="2"] {
-  /* Step 3: Float on top of the generation image */
-  position: fixed !important;
+  /* Base positioning - let onborda handle relative to target */
+  position: absolute !important;
   z-index: 9999 !important;
-  /* Position near the feedback buttons (bottom left of image area) */
-  bottom: 80px !important;
-  left: 20px !important;
-  right: auto !important;
-  top: auto !important;
-  transform: none !important;
-  /* Ensure it floats above everything */
   pointer-events: auto !important;
+  max-width: min(400px, calc(100vw - 2rem)) !important;
+}
+
+/* Desktop positioning - cards appear above their targets */
+@media (min-width: 641px) {
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] {
+    /* Step 1: Position above target with left alignment */
+    bottom: auto !important;
+    top: auto !important;
+    left: 0 !important;
+    right: auto !important;
+    transform: translateY(-100%) translateY(-20px) !important;
+  }
+  
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] {
+    /* Step 2: Position above target with right alignment */
+    bottom: auto !important;
+    top: auto !important;
+    left: -100px !important;
+    transform: translateY(-100%) translateY(-20px) !important;
+  }
+
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] {
+    /* Step 3: Position above target with left alignment */
+    bottom: auto !important;
+    top: auto !important;
+    left: 0 !important;
+    right: auto !important;
+    transform: translateY(-100%) translateY(-20px) !important;
+  }
 }
 
 /* Mobile responsive positioning for generation-detail tour */
 @media (max-width: 640px) {
-  [data-onborda-tour="generation-detail"][data-onborda-step="0"] {
-    /* Step 1: On mobile, position cards above the target element */
-    position: absolute !important;
-    bottom: auto !important;
-    top: -20px !important;
-    left: 50% !important;
-    right: auto !important;
-    transform: translateX(-50%) translateY(-100%) !important;
-    max-width: calc(100vw - 2rem) !important;
-  }
   
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"],
+
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] {
+    /* Step 1: Position above target with left alignment */
+    position: absolute !important;
+    top: 0px !important;
+    left: -100px !important;
+    transform: translateY(-100%) translateY(-20px) !important;
+  }
+
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] {
+    /* Step 1: Position above target with left alignment */
+    position: absolute !important;
+    top: 0px !important;
+    left: -200px !important;
+    transform: translateY(-100%) translateY(-20px) !important;
+  }
+
   [data-onborda-tour="generation-detail"][data-onborda-step="2"] {
-    /* Steps 2 & 3: On mobile, position above action/feedback buttons */
-    position: fixed !important;
-    bottom: 80px !important;
-    left: 50% !important;
-    right: auto !important;
-    top: auto !important;
-    transform: translateX(-50%) !important;
-    max-width: calc(100vw - 2rem) !important;
-    z-index: 9999 !important;
+    /* Step 1: Position above target with left alignment */
+    position: absolute !important;
+    top: 30px !important;
+    left: -50px !important;
+    transform: translateY(-100%) translateY(-20px) !important;
+  }
+
+  /* Mobile responsive pointer positioning for generation-detail tour */
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] .onborda-pointer,
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] .onborda-arrow,
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] [data-onborda-pointer],
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"]::before,
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"]::after,
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] svg,
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] [style*="position: absolute"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="0"] [style*="position:absolute"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] .onborda-pointer,
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] .onborda-arrow,
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [data-onborda-pointer],
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"]::before,
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"]::after,
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] svg,
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position: absolute"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position:absolute"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] .onborda-pointer,
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] .onborda-arrow,
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] [data-onborda-pointer],
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"]::before,
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"]::after,
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] svg,
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] [style*="position: absolute"],
+  [data-onborda-tour="generation-detail"][data-onborda-step="2"] [style*="position:absolute"] {
+    /* On mobile, hide pointers since cards are centered at bottom and not pointing to specific elements */
+    display: none !important;
   }
 }
 
@@ -277,40 +309,6 @@
   margin: 0 !important;
 }
 
-/* Mobile responsive pointer positioning for generation-detail tour */
-@media (max-width: 640px) {
-  [data-onborda-tour="generation-detail"][data-onborda-step="0"] .onborda-pointer,
-  [data-onborda-tour="generation-detail"][data-onborda-step="0"] .onborda-arrow,
-  [data-onborda-tour="generation-detail"][data-onborda-step="0"] [data-onborda-pointer],
-  [data-onborda-tour="generation-detail"][data-onborda-step="0"]::before,
-  [data-onborda-tour="generation-detail"][data-onborda-step="0"]::after,
-  [data-onborda-tour="generation-detail"][data-onborda-step="0"] svg,
-  [data-onborda-tour="generation-detail"][data-onborda-step="0"] [style*="position: absolute"],
-  [data-onborda-tour="generation-detail"][data-onborda-step="0"] [style*="position:absolute"],
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"] .onborda-pointer,
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"] .onborda-arrow,
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [data-onborda-pointer],
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"]::before,
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"]::after,
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"] svg,
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position: absolute"],
-  [data-onborda-tour="generation-detail"][data-onborda-step="1"] [style*="position:absolute"],
-  [data-onborda-tour="generation-detail"][data-onborda-step="2"] .onborda-pointer,
-  [data-onborda-tour="generation-detail"][data-onborda-step="2"] .onborda-arrow,
-  [data-onborda-tour="generation-detail"][data-onborda-step="2"] [data-onborda-pointer],
-  [data-onborda-tour="generation-detail"][data-onborda-step="2"]::before,
-  [data-onborda-tour="generation-detail"][data-onborda-step="2"]::after,
-  [data-onborda-tour="generation-detail"][data-onborda-step="2"] svg,
-  [data-onborda-tour="generation-detail"][data-onborda-step="2"] [style*="position: absolute"],
-  [data-onborda-tour="generation-detail"][data-onborda-step="2"] [style*="position:absolute"] {
-    /* On mobile, position pointer at bottom center of card (pointing down) */
-    left: 50% !important;
-    right: auto !important;
-    top: auto !important;
-    bottom: -8px !important;
-    transform: translateX(-50%) !important;
-  }
-}
 
 body {
   background: var(--background);

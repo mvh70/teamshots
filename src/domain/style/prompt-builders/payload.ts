@@ -57,8 +57,7 @@ export function createBasePayload({
       crop_points: '',
       orientation,
       composition: framingNote,
-      headroom_percent: headroomPercent,
-      shows: ''
+      headroom_percent: headroomPercent
     },
     camera: {
       sensor: 'full-frame mirrorless',

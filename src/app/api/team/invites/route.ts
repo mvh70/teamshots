@@ -198,6 +198,10 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Calculate inviter first name safely
+    const inviterName = session.user.name || ''
+    const inviterFirstName = inviterName.split(' ')[0] || inviterName || 'Team Admin'
+
     // Send email with invite link
     const baseUrl = Env.string('NEXTAUTH_URL', 'http://localhost:3000')
     const inviteLink = `${baseUrl}/invite/${token}`
@@ -208,6 +212,7 @@ export async function POST(request: NextRequest) {
       inviteLink,
       creditsAllocated: teamInvite.creditsAllocated,
       firstName,
+      inviterFirstName,
       locale: user.locale as 'en' | 'es' || 'en'
     })
 

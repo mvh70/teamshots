@@ -135,4 +135,70 @@ export async function initializeQueues() {
   await redis.ping()
 }
 
+// Clear queue utilities
+export async function clearImageGenerationQueue(options?: { force?: boolean }) {
+  const force = options?.force ?? false
+  
+  if (force) {
+    // Completely obliterate the queue (removes all jobs, including completed/failed)
+    await imageGenerationQueue.obliterate({ force: true })
+    console.log('✅ Image generation queue cleared (obliterated)')
+  } else {
+    // Remove all waiting/delayed jobs (safer - keeps completed/failed for history)
+    const waiting = await imageGenerationQueue.getWaiting()
+    const delayed = await imageGenerationQueue.getDelayed()
+    const active = await imageGenerationQueue.getActive()
+    
+    // Remove waiting and delayed jobs (these are not locked)
+    await Promise.allSettled([
+      ...waiting.map(job => job.remove()),
+      ...delayed.map(job => job.remove()),
+    ])
+    
+    // For active jobs, handle locked jobs gracefully
+    const activeResults = await Promise.allSettled(
+      active.map(async (job) => {
+        try {
+          await job.remove()
+        } catch (error) {
+          // If job is locked, try to fail it first, then remove
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          if (errorMessage.includes('locked')) {
+            try {
+              await job.moveToFailed(new Error('Manually cancelled'), '0')
+              await job.remove()
+            } catch {
+              // If we can't fail it either, skip it
+              throw new Error(`Job ${job.id} is locked and cannot be removed`)
+            }
+          } else {
+            throw error
+          }
+        }
+      })
+    )
+    
+    const activeRemoved = activeResults.filter(r => r.status === 'fulfilled').length
+    const activeLocked = activeResults.filter(r => r.status === 'rejected').length
+    
+    let message = `✅ Removed ${waiting.length} waiting, ${delayed.length} delayed, and ${activeRemoved}/${active.length} active jobs`
+    if (activeLocked > 0) {
+      message += ` (${activeLocked} locked - use force option to obliterate)`
+    }
+    console.log(message)
+  }
+}
+
+export async function clearAllQueues(options?: { force?: boolean }) {
+  const force = options?.force ?? false
+  
+  await Promise.all([
+    clearImageGenerationQueue({ force }),
+    force ? backgroundRemovalQueue.obliterate({ force: true }) : Promise.resolve(),
+    force ? emailSendingQueue.obliterate({ force: true }) : Promise.resolve(),
+  ])
+  
+  console.log('✅ All queues cleared')
+}
+
 

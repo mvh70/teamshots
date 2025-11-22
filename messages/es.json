@@ -572,6 +572,12 @@
         "buyMore": "Comprar más fotos"
       },
       "generate": {
+        "photo": "foto",
+        "photos": "fotos",
+        "photoCredit": "crédito de foto",
+        "photoCredits": "créditos de foto",
+        "perPhoto": "por foto",
+        "retriesPerPhoto": "intentos por foto",
         "getSelfie": "Obtener selfie",
         "getSelfieDescription": "Sube foto o usa cámara para selfie.",
         "readyToGenerate": "Listo para generar",
@@ -590,7 +596,10 @@
         "insufficientPhotosMessage": "Necesitas {required} fotos para generar. Tienes {current}. ¡Recarga!",
     "generatePhoto": "Generar foto",
     "customizeFirstTooltip": "Personaliza tu foto con las secciones editables a continuación",
-    "buyMorePhotos": "Comprar más fotos",
+        "buyMorePhotos": "Comprar más fotos",
+        "insufficientCredits": "Créditos de foto insuficientes",
+        "insufficientCreditsMessage": "Necesitas {required, plural, one {# crédito de foto} other {# créditos de foto}} para generar. Actualmente tienes {current, plural, one {# crédito de foto} other {# créditos de foto}}. ¡Es hora de recargar!",
+        "buyMoreCredits": "Comprar más créditos",
         "noPhotosTitle": "Sin fotos disponibles",
         "noPhotosMessage": "Necesitas fotos para generar (piénsalos como tickets para lucir increíble). Compra para empezar.",
         "noTeamPhotosTitle": "Sin fotos equipo disponibles",
@@ -1486,12 +1495,12 @@
       "text": "Has sido invitado a unirte a {teamName} en TeamShotsPro.\n\nUsa este enlace para aceptar: {inviteLink}\n\nTienes {creditsAllocated} créditos para empezar.",
       "title": "Invitación al equipo",
       "greeting": "Has sido invitado a unirte al equipo de {teamName} en TeamShotsPro. La buena noticia: no necesitas sesiones de fotos incómodas en la oficina.",
-      "greetingWithName": "Hola {firstName}, has sido invitado a unirte al equipo de {teamName} en TeamShotsPro. La buena noticia: no necesitas sesiones de fotos incómodas en la oficina.",
+      "greetingWithName": "Hola {firstName}, {inviterFirstName} te ha invitado a unirte al equipo de {teamName} en TeamShotsPro. ¿Por qué? Para obtener fotos profesionales consistentes para el equipo sin el lío de sesiones fotográficas. Lo que obtienes: {credits} créditos para crear {photos} fotos pulidas a partir de tu selfie. Buena noticia: no se requieren poses incómodas – nosotros nos encargamos de la magia profesional.",
       "whatYouGet": "Lo que obtienes:",
       "photos": "{photos} fotos profesionales ({variations} variaciones)",
-      "credits": "{photos} fotos profesionales ({variations} variaciones)",
       "teamBranded": "Generación de fotos con marca del equipo",
-      "photosDescription": "Has recibido {credits} créditos, suficientes para {photos} fotos. Desde solo un selfie. Tu selfie no tiene que ser perfecto. Nosotros nos encargamos del acabado profesional.",
+      "photosDescription": "Has recibido {credits} créditos de fotos para generar {photos} fotos. Desde solo un selfie. Tu selfie no tiene que ser perfecto. Nosotros nos encargamos del acabado profesional.",
+      "mobileAdvice": "Para la mejor experiencia, abre esto en tu dispositivo móvil. Ahí es donde tomarás tu selfie.",
       "noSignup": "Sin registro requerido",
       "directAccess": "Acceso directo para subir tu selfie",
       "acceptButton": "Aceptar invitación",
@@ -1590,6 +1599,38 @@
         "userChoice": "Elección del Usuario",
         "notSet": "No Establecido"
       },
+      "lockedSections": {
+        "teaser": {
+          "title": "{count} configuraciones más establecidas",
+          "subtitle": "Personaliza las secciones anteriores para ver qué más se ha configurado"
+        },
+        "revealed": {
+          "title": "¡Excelente! Tus personalizaciones están guardadas",
+          "subtitle": "Esto es lo que tu administrador ha configurado para el resto:"
+        }
+      },
+      "autosave": {
+        "saving": "Guardando...",
+        "saved": "Todos los cambios guardados",
+        "error": "Error al guardar",
+        "retry": "Reintentar",
+        "idle": "Guardado automático activado"
+      },
+      "progress": {
+        "editable": "{count} de {total} editables",
+        "editableTeam": "{count} de {total} editables por los miembros del equipo"
+      },
+      "tooltips": {
+        "predefinedToggle": "Predefinido bloquea esta configuración para todos los miembros del equipo. Elección del Usuario permite que cada persona la personalice.",
+        "background": "Elige el estilo de fondo para tus fotos. Esto establece el ambiente y el estado de ánimo general.",
+        "branding": "Incluye el logo de tu empresa en las fotos generadas para mantener la consistencia de marca.",
+        "shotType": "Diferentes encuadres funcionan mejor para diferentes plataformas. Retratos para LinkedIn, cuerpo completo para páginas de equipo.",
+        "clothing": "Establece el código de vestimenta para las fotos de tu equipo - desde casual hasta formal de negocios.",
+        "clothingColors": "Especifica colores exactos para artículos de ropa para que coincidan con tu paleta de marca.",
+        "expression": "Controla la expresión facial y el estado de ánimo de las fotos de tu equipo.",
+        "lighting": "Establece el estilo de iluminación para que coincida con tu estética de marca - desde natural hasta iluminación de estudio.",
+        "pose": "Elige una pose corporal y posicionamiento que coincida con tu imagen profesional y estilo de marca."
+      },
       "toggle": {
         "predefined": "Predefinido",
         "userChoice": "Elección del Usuario"
@@ -1598,10 +1639,14 @@
       "sections": {
         "photoStyle": "Configuración de Estilo de Foto",
         "photoStyleDesc": "Fondo, marca y estilo general de foto",
-        "composition": "Configuración de composición",
+        "composition": "Configuración de Composición",
         "compositionDesc": "Fondo, marca y tipo de toma",
         "userStyle": "Configuración de Estilo de Usuario",
-        "userStyleDesc": "Preferencias de ropa, expresión e iluminación"
+        "userStyleDesc": "Preferencias de ropa, expresión e iluminación",
+        "customizable": "Personaliza Tu Estilo",
+        "customizableDesc": "Personaliza estas configuraciones para que coincidan con tus preferencias",
+        "preset": "Configuraciones Predefinidas del Equipo",
+        "presetDesc": "Estas configuraciones están configuradas por el administrador de tu equipo"
       },
       "categories": {
         "background": {
@@ -1635,6 +1680,10 @@
         "lighting": {
           "title": "Iluminación",
           "description": "Estilo de iluminación y ambiente"
+        },
+        "pose": {
+          "title": "Pose",
+          "description": "Pose corporal y posicionamiento"
         }
       },
       "background": {
@@ -1708,7 +1757,15 @@
       "clothingColors": {
         "title": "Colores de Ropa",
         "subtitle": "Elige colores para artículos de ropa",
-        "predefined": "Predefinido"
+        "predefined": "Predefinido",
+        "outerLayer": "Capa Externa",
+        "outerLayerDesc": "Blazer, chaqueta, cárdigan",
+        "shirtBlouse": "Camisa/Blusa",
+        "shirtBlouseDesc": "Camisa de vestir, blusa, polo",
+        "pantsSkirt": "Pantalones/Falda",
+        "pantsSkirtDesc": "Pantalones, slacks, falda",
+        "shoes": "Zapatos",
+        "shoesDesc": "Zapatos de vestir, zapatos casuales"
       },
       "shotType": {
         "title": "Tipo de Toma",
@@ -1719,6 +1776,45 @@
         "title": "Expresión",
         "subtitle": "Elige una expresión facial",
         "predefined": "Predefinido"
+      },
+      "pose": {
+        "title": "Pose",
+        "subtitle": "Elige una pose corporal y posicionamiento",
+        "predefined": "Predefinido",
+        "poses": {
+          "power_classic": {
+            "label": "Pose de Poder - Clásica",
+            "description": "Ejecutivo, fundador, liderazgo"
+          },
+          "power_crossed": {
+            "label": "Pose de Poder - Brazos Cruzados",
+            "description": "Profesional, experto, corporativo"
+          },
+          "casual_confident": {
+            "label": "Confianza Casual",
+            "description": "Profesional moderno, tecnología, creativo"
+          },
+          "approachable_cross": {
+            "label": "Experto Accesible",
+            "description": "Consultor, coach, servicio"
+          },
+          "walking_confident": {
+            "label": "Caminando - Con Propósito",
+            "description": "Dinámico, moderno, liderazgo"
+          },
+          "sitting_engaged": {
+            "label": "Sentado Hacia Adelante - Comprometido",
+            "description": "Coach, consultor, empático"
+          },
+          "executive_seated": {
+            "label": "Ejecutivo Sentado",
+            "description": "Ejecutivo, c-suite, formal"
+          },
+          "thinker": {
+            "label": "El Pensador",
+            "description": "Líder de pensamiento, experto, estratégico"
+          }
+        }
       }
     }
   },
@@ -1825,11 +1921,13 @@
         "placeholder": "Juan"
       },
       "photos": {
-        "label": "Fotos a asignar",
-        "hint": "Cada foto se puede regenerar hasta {count} veces gratis"
+        "label": "Número de fotos",
+        "hint": "Cada foto se puede regenerar hasta {count} veces gratis",
+        "tooltip": "Este es el número de fotos que pueden generar con personalización. Cada personalización se puede regenerar hasta {count} veces.",
+        "required": "El número de fotos debe ser mayor que 0"
       },
       "success": "Invitación enviada exitosamente a {email}",
-      "insufficientCreditsModal": "Necesitas {required} créditos pero solo tienes {available} disponibles. Por favor reduce la asignación de fotos o compra más créditos.",
+      "insufficientCreditsModal": "Necesitas {required} créditos de foto pero solo tienes {available} disponibles. Por favor reduce la asignación de fotos o compra más créditos de foto.",
       "photoStyle": {
         "label": "Estilo de Foto",
         "useActiveStyle": "Usar Estilo de Foto Activo",
@@ -2089,13 +2187,16 @@
     "alerts": {
       "selectAtLeastTwoSelfies": "Por favor, selecciona al menos 2 selfies para continuar.",
       "insufficientCreditsWithName": "No tienes suficientes créditos para generar fotos. Por favor, contacta a {adminName} ({adminEmail}) para solicitar más créditos.",
+      "customizePhoto": "Por favor, personaliza la configuración de tu foto antes de generar",
       "insufficientCreditsWithEmail": "No tienes suficientes créditos para generar fotos. Por favor, contacta al administrador de tu equipo en {adminEmail} para solicitar más créditos.",
       "insufficientCreditsGeneric": "No tienes suficientes créditos para generar fotos. Por favor, contacta al administrador de tu equipo para solicitar más créditos.",
       "generationFailed": "Error al iniciar la generación. Por favor, intenta de nuevo."
     },
     "common": {
       "continue": "Continuar",
-      "credits": "créditos"
+      "credits": "créditos",
+      "photoCredit": "crédito de foto",
+      "photoCredits": "créditos de foto"
     },
     "getStarted": {
       "title": "Empezar",

@@ -10,6 +10,8 @@ import { jsonFetcher } from '@/lib/fetcher'
 import { loadStyle, loadStyleByContextId } from '@/domain/style/service'
 import { getPackageConfig } from '@/domain/style/packages'
 import { PrimaryButton, SecondaryButton } from '@/components/ui'
+import { CheckCircleIcon, ExclamationCircleIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { useTranslations } from 'next-intl'
 
 export interface StyleFormProps {
   mode: 'create' | 'edit'
@@ -50,6 +52,7 @@ export default function StyleForm({
 }: StyleFormProps) {
   const params = useParams()
   const router = useRouter()
+  const t = useTranslations('customization.photoStyle.autosave')
   
   const [context, setContext] = useState<Context | null>(null)
   const [loading, setLoading] = useState(mode === 'edit')
@@ -75,6 +78,36 @@ export default function StyleForm({
     initialContextId: autosaveInitialContextId,
     name: autosaveName || name
   })
+
+  // Calculate progress - count editable sections (user-choice)
+  const calculateProgress = () => {
+    const allCategories = ['background', 'branding', 'pose', 'clothing', 'clothingColors', 'expression', 'lighting']
+    
+    let editableCount = 0
+    let totalCount = 0
+    
+    allCategories.forEach(category => {
+      const setting = photoStyleSettings[category as keyof PhotoStyleSettingsType]
+      if (!setting) return
+      
+      totalCount++
+      
+      // Check if it's editable (user-choice)
+      if (category === 'clothing') {
+        if ((setting as { style?: string }).style === 'user-choice') {
+          editableCount++
+        }
+      } else {
+        if ((setting as { type?: string }).type === 'user-choice') {
+          editableCount++
+        }
+      }
+    })
+    
+    return { editableCount, totalCount }
+  }
+
+  const progress = calculateProgress()
 
   // Load context data for edit mode
   useEffect(() => {
@@ -276,16 +309,9 @@ export default function StyleForm({
       )}
 
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <label className="block text-sm font-medium text-gray-700">
-            Photo Style Settings
-          </label>
-          <span id="autosave-indicator" className={`text-xs font-medium ${
-            styleStatus === 'error' ? 'text-red-600' : styleStatus === 'saved' ? 'text-brand-secondary' : 'text-gray-500'
-          }`}>
-            {styleStatus === 'error' ? 'Not saved' : styleStatus === 'saving' ? 'Saving…' : styleStatus === 'saved' ? 'Saved' : 'Autosave on'}
-          </span>
-        </div>
+        <label className="block text-sm font-medium text-gray-700 mb-4">
+          Photo Style Settings
+        </label>
         <PhotoStyleSettings
           value={photoStyleSettings}
           onChange={setPhotoStyleSettings}
@@ -346,8 +372,106 @@ export default function StyleForm({
     </div>
   )
 
+  // Floating autosave badge component
+  const AutosaveBadge = () => {
+    const getStatusConfig = () => {
+      switch (styleStatus) {
+        case 'saving':
+          return {
+            icon: <ArrowPathIcon className="h-4 w-4 animate-spin" />,
+            text: t('saving', { default: 'Saving...' }),
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-200',
+            textColor: 'text-blue-700'
+          }
+        case 'saved':
+          return {
+            icon: <CheckCircleIcon className="h-4 w-4" />,
+            text: t('saved', { default: 'All changes saved' }),
+            bgColor: 'bg-green-50',
+            borderColor: 'border-green-200',
+            textColor: 'text-green-700'
+          }
+        case 'error':
+          return {
+            icon: <ExclamationCircleIcon className="h-4 w-4" />,
+            text: t('error', { default: 'Save failed' }),
+            bgColor: 'bg-red-50',
+            borderColor: 'border-red-200',
+            textColor: 'text-red-700'
+          }
+        default:
+          return {
+            icon: <CheckCircleIcon className="h-4 w-4" />,
+            text: t('idle', { default: 'Autosave on' }),
+            bgColor: 'bg-gray-50',
+            borderColor: 'border-gray-200',
+            textColor: 'text-gray-600'
+          }
+      }
+    }
+
+    const config = getStatusConfig()
+    const tProgress = useTranslations('customization.photoStyle.progress')
+
+    return (
+      <div className="fixed top-20 right-6 z-20 flex flex-col gap-2 animate-fade-in">
+        {/* Autosave status badge */}
+        <div 
+          className={`${config.bgColor} ${config.borderColor} border-2 rounded-lg shadow-lg px-4 py-2.5 flex items-center gap-2 transition-all duration-200 ${
+            styleStatus === 'saved' ? 'animate-scale-in' : ''
+          }`}
+        >
+          <span className={config.textColor}>{config.icon}</span>
+          <span className={`text-sm font-medium ${config.textColor}`}>
+            {config.text}
+          </span>
+          {styleStatus === 'error' && (
+            <button
+              onClick={() => setPhotoStyleSettings({ ...photoStyleSettings })}
+              className="ml-2 text-xs underline hover:no-underline"
+            >
+              {t('retry', { default: 'Retry' })}
+            </button>
+          )}
+        </div>
+        
+        {/* Progress counter */}
+        {progress.totalCount > 0 && (
+          <div className="bg-white border-2 border-gray-200 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
+            <div className="flex-1">
+              <div className="text-xs text-gray-600 mb-1">
+                {scope === 'pro' 
+                  ? tProgress('editableTeam', { 
+                      count: progress.editableCount, 
+                      total: progress.totalCount,
+                      default: `${progress.editableCount} of ${progress.totalCount} editable by team members`
+                    })
+                  : tProgress('editable', { 
+                      count: progress.editableCount, 
+                      total: progress.totalCount,
+                      default: `${progress.editableCount} of ${progress.totalCount} editable`
+                    })
+                }
+              </div>
+              <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-purple-500 transition-all duration-300"
+                  style={{ width: `${(progress.editableCount / progress.totalCount) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <>
+      {/* Floating Autosave Badge */}
+      <AutosaveBadge />
+
       {/* Success Message */}
       {!hideMessages && success && (
         <div className="bg-brand-secondary/10 border border-brand-secondary/20 rounded-lg p-4">

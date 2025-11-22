@@ -13,7 +13,7 @@ import { useCredits } from '@/contexts/CreditsContext'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
 import { ErrorCard, Grid } from '@/components/ui'
-import { Sparkles, Users, Camera, Image, XCircle } from 'lucide-react'
+import { Sparkles, Users, Camera, Image, XCircle, Info } from 'lucide-react'
 
 interface TeamInvite {
   id: string
@@ -358,6 +358,12 @@ export default function TeamPage() {
       return
     }
 
+    if (allocatedPhotos <= 0) {
+      setInviteError(t('inviteForm.photos.required'))
+      setInviting(false)
+      return
+    }
+
     if (credits.team < allocatedPhotos * PRICING_CONFIG.credits.perGeneration) {
       setInviteError(t('invites.insufficientCredits'))
       setInviting(false)
@@ -687,28 +693,95 @@ export default function TeamPage() {
         </div>
         
         {userRoles.isTeamAdmin && (
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              id="invite-team-member-btn"
-              onClick={() => {
-                setInviteError(null)
-                setError(null)
-                setEmailValue('')
-                setFirstNameValue('')
-                setPhotosInputValue(defaultPhotos.toString())
-                setAllocatedPhotos(defaultPhotos)
-                setShowInviteForm(true)
-              }}
-              disabled={(!teamData?.activeContext && !isFreePlan) || credits.team === 0}
-              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
-                (teamData?.activeContext || isFreePlan) && credits.team > 0
-                  ? 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-sm hover:shadow-md'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              <PlusIcon className="h-5 w-5" />
-              {t('buttons.inviteTeamMember')}
-            </button>
+          <div className="flex flex-col gap-4">
+            {!teamData?.activeContext && !isFreePlan ? (
+              <div className="bg-gradient-to-br from-brand-primary-light to-white border-2 border-brand-primary-lighter rounded-xl p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-brand-primary rounded-xl flex items-center justify-center shadow-sm">
+                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-brand-primary font-bold text-lg block mb-2">
+                      {t('setupRequired.title')}
+                    </h3>
+                    <p className="text-gray-700 text-sm mb-5 leading-relaxed">
+                      {t('setupRequired.message')}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 items-start">
+                      <Link
+                        href="/app/styles/team/create"
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover text-sm font-semibold transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        {t('setupRequired.createButton')}
+                      </Link>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500">
+                        <PlusIcon className="h-5 w-5 text-gray-400" />
+                        <span className="font-medium">{t('buttons.inviteTeamMember')}</span>
+                        <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">Locked</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-brand-secondary-light to-white border-2 border-brand-secondary-border rounded-xl p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-brand-secondary rounded-xl flex items-center justify-center shadow-sm">
+                    <CheckIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-brand-secondary font-bold text-lg block mb-2">
+                      {t('readyToInvite.title')}
+                    </h3>
+                    <p className="text-gray-700 text-sm mb-5 leading-relaxed">
+                      Active photo style:{' '}
+                      {teamData?.activeContext?.id ? (
+                        <Link
+                          href={`/app/styles/team/${teamData.activeContext.id}/edit`}
+                          className="font-bold text-brand-secondary hover:text-brand-secondary-hover underline decoration-2 underline-offset-2 transition-colors"
+                        >
+                          {(isFreePlan && (!teamData.activeContext.name || teamData.activeContext.name === 'unnamed')) 
+                            ? 'Free Package Style' 
+                            : (teamData.activeContext.name || 'Active Style')}
+                        </Link>
+                      ) : (
+                        <span className="font-bold text-brand-secondary">
+                          {(isFreePlan && (!teamData?.activeContext?.name || teamData.activeContext.name === 'unnamed')) 
+                            ? 'Free Package Style' 
+                            : (teamData?.activeContext?.name || 'Active Style')}
+                        </span>
+                      )}
+                    </p>
+                    <button
+                      id="invite-team-member-btn"
+                      onClick={() => {
+                        setInviteError(null)
+                        setError(null)
+                        setEmailValue('')
+                        setFirstNameValue('')
+                        setPhotosInputValue(defaultPhotos.toString())
+                        setAllocatedPhotos(defaultPhotos)
+                        setShowInviteForm(true)
+                      }}
+                      disabled={credits.team === 0}
+                      className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                        credits.team > 0
+                          ? 'bg-brand-secondary text-white hover:bg-brand-secondary-hover shadow-sm hover:shadow-md focus:ring-brand-secondary'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <PlusIcon className="h-5 w-5" />
+                      {t('buttons.inviteTeamMember')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -757,54 +830,10 @@ export default function TeamPage() {
         </div>
       </div>
 
-      {/* Setup Status */}
-      {isFreePlan && !teamData?.activeContext ? (
+      {/* Free Plan Banner */}
+      {isFreePlan && !teamData?.activeContext && (
         <div id="team-free-plan-banner" className="space-y-4">
           <FreePlanBanner variant="team" />
-        </div>
-      ) : !teamData?.activeContext ? (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
-              <svg className="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-yellow-800 font-semibold text-base block mb-1">
-                {t('setupRequired.title')}
-              </span>
-              <p className="text-yellow-700 text-sm mb-3">
-                {t('setupRequired.message')}
-              </p>
-              <Link
-                href="/app/contexts"
-                className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
-              >
-                {t('setupRequired.createButton')}
-              </Link>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div id="team-active-style" className="bg-brand-secondary-light border border-brand-secondary-lighter rounded-xl p-5 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-8 h-8 bg-brand-secondary-lighter rounded-full flex items-center justify-center mt-0.5">
-              <CheckIcon className="h-5 w-5 text-brand-secondary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-brand-secondary-text-light font-semibold text-base block mb-1">
-                {t('readyToInvite.title')}
-              </span>
-              <p className="text-brand-secondary-text text-sm">
-                {t('readyToInvite.activeStyle', { 
-                  name: (isFreePlan && (!teamData.activeContext.name || teamData.activeContext.name === 'unnamed')) 
-                    ? 'Free Package Style' 
-                    : teamData.activeContext.name 
-                })}
-              </p>
-            </div>
-          </div>
         </div>
       )}
 
@@ -1432,8 +1461,31 @@ export default function TeamPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
                     {t('inviteForm.photos.label')}
+                    <div className="relative group inline-flex">
+                      <div className="p-0.5 rounded-full hover:bg-gray-100 transition-colors cursor-help">
+                        <Info className="h-4 w-4 text-gray-400 group-hover:text-brand-primary transition-colors" />
+                      </div>
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 translate-y-1 transition-all duration-200 ease-out z-50 pointer-events-none">
+                        <div className="relative">
+                          <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white text-sm rounded-xl py-3 px-4 shadow-2xl w-72 whitespace-normal text-left border border-gray-700/50 backdrop-blur-sm">
+                            <div className="font-medium mb-1.5 text-white/90">
+                              Photo Credits Allocation
+                            </div>
+                            <div className="text-gray-300 text-xs leading-relaxed">
+                              {t('inviteForm.photos.tooltip', {
+                                count: PRICING_CONFIG.regenerations.invited,
+                                default: `This is the number of photos they can generate with customization. Each customization can be retried up to ${PRICING_CONFIG.regenerations.invited} times.`
+                              })}
+                            </div>
+                          </div>
+                          <div className="absolute left-1/2 -translate-x-1/2 top-full -mt-px">
+                            <div className="w-3 h-3 bg-gradient-to-br from-gray-900 to-gray-800 rotate-45 border-r border-b border-gray-700/50"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </label>
                   <input
                     type="number"
@@ -1475,6 +1527,29 @@ export default function TeamPage() {
                       })}
                     </p>
                   )}
+                  {allocatedPhotos <= 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
+                      <div className="flex items-start gap-2">
+                        <XCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-red-800 text-sm font-medium">
+                          {t('inviteForm.photos.required')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {allocatedPhotos > 0 && allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
+                      <div className="flex items-start gap-2">
+                        <XCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-red-800 text-sm font-medium">
+                          {t('inviteForm.insufficientCreditsModal', { 
+                            required: allocatedPhotos,
+                            available: calculatePhotosFromCredits(credits.team) 
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1514,10 +1589,22 @@ export default function TeamPage() {
                             {t('inviteForm.photoStyle.useActiveStyle', { default: 'Use Active Photo Style' })}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {t('inviteForm.photoStyle.useActiveStyleDesc', { 
-                              default: 'Team member will use the predefined photo style',
-                              name: teamData?.activeContext?.name || 'Active Style'
-                            })}
+                            {(() => {
+                              const styleName = teamData?.activeContext?.name || 'Active Style'
+                              const baseText = t('inviteForm.photoStyle.useActiveStyleDesc', { 
+                                default: 'Team member will use the predefined photo style',
+                                name: styleName
+                              })
+                              const parts = baseText.split(': ')
+                              if (parts.length > 1) {
+                                return (
+                                  <>
+                                    {parts[0]}: <span className="font-bold text-gray-700">{parts.slice(1).join(': ')}</span>
+                                  </>
+                                )
+                              }
+                              return baseText
+                            })()}
                           </div>
                         </div>
                       </label>
@@ -1546,20 +1633,20 @@ export default function TeamPage() {
                 <div className="bg-brand-primary-light border border-brand-primary/20 rounded-xl p-4">
                   <h4 className="text-sm font-semibold text-brand-primary mb-2">{t('inviteForm.whatHappensNext.title')}</h4>
                   <ul className="text-xs text-brand-primary space-y-1.5">
-                    <li className="flex items-start gap-2">
-                      <span className="text-brand-primary mt-0.5">•</span>
+                    <li className="flex gap-2">
+                      <span className="text-brand-primary flex-shrink-0">•</span>
                       <span>{t('inviteForm.whatHappensNext.step1')}</span>
                     </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-brand-primary mt-0.5">•</span>
+                    <li className="flex gap-2">
+                      <span className="text-brand-primary flex-shrink-0">•</span>
                       <span>{t('inviteForm.whatHappensNext.step2')}</span>
                     </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-brand-primary mt-0.5">•</span>
+                    <li className="flex gap-2">
+                      <span className="text-brand-primary flex-shrink-0">•</span>
                       <span>{t('inviteForm.whatHappensNext.step3')}</span>
                     </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-brand-primary mt-0.5">•</span>
+                    <li className="flex gap-2">
+                      <span className="text-brand-primary flex-shrink-0">•</span>
                       <span>{t('inviteForm.whatHappensNext.step4', { 
                         name: isFreePlan 
                           ? 'Free Package Style' 
@@ -1569,26 +1656,12 @@ export default function TeamPage() {
                   </ul>
                 </div>
 
-                {allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                    <div className="flex items-start gap-2">
-                      <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-red-800 text-sm font-medium">
-                        {t('inviteForm.insufficientCreditsModal', { 
-                          required: allocatedPhotos * PRICING_CONFIG.credits.perGeneration,
-                          available: credits.team 
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-6">
                   <button
                     type="submit"
-                    disabled={inviting || allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team}
+                    disabled={inviting || allocatedPhotos <= 0 || allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team}
                     className={`flex-1 px-6 py-3 rounded-lg font-medium min-h-[44px] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
-                      allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team
+                      allocatedPhotos <= 0 || allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team
                         ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                         : 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-sm hover:shadow-md disabled:opacity-50'
                     }`}

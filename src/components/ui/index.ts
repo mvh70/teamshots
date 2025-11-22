@@ -29,3 +29,4 @@ export { ErrorDisplay, ErrorBanner, ErrorCard, InlineError } from './ErrorDispla
 export { Toast } from './Toast'
 export { Badge } from './badge'
 export { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card'
+export { default as Tooltip } from './Tooltip'

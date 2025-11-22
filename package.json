@@ -37,7 +37,11 @@
     "type-check": "tsc --noEmit",
     "db:reset": "node scripts/reset-dev-db.js",
     "db:test:reset": "node tests/cleanup-test-db.js",
-    "db:test:setup": "node tests/setup-test-db.js"
+    "db:test:setup": "node tests/setup-test-db.js",
+    "queue:clear": "tsx scripts/clear-queue.ts",
+    "queue:clear:force": "tsx scripts/clear-queue.ts --force",
+    "queue:clear:all": "tsx scripts/clear-queue.ts --all",
+    "queue:clear:all:force": "tsx scripts/clear-queue.ts --all --force"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.0",

@@ -86,8 +86,8 @@ export default function ClothingColorSelector({
     if (isPredefined) return
     
     onChange({ 
-      // When a user provides any color, this becomes a concrete choice
-      type: 'predefined',
+      // Preserve the existing type (user-choice or predefined)
+      type: value.type || 'user-choice',
       colors: { 
         ...value.colors, 
         [colorType]: color 
@@ -116,90 +116,130 @@ export default function ClothingColorSelector({
       )}
 
       {/* Colors Section */}
-      <div className={`space-y-3 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
-        {/* Top Cover Color */}
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Top Cover (Blazer/Jacket)</label>
+      <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
+        {/* Outer Layer */}
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg" role="img" aria-label="jacket">🧥</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-900">
+                {t('outerLayer', { default: 'Outer Layer' })}
+              </label>
+              <p className="text-xs text-gray-500">
+                {t('outerLayerDesc', { default: 'Blazer, jacket, cardigan' })}
+              </p>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="color"
               value={normalizeColorToHex(value.colors?.topCover)}
               onChange={(e) => handleColorChange('topCover', e.target.value)}
               disabled={isPredefined || isDisabled}
-              className="h-8 w-12 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="h-10 w-14 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             <input
               type="text"
               value={value.colors?.topCover || ''}
               onChange={(e) => handleColorChange('topCover', e.target.value)}
               disabled={isPredefined || isDisabled}
-              className="flex-1 px-2 py-1 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="flex-1 px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="e.g., navy, black"
             />
           </div>
         </div>
 
-        {/* Top Base Color */}
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Base Layer (Shirt/T-shirt)</label>
+        {/* Shirt/Blouse */}
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg" role="img" aria-label="shirt">👔</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-900">
+                {t('shirtBlouse', { default: 'Shirt/Blouse' })}
+              </label>
+              <p className="text-xs text-gray-500">
+                {t('shirtBlouseDesc', { default: 'Dress shirt, blouse, polo' })}
+              </p>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="color"
               value={normalizeColorToHex(value.colors?.topBase)}
               onChange={(e) => handleColorChange('topBase', e.target.value)}
               disabled={isPredefined || isDisabled}
-              className="h-8 w-12 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="h-10 w-14 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             <input
               type="text"
               value={value.colors?.topBase || ''}
               onChange={(e) => handleColorChange('topBase', e.target.value)}
               disabled={isPredefined || isDisabled}
-              className="flex-1 px-2 py-1 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="flex-1 px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="e.g., white, blue"
             />
           </div>
         </div>
 
-        {/* Bottom Color */}
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Bottom (Pants/Skirt)</label>
+        {/* Pants/Skirt */}
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg" role="img" aria-label="pants">👖</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-900">
+                {t('pantsSkirt', { default: 'Pants/Skirt' })}
+              </label>
+              <p className="text-xs text-gray-500">
+                {t('pantsSkirtDesc', { default: 'Trousers, slacks, skirt' })}
+              </p>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="color"
               value={normalizeColorToHex(value.colors?.bottom)}
               onChange={(e) => handleColorChange('bottom', e.target.value)}
               disabled={isPredefined || isDisabled}
-              className="h-8 w-12 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="h-10 w-14 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             <input
               type="text"
               value={value.colors?.bottom || ''}
               onChange={(e) => handleColorChange('bottom', e.target.value)}
               disabled={isPredefined || isDisabled}
-              className="flex-1 px-2 py-1 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="flex-1 px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="e.g., black, gray"
             />
           </div>
         </div>
 
-        {/* Shoes Color */}
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Shoes</label>
+        {/* Shoes */}
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg" role="img" aria-label="shoes">👞</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-900">
+                {t('shoes', { default: 'Shoes' })}
+              </label>
+              <p className="text-xs text-gray-500">
+                {t('shoesDesc', { default: 'Dress shoes, casual shoes' })}
+              </p>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="color"
               value={normalizeColorToHex(value.colors?.shoes)}
               onChange={(e) => handleColorChange('shoes', e.target.value)}
               disabled={isPredefined || isDisabled}
-              className="h-8 w-12 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="h-10 w-14 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             <input
               type="text"
               value={value.colors?.shoes || ''}
               onChange={(e) => handleColorChange('shoes', e.target.value)}
               disabled={isPredefined || isDisabled}
-              className="flex-1 px-2 py-1 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="flex-1 px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="e.g., black, brown"
             />
           </div>

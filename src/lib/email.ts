@@ -152,6 +152,7 @@ interface SendTeamInviteEmailParams {
   inviteLink: string;
   creditsAllocated: number;
   firstName?: string;
+  inviterFirstName?: string;
   locale?: 'en' | 'es';
 }
 
@@ -164,6 +165,7 @@ export async function sendTeamInviteEmail({
   inviteLink,
   creditsAllocated,
   firstName,
+  inviterFirstName,
   locale = 'en',
 }: SendTeamInviteEmailParams) {
   try {
@@ -185,6 +187,7 @@ export async function sendTeamInviteEmail({
         inviteLink, 
         creditsAllocated,
         firstName,
+        inviterFirstName,
         locale 
       }),
     });

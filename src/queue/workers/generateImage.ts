@@ -4,7 +4,7 @@
  * Processes image generation jobs using AI providers
  */
 
-import { Worker, Job } from 'bullmq'
+import { Worker, Job, UnrecoverableError } from 'bullmq'
 import sharp from 'sharp'
 
 import { ImageGenerationJobData, redis } from '@/queue'
@@ -27,6 +27,7 @@ import { preprocessSelfie } from './generate-image/preprocessing'
 import { generateWithGemini } from './generate-image/gemini'
 import { evaluateGeneratedImage } from './generate-image/evaluator'
 import type { ImageEvaluationResult, SelfieReference } from './generate-image/evaluator'
+import { executeV2Workflow } from './generate-image/workflow-v2'
 import {
   downloadAssetAsBase64,
   downloadSelfieAsBase64,
@@ -41,12 +42,13 @@ const s3Client = createS3Client({ forcePathStyle: false })
 const BUCKET_NAME = getS3BucketName()
 const RATE_LIMIT_SLEEP_MS = 60_000
 const MAX_RATE_LIMIT_RETRIES = 3
+const PROGRESS_UPDATE_DEBOUNCE_MS = 100 // Minimum time between identical progress updates
 
 // Create worker
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
   'image-generation',
   async (job: Job<ImageGenerationJobData>) => {
-    const { generationId, personId, userId, selfieS3Key, selfieS3Keys, styleSettings, prompt, creditSource } = job.data
+    const { generationId, personId, userId, selfieS3Key, selfieS3Keys, styleSettings, prompt, creditSource, providerOptions } = job.data
     
     // Get attempt info for inclusion in all progress messages
     const maxAttempts = job.opts?.attempts || 3
@@ -69,25 +71,12 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       Logger.info(`Starting image generation for job ${job.id}, generation ${generationId}, attempt ${currentAttempt}/${maxAttempts}`)
       Logger.debug('Reference mode selected', { useCompositeReference: USE_COMPOSITE_REFERENCE })
       
-      // Update generation status to processing
-      await prisma.generation.update({
-        where: { id: generationId },
-        data: { 
-          status: 'processing',
-          updatedAt: new Date()
-        }
-      })
-      
-      const firstProgressMsg = formatProgressWithAttempt(getProgressMessage('starting-preprocessing'), 10)
-      Logger.info('Updating progress with message', { message: firstProgressMsg, progress: 10 })
-      await job.updateProgress({ progress: 10, message: firstProgressMsg })
-      
-      // Background removal processing disabled - using original selfie
-      Logger.debug('Using original selfie without background removal processing')
-      
+      // Check if generation exists before processing
       const generation = await prisma.generation.findUnique({
         where: { id: generationId },
         select: {
+          id: true,
+          status: true,
           styleSettings: true,
           context: {
             select: {
@@ -99,8 +88,47 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       })
 
       if (!generation) {
-        throw new Error('Generation not found')
+        throw new Error(`Generation record not found for ID: ${generationId}. The generation may have been deleted or never created.`)
       }
+
+      // Update generation status to processing (only if it exists)
+      try {
+        await prisma.generation.update({
+          where: { id: generationId },
+          data: { 
+            status: 'processing',
+            updatedAt: new Date()
+          }
+        })
+      } catch (updateError) {
+        // If update fails, log but continue (generation might have been deleted)
+        Logger.warn('Failed to update generation status to processing', {
+          generationId,
+          error: updateError instanceof Error ? updateError.message : String(updateError),
+          currentStatus: generation.status
+        })
+        // Re-check if generation still exists
+        const stillExists = await prisma.generation.findUnique({
+          where: { id: generationId },
+          select: { id: true }
+        })
+        if (!stillExists) {
+          throw new Error(`Generation ${generationId} was deleted during processing`)
+        }
+      }
+      
+      const firstProgressMsg = formatProgressWithAttempt(getProgressMessage('starting-preprocessing'), 10)
+      Logger.info('Updating progress with message', { message: firstProgressMsg, progress: 10 })
+      try {
+        await job.updateProgress({ progress: 10, message: firstProgressMsg })
+      } catch (err: unknown) {
+        Logger.warn('Failed to update initial progress', {
+          error: err instanceof Error ? err.message : String(err)
+        })
+      }
+      
+      // Background removal processing disabled - using original selfie
+      Logger.debug('Using original selfie without background removal processing')
 
       const savedStyleSettings = asRecord(generation.styleSettings)
       const contextSettings = asRecord(generation.context?.settings)
@@ -143,10 +171,16 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         throw new Error('At least one selfieS3Key is required')
       }
 
+      // Check if V2 workflow is requested (needed to skip preprocessing progress)
+      const useV2 = providerOptions?.useV2 === true
+      const skipPreprocessingProgress = useV2 // Skip preprocessing progress for V2 (Step 2 handles it)
+
       const primarySelfieKey = selfieS3Key ?? providedKeys[0]
 
       const processedSelfies: Record<string, Buffer> = {}
 
+      let lastProgressMessage = ''
+      let lastProgressUpdateTime = 0
       const preprocessWithProgress = async (key: string): Promise<Buffer> => {
         if (processedSelfies[key]) {
           return processedSelfies[key]
@@ -156,15 +190,39 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           selfieKey: key,
           styleSettings: mergedStyleSettings,
           downloadSelfie,
-          onStepProgress: (stepName) => {
-            const progressMsg = getProgressMessage(stepName)
-            const formattedMsg = formatProgressWithAttempt(progressMsg, 15)
-            job.updateProgress({ progress: 15, message: formattedMsg }).catch((err: unknown) => {
-              Logger.warn('Failed to update progress', {
-                error: err instanceof Error ? err.message : String(err)
-              })
-            })
-          }
+          skipLogoPlacement: useV2, // Skip logo placement for V2 (Step 1 handles it separately)
+          skipBackgroundProcessing: useV2, // Skip background processing for V2 (Step 2 handles it)
+          onStepProgress: skipPreprocessingProgress 
+            ? undefined // Skip progress updates for V2 workflow
+            : async (stepName) => {
+                const progressMsg = getProgressMessage(stepName)
+                const formattedMsg = formatProgressWithAttempt(progressMsg, 15)
+
+                // Only debounce identical messages within a short time window
+                const now = Date.now()
+                if (formattedMsg === lastProgressMessage && now - lastProgressUpdateTime < PROGRESS_UPDATE_DEBOUNCE_MS) {
+                  Logger.debug('Skipping duplicate progress update', {
+                    stepName,
+                    message: formattedMsg.substring(0, 50)
+                  })
+                  return
+                }
+
+                try {
+                  await job.updateProgress({ progress: 15, message: formattedMsg })
+                  lastProgressMessage = formattedMsg
+                  lastProgressUpdateTime = Date.now()
+                  Logger.debug('Progress update sent for preprocessing step', {
+                    stepName,
+                    progress: 15,
+                    messagePreview: formattedMsg.substring(0, 50)
+                  })
+                } catch (err: unknown) {
+                  Logger.warn('Failed to update progress', {
+                    error: err instanceof Error ? err.message : String(err)
+                  })
+                }
+              }
         })
         processedSelfies[key] = buffer
         return buffer
@@ -194,7 +252,8 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         primarySelfieKey,
         processedSelfies,
         options: {
-          useCompositeReference: USE_COMPOSITE_REFERENCE
+          useCompositeReference: USE_COMPOSITE_REFERENCE,
+          skipLogoInComposite: useV2 // Skip logo in composite for V2 (Step 1/2 handle it separately)
         },
         assets: {
           downloadSelfie,
@@ -213,11 +272,59 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
       const finalPrompt = labelInstruction ? `${basePrompt}\n\n${labelInstruction}` : basePrompt
 
-      await job.updateProgress({ progress: 20, message: formatProgressWithAttempt(getProgressMessage(), 20) })
+      try {
+        await job.updateProgress({ progress: 20, message: formatProgressWithAttempt(getProgressMessage(), 20) })
+      } catch (err: unknown) {
+        Logger.warn('Failed to update prompt generation progress', {
+          error: err instanceof Error ? err.message : String(err)
+        })
+      }
 
       Logger.info('Generated Prompt for Gemini', { prompt: finalPrompt })
 
-      if (SKIP_GEMINI_PROMPT) {
+      let approvedImageBuffers: Buffer[] | undefined
+
+      if (useV2) {
+        Logger.info('Using V2 workflow for image generation', { generationId })
+
+        try {
+          // For V2 workflow, we need to modify the selfie references to exclude logos
+          // The V2 workflow handles logos separately in Step 2
+          const v2SelfieReferences = selfieReferences.map(ref => ({
+            label: ref.label,
+            base64: ref.base64,
+            mimeType: ref.mimeType
+          }))
+
+          const v2Result = await executeV2Workflow({
+            job,
+            generationId,
+            personId,
+            userId,
+            selfieReferences: v2SelfieReferences,
+            styleSettings: mergedStyleSettings,
+            prompt: basePrompt, // Use base prompt without label instructions for V2
+            aspectRatio,
+            resolution: undefined, // V2 workflow handles resolution internally
+            downloadAsset,
+            currentAttempt,
+            maxAttempts,
+            debugMode: providerOptions?.debugMode === true
+          })
+
+          approvedImageBuffers = v2Result.approvedImageBuffers
+
+        } catch (error) {
+          Logger.error('V2 workflow failed', {
+            generationId,
+            error: error instanceof Error ? error.message : String(error)
+          })
+          throw error
+        }
+
+      } else {
+        // Original V1 workflow
+        if (SKIP_GEMINI_PROMPT) {
         Logger.warn('SKIP_GEMINI_PROMPT enabled – skipping Gemini call and returning prompt only')
 
         await prisma.generation.update({
@@ -253,6 +360,11 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       const aspectRatioConfig =
         ASPECT_RATIOS[resolvedAspectRatioId] ?? DEFAULT_ASPECT_RATIO
 
+      // Extract resolution from providerOptions or environment variable
+      const resolution = (providerOptions?.resolution as '1K' | '2K' | '4K' | undefined) ||
+        (Env.string('GEMINI_IMAGE_RESOLUTION', '') as '1K' | '2K' | '4K' | undefined) ||
+        undefined
+
       const MAX_LOCAL_GENERATION_ATTEMPTS = 2
       let localAttempt = 0
       let approvedImageBuffers: Buffer[] | null = null
@@ -272,7 +384,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         let rateLimitRetries = 0
         while (true) {
           try {
-            generatedBuffers = await generateWithGemini(finalPrompt, referenceImages, aspectRatio)
+            generatedBuffers = await generateWithGemini(finalPrompt, referenceImages, aspectRatio, resolution)
             break
           } catch (error) {
             if (isModelNotFoundError(error)) {
@@ -456,20 +568,103 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         })
       }
 
-      if (!approvedImageBuffers) {
+      if (!approvedImageBuffers || approvedImageBuffers.length === 0) {
         throw new Error('Generated images could not be approved after evaluation retries')
+      }
+      } // End of original V1 workflow
+
+      // Run final evaluation on V2 output if using V2 workflow
+      if (useV2 && approvedImageBuffers && approvedImageBuffers.length > 0) {
+        const resolvedAspectRatioId =
+          (aspectRatio as AspectRatioId | undefined) ?? (DEFAULT_ASPECT_RATIO.id as AspectRatioId)
+        const aspectRatioConfig =
+          ASPECT_RATIOS[resolvedAspectRatioId] ?? DEFAULT_ASPECT_RATIO
+
+        const processedVariants = await Promise.all(
+          approvedImageBuffers.map(async (buffer: Buffer, index: number) => {
+            const metadata = await sharp(buffer).metadata()
+            const pngBuffer = await sharp(buffer).png().toBuffer()
+            return {
+              buffer: pngBuffer,
+              base64: pngBuffer.toString('base64'),
+              width: metadata.width ?? null,
+              height: metadata.height ?? null,
+              index
+            }
+          })
+        )
+
+        // Use simplified evaluation for V2 (no complex references needed)
+        const evaluations: ImageEvaluationResult[] = []
+        let allApproved = true
+
+        await job.updateProgress({
+          progress: 95,
+          message: formatProgressWithAttempt({
+            message: 'Running final quality check',
+            emoji: '🔍'
+          }, 95)
+        })
+
+        for (let index = 0; index < processedVariants.length; index += 1) {
+          const variant = processedVariants[index]
+          const evaluation = await evaluateGeneratedImage({
+            imageBase64: variant.base64,
+            imageIndex: index,
+            actualWidth: variant.width,
+            actualHeight: variant.height,
+            expectedWidth: aspectRatioConfig.width,
+            expectedHeight: aspectRatioConfig.height,
+            aspectRatioId: aspectRatioConfig.id,
+            aspectRatioDescription,
+            shotLabel,
+            shotDescription,
+            generationPrompt: finalPrompt,
+            labelInstruction,
+            selfieReferences,
+            compositeReference: undefined, // V2 doesn't use composite references
+            logoReference: undefined, // V2 handles branding separately
+            backgroundReference: undefined // V2 handles background separately
+          })
+          evaluations.push(evaluation)
+          if (evaluation.status !== 'Approved') {
+            allApproved = false
+          }
+        }
+
+        if (!allApproved) {
+          Logger.warn('V2 final output failed evaluation', {
+            generationId,
+            evaluations: evaluations.map((result, idx) => ({
+              variation: idx + 1,
+              status: result.status,
+              reasonPreview: result.reason.slice(0, 200)
+            }))
+          })
+          // For V2, if final evaluation fails, we still proceed but log the issue
+          // This maintains backward compatibility while allowing V2 workflow to complete
+          Logger.info('V2 workflow completed despite evaluation concerns', { generationId })
+        } else {
+          Logger.info('V2 final evaluation passed', { generationId })
+        }
       }
 
       // Upload generated images to S3
       const generatedImageKeys = await uploadGeneratedImagesToS3({
-        images: approvedImageBuffers,
+        images: approvedImageBuffers!,
         bucketName: BUCKET_NAME,
         s3Client,
         personId,
         generationId
       })
-      await job.updateProgress({ progress: 80, message: formatProgressWithAttempt(getProgressMessage(), 80) })
-      
+      try {
+        await job.updateProgress({ progress: 80, message: formatProgressWithAttempt(getProgressMessage(), 80) })
+      } catch (err: unknown) {
+        Logger.warn('Failed to update upload progress', {
+          error: err instanceof Error ? err.message : String(err)
+        })
+      }
+
       // Update generation record with results
       await prisma.generation.update({
         where: { id: generationId },
@@ -482,12 +677,18 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           updatedAt: new Date()
         }
       })
-      
-      await job.updateProgress({ progress: 100, message: formatProgressWithAttempt({
-        message: 'All done! Your photo is ready!',
-        emoji: '✨'
-      }, 100) })
-      
+
+      try {
+        await job.updateProgress({ progress: 100, message: formatProgressWithAttempt({
+          message: 'All done! Your photo is ready!',
+          emoji: '✨'
+        }, 100) })
+      } catch (err: unknown) {
+        Logger.warn('Failed to update completion progress', {
+          error: err instanceof Error ? err.message : String(err)
+        })
+      }
+
       Logger.info(`Image generation completed for job ${job.id}`)
       
       Telemetry.increment('generation.worker.success')
@@ -553,7 +754,17 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       
       // Send support notification email on failure (only on final attempt to avoid spam)
       const maxAttempts = job.opts?.attempts || 3
-      const isFinalAttempt = job.attemptsMade >= maxAttempts - 1
+      
+      // Check if this is a V2 workflow failure (internal retries exhausted)
+      // These errors indicate logical failure after multiple internal attempts, so we shouldn't retry the whole job
+      const isWorkflowFailure = error instanceof Error && (
+        error.message.includes('Step 1 failed after') ||
+        error.message.includes('Step 5 failed after') ||
+        error.message.includes('Step 7 failed after') ||
+        error.message.includes('Step 4 validation failed')
+      )
+      
+      const isFinalAttempt = job.attemptsMade >= maxAttempts - 1 || isWorkflowFailure
       
       // Get current progress for retry message
       const currentProgress = typeof job.progress === 'object' && job.progress !== null && 'progress' in job.progress 
@@ -696,6 +907,9 @@ Error Details: ${JSON.stringify(errorDetails, null, 2)}`,
       }
       
       // Rethrow to trigger retry mechanism if attempts remain
+      if (isWorkflowFailure) {
+        throw new UnrecoverableError(error instanceof Error ? error.message : String(error))
+      }
       throw error
     }
   },
@@ -940,6 +1154,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   }
   return value as Record<string, unknown>
 }
+
+// Exported utilities for V2 workflow rate limit handling
+export { isRateLimitError, RATE_LIMIT_SLEEP_MS }
+export { delay }
 
 export default imageGenerationWorker
 

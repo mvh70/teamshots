@@ -567,6 +567,12 @@
         "buyMore": "Buy more photos"
       },
       "generate": {
+        "photo": "photo",
+        "photos": "photos",
+        "photoCredit": "photo credit",
+        "photoCredits": "photo credits",
+        "perPhoto": "per photo",
+        "retriesPerPhoto": "retries per photo",
         "getSelfie": "Get selfie",
         "getSelfieDescription": "Upload a photo or use your camera to take a selfie.",
         "readyToGenerate": "Ready to generate",
@@ -585,7 +591,10 @@
         "insufficientPhotosMessage": "You need {required} photos to generate a photo. You currently have {current} photos. Time to top up!",
     "generatePhoto": "Generate photo",
     "customizeFirstTooltip": "Customize your photo with the editable sections below",
-    "buyMorePhotos": "Buy more photos",
+        "buyMorePhotos": "Buy more photos",
+        "insufficientCredits": "Insufficient photo credits",
+        "insufficientCreditsMessage": "You need {required, plural, one {# photo credit} other {# photo credits}} to generate. You currently have {current, plural, one {# photo credit} other {# photo credits}}. Time to top up!",
+        "buyMoreCredits": "Buy more credits",
         "noPhotosTitle": "No photos available",
         "noPhotosMessage": "You need photos to generate photos (think of them as tickets to looking amazing). Purchase photos to get started with photo generation.",
         "noTeamPhotosTitle": "No team photos available",
@@ -1478,11 +1487,12 @@
       "text": "You've been invited to join {teamName} on TeamShotsPro.\n\nUse this link to accept: {inviteLink}\n\nYou have {photosAllocated} photos to get started.",
       "title": "Team invitation",
       "greeting": "You've been invited to join {teamName}'s team on TeamShotsPro. Good news: no awkward office photo sessions required.",
-      "greetingWithName": "Hi {firstName}, you've been invited to join {teamName}'s team on TeamShotsPro. Good news: no awkward office photo sessions required.",
+      "greetingWithName": "Hi {firstName}, {inviterFirstName} has invited you to join {teamName}'s team on TeamShotsPro. Why? To get consistent professional headshots for the team without the hassle of photoshoots. What you get: {credits} credits to create {photos} polished photos from your selfie. Good news: no awkward poses required – we'll handle the professional magic.",
       "whatYouGet": "What you get:",
       "photos": "{photos} professional photos ({variations} variations)",
       "teamBranded": "Team-branded photo generation",
-      "photosDescription": "You have received {photos} photos. From just a selfie. Your selfie doesn't need to be perfect. We'll handle the professional polish.",
+      "photosDescription": "You've received {credits} photo credits to generate {photos} photos. From just a selfie. Your selfie doesn't need to be perfect. We'll handle the professional polish.",
+      "mobileAdvice": "For the best experience, open this on your mobile device. That's where you'll take your selfie.",
       "noSignup": "No signup required",
       "directAccess": "Direct access to upload your selfie",
       "acceptButton": "Accept invitation",
@@ -1581,6 +1591,38 @@
         "userChoice": "User choice",
         "notSet": "Not set"
       },
+      "lockedSections": {
+        "teaser": {
+          "title": "{count} more settings configured",
+          "subtitle": "Customize the sections above to see what else has been set"
+        },
+        "revealed": {
+          "title": "Great! Your customizations are saved",
+          "subtitle": "Here's what your admin has configured for the rest:"
+        }
+      },
+      "autosave": {
+        "saving": "Saving...",
+        "saved": "All changes saved",
+        "error": "Save failed",
+        "retry": "Retry",
+        "idle": "Autosave on"
+      },
+      "progress": {
+        "editable": "{count} of {total} editable",
+        "editableTeam": "{count} of {total} editable by team members"
+      },
+      "tooltips": {
+        "predefinedToggle": "Predefined locks this setting for all team members. User Choice lets each person customize it.",
+        "background": "Choose the background style for your photos. This sets the overall environment and mood.",
+        "branding": "Include your company logo in generated photos to maintain brand consistency.",
+        "shotType": "Different framings work better for different platforms. Headshots for LinkedIn, full body for team pages.",
+        "clothing": "Set the dress code for your team photos - from casual to business formal.",
+        "clothingColors": "Specify exact colors for clothing items to match your brand palette.",
+        "expression": "Control the facial expression and mood of your team photos.",
+        "lighting": "Set the lighting style to match your brand aesthetic - from natural to studio lighting.",
+        "pose": "Choose a body pose and positioning that matches your professional image and brand style."
+      },
       "toggle": {
         "predefined": "Predefined",
         "userChoice": "User Choice"
@@ -1589,10 +1631,14 @@
       "sections": {
         "photoStyle": "Photo style settings",
         "photoStyleDesc": "Background, branding, and overall photo style",
-        "composition": "Composition settings",
+        "composition": "Composition Settings",
         "compositionDesc": "Background, branding, and shot type",
-        "userStyle": "User style settings",
-        "userStyleDesc": "Clothing, expression, and lighting preferences"
+        "userStyle": "User Style Settings",
+        "userStyleDesc": "Clothing, expression, and lighting preferences",
+        "customizable": "Customize Your Style",
+        "customizableDesc": "Personalize these settings to match your preferences",
+        "preset": "Team Preset Settings",
+        "presetDesc": "These settings are configured by your team admin"
       },
       "categories": {
         "background": {
@@ -1626,6 +1672,10 @@
         "lighting": {
           "title": "Lighting",
           "description": "Lighting style and mood"
+        },
+        "pose": {
+          "title": "Pose",
+          "description": "Body pose and positioning"
         }
       },
       "background": {
@@ -1699,7 +1749,15 @@
       "clothingColors": {
         "title": "Clothing Colors",
         "subtitle": "Choose colors for clothing items",
-        "predefined": "Predefined"
+        "predefined": "Predefined",
+        "outerLayer": "Outer Layer",
+        "outerLayerDesc": "Blazer, jacket, cardigan",
+        "shirtBlouse": "Shirt/Blouse",
+        "shirtBlouseDesc": "Dress shirt, blouse, polo",
+        "pantsSkirt": "Pants/Skirt",
+        "pantsSkirtDesc": "Trousers, slacks, skirt",
+        "shoes": "Shoes",
+        "shoesDesc": "Dress shoes, casual shoes"
       },
       "shotType": {
         "title": "Shot Type",
@@ -1710,6 +1768,45 @@
         "title": "Expression",
         "subtitle": "Choose a facial expression",
         "predefined": "Predefined"
+      },
+      "pose": {
+        "title": "Pose",
+        "subtitle": "Choose a body pose and positioning",
+        "predefined": "Predefined",
+        "poses": {
+          "power_classic": {
+            "label": "Power Pose - Classic",
+            "description": "Executive, founder, leadership"
+          },
+          "power_crossed": {
+            "label": "Power Pose - Arms Crossed",
+            "description": "Professional, expert, corporate"
+          },
+          "casual_confident": {
+            "label": "Casual Confident",
+            "description": "Modern professional, tech, creative"
+          },
+          "approachable_cross": {
+            "label": "Approachable Expert",
+            "description": "Consultant, coach, service"
+          },
+          "walking_confident": {
+            "label": "Walking - Purposeful",
+            "description": "Dynamic, modern, leadership"
+          },
+          "sitting_engaged": {
+            "label": "Sitting Forward - Engaged",
+            "description": "Coach, consultant, empathetic"
+          },
+          "executive_seated": {
+            "label": "Seated Executive",
+            "description": "Executive, c-suite, formal"
+          },
+          "thinker": {
+            "label": "The Thinker",
+            "description": "Thought leader, expert, strategic"
+          }
+        }
       }
     }
   },
@@ -1809,11 +1906,13 @@
         "placeholder": "John"
       },
       "photos": {
-        "label": "Photos to allocate",
-        "hint": "Each photo can be retried up to {count} times for free"
+        "label": "Number of photos",
+        "hint": "Each photo can be retried up to {count} times for free",
+        "tooltip": "This is the number of photos they can generate with customization. Each customization can be retried up to {count} times.",
+        "required": "Number of photos must be greater than 0"
       },
       "success": "Invitation sent successfully to {email}",
-      "insufficientCreditsModal": "You need {required} credits but only have {available} available. Please reduce the photo allocation or purchase more credits.",
+      "insufficientCreditsModal": "You need {required} photo credits but only have {available} available. Please reduce the photo allocation or purchase more photo credits.",
       "photoStyle": {
         "label": "Photo style",
         "useActiveStyle": "Use active photo style",
@@ -1919,6 +2018,7 @@
         "noActiveContext": "You need to create and set an active photo style before inviting team members. Set it up first, then come back!",
         "insufficientTeamPhotos": "Not enough team photos. You have {available} available, but need {required}. Time to top up!",
         "invalidPhotoAllocation": "Photos must be allocated in multiples of {photos} (the cost per photo generation). For example: {photos}, {photos2}, {photos3}, etc.",
+        "invalidCreditAllocation": "Photos must be allocated in multiples of {credits} credits (the cost per photo generation). For example: {credits2} credits ({credits} credits × 2), {credits3} credits ({credits} credits × 3), etc.",
         "teamSizeLimitReached": "Your Pro Small plan allows up to {limit} team members. Upgrade to Pro Large for unlimited team members."
       },
       "photos": {
@@ -2067,13 +2167,16 @@
     "alerts": {
       "selectAtLeastTwoSelfies": "Please select at least 2 selfies to continue.",
       "insufficientCreditsWithName": "You don't have enough credits to generate photos. Please contact {adminName} ({adminEmail}) to request more credits.",
+      "customizePhoto": "Please customize your photo settings before generating",
       "insufficientCreditsWithEmail": "You don't have enough credits to generate photos. Please contact your team admin at {adminEmail} to request more credits.",
       "insufficientCreditsGeneric": "You don't have enough credits to generate photos. Please contact your team admin to request more credits.",
       "generationFailed": "Failed to start generation. Please try again."
     },
     "common": {
       "continue": "Continue",
-      "credits": "credits"
+      "credits": "credits",
+      "photoCredit": "photo credit",
+      "photoCredits": "photo credits"
     },
     "getStarted": {
       "title": "Get started",

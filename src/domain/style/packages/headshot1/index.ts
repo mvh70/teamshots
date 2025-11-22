@@ -4,8 +4,8 @@ import {
   buildStandardPrompt,
   generateBackgroundPrompt,
   generateBrandingPrompt,
-  generateExpressionPrompt,
-  generateWardrobePrompt
+  generateWardrobePrompt,
+  generatePosePrompt
 } from '../../prompt-builders'
 import { getDefaultPresetSettings } from '../standard-settings'
 import { setPath, getValueOrDefault } from '../shared/utils'
@@ -15,7 +15,7 @@ import {
   deserializeBranding,
   deserializeClothing,
   deserializeClothingColors,
-  deserializeShotType,
+  deserializePose,
   deserializeExpression
 } from '../shared/deserializers'
 
@@ -35,12 +35,13 @@ const DEFAULTS = {
       shoes: 'brown',
       bottom: 'Gray'
     }
-  }
+  },
+  pose: { type: 'power_crossed' as const },
+  shotType: { type: 'medium-shot' as const }
 }
 
 function buildPrompt(settings: PhotoStyleSettings): string {
   const {
-    presetDefaults,
     effectiveSettings,
     payload
   } = buildStandardPrompt({
@@ -49,16 +50,24 @@ function buildPrompt(settings: PhotoStyleSettings): string {
     presetDefaults: HEADSHOT1_PRESET_DEFAULTS
   })
 
-  const expressionResult = generateExpressionPrompt(effectiveSettings.expression)
-  const currentArmPose = (payload.subject as Record<string, unknown>)?.pose as Record<string, unknown> | undefined
-  const armsPose = currentArmPose?.arms as string
-  const defaultPose = {
-    arms: armsPose,
-    description: expressionResult.poseDescription
+  // Generate pose prompt - respects pose presets if selected
+  const poseResult = generatePosePrompt(effectiveSettings)
+  
+  // Override pose fields from buildStandardPrompt with template-based instructions
+  // This ensures pose templates take precedence over component-based resolution
+  setPath(payload, 'subject.pose.expression', poseResult.expression)
+  setPath(payload, 'subject.pose.description', poseResult.description)
+  setPath(payload, 'subject.pose.body_angle', poseResult.bodyAngle)
+  setPath(payload, 'subject.pose.head_position', poseResult.headPosition)
+  setPath(payload, 'subject.pose.shoulder_position', poseResult.shoulderPosition)
+  setPath(payload, 'subject.pose.weight_distribution', poseResult.weightDistribution)
+  setPath(payload, 'subject.pose.arms', poseResult.arms)
+  if (poseResult.sittingPosition) {
+    setPath(payload, 'subject.pose.sitting_position', poseResult.sittingPosition)
   }
-  setPath(payload, 'subject.pose.expression', expressionResult.expression)
-  setPath(payload, 'subject.pose.description', defaultPose.description)
-  setPath(payload, 'subject.pose.arms', defaultPose.arms)
+  if (poseResult.minimumShotType) {
+    setPath(payload, 'subject.pose.minimum_shot_type', poseResult.minimumShotType)
+  }
 
   const background = effectiveSettings.background
   if (background) {
@@ -80,7 +89,7 @@ function buildPrompt(settings: PhotoStyleSettings): string {
   const wardrobeResult = generateWardrobePrompt({
     clothing: effectiveSettings.clothing ?? DEFAULTS.clothing,
     clothingColors: effectiveSettings.clothingColors ?? DEFAULTS.clothingColors,
-    shotType: effectiveSettings.shotType?.type ?? presetDefaults.shotType?.type
+    shotType: DEFAULTS.shotType.type // Fixed to medium-shot for headshot1
   })
   setPath(payload, 'subject.wardrobe', wardrobeResult.wardrobe)
 
@@ -88,12 +97,14 @@ function buildPrompt(settings: PhotoStyleSettings): string {
     branding: effectiveSettings.branding,
     styleKey: wardrobeResult.styleKey,
     detailKey: wardrobeResult.detailKey,
-    defaultPose
+    defaultPose: {
+      arms: poseResult.arms,
+      description: poseResult.description
+    }
   })
   setPath(payload, 'subject.branding', brandingResult.branding)
-  // Use default pose - no special branding poses in headshot1
-  setPath(payload, 'subject.pose.arms', defaultPose.arms)
-  setPath(payload, 'subject.pose.description', defaultPose.description)
+  // Use pose from generatePosePrompt - no special branding poses in headshot1
+  // (pose settings are already set by buildStandardPrompt and generatePosePrompt)
 
   return JSON.stringify(payload, null, 2)
 }
@@ -102,7 +113,7 @@ export const headshot1: ClientStylePackage = {
   id: 'headshot1',
   label: 'Professional Headshot',
   version: 1,
-  visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'shotType', 'expression'],
+  visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'pose', 'expression'],
   availableBackgrounds: ['office', 'tropical-beach', 'busy-city', 'neutral', 'gradient', 'custom'],
   defaultSettings: DEFAULTS,
   defaultPresetId: HEADSHOT1_PRESET_ID,
@@ -116,8 +127,9 @@ export const headshot1: ClientStylePackage = {
       branding: getValueOrDefault(settings.branding, DEFAULTS.branding),
       clothing: getValueOrDefault(settings.clothing, DEFAULTS.clothing),
       clothingColors: getValueOrDefault(settings.clothingColors, DEFAULTS.clothingColors),
-      shotType: getValueOrDefault(settings.shotType, DEFAULTS.shotType),
+      pose: getValueOrDefault(settings.pose, DEFAULTS.pose),
       expression: getValueOrDefault(settings.expression, HEADSHOT1_PRESET_DEFAULTS.expression),
+      shotType: DEFAULTS.shotType, // Fixed to medium-shot for headshot1
       // Runtime context (passed in by caller, not from persisted settings)
       aspectRatio: settings.aspectRatio,
       subjectCount: settings.subjectCount,
@@ -135,20 +147,20 @@ export const headshot1: ClientStylePackage = {
       branding: ui.branding,
       clothing: ui.clothing,
       clothingColors: ui.clothingColors || { type: 'user-choice' },
-      shotType: ui.shotType,
+      pose: ui.pose,
       expression: ui.expression
     }),
     deserialize: (raw) => {
       const r = raw as Record<string, unknown>
       
       // Deserialize only the categories exposed to users via visibleCategories
-      // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'shotType', 'expression']
+      // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'pose', 'expression']
       // Note: aspectRatio is derived from preset/shotType, not a direct user input
       const background = deserializeBackground(r)
       const branding = deserializeBranding(r)
       const clothing = deserializeClothing(r, DEFAULTS.clothing)
       const clothingColors = deserializeClothingColors(r, DEFAULTS.clothingColors)
-      const shotType = deserializeShotType(r, DEFAULTS.shotType)
+      const pose = deserializePose(r, DEFAULTS.pose)
       const expression = deserializeExpression(r, HEADSHOT1_PRESET_DEFAULTS.expression)
 
       return {
@@ -157,7 +169,7 @@ export const headshot1: ClientStylePackage = {
         branding,
         clothing,
         clothingColors,
-        shotType,
+        pose,
         expression
       }
     }

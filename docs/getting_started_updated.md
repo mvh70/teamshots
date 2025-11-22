@@ -1166,7 +1166,7 @@ Create `lib/gemini.ts`:
 import { VertexAI } from '@google-cloud/vertexai'
 
 const project = process.env.GOOGLE_PROJECT_ID!
-const location = process.env.GOOGLE_LOCATION ?? 'us-central1'
+const location = process.env.GOOGLE_LOCATION ?? 'global'
 const modelName = process.env.GEMINI_IMAGE_MODEL ?? 'gemini-2.5-flash'
 
 const vertexAI = new VertexAI({ project, location })

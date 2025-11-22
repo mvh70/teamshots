@@ -9,7 +9,8 @@ import { useSession } from 'next-auth/react'
 import { useCredits } from '@/contexts/CreditsContext'
 import { BRAND_CONFIG } from '@/config/brand'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
-import { PRICING_CONFIG } from '@/config/pricing'
+import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
+import { calculatePhotosFromCredits, getRegenerationCount } from '@/domain/pricing'
 import { Toast, GenerationGrid } from '@/components/ui'
 import { fetchAccountMode } from '@/domain/account/accountMode'
 import { UpgradePrompt } from '@/components/generations/UpgradePrompt'
@@ -25,6 +26,7 @@ export default function PersonalGenerationsPage() {
   const currentUserId = session?.user?.id
   const currentUserName = session?.user?.name || ''
   const [failureToast, setFailureToast] = useState<string | null>(null)
+  const [subscriptionTier, setSubscriptionTier] = useState<PricingTier | null>(null)
   const { timeframe, context, setTimeframe, setContext, filterGenerated } = useGenerationFilters()
   const { context: onboardingContext } = useOnboardingState()
   const { startTour } = useOnbordaTours()
@@ -47,6 +49,9 @@ export default function PersonalGenerationsPage() {
       try {
         const accountMode = await fetchAccountMode()
         if (cancelled) return
+
+        // Store subscription tier for regeneration count
+        setSubscriptionTier(accountMode.subscriptionTier as PricingTier | null)
 
         if (accountMode.mode === 'pro') {
           window.location.href = '/app/generations/team'
@@ -256,13 +261,15 @@ export default function PersonalGenerationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">{tg('title')}</h1>
-                <Link href="/app/generate/selfie?type=personal" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-4">{tg('title')}</h1>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Filters and Generate Button Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
         <select value={timeframe} onChange={(e) => setTimeframe(e.target.value as 'all'|'7d'|'30d')} className="border rounded-md px-2 py-1 text-sm">
           <option value="all">All time</option>
           <option value="7d">Last 7 days</option>
@@ -274,7 +281,53 @@ export default function PersonalGenerationsPage() {
             <option key={name} value={name}>{name}</option>
           ))}
         </select>
-        <div className="ml-auto text-xs text-gray-600">{PRICING_CONFIG.credits.perGeneration} credits per generation</div>
+        </div>
+
+        {/* Prominent Generate Button with Cost Info */}
+        <div className="flex flex-col items-end md:items-center gap-2 w-full md:w-auto">
+          <Link 
+            href="/app/generate/selfie?type=personal" 
+            className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-lg font-semibold text-base md:text-lg lg:text-xl shadow-sm transition-all hover:shadow-md flex items-center gap-2 whitespace-nowrap"
+            style={{
+              backgroundColor: BRAND_CONFIG.colors.primary,
+              color: 'white'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
+            }}
+          >
+            <svg 
+              className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              strokeWidth={2.5} 
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 4.5v15m7.5-7.5h-15"
+              />
+            </svg>
+            New generation
+          </Link>
+          
+          {/* Cost information */}
+          <div className="text-xs md:text-sm text-gray-600 text-right md:text-center space-y-0.5">
+            <div>
+              <span className="font-medium" style={{ color: BRAND_CONFIG.colors.primary }}>
+                {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)} {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration) === 1 ? t('photoCredit') : t('photoCredits')}
+              </span>
+              <span> {t('perPhoto')}</span>
+            </div>
+            <div className="text-gray-500">
+              {subscriptionTier ? getRegenerationCount(subscriptionTier) : 3} {t('retriesPerPhoto')}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Content */}

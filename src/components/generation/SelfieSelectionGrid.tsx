@@ -1,8 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { CameraIcon } from '@heroicons/react/24/outline'
 import { SelfieGrid } from '@/components/ui'
+import SelfieUploadPlaceholder from './SelfieUploadPlaceholder'
 
 export interface GridSelfieItem {
   id: string
@@ -65,14 +65,8 @@ export default function SelfieSelectionGrid({
           </div>
         )
       })}
-      {showUploadTile && (
-        <button
-          onClick={onUploadClick}
-          className="aspect-square bg-white rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-sm text-gray-600 hover:border-brand-primary hover:text-brand-primary transition-colors"
-        >
-          <CameraIcon className="w-7 h-7 mb-2" />
-          <span>Upload new selfie</span>
-        </button>
+      {showUploadTile && onUploadClick && (
+        <SelfieUploadPlaceholder onUploadClick={onUploadClick} />
       )}
     </SelfieGrid>
   )

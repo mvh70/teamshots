@@ -54,9 +54,39 @@ export async function buildVerticalSelfieComposite({
     const key = selfieKeys[index]
     const selfieBuffer = await getSelfieBuffer(key)
 
-    const selfieMetadata = await sharp(selfieBuffer).metadata()
-    const selfieWidth = selfieMetadata.width ?? 0
-    const selfieHeight = selfieMetadata.height ?? 0
+    // Apply EXIF orientation to ensure correct display
+    // Sharp doesn't auto-apply EXIF orientation, so we need to handle it manually
+    const selfieSharp = sharp(selfieBuffer)
+    const selfieMetadata = await selfieSharp.metadata()
+    
+    // Rotate based on EXIF orientation if present
+    // Orientation values: 1=normal, 3=180°, 6=90°CW, 8=90°CCW
+    let orientedBuffer = selfieBuffer
+    if (selfieMetadata.orientation && selfieMetadata.orientation > 1) {
+      // Map EXIF orientation to rotation angle
+      // Orientation 3 = 180°, 6 = -90° (or 270°), 8 = 90°
+      let rotationAngle = 0
+      if (selfieMetadata.orientation === 3) {
+        rotationAngle = 180
+      } else if (selfieMetadata.orientation === 6) {
+        rotationAngle = -90 // or 270
+      } else if (selfieMetadata.orientation === 8) {
+        rotationAngle = 90
+      }
+      
+      if (rotationAngle !== 0) {
+        // Rotate and remove EXIF orientation to prevent double-rotation
+        orientedBuffer = await selfieSharp
+          .rotate(rotationAngle)
+          .withMetadata({ orientation: 1 }) // Reset orientation to normal
+          .toBuffer()
+      }
+    }
+    
+    // Get metadata after orientation correction
+    const orientedMetadata = await sharp(orientedBuffer).metadata()
+    const selfieWidth = orientedMetadata.width ?? 0
+    const selfieHeight = orientedMetadata.height ?? 0
 
     const labelOverlay = await createTextOverlayDynamic(
       `SUBJECT1-SELFIE${index + 1}`,
@@ -70,7 +100,7 @@ export async function buildVerticalSelfieComposite({
 
     maxContentWidth = Math.max(maxContentWidth, selfieWidth, labelWidth)
     selfieEntries.push({
-      selfieBuffer,
+      selfieBuffer: orientedBuffer,
       selfieWidth,
       selfieHeight,
       labelOverlay,
@@ -244,7 +274,32 @@ export async function buildCollectiveReferenceImages(
   for (let index = 0; index < selfieKeys.length; index += 1) {
     const key = selfieKeys[index]
     const selfieBuffer = await getSelfieBuffer(key)
-    const pngSelfie = await sharp(selfieBuffer).png().toBuffer()
+    
+    // Apply EXIF orientation to ensure correct display
+    const selfieSharp = sharp(selfieBuffer)
+    const selfieMetadata = await selfieSharp.metadata()
+    
+    // Rotate based on EXIF orientation if present
+    let orientedBuffer = selfieBuffer
+    if (selfieMetadata.orientation && selfieMetadata.orientation > 1) {
+      let rotationAngle = 0
+      if (selfieMetadata.orientation === 3) {
+        rotationAngle = 180
+      } else if (selfieMetadata.orientation === 6) {
+        rotationAngle = -90
+      } else if (selfieMetadata.orientation === 8) {
+        rotationAngle = 90
+      }
+      
+      if (rotationAngle !== 0) {
+        orientedBuffer = await selfieSharp
+          .rotate(rotationAngle)
+          .withMetadata({ orientation: 1 })
+          .toBuffer()
+      }
+    }
+    
+    const pngSelfie = await sharp(orientedBuffer).png().toBuffer()
     references.push({
       mimeType: 'image/png',
       base64: pngSelfie.toString('base64'),
@@ -274,7 +329,8 @@ export async function buildDefaultReferencePayload({
   generationId,
   shotDescription,
   aspectRatioDescription,
-  aspectRatioSize
+  aspectRatioSize,
+  skipLogoInComposite = false // Skip adding logo to composite (for V2 workflow)
 }: {
   styleSettings: PhotoStyleSettings
   selfieKeys: string[]
@@ -285,6 +341,7 @@ export async function buildDefaultReferencePayload({
   shotDescription: string
   aspectRatioDescription: string
   aspectRatioSize: { width: number; height: number }
+  skipLogoInComposite?: boolean
 }): Promise<{ referenceImages: ReferenceImage[]; labelInstruction: string }> {
   if (!selfieKeys.length) {
     throw new Error('At least one selfie key is required to build references')
@@ -296,7 +353,8 @@ export async function buildDefaultReferencePayload({
   if (useCompositeReference) {
     const additionalAssets: Array<{ label: string; buffer: Buffer }> = []
 
-    if (styleSettings.branding?.type !== 'exclude' && styleSettings.branding?.logoKey) {
+    // Skip logo in composite for V2 workflow (Step 1/2 handle it separately)
+    if (!skipLogoInComposite && styleSettings.branding?.type !== 'exclude' && styleSettings.branding?.logoKey) {
       const logoAsset = await downloadAsset(styleSettings.branding.logoKey)
       if (logoAsset) {
         const logoBuffer = await sharp(Buffer.from(logoAsset.base64, 'base64')).png().toBuffer()

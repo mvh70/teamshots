@@ -65,6 +65,9 @@ const createGenerationSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),
   isRegeneration: z.boolean().optional().default(false), // Flag to indicate this is a regeneration
   originalGenerationId: z.string().optional(), // ID of the original generation being regenerated
+  useV2: z.boolean().optional().default(false), // Enable V2 workflow
+  debugMode: z.boolean().optional().default(false), // Enable debug mode (logs prompts, saves intermediate files)
+  stopAfterStep: z.number().int().min(1).max(4).optional(), // Stop workflow after this step (1-4). Useful for testing intermediate results.
 })
 
 export async function POST(request: NextRequest) {
@@ -94,7 +97,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createGenerationSchema.parse(body)
     
-    const { selfieId, selfieKey, selfieIds, selfieKeys, contextId, styleSettings, prompt, isRegeneration, originalGenerationId } = validatedData
+    const { selfieId, selfieKey, selfieIds, selfieKeys, contextId, styleSettings, prompt, isRegeneration, originalGenerationId, useV2, debugMode, stopAfterStep } = validatedData
 
     // Determine requested selfies (multiple preferred)
     const requestedIds = Array.isArray(selfieIds) ? selfieIds : (selfieId ? [selfieId] : [])
@@ -649,11 +652,19 @@ export async function POST(request: NextRequest) {
           userContext
         )
 
-        if (!reservationResult.success) {
-          Logger.error('Credit reservation failed', { error: reservationResult.error })
-          await prisma.generation.delete({ where: { id: generation.id } })
-          throw new Error(reservationResult.error || 'Credit reservation failed')
-        }
+    if (!reservationResult.success) {
+      Logger.error('Credit reservation failed', { error: reservationResult.error })
+      try {
+        await prisma.generation.delete({ where: { id: generation.id } })
+      } catch (deleteError) {
+        // Ignore if generation was already deleted or doesn't exist
+        Logger.warn('Failed to delete generation after credit reservation failure', {
+          generationId: generation.id,
+          error: deleteError instanceof Error ? deleteError.message : String(deleteError)
+        })
+      }
+      throw new Error(reservationResult.error || 'Credit reservation failed')
+    }
 
         Logger.debug('Credits reserved successfully', {
           generationId: generation.id,
@@ -661,11 +672,19 @@ export async function POST(request: NextRequest) {
           individualCreditsUsed: reservationResult.individualCreditsUsed,
           teamCreditsUsed: reservationResult.teamCreditsUsed
         })
-      } catch (creditError) {
-        // If credit reservation fails, delete the generation record
+    } catch (creditError) {
+      // If credit reservation fails, delete the generation record
+      try {
         await prisma.generation.delete({ where: { id: generation.id } })
-        throw creditError
+      } catch (deleteError) {
+        // Ignore if generation was already deleted or doesn't exist
+        Logger.warn('Failed to delete generation after credit reservation failure', {
+          generationId: generation.id,
+          error: deleteError instanceof Error ? deleteError.message : String(deleteError)
+        })
       }
+      throw creditError
+    }
     }
 
     // Lazy import to avoid build-time issues
@@ -695,8 +714,11 @@ export async function POST(request: NextRequest) {
       styleSettings: serializedStyleSettings,
       prompt,
       providerOptions: {
-        model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
+        model: Env.string('GEMINI_IMAGE_MODEL'),
         numVariations: 4,
+        useV2,
+        debugMode,
+        stopAfterStep,
       },
       creditSource: enforcedCreditSource,
     }, {

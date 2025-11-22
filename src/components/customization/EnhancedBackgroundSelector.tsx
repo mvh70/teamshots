@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
-import { PhotoIcon, SwatchIcon, PaintBrushIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline'
+import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
 import { BackgroundSettings } from '@/types/photo-style'
 import { BRAND_CONFIG } from '@/config/brand'
@@ -19,12 +19,12 @@ interface EnhancedBackgroundSelectorProps {
 }
 
 const BACKGROUND_TYPES = [
-  { value: 'office', label: 'Office Environment', icon: PhotoIcon },
-  { value: 'tropical-beach', label: 'Tropical Beach', icon: PhotoIcon },
-  { value: 'busy-city', label: 'Busy City', icon: PhotoIcon },
-  { value: 'neutral', label: 'Neutral Background', icon: SwatchIcon },
-  { value: 'gradient', label: 'Gradient Background', icon: PaintBrushIcon },
-  { value: 'custom', label: 'Custom Upload', icon: CloudArrowUpIcon }
+  { value: 'office', label: 'Office Environment', icon: '🏢', color: 'from-blue-500 to-indigo-500' },
+  { value: 'tropical-beach', label: 'Tropical Beach', icon: '🏝️', color: 'from-cyan-500 to-teal-500' },
+  { value: 'busy-city', label: 'Busy City', icon: '🌆', color: 'from-purple-500 to-pink-500' },
+  { value: 'neutral', label: 'Neutral Background', icon: '⬜', color: 'from-gray-400 to-gray-500' },
+  { value: 'gradient', label: 'Gradient Background', icon: '🎨', color: 'from-orange-500 to-red-500' },
+  { value: 'custom', label: 'Custom Upload', icon: '📤', color: 'from-green-500 to-emerald-500' }
 ] as const
 
 const NEUTRAL_COLORS = [
@@ -197,12 +197,11 @@ export default function EnhancedBackgroundSelector({
       )}
 
       {/* Background Type Selection */}
-      <div className={`space-y-3 mb-6 ${
+      <div className={`space-y-4 mb-6 ${
         // Hide entire selection section on mobile when predefined and custom upload is selected
         isPredefined && value.type === 'custom' ? 'hidden md:block' : ''
       }`}>
         {filteredBackgroundTypes.map((type) => {
-          const Icon = type.icon
           const isSelected = value.type === type.value
           // On mobile, hide unselected options when predefined
           const shouldHide = isPredefined && !isSelected
@@ -215,19 +214,35 @@ export default function EnhancedBackgroundSelector({
               key={type.value}
               onClick={() => !(isPredefined || isDisabled) && handleTypeChange(type.value as BackgroundSettings['type'])}
               disabled={isPredefined || isDisabled}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+              className={`w-full bg-gray-50 rounded-lg p-4 border-2 transition-all ${
                 isSelected
-                  ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
+                  ? 'border-brand-primary bg-brand-primary-light shadow-sm'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-white hover:shadow-sm'
               } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
-                shouldHide ? 'hidden md:flex' : ''
-              } ${hideCustomUpload ? 'hidden md:flex' : ''}`}
+                shouldHide ? 'hidden md:block' : ''
+              } ${hideCustomUpload ? 'hidden md:block' : ''}`}
             >
-              <Icon className="h-5 w-5 flex-shrink-0" />
-              <span className="text-sm font-medium">{type.label}</span>
-              {isSelected && (
-                <div className="ml-auto w-2 h-2 bg-brand-primary rounded-full"></div>
-              )}
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl ${
+                  isSelected 
+                    ? `bg-gradient-to-br ${type.color}` 
+                    : 'bg-gray-200'
+                }`}>
+                  {type.icon}
+                </div>
+                <div className="flex-1 text-left">
+                  <div className={`text-sm font-semibold ${isSelected ? 'text-brand-primary' : 'text-gray-900'}`}>
+                    {type.label}
+                  </div>
+                </div>
+                {isSelected && (
+                  <div className="w-5 h-5 bg-brand-primary rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+              </div>
             </button>
           )
         })}

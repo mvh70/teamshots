@@ -81,7 +81,7 @@ interface UseGenerationStatusReturn {
 export function useGenerationStatus({
   generationId,
   enabled = true,
-  pollInterval = 2000, // 2 seconds
+  pollInterval = 1000, // 1 second
   maxPollTime = 300000, // 5 minutes
 }: UseGenerationStatusOptions): UseGenerationStatusReturn {
   const [generation, setGeneration] = useState<GenerationStatus | null>(null)
@@ -94,14 +94,21 @@ export function useGenerationStatus({
 
     try {
       const data = await jsonFetcher<GenerationStatus>(`/api/generations/${generationId}`)
+      console.log('useGenerationStatus API response:', {
+        generationId,
+        status: data.status,
+        jobStatus: data.jobStatus,
+        progress: data.jobStatus?.progress,
+        message: data.jobStatus?.message?.substring(0, 50)
+      })
       setGeneration(data)
       setError(null)
-      
+
       // Stop polling if generation is completed or failed
       if (data.status === 'completed' || data.status === 'failed') {
         setLoading(false)
       }
-      
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       setError(errorMessage)
