@@ -8,7 +8,7 @@ import {
   type CanonicalShotType,
   resolveAperture,
   resolveFocalLength
-} from './camera-presets'
+} from '../elements/shot-type/config'
 
 type FocalLengthConfig = ReturnType<typeof resolveFocalLength>
 type ApertureConfig = ReturnType<typeof resolveAperture>

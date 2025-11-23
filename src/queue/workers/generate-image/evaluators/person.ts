@@ -46,17 +46,13 @@ export async function evaluatePersonGeneration(
     '   - Is the background pure white or very close to white?',
     '   - Should be clean and isolated, no other colors or patterns',
     '',
-    '3. correct_pose_and_clothing',
-    '   - Does the person\'s pose and clothing match the generation prompt?',
-    '   - Check for professional attire, posture, and positioning as requested',
-    '',
-    '4. proportions_realistic',
+    '3. proportions_realistic',
     '   - Is head size proportional and realistic compared to the rest of the body?',
     '   - Does the head appear neither too large (like a caricature) nor too small relative to torso, limbs, and overall body?',
     '   - Are there NO exaggerated or shrunken anatomical features?',
     '   - Pay special attention to head-to-body ratio - it should match realistic human proportions',
     '',
-    '5. no_unauthorized_accessories',
+    '4. no_unauthorized_accessories',
     '   - Compare the reference selfies to the generated image',
     '   - Are there NO accessories (glasses, jewelry, piercings, tattoos, hats)',
     '     that are ABSENT from the reference selfies?'
@@ -66,29 +62,24 @@ export async function evaluatePersonGeneration(
   if (logoReference && brandingPosition === 'clothing') {
     instructions.push(
       '',
-      '6. branding_logo_matches',
-      '   - Does the logo on the clothing EXACTLY match the provided brand asset?',
-      '   - Are colors, proportions, and design elements preserved with NO distortion or modifications?',
-      '   - Is the logo the SAME SIZE (dimensions/aspect ratio) as the reference, not enlarged or shrunk?',
-      '   - Are there NO additional elements added to the logo (no boxes, borders, labels, text overlays, backgrounds)?',
+      '5. branding_logo_matches',
+      '   - Logo can be covered by parts of the wardrobe or the arms. The visible parts of the logo should have all the images and letters of the logo, each in the same size, position, and color of the original logo.',
       '',
-      '7. branding_positioned_correctly',
-      '   - Check the generation prompt for the EXACT placement instruction (e.g., "left chest", "center chest", "sleeve")',
-      '   - Is the logo placed in EXACTLY the location specified in the prompt?',
-      '   - Does it appear exactly ONCE (not duplicated, not missing)?',
-      '   - Is the positioning accurate (not shifted, not rotated incorrectly, not placed on wrong body part)?',
+      '6. branding_positioned_correctly',
+      '   - Is the logo placed on the CHEST AREA of the shirt/t-shirt/polo (NOT on jacket, background, or accessories)?',
+      '   - Very important: Is the logo positioned naturally on the base garment surface, and does it not overflow on eg the outer layer (jacket, blazer, cardigan)?',
       '',
-      '8. branding_scene_aligned',
-      '   - Is the logo integrated naturally into the clothing without looking pasted or composited?',
-      '   - Does lighting, perspective, and scale match the environment realistically?',
-      '   - Does the logo follow the contours of the clothing/fabric it\'s placed on?'
+      '7. branding_scene_aligned',
+      '   - Does the logo look like it\'s physically printed on the fabric with proper lighting and shadows, followingthe natural contours and perspective of the clothing?',
+      '   - Is the logo integrated naturally without looking artificially pasted or composited?',
+      '   - Is the logo size proportional to the garment (not too small to see, not overwhelmingly large)?'
     )
   } else {
     instructions.push(
       '',
-      '6. branding_logo_matches: N/A (no clothing branding required)',
-      '7. branding_positioned_correctly: N/A (no clothing branding required)',
-      '8. branding_scene_aligned: N/A (no clothing branding required)'
+      '5. branding_logo_matches: N/A (no clothing branding required)',
+      '6. branding_positioned_correctly: N/A (no clothing branding required)',
+      '7. branding_scene_aligned: N/A (no clothing branding required)'
     )
   }
 
@@ -99,7 +90,6 @@ export async function evaluatePersonGeneration(
     '{',
     '  "person_present": "YES",',
     '  "white_background": "YES",',
-    '  "correct_pose_and_clothing": "YES",',
     '  "proportions_realistic": "YES",',
     '  "no_unauthorized_accessories": "YES",',
     '  "branding_logo_matches": "N/A",',
@@ -146,7 +136,7 @@ export async function evaluatePersonGeneration(
   try {
     const response: GenerateContentResult = await model.generateContent({
       contents,
-      generationConfig: { temperature: 0.1 }
+      generationConfig: { temperature: 0.2 }
     })
 
     const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
@@ -159,7 +149,6 @@ export async function evaluatePersonGeneration(
         const autoReject = [
           evaluation.person_present === 'NO',
           evaluation.white_background === 'NO',
-          evaluation.correct_pose_and_clothing === 'NO',
           evaluation.proportions_realistic === 'NO',
           evaluation.no_unauthorized_accessories === 'NO',
           logoReference && brandingPosition === 'clothing' && evaluation.branding_logo_matches === 'NO',
@@ -170,10 +159,9 @@ export async function evaluatePersonGeneration(
         const allApproved =
           evaluation.person_present === 'YES' &&
           evaluation.white_background === 'YES' &&
-          evaluation.correct_pose_and_clothing === 'YES' &&
           evaluation.proportions_realistic === 'YES' &&
           evaluation.no_unauthorized_accessories === 'YES' &&
-          (!logoReference || brandingPosition !== 'clothing' || 
+          (!logoReference || brandingPosition !== 'clothing' ||
             (evaluation.branding_logo_matches === 'YES' &&
              evaluation.branding_positioned_correctly === 'YES' &&
              evaluation.branding_scene_aligned === 'YES'))
@@ -221,7 +209,6 @@ function parsePersonEvaluation(text: string, hasBranding: boolean) {
     return {
       person_present: normalizeYesNoUncertain(parsed.person_present),
       white_background: normalizeYesNoUncertain(parsed.white_background),
-      correct_pose_and_clothing: normalizeYesNoUncertain(parsed.correct_pose_and_clothing),
       proportions_realistic: normalizeYesNoUncertain(parsed.proportions_realistic),
       no_unauthorized_accessories: normalizeYesNoUncertain(parsed.no_unauthorized_accessories),
       branding_logo_matches: hasBranding ? normalizeYesNoUncertain(parsed.branding_logo_matches) : 'N/A',
@@ -254,9 +241,6 @@ function generateAdjustmentSuggestions(failedCriteria: string[]): string {
     }
     if (criterion.includes('white_background')) {
       suggestions.push('Emphasize pure white background with no other elements or colors')
-    }
-    if (criterion.includes('correct_pose_and_clothing')) {
-      suggestions.push('Verify pose and clothing match the specified style requirements')
     }
     if (criterion.includes('proportions_realistic')) {
       suggestions.push('Adjust head-to-body proportions to match realistic human anatomy; avoid caricature-like features')

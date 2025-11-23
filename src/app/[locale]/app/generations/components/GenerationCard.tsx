@@ -159,6 +159,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
             creditSource: 'individual',
             isRegeneration: true,
             originalGenerationId: item.id,
+            useV2: true, // Use V2 workflow for regenerations
           })
 
       const response = await fetch(apiUrl, {

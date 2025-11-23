@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     clothingSettings?: { type?: 'business' | 'startup' | 'black-tie' | 'user-choice'; style: 'business' | 'startup' | 'black-tie' | 'user-choice'; details?: string; colors?: { topCover?: string; topBase?: string; bottom?: string }; accessories?: string[] }
     clothingColorsSettings?: { type: 'predefined' | 'user-choice'; colors?: { topCover?: string; topBase?: string; bottom?: string; shoes?: string } }
     shotTypeSettings?: { type: 'headshot' | 'midchest' | 'full-body' | 'user-choice' }
-    expressionSettings?: { type: 'professional' | 'friendly' | 'serious' | 'confident' | 'happy' | 'sad' | 'neutral' | 'thoughtful' | 'user-choice' }
+    expressionSettings?: { type: 'genuine_smile' | 'soft_smile' | 'neutral_serious' | 'laugh_joy' | 'contemplative' | 'confident' | 'sad' | 'user-choice' }
     packageId?: string
   }
 

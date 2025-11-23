@@ -27,6 +27,10 @@ export function resolveStyleSettings({
   jobStyleSettings,
   defaultPackageId = DEFAULT_PACKAGE_ID
 }: StyleResolutionInput): StyleResolutionResult {
+  // Priority hierarchy for style settings resolution:
+  // 1. savedStyleSettings: Already merged settings from generation record (preferred)
+  // 2. contextSettings: Original context/photo style settings (fallback for legacy)
+  // 3. jobStyleSettings: User modifications from job payload (last resort)
   const rawStyleSettings = pickRawStyleSettings(savedStyleSettings, contextSettings, jobStyleSettings)
 
   let packageId = extractPackageId(rawStyleSettings)
@@ -71,16 +75,18 @@ function pickRawStyleSettings(
   contextSettings?: RawSettings | null,
   jobStyleSettings?: RawSettings | null
 ): RawSettings {
+  // Priority: Use saved settings first (already properly merged during generation creation)
+  // Then fallback to context settings, then job overrides (should not happen for normal flow)
   if (isRecord(savedStyleSettings)) {
-    Logger.debug('Using saved styleSettings from generation record')
+    Logger.debug('Using saved styleSettings from generation record (already merged)')
     return savedStyleSettings
   }
   if (isRecord(contextSettings)) {
-    Logger.debug('Using styleSettings from generation context')
+    Logger.debug('Using styleSettings from generation context (legacy fallback)')
     return contextSettings
   }
   if (isRecord(jobStyleSettings)) {
-    Logger.debug('Using styleSettings from job payload')
+    Logger.debug('Using styleSettings from job payload (last resort)')
     return jobStyleSettings
   }
   Logger.debug('No styleSettings provided, falling back to empty object')

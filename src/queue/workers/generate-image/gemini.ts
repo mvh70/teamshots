@@ -5,6 +5,7 @@ import type { Content, GenerateContentResult, Part, GenerativeModel, SafetySetti
 
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
+import { generateWithGeminiRest } from './gemini-rest'
 
 export interface GeminiReferenceImage {
   mimeType: string
@@ -110,6 +111,43 @@ export interface GenerationOptions {
 }
 
 export async function generateWithGemini(
+  prompt: string,
+  images: GeminiReferenceImage[],
+  aspectRatio?: string,
+  resolution?: '1K' | '2K' | '4K',
+  options?: GenerationOptions
+): Promise<Buffer[]> {
+  // Determine which client to use based on available credentials
+  const hasApiKey = !!Env.string('GOOGLE_CLOUD_API_KEY', '')
+  const hasServiceAccount = !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', '') ||
+                           !!Env.string('GOOGLE_PROJECT_ID', '')
+
+  // Prefer REST API client if API key is available, otherwise use Vertex AI
+  const useRestApi = hasApiKey
+
+  if (useRestApi) {
+    Logger.debug('Using Gemini REST API client for image generation')
+    // Convert safety settings to REST API format
+    const restOptions = options ? {
+      ...options,
+      safetySettings: options.safetySettings?.map(setting => ({
+        category: setting.category,
+        threshold: (setting.threshold === HarmBlockThreshold.BLOCK_ONLY_HIGH ? 'BLOCK_ONLY_HIGH' :
+                   setting.threshold === HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE ? 'BLOCK_MEDIUM_AND_ABOVE' :
+                   setting.threshold === HarmBlockThreshold.BLOCK_LOW_AND_ABOVE ? 'BLOCK_LOW_AND_ABOVE' :
+                   'BLOCK_NONE') as 'BLOCK_ONLY_HIGH' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_LOW_AND_ABOVE' | 'BLOCK_NONE'
+      }))
+    } : undefined
+    return generateWithGeminiRest(prompt, images, aspectRatio, resolution, restOptions)
+  } else if (hasServiceAccount) {
+    Logger.debug('Using Vertex AI client for image generation')
+    return generateWithGeminiVertex(prompt, images, aspectRatio, resolution, options)
+  } else {
+    throw new Error('Neither GOOGLE_CLOUD_API_KEY nor GOOGLE_APPLICATION_CREDENTIALS/GOOGLE_PROJECT_ID are configured for Gemini API access')
+  }
+}
+
+async function generateWithGeminiVertex(
   prompt: string,
   images: GeminiReferenceImage[],
   aspectRatio?: string,
@@ -329,8 +367,9 @@ export async function generateWithGemini(
     console.error('Error Object:', error)
     console.error('Error Details:', JSON.stringify(errorDetails, null, 2))
     console.error('========================\n')
-    
+
     throw error
   }
 }
+
 

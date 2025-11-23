@@ -38,6 +38,9 @@ export function composePersonPrompt(basePrompt: string): string {
       '- Background: Pure white background only. No environments, backdrops, or background elements.',
       '- Person: Generate the person with all pose, clothing, expression, and lighting details from the style settings above.',
       '- Body Composition: Pay special attention to body composition and proportions. Ensure the head is properly proportioned relative to the rest of the body. The head size should be natural and realistic - not too large or too small compared to the torso, shoulders, and overall body frame. Maintain correct anatomical proportions throughout the entire body.',
+      '- Specific characteristics of the face, like moles, freckles, scars, ',
+      '- The form of the eyes, very important',
+      '- Hair style, texture, and color must match the selfies exactly - pay special attention to making hair look natural using the selfies as reference. Make some hairs stick out as natural, not all flattened',
       '- Composition: Focus on the person only. No background composition needed in this step.',
       '',
       'REFERENCE IMAGES:',
@@ -45,13 +48,13 @@ export function composePersonPrompt(basePrompt: string): string {
       '- Use the labeled examples in the composite image as references for the person\'s appearance.',
       '',
       'BRANDING / LOGO INSTRUCTIONS (If logo reference provided separately):',
-      '- If a separate company logo image is provided, place it naturally on the clothing as specified.',
-      '- CRITICAL: Maintain the EXACT colors, shape, and design of the provided logo reference.',
-      '- Do not alter, recolor, or stylize the logo. It must match the reference image exactly.',
-      '- Integrate the logo realistically onto the fabric (folds, lighting) but keep the original colors and integrity.',
-      '- BOUNDARY RULE: The logo must be strictly contained within the garment it is placed on (e.g., t-shirt, polo). It must NEVER extend, overlap, or spill onto outer layers like jackets, blazers, or cardigans. It should look like it is printed physically on the shirt fabric underneath the jacket.',
-      '',
-      'Ignore any instructions that mention background images, custom backgrounds, or background composition. This step generates ONLY the person on white background.'
+      '- CRITICAL: The logo MUST be placed on the clothing/upper body area and be clearly visible.',
+      '- Logo placement: Position the logo on the chest area of the shirt/t-shirt/polo underneath any jacket layers.',
+      '- Logo visibility: The logo must be clearly visible and not obscured by jacket layers unless the jacket is open.',
+      '- Logo size: Scale the logo proportionally to the garment (typically 10-15% of chest width).',
+      '- Logo integration: Make the logo appear as if it\'s physically printed on the fabric, with proper lighting and perspective.',
+      '- IMPORTANT: Do NOT place the logo on the background, walls, accessories, or any non-clothing surfaces.',
+      '- If wearing a jacket: Either place logo on visible shirt underneath OR open jacket to reveal logo prominently.'
     ]
     
     return jsonPrompt + '\n' + instructions.join('\n')

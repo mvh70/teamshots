@@ -108,14 +108,13 @@ export interface StyleSettings {
 
 export interface ExpressionSettings {
   type:
-    | 'professional'
-    | 'friendly'
-    | 'serious'
+    | 'genuine_smile'
+    | 'soft_smile'
+    | 'neutral_serious'
+    | 'laugh_joy'
+    | 'contemplative'
     | 'confident'
-    | 'happy'
     | 'sad'
-    | 'neutral'
-    | 'thoughtful'
     | 'user-choice'
 }
 
@@ -308,14 +307,13 @@ export const STYLE_PRESETS = {
 } as const
 
 export const EXPRESSION_OPTIONS = {
-  professional: 'Professional',
-  friendly: 'Friendly',
-  serious: 'Serious',
+  genuine_smile: 'Genuine Smile (teeth)',
+  soft_smile: 'Soft Smile (no teeth)',
+  neutral_serious: 'Neutral/Serious',
+  laugh_joy: 'Laugh/Joy',
+  contemplative: 'Contemplative',
   confident: 'Confident',
-  happy: 'Happy',
   sad: 'Sad',
-  neutral: 'Neutral',
-  thoughtful: 'Thoughtful',
   'user-choice': 'User Choice'
 } as const
 

@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { ExclamationTriangleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
-import { resolveShotType } from '@/domain/style/packages/camera-presets'
+import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import { useTranslations } from 'next-intl'
 
 export interface PhotoStyleSummarySettings {

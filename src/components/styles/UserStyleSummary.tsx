@@ -2,7 +2,7 @@
 
 import { ExclamationTriangleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
 import { UserIcon } from '@heroicons/react/24/outline'
-import { resolveExpression } from '@/domain/style/packages/expression-config'
+import { resolveExpression } from '@/domain/style/elements/expression/config'
 interface ClothingColors {
   topCover?: string
   topBase?: string

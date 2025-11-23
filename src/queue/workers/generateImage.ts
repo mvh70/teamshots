@@ -19,9 +19,9 @@ import { getProgressMessage, formatProgressMessage } from '@/lib/generation-prog
 import { createS3Client, getS3BucketName } from '@/lib/s3-client'
 import { PhotoStyleSettings } from '@/types/photo-style'
 
-import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/domain/style/packages/aspect-ratios'
-import type { AspectRatioId } from '@/domain/style/packages/aspect-ratios'
-import { resolveShotType } from '@/domain/style/packages/camera-presets'
+import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/domain/style/elements/aspect-ratio/config'
+import type { AspectRatioId } from '@/domain/style/elements/aspect-ratio/config'
+import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import { resolveStyleSettings } from './generate-image/style-settings'
 import { preprocessSelfie } from './generate-image/preprocessing'
 import { generateWithGemini } from './generate-image/gemini'

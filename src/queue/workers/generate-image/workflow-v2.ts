@@ -6,7 +6,7 @@ import sharp from 'sharp'
 import type { Job } from 'bullmq'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import type { ReferenceImage, DownloadAssetFn } from '@/types/generation'
-import { ASPECT_RATIOS, type AspectRatioId } from '@/domain/style/packages/aspect-ratios'
+import { ASPECT_RATIOS, type AspectRatioId } from '@/domain/style/elements/aspect-ratio/config'
 
 // Step imports
 import { executeStep1 } from './steps/step1-person'

@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
       providerOptions: {
         model: Env.string('GEMINI_IMAGE_MODEL'),
         numVariations: 4,
-        useV2: false, // Default to V1 for regenerations
+        useV2: true, // Use V2 workflow for regenerations
         debugMode: false,
       },
       creditSource: 'team',

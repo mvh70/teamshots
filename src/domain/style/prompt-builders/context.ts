@@ -1,13 +1,4 @@
-import type { PhotoStyleSettings } from '@/types/photo-style'
-
-import {
-  resolveShotType,
-  resolveFocalLength,
-  resolveAperture,
-  resolveLightingQuality,
-  resolveShutterSpeed,
-  getLightingDirectionLabel
-} from '../packages/camera-presets'
+import { PhotoStyleSettings } from '@/types/photo-style'
 import {
   resolveBodyAngle,
   resolveHeadPosition,
@@ -16,10 +7,12 @@ import {
   resolveArmPosition,
   resolveSittingPose,
   getExpressionLabel
-} from '../packages/pose-presets'
+} from '../elements/pose/config'
 import { applyStandardPreset } from '../packages/standard-settings'
 import type { StandardPresetConfig } from '../packages/standard-presets'
 import { createBasePayload } from './payload'
+import { generateShotTypePrompt } from '../elements/shot-type/prompt'
+import { getLightingDirectionLabel } from '../elements/shot-type/config'
 
 export type PromptPayload = Record<string, unknown>
 
@@ -56,20 +49,10 @@ interface ResolvedPoseConfig {
 }
 
 interface ResolvedConfig {
-  shotType: ReturnType<typeof resolveShotType>
-  focalLength: ReturnType<typeof resolveFocalLength>
-  aperture: ReturnType<typeof resolveAperture>
-  lighting: ReturnType<typeof resolveLightingQuality>
-  shutter: ReturnType<typeof resolveShutterSpeed>
   pose: ResolvedPoseConfig
 }
 
 const resolveConfig = (settings: PhotoStyleSettings): ResolvedConfig => {
-  const shotType = resolveShotType(settings.shotType?.type)
-  const focalLength = resolveFocalLength(settings.focalLength as string | undefined)
-  const aperture = resolveAperture(settings.aperture as string | undefined)
-  const lighting = resolveLightingQuality(settings.lightingQuality as string | undefined)
-  const shutter = resolveShutterSpeed(settings.shutterSpeed as string | undefined)
   const sitting =
     settings.sittingPose && settings.sittingPose !== 'user-choice'
       ? resolveSittingPose(settings.sittingPose as string | undefined)
@@ -83,11 +66,6 @@ const resolveConfig = (settings: PhotoStyleSettings): ResolvedConfig => {
     sitting
   }
   return {
-    shotType,
-    focalLength,
-    aperture,
-    lighting,
-    shutter,
     pose
   }
 }
@@ -96,6 +74,7 @@ const applyResolvedToPayload = (
   payload: NestedRecord,
   preset: StandardPresetConfig,
   resolved: ResolvedConfig,
+  effectiveSettings: PhotoStyleSettings,
   expressionLabel: string,
   skipPoseFields = false
 ) => {
@@ -109,21 +88,24 @@ const applyResolvedToPayload = (
     setPath(payload, 'subject.pose.sitting_position', resolved.pose.sitting?.description)
   }
 
-  setPath(payload, 'framing.shot_type', resolved.shotType.label)
-  setPath(payload, 'framing.crop_points', resolved.shotType.framingDescription)
-  setPath(payload, 'framing.composition', resolved.shotType.compositionNotes ?? resolved.shotType.framingDescription)
+  // Generate shot type, camera, and lighting prompt using the new decoupled logic
+  const shotTypePrompt = generateShotTypePrompt(effectiveSettings)
+
+  setPath(payload, 'framing.shot_type', shotTypePrompt.framing.shot_type)
+  setPath(payload, 'framing.crop_points', shotTypePrompt.framing.crop_points)
+  setPath(payload, 'framing.composition', shotTypePrompt.framing.composition)
 
   setPath(payload, 'camera.lens', {
-    focal_length_mm: resolved.focalLength.mm,
-    type: resolved.focalLength.lensType,
-    character: resolved.focalLength.description
+    focal_length_mm: shotTypePrompt.camera.lens.focal_length_mm,
+    type: shotTypePrompt.camera.lens.type,
+    character: shotTypePrompt.camera.lens.character
   })
-  setPath(payload, 'camera.settings.aperture', resolved.aperture.value)
-  setPath(payload, 'camera.settings.shutter_speed', resolved.shutter.value)
+  setPath(payload, 'camera.settings.aperture', shotTypePrompt.camera.settings.aperture)
+  setPath(payload, 'camera.settings.shutter_speed', shotTypePrompt.camera.settings.shutter_speed)
   setPath(payload, 'camera.settings.iso', preset.defaults.iso ?? 100)
 
-  setPath(payload, 'lighting.quality', resolved.lighting.label)
-  setPath(payload, 'lighting.description', resolved.lighting.description)
+  setPath(payload, 'lighting.quality', shotTypePrompt.lighting.quality)
+  setPath(payload, 'lighting.description', shotTypePrompt.lighting.description)
   setPath(payload, 'subject.pose.expression', expressionLabel)
 }
 
@@ -151,7 +133,8 @@ export function buildStandardPrompt({
     settings
   )
 
-  const expressionLabel = getExpressionLabel(presetDefaults.expression?.type)
+  // Use effectiveSettings expression (user's choice) instead of preset defaults
+  const expressionLabel = getExpressionLabel(effectiveSettings.expression?.type)
   const payload = createBasePayload({
     preset,
     expressionLabel,
@@ -162,27 +145,15 @@ export function buildStandardPrompt({
     preset: preset.label
   })
 
+  // Resolve pose using preset defaults as a base, but effective settings should be used for the full prompt generation if possible.
+  // Actually, `resolveConfig` was taking `presetDefaults` in the old code.
+  // But `generateShotTypePrompt` takes `effectiveSettings`.
+  // Let's stick to `presetDefaults` for the `resolveConfig` call to match previous behavior for POSE if that was intended,
+  // but `applyResolvedToPayload` now takes `effectiveSettings` for the shot type part.
   const presetResolved = resolveConfig(presetDefaults)
-  const hasPosePreset = effectiveSettings.pose?.type && effectiveSettings.pose.type !== 'user-choice'
-  applyResolvedToPayload(payload, preset, presetResolved, expressionLabel, hasPosePreset)
-
-  const activeResolved = resolveConfig(effectiveSettings)
-
-  setPath(payload, 'framing.shot_type', activeResolved.shotType.label)
-  setPath(payload, 'framing.crop_points', activeResolved.shotType.framingDescription)
-  setPath(payload, 'framing.composition', activeResolved.shotType.compositionNotes ?? activeResolved.shotType.framingDescription)
-
-  // Only set pose fields from resolved components if no pose preset is selected
-  // Pose presets will be handled by generatePosePrompt in the package-specific buildPrompt functions
-  // This prevents component-based resolution from overriding template-based pose instructions
-  if (!hasPosePreset) {
-    setPath(payload, 'subject.pose.body_angle', activeResolved.pose.body.description)
-    setPath(payload, 'subject.pose.head_position', activeResolved.pose.head.description)
-    setPath(payload, 'subject.pose.shoulder_position', activeResolved.pose.shoulder.description)
-    setPath(payload, 'subject.pose.weight_distribution', activeResolved.pose.weight.description)
-    setPath(payload, 'subject.pose.arms', activeResolved.pose.arm.description)
-    setPath(payload, 'subject.pose.sitting_position', activeResolved.pose.sitting?.description)
-  }
+  
+  // Note: We pass effectiveSettings to applyResolvedToPayload so it can generate the correct shot type prompt
+  applyResolvedToPayload(payload, preset, presetResolved, effectiveSettings, expressionLabel, false)
 
   return {
     preset,
@@ -191,6 +162,3 @@ export function buildStandardPrompt({
     payload
   }
 }
-
-
-

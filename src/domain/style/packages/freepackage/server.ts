@@ -1,10 +1,10 @@
 import { freepackage as freepackageBase } from './index'
 import { buildDefaultReferencePayload } from '@/lib/generation/reference-utils'
-import { resolveAspectRatio } from '../aspect-ratios'
+import { resolveAspectRatio } from '../../elements/aspect-ratio/config'
 import { applyStandardPreset } from '../standard-settings'
-import { resolveShotType } from '../camera-presets'
+import { resolveShotType } from '../../elements/shot-type/config'
 import { Logger } from '@/lib/logger'
-import type { AspectRatioId } from '../aspect-ratios'
+import type { AspectRatioId } from '../../elements/aspect-ratio/config'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
 
 export type FreePackageServerPackage = typeof freepackageBase & {

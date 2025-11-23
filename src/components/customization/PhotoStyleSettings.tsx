@@ -20,16 +20,16 @@ import {
   ClothingColorSettings,
   ShotTypeSettings
 } from '@/types/photo-style'
-import EnhancedBackgroundSelector from './EnhancedBackgroundSelector'
-import ClothingStyleSelector from './ClothingStyleSelector'
-import ClothingColorSelector from './ClothingColorSelector'
-import ShotTypeSelector from './ShotTypeSelector'
-import BrandingSelector from './BrandingSelector'
-import ExpressionSelector from './ExpressionSelector'
-import PoseSelector from './PoseSelector'
+import BackgroundSelector from '@/domain/style/elements/background/BackgroundSelector'
+import ClothingSelector from '@/domain/style/elements/clothing/ClothingSelector'
+import ClothingColorSelector from '@/domain/style/elements/clothing-colors/ClothingColorSelector'
+import ShotTypeSelector from '@/domain/style/elements/shot-type/ShotTypeSelector'
+import BrandingSelector from '@/domain/style/elements/branding/BrandingSelector'
+import ExpressionSelector from '@/domain/style/elements/expression/ExpressionSelector'
+import PoseSelector from '@/domain/style/elements/pose/PoseSelector'
 import { getPackageConfig } from '@/domain/style/packages'
-import { applyPosePresetToSettings } from '@/domain/style/packages/pose-preset-mapper'
-import { defaultAspectRatioForShot } from '@/domain/style/packages/aspect-ratios'
+import { applyPosePresetToSettings } from '@/domain/style/elements/pose/config'
+import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
 import { CardGrid, Tooltip } from '@/components/ui'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 
@@ -263,7 +263,7 @@ export default function PhotoStyleSettings({
             newSettings.style = { type: 'preset', preset: 'corporate' }
             break
           case 'expression':
-            newSettings.expression = { type: 'neutral' }
+            newSettings.expression = { type: 'neutral_serious' }
             break
           case 'lighting':
             newSettings.lighting = { type: 'natural' }
@@ -523,7 +523,7 @@ export default function PhotoStyleSettings({
             : 'p-5 md:p-4'
         } ${isLockedByPreset ? 'opacity-60' : ''}`}>
           {category.key === 'background' && (
-            <EnhancedBackgroundSelector
+            <BackgroundSelector
               value={value.background || { type: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('background', settings)}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
@@ -535,7 +535,7 @@ export default function PhotoStyleSettings({
           )}
           
           {category.key === 'clothing' && (
-            <ClothingStyleSelector
+            <ClothingSelector
               value={value.clothing || { style: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('clothing', settings)}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}

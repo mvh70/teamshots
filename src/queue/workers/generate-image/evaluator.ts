@@ -321,7 +321,7 @@ export async function evaluateGeneratedImage({
     const response: GenerateContentResult = await model.generateContent({
       contents,
       generationConfig: {
-        temperature: 0.1
+        temperature: 0.2
       }
     })
 

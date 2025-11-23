@@ -7,6 +7,15 @@ import {
   generateWardrobePrompt,
   generatePosePrompt
 } from '../../prompt-builders'
+import { resolveShotType } from '../../elements/shot-type/config'
+import {
+  resolveBodyAngle,
+  resolveHeadPosition,
+  resolveShoulderPosition,
+  resolveWeightDistribution,
+  resolveArmPosition,
+  resolveSittingPose
+} from '../../elements/pose/config'
 import { getDefaultPresetSettings } from '../standard-settings'
 import { setPath, getValueOrDefault } from '../shared/utils'
 // Import optional deserializer helpers for the categories this package exposes
@@ -36,7 +45,8 @@ const DEFAULTS = {
       bottom: 'Gray'
     }
   },
-  pose: { type: 'power_crossed' as const },
+  pose: { type: 'user-choice' as const },
+  expression: { type: 'user-choice' as const },
   shotType: { type: 'medium-shot' as const }
 }
 
@@ -50,23 +60,64 @@ function buildPrompt(settings: PhotoStyleSettings): string {
     presetDefaults: HEADSHOT1_PRESET_DEFAULTS
   })
 
-  // Generate pose prompt - respects pose presets if selected
+  // Set framing (shot type) - package decides what goes in the prompt
+  const shotType = resolveShotType(effectiveSettings.shotType?.type)
+  setPath(payload, 'framing.shot_type', shotType.label)
+  setPath(payload, 'framing.crop_points', shotType.framingDescription)
+  setPath(payload, 'framing.composition', shotType.compositionNotes ?? shotType.framingDescription)
+
+  // Generate pose prompt - respects pose presets if selected, otherwise uses default
   const poseResult = generatePosePrompt(effectiveSettings)
-  
-  // Override pose fields from buildStandardPrompt with template-based instructions
-  // This ensures pose templates take precedence over component-based resolution
-  setPath(payload, 'subject.pose.expression', poseResult.expression)
-  setPath(payload, 'subject.pose.description', poseResult.description)
-  setPath(payload, 'subject.pose.body_angle', poseResult.bodyAngle)
-  setPath(payload, 'subject.pose.head_position', poseResult.headPosition)
-  setPath(payload, 'subject.pose.shoulder_position', poseResult.shoulderPosition)
-  setPath(payload, 'subject.pose.weight_distribution', poseResult.weightDistribution)
-  setPath(payload, 'subject.pose.arms', poseResult.arms)
-  if (poseResult.sittingPosition) {
-    setPath(payload, 'subject.pose.sitting_position', poseResult.sittingPosition)
+
+  // Set expression if present (uses user's expression selection)
+  if (poseResult.expression) {
+    setPath(payload, 'subject.pose.expression', poseResult.expression)
   }
-  if (poseResult.minimumShotType) {
-    setPath(payload, 'subject.pose.minimum_shot_type', poseResult.minimumShotType)
+
+  // If a pose template was found (indicated by detailedInstructions), use template values
+  // Otherwise, use component-based resolution
+  if (poseResult.detailedInstructions) {
+    // Use template-based instructions for detailed pose
+    if (poseResult.description) {
+      setPath(payload, 'subject.pose.description', poseResult.description)
+    }
+    if (poseResult.bodyAngle) {
+      setPath(payload, 'subject.pose.body_angle', poseResult.bodyAngle)
+    }
+    if (poseResult.headPosition) {
+      setPath(payload, 'subject.pose.head_position', poseResult.headPosition)
+    }
+    if (poseResult.shoulderPosition) {
+      setPath(payload, 'subject.pose.shoulder_position', poseResult.shoulderPosition)
+    }
+    if (poseResult.weightDistribution) {
+      setPath(payload, 'subject.pose.weight_distribution', poseResult.weightDistribution)
+    }
+    if (poseResult.arms) {
+      setPath(payload, 'subject.pose.arms', poseResult.arms)
+    }
+    if (poseResult.sittingPosition) {
+      setPath(payload, 'subject.pose.sitting_position', poseResult.sittingPosition)
+    }
+  } else {
+    // Use component-based resolution when no pose template
+    const bodyAngle = resolveBodyAngle(effectiveSettings.bodyAngle as string | undefined)
+    const headPosition = resolveHeadPosition(effectiveSettings.headPosition as string | undefined)
+    const shoulderPosition = resolveShoulderPosition(effectiveSettings.shoulderPosition as string | undefined)
+    const weightDistribution = resolveWeightDistribution(effectiveSettings.weightDistribution as string | undefined)
+    const armPosition = resolveArmPosition(effectiveSettings.armPosition as string | undefined)
+    const sittingPose = effectiveSettings.sittingPose && effectiveSettings.sittingPose !== 'user-choice'
+      ? resolveSittingPose(effectiveSettings.sittingPose as string | undefined)
+      : undefined
+
+    setPath(payload, 'subject.pose.body_angle', bodyAngle.description)
+    setPath(payload, 'subject.pose.head_position', headPosition.description)
+    setPath(payload, 'subject.pose.shoulder_position', shoulderPosition.description)
+    setPath(payload, 'subject.pose.weight_distribution', weightDistribution.description)
+    setPath(payload, 'subject.pose.arms', armPosition.description)
+    if (sittingPose) {
+      setPath(payload, 'subject.pose.sitting_position', sittingPose.description)
+    }
   }
 
   const background = effectiveSettings.background
@@ -128,7 +179,7 @@ export const headshot1: ClientStylePackage = {
       clothing: getValueOrDefault(settings.clothing, DEFAULTS.clothing),
       clothingColors: getValueOrDefault(settings.clothingColors, DEFAULTS.clothingColors),
       pose: getValueOrDefault(settings.pose, DEFAULTS.pose),
-      expression: getValueOrDefault(settings.expression, HEADSHOT1_PRESET_DEFAULTS.expression),
+      expression: getValueOrDefault(settings.expression, DEFAULTS.expression),
       shotType: DEFAULTS.shotType, // Fixed to medium-shot for headshot1
       // Runtime context (passed in by caller, not from persisted settings)
       aspectRatio: settings.aspectRatio,
@@ -161,7 +212,7 @@ export const headshot1: ClientStylePackage = {
       const clothing = deserializeClothing(r, DEFAULTS.clothing)
       const clothingColors = deserializeClothingColors(r, DEFAULTS.clothingColors)
       const pose = deserializePose(r, DEFAULTS.pose)
-      const expression = deserializeExpression(r, HEADSHOT1_PRESET_DEFAULTS.expression)
+      const expression = deserializeExpression(r, DEFAULTS.expression)
 
       return {
         presetId: (r.presetId as string) || headshot1.defaultPresetId,
@@ -170,7 +221,14 @@ export const headshot1: ClientStylePackage = {
         clothing,
         clothingColors,
         pose,
-        expression
+        expression,
+        // Include granular pose settings if present
+        bodyAngle: (r.bodyAngle as PhotoStyleSettings['bodyAngle']) || undefined,
+        headPosition: (r.headPosition as PhotoStyleSettings['headPosition']) || undefined,
+        shoulderPosition: (r.shoulderPosition as PhotoStyleSettings['shoulderPosition']) || undefined,
+        weightDistribution: (r.weightDistribution as PhotoStyleSettings['weightDistribution']) || undefined,
+        armPosition: (r.armPosition as PhotoStyleSettings['armPosition']) || undefined,
+        sittingPose: (r.sittingPose as PhotoStyleSettings['sittingPose']) || undefined
       }
     }
   }

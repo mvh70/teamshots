@@ -85,6 +85,18 @@ export function deserializeClothingColors(
   }
   
   if (rawClothingColors.type === 'user-choice') {
+    // Preserve colors if they exist in the user-choice object
+    if (rawClothingColors.colors) {
+      return { 
+        type: 'user-choice',
+        colors: {
+          topBase: rawClothingColors.colors.topBase,
+          topCover: rawClothingColors.colors.topCover,
+          bottom: rawClothingColors.colors.bottom,
+          shoes: rawClothingColors.colors.shoes
+        }
+      }
+    }
     return { type: 'user-choice' }
   }
   

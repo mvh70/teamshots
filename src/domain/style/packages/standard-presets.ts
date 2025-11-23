@@ -12,7 +12,7 @@ import {
   WeightDistributionSetting,
   ShutterSpeedSetting
 } from '@/types/photo-style'
-import { AspectRatioId } from './aspect-ratios'
+import { AspectRatioId } from '../elements/aspect-ratio/config'
 
 type LightingDirection =
   | 'front'
@@ -106,7 +106,7 @@ const CORPORATE_HEADSHOT: StandardPresetConfig = {
       shoulderPosition: 'front-shoulder-dropped',
       weightDistribution: 'back-foot-70',
       armPosition: 'not-visible',
-      expression: 'friendly',
+      expression: 'genuine_smile',
       notes: ['Chin extended forward and slightly down for jaw definition.']
     },
     promptTemplate:
@@ -148,7 +148,7 @@ const EXECUTIVE_PORTRAIT: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'even',
       armPosition: 'arms-crossed',
-      expression: 'serious',
+      expression: 'neutral_serious',
       notes: ['Arms crossed or hands visible to project control and confidence.']
     },
     promptTemplate:
@@ -190,7 +190,7 @@ const LINKEDIN_PROFILE: StandardPresetConfig = {
       shoulderPosition: 'front-shoulder-dropped',
       weightDistribution: 'back-foot-70',
       armPosition: 'not-visible',
-      expression: 'friendly',
+      expression: 'genuine_smile',
       notes: ['Warm genuine smile conveying approachability.']
     },
     promptTemplate:
@@ -233,7 +233,7 @@ const FULL_LENGTH_BUSINESS: StandardPresetConfig = {
       shoulderPosition: 'front-shoulder-dropped',
       weightDistribution: 'back-foot-70',
       armPosition: 'one-hand-pocket',
-      expression: 'professional',
+      expression: 'soft_smile',
       notes: ['Front knee slightly bent; alternate pose with arms crossed acceptable.']
     },
     promptTemplate:
@@ -275,7 +275,7 @@ const TEAM_GROUP: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'even',
       armPosition: 'relaxed-sides',
-      expression: 'friendly',
+      expression: 'genuine_smile',
       notes: ['Encourage light physical connection (touching shoulders) for unity.']
     },
     promptTemplate:
@@ -316,7 +316,7 @@ const FASHION_EDITORIAL: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'hip-shift',
       armPosition: 'adjusting-jacket',
-      expression: 'serious',
+      expression: 'neutral_serious',
       notes: ['Encourage angular limbs and fashion-forward body language.']
     },
     promptTemplate:
@@ -356,7 +356,7 @@ const LIFESTYLE_CASUAL: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'hip-shift',
       armPosition: 'one-hand-pocket',
-      expression: 'happy',
+      expression: 'genuine_smile',
       notes: ['Encourage real interaction (hold coffee, adjust hair) for authenticity.']
     },
     promptTemplate:
@@ -396,7 +396,7 @@ const INSTAGRAM_SOCIAL: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'hip-shift',
       armPosition: 'relaxed-sides',
-      expression: 'friendly',
+      expression: 'genuine_smile',
       notes: ['Capture warm relatable energy; maintain modern styling.']
     },
     promptTemplate:
@@ -436,7 +436,7 @@ const DATING_PROFILE: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'hip-shift',
       armPosition: 'one-hand-pocket',
-      expression: 'happy',
+      expression: 'genuine_smile',
       notes: ['Relaxed posture showing open approachable body language.']
     },
     promptTemplate:
@@ -476,7 +476,7 @@ const FAMILY_PORTRAIT: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'even',
       armPosition: 'relaxed-sides',
-      expression: 'happy',
+      expression: 'genuine_smile',
       notes: ['Ensure natural physical connection—hands on shoulders, arms around family members.']
     },
     promptTemplate:
@@ -516,7 +516,7 @@ const ACTOR_HEADSHOT: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'even',
       armPosition: 'not-visible',
-      expression: 'neutral',
+      expression: 'neutral_serious',
       notes: ['Chin extended forward and down to sharpen jawline; maintain strong eye contact.']
     },
     promptTemplate:
@@ -556,7 +556,7 @@ const REAL_ESTATE_AGENT: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'even',
       armPosition: 'arms-crossed',
-      expression: 'happy',
+      expression: 'genuine_smile',
       notes: ['Alternate pose with hands on hips or one hand in pocket.']
     },
     promptTemplate:
@@ -595,7 +595,7 @@ const UNIVERSAL_PRESET: StandardPresetConfig = {
       shoulderPosition: 'front-shoulder-dropped',
       weightDistribution: 'back-foot-70',
       armPosition: 'not-visible',
-      expression: 'friendly',
+      expression: 'genuine_smile',
       notes: ['Chin out and down; adjust pose to suit context.']
     },
     promptTemplate:

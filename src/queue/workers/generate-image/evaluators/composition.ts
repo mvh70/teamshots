@@ -160,7 +160,7 @@ export async function evaluateComposition(
   try {
     const response: GenerateContentResult = await model.generateContent({
       contents,
-      generationConfig: { temperature: 0.1 }
+      generationConfig: { temperature: 0.2 }
     })
 
     const responseParts = response.response.candidates?.[0]?.content?.parts ?? []

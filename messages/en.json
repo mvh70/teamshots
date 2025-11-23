@@ -1775,11 +1775,11 @@
         "predefined": "Predefined",
         "poses": {
           "power_classic": {
-            "label": "Power Pose - Classic",
+            "label": "Power Pose",
             "description": "Executive, founder, leadership"
           },
           "power_crossed": {
-            "label": "Power Pose - Arms Crossed",
+            "label": "Power Pose (Arms Crossed)",
             "description": "Professional, expert, corporate"
           },
           "casual_confident": {

@@ -37,6 +37,7 @@ const envSchema = z.object({
   GEMINI_IMAGE_MODEL: z.string().optional(),
   GEMINI_EVAL_MODEL: z.string().optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
+  GOOGLE_CLOUD_API_KEY: z.string().optional(),
   
   // Stripe
   STRIPE_SECRET_KEY: z.string().optional(),
@@ -72,6 +73,17 @@ const envSchema = z.object({
   {
     message: 'NEXTAUTH_URL must start with https:// in production.',
     path: ['NEXTAUTH_URL'],
+  }
+).refine(
+  (data) => {
+    // Ensure at least one Gemini AI authentication method is configured
+    const hasApiKey = !!data.GOOGLE_CLOUD_API_KEY;
+    const hasServiceAccount = !!data.GOOGLE_APPLICATION_CREDENTIALS || !!data.GOOGLE_PROJECT_ID;
+    return hasApiKey || hasServiceAccount;
+  },
+  {
+    message: 'Either GOOGLE_CLOUD_API_KEY or both GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_PROJECT_ID must be configured for Gemini AI access.',
+    path: ['GOOGLE_CLOUD_API_KEY'],
   }
 );
 

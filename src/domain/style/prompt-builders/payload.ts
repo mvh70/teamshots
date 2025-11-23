@@ -1,5 +1,5 @@
 import type { StandardPresetConfig } from '../packages/standard-presets'
-import { CHIN_TECHNIQUE_NOTE } from '../packages/pose-presets'
+import { CHIN_TECHNIQUE_NOTE } from '../elements/pose/config'
 
 import { subject } from './subject'
 

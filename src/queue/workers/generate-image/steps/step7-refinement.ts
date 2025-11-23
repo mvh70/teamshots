@@ -201,7 +201,7 @@ export async function executeStep7(
     aspectRatio,
     resolution,
     {
-      temperature: 0.3  // More deterministic for refinement adjustments
+      temperature: 0.4  // More deterministic for refinement adjustments
     }
   )
   

@@ -1,4 +1,4 @@
-import { defaultAspectRatioForShot } from './aspect-ratios'
+import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
 import type {
   FocalLengthSetting,
   ApertureSetting,
@@ -26,7 +26,7 @@ export type LightingDirection =
 
 export const DEFAULT_SHOT_TYPE: CanonicalShotType = 'medium-close-up'
 
-interface ShotTypeConfig {
+export interface ShotTypeConfig {
   id: CanonicalShotType
   label: string
   framingDescription: string
@@ -34,7 +34,7 @@ interface ShotTypeConfig {
   compositionNotes?: string
 }
 
-const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
+export const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
   'extreme-close-up': {
     id: 'extreme-close-up',
     label: 'Extreme Close-Up',
@@ -87,7 +87,7 @@ const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
   }
 }
 
-const SHOT_TYPE_ALIASES: Record<string, CanonicalShotType> = {
+export const SHOT_TYPE_ALIASES: Record<string, CanonicalShotType> = {
   'headshot': 'medium-close-up',
   'midchest': 'medium-shot',
   'full-body': 'full-length',
@@ -112,7 +112,7 @@ export function resolveShotType(input?: string): ShotTypeConfig {
 
 export const DEFAULT_FOCAL_LENGTH: FocalLengthSetting = '85mm'
 
-interface FocalLengthConfig {
+export interface FocalLengthConfig {
   id: FocalLengthSetting
   label: string
   mm: number
@@ -120,7 +120,7 @@ interface FocalLengthConfig {
   description: string
 }
 
-const FOCAL_LENGTH_CONFIGS: Record<FocalLengthSetting, FocalLengthConfig> = {
+export const FOCAL_LENGTH_CONFIGS: Record<FocalLengthSetting, FocalLengthConfig> = {
   '24mm': {
     id: '24mm',
     label: '24mm',
@@ -197,13 +197,13 @@ export function resolveFocalLength(input?: string): FocalLengthConfig {
 
 export const DEFAULT_APERTURE: ApertureSetting = 'f/4.0'
 
-interface ApertureConfig {
+export interface ApertureConfig {
   id: ApertureSetting
   value: string
   description: string
 }
 
-const APERTURE_CONFIGS: Record<ApertureSetting, ApertureConfig> = {
+export const APERTURE_CONFIGS: Record<ApertureSetting, ApertureConfig> = {
   'f/1.2': {
     id: 'f/1.2',
     value: 'f/1.2',
@@ -266,7 +266,7 @@ export function resolveAperture(input?: string): ApertureConfig {
 
 export const DEFAULT_LIGHTING_QUALITY: LightingQualitySetting = 'soft-diffused'
 
-interface LightingQualityConfig {
+export interface LightingQualityConfig {
   id: LightingQualitySetting
   label: string
   quality: string
@@ -274,7 +274,7 @@ interface LightingQualityConfig {
   description: string
 }
 
-const LIGHTING_QUALITY_CONFIGS: Record<LightingQualitySetting, LightingQualityConfig> = {
+export const LIGHTING_QUALITY_CONFIGS: Record<LightingQualitySetting, LightingQualityConfig> = {
   'soft-diffused': {
     id: 'soft-diffused',
     label: 'Soft Diffused',
@@ -363,7 +363,7 @@ export function resolveLightingQuality(input?: string): LightingQualityConfig {
   return entry ?? LIGHTING_QUALITY_CONFIGS[DEFAULT_LIGHTING_QUALITY]
 }
 
-const LIGHTING_DIRECTION_LABELS: Record<LightingDirection, string> = {
+export const LIGHTING_DIRECTION_LABELS: Record<LightingDirection, string> = {
   front: 'front-lit (camera-side key)',
   'front-45': '45° front-side',
   side: 'side-lit profile',
@@ -384,13 +384,13 @@ export function getLightingDirectionLabel(direction?: string | null): string {
 
 export const DEFAULT_SHUTTER_SPEED: ShutterSpeedSetting = '1/200'
 
-interface ShutterSpeedConfig {
+export interface ShutterSpeedConfig {
   id: ShutterSpeedSetting
   value: string
   description: string
 }
 
-const SHUTTER_SPEED_CONFIGS: Record<ShutterSpeedSetting, ShutterSpeedConfig> = {
+export const SHUTTER_SPEED_CONFIGS: Record<ShutterSpeedSetting, ShutterSpeedConfig> = {
   '1/100': {
     id: '1/100',
     value: '1/100',

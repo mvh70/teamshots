@@ -57,8 +57,8 @@ After the command block, append the preset’s narrative template (optional) bef
 
 ## Shared Utilities
 
-- `camera-presets.ts`: normalises shot types, focal lengths, apertures, shutter speeds, lighting qualities, and maps shot types to orientation hints.
-- `pose-presets.ts`: encapsulates pose defaults, technique notes, and exposes the global “chin out & down” reminder.
+- `src/domain/style/elements/shot-type/config.ts`: normalises shot types, focal lengths, apertures, shutter speeds, lighting qualities, and maps shot types to orientation hints. (Formerly `camera-presets.ts`)
+- `src/domain/style/elements/pose/config.ts`: encapsulates pose defaults, technique notes, and exposes the global “chin out & down” reminder. (Formerly `pose-presets.ts`)
 - `standard-settings.ts`: orchestrates preset application and merges overrides.
 - `reference-utils.ts`: vertical selfie composites, logo/background references, fallback reference payload assembly.
 

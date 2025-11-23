@@ -25,6 +25,7 @@ import { getPackageConfig } from '@/domain/style/packages'
 import { CreditService } from '@/domain/services/CreditService'
 import { UserService } from '@/domain/services/UserService'
 import { deriveGenerationType, deriveCreditSource } from '@/domain/generation/utils'
+import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
 
 const cloneDeep = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
@@ -514,17 +515,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate final style settings before creating generation
-    const baseStyleSettings: Record<string, unknown> = contextStyleSettings && typeof contextStyleSettings === 'object' && !Array.isArray(contextStyleSettings)
-      ? cloneDeep(contextStyleSettings as Record<string, unknown>)
-      : {}
+    const packageId = (styleSettings?.packageId as string) || PACKAGES_CONFIG.defaultPlanPackage
 
-    const requestStyleSettings: Record<string, unknown> | null = styleSettings && typeof styleSettings === 'object' && !Array.isArray(styleSettings)
-      ? (styleSettings as Record<string, unknown>)
+    // Convert raw settings to PhotoStyleSettings objects for the resolver
+    const contextSettingsObj = contextStyleSettings && typeof contextStyleSettings === 'object' && !Array.isArray(contextStyleSettings)
+      ? getPackageConfig(packageId).persistenceAdapter.deserialize(contextStyleSettings as Record<string, unknown>)
       : null
 
-    let finalStyleSettings: Record<string, unknown> = requestStyleSettings
-      ? deepMerge(baseStyleSettings, requestStyleSettings)
-      : baseStyleSettings
+    const userModificationsObj = styleSettings && typeof styleSettings === 'object' && !Array.isArray(styleSettings)
+      ? getPackageConfig(packageId).persistenceAdapter.deserialize(styleSettings as Record<string, unknown>)
+      : null
+
+    const finalStyleSettingsObj = resolvePhotoStyleSettings(packageId, contextSettingsObj, userModificationsObj)
+
+    // Serialize back to Record for storage
+    let finalStyleSettings = getPackageConfig(packageId).persistenceAdapter.serialize(finalStyleSettingsObj)
 
     // Normalize potential UI variants before serialization
     try {

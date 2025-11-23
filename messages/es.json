@@ -1783,11 +1783,11 @@
         "predefined": "Predefinido",
         "poses": {
           "power_classic": {
-            "label": "Pose de Poder - Clásica",
+            "label": "Pose de Poder",
             "description": "Ejecutivo, fundador, liderazgo"
           },
           "power_crossed": {
-            "label": "Pose de Poder - Brazos Cruzados",
+            "label": "Pose de Poder (Brazos Cruzados)",
             "description": "Profesional, experto, corporativo"
           },
           "casual_confident": {
