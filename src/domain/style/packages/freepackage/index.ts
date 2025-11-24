@@ -44,7 +44,8 @@ const AVAILABLE_EXPRESSIONS = [
 const FREE_PRESET = CORPORATE_HEADSHOT
 const FREE_PRESET_DEFAULTS = getDefaultPresetSettings(FREE_PRESET)
 
-const DEFAULTS = {
+// Server-side defaults (includes pose for generation)
+const SERVER_DEFAULTS = {
   ...FREE_PRESET_DEFAULTS,
   clothingColors: {
     type: 'predefined' as const,
@@ -55,9 +56,27 @@ const DEFAULTS = {
       bottom: 'Gray'
     }
   },
-  pose: { type: 'jacket_reveal' as const },
+  pose: { type: 'jacket_reveal' as const }, // Used server-side for generation
   shotType: { type: 'medium-shot' as const },
   subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts
+}
+
+// Client-side defaults (excludes pose since it's not in visibleCategories)
+const DEFAULTS: Omit<typeof SERVER_DEFAULTS, 'pose'> = {
+  ...FREE_PRESET_DEFAULTS,
+  clothingColors: {
+    type: 'predefined' as const,
+    colors: {
+      topBase: 'White',
+      topCover: 'Dark blue',
+      shoes: 'brown',
+      bottom: 'Gray'
+    }
+  },
+  // pose is NOT included - it's not in visibleCategories
+  // pose will be applied server-side during generation using SERVER_DEFAULTS
+  shotType: { type: 'medium-shot' as const },
+  subjectCount: '1' as const
 }
 
 function buildPrompt(settings: PhotoStyleSettings): string {
@@ -113,7 +132,7 @@ export const freepackage: ClientStylePackage = {
       branding: getValueOrDefault(settings.branding, DEFAULTS.branding),
       clothing: getValueOrDefault(settings.clothing, DEFAULTS.clothing),
       clothingColors: getValueOrDefault(settings.clothingColors, DEFAULTS.clothingColors),
-      pose: getValueOrDefault(settings.pose, DEFAULTS.pose),
+      pose: getValueOrDefault(settings.pose, SERVER_DEFAULTS.pose),
       expression: getValueOrDefault(settings.expression, DEFAULTS.expression),
       shotType: DEFAULTS.shotType, // Fixed to medium-shot for freepackage
       // Runtime context (passed in by caller, not from persisted settings)
@@ -126,6 +145,7 @@ export const freepackage: ClientStylePackage = {
   },
   extractUiSettings: (rawStyleSettings) => {
     // Extract UI settings from request for visible categories: background, branding, clothing, clothingColors, expression
+    // pose is NOT included since it's not in visibleCategories
     return {
       presetId: freepackage.defaultPresetId,
       background: rawStyleSettings.background as PhotoStyleSettings['background'],
@@ -134,8 +154,8 @@ export const freepackage: ClientStylePackage = {
       clothingColors: rawStyleSettings.clothingColors as PhotoStyleSettings['clothingColors'],
       expression: rawStyleSettings.expression as PhotoStyleSettings['expression'],
       // Fixed settings for freepackage
-      pose: DEFAULTS.pose,
       shotType: DEFAULTS.shotType,
+      // pose is omitted - not in visibleCategories, will be applied server-side
     }
   },
   persistenceAdapter: {
@@ -170,16 +190,20 @@ export const freepackage: ClientStylePackage = {
       const clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
       const expressionResult = expression.deserialize(inner, DEFAULTS.expression)
 
-      return {
+      // Build settings object - only include categories that are in visibleCategories
+      // pose is NOT in visibleCategories, so we omit it entirely (it's optional in PhotoStyleSettings)
+      const settings: PhotoStyleSettings = {
         presetId: freepackage.defaultPresetId, // Always derive from package
         background: backgroundResult || { type: 'user-choice' },
         branding: brandingResult,
         clothing: clothingResult,
         clothingColors: clothingColorsResult,
-        // Use default pose (not from database) since pose is not in visibleCategories
-        pose: DEFAULTS.pose,
         expression: expressionResult,
+        // Explicitly omit pose since it's not in visibleCategories
+        // The default pose will be applied server-side during generation if needed
       }
+      
+      return settings
     }
   }
 }

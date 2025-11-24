@@ -715,7 +715,9 @@ export default function PhotoStyleSettings({
                 </div>
               </div>
             </div>
-            {currentEditableCategories.map(renderCategoryCard)}
+            <CardGrid>
+              {currentEditableCategories.map(renderCategoryCard)}
+            </CardGrid>
           </div>
           
           {/* Locked sections teaser or revealed sections */}
@@ -741,15 +743,17 @@ export default function PhotoStyleSettings({
                         </div>
                       </div>
                     </div>
-                    {currentLockedCategories.map((cat, idx) => (
-                      <div 
-                        key={cat.key}
-                        className="animate-fade-in"
-                        style={{ animationDelay: `${idx * 100}ms` }}
-                      >
-                        {renderCategoryCard(cat)}
-                      </div>
-                    ))}
+                    <CardGrid>
+                      {currentLockedCategories.map((cat, idx) => (
+                        <div 
+                          key={cat.key}
+                          className="animate-fade-in"
+                          style={{ animationDelay: `${idx * 100}ms` }}
+                        >
+                          {renderCategoryCard(cat)}
+                        </div>
+                      ))}
+                    </CardGrid>
                   </div>
                 </>
               )}
@@ -761,8 +765,15 @@ export default function PhotoStyleSettings({
       {/* Context A: Admin setting style - show all categories with sections */}
       {showToggles && (
         <>
-          {/* Photo Style Section - visible on all screen sizes */}
-          <div className="space-y-4">
+          {/* Mobile: All categories in single grid */}
+          <div className="md:hidden space-y-4">
+            <CardGrid>
+              {allCategories.map(renderCategoryCard)}
+            </CardGrid>
+          </div>
+
+          {/* Desktop: Original order - Photo Style Section */}
+          <div className="hidden md:block space-y-4">
             <div id="composition-settings-section" className="bg-gradient-to-r from-brand-primary/5 to-brand-secondary/5 border-l-4 border-brand-primary rounded-lg p-5 shadow-sm">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-brand-primary rounded-lg flex items-center justify-center flex-shrink-0">
@@ -783,8 +794,8 @@ export default function PhotoStyleSettings({
             </CardGrid>
           </div>
 
-          {/* User Style Section - visible on all screen sizes */}
-          <div className="space-y-4">
+          {/* Desktop: User Style Section */}
+          <div className="hidden md:block space-y-4">
             <div id="user-style-settings-section" className="bg-gradient-to-r from-brand-secondary/5 to-brand-primary/5 border-l-4 border-brand-secondary rounded-lg p-5 shadow-sm">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-brand-secondary rounded-lg flex items-center justify-center flex-shrink-0">
