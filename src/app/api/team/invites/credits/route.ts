@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
     if (!user?.person?.team) {
       // User is not part of a team yet, return empty response
       return NextResponse.json({
+        totalAllocatedCredits: 0,
         totalRemainingCredits: 0,
         invites: []
       })
@@ -60,7 +61,14 @@ export async function GET(request: NextRequest) {
       0
     )
 
+    // Calculate total allocated credits (credits assigned to invites)
+    const totalAllocatedCredits = user.person.team.teamInvites.reduce(
+      (sum, invite) => sum + (invite.creditsAllocated ?? 0),
+      0
+    )
+
     return NextResponse.json({
+      totalAllocatedCredits,
       totalRemainingCredits,
       invites: invitesWithRemainingCredits
     })

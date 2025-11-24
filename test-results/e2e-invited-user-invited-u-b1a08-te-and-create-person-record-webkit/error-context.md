@@ -1,0 +1,53 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [active]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - navigation [ref=e7]:
+            - button "previous" [disabled] [ref=e8]:
+              - img "previous" [ref=e9]
+            - generic [ref=e11]:
+              - generic [ref=e12]: 1/
+              - text: "1"
+            - button "next" [disabled] [ref=e13]:
+              - img "next" [ref=e14]
+          - img
+        - generic [ref=e16]:
+          - link "Next.js 15.5.4 (outdated) Webpack" [ref=e17]:
+            - /url: https://nextjs.org/docs/messages/version-staleness
+            - img [ref=e18]
+            - generic "An outdated version detected (latest is 16.0.3), upgrade is highly recommended!" [ref=e20]: Next.js 15.5.4 (outdated)
+            - generic [ref=e21]: Webpack
+          - img
+      - dialog "Runtime Error" [ref=e23]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e30]: Runtime Error
+            - generic [ref=e31]:
+              - button "Copy Error Info" [ref=e32] [cursor=pointer]:
+                - img [ref=e33]
+              - button "No related documentation found" [disabled] [ref=e35]:
+                - img [ref=e36]
+              - link "Learn more about enabling Node.js inspector for server code with Chrome DevTools" [ref=e38]:
+                - /url: https://nextjs.org/docs/app/building-your-application/configuring/debugging#server-side-code
+                - img [ref=e39]
+          - paragraph [ref=e51]: "Failed to call `useTranslations` because the context from `NextIntlClientProvider` was not found. This can happen because: 1) You intended to render this component as a Server Component, the render failed, and therefore React attempted to render the component on the client instead. If this is the case, check the console for server errors. 2) You intended to render this component on the client side, but no context was found. Learn more about this error here: https://next-intl.dev/docs/environments/server-client-components#missing-context"
+        - generic [ref=e53]:
+          - generic [ref=e54]: "1"
+          - generic [ref=e55]: "2"
+    - generic [ref=e60] [cursor=pointer]:
+      - button "Open Next.js Dev Tools" [ref=e61]:
+        - img [ref=e62]
+      - generic [ref=e67]:
+        - button "Open issues overlay" [ref=e68]:
+          - generic [ref=e69]:
+            - generic [ref=e70]: "0"
+            - generic [ref=e71]: "1"
+          - generic [ref=e72]: Issue
+        - button "Collapse issues badge" [ref=e73]:
+          - img [ref=e74]
+  - 'heading "Application error: a client-side exception has occurred while loading localhost (see the browser console for more information)." [level=2] [ref=e78]'
+```

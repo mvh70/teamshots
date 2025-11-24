@@ -16,12 +16,6 @@ interface Context {
   id: string
   name: string
   settings?: PhotoStyleSettingsType
-  // Legacy fields for backward compatibility
-  backgroundUrl?: string
-  backgroundPrompt?: string
-  logoUrl?: string
-  stylePreset: string
-  customPrompt?: string
   createdAt: string
 }
 
@@ -219,7 +213,6 @@ export default function ContextsPage() {
             </div>
             <StyleCard
               settings={freePackageContext?.settings}
-              stylePreset={freePackageContext?.stylePreset || 'corporate'}
             />
             
           </div>
@@ -271,10 +264,6 @@ export default function ContextsPage() {
 
             <StyleCard
               settings={context.settings}
-              stylePreset={context.stylePreset}
-              legacyBackgroundUrl={context.backgroundUrl}
-              legacyBackgroundPrompt={context.backgroundPrompt}
-              legacyLogoUrl={context.logoUrl}
             />
 
             {contextsData.activeContext?.id !== context.id && (

@@ -134,10 +134,14 @@ export default function SelfieUploadFlow({
       // Small delay to ensure database is ready
       await new Promise(resolve => setTimeout(resolve, 200))
 
-      // Call parent callback - parent will hide this component
-      // Keep isProcessing true to prevent flash of upload buttons
-      // Component will unmount when parent sets showUpload=false
+      // Call parent callback
       onSelfiesApproved(successfulResults)
+      
+      // Reset processing state after a brief delay to show success
+      // This is important for mobile where component stays mounted
+      setTimeout(() => {
+        setIsProcessing(false)
+      }, 1500)
     } catch (error) {
       console.error('Failed to handle upload:', error)
       onError?.('Selfie upload failed. Please try again.')
@@ -184,6 +188,12 @@ export default function SelfieUploadFlow({
 
       // Call parent callback
       onSelfiesApproved(successfulResults)
+      
+      // Reset processing state after a brief delay
+      // This is important for mobile where component stays mounted
+      setTimeout(() => {
+        setIsProcessing(false)
+      }, 1500)
     } catch (error) {
       console.error('Failed to approve camera capture:', error)
       onError?.('Failed to approve selfie. Please try again.')

@@ -1,5 +1,5 @@
 import { PhotoStyleSettings } from '@/types/photo-style'
-import { StandardPresetConfig, getStandardPreset } from './standard-presets'
+import { StandardPresetConfig } from './index'
 import { shotTypeSuggestedAspectRatio } from '../elements/shot-type/config'
 
 function cloneSettings(settings: PhotoStyleSettings): PhotoStyleSettings {
@@ -11,40 +11,55 @@ export interface AppliedStandardPreset {
   settings: PhotoStyleSettings
 }
 
-export function getDefaultPresetSettings(presetId: string): PhotoStyleSettings {
-  const preset = getStandardPreset(presetId)
-
+/**
+ * Gets the default settings for a preset.
+ * NOW REQUIRES explicitly passing the preset config object,
+ * as presets are no longer looked up from a global registry.
+ */
+export function getDefaultPresetSettings(preset: StandardPresetConfig): PhotoStyleSettings {
   const defaults: PhotoStyleSettings = {
     presetId: preset.id,
     shotType: { type: preset.defaults.shotType },
-    focalLength: preset.defaults.focalLength,
-    aperture: preset.defaults.aperture,
-    lightingQuality: preset.defaults.lighting.quality,
-    shutterSpeed: preset.defaults.shutterSpeed,
-    bodyAngle: preset.defaults.pose.bodyAngle,
-    headPosition: preset.defaults.pose.headPosition,
-    shoulderPosition: preset.defaults.pose.shoulderPosition,
-    weightDistribution: preset.defaults.pose.weightDistribution,
-    armPosition: preset.defaults.pose.armPosition,
-    expression: { type: preset.defaults.pose.expression }
+    // focalLength, aperture, lightingQuality, shutterSpeed are now dynamically derived
+    // Initialize pose with nested granular defaults
+    pose: {
+      type: 'user-choice',
+      bodyAngle: preset.defaults.pose.bodyAngle,
+      headPosition: preset.defaults.pose.headPosition,
+      shoulderPosition: preset.defaults.pose.shoulderPosition,
+      weightDistribution: preset.defaults.pose.weightDistribution,
+      armPosition: preset.defaults.pose.armPosition,
+      // sittingPose is optional, added below if present
+    },
+    expression: { type: preset.defaults.pose.expression ?? 'user-choice' }
   }
 
   if (preset.defaults.aspectRatio) {
     defaults.aspectRatio = preset.defaults.aspectRatio
   }
 
-  if (preset.defaults.pose.sittingPose) {
-    defaults.sittingPose = preset.defaults.pose.sittingPose
+  if (preset.defaults.pose.sittingPose && defaults.pose) {
+    defaults.pose.sittingPose = preset.defaults.pose.sittingPose
   }
 
   return defaults
 }
 
+/**
+ * Applies a standard preset to settings.
+ * NOW REQUIRES passing the preset object map (from the package) to look up the preset.
+ */
 export function applyStandardPreset(
   presetId: string | undefined,
-  styleSettings: PhotoStyleSettings
+  styleSettings: PhotoStyleSettings,
+  availablePresets: Record<string, StandardPresetConfig>
 ): AppliedStandardPreset {
-  const preset = getStandardPreset(presetId)
+  const preset = (presetId ? availablePresets[presetId] : undefined) || Object.values(availablePresets)[0]
+  
+  if (!preset) {
+    throw new Error(`Preset ${presetId} not found and no defaults available`)
+  }
+
   const settings = cloneSettings(styleSettings)
 
   if (!settings.presetId) {
@@ -71,54 +86,45 @@ export function applyStandardPreset(
     }
   }
 
-  if (!settings.focalLength) {
-    settings.focalLength = preset.defaults.focalLength
-  }
+  // focalLength, aperture, lightingQuality, shutterSpeed are now dynamically derived
+  // by camera-settings and lighting elements
 
-  if (!settings.aperture) {
-    settings.aperture = preset.defaults.aperture
-  }
-
-  if (!settings.lightingQuality) {
-    settings.lightingQuality = preset.defaults.lighting.quality
-  }
-
-  if (!settings.shutterSpeed) {
-    settings.shutterSpeed = preset.defaults.shutterSpeed
+  // Initialize pose object if missing
+  if (!settings.pose) {
+    settings.pose = { type: 'user-choice' }
   }
 
   // Pose defaults - skip if pose preset is selected to avoid overriding template settings
-  const hasPosePreset = settings.pose?.type && settings.pose.type !== 'user-choice'
+  const hasPosePreset = settings.pose.type && settings.pose.type !== 'user-choice'
   if (!hasPosePreset) {
-    if (!settings.bodyAngle) {
-    settings.bodyAngle = preset.defaults.pose.bodyAngle
-  }
+    if (!settings.pose.bodyAngle) {
+      settings.pose.bodyAngle = preset.defaults.pose.bodyAngle
+    }
 
-  if (!settings.headPosition) {
-    settings.headPosition = preset.defaults.pose.headPosition
-  }
+    if (!settings.pose.headPosition) {
+      settings.pose.headPosition = preset.defaults.pose.headPosition
+    }
 
-  if (!settings.shoulderPosition) {
-    settings.shoulderPosition = preset.defaults.pose.shoulderPosition
-  }
+    if (!settings.pose.shoulderPosition) {
+      settings.pose.shoulderPosition = preset.defaults.pose.shoulderPosition
+    }
 
-  if (!settings.weightDistribution) {
-    settings.weightDistribution = preset.defaults.pose.weightDistribution
-  }
+    if (!settings.pose.weightDistribution) {
+      settings.pose.weightDistribution = preset.defaults.pose.weightDistribution
+    }
 
-  if (!settings.armPosition) {
-    settings.armPosition = preset.defaults.pose.armPosition
-  }
+    if (!settings.pose.armPosition) {
+      settings.pose.armPosition = preset.defaults.pose.armPosition
+    }
 
-  if (!settings.sittingPose && preset.defaults.pose.sittingPose) {
-    settings.sittingPose = preset.defaults.pose.sittingPose
-  }
+    if (!settings.pose.sittingPose && preset.defaults.pose.sittingPose) {
+      settings.pose.sittingPose = preset.defaults.pose.sittingPose
+    }
 
-  if (!settings.expression || !settings.expression.type) {
-    settings.expression = { type: preset.defaults.pose.expression }
-  }
+    if (!settings.expression || !settings.expression.type) {
+      settings.expression = { type: preset.defaults.pose.expression ?? 'user-choice' }
+    }
   }
 
   return { preset, settings }
 }
-

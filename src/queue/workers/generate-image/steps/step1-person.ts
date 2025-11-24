@@ -154,7 +154,7 @@ export async function executeStep1(
     Logger.info('V2 DEBUG - Step 1 Image Generation Prompt:', {
       step: 1,
       attempt: retryContext?.attempt || 1,
-      prompt: personPrompt.substring(0, 3000) + (personPrompt.length > 3000 ? '...(truncated)' : ''),
+      prompt: personPrompt.substring(0, 8000) + (personPrompt.length > 8000 ? '...(truncated)' : ''),
       promptLength: personPrompt.length,
       selfieCount: selfieReferences.length,
       hasLogo: !!logoReference
@@ -217,7 +217,8 @@ export async function executeStep1(
   
   return {
     personBuffer: pngBuffer,
-    personBase64: base64
+    personBase64: base64,
+    personPrompt
   }
 }
 

@@ -1,4 +1,4 @@
-import { ExpressionSettings } from '@/types/photo-style'
+import type { ExpressionSettings } from '@/types/photo-style'
 
 export type ExpressionType = ExpressionSettings['type']
 
@@ -9,6 +9,16 @@ export interface ExpressionConfig {
   icon: string
   color: string
 }
+
+export const ALL_EXPRESSION_IDS: ExpressionType[] = [
+  'genuine_smile',
+  'soft_smile',
+  'neutral_serious',
+  'laugh_joy',
+  'contemplative',
+  'confident',
+  'sad'
+]
 
 export const EXPRESSION_CONFIGS: ExpressionConfig[] = [
   {
@@ -82,4 +92,3 @@ export function getExpressionLabel(type?: ExpressionType | null): string {
   const expressionType = type as NonNullable<ExpressionType>
   return EXPRESSION_LABELS[expressionType] ?? EXPRESSION_LABELS.neutral_serious
 }
-

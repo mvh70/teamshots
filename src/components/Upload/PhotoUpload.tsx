@@ -53,6 +53,12 @@ export default function PhotoUpload({
   const [cameraReady, setCameraReady] = useState(false);
   const hasAutoOpenedRef = useRef(false);
 
+  // Detect if device is iPad or iOS (treat as mobile for camera purposes)
+  const isIOSDevice = typeof window !== 'undefined' && (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) // iPad on iOS 13+
+  );
+
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -438,6 +444,15 @@ export default function PhotoUpload({
 
   const openCamera = useCallback(async () => {
     setError(null);
+    
+    // On iOS/iPad, use native file input with capture attribute instead of getUserMedia
+    // This provides better compatibility and native camera integration
+    if (isIOSDevice) {
+      // Trigger the file input which has capture="user" attribute
+      inputRef.current?.click();
+      return;
+    }
+    
     try {
       // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -465,8 +480,8 @@ export default function PhotoUpload({
       setCameraOpen(true);
       setCameraReady(false);
 
-      // Scroll to top on mobile when camera opens
-      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      // Scroll to top on mobile/tablet when camera opens
+      if (typeof window !== 'undefined' && (window.innerWidth < 768 || isIOSDevice)) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (error) {
@@ -497,7 +512,7 @@ export default function PhotoUpload({
         setError("Unable to access camera");
       }
     }
-  }, []);
+  }, [isIOSDevice]);
 
   const closeCamera = () => {
     setCameraOpen(false);
@@ -528,8 +543,9 @@ export default function PhotoUpload({
     
     // Small delay to ensure DOM is ready, especially for mobile portal
     const timeoutId = setTimeout(() => {
-      // Determine which video element to use based on screen size
-      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      // Determine which video element to use based on screen size and device type
+      // Treat iPad as mobile for camera UI
+      const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || isIOSDevice);
       const v = (isMobile ? videoRefMobile.current : videoRefDesktop.current) as (HTMLVideoElement & { srcObject?: MediaStream }) | null;
       
       // Fallback to the other ref if primary one is not available
@@ -590,7 +606,7 @@ export default function PhotoUpload({
         desktopVideo.onloadedmetadata = null;
       }
     };
-  }, [cameraOpen, stream]);
+  }, [cameraOpen, stream, isIOSDevice]);
 
   const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -662,7 +678,7 @@ export default function PhotoUpload({
                 data-testid="camera-button"
               >
                 <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <span>Use Camera</span>
@@ -687,6 +703,7 @@ export default function PhotoUpload({
             type="file"
             accept={accept}
             multiple={multiple}
+            capture={isIOSDevice ? "user" : undefined}
             className="hidden"
             onChange={onInputChange}
             disabled={disabled}

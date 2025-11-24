@@ -139,3 +139,31 @@ export function formatProgressMessage(progressMessage: ProgressMessage): string 
   return progressMessage.message
 }
 
+/**
+ * Format progress message with attempt number
+ * Used in worker queue to show which generation attempt is running
+ * 
+ * @param progressMsg - The progress message object
+ * @param progress - Progress percentage (0-100)
+ * @param currentAttempt - Current attempt number
+ * @returns Formatted string with attempt info
+ * 
+ * @example
+ * ```typescript
+ * const msg = formatProgressWithAttempt(
+ *   { message: 'Generating...', emoji: '✨' },
+ *   50,
+ *   2
+ * )
+ * // Returns: "Generation #2\n50% - ✨ Generating..."
+ * ```
+ */
+export function formatProgressWithAttempt(
+  progressMsg: ProgressMessage,
+  progress: number,
+  currentAttempt: number
+): string {
+  const formatted = formatProgressMessage(progressMsg)
+  return `Generation #${currentAttempt}\n${progress}% - ${formatted}`
+}
+

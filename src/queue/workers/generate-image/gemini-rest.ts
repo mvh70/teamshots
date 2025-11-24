@@ -2,6 +2,7 @@ import { GoogleGenAI, HarmCategory } from '@google/genai'
 
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
+import { isRateLimitError } from '@/lib/rate-limit-retry'
 
 export interface GeminiReferenceImage {
   mimeType: string
@@ -22,8 +23,8 @@ export interface GenerationOptions {
 
 // Map Vertex AI safety settings to REST API format
 function mapSafetySettings(vertexSettings?: Array<{
-  category: any
-  threshold: any
+  category: HarmCategory
+  threshold: 'BLOCK_ONLY_HIGH' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_LOW_AND_ABOVE' | 'BLOCK_NONE'
 }>): Array<{
   category: HarmCategory
   threshold: 'BLOCK_ONLY_HIGH' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_LOW_AND_ABOVE' | 'BLOCK_NONE'
@@ -121,8 +122,7 @@ export async function generateWithGeminiRest(
     imageCount: contents[0].parts.filter(p => 'inlineData' in p).length,
     hasAspectRatio: !!aspectRatio,
     hasResolution: !!resolution,
-    generationConfig: Object.keys(generationConfig).length > 0 ? generationConfig : undefined,
-    safetySettings: safetySettings.map(s => ({ category: s.category, threshold: s.threshold }))
+    generationConfig: Object.keys(generationConfig).length > 0 ? generationConfig : undefined
   })
 
   try {
@@ -136,7 +136,17 @@ export async function generateWithGeminiRest(
     const streamingResp = await ai.models.generateContentStream(req)
 
     // Collect all chunks
-    const chunks: any[] = []
+    const chunks: Array<{
+      candidates?: Array<{
+        content?: {
+          parts?: Array<{
+            inlineData?: {
+              data?: string
+            }
+          }>
+        }
+      }>
+    }> = []
     for await (const chunk of streamingResp) {
       chunks.push(chunk)
     }
@@ -163,11 +173,21 @@ export async function generateWithGeminiRest(
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    Logger.error('Gemini REST API generation failed', {
-      modelName,
-      error: errorMessage,
-      note: 'If using gemini-3-pro-image-preview, ensure it\'s available via REST API.'
-    })
+    const isRateLimit = isRateLimitError(error)
+    
+    if (isRateLimit) {
+      // For rate limit errors, log without stack trace
+      Logger.error('Gemini REST API rate limited (429)', {
+        modelName,
+        error: errorMessage
+      })
+    } else {
+      Logger.error('Gemini REST API generation failed', {
+        modelName,
+        error: errorMessage,
+        note: 'If using gemini-3-pro-image-preview, ensure it\'s available via REST API.'
+      })
+    }
     throw error
   }
 }

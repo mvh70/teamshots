@@ -5,6 +5,33 @@ import { getPackageConfig } from './packages'
 const cloneDeep = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
 /**
+ * Extracts package ID from raw settings object (handles both old and new formats)
+ * Centralized utility to avoid duplication across codebase
+ */
+export function extractPackageId(input: Record<string, unknown> | null | undefined): string | undefined {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return undefined
+  }
+
+  // NEW format: package at root
+  if ('package' in input && typeof input.package === 'string') {
+    return input.package
+  }
+
+  // NEW format: packageName at root
+  if ('packageName' in input && typeof input.packageName === 'string') {
+    return input.packageName
+  }
+
+  // OLD format: packageId at root
+  if ('packageId' in input && typeof input.packageId === 'string') {
+    return input.packageId
+  }
+
+  return undefined
+}
+
+/**
  * Resolves final style settings with correct priority:
  * 1. Package defaults (standards)
  * 2. Photo style/context settings (completely replace package defaults)

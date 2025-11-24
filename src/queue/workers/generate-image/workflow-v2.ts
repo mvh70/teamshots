@@ -6,7 +6,9 @@ import sharp from 'sharp'
 import type { Job } from 'bullmq'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import type { ReferenceImage, DownloadAssetFn } from '@/types/generation'
-import { ASPECT_RATIOS, type AspectRatioId } from '@/domain/style/elements/aspect-ratio/config'
+import { resolveAspectRatioConfig } from '@/domain/style/elements/aspect-ratio/config'
+import { resolveShotType } from '@/domain/style/elements/shot-type/config'
+import { isRateLimitError, RATE_LIMIT_SLEEP_MS } from '@/lib/rate-limit-retry'
 
 // Step imports
 import { executeStep1 } from './steps/step1-person'
@@ -18,8 +20,10 @@ import { executeStep6 } from './steps/step6-composition-eval'
 import { executeStep7 } from './steps/step7-refinement'
 import { executeStep8 } from './steps/step8-final-eval'
 
-// Import rate limit utilities from main worker
-import { isRateLimitError, RATE_LIMIT_SLEEP_MS, delay } from '../generateImage'
+// Delay utility
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 export interface V2WorkflowInput {
   job: Job
@@ -91,10 +95,17 @@ export async function executeV2Workflow({
   currentAttempt,
   debugMode = false
 }: V2WorkflowInput): Promise<V2WorkflowResult> {
-  // Get expected dimensions from aspect ratio
-  const aspectRatioConfig = ASPECT_RATIOS[aspectRatio as AspectRatioId] || ASPECT_RATIOS['1:1']
+  // Get expected dimensions from aspect ratio using centralized utility
+  const aspectRatioConfig = resolveAspectRatioConfig(aspectRatio)
   const expectedWidth = aspectRatioConfig.width
   const expectedHeight = aspectRatioConfig.height
+
+  // Derive shot description from style settings
+  const shotTypeInput = typeof styleSettings.shotType?.type === 'string' 
+    ? styleSettings.shotType.type 
+    : undefined
+  const shotTypeConfig = resolveShotType(shotTypeInput)
+  const shotDescription = shotTypeConfig.framingDescription
 
   Logger.info('Starting V2 image generation workflow (8 steps)', {
     generationId,
@@ -123,7 +134,7 @@ export async function executeV2Workflow({
   if (debugMode) {
     Logger.info('V2 DEBUG - Base Prompt from Package Builder:', {
       generationId,
-      prompt: prompt.substring(0, 3000) + (prompt.length > 3000 ? '...(truncated)' : ''),
+      prompt: prompt.substring(0, 8000) + (prompt.length > 8000 ? '...(truncated)' : ''),
       promptLength: prompt.length
     })
   }
@@ -193,7 +204,7 @@ export async function executeV2Workflow({
               personBuffer: step1Output.personBuffer,
               personBase64: step1Output.personBase64,
               selfieReferences: processedSelfieReferences,
-              generationPrompt: prompt,
+              generationPrompt: step1Output.personPrompt,
               logoReference,
               brandingPosition: styleSettings.branding?.position
             }, debugMode)).evaluation : undefined
@@ -245,7 +256,7 @@ export async function executeV2Workflow({
       personBuffer: step1Output.personBuffer,
       personBase64: step1Output.personBase64,
       selfieReferences: processedSelfieReferences,
-      generationPrompt: prompt,
+      generationPrompt: step1Output.personPrompt,
       logoReference,
       brandingPosition: styleSettings.branding?.position
     }, debugMode)
@@ -330,7 +341,9 @@ export async function executeV2Workflow({
             aspectRatioDescription: aspectRatioConfig.id,
             expectedWidth,
             expectedHeight,
-            resolution
+            resolution,
+            styleSettings,
+            shotDescription
           },
           step5Attempts > 1 ? {
             attempt: step5Attempts,

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { getPackageConfig } from '@/domain/style/packages'
+import { extractPackageId } from '@/domain/style/settings-resolver'
 
 interface JobData {
   generationId: string;
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Serialize style settings for storage
-    const packageId = (finalStyleSettings['packageId'] as string) || 'headshot1'
+    const packageId = extractPackageId(finalStyleSettings) || 'headshot1'
     const pkg = getPackageConfig(packageId)
     const serializedStyleSettingsBase = pkg.persistenceAdapter.serialize(finalStyleSettings)
     // Try to reuse stored selfie keys from the source generation

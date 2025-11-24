@@ -48,12 +48,6 @@ interface Context {
       type?: string
     }
   }
-  // Legacy fields for backward compatibility
-  backgroundUrl?: string
-  backgroundPrompt?: string
-  logoUrl?: string
-  stylePreset: string
-  customPrompt?: string
   createdAt: string
 }
 
@@ -229,7 +223,6 @@ export default function TeamPhotoStylesPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <StyleSummaryCard
                   settings={freePackageContext?.settings}
-                  stylePreset={freePackageContext?.stylePreset || 'corporate'}
                 />
                 <UserStyleSummary settings={freePackageContext?.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
               </div>
@@ -295,10 +288,6 @@ export default function TeamPhotoStylesPage() {
                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                  <StyleSummaryCard
                    settings={context.settings}
-                   stylePreset={context.stylePreset}
-                   legacyBackgroundUrl={context.backgroundUrl}
-                   legacyBackgroundPrompt={context.backgroundPrompt}
-                   legacyLogoUrl={context.logoUrl}
                  />
                  <UserStyleSummary settings={context.settings as Parameters<typeof UserStyleSummary>[0]['settings']} />
                </div>

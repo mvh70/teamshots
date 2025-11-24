@@ -49,12 +49,6 @@ interface Context {
       type?: string
     }
   }
-  // Legacy fields for backward compatibility
-  backgroundUrl?: string
-  backgroundPrompt?: string
-  logoUrl?: string
-  stylePreset: string
-  customPrompt?: string
   createdAt: string
 }
 
@@ -199,7 +193,6 @@ export default function PersonalPhotoStylesPage() {
             </div>
             <StyleCard
               settings={freePackageContext?.settings}
-              stylePreset={freePackageContext?.stylePreset || 'corporate'}
             />
           </div>
         </CardGrid>
@@ -248,10 +241,6 @@ export default function PersonalPhotoStylesPage() {
               {/* Left Column - Photo Style Settings */}
               <StyleSummaryCard
                 settings={context.settings}
-                stylePreset={context.stylePreset}
-                legacyBackgroundUrl={context.backgroundUrl}
-                legacyBackgroundPrompt={context.backgroundPrompt}
-                legacyLogoUrl={context.logoUrl}
               />
 
               {/* Right Column - User Style Settings */}

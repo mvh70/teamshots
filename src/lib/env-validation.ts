@@ -38,6 +38,7 @@ const envSchema = z.object({
   GEMINI_EVAL_MODEL: z.string().optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   GOOGLE_CLOUD_API_KEY: z.string().optional(),
+  GOOGLE_PROJECT_ID: z.string().optional(),
   
   // Stripe
   STRIPE_SECRET_KEY: z.string().optional(),

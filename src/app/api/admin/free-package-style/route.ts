@@ -23,12 +23,16 @@ export async function GET() {
   // Load the saved context to hydrate UI with persisted values
   const context = await prisma.context.findUnique({
     where: { id: freePackageStyleId },
-    select: { id: true, stylePreset: true, settings: true }
+    select: { id: true, settings: true }
   })
+
+  // Extract stylePreset from settings if it exists
+  const settings = context?.settings as Record<string, unknown> | undefined
+  const stylePreset = settings?.stylePreset as string | undefined
 
   return NextResponse.json({
     freePackageStyleId,
-    context
+    context: context ? { ...context, stylePreset } : null
   })
 }
 

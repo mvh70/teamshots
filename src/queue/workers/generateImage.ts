@@ -15,9 +15,11 @@ import { Telemetry } from '@/lib/telemetry'
 import { Env } from '@/lib/env'
 import { sendSupportNotificationEmail } from '@/lib/email'
 import type { SupportNotificationAttachment } from '@/lib/email'
-import { getProgressMessage, formatProgressMessage } from '@/lib/generation-progress-messages'
+import { getProgressMessage, formatProgressWithAttempt } from '@/lib/generation-progress-messages'
 import { createS3Client, getS3BucketName } from '@/lib/s3-client'
 import { PhotoStyleSettings } from '@/types/photo-style'
+import { isRateLimitError, MAX_RATE_LIMIT_RETRIES, RATE_LIMIT_SLEEP_MS, delay } from '@/lib/rate-limit-retry'
+import { asRecord } from '@/lib/type-guards'
 
 import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/domain/style/elements/aspect-ratio/config'
 import type { AspectRatioId } from '@/domain/style/elements/aspect-ratio/config'
@@ -40,9 +42,9 @@ const SKIP_GEMINI_PROMPT = Env.boolean('SKIP_GEMINI_PROMPT', false)
 
 const s3Client = createS3Client({ forcePathStyle: false })
 const BUCKET_NAME = getS3BucketName()
-const RATE_LIMIT_SLEEP_MS = 60_000
-const MAX_RATE_LIMIT_RETRIES = 3
 const PROGRESS_UPDATE_DEBOUNCE_MS = 100 // Minimum time between identical progress updates
+
+// Note: RATE_LIMIT_SLEEP_MS and MAX_RATE_LIMIT_RETRIES now exported from @/lib/rate-limit-retry
 
 // Create worker
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
@@ -54,12 +56,11 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
     const maxAttempts = job.opts?.attempts || 3
     const currentAttempt = job.attemptsMade + 1
     
-    // Helper to format progress messages with attempt info
-    const formatProgressWithAttempt = (progressMsg: { message: string; emoji?: string }, progress: number): string => {
-      const formatted = formatProgressMessage(progressMsg)
-      const result = `Generation #${currentAttempt}\n${progress}% - ${formatted}`
+    // Helper to format progress messages with attempt info (uses centralized utility)
+    const formatProgress = (progressMsg: { message: string; emoji?: string }, progress: number): string => {
+      const result = formatProgressWithAttempt(progressMsg, progress, currentAttempt)
       Logger.debug('Progress message formatted', { 
-        original: formatted.substring(0, 50), 
+        original: progressMsg.message.substring(0, 50), 
         progress,
         attempt: currentAttempt,
         final: result.substring(0, 80) 
@@ -117,7 +118,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
       }
       
-      const firstProgressMsg = formatProgressWithAttempt(getProgressMessage('starting-preprocessing'), 10)
+      const firstProgressMsg = formatProgress(getProgressMessage('starting-preprocessing'), 10)
       Logger.info('Updating progress with message', { message: firstProgressMsg, progress: 10 })
       try {
         await job.updateProgress({ progress: 10, message: firstProgressMsg })
@@ -196,7 +197,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             ? undefined // Skip progress updates for V2 workflow
             : async (stepName) => {
                 const progressMsg = getProgressMessage(stepName)
-                const formattedMsg = formatProgressWithAttempt(progressMsg, 15)
+                const formattedMsg = formatProgress(progressMsg, 15)
 
                 // Only debounce identical messages within a short time window
                 const now = Date.now()
@@ -273,7 +274,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       const finalPrompt = labelInstruction ? `${basePrompt}\n\n${labelInstruction}` : basePrompt
 
       try {
-        await job.updateProgress({ progress: 20, message: formatProgressWithAttempt(getProgressMessage(), 20) })
+        await job.updateProgress({ progress: 20, message: formatProgress(getProgressMessage(), 20) })
       } catch (err: unknown) {
         Logger.warn('Failed to update prompt generation progress', {
           error: err instanceof Error ? err.message : String(err)
@@ -341,7 +342,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
         await job.updateProgress({
           progress: 100,
-          message: formatProgressWithAttempt({
+          message: formatProgress({
             message: 'Prompt logged for inspection',
             emoji: '📝'
           }, 100)
@@ -394,7 +395,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
               })
               await job.updateProgress({
                 progress: 55,
-                message: formatProgressWithAttempt({
+                message: formatProgress({
                   message:
                     'Gemini model configuration error. Please verify GEMINI_IMAGE_MODEL or Vertex AI access.',
                   emoji: '⚠️'
@@ -422,7 +423,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
               await job.updateProgress({
                 progress: 55,
-                message: formatProgressWithAttempt({
+                message: formatProgress({
                   message: `Gemini is busy (rate limited). Trying again in ${waitSeconds} seconds...`,
                   emoji: '⏳'
                 }, 55)
@@ -438,7 +439,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
         await job.updateProgress({
           progress: 60,
-          message: formatProgressWithAttempt(getProgressMessage(), 60)
+          message: formatProgress(getProgressMessage(), 60)
         })
 
         if (!generatedBuffers.length) {
@@ -464,7 +465,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
         await job.updateProgress({
           progress: 65,
-          message: formatProgressWithAttempt({
+          message: formatProgress({
             message: 'Running automated quality check',
             emoji: '🔍'
           }, 65)
@@ -528,7 +529,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         if (allApproved) {
           await job.updateProgress({
             progress: 70,
-            message: formatProgressWithAttempt({
+            message: formatProgress({
               message: 'Image approved! Finalizing delivery',
               emoji: '✅'
             }, 70)
@@ -556,7 +557,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
         await job.updateProgress({
           progress: 60,
-          message: formatProgressWithAttempt({
+          message: formatProgress({
             message: 'Image not approved. Regenerating another version for free...',
             emoji: '♻️'
           }, 60)
@@ -600,7 +601,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
         await job.updateProgress({
           progress: 95,
-          message: formatProgressWithAttempt({
+          message: formatProgress({
             message: 'Running final quality check',
             emoji: '🔍'
           }, 95)
@@ -658,7 +659,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         generationId
       })
       try {
-        await job.updateProgress({ progress: 80, message: formatProgressWithAttempt(getProgressMessage(), 80) })
+        await job.updateProgress({ progress: 80, message: formatProgress(getProgressMessage(), 80) })
       } catch (err: unknown) {
         Logger.warn('Failed to update upload progress', {
           error: err instanceof Error ? err.message : String(err)
@@ -679,7 +680,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       })
 
       try {
-        await job.updateProgress({ progress: 100, message: formatProgressWithAttempt({
+        await job.updateProgress({ progress: 100, message: formatProgress({
           message: 'All done! Your photo is ready!',
           emoji: '✨'
         }, 100) })
@@ -744,7 +745,17 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
       }
       
-      Logger.error(`Image generation failed for job ${job.id}`, errorDetails)
+      // Check if this is a rate limit error (429) - filter out stack trace
+      const isRateLimit = isRateLimitError(error)
+      
+      if (isRateLimit) {
+        // For rate limit errors, log without stack trace
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { stack, ...errorDetailsWithoutStack } = errorDetails
+        Logger.error(`Image generation rate limited (429) for job ${job.id}`, errorDetailsWithoutStack)
+      } else {
+        Logger.error(`Image generation failed for job ${job.id}`, errorDetails)
+      }
       
       // Truncate error message if too long (database field has limit, but we'll keep it reasonable)
       const maxErrorMessageLength = 2000
@@ -1049,17 +1060,7 @@ async function notifyEvaluationFailure({
   }
 }
 
-function isRateLimitError(error: unknown): boolean {
-  const metadata = collectErrorMetadata(error)
-  if (metadata.statusCodes.includes(429)) {
-    return true
-  }
-
-  return metadata.messages.some((message) => {
-    const normalized = message.toLowerCase()
-    return normalized.includes('too many requests') || normalized.includes('resource exhausted')
-  })
-}
+// Note: isRateLimitError and rate limit retry logic now centralized in @/lib/rate-limit-retry
 
 function isModelNotFoundError(error: unknown): boolean {
   const metadata = collectErrorMetadata(error)
@@ -1142,22 +1143,8 @@ function collectErrorMetadata(error: unknown): { statusCodes: number[]; messages
   }
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null
-  }
-  return value as Record<string, unknown>
-}
-
-// Exported utilities for V2 workflow rate limit handling
-export { isRateLimitError, RATE_LIMIT_SLEEP_MS }
-export { delay }
+// Note: asRecord now centralized in @/lib/type-guards
+// Note: isRateLimitError, RATE_LIMIT_SLEEP_MS, and delay now centralized in @/lib/rate-limit-retry
 
 export default imageGenerationWorker
 

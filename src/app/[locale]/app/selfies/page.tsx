@@ -2,10 +2,13 @@
 
 import { useTranslations } from 'next-intl'
 import SelfieGallery from '@/components/generation/SelfieGallery'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
+import dynamic from 'next/dynamic'
+
+const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
 interface UploadListItem {
   id: string
@@ -19,9 +22,23 @@ interface UploadListItem {
 function SelfiesPageContent() {
   const t = useTranslations('selfies')
   const [error, setError] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  
   const { uploads, loading, loadUploads } = useSelfieManagement() as { uploads: UploadListItem[], loading: boolean, loadUploads: () => void }
 
   // Hook handles initialization internally
+  
+  // Detect mobile viewport
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkMobile = () => {
+        setIsMobile(window.innerWidth < 768) // md breakpoint
+      }
+      checkMobile()
+      window.addEventListener('resize', checkMobile)
+      return () => window.removeEventListener('resize', checkMobile)
+    }
+  }, [])
 
   const handleSelfiesApproved = async () => {
     // Reload uploads after successful upload
@@ -74,16 +91,26 @@ function SelfiesPageContent() {
       {loading ? (
         <LoadingGrid cols={4} rows={2} />
       ) : (
-        <div>
+        <div className={isMobile ? 'pb-40' : ''}>
           <SelfieGallery
             selfies={uploads.map(u => ({ id: u.id, key: u.uploadedKey, url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`, uploadedAt: u.createdAt, used: u.hasGenerations }))}
             allowDelete
-            showUploadTile
+            showUploadTile={!isMobile}
             onSelfiesApproved={handleSelfiesApproved}
             onUploadError={handleUploadError}
             onDeleted={loadUploads}
           />
         </div>
+      )}
+      
+      {/* Mobile: Always show sticky upload flow at bottom */}
+      {isMobile && (
+        <SelfieUploadFlow
+          hideHeader={true}
+          onSelfiesApproved={handleSelfiesApproved}
+          onCancel={() => {}}
+          onError={handleUploadError}
+        />
       )}
     </div>
   )

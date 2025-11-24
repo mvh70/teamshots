@@ -30,11 +30,6 @@ export interface Context {
   id: string
   name: string
   settings?: PhotoStyleSettingsType
-  backgroundUrl?: string
-  backgroundPrompt?: string
-  logoUrl?: string
-  stylePreset: string
-  customPrompt?: string
   createdAt: string
 }
 
@@ -71,9 +66,12 @@ export default function StyleForm({
     ? (loading ? null : (styleContextId ?? undefined))
     : undefined
 
+  const packageId = scope === 'freePackage' ? 'freepackage' : 'headshot1'
+  const pkg = getPackageConfig(packageId)
+
   const { status: styleStatus, contextId: autosaveContextId } = useAutosaveStyle({
     scope,
-    packageId: scope === 'freePackage' ? 'freepackage' : 'headshot1',
+    packageId,
     settings: photoStyleSettings,
     initialContextId: autosaveInitialContextId,
     name: autosaveName || name
@@ -81,7 +79,8 @@ export default function StyleForm({
 
   // Calculate progress - count editable sections (user-choice)
   const calculateProgress = () => {
-    const allCategories = ['background', 'branding', 'pose', 'clothing', 'clothingColors', 'expression', 'lighting']
+    // Use the package's visible categories instead of hardcoded list
+    const allCategories = pkg.visibleCategories
     
     let editableCount = 0
     let totalCount = 0
@@ -134,7 +133,7 @@ export default function StyleForm({
             if (contextData) {
               setContext(contextData)
               setName(contextData.name || '')
-              setCustomPrompt(contextData.customPrompt || '')
+              setCustomPrompt(contextData.settings?.customPrompt || '')
               // Load via unified style service
               const { ui, contextId: loadedId } = await loadStyleByContextId(idToLoad)
               setPhotoStyleSettings(ui)
@@ -373,9 +372,28 @@ export default function StyleForm({
   )
 
   // Floating autosave badge component
-  const AutosaveBadge = () => {
+  const AutosaveBadge = ({ status }: { status: typeof styleStatus }) => {
+    const [showBadge, setShowBadge] = useState(false)
+
+    // Auto-hide the badge after 3 seconds when status is "saved"
+    useEffect(() => {
+      if (status === 'saved') {
+        setShowBadge(true)
+        const timer = setTimeout(() => {
+          setShowBadge(false)
+        }, 3000)
+        return () => clearTimeout(timer)
+      } else if (status === 'saving' || status === 'error') {
+        // Always show badge when saving or error
+        setShowBadge(true)
+      } else {
+        // Hide badge for "idle" status
+        setShowBadge(false)
+      }
+    }, [status])
+
     const getStatusConfig = () => {
-      switch (styleStatus) {
+      switch (status) {
         case 'saving':
           return {
             icon: <ArrowPathIcon className="h-4 w-4 animate-spin" />,
@@ -416,25 +434,27 @@ export default function StyleForm({
 
     return (
       <div className="fixed top-20 right-6 z-20 flex flex-col gap-2 animate-fade-in">
-        {/* Autosave status badge */}
-        <div 
-          className={`${config.bgColor} ${config.borderColor} border-2 rounded-lg shadow-lg px-4 py-2.5 flex items-center gap-2 transition-all duration-200 ${
-            styleStatus === 'saved' ? 'animate-scale-in' : ''
-          }`}
-        >
-          <span className={config.textColor}>{config.icon}</span>
-          <span className={`text-sm font-medium ${config.textColor}`}>
-            {config.text}
-          </span>
-          {styleStatus === 'error' && (
-            <button
-              onClick={() => setPhotoStyleSettings({ ...photoStyleSettings })}
-              className="ml-2 text-xs underline hover:no-underline"
-            >
-              {t('retry', { default: 'Retry' })}
-            </button>
-          )}
-        </div>
+        {/* Autosave status badge - conditionally rendered */}
+        {showBadge && (
+          <div 
+            className={`${config.bgColor} ${config.borderColor} border-2 rounded-lg shadow-lg px-4 py-2.5 flex items-center gap-2 transition-all duration-200 ${
+              status === 'saved' ? 'animate-scale-in' : ''
+            }`}
+          >
+            <span className={config.textColor}>{config.icon}</span>
+            <span className={`text-sm font-medium ${config.textColor}`}>
+              {config.text}
+            </span>
+            {status === 'error' && (
+              <button
+                onClick={() => setPhotoStyleSettings({ ...photoStyleSettings })}
+                className="ml-2 text-xs underline hover:no-underline"
+              >
+                {t('retry', { default: 'Retry' })}
+              </button>
+            )}
+          </div>
+        )}
         
         {/* Progress counter */}
         {progress.totalCount > 0 && (
@@ -470,7 +490,7 @@ export default function StyleForm({
   return (
     <>
       {/* Floating Autosave Badge */}
-      <AutosaveBadge />
+      <AutosaveBadge status={styleStatus} />
 
       {/* Success Message */}
       {!hideMessages && success && (

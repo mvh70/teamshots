@@ -83,7 +83,7 @@ export async function PUT(
         id: contextId,
         OR: [
           { userId: session.user.id }, // Personal context
-          { 
+          {
             team: {
               teamMembers: {
                 some: {
@@ -103,9 +103,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Context not found' }, { status: 404 })
     }
 
-    // Update style
-    const stylePreset = settings?.style?.preset || 'corporate'
-    const updatedContext = await prisma.context.update({ where: { id: contextId }, data: { name, stylePreset, customPrompt, settings: settings || {} } })
+    // Update style - store customPrompt in settings
+    const updatedSettings = { ...settings, customPrompt }
+    const updatedContext = await prisma.context.update({
+      where: { id: contextId },
+      data: { name, settings: updatedSettings }
+    })
 
     if (typeof setAsActive === 'boolean') {
       await setActiveStyleServer({

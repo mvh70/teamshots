@@ -29,9 +29,6 @@ export default function SelfiesPage() {
   const uploadOnly = (searchParams?.get('mode') || '') === 'upload'
 
   const [error, setError] = useState<string | null>(null)
-  
-  // Upload flow state
-  const [showUploadFlow, setShowUploadFlow] = useState(false)
   const [isApproved, setIsApproved] = useState<boolean>(false)
   // Header resolves invite info internally; no local invite state needed
 
@@ -85,7 +82,14 @@ export default function SelfiesPage() {
     customUploadEndpoint: onUploadWithToken,
     customSaveEndpoint: saveSelfieEndpoint,
     autoSelectNewUploads: true,
-    onSelfiesApproved: () => {
+    onSelfiesApproved: async () => {
+      // Reload selected state to ensure UI updates with newly selected selfies
+      // This is critical for the continue button to enable after uploading 2 selfies
+      await loadSelected()
+      
+      // Small delay to allow React to process state updates and re-render
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       // Handle navigation and approval state for invited flow
       // Only navigate away if in upload-only mode
       if (uploadOnly) {
@@ -96,24 +100,13 @@ export default function SelfiesPage() {
       // Show success briefly, then handle mobile/desktop differences
       setIsApproved(true)
 
-      // On mobile in generation flow, keep upload flow open after approval
-      if (isMobile && isInGenerationFlow) {
-        // Keep upload flow open but clear approval state after delay
-        setTimeout(() => {
-          setIsApproved(false)
-          // Upload flow stays open (showUploadFlow remains true)
-        }, 1500)
-      } else {
-        // Desktop or non-generation flow: close upload flow after success
-        setTimeout(() => {
-          setShowUploadFlow(false)
-          setIsApproved(false)
-        }, 1500)
-      }
+      // Clear approval state after delay
+      setTimeout(() => {
+        setIsApproved(false)
+      }, 1500)
     },
     onUploadError: (error) => {
       setError(error)
-      setShowUploadFlow(false)
     }
   }) as {
     uploads: Selfie[],
@@ -132,10 +125,9 @@ export default function SelfiesPage() {
     loadSelected()
   }, [loadSelected])
 
-  // Filter selectedIds to only include selfies that actually exist in the current list
-  // This prevents stale selections from showing incorrect counts
-  const validSelectedIds = selectedIds.filter(id => hookSelfies.some(s => s.id === id))
-  const selectedCount = validSelectedIds.length
+  // Count all selected selfies, including newly uploaded ones that may not be in hookSelfies yet
+  // The filtering was causing newly uploaded selfies to not count toward the continue button
+  const selectedCount = selectedIds.length
   const canContinue = selectedCount >= 2
 
   // Only show continue button when coming from generation flow (not when just managing selfies)
@@ -159,12 +151,6 @@ export default function SelfiesPage() {
     }
   }, [])
   
-  // Auto-open upload on mobile when in generation flow
-  useEffect(() => {
-    if (isMobile && isInGenerationFlow && !showUploadFlow && !isApproved) {
-      setShowUploadFlow(true)
-    }
-  }, [isMobile, isInGenerationFlow, showUploadFlow, isApproved])
 
   const handleContinue = () => {
     if (canContinue) {
@@ -176,14 +162,11 @@ export default function SelfiesPage() {
     }
   }
 
-
   const handleCancelUpload = () => {
-    setShowUploadFlow(false)
     setIsApproved(false)
   }
 
   const handleRetake = () => {
-    // Keep upload flow open for retake
     setIsApproved(false)
   }
 
@@ -230,7 +213,7 @@ export default function SelfiesPage() {
       {!uploadOnly && (
         <>
           {/* Mobile: Direct content, no wrapper, with padding */}
-          <div className={`md:hidden bg-white ${showUploadFlow ? 'pb-40' : ''}`}>
+          <div className={`md:hidden bg-white ${isMobile ? 'pb-40' : ''}`}>
             <div className="px-4 pt-4 flex items-center justify-between gap-3">
               <SelfieSelectionInfoBanner selectedCount={selectedCount} className="flex-1 mb-0" />
               {isInGenerationFlow && (
@@ -258,8 +241,8 @@ export default function SelfiesPage() {
                     }))}
                 token={token}
                 allowDelete
-                showUploadTile={!showUploadFlow && !(isMobile && isInGenerationFlow)}
-                onUploadClick={() => setShowUploadFlow(true)}
+                showUploadTile={!isMobile}
+                onSelfiesApproved={handleSelfiesApproved}
                 onAfterChange={handleSelectionChange}
                 onDeleted={async () => {
                   // Reload selfies list after deletion
@@ -267,16 +250,16 @@ export default function SelfiesPage() {
                   // Also reload selected state to ensure consistency
                   await loadSelected()
                 }}
+                uploadEndpoint={handlePhotoUpload}
+                saveEndpoint={saveSelfieEndpoint}
               />
             </div>
           </div>
         </>
       )}
 
-      {/* Upload Flow - Fixed at bottom on mobile, static on desktop */}
-      {/* On mobile in generation flow, keep showing even after approval */}
-      {/* Hide when approved (approval is handled inside SelfieUploadFlow) */}
-      {showUploadFlow && !isApproved && (
+      {/* Upload Flow - Fixed at bottom on mobile (always) */}
+      {isMobile && !isApproved && (
         <SelfieUploadFlow
           hideHeader={true}
           uploadEndpoint={handlePhotoUpload}
@@ -293,7 +276,7 @@ export default function SelfiesPage() {
         <div className="space-y-6">
 
           {/* Success Message - Desktop only (mobile version is above selfies section) */}
-          {isApproved && !showUploadFlow && (
+          {isApproved && (
             <div className="hidden md:block">
               <SelfieUploadSuccess />
             </div>
@@ -334,8 +317,8 @@ export default function SelfiesPage() {
                     }))}
                     token={token}
                     allowDelete
-                    showUploadTile={!showUploadFlow && !(isMobile && isInGenerationFlow)}
-                    onUploadClick={() => setShowUploadFlow(true)}
+                    showUploadTile={!isMobile}
+                    onSelfiesApproved={handleSelfiesApproved}
                     onAfterChange={handleSelectionChange}
                 onDeleted={async () => {
                   // Reload selfies list after deletion
@@ -343,6 +326,8 @@ export default function SelfiesPage() {
                   // Also reload selected state to ensure consistency
                   await loadSelected()
                 }}
+                    uploadEndpoint={handlePhotoUpload}
+                    saveEndpoint={saveSelfieEndpoint}
                   />
                 </div>
               </div>

@@ -439,13 +439,13 @@ export default function SettingsPage() {
       <StripeNotice className="mb-6" />
 
       {/* Tabs */}
-      <div className="mb-6 overflow-x-auto">
-        <div className="inline-flex rounded-lg border border-gray-200 bg-white">
+      <div className="mb-6">
+        <div className="flex flex-wrap gap-2 lg:inline-flex lg:gap-0 lg:rounded-lg lg:border lg:border-gray-200 bg-white">
           {isTeamAdmin && (
             <button
               type="button"
               onClick={() => setActiveTab('team')}
-              className={`px-4 py-2 text-sm font-medium rounded-l-lg border-r border-gray-200 ${activeTab === 'team' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+              className={`px-3 py-2 text-sm font-medium rounded-lg lg:rounded-l-lg lg:rounded-r-none lg:border-r lg:border-gray-200 whitespace-nowrap ${activeTab === 'team' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50 border border-gray-200 lg:border-0'}`}
             >
               {t('tabs.teamInformation')}
             </button>
@@ -453,21 +453,21 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => setActiveTab('subscription')}
-            className={`px-4 py-2 text-sm font-medium ${isTeamAdmin ? 'border-r border-gray-200' : 'rounded-l-lg border-r border-gray-200'} ${activeTab === 'subscription' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+            className={`px-3 py-2 text-sm font-medium rounded-lg lg:rounded-none whitespace-nowrap ${isTeamAdmin ? 'lg:border-r lg:border-gray-200' : 'lg:rounded-l-lg lg:border-r lg:border-gray-200'} ${activeTab === 'subscription' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50 border border-gray-200 lg:border-0'}`}
           >
             {t('tabs.subscription')}
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('billing')}
-            className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'billing' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+            className={`px-3 py-2 text-sm font-medium rounded-lg lg:rounded-none lg:border-r lg:border-gray-200 whitespace-nowrap ${activeTab === 'billing' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50 border border-gray-200 lg:border-0'}`}
           >
             {t('tabs.billing')}
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('account')}
-            className={`px-4 py-2 text-sm font-medium ${isPlatformAdmin ? 'border-r border-gray-200' : 'rounded-r-lg'} ${activeTab === 'account' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+            className={`px-3 py-2 text-sm font-medium rounded-lg lg:rounded-none whitespace-nowrap ${isPlatformAdmin ? 'lg:border-r lg:border-gray-200' : 'lg:rounded-r-lg'} ${activeTab === 'account' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50 border border-gray-200 lg:border-0'}`}
           >
             {t('tabs.accountInfo')}
           </button>
@@ -475,7 +475,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setActiveTab('admin')}
-              className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'admin' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-50'}`}
+              className={`px-3 py-2 text-sm font-medium rounded-lg lg:rounded-none lg:border-r lg:border-gray-200 whitespace-nowrap ${activeTab === 'admin' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-50 border border-gray-200 lg:border-0'}`}
             >
               {t('tabs.adminTools')}
             </button>
@@ -484,7 +484,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setActiveTab('freeStyle')}
-              className={`px-4 py-2 text-sm font-medium rounded-r-lg ${activeTab === 'freeStyle' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-50'}`}
+              className={`px-3 py-2 text-sm font-medium rounded-lg lg:rounded-r-lg lg:rounded-l-none whitespace-nowrap ${activeTab === 'freeStyle' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-50 border border-gray-200 lg:border-0'}`}
             >
               Free Plan Style
             </button>

@@ -6,6 +6,7 @@ import { getPackageConfig } from '@/domain/style/packages'
 import { PhotoStyleSettings, DEFAULT_PHOTO_STYLE_SETTINGS } from '@/types/photo-style'
 import { getUserSubscription } from '@/domain/subscription/subscription'
 import { PACKAGES_CONFIG } from '@/config/packages'
+import { extractPackageId } from '@/domain/style/settings-resolver'
 
 export type ContextOption = {
   id: string
@@ -124,15 +125,6 @@ export async function getGenerationPageData(keyFromQuery?: string): Promise<Gene
   const isTeamAdmin = session.user.role === 'team_admin'
   const isTeamMember = session.user.role === 'team_member'
 
-  console.log('[Server Action] User plan info:', {
-    userId: session.user.id,
-    tier,
-    period,
-    isFreePlan,
-    isProUser,
-    role: session.user.role
-  })
-
   // Fetch style data based on plan
   // Team admins and team members should use team generation type, regardless of tier
   const shouldUseTeamGeneration = isTeamAdmin || isTeamMember || (isProUser && person?.teamId)
@@ -174,19 +166,15 @@ async function fetchStyleData(params: {
 }): Promise<GenerationPageData['styleData']> {
   // Free plan: load system admin's configured freepackage style
   if (params.isFreePlan) {
-    console.log('[Server Action] Free plan detected, loading freepackage style')
-    
     // Query database directly instead of using fetch (Server Actions requirement)
     const setting = await prisma.appSetting.findUnique({ 
       where: { key: 'freePackageStyleId' } 
     })
     
     const freepackagePkg = getPackageConfig('freepackage')
-    console.log('[Server Action] Freepackage defaults:', JSON.stringify(freepackagePkg.defaultSettings, null, 2))
     
     if (!setting?.value) {
       // No admin-configured style, use freepackage defaults
-      console.log('[Server Action] No admin-configured style, using freepackage defaults')
       return {
         photoStyleSettings: freepackagePkg.defaultSettings,
         originalContextSettings: freepackagePkg.defaultSettings,
@@ -199,9 +187,9 @@ async function fetchStyleData(params: {
     // Load the admin-configured context
     const ctx = await prisma.context.findUnique({
       where: { id: setting.value },
-      select: { id: true, name: true, customPrompt: true, settings: true, stylePreset: true }
+      select: { id: true, name: true, settings: true, packageName: true }
     })
-    
+
     if (!ctx) {
       // Context not found, use freepackage defaults
       return {
@@ -212,17 +200,15 @@ async function fetchStyleData(params: {
         availableContexts: []
       }
     }
-    
+
     // Deserialize the admin-configured settings
     const ui = freepackagePkg.persistenceAdapter.deserialize(
       (ctx.settings as Record<string, unknown>) || {}
     )
-    
-    console.log('[Server Action] Admin-configured freepackage style loaded:', {
-      contextId: ctx.id,
-      settings: JSON.stringify(ui, null, 2)
-    })
-    
+
+    // Get customPrompt from settings
+    const customPrompt = (ctx.settings as Record<string, unknown>)?.customPrompt as string | null
+
     return {
       photoStyleSettings: ui,
       originalContextSettings: ui,
@@ -231,7 +217,7 @@ async function fetchStyleData(params: {
         id: ctx.id,
         name: ctx.name || 'Free Package Style',
         settings: ui as Record<string, unknown>,
-        customPrompt: ctx.customPrompt
+        customPrompt
       },
       availableContexts: []
     }
@@ -239,13 +225,6 @@ async function fetchStyleData(params: {
 
   // Paid users: fetch contexts based on generation type
   if (params.generationType === 'team' && params.teamId) {
-    // Diagnostic logging: verify teamId is valid
-    console.log('[Server Action] Fetching team style data:', {
-      teamId: params.teamId,
-      generationType: params.generationType,
-      userId: params.userId
-    })
-
     // Fetch team contexts
     const team = await prisma.team.findUnique({
       where: { id: params.teamId },
@@ -261,21 +240,11 @@ async function fetchStyleData(params: {
       }
     })
 
-    // Diagnostic logging: check team query result
-    console.log('[Server Action] Team query result:', {
-      teamExists: !!team,
-      teamId: team?.id,
-      activeContextId: team?.activeContextId,
-      activeContextExists: !!team?.activeContext,
-      activeContextIdFromRelation: team?.activeContext?.id,
-      contextsCount: team?.contexts?.length || 0
-    })
-
     const rawContexts = team?.contexts || []
     const contexts: ContextOption[] = rawContexts.map((ctx, index) => ({
       id: ctx.id,
       name: ctx.name || `Team Style ${rawContexts.length - index}`,
-      customPrompt: ctx.customPrompt,
+      customPrompt: (ctx.settings as Record<string, unknown>)?.customPrompt as string | null,
       settings: ctx.settings as Record<string, unknown>
     }))
 
@@ -283,23 +252,14 @@ async function fetchStyleData(params: {
 
     // Fallback: if activeContextId exists but relation didn't load, fetch directly
     if (team && team.activeContextId && !activeContextData) {
-      console.log('[Server Action] ActiveContext relation not loaded, fetching directly:', {
-        activeContextId: team.activeContextId
-      })
       try {
         const fallbackContext = await prisma.context.findUnique({
           where: { id: team.activeContextId },
-          select: { id: true, name: true, customPrompt: true, settings: true, stylePreset: true }
+          select: { id: true, name: true, settings: true, packageName: true }
         })
         if (fallbackContext) {
-          console.log('[Server Action] Fallback context fetched successfully:', {
-            contextId: fallbackContext.id,
-            contextName: fallbackContext.name
-          })
           // Cast to match the expected type (we only need the selected fields)
           activeContextData = fallbackContext as typeof team.activeContext
-        } else {
-          console.log('[Server Action] Fallback context not found for activeContextId:', team.activeContextId)
         }
       } catch (error) {
         console.error('[Server Action] Error fetching fallback context:', error)
@@ -309,17 +269,11 @@ async function fetchStyleData(params: {
     if (activeContextData) {
       try {
         // Deserialize the context settings directly
-        const packageId = (activeContextData.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1'
+        const packageId = extractPackageId(activeContextData.settings as Record<string, unknown>) || 'headshot1'
         const pkg = getPackageConfig(packageId)
         const ui = pkg.persistenceAdapter.deserialize(
           (activeContextData.settings as Record<string, unknown>) || {}
         )
-        
-        console.log('[Server Action] Active context loaded successfully:', {
-          contextId: activeContextData.id,
-          contextName: activeContextData.name,
-          packageId: pkg.id
-        })
         
         return {
           photoStyleSettings: ui,
@@ -328,10 +282,10 @@ async function fetchStyleData(params: {
           activeContext: {
             id: activeContextData.id,
             name: activeContextData.name || 'Team Style',
-            customPrompt: activeContextData.customPrompt,
+            customPrompt: (activeContextData.settings as Record<string, unknown>)?.customPrompt as string | null,
             settings: ui as Record<string, unknown>,
             backgroundPrompt: (activeContextData.settings as Record<string, unknown> | undefined)?.['backgroundPrompt'] as string | undefined,
-            stylePreset: activeContextData.stylePreset ?? undefined
+            stylePreset: undefined // Will be derived from package
           },
           availableContexts: contexts
         }
@@ -339,8 +293,6 @@ async function fetchStyleData(params: {
         console.error('[Server Action] Error deserializing active context:', error)
         // Fall through to default settings
       }
-    } else {
-      console.log('[Server Action] No active context found, using default settings')
     }
 
     return {
@@ -371,7 +323,7 @@ async function fetchStyleData(params: {
   const contexts: ContextOption[] = rawContexts.map((ctx, index) => ({
     id: ctx.id,
     name: ctx.name || `Personal Style ${rawContexts.length - index}`,
-    customPrompt: ctx.customPrompt,
+    customPrompt: (ctx.settings as Record<string, unknown>)?.customPrompt as string | null,
     settings: ctx.settings as Record<string, unknown>
   }))
 
@@ -387,7 +339,7 @@ async function fetchStyleData(params: {
     
     if (activeCtx) {
       // Deserialize the context settings directly
-      const packageId = (activeCtx.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1'
+      const packageId = extractPackageId(activeCtx.settings as Record<string, unknown>) || 'headshot1'
       const pkg = getPackageConfig(packageId)
       const ui = pkg.persistenceAdapter.deserialize(
         (activeCtx.settings as Record<string, unknown>) || {}
@@ -400,10 +352,10 @@ async function fetchStyleData(params: {
         activeContext: {
           id: activeCtx.id,
           name: activeCtx.name || 'Personal Style',
-          customPrompt: activeCtx.customPrompt,
+          customPrompt: (activeCtx.settings as Record<string, unknown>)?.customPrompt as string | null,
           settings: ui as Record<string, unknown>,
           backgroundPrompt: (activeCtx.settings as Record<string, unknown> | undefined)?.['backgroundPrompt'] as string | undefined,
-          stylePreset: activeCtx.stylePreset ?? undefined
+          stylePreset: undefined // Will be derived from package
         },
         availableContexts: contexts
       }

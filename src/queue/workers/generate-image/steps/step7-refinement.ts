@@ -178,13 +178,17 @@ export async function executeStep7(
   )
 
   // Build reference images array
+  // Emphasize selfie composite as primary reference for face matching
   const referenceImages = [
     {
-      description: 'BASE IMAGE (Structure Reference) - Maintain this exact composition and background',
+      description: 'BASE IMAGE (Structure Reference) - Maintain this exact composition and background - DO NOT change anything except the face',
       base64: compositionBuffer.toString('base64'),
       mimeType: 'image/png'
     },
-    selfieComposite
+    {
+      ...selfieComposite,
+      description: 'PRIMARY FACE REFERENCE (FOR YOUR REFERENCE ONLY - DO NOT INCLUDE IN OUTPUT) - Match the face in these selfies EXACTLY. Study every detail: eyes, nose, mouth, skin, hair, facial structure. This is the source of truth for the face. IMPORTANT: These selfie images are reference material only and must NOT appear in the final generated image.'
+    }
   ]
   
   Logger.debug('V2 Step 7: Sending to Gemini', {
@@ -194,14 +198,14 @@ export async function executeStep7(
   })
   
   // Generate with Gemini (this is a refinement/adjustment pass)
-  // Use moderate temperature (0.5) to balance instruction adherence with natural blending
+  // Use lower temperature (0.3) for maximum adherence to selfie matching instructions
   const generatedBuffers = await generateWithGemini(
     refinementPrompt,
     referenceImages,
     aspectRatio,
     resolution,
     {
-      temperature: 0.4  // More deterministic for refinement adjustments
+      temperature: 0.3  // Lower temperature for stricter, more deterministic face matching
     }
   )
   

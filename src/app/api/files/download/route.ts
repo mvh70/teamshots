@@ -47,9 +47,6 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const ownership = await findFileOwnership(key)
-    if (!ownership) return NextResponse.json({ error: 'File not found' }, { status: 404 })
-
     let invitePersonId: string | null = null
     let inviteTeamId: string | null = null
     if (!session?.user?.id && token) {
@@ -73,7 +70,22 @@ export async function GET(req: NextRequest) {
       roles = await getUserEffectiveRoles(user, subscription)
     }
 
-    const authorized = isFileAuthorized(ownership, userWithRoles, roles, invitePersonId, inviteTeamId)
+    const ownership = await findFileOwnership(key)
+    
+    // Special case: Allow access to background/logo files users uploaded
+    // even if not yet saved to a context (e.g., during style customization)
+    let allowAccessWithoutOwnership = false
+    if (!ownership) {
+      if (invitePersonId && (key.startsWith(`backgrounds/${invitePersonId}/`) || key.startsWith(`logos/${invitePersonId}/`))) {
+        allowAccessWithoutOwnership = true
+      } else if (userWithRoles?.person?.id && (key.startsWith(`backgrounds/${userWithRoles.person.id}/`) || key.startsWith(`logos/${userWithRoles.person.id}/`))) {
+        allowAccessWithoutOwnership = true
+      } else {
+        return NextResponse.json({ error: 'File not found' }, { status: 404 })
+      }
+    }
+
+    const authorized = ownership ? isFileAuthorized(ownership, userWithRoles, roles, invitePersonId, inviteTeamId, key) : allowAccessWithoutOwnership
     if (!authorized) {
       if (session?.user?.id) {
         await SecurityLogger.logPermissionDenied(session.user.id, 'files.download', key)

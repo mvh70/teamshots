@@ -57,7 +57,9 @@ export async function executeStep5(
     aspectRatioDescription,
     expectedWidth,
     expectedHeight,
-    resolution
+    resolution,
+    styleSettings,
+    shotDescription
   } = input
   
   Logger.info('V2 Step 5: Composing person + background', {
@@ -73,7 +75,9 @@ export async function executeStep5(
   let compositionPrompt = composeCompositionPrompt(
     basePrompt,
     !!backgroundBuffer,
-    aspectRatioDescription
+    aspectRatioDescription,
+    styleSettings,
+    shotDescription
   )
   
   // If we have feedback from previous attempt, append adjustment suggestions

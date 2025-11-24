@@ -238,10 +238,11 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
   // Fetch allocated credits only for team admins
   useEffect(() => {
     const fetchAllocatedCredits = async () => {
-      if (session?.user?.role !== 'team_admin') return
+      if (!isTeamAdmin) return
       try {
-        const data = await jsonFetcher<{ totalRemainingCredits: number }>('/api/team/invites/credits')
-        setAllocatedCredits(data.totalRemainingCredits)
+        const data = await jsonFetcher<{ totalAllocatedCredits: number; totalRemainingCredits: number }>('/api/team/invites/credits')
+        // Show total allocated credits (credits assigned to invites)
+        setAllocatedCredits(data.totalAllocatedCredits ?? 0)
       } catch (err) {
         setAllocatedCredits(0)
         console.error('Failed to fetch allocated credits:', err)
@@ -254,7 +255,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
     } else if (!needsTeamSetup) {
       setAllocatedCredits(0)
     }
-  }, [session?.user?.id, session?.user?.role, isTeamAdmin, needsTeamSetup])
+  }, [session?.user?.id, isTeamAdmin, needsTeamSetup])
 
 
   // OPTIMIZATION: Only fetch subscription if not provided as prop

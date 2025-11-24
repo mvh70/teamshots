@@ -1,9 +1,11 @@
 import {
-  type ApertureSetting,
   type SubjectCountSetting,
-  type UsageContextSetting,
-  type FocalLengthSetting
+  type UsageContextSetting
 } from '@/types/photo-style'
+import type {
+  ApertureSetting,
+  FocalLengthSetting
+} from '../elements/shot-type/types'
 import {
   type CanonicalShotType,
   resolveAperture,

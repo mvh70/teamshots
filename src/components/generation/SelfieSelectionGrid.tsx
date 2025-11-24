@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import { SelfieGrid } from '@/components/ui'
-import SelfieUploadPlaceholder from './SelfieUploadPlaceholder'
 
 export interface GridSelfieItem {
   id: string
@@ -66,7 +65,21 @@ export default function SelfieSelectionGrid({
         )
       })}
       {showUploadTile && onUploadClick && (
-        <SelfieUploadPlaceholder onUploadClick={onUploadClick} />
+        <div 
+          className="aspect-square rounded-2xl p-3 md:p-6 lg:p-8 flex flex-col items-center justify-center text-center border border-gray-200 bg-gradient-to-br from-white via-gray-50 to-gray-100 hover:shadow-lg transition-all duration-200 cursor-pointer"
+          onClick={onUploadClick}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter') onUploadClick(); }}
+          data-testid="selfie-upload-trigger"
+        >
+          <div className="w-full flex flex-col items-center gap-3">
+            <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <p className="text-sm font-medium text-gray-700">Add selfie</p>
+          </div>
+        </div>
       )}
     </SelfieGrid>
   )

@@ -1,0 +1,43 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "TeamShotsPro" [ref=e5]:
+        - /url: /
+        - img "TeamShotsPro" [ref=e6]
+    - main [ref=e7]:
+      - generic [ref=e11]:
+        - heading "Sign in to your account" [level=2] [ref=e13]
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - generic [ref=e17]: Email address
+            - textbox "Email address" [ref=e19]: individual-user-flow-1763557567580-2ujdd0ec9@example.com
+          - generic [ref=e20]:
+            - generic [ref=e21]: Password
+            - generic [ref=e22]:
+              - textbox "Password" [ref=e23]: TestPassword123!
+              - button "Show password" [ref=e24] [cursor=pointer]: 👁️ Show
+          - generic [ref=e25]:
+            - generic [ref=e26]:
+              - checkbox "Use magic link instead of password" [ref=e27]
+              - text: Use magic link instead of password
+            - link "Forgot password?" [ref=e28]:
+              - /url: "#"
+          - button "Sign in" [ref=e29] [cursor=pointer]
+          - link "Don't have an account? Sign up" [ref=e31]:
+            - /url: /auth/signup
+  - generic [ref=e36] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e37]:
+      - img [ref=e38]
+    - generic [ref=e43]:
+      - button "Open issues overlay" [ref=e44]:
+        - generic [ref=e45]:
+          - generic [ref=e46]: "0"
+          - generic [ref=e47]: "1"
+        - generic [ref=e48]: Issue
+      - button "Collapse issues badge" [ref=e49]:
+        - img [ref=e50]
+  - alert [ref=e52]
+```

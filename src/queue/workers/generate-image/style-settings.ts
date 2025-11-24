@@ -1,6 +1,8 @@
 import { getServerPackageConfig } from '@/domain/style/packages/server'
 import { Logger } from '@/lib/logger'
 import { PhotoStyleSettings } from '@/types/photo-style'
+import { extractPackageId as extractPackageIdUtil } from '@/domain/style/settings-resolver'
+import { isRecord } from '@/lib/type-guards'
 
 type RawSettings = Record<string, unknown>
 
@@ -93,10 +95,9 @@ function pickRawStyleSettings(
   return {}
 }
 
+// Use centralized utility for package ID extraction
 function extractPackageId(input: RawSettings | null | undefined): string | undefined {
-  if (!isRecord(input)) return undefined
-  const packageId = input.packageId
-  return typeof packageId === 'string' ? packageId : undefined
+  return extractPackageIdUtil(input)
 }
 
 function mergeJobOverrides(
@@ -198,7 +199,5 @@ function mergeJobOverrides(
   return merged as PhotoStyleSettings
 }
 
-function isRecord(value: unknown): value is RawSettings {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
+// Note: isRecord now centralized in @/lib/type-guards
 

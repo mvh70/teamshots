@@ -16,8 +16,8 @@ export const promoteUploads = async (uploads: { key: string; url?: string }[]): 
             credentials: 'include'
           })
           if (promoteRes.ok) {
-            const { key, selfieId } = await promoteRes.json() as { key: string; selfieId?: string }
-            return { key, selfieId }
+            const data = await promoteRes.json() as { key: string; selfieId?: string }
+            return { key: data.key, selfieId: data.selfieId }
           } else {
             // If promote fails, return the temp key
             return { key: upload.key, selfieId: undefined }
@@ -34,9 +34,6 @@ export const promoteUploads = async (uploads: { key: string; url?: string }[]): 
 
   // Wait for all promotions to complete in parallel
   const successfulResults = await Promise.all(promotionPromises)
-
-  // Log results for debugging
-  console.log('[promoteUploads] Promotion results:', successfulResults)
 
   return successfulResults
 }

@@ -22,6 +22,9 @@ export default function TeamInviteEmail({
 }: TeamInviteEmailProps) {
   // Calculate number of photos and variations from credits
   const numberOfPhotos = calculatePhotosFromCredits(creditsAllocated);
+  // Invited users get 4 regenerations
+  const regenerations = 4;
+  const totalPhotos = numberOfPhotos * (regenerations + 1);
   
   // Use personalized greeting if firstName is available
   const greetingKey = firstName ? 'teamInvite.greetingWithName' : 'teamInvite.greeting';
@@ -36,10 +39,11 @@ export default function TeamInviteEmail({
           {getEmailTranslation(greetingKey, locale, greetingParams)}
         </p>
 
-        <p style={{ lineHeight: '1.6', marginBottom: '20px' }}>
+        <p style={{ lineHeight: '1.6', marginBottom: '20px', whiteSpace: 'pre-line' }}>
           {getEmailTranslation('teamInvite.photosDescription', locale, {
             credits: creditsAllocated.toString(),
-            photos: numberOfPhotos.toString()
+            photos: numberOfPhotos.toString(),
+            totalPhotos: totalPhotos.toString()
           })}
         </p>
 
@@ -64,15 +68,15 @@ export default function TeamInviteEmail({
           </a>
         </div>
 
-        <p style={{ fontSize: '14px', marginBottom: '10px' }}>
+        <p style={{ fontSize: '13px', fontFamily: 'Arial, sans-serif', marginBottom: '10px' }}>
           {getEmailTranslation('teamInvite.expires', locale)}
         </p>
-        
-        <p style={{ fontSize: '13px', wordBreak: 'break-all', marginBottom: '20px' }}>
+
+        <p style={{ fontSize: '13px', fontFamily: 'Arial, sans-serif', wordBreak: 'break-all', marginBottom: '20px' }}>
           {inviteLink}
         </p>
 
-        <p style={{ fontSize: '13px', marginTop: '30px' }}>
+        <p style={{ fontSize: '13px', fontFamily: 'Arial, sans-serif', marginTop: '30px' }}>
           {getEmailTranslation('teamInvite.questions', locale)}
         </p>
       </div>

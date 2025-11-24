@@ -1,0 +1,49 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "TeamShotsPro" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "TeamShotsPro" [ref=e6]
+    - main [ref=e7]:
+      - generic [ref=e9]:
+        - generic [ref=e13]:
+          - heading "Create your account" [level=1] [ref=e14]
+          - paragraph [ref=e15]: Built for teams and startup founders. Join in seconds. No photoshoot, no photographer, no vendor management. Just professional team photos.
+          - generic [ref=e16]:
+            - generic [ref=e19]: Generate professional headshots in 60 seconds
+            - generic [ref=e22]: Credits never expire. Use them whenever.
+            - generic [ref=e25]: Perfect for remote teams and new hires
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - heading "Create your account" [level=2] [ref=e29]
+            - generic [ref=e31]:
+              - generic [ref=e33]: Includes 1 free test generation in a predefined style
+              - paragraph [ref=e38]: Step 1 of 2
+          - generic [ref=e40]:
+            - generic [ref=e41]:
+              - generic [ref=e42]: First name
+              - textbox "First name" [ref=e44]
+            - generic [ref=e45]:
+              - generic [ref=e46]: Email address
+              - textbox "Email address" [ref=e48]
+            - generic [ref=e49]:
+              - generic [ref=e50]: Password
+              - generic [ref=e51]:
+                - textbox "Password" [ref=e52]
+                - button "Show password" [ref=e53] [cursor=pointer]: 👁️ Show
+              - paragraph [ref=e57]: 👶 Weak
+            - generic [ref=e58]:
+              - generic [ref=e59]: Confirm password
+              - generic [ref=e60]:
+                - textbox "Confirm password" [ref=e61]
+                - button "Show password" [ref=e62] [cursor=pointer]: 👁️ Show
+            - button "Send verification code" [disabled] [ref=e63]
+            - link "Already have an account? Sign in" [ref=e65] [cursor=pointer]:
+              - /url: /auth/signin
+  - button "Open Next.js Dev Tools" [ref=e71] [cursor=pointer]:
+    - img [ref=e72]
+  - alert [ref=e75]
+```

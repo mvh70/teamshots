@@ -15,8 +15,8 @@
     "db:migrate:status": "prisma migrate status",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
-    "worker": "tsx src/queue/worker.ts",
-    "worker:dev": "tsx watch src/queue/worker.ts",
+    "worker": "tsx src/queue/worker.ts | tee -a logs/worker.log",
+    "worker:dev": "tsx watch src/queue/worker.ts | tee -a logs/worker-dev.log",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -41,7 +41,12 @@
     "queue:clear": "tsx scripts/clear-queue.ts",
     "queue:clear:force": "tsx scripts/clear-queue.ts --force",
     "queue:clear:all": "tsx scripts/clear-queue.ts --all",
-    "queue:clear:all:force": "tsx scripts/clear-queue.ts --all --force"
+    "queue:clear:all:force": "tsx scripts/clear-queue.ts --all --force",
+    "logs:tail": "./scripts/view-worker-logs.sh tail",
+    "logs:dev": "./scripts/view-worker-logs.sh dev",
+    "logs:last": "./scripts/view-worker-logs.sh last",
+    "logs:search": "./scripts/view-worker-logs.sh search",
+    "logs:clear": "./scripts/view-worker-logs.sh clear"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.0",

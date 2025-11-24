@@ -1,0 +1,150 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - navigation [ref=e4]:
+        - link "TeamShotsPro" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - img "TeamShotsPro" [ref=e7]
+        - generic [ref=e8]:
+          - link "Inicio" [ref=e9] [cursor=pointer]:
+            - /url: /
+          - link "Precios" [ref=e10] [cursor=pointer]:
+            - /url: /pricing
+          - generic [ref=e11]:
+            - button "EN" [ref=e12] [cursor=pointer]
+            - button "ES" [ref=e13] [cursor=pointer]
+          - link "Iniciar Sesión" [ref=e14] [cursor=pointer]:
+            - /url: /auth/signin
+          - link "Empezar" [ref=e15] [cursor=pointer]:
+            - /url: /auth/signup
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - heading "Precios simples y transparentes" [level=1] [ref=e19]
+        - paragraph [ref=e20]: Estás a solo un clic de fotos profesionales de equipo que hacen brillar a todos. Elige un plan y comencemos – sin drama de sesiones!
+        - generic [ref=e22]:
+          - button "Mensual" [pressed] [ref=e23] [cursor=pointer]
+          - button "Anual" [ref=e24] [cursor=pointer]
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - heading "Prueba Una Vez" [level=3] [ref=e28]
+            - paragraph [ref=e29]: Perfecto para probar el servicio
+            - generic [ref=e30]:
+              - generic [ref=e31]: $5.00
+              - generic [ref=e32]: pago único
+            - paragraph [ref=e33]: 10 créditos
+            - generic [ref=e38]:
+              - generic [ref=e39]:
+                - generic [ref=e40]: $2.50
+                - generic [ref=e41]: por variación de foto
+              - generic [ref=e43]: Incluye 2 variaciones por foto
+          - list [ref=e44]:
+            - listitem [ref=e45]:
+              - img [ref=e46]
+              - generic [ref=e48]:
+                - strong [ref=e49]: "1"
+                - text: generación de foto
+            - listitem [ref=e50]:
+              - img [ref=e51]
+              - generic [ref=e53]: Regenera hasta 2 veces para perfeccionar cada foto
+            - listitem [ref=e54]:
+              - img [ref=e55]
+              - generic [ref=e57]: Fotos retenidas por 30 días desde generación
+            - listitem [ref=e58]:
+              - img [ref=e59]
+              - generic [ref=e61]: Recarga de créditos disponible
+            - listitem [ref=e62]:
+              - img [ref=e63]
+              - generic [ref=e65]: Soporte por correo
+          - link "Prueba un retrato" [ref=e66] [cursor=pointer]:
+            - /url: /auth/signup?period=try_once
+        - generic [ref=e67]:
+          - generic [ref=e69]: Más popular
+          - generic [ref=e70]:
+            - heading "Pro" [level=3] [ref=e71]
+            - paragraph [ref=e72]: Para equipos que quieren que todos luzcan igualmente increíbles
+            - generic [ref=e73]:
+              - generic [ref=e74]: $59.00
+              - generic [ref=e75]: monthly
+            - paragraph [ref=e76]: 200 créditos mensuales
+            - generic [ref=e81]:
+              - generic [ref=e82]:
+                - generic [ref=e83]: $0.74
+                - generic [ref=e84]: por variación de foto
+              - generic [ref=e86]: Incluye 4 variaciones por foto
+          - list [ref=e87]:
+            - listitem [ref=e88]:
+              - img [ref=e89]
+              - generic [ref=e91]:
+                - strong [ref=e92]: "20"
+                - text: generaciones de fotos
+            - listitem [ref=e93]:
+              - img [ref=e94]
+              - generic [ref=e96]: Regenera hasta 4 veces para perfeccionar cada foto
+            - listitem [ref=e97]:
+              - img [ref=e98]
+              - generic [ref=e100]: "Todas las funciones Individual, más:"
+            - listitem [ref=e101]:
+              - img [ref=e102]
+              - generic [ref=e104]: Invitaciones a miembros del equipo
+            - listitem [ref=e105]:
+              - img [ref=e106]
+              - generic [ref=e108]: Gestión de fotos del equipo
+            - listitem [ref=e109]:
+              - img [ref=e110]
+              - generic [ref=e112]: Plantillas de estilo de empresa
+            - listitem [ref=e113]:
+              - img [ref=e114]
+              - generic [ref=e116]: Flujo de aprobación de administrador
+            - listitem [ref=e117]:
+              - img [ref=e118]
+              - generic [ref=e120]: Créditos de recarga con descuento
+            - listitem [ref=e121]:
+              - img [ref=e122]
+              - generic [ref=e124]: Soporte prioritario con gerente dedicado
+            - listitem [ref=e125]:
+              - img [ref=e126]
+              - generic [ref=e128]:
+                - text: High quality downloads
+                - generic [ref=e129]: Coming Soon
+            - listitem [ref=e131]:
+              - img [ref=e132]
+              - generic [ref=e134]:
+                - text: Style packages
+                - generic [ref=e135]: Coming Soon
+          - link "Eleva al equipo" [ref=e137] [cursor=pointer]:
+            - /url: /auth/signup?tier=team&period=monthly
+      - generic [ref=e138]:
+        - heading "Preguntas Frecuentes" [level=2] [ref=e139]
+        - generic [ref=e140]:
+          - generic [ref=e141]:
+            - heading "¿Tengo una generación gratis?" [level=3] [ref=e142]
+            - paragraph [ref=e143]: ¡Sí! Damos a los nuevos usuarios una generación de prueba gratuita en un estilo establecido para que veas si nuestra IA cumple con las expectativas. Normalmente cuesta 10 créditos y te permite reintentar hasta 4 veces (dependiendo de tu paquete).
+          - generic [ref=e144]:
+            - heading "¿Cómo funcionan los créditos?" [level=3] [ref=e145]
+            - paragraph [ref=e146]: Cada generación de foto usa 10 créditos y permite hasta 4 reintentos de alta calidad. Tus créditos se acumulan mes a mes y nunca expiran. ¡Sin prisa, son tuyos para siempre!
+          - generic [ref=e147]:
+            - heading "¿Puedo recargar créditos?" [level=3] [ref=e148]
+            - paragraph [ref=e149]: ¡Sí! Suscriptores pueden comprar créditos adicionales cuando quieran. Precios varían por nivel.
+          - generic [ref=e150]:
+            - heading "¿Qué si no estoy satisfecho?" [level=3] [ref=e151]
+            - paragraph [ref=e152]: Cada foto incluye 2-4 reintentos según tu plan, para refinar hasta que quede perfecta. Por eso ofrecemos generación de prueba gratis al registrarte—prueba primero, sin obligaciones.
+    - contentinfo [ref=e153]:
+      - generic [ref=e155]:
+        - img "TeamShotsPro" [ref=e157]
+        - paragraph [ref=e158]: Fotos profesionales de equipo en 60 segundos
+        - generic [ref=e159]:
+          - link "Inicio" [ref=e160] [cursor=pointer]:
+            - /url: /es
+          - link "Precios" [ref=e161] [cursor=pointer]:
+            - /url: /es/pricing
+          - link "Get Started" [ref=e162] [cursor=pointer]:
+            - /url: /es/auth/signup
+        - paragraph [ref=e163]: © 2025 TeamShotsPro. Todos los derechos reservados.
+  - button "Open Next.js Dev Tools" [ref=e169] [cursor=pointer]:
+    - img [ref=e170]
+  - alert [ref=e173]
+```

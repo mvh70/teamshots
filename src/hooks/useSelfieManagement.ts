@@ -196,8 +196,10 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
     // Reload uploads to show new selfies
     await fetchInviteUploads()
 
-    // Call parent callback
-    onSelfiesApproved?.(results)
+    // Await parent callback to ensure state updates propagate
+    if (onSelfiesApproved) {
+      await onSelfiesApproved(results)
+    }
   }, [autoSelectNewUploads, selectionHook, fetchInviteUploads, onSelfiesApproved])
 
   // Initialize data based on flow type - ONLY RUN ONCE

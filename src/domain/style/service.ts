@@ -1,5 +1,6 @@
 import { PhotoStyleSettings } from '@/types/photo-style'
 import { getPackageConfig } from './packages'
+import { extractPackageId } from './settings-resolver'
 
 export type Scope = 'individual' | 'pro' | 'freePackage'
 
@@ -11,7 +12,7 @@ export async function loadStyle(params: { scope: Scope }) {
   const data = await res.json() as { context?: { id: string; settings?: Record<string, unknown>; stylePreset?: string }, packageId?: string | null }
   // For freePackage scope, always use 'freepackage' regardless of what's stored in the context
   // This ensures we always use the correct deserializer and defaults
-  const packageId = params.scope === 'freePackage' ? 'freepackage' : (data.packageId || (data.context?.settings?.['packageId'] as string | undefined) || defaultPackageId)
+  const packageId = params.scope === 'freePackage' ? 'freepackage' : (data.packageId || extractPackageId(data.context?.settings) || defaultPackageId)
   const pkg = getPackageConfig(packageId)
   const ui: PhotoStyleSettings = data.context?.settings ? pkg.persistenceAdapter.deserialize(data.context.settings as Record<string, unknown>) : pkg.defaultSettings
   return { contextId: data.context?.id ?? null, pkg, ui }
@@ -24,13 +25,12 @@ export async function loadStyleByContextId(contextId: string) {
     context?: {
       id: string
       name?: string | null
-      customPrompt?: string | null
       settings?: Record<string, unknown>
-      stylePreset?: string
+      packageName?: string
     }
     packageId?: string | null
   }
-  const pkg = getPackageConfig(data.packageId || (data.context?.settings?.['packageId'] as string | undefined))
+  const pkg = getPackageConfig(data.packageId || extractPackageId(data.context?.settings))
   const ui: PhotoStyleSettings = data.context?.settings ? pkg.persistenceAdapter.deserialize(data.context.settings as Record<string, unknown>) : pkg.defaultSettings
   return {
     contextId: data.context?.id ?? null,
@@ -42,13 +42,13 @@ export async function loadStyleByContextId(contextId: string) {
 
 export async function saveStyle(params: { scope: Scope; contextId: string | null; packageId: string; ui: PhotoStyleSettings; name?: string }) {
   const pkg = getPackageConfig(params.packageId)
-  const stylePreset = params.ui.style?.preset ?? 'corporate'
 
   // Free plan style is a global setting; use admin endpoint and payload shape
   if (params.scope === 'freePackage') {
     const backgroundType = params.ui.background?.type ?? 'user-choice'
     const backgroundPrompt = params.ui.background?.prompt ?? ''
     const includeLogo = (params.ui.branding?.type ?? 'user-choice') === 'include'
+    const stylePreset = pkg.defaultPresetId // Derive from package
 
     const res = await fetch('/api/admin/free-package-style/save', {
       method: 'POST',
@@ -66,6 +66,7 @@ export async function saveStyle(params: { scope: Scope; contextId: string | null
         shotTypeSettings: params.ui.shotType,
         expressionSettings: params.ui.expression,
         lightingSettings: params.ui.lighting,
+        poseSettings: params.ui.pose,
         packageId: params.packageId || 'freepackage'
       })
     })
@@ -74,6 +75,7 @@ export async function saveStyle(params: { scope: Scope; contextId: string | null
 
   // Personal/Team styles are user-scoped; use generic styles save
   const settings = pkg.persistenceAdapter.serialize(params.ui)
+  const stylePreset = pkg.defaultPresetId // Derive from package instead of ui.style?.preset
   const res = await fetch('/api/styles/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -88,6 +90,11 @@ export function deriveStyleName(scope: Scope, provided?: string | null): string 
   const trimmed = (provided ?? '').toString().trim()
   if (trimmed) return trimmed
   return scope === 'freePackage' ? 'Free Package Style' : 'unnamed'
+}
+
+export function getStylePresetForPackage(packageId: string): string {
+  const pkg = getPackageConfig(packageId)
+  return pkg.defaultPresetId
 }
 
 export async function createOrUpdateStyle(params: {

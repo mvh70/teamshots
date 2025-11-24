@@ -1,4 +1,4 @@
-import { PhotoStyleSettings } from '@/types/photo-style'
+import { PhotoStyleSettings, PoseSettings } from '@/types/photo-style'
 import { resolveBodyAngle, resolveHeadPosition, resolveShoulderPosition, resolveWeightDistribution, resolveArmPosition, resolveSittingPose } from './config'
 import { getExpressionLabel } from '../expression/config'
 import { getPoseTemplate } from './config'
@@ -6,6 +6,7 @@ import { getPoseTemplate } from './config'
 export interface PosePromptResult {
   bodyAngle: string
   headPosition: string
+  chinTechnique?: string
   shoulderPosition: string
   weightDistribution: string
   arms: string
@@ -31,6 +32,7 @@ export const generatePosePrompt = (
       return {
         bodyAngle: template.pose.body_angle,
         headPosition: template.pose.head_position,
+        chinTechnique: template.pose.chin_technique,
         shoulderPosition: template.pose.shoulders,
         weightDistribution: template.pose.weight_distribution,
         arms: template.pose.arms,
@@ -42,13 +44,16 @@ export const generatePosePrompt = (
   }
 
   // Fallback to component-based resolution (used for 'user-choice' or individual overrides)
-  const bodyAngle = resolveBodyAngle(settings.bodyAngle)
-  const headPosition = resolveHeadPosition(settings.headPosition)
-  const shoulderPosition = resolveShoulderPosition(settings.shoulderPosition)
-  const weightDistribution = resolveWeightDistribution(settings.weightDistribution)
-  const armPosition = resolveArmPosition(settings.armPosition)
-  const sittingPose = settings.sittingPose && settings.sittingPose !== 'user-choice'
-    ? resolveSittingPose(settings.sittingPose)
+  // Cast to PoseSettings to access granular properties which are merged into PoseSettings type
+  const granularSettings = settings.pose as PoseSettings || {}
+  
+  const bodyAngle = resolveBodyAngle(granularSettings.bodyAngle)
+  const headPosition = resolveHeadPosition(granularSettings.headPosition)
+  const shoulderPosition = resolveShoulderPosition(granularSettings.shoulderPosition)
+  const weightDistribution = resolveWeightDistribution(granularSettings.weightDistribution)
+  const armPosition = resolveArmPosition(granularSettings.armPosition)
+  const sittingPose = granularSettings.sittingPose && granularSettings.sittingPose !== 'user-choice'
+    ? resolveSittingPose(granularSettings.sittingPose)
     : undefined
 
   const descriptionParts = [
@@ -73,6 +78,7 @@ export const generatePosePrompt = (
   return {
     bodyAngle: bodyAngle.description,
     headPosition: headPosition.description,
+    chinTechnique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
     shoulderPosition: shoulderPosition.description,
     weightDistribution: weightDistribution.description,
     arms: armPosition.description,

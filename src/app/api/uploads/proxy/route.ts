@@ -33,9 +33,9 @@ export async function POST(req: NextRequest) {
       folder = 'selfies'
     }
 
-    // For selfies, include personId-firstName in the path
+    // For selfies, backgrounds, and logos, include personId in the path when available
     let relativeKey: string
-    if (fileType === 'selfie' && !keyHeader) {
+    if (!keyHeader && (fileType === 'selfie' || fileType === 'background' || fileType === 'logo')) {
       // Resolve person via session OR invite token
       let person: { id: string; firstName: string | null } | null = null
 
@@ -60,10 +60,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Person record not found' }, { status: 404 })
       }
 
-      const firstName = sanitizeNameForS3(person.firstName || 'unknown')
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}${extension ? `.${extension.replace(/^\./, '')}` : ''}`
-      // Format: selfies/{personId}-{firstName}/{filename}
-      relativeKey = `${folder}/${person.id}-${firstName}/${fileName}`
+      
+      if (fileType === 'selfie') {
+        // Format: selfies/{personId}-{firstName}/{filename}
+        const firstName = sanitizeNameForS3(person.firstName || 'unknown')
+        relativeKey = `${folder}/${person.id}-${firstName}/${fileName}`
+      } else {
+        // Format: backgrounds/{personId}/{filename} or logos/{personId}/{filename}
+        relativeKey = `${folder}/${person.id}/${fileName}`
+      }
     } else {
       // Use provided keyHeader or construct standard key
       relativeKey = keyHeader || `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}${extension ? `.${extension.replace(/^\./, '')}` : ''}`

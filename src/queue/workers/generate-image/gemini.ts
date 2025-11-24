@@ -6,6 +6,7 @@ import type { Content, GenerateContentResult, Part, GenerativeModel, SafetySetti
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { generateWithGeminiRest } from './gemini-rest'
+import { isRateLimitError } from '@/lib/rate-limit-retry'
 
 export interface GeminiReferenceImage {
   mimeType: string
@@ -241,8 +242,7 @@ async function generateWithGeminiVertex(
     imageCount: parts.filter(p => 'inlineData' in p).length,
     hasAspectRatio: !!aspectRatio,
     hasResolution: !!resolution,
-    generationConfig: Object.keys(generationConfig).length > 0 ? generationConfig : undefined,
-    safetySettings: safetySettings.map(s => ({ category: s.category, threshold: s.threshold }))
+    generationConfig: Object.keys(generationConfig).length > 0 ? generationConfig : undefined
   })
 
   try {
@@ -356,17 +356,30 @@ async function generateWithGeminiVertex(
       )
     }
     
-    // Log all other errors with full details
-    Logger.error('Gemini image generation failed', {
-      modelName,
-      ...errorDetails
-    })
+    // Check if this is a rate limit error (429) - filter out stack trace
+    const isRateLimit = isRateLimitError(error)
     
-    // Also log to console for full visibility
-    console.error('\n=== FULL ERROR DETAILS ===')
-    console.error('Error Object:', error)
-    console.error('Error Details:', JSON.stringify(errorDetails, null, 2))
-    console.error('========================\n')
+    if (isRateLimit) {
+      // For rate limit errors, log without stack trace
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { stack, ...errorDetailsWithoutStack } = errorDetails
+      Logger.error('Gemini image generation rate limited (429)', {
+        modelName,
+        ...errorDetailsWithoutStack
+      })
+    } else {
+      // Log all other errors with full details
+      Logger.error('Gemini image generation failed', {
+        modelName,
+        ...errorDetails
+      })
+      
+      // Also log to console for full visibility (only for non-rate-limit errors)
+      console.error('\n=== FULL ERROR DETAILS ===')
+      console.error('Error Object:', error)
+      console.error('Error Details:', JSON.stringify(errorDetails, null, 2))
+      console.error('========================\n')
+    }
 
     throw error
   }

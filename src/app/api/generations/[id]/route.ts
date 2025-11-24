@@ -187,7 +187,7 @@ export async function GET(
       context: generation.context ? {
         id: generation.context.id,
         name: generation.context.name,
-        stylePreset: generation.context.stylePreset,
+        stylePreset: (generation.context.settings as Record<string, unknown> | undefined)?.stylePreset as string | undefined,
       } : null,
     })
 

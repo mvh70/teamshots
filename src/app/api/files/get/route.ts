@@ -96,11 +96,21 @@ export async function GET(req: NextRequest) {
     }
 
     const ownership = await findFileOwnership(key)
+    
+    // Special case: Allow access to background/logo files users uploaded
+    // even if not yet saved to a context (e.g., during style customization)
+    let allowAccessWithoutOwnership = false
     if (!ownership) {
-      return fileNotFoundResponse()
+      if (invitePersonId && (key.startsWith(`backgrounds/${invitePersonId}/`) || key.startsWith(`logos/${invitePersonId}/`))) {
+        allowAccessWithoutOwnership = true
+      } else if (userWithRoles?.person?.id && (key.startsWith(`backgrounds/${userWithRoles.person.id}/`) || key.startsWith(`logos/${userWithRoles.person.id}/`))) {
+        allowAccessWithoutOwnership = true
+      } else {
+        return fileNotFoundResponse()
+      }
     }
 
-    const authorized = isFileAuthorized(ownership, userWithRoles, roles, invitePersonId, inviteTeamId)
+    const authorized = ownership ? isFileAuthorized(ownership, userWithRoles, roles, invitePersonId, inviteTeamId, key) : allowAccessWithoutOwnership
 
     if (!authorized) {
       if (session?.user?.id) {

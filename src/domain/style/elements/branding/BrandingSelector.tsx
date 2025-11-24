@@ -59,7 +59,12 @@ export default function BrandingSelector({
       // Use the same upload method as selfies (proxy endpoint)
       const ext = file.name.split('.').pop()?.toLowerCase() || ''
       
-      const res = await fetch('/api/uploads/proxy', {
+      // Include token in URL if provided (for invite-based access)
+      const uploadUrl = token 
+        ? `/api/uploads/proxy?token=${encodeURIComponent(token)}`
+        : '/api/uploads/proxy'
+      
+      const res = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
           'x-file-content-type': file.type,

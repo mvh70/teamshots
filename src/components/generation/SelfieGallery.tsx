@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl'
 import { LoadingSpinner, SelfieGrid } from '@/components/ui'
 import dynamic from 'next/dynamic'
 import SelfieApproval from '@/components/Upload/SelfieApproval'
-import SelfieUploadPlaceholder from './SelfieUploadPlaceholder'
 import { promoteUploads } from '@/lib/uploadHelpers'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
@@ -31,6 +30,8 @@ interface SelfieGalleryProps {
   // Upload-related props for inline upload functionality
   onSelfiesApproved?: (results: { key: string; selfieId?: string }[]) => void
   onUploadError?: (error: string) => void
+  saveEndpoint?: (key: string) => Promise<string | undefined> // Custom save function for invite flows
+  uploadEndpoint?: (file: File) => Promise<{ key: string; url?: string }> // Custom upload function for invite flows
 }
 
 export default function SelfieGallery({
@@ -43,6 +44,8 @@ export default function SelfieGallery({
   onDeleted,
   onSelfiesApproved,
   onUploadError,
+  saveEndpoint,
+  uploadEndpoint,
 }: SelfieGalleryProps) {
   const t = useTranslations('selfies.gallery')
   const { selectedSet, toggleSelect } = useSelfieSelection({ token })
@@ -63,36 +66,45 @@ export default function SelfieGallery({
 
 
 
-  // Custom upload handler that uses temp storage (required for promotion flow)
+  // Custom upload handler - uses custom endpoint if provided (invite flow), otherwise temp storage
   const handlePhotoUpload = async (file: File): Promise<{ key: string; url?: string }> => {
     const isFromCamera = file.name.startsWith('capture-')
     try {
-      const ext = file.name.split('.')?.pop()?.toLowerCase()
-      const res = await fetch('/api/uploads/temp', {
-        method: 'POST',
-        headers: {
-          'x-file-content-type': file.type,
-          'x-file-extension': ext || ''
-        },
-        body: file,
-        credentials: 'include'
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Temp upload failed')
+      let result: { key: string; url?: string }
+      
+      // Use custom upload endpoint if provided (invite flow)
+      if (uploadEndpoint) {
+        result = await uploadEndpoint(file)
+      } else {
+        // Standard flow: Upload to temp storage
+        const ext = file.name.split('.')?.pop()?.toLowerCase()
+        const res = await fetch('/api/uploads/temp', {
+          method: 'POST',
+          headers: {
+            'x-file-content-type': file.type,
+            'x-file-extension': ext || ''
+          },
+          body: file,
+          credentials: 'include'
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || 'Temp upload failed')
+        }
+        const data = await res.json() as { tempKey: string }
+        // Create preview URL for local display
+        const url = URL.createObjectURL(file)
+        result = { key: data.tempKey, url }
       }
-      const data = await res.json() as { tempKey: string }
-      // Create preview URL for local display
-      const url = URL.createObjectURL(file)
       
       // Store camera captures for approval screen
-      if (isFromCamera) {
-        const approvalData = { key: data.tempKey, previewUrl: url }
+      if (isFromCamera && result.url) {
+        const approvalData = { key: result.key, previewUrl: result.url }
         setPendingApproval(approvalData)
         pendingApprovalRef.current = approvalData
       }
       
-      return { key: data.tempKey, url }
+      return result
     } catch (error) {
       setPendingApproval(null)
       pendingApprovalRef.current = null
@@ -107,8 +119,26 @@ export default function SelfieGallery({
       if (Array.isArray(result) && result.length > 1) {
         setIsProcessingMultiple(true)
 
-        // Process all uploads in parallel for better performance
-        const successfulResults = await promoteUploads(result)
+        let successfulResults: { key: string; selfieId?: string }[]
+
+        // Check if saveEndpoint is provided (invite flow with direct uploads)
+        if (saveEndpoint) {
+          // Invite flow: Process direct uploads by calling saveEndpoint
+          successfulResults = await Promise.all(
+            result.map(async (upload) => {
+              try {
+                const selfieId = await saveEndpoint(upload.key)
+                return { key: upload.key, selfieId }
+              } catch (error) {
+                console.error('Failed to save direct upload:', error)
+                return { key: upload.key, selfieId: undefined }
+              }
+            })
+          )
+        } else {
+          // Standard flow: Promote temp uploads to permanent storage
+          successfulResults = await promoteUploads(result)
+        }
 
         // Log results for debugging
         console.log('[SelfieGallery] Promotion results:', successfulResults)
@@ -139,10 +169,25 @@ export default function SelfieGallery({
         }
 
         // File upload - auto-approve directly
-        // Promote temp file to permanent storage if it's a temp key
-        const [promotedResult] = await promoteUploads([singleResult])
-        const finalKey = promotedResult.key
-        const selfieId = promotedResult.selfieId
+        let finalKey: string
+        let selfieId: string | undefined
+
+        // Check if saveEndpoint is provided (invite flow with direct uploads)
+        if (saveEndpoint) {
+          // Invite flow: Direct upload - call saveEndpoint to create DB record
+          try {
+            selfieId = await saveEndpoint(singleResult.key)
+            finalKey = singleResult.key
+          } catch (error) {
+            console.error('Failed to save direct upload:', error)
+            throw error
+          }
+        } else {
+          // Standard flow: Promote temp file to permanent storage
+          const [promotedResult] = await promoteUploads([singleResult])
+          finalKey = promotedResult.key
+          selfieId = promotedResult.selfieId
+        }
 
         console.log('Final key:', finalKey, 'selfieId:', selfieId)
 
@@ -221,10 +266,25 @@ export default function SelfieGallery({
               return
             }
 
-            // Promote temp file to permanent storage
-            const [promotedResult] = await promoteUploads([approvalData])
-            const finalKey = promotedResult.key
-            const selfieId = promotedResult.selfieId
+            let finalKey: string
+            let selfieId: string | undefined
+
+            // Check if saveEndpoint is provided (invite flow with direct uploads)
+            if (saveEndpoint) {
+              // Invite flow: Direct upload - call saveEndpoint to create DB record
+              try {
+                selfieId = await saveEndpoint(approvalData.key)
+                finalKey = approvalData.key
+              } catch (error) {
+                console.error('Failed to save direct upload:', error)
+                throw error
+              }
+            } else {
+              // Standard flow: Promote temp file to permanent storage
+              const [promotedResult] = await promoteUploads([approvalData])
+              finalKey = promotedResult.key
+              selfieId = promotedResult.selfieId
+            }
 
             // Call the approval handler
             if (onSelfiesApproved) {
@@ -362,7 +422,20 @@ export default function SelfieGallery({
               isProcessing={isProcessingMultiple}
             />
           ) : onUploadClick ? (
-            <SelfieUploadPlaceholder onUploadClick={onUploadClick} />
+            <div className="aspect-square rounded-2xl p-3 md:p-6 lg:p-8 flex flex-col items-center justify-center text-center border border-gray-200 bg-gradient-to-br from-white via-gray-50 to-gray-100 hover:shadow-lg transition-all duration-200 cursor-pointer"
+              onClick={onUploadClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter') onUploadClick(); }}
+              data-testid="selfie-upload-trigger"
+            >
+              <div className="w-full flex flex-col items-center gap-3">
+                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <p className="text-sm font-medium text-gray-700">Add selfie</p>
+              </div>
+            </div>
           ) : null}
         </div>
       )}

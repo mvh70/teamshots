@@ -24,7 +24,8 @@ export const headshot1Server: Headshot1ServerPackage = {
   }: GenerationContext): Promise<GenerationPayload> => {
     const { settings: effectiveSettings } = applyStandardPreset(
       styleSettings.presetId || headshot1Base.defaultPresetId,
-      styleSettings
+      styleSettings,
+      headshot1Base.presets || {}
     )
 
     // Fixed to medium-shot for headshot1

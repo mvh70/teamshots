@@ -3,7 +3,7 @@ import { useOnborda } from 'onborda'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { usePathname } from '@/i18n/routing'
-import { OnboardingContext, getApplicableTours, getTour, createTranslatedTours } from './config'
+import { OnboardingContext, getApplicableTours, getTour } from './config'
 import { trackTourStarted, trackTourCompleted, trackTourSkipped, trackStepViewed } from './analytics'
 
 // Export the utility functions
@@ -282,6 +282,7 @@ export function useOnbordaTours() {
   const { useOnboardingState: useOnboardingStateFromContext } = require('@/contexts/OnboardingContext')
   const { context, updateContext, pendingTour, setPendingTour, clearPendingTour: clearPendingTourFromContext } = useOnboardingStateFromContext()
   const t = useTranslations('app')
+  const pathname = usePathname()
   const [currentTour, setCurrentTour] = useState<string | null>(null)
   const [sidebarIndicators, setSidebarIndicators] = useState<Record<string, number>>({})
 
@@ -316,42 +317,29 @@ export function useOnbordaTours() {
   // Start a specific tour
   const startTour = (tourName: string, force: boolean = false) => {
     try {
-      console.log('[startTour] Called with:', tourName, 'force:', force, 'current pendingTour:', pendingTour, 'context.personId:', context.personId)
       // Check if tour has already been completed (check database via context.completedTours)
       // Skip check if force is true (explicit call from page that already validated conditions)
       if (!force) {
         const completedTours = context.completedTours || []
-        console.log('[startTour] completedTours from context:', completedTours, 'checking for:', tourName)
         const hasCompleted = completedTours.includes(tourName)
         if (hasCompleted) {
-          console.log('[startTour] Tour already completed, returning. completedTours:', completedTours)
           return
         }
       } else {
-        console.log('[startTour] Force mode - bypassing completion check')
         // When forcing, also remove from completedTours in local context to fix stale data
         // This ensures the tour can proceed even if context has stale completion data
         const currentCompletedTours = context.completedTours || []
         if (currentCompletedTours.includes(tourName)) {
-          console.log('[startTour] Force mode - removing tour from local completedTours to fix stale data')
           const updatedCompletedTours = currentCompletedTours.filter((t: string) => t !== tourName)
           updateContext({ completedTours: updatedCompletedTours })
-          console.log('[startTour] Updated local context completedTours:', updatedCompletedTours)
         }
       }
       
-      console.log('[startTour] Getting tour config for:', tourName)
       const tour = getTour(tourName, t, context)
-      console.log('[startTour] Tour found:', !!tour, 'tour name:', tour?.name, 'tour object:', tour ? { name: tour.name, startingPath: tour.startingPath } : 'null')
       
       if (tour) {
-        console.log('[startTour] Tour exists, setting pendingTour to:', tourName)
         setPendingTour(tourName)
-        console.log('[startTour] setPendingTour called, tracking tour started')
         trackTourStarted(tourName, context)
-        console.log('[startTour] Complete - pendingTour should now be:', tourName)
-      } else {
-        console.error('[startTour] ERROR: No tour found for:', tourName, 'Available tours:', Object.keys(createTranslatedTours(t, context)))
       }
     } catch (error) {
       console.error('[startTour] ERROR calling startTour:', error)
@@ -375,17 +363,66 @@ export function useOnbordaTours() {
       // Persist tour completion to database (Person.onboardingState)
       if (context.personId) {
         try {
-          await fetch('/api/onboarding/complete-tour', {
+          // Check if we're in an invite flow - extract token from pathname
+          const inviteMatch = pathname?.match(/^\/invite-dashboard\/([^/]+)/)
+          const inviteToken = inviteMatch ? inviteMatch[1] : null
+          
+          // Build request body with token if in invite flow
+          const requestBody: { tourName: string; token?: string } = { tourName }
+          if (inviteToken) {
+            requestBody.token = inviteToken
+          }
+          
+          const response = await fetch('/api/onboarding/complete-tour', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tourName }),
+            body: JSON.stringify(requestBody),
           })
-          // Update local context to include this tour in completedTours
-          const currentCompletedTours = context.completedTours || []
-          if (!currentCompletedTours.includes(tourName)) {
-            updateContext({ completedTours: [...currentCompletedTours, tourName] })
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+            console.error(`[completeTour] Failed to complete tour ${tourName}:`, response.status, errorData)
+            throw new Error(`API returned ${response.status}: ${JSON.stringify(errorData)}`)
           }
-        } catch {
+
+          await response.json()
+
+          // Refresh onboarding context from database to ensure we have the latest state
+          try {
+            // Check if we're in an invite flow - extract token from pathname
+            const inviteMatch = pathname?.match(/^\/invite-dashboard\/([^/]+)/)
+            const inviteToken = inviteMatch ? inviteMatch[1] : null
+            
+            // Build API URL with token if in invite flow
+            const contextApiUrl = inviteToken 
+              ? `/api/onboarding/context?token=${encodeURIComponent(inviteToken)}`
+              : '/api/onboarding/context'
+            
+            const contextResponse = await fetch(contextApiUrl)
+            if (contextResponse.ok) {
+              const freshContext = await contextResponse.json()
+              // Update context with fresh data from database
+              updateContext({
+                completedTours: freshContext.completedTours || [],
+                pendingTours: freshContext.pendingTours || [],
+              })
+            } else {
+              // Still update local context optimistically with the API result
+              const currentCompletedTours = context.completedTours || []
+              if (!currentCompletedTours.includes(tourName)) {
+                updateContext({ completedTours: [...currentCompletedTours, tourName] })
+              }
+            }
+          } catch (refreshError) {
+            console.error(`[completeTour] Error refreshing context after completing ${tourName}:`, refreshError)
+            // Still update local context optimistically with the API result
+            const currentCompletedTours = context.completedTours || []
+            if (!currentCompletedTours.includes(tourName)) {
+              updateContext({ completedTours: [...currentCompletedTours, tourName] })
+            }
+          }
+        } catch (error) {
+          console.error(`[completeTour] Error completing tour ${tourName}:`, error)
           // Continue execution even if database update fails
           // Still update local context optimistically
           const currentCompletedTours = context.completedTours || []

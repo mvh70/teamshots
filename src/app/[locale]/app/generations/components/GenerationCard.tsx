@@ -58,30 +58,69 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const t = useTranslations('generations')
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const imageKey = item.acceptedKey || item.generatedKey
   const [beforeImageError, setBeforeImageError] = useState(false)
   const [afterImageError, setAfterImageError] = useState(false)
   const [beforeRetryCount, setBeforeRetryCount] = useState(0)
   const [afterRetryCount, setAfterRetryCount] = useState(0)
   const [loadedGenerated, setLoadedGenerated] = useState(false)
+  const [failedGenerationHidden, setFailedGenerationHidden] = useState(false)
+  const failedGenerationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const beforeKey = item.selfieKey || item.uploadedKey
-  const afterKey = item.generatedKey || item.uploadedKey
   const normalizedBeforeKey = beforeKey && beforeKey !== 'undefined' ? beforeKey : null
-  const normalizedAfterKey = afterKey && afterKey !== 'undefined' ? afterKey : null
 
   // Use real-time status polling for potentially incomplete generations
-  const shouldPoll = (item.status === 'pending' || item.status === 'processing') || (!item.generatedKey && !item.acceptedKey)
+  // Always enable the hook to fetch at least once, but use a longer interval if generation appears complete
+  const initialShouldPoll = (item.status === 'pending' || item.status === 'processing') || (!item.generatedKey && !item.acceptedKey)
   const { generation: liveGeneration } = useGenerationStatus({
-    generationId: shouldPoll ? item.id : '',
-    enabled: shouldPoll,
-    pollInterval: 1000, // Poll every second for active generations
+    generationId: item.id,
+    enabled: true, // Always enabled to fetch at least once, even for completed generations
+    pollInterval: initialShouldPoll ? 1000 : 5000, // Poll every second if incomplete, every 5 seconds if complete (to catch updates)
   })
 
   // Use live data if available, otherwise fall back to static item data
   const currentJobStatus = liveGeneration?.jobStatus || item.jobStatus
   const currentStatus = liveGeneration?.status || item.status
+  
+  // Extract generated key from live generation if available
+  // The API returns generatedImageUrls as URLs, so we need to extract the key from the URL
+  const extractKeyFromUrl = (url: string): string | null => {
+    if (!url) return null
+    try {
+      // Handle both absolute and relative URLs
+      const urlObj = url.startsWith('http') 
+        ? new URL(url)
+        : new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+      const key = urlObj.searchParams.get('key')
+      if (key) return decodeURIComponent(key)
+    } catch (error) {
+      console.warn('Failed to parse URL, trying regex extraction:', url, error)
+    }
+    // If URL parsing fails, try to extract key directly from query string
+    const match = url.match(/[?&]key=([^&]+)/)
+    return match ? decodeURIComponent(match[1]) : null
+  }
+  
+  // Get generated key from live generation or fall back to item
+  // The API returns generatedImageUrls as proxy URLs, extract the key to build the correct URL
+  const liveGeneratedKey = liveGeneration?.generatedImageUrls?.[0] 
+    ? extractKeyFromUrl(liveGeneration.generatedImageUrls[0])
+    : null
+  const liveAcceptedKey = liveGeneration?.acceptedPhotoKey || null
+  
+  // Log key extraction for debugging
+  if (liveGeneration?.generatedImageUrls?.[0] && !liveGeneratedKey) {
+    console.warn('Failed to extract key from generatedImageUrl:', liveGeneration.generatedImageUrls[0])
+  }
+  
+  // Use live keys when available, otherwise fall back to static item data
+  const effectiveGeneratedKey = liveGeneratedKey || item.generatedKey
+  const effectiveAcceptedKey = liveAcceptedKey || item.acceptedKey
+  const afterKey = effectiveAcceptedKey || effectiveGeneratedKey || item.uploadedKey
+  const normalizedAfterKey = afterKey && afterKey !== 'undefined' ? afterKey : null
+  const imageKey = effectiveAcceptedKey || effectiveGeneratedKey
 
-  const isIncomplete = (currentStatus === 'pending' || currentStatus === 'processing') || (!item.generatedKey && !item.acceptedKey)
+  const isFailed = currentStatus === 'failed' && !failedGenerationHidden
+  const isIncomplete = (currentStatus === 'pending' || currentStatus === 'processing') || (!effectiveGeneratedKey && !effectiveAcceptedKey && !isFailed)
 
   // Debug live generation data
   console.log('GenerationCard live data:', {
@@ -91,7 +130,16 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
     liveJobStatus: liveGeneration?.jobStatus,
     currentJobStatus: currentJobStatus,
     currentStatus: currentStatus,
-    isIncomplete
+    isIncomplete,
+    liveGeneratedImageUrls: liveGeneration?.generatedImageUrls,
+    liveGeneratedKey,
+    liveAcceptedKey,
+    effectiveGeneratedKey,
+    effectiveAcceptedKey,
+    afterKey,
+    normalizedAfterKey,
+    itemGeneratedKey: item.generatedKey,
+    itemAcceptedKey: item.acceptedKey
   })
 
 
@@ -104,6 +152,35 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
       setPos(100)
     }
   }, [isIncomplete, currentJobStatus?.progress])
+
+  // Force re-render when live generation completes to show the image
+  useEffect(() => {
+    if (liveGeneration && (liveGeneration.status === 'completed' || liveGeneration.status === 'failed')) {
+      // Generation completed - component will re-render with updated keys
+      console.log('Generation completed, updating display:', {
+        id: liveGeneration.id,
+        status: liveGeneration.status,
+        hasGeneratedImages: liveGeneration.generatedImageUrls?.length > 0,
+        acceptedKey: liveGeneration.acceptedPhotoKey
+      })
+    }
+  }, [liveGeneration])
+
+  // Auto-hide failed generations after 10 seconds
+  useEffect(() => {
+    if (isFailed && !failedGenerationHidden) {
+      // Set timeout to hide the failed generation after 10 seconds
+      failedGenerationTimeoutRef.current = setTimeout(() => {
+        setFailedGenerationHidden(true)
+      }, 10000) // 10 seconds
+
+      return () => {
+        if (failedGenerationTimeoutRef.current) {
+          clearTimeout(failedGenerationTimeoutRef.current)
+        }
+      }
+    }
+  }, [isFailed, failedGenerationHidden])
 
   useEffect(() => {
     setBeforeImageError(false)
@@ -290,6 +367,11 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
     }
   }, []) // updateFromEvent uses refs, so it's stable
 
+  // Don't render if failed generation has been hidden
+  if (failedGenerationHidden && currentStatus === 'failed') {
+    return null
+  }
+
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
         <div className="relative aspect-square" ref={photoContainerRef}>
@@ -348,7 +430,26 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
         )}
 
         {/* FOREGROUND: Generated clipped to handle position OR placeholder */}
-        {isIncomplete ? (
+        {isFailed ? (
+          // Error state for failed generation
+          <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+            <div className="text-center px-4">
+              <div className="mx-auto mb-3">
+                <svg className="w-12 h-12 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-900 mb-1">
+                {t('toasts.generationFailed', { default: 'We couldn\'t finish that photo. The photo credits have been returned to your balance.' })}
+              </p>
+              {currentJobStatus?.failedReason && (
+                <p className="text-xs text-gray-500 mt-2">
+                  {currentJobStatus.failedReason}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : isIncomplete ? (
           // Placeholder for incomplete generation - show full spinner
           <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
             <div className="text-center px-4">

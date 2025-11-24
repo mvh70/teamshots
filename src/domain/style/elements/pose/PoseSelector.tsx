@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { PoseSettings } from '@/types/photo-style'
-import { getPoseUIInfo, POSE_COLORS } from './config'
+import { getPoseUIInfo } from './config'
 
 interface PoseSelectorProps {
   value: PoseSettings
@@ -11,12 +11,14 @@ interface PoseSelectorProps {
   isDisabled?: boolean
   className?: string
   showHeader?: boolean
+  availablePoses?: string[]
 }
 
 // Get poses from the single source of truth
 const POSES = getPoseUIInfo().map(pose => ({
   ...pose,
-  color: POSE_COLORS[pose.category as keyof typeof POSE_COLORS] || 'from-gray-500 to-gray-600'
+  // Default color since categories are removed
+  color: 'from-gray-500 to-gray-600'
 }))
 
 export default function PoseSelector({
@@ -25,9 +27,14 @@ export default function PoseSelector({
   isPredefined = false,
   isDisabled = false,
   className = '',
-  showHeader = false
+  showHeader = false,
+  availablePoses
 }: PoseSelectorProps) {
   const t = useTranslations('customization.photoStyle.pose')
+
+  const visiblePoses = availablePoses 
+    ? POSES.filter(p => availablePoses.includes(p.value))
+    : POSES
 
   const handleChange = (pose: PoseSettings['type'], event?: React.MouseEvent) => {
     if (event) {
@@ -59,7 +66,7 @@ export default function PoseSelector({
       )}
 
       <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
-        {POSES.map((pose) => {
+        {visiblePoses.map((pose) => {
           const isSelected = value.type === pose.value
           // On mobile, hide unselected options when predefined
           const shouldHide = isPredefined && !isSelected
@@ -91,10 +98,10 @@ export default function PoseSelector({
                 </div>
                 <div className="flex-1 text-left">
                   <div className={`text-sm font-semibold ${isSelected ? 'text-brand-primary' : 'text-gray-900'}`}>
-                    {t(`poses.${pose.value}.label`, { default: pose.label })}
+                    {t(`poses.${pose.value}.label`)}
                   </div>
                   <div className="text-xs text-gray-600 mt-0.5">
-                    {t(`poses.${pose.value}.description`, { default: pose.description })}
+                    {t(`poses.${pose.value}.description`)}
                   </div>
                 </div>
                 {isSelected && (

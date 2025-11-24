@@ -1299,7 +1299,7 @@
       "name": "Generado por {name}"
     },
     "toasts": {
-      "generationFailed": "No pudimos terminar esa foto. Tus créditos volvieron a tu saldo."
+      "generationFailed": "No pudimos terminar esa foto. Los créditos de la foto han sido devueltos a tu saldo."
     }
   },
   "selfies": {
@@ -1495,11 +1495,11 @@
       "text": "Has sido invitado a unirte a {teamName} en TeamShotsPro.\n\nUsa este enlace para aceptar: {inviteLink}\n\nTienes {creditsAllocated} créditos para empezar.",
       "title": "Invitación al equipo",
       "greeting": "Has sido invitado a unirte al equipo de {teamName} en TeamShotsPro. La buena noticia: no necesitas sesiones de fotos incómodas en la oficina.",
-      "greetingWithName": "Hola {firstName}, {inviterFirstName} te ha invitado a unirte al equipo de {teamName} en TeamShotsPro. ¿Por qué? Para obtener fotos profesionales consistentes para el equipo sin el lío de sesiones fotográficas. Lo que obtienes: {credits} créditos para crear {photos} fotos pulidas a partir de tu selfie. Buena noticia: no se requieren poses incómodas – nosotros nos encargamos de la magia profesional.",
+      "greetingWithName": "Hola {firstName}, {inviterFirstName} te ha invitado a unirte al equipo de {teamName} en TeamShotsPro. ¿Por qué? Para obtener fotos profesionales consistentes para el equipo sin el lío de sesiones fotográficas.",
       "whatYouGet": "Lo que obtienes:",
       "photos": "{photos} fotos profesionales ({variations} variaciones)",
       "teamBranded": "Generación de fotos con marca del equipo",
-      "photosDescription": "Has recibido {credits} créditos de fotos para generar {photos} fotos. Desde solo un selfie. Tu selfie no tiene que ser perfecto. Nosotros nos encargamos del acabado profesional.",
+      "photosDescription": "Puedes generar {photos} fotos personalizables. Y cada foto se puede rehacer hasta 4 veces cada una. Desde solo un selfie.\n\nTu selfie no tiene que ser perfecto. Nosotros nos encargamos del acabado profesional.",
       "mobileAdvice": "Para la mejor experiencia, abre esto en tu dispositivo móvil. Ahí es donde tomarás tu selfie.",
       "noSignup": "Sin registro requerido",
       "directAccess": "Acceso directo para subir tu selfie",
@@ -1813,6 +1813,10 @@
           "thinker": {
             "label": "El Pensador",
             "description": "Líder de pensamiento, experto, estratégico"
+          },
+          "jacket_reveal": {
+            "label": "Revelación de Chaqueta",
+            "description": "Pose profesional que destaca el atuendo"
           }
         }
       }

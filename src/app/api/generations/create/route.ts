@@ -27,23 +27,6 @@ import { UserService } from '@/domain/services/UserService'
 import { deriveGenerationType, deriveCreditSource } from '@/domain/generation/utils'
 import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
 
-const cloneDeep = <T>(value: T): T => JSON.parse(JSON.stringify(value))
-
-// Generic deep merge that preserves user-choice nulls and ignores undefined
-function deepMerge(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = Array.isArray(base) ? [...base] as unknown as Record<string, unknown> : { ...base }
-  for (const [k, v] of Object.entries(override)) {
-    if (v === undefined) continue
-    if (v === null) { out[k] = null; continue }
-    const bv = out[k]
-    if (bv && typeof bv === 'object' && !Array.isArray(bv) && typeof v === 'object' && !Array.isArray(v)) {
-      out[k] = deepMerge(bv as Record<string, unknown>, v as Record<string, unknown>)
-    } else {
-      out[k] = v
-    }
-  }
-  return out
-}
 
 // Request validation schema
 const createGenerationSchema = z.object({
@@ -61,6 +44,7 @@ const createGenerationSchema = z.object({
     clothingColors: z.any().optional(),
     shotType: z.any().optional(),
     expression: z.any().optional(),
+    pose: z.any().optional(),
     lighting: z.any().optional(),
   }).optional(),
   prompt: z.string().min(1, 'Prompt is required'),
@@ -305,14 +289,14 @@ export async function POST(request: NextRequest) {
       // First try to find by ID
       let context = await prisma.context.findUnique({
         where: { id: contextId },
-        select: { id: true, name: true, settings: true, stylePreset: true }
+        select: { id: true, name: true, settings: true }
       })
       
       // If not found by ID, try to find by name
       if (!context) {
         context = await prisma.context.findFirst({
           where: { name: contextId },
-          select: { id: true, name: true, settings: true, stylePreset: true }
+          select: { id: true, name: true, settings: true }
         })
       }
       
@@ -516,75 +500,68 @@ export async function POST(request: NextRequest) {
 
     // Calculate final style settings before creating generation
     const packageId = (styleSettings?.packageId as string) || PACKAGES_CONFIG.defaultPlanPackage
+    const packageConfig = getPackageConfig(packageId)
+    const resolvedPackageId = packageId
 
     // Convert raw settings to PhotoStyleSettings objects for the resolver
     const contextSettingsObj = contextStyleSettings && typeof contextStyleSettings === 'object' && !Array.isArray(contextStyleSettings)
-      ? getPackageConfig(packageId).persistenceAdapter.deserialize(contextStyleSettings as Record<string, unknown>)
+      ? packageConfig.persistenceAdapter.deserialize(contextStyleSettings as Record<string, unknown>)
       : null
 
-    const userModificationsObj = styleSettings && typeof styleSettings === 'object' && !Array.isArray(styleSettings)
-      ? getPackageConfig(packageId).persistenceAdapter.deserialize(styleSettings as Record<string, unknown>)
-      : null
+    // Let the package extract UI settings from the raw request data
+    const userModificationsObj = styleSettings ? packageConfig.extractUiSettings(styleSettings) : null
 
-    const finalStyleSettingsObj = resolvePhotoStyleSettings(packageId, contextSettingsObj, userModificationsObj)
-
-    // Serialize back to Record for storage
-    let finalStyleSettings = getPackageConfig(packageId).persistenceAdapter.serialize(finalStyleSettingsObj)
-
-    // Normalize potential UI variants before serialization
-    try {
-      const clothing = (finalStyleSettings['clothing'] as { colors?: unknown } | undefined)
-      const clothingColors = finalStyleSettings['clothingColors'] as Record<string, unknown> | null | undefined
-      // Some UIs may send colors under clothing.colors; lift to clothingColors if present
-      if (!clothingColors && clothing && clothing.colors && typeof clothing.colors === 'object') {
-        finalStyleSettings['clothingColors'] = { colors: clothing.colors as Record<string, unknown> }
-        // keep clothing.colors as-is for backward compatibility; do not delete
-      }
-    } catch {}
-    
+    let finalStyleSettingsObj = resolvePhotoStyleSettings(packageId, contextSettingsObj, userModificationsObj)
 
     // Enforce free package style for free-plan users or when team admin is on free plan
+    // Skip enforcement for invited users (they get package from invite)
     try {
-      let shouldEnforceFreeStyle = false
-      
-      if (session.user.id) {
-        const userBasic = await prisma.user.findUnique({ where: { id: session.user.id } })
-        const basicPlanPeriod = (userBasic as unknown as { planPeriod?: string | null })?.planPeriod
-        // Check if user is on free plan
-        if (basicPlanPeriod === 'free') {
-          shouldEnforceFreeStyle = true
-        }
-      }
-      
-      // If using team credits, also check if team admin is on free plan
-      if (enforcedCreditSource === 'team' && ownerPerson.teamId) {
-        const team = await prisma.team.findUnique({
-          where: { id: ownerPerson.teamId },
-          include: {
-            admin: true
-          }
-        })
+      // Skip if person is invited (has inviteToken) - they get package from invite
+      if (ownerPerson.inviteToken) {
+        Logger.debug('Skipping free package enforcement for invited user')
+      } else if (packageId === 'freepackage') {
+        let shouldEnforceFreeStyle = false
         
-        if (team?.admin) {
-          const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
-          if (adminPlanPeriod === 'free') {
+        // Check if user is on free plan
+        if (session.user.id) {
+          const userBasic = await prisma.user.findUnique({ where: { id: session.user.id } })
+          const basicPlanPeriod = (userBasic as unknown as { planPeriod?: string | null })?.planPeriod
+          if (basicPlanPeriod === 'free') {
             shouldEnforceFreeStyle = true
           }
         }
-      }
-      
-      if (shouldEnforceFreeStyle) {
-        type PrismaWithAppSetting = typeof prisma & { appSetting: { findUnique: (...args: unknown[]) => Promise<{ key: string; value: string } | null> } }
-        const prismaEx = prisma as unknown as PrismaWithAppSetting
-        const setting = await prismaEx.appSetting.findUnique({ where: { key: 'freePackageStyleId' } })
-        if (setting?.value) {
-          const freeCtx = await prisma.context.findUnique({ where: { id: setting.value }, select: { id: true, settings: true } })
-          if (freeCtx && freeCtx.settings) {
-            resolvedContextId = freeCtx.id
-            // For free plan users, the frontend already sends the correct Free Package style settings
-            // with user customizations on user-choice fields. We just need to set the contextId.
-            // The finalStyleSettings from the request is already correct.
-            Logger.debug('Free plan user or team admin on free plan - using styleSettings from request (already includes Free Package + customizations)')
+        
+        // If using team credits, also check if team admin is on free plan
+        if (enforcedCreditSource === 'team' && ownerPerson.teamId) {
+          const team = await prisma.team.findUnique({
+            where: { id: ownerPerson.teamId },
+            include: {
+              admin: true
+            }
+          })
+          
+          if (team?.admin) {
+            const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
+            if (adminPlanPeriod === 'free') {
+              shouldEnforceFreeStyle = true
+            }
+          }
+        }
+        
+        if (shouldEnforceFreeStyle) {
+          type PrismaWithAppSetting = typeof prisma & { appSetting: { findUnique: (...args: unknown[]) => Promise<{ key: string; value: string } | null> } }
+          const prismaEx = prisma as unknown as PrismaWithAppSetting
+          const setting = await prismaEx.appSetting.findUnique({ where: { key: 'freePackageStyleId' } })
+          if (setting?.value) {
+            const freeCtx = await prisma.context.findUnique({ where: { id: setting.value }, select: { id: true, settings: true } })
+            if (freeCtx && freeCtx.settings) {
+              resolvedContextId = freeCtx.id
+              // Deserialize admin settings from the context
+              const adminSettings = getPackageConfig('freepackage').persistenceAdapter.deserialize(freeCtx.settings as Record<string, unknown>)
+              // Merge admin settings (base) with user settings (overlay) - update the object directly
+              finalStyleSettingsObj = resolvePhotoStyleSettings('freepackage', adminSettings, finalStyleSettingsObj)
+              Logger.debug('Free package - merged admin settings with user customizations')
+            }
           }
         }
       }
@@ -592,6 +569,8 @@ export async function POST(request: NextRequest) {
       Logger.error('Failed to enforce free package style', { error: e instanceof Error ? e.message : String(e) })
     }
     
+    // Handle regeneration - use existing serialized settings if available
+    let serializedStyleSettings: Record<string, unknown> | null = null
     if (isRegeneration && originalGenerationId) {
       // Fetch the original generation's styleSettings and context
       const originalGeneration = await prisma.generation.findUnique({
@@ -602,26 +581,39 @@ export async function POST(request: NextRequest) {
       // Use the original generation's saved styleSettings (includes user customizations)
       // This is more accurate than context settings because it contains the actual settings used
       if (originalGeneration?.styleSettings && typeof originalGeneration.styleSettings === 'object' && !Array.isArray(originalGeneration.styleSettings)) {
-        finalStyleSettings = originalGeneration.styleSettings as Record<string, unknown>
+        serializedStyleSettings = originalGeneration.styleSettings as Record<string, unknown>
         Logger.debug('Using styleSettings from original generation', { 
           contextName: originalGeneration.context?.name 
         })
       } else if (originalGeneration?.context?.settings) {
         // Fallback to context settings if generation doesn't have saved styleSettings
-        finalStyleSettings = originalGeneration.context.settings as Record<string, unknown>
+        serializedStyleSettings = originalGeneration.context.settings as Record<string, unknown>
         Logger.debug('Using context settings from original generation (fallback)', { 
           contextName: originalGeneration.context.name 
         })
       }
     }
 
-    // Serialize style settings with package info
-    const finalPackageId = (finalStyleSettings?.['packageId'] as string) || requestedPackageId || 'headshot1'
-    const pkg = getPackageConfig(finalPackageId)
+    // Serialize style settings with package info (only if not already serialized from regeneration)
+    if (!serializedStyleSettings) {
+      const pkg = getPackageConfig(resolvedPackageId)
+      serializedStyleSettings = pkg.persistenceAdapter.serialize(finalStyleSettingsObj)
+      
+      // Normalize potential UI variants after serialization
+      try {
+        const clothing = (serializedStyleSettings['clothing'] as { colors?: unknown } | undefined)
+        const clothingColors = serializedStyleSettings['clothingColors'] as Record<string, unknown> | null | undefined
+        // Some UIs may send colors under clothing.colors; lift to clothingColors if present
+        if (!clothingColors && clothing && clothing.colors && typeof clothing.colors === 'object') {
+          serializedStyleSettings['clothingColors'] = { colors: clothing.colors as Record<string, unknown> }
+          // keep clothing.colors as-is for backward compatibility; do not delete
+        }
+      } catch {}
+    }
+    
     // Persist style settings and also embed selected selfie keys for future regenerations
-    const serializedStyleSettingsBase = pkg.persistenceAdapter.serialize(finalStyleSettings)
-    const serializedStyleSettings = {
-      ...serializedStyleSettingsBase,
+    serializedStyleSettings = {
+      ...serializedStyleSettings,
       inputSelfies: { keys: selfieS3Keys }
     } as Record<string, unknown>
 

@@ -1,13 +1,15 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import SelfieGallery from '@/components/generation/SelfieGallery'
 import { LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
-
+import dynamic from 'next/dynamic'
 import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
+
+const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
 interface UploadListItem {
   id: string
@@ -20,17 +22,33 @@ interface UploadListItem {
 function SelfieSelectionPageContent() {
   const t = useTranslations('generate.selfie')
   const router = useRouter()
+  const [isMobile, setIsMobile] = useState(false)
+  
   const { uploads, selectedIds, loading, loadSelected, handleSelfiesApproved, handleUploadError } = useSelfieManagement({
     autoSelectNewUploads: true,
-    onSelfiesApproved: (results) => {
-      console.log('=== handleSelfiesApproved CALLED ===', { count: results.length, results })
-      // Auto-selection and reload are handled by the hook
+    onSelfiesApproved: async () => {
+      // Reload selected state to trigger re-render with updated selectedIds
+      await loadSelected()
+      // Small delay to allow React to process state updates
+      await new Promise(resolve => setTimeout(resolve, 100))
     },
     onUploadError: (error) => {
       console.error('Selfie upload error:', error)
       alert(`Error: ${error}`)
     }
   }) as { uploads: UploadListItem[], selectedIds: string[], loading: boolean, loadSelected: () => Promise<void>, handleSelfiesApproved?: (results: { key: string; selfieId?: string }[]) => Promise<void>, handleUploadError?: (error: string) => void }
+  
+  // Detect mobile viewport
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkMobile = () => {
+        setIsMobile(window.innerWidth < 768) // md breakpoint
+      }
+      checkMobile()
+      window.addEventListener('resize', checkMobile)
+      return () => window.removeEventListener('resize', checkMobile)
+    }
+  }, [])
 
 
   // Use a ref to prevent infinite loops
@@ -81,13 +99,25 @@ function SelfieSelectionPageContent() {
       {loading ? (
         <LoadingGrid cols={4} rows={2} />
       ) : (
-        <SelfieGallery
-          selfies={uploads.map(u => ({ id: u.id, key: u.uploadedKey, url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`, uploadedAt: u.createdAt, used: u.hasGenerations }))}
-          allowDelete={false}
-          showUploadTile
+        <div className={isMobile ? 'pb-40' : ''}>
+          <SelfieGallery
+            selfies={uploads.map(u => ({ id: u.id, key: u.uploadedKey, url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`, uploadedAt: u.createdAt, used: u.hasGenerations }))}
+            allowDelete={false}
+            showUploadTile={!isMobile}
+            onSelfiesApproved={handleSelfiesApproved}
+            onUploadError={handleUploadError}
+            onAfterChange={handleSelectionChange}
+          />
+        </div>
+      )}
+      
+      {/* Mobile: Always show sticky upload flow at bottom */}
+      {isMobile && handleSelfiesApproved && (
+        <SelfieUploadFlow
+          hideHeader={true}
           onSelfiesApproved={handleSelfiesApproved}
-          onUploadError={handleUploadError}
-          onAfterChange={handleSelectionChange}
+          onCancel={() => {}}
+          onError={handleUploadError || (() => {})}
         />
       )}
     </div>

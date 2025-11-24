@@ -4,10 +4,6 @@ import { PhotoIcon } from '@heroicons/react/24/outline'
 
 interface StyleSummaryCardProps {
   settings?: PhotoStyleSummarySettings | null
-  stylePreset?: string
-  legacyBackgroundUrl?: string | null
-  legacyBackgroundPrompt?: string | null
-  legacyLogoUrl?: string | null
 }
 
 export default function StyleSummaryCard(props: StyleSummaryCardProps) {

@@ -57,9 +57,10 @@ async function clearQueue() {
             active.map(async (job) => {
               try {
                 await job.remove()
-              } catch (error: any) {
+              } catch (error: unknown) {
                 // If job is locked, try to fail it first, then remove
-                if (error?.message?.includes('locked')) {
+                const errorMessage = error instanceof Error ? error.message : String(error)
+                if (errorMessage?.includes('locked')) {
                   try {
                     await job.moveToFailed(new Error('Manually cancelled'), '0')
                     await job.remove()
@@ -117,9 +118,10 @@ async function clearQueue() {
           active.map(async (job) => {
             try {
               await job.remove()
-            } catch (error: any) {
+            } catch (error: unknown) {
               // If job is locked, try to fail it first, then remove
-              if (error?.message?.includes('locked')) {
+              const errorMessage = error instanceof Error ? error.message : String(error)
+              if (errorMessage?.includes('locked')) {
                 try {
                   await job.moveToFailed(new Error('Manually cancelled'), '0')
                   await job.remove()

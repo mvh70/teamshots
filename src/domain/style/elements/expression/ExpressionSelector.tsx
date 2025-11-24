@@ -11,6 +11,7 @@ interface ExpressionSelectorProps {
   isDisabled?: boolean
   className?: string
   showHeader?: boolean
+  availableExpressions?: string[]
 }
 
 export default function ExpressionSelector({
@@ -19,9 +20,14 @@ export default function ExpressionSelector({
   isPredefined = false,
   isDisabled = false,
   className = '',
-  showHeader = false
+  showHeader = false,
+  availableExpressions
 }: ExpressionSelectorProps) {
   const t = useTranslations('customization.photoStyle.expression')
+
+  const visibleExpressions = availableExpressions
+    ? EXPRESSION_CONFIGS.filter(e => availableExpressions.includes(e.value))
+    : EXPRESSION_CONFIGS
 
   const handleChange = (type: ExpressionType, event?: React.MouseEvent) => {
     if (event) {
@@ -53,7 +59,7 @@ export default function ExpressionSelector({
       )}
 
       <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
-        {EXPRESSION_CONFIGS.map((expr) => {
+        {visibleExpressions.map((expr) => {
           const isSelected = value.type === expr.value
           // On mobile, hide unselected options when predefined
           const shouldHide = isPredefined && !isSelected

@@ -58,18 +58,19 @@ export async function findFileOwnership(key: string): Promise<OwnershipRecord | 
         },
       },
     }),
-    prisma.context.findFirst({
-      where: {
-        OR: [
-          { settings: { path: ['branding', 'logoKey'], equals: trimmedKey } },
-          { settings: { path: ['background', 'key'], equals: trimmedKey } },
-        ],
-      },
-      select: {
-        userId: true,
-        teamId: true,
-      },
-    }),
+    // Use raw SQL to query JSON fields efficiently
+    // Settings are stored with nested structure: { packageName, version, settings: { background: { key }, branding: { logoKey } } }
+    // So we need to navigate: settings->'settings'->'background'->>'key'
+    prisma.$queryRaw<Array<{ userId: string | null; teamId: string | null }>>`
+      SELECT "userId", "teamId"
+      FROM "Context"
+      WHERE 
+        ("settings"->'settings'->'branding'->>'logoKey') = ${trimmedKey}
+        OR ("settings"->'settings'->'background'->>'key') = ${trimmedKey}
+        OR ("settings"->'branding'->>'logoKey') = ${trimmedKey}
+        OR ("settings"->'background'->>'key') = ${trimmedKey}
+      LIMIT 1
+    `.then(results => results[0] || null),
   ])
 
   // Return results in priority order: selfie > generation > context
@@ -139,17 +140,23 @@ export async function validateInviteToken(token: string | null): Promise<{ perso
 /**
  * Check if invite token authorizes access to file
  */
-export function isInviteAuthorized(ownership: OwnershipRecord, invitePersonId: string, inviteTeamId: string | null): boolean {
+export function isInviteAuthorized(ownership: OwnershipRecord, invitePersonId: string, inviteTeamId: string | null, fileKey?: string): boolean {
   // For selfies and generations, check personId match
   if (ownership.personId) {
     return ownership.personId === invitePersonId
   }
-  
+
   // For context files (backgrounds/logos), check teamId match
   if (ownership.type === 'context' && ownership.teamId && inviteTeamId) {
     return ownership.teamId === inviteTeamId
   }
-  
+
+  // Special case: Allow invited users to access background and logo files they've uploaded
+  // even if not yet saved to a context (e.g., during style customization)
+  if (fileKey && (fileKey.startsWith(`backgrounds/${invitePersonId}/`) || fileKey.startsWith(`logos/${invitePersonId}/`))) {
+    return true
+  }
+
   return false
 }
 
@@ -214,10 +221,11 @@ export function isFileAuthorized(
   user: Awaited<ReturnType<typeof getUserWithRoles>> | null,
   roles: Awaited<ReturnType<typeof getUserEffectiveRoles>> | null,
   invitePersonId: string | null,
-  inviteTeamId: string | null = null
+  inviteTeamId: string | null = null,
+  fileKey?: string
 ): boolean {
   if (invitePersonId) {
-    return isInviteAuthorized(ownership, invitePersonId, inviteTeamId)
+    return isInviteAuthorized(ownership, invitePersonId, inviteTeamId, fileKey)
   }
   return isSessionAuthorized(ownership, user, roles)
 }

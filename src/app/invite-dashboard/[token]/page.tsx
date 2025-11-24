@@ -25,7 +25,6 @@ import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { hasUserDefinedFields, areAllCustomizableSectionsCustomized } from '@/domain/style/userChoice'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { getPackageConfig } from '@/domain/style/packages'
-import { normalizeContextToPhotoStyleSettings } from '@/domain/style/normalize'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
 
@@ -126,13 +125,9 @@ export default function InviteDashboardPage() {
       }
 
       const data = await response.json() as {
-        context?: { 
+        context?: {
           id: string
           settings?: Record<string, unknown>
-          stylePreset?: string
-          backgroundUrl?: string | null
-          logoUrl?: string | null
-          backgroundPrompt?: string | null
         }
         packageId?: string
       }
@@ -142,39 +137,20 @@ export default function InviteDashboardPage() {
       }
 
       // Extract packageId from API response or context settings
-      const extractedPackageId = data.packageId || (data.context.settings as Record<string, unknown>)?.['packageId'] as string || 'headshot1'
+      const { extractPackageId } = await import('@/domain/style/settings-resolver')
+      const extractedPackageId = data.packageId || extractPackageId(data.context.settings as Record<string, unknown>) || 'headshot1'
       
       // Get package config and deserialize settings using package deserializer
-      // This properly handles all fields including clothingColors and shotType
+      // This properly handles all fields including clothingColors, shotType, background, and branding
       const pkg = getPackageConfig(extractedPackageId)
       const deserializedSettings = data.context.settings 
         ? pkg.persistenceAdapter.deserialize(data.context.settings as Record<string, unknown>)
         : pkg.defaultSettings
       
-      // Normalize context to PhotoStyleSettings for legacy backgroundUrl/logoUrl fields
-      // This ensures custom backgrounds and logos are properly extracted from URLs
-      const normalizedSettings = normalizeContextToPhotoStyleSettings({
-        id: data.context.id,
-        name: '',
-        settings: data.context.settings,
-        stylePreset: (data.context.stylePreset as 'corporate' | 'casual' | 'creative' | 'modern' | 'classic' | 'artistic' | null | undefined) || null,
-        backgroundUrl: data.context.backgroundUrl || null,
-        logoUrl: data.context.logoUrl || null,
-        backgroundPrompt: data.context.backgroundPrompt || null,
-        customPrompt: null
-      })
-      
-      // Merge deserialized settings (which includes clothingColors, shotType, etc.) 
-      // with normalized settings (which handles legacy background/branding URLs)
-      const ui: PhotoStyleSettingsType = {
-        ...deserializedSettings,
-        background: normalizedSettings.background,
-        branding: normalizedSettings.branding,
-        style: normalizedSettings.style
-      }
-      
-      setPhotoStyleSettings(ui)
-      setOriginalContextSettings(ui)
+      // Use deserialized settings directly - the package deserializer already handles everything correctly
+      // including preserving preset values for background, branding, and other categories
+      setPhotoStyleSettings(deserializedSettings)
+      setOriginalContextSettings(deserializedSettings)
       setPackageId(pkg.id)
     } catch (error) {
       console.error('Error loading context settings:', error)

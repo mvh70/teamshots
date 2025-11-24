@@ -126,7 +126,7 @@ export async function evaluatePersonGeneration(
     Logger.info('V2 DEBUG - Step 2 Evaluation Prompt:', {
       step: 2,
       evaluationType: 'person_generation',
-      prompt: evalPromptText.substring(0,3000) + (evalPromptText.length > 3000 ? '...(truncated)' : ''),
+      prompt: evalPromptText.substring(0,8000) + (evalPromptText.length > 8000 ? '...(truncated)' : ''),
       promptLength: evalPromptText.length,
       imageCount: 1,
       selfieCount: selfieReferences.length

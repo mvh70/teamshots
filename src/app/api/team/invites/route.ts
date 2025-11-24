@@ -99,12 +99,13 @@ export async function POST(request: NextRequest) {
           const pkg = getPackageConfig('freepackage')
           const defaultSettings = pkg.defaultSettings
           const serializedSettings = pkg.persistenceAdapter.serialize(defaultSettings) as Record<string, unknown>
+          // Store stylePreset in settings
+          serializedSettings.stylePreset = pkg.defaultPresetId
           
           // Create the free package context with default settings
           const newContext = await prisma.context.create({
             data: {
               name: 'Free Package Style',
-              stylePreset: pkg.defaultPresetId,
               settings: serializedSettings as unknown as Parameters<typeof prisma.context.create>[0]['data']['settings'],
             },
             select: { id: true },

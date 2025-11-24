@@ -21,25 +21,19 @@ export async function POST(request: NextRequest) {
     }
 
 
-    // Derive legacy fields for back-compat
-    const backgroundUrl = settings?.background?.key ? `/api/files/get?key=${encodeURIComponent(settings.background.key)}` : null
-    const backgroundPrompt = settings?.background?.prompt || null
-    const logoUrl = settings?.branding?.logoKey ? `/api/files/get?key=${encodeURIComponent(settings.branding.logoKey)}` : null
-    const stylePreset = settings?.style?.preset || 'corporate'
-
     // Get user's team (if any)
     // First try to find the user without includes
     let user = await prisma.user.findUnique({
       where: { id: session.user.id }
     })
-    
+
     // If not found by ID, try by email (fallback for session/database ID mismatches)
     if (!user) {
       user = await prisma.user.findUnique({
         where: { email: session.user.email }
       })
     }
-    
+
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
@@ -49,7 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Style creation is not available on the free plan' }, { status: 403 })
     }
 
-    
+
     // Now get the full user with includes using the actual user ID
     user = await prisma.user.findUnique({
       where: { id: user.id },
@@ -68,11 +62,14 @@ export async function POST(request: NextRequest) {
     // Determine context type based on explicit parameter or fallback to user's team status
     const scope = (contextType === 'personal' || (!contextType && !teamId)) ? 'individual' as const : 'pro' as const
 
+    // Extract packageId from settings or default to headshot1
+    const packageId = (settings as Record<string, unknown>)?.packageName as string || 'headshot1'
+
     const created = await createOrUpdateStyleServer({
       scope,
       userId: session.user.id,
-      stylePreset,
-      settings: { ...settings, backgroundUrl, backgroundPrompt, logoUrl, customPrompt },
+      packageId,
+      settings: { ...settings, customPrompt },
       name
     })
 

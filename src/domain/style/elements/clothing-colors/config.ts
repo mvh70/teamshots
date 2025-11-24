@@ -56,4 +56,3 @@ export function normalizeColorToHex(color: string | undefined): string {
   
   return hex || '#ffffff' // fallback to white if not found
 }
-

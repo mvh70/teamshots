@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { getPackageConfig } from '@/domain/style/packages'
-import type { PhotoStyleSettings, BackgroundSettings } from '@/types/photo-style'
+import type { PhotoStyleSettings, BackgroundSettings, PoseSettings } from '@/types/photo-style'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     clothingColorsSettings,
     shotTypeSettings,
     expressionSettings,
+    poseSettings,
     packageId
   } = body as {
     contextId?: string | null
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
     clothingColorsSettings?: { type: 'predefined' | 'user-choice'; colors?: { topCover?: string; topBase?: string; bottom?: string; shoes?: string } }
     shotTypeSettings?: { type: 'headshot' | 'midchest' | 'full-body' | 'user-choice' }
     expressionSettings?: { type: 'genuine_smile' | 'soft_smile' | 'neutral_serious' | 'laugh_joy' | 'contemplative' | 'confident' | 'sad' | 'user-choice' }
+    poseSettings?: PoseSettings
     packageId?: string
   }
 
@@ -59,11 +61,14 @@ export async function POST(request: NextRequest) {
       // Use provided settings or default to user-choice
       clothingColors: clothingColorsSettings || { type: 'user-choice' },
       shotType: shotTypeSettings || pkg.defaultSettings.shotType,
-      expression: expressionSettings || pkg.defaultSettings.expression
+      expression: expressionSettings || pkg.defaultSettings.expression,
+      pose: poseSettings || pkg.defaultSettings.pose
     }
     
     // Use the package serializer to ensure format matches what deserializer expects
     const serializedSettings = pkg.persistenceAdapter.serialize(ui) as Record<string, unknown>
+    // Store stylePreset in settings
+    serializedSettings.stylePreset = stylePreset
     
     let ctxId = contextId || null
     
@@ -87,7 +92,6 @@ export async function POST(request: NextRequest) {
           where: { id: ctxId },
           data: {
             name: 'Free Package Style',
-            stylePreset,
             settings: serializedSettings as unknown as Parameters<typeof prisma.context.update>[0]['data']['settings'],
           },
         })
@@ -101,7 +105,6 @@ export async function POST(request: NextRequest) {
       const ctx = await prisma.context.create({
         data: {
           name: 'Free Package Style',
-          stylePreset,
           settings: serializedSettings as unknown as Parameters<typeof prisma.context.create>[0]['data']['settings'],
         },
         select: { id: true },
@@ -121,5 +124,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to save free package style' }, { status: 500 })
   }
 }
-
-

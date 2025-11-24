@@ -18,7 +18,8 @@ import {
   CategoryType,
   DEFAULT_PHOTO_STYLE_SETTINGS,
   ClothingColorSettings,
-  ShotTypeSettings
+  ShotTypeSettings,
+  PoseSettings
 } from '@/types/photo-style'
 import BackgroundSelector from '@/domain/style/elements/background/BackgroundSelector'
 import ClothingSelector from '@/domain/style/elements/clothing/ClothingSelector'
@@ -123,8 +124,17 @@ export default function PhotoStyleSettings({
   )
 
   const { visiblePhotoCategories, visibleUserCategories, allCategories } = React.useMemo(() => {
-    const visiblePhoto = PHOTO_STYLE_CATEGORIES.filter(c => pkg.visibleCategories.includes(c.key))
-    const visibleUser = USER_STYLE_CATEGORIES.filter(c => pkg.visibleCategories.includes(c.key))
+    // Use package-defined groupings, with defaults for backward compatibility
+    const compositionCategoryKeys = pkg.compositionCategories ?? ['background', 'branding', 'pose']
+    const userStyleCategoryKeys = pkg.userStyleCategories ?? ['clothing', 'clothingColors', 'expression', 'lighting']
+    
+    // Filter categories based on package's visibleCategories and groupings
+    const visiblePhoto = PHOTO_STYLE_CATEGORIES.filter(c => 
+      pkg.visibleCategories.includes(c.key) && compositionCategoryKeys.includes(c.key)
+    )
+    const visibleUser = USER_STYLE_CATEGORIES.filter(c => 
+      pkg.visibleCategories.includes(c.key) && userStyleCategoryKeys.includes(c.key)
+    )
     const all = [...visiblePhoto, ...visibleUser]
     return { visiblePhotoCategories: visiblePhoto, visibleUserCategories: visibleUser, allCategories: all }
   }, [pkg])
@@ -172,7 +182,7 @@ export default function PhotoStyleSettings({
     if (showToggles || hasCustomizedEditable) return // Skip for admin context or already revealed
 
     const editable = allCategories.filter(cat => {
-      const categorySettings = value[cat.key]
+      const categorySettings = (value as Record<string, unknown>)[cat.key]
       if (!categorySettings) return true
       if (cat.key === 'clothing') {
         return (categorySettings as { style?: string }).style === 'user-choice'
@@ -184,8 +194,8 @@ export default function PhotoStyleSettings({
 
     // Check if user has made changes to editable sections
     const hasChanges = editable.some(cat => {
-      const setting = value[cat.key]
-      const defaultSetting = packageDefaults[cat.key]
+      const setting = (value as Record<string, unknown>)[cat.key]
+      const defaultSetting = (packageDefaults as Record<string, unknown>)[cat.key]
       return setting && JSON.stringify(setting) !== JSON.stringify(defaultSetting)
     })
 
@@ -216,16 +226,17 @@ export default function PhotoStyleSettings({
     
     const newSettings = { ...value }
     
-    if (!newSettings[category]) {
+    if (!(newSettings as Record<string, unknown>)[category]) {
       // Initialize with default values
-      const packageDefaultValue = packageDefaults[category]
+      const packageDefaultValue = (packageDefaults as Record<string, unknown>)[category]
+      const defaultValue = (DEFAULT_PHOTO_STYLE_SETTINGS as Record<string, unknown>)[category]
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(newSettings as any)[category] =
-        packageDefaultValue !== undefined ? packageDefaultValue : DEFAULT_PHOTO_STYLE_SETTINGS[category]
+        packageDefaultValue !== undefined ? packageDefaultValue : defaultValue
     }
     
     // Update the type based on toggle
-    if (newSettings[category]) {
+    if ((newSettings as Record<string, unknown>)[category]) {
       if (isPredefined) {
         // Set to a predefined value (not user-choice)
         switch (category) {
@@ -330,6 +341,10 @@ export default function PhotoStyleSettings({
     } else if (category === 'pose') {
       // Apply pose preset settings when pose is changed
       const poseSettings = settings as { type: string }
+      
+      // Explicitly update pose setting first to ensure type is preserved
+      newSettings.pose = { type: poseSettings.type } as PoseSettings
+      
       if (poseSettings?.type && poseSettings.type !== 'user-choice') {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const updatedSettings = applyPosePresetToSettings(newSettings, poseSettings.type as any)
@@ -344,7 +359,7 @@ export default function PhotoStyleSettings({
     // When showToggles is true (admin setting style), always check current value
     // to reflect the admin's active changes, not the original context
     if (showToggles) {
-      const categorySettings = value[category]
+      const categorySettings = (value as Record<string, unknown>)[category]
       if (category === 'clothing') {
         return !!(
           categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
@@ -357,7 +372,7 @@ export default function PhotoStyleSettings({
 
     // If we have original context settings, check if this category was predefined in the original context
     if (originalContextSettings) {
-      const originalSettings = originalContextSettings[category]
+      const originalSettings = (originalContextSettings as Record<string, unknown>)[category]
       if (category === 'clothing') {
         return !!(
           originalSettings && (originalSettings as { style?: string }).style !== 'user-choice'
@@ -374,7 +389,7 @@ export default function PhotoStyleSettings({
     }
 
     // Fallback to current value logic
-    const categorySettings = value[category]
+    const categorySettings = (value as Record<string, unknown>)[category]
     if (category === 'clothing') {
       return !!(
         categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
@@ -391,7 +406,7 @@ export default function PhotoStyleSettings({
   }
 
   const getCategoryStatus = (category: CategoryType) => {
-    const categorySettings = value[category]
+    const categorySettings = (value as Record<string, unknown>)[category]
     if (!categorySettings) return 'not-set'
     if (category === 'clothing') {
       if ((categorySettings as { style?: string }).style === 'user-choice') return 'user-choice'
@@ -579,6 +594,7 @@ export default function PhotoStyleSettings({
               onChange={(settings) => handleCategorySettingsChange('expression', settings)}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
               isDisabled={!showToggles && readonlyPredefined && isPredefined}
+              availableExpressions={pkg.availableExpressions}
             />
           )}
           
@@ -588,6 +604,7 @@ export default function PhotoStyleSettings({
               onChange={(settings) => handleCategorySettingsChange('pose', settings)}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
               isDisabled={!showToggles && readonlyPredefined && isPredefined}
+              availablePoses={pkg.availablePoses}
             />
           )}
           
@@ -622,7 +639,7 @@ export default function PhotoStyleSettings({
     return new Set(
       allCats
         .filter(cat => {
-          const categorySettings = initialSettings?.[cat.key]
+          const categorySettings = initialSettings ? (initialSettings as Record<string, unknown>)[cat.key] : undefined
           if (!categorySettings) return false
           if (cat.key === 'clothing') {
             return (categorySettings as { style?: string }).style === 'user-choice'

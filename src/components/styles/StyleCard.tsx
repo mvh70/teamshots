@@ -7,19 +7,11 @@ import { Grid } from '@/components/ui'
 
 interface StyleCardProps {
   settings?: unknown
-  stylePreset?: string
-  legacyBackgroundUrl?: string | null
-  legacyBackgroundPrompt?: string | null
-  legacyLogoUrl?: string | null
   className?: string
 }
 
 export default function StyleCard({
   settings,
-  stylePreset,
-  legacyBackgroundUrl,
-  legacyBackgroundPrompt,
-  legacyLogoUrl,
   className
 }: StyleCardProps) {
   return (
@@ -27,10 +19,6 @@ export default function StyleCard({
       <Grid cols={{ mobile: 2 }} gap="md" className="text-sm text-gray-600">
         <StyleSummaryCard
           settings={(settings as SummarySettings) || undefined}
-          stylePreset={stylePreset}
-          legacyBackgroundUrl={legacyBackgroundUrl || undefined}
-          legacyBackgroundPrompt={legacyBackgroundPrompt || undefined}
-          legacyLogoUrl={legacyLogoUrl || undefined}
         />
         <UserStyleSummary settings={settings as Parameters<typeof UserStyleSummary>[0]['settings']}         />
       </Grid>

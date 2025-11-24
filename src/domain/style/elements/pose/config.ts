@@ -5,7 +5,9 @@ import type {
   ShoulderPositionSetting,
   SittingPoseSetting,
   WeightDistributionSetting,
-  PoseSettings,
+  PoseSettings
+} from './types'
+import type {
   ExpressionSettings,
   PhotoStyleSettings
 } from '@/types/photo-style'
@@ -13,27 +15,16 @@ import { getExpressionLabel } from '../expression/config'
 
 export { getExpressionLabel }
 
-export const CHIN_TECHNIQUE_NOTE =
-  'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.'
-
-// Color mapping for pose categories
-export const POSE_COLORS = {
-  power: 'from-blue-600 to-indigo-600',
-  approachable: 'from-green-500 to-emerald-500',
-  dynamic: 'from-orange-500 to-red-500',
-  seated: 'from-amber-500 to-yellow-500',
-  thoughtful: 'from-violet-500 to-purple-600'
-} as const
-
 export interface PoseTemplate {
   id: PoseSettings['type']
-  label: string
-  description: string
-  category: keyof typeof POSE_COLORS
+  // Label and description handled via translation keys:
+  // pose.template.[id].label
+  // pose.template.[id].description
   icon: string
   pose: {
     body_angle: string
     head_position: string
+    chin_technique: string
     shoulders: string
     weight_distribution: string
     arms: string
@@ -42,34 +33,26 @@ export interface PoseTemplate {
   prompt_instructions: string
 }
 
-export const JACKET_REVEAL_POSE: PoseTemplate = {
-  id: 'power_classic', // Use existing ID or new one if needed
-  label: 'Jacket Reveal',
-  description: 'Confident pose revealing clothing details',
-  category: 'power',
-  icon: '👔',
-  pose: {
-    body_angle: 'Slightly angled to camera (15-20 degrees)',
-    head_position: 'Turned towards camera, chin slightly down',
-    shoulders: 'Relaxed, back straight',
-    weight_distribution: 'Balanced on both feet',
-    arms: 'One hand adjusting jacket/lapel, one relaxed',
-    description: 'Professional pose highlighting attire'
-  },
-  prompt_instructions: 'Subject is adjusting their jacket with one hand, creating a natural and professional look that showcases the outfit.'
-}
+export const ALL_POSE_IDS: PoseSettings['type'][] = [
+  'power_classic',
+  'power_crossed',
+  'casual_confident',
+  'approachable_cross',
+  'walking_confident',
+  'sitting_engaged',
+  'executive_seated',
+  'thinker',
+  'jacket_reveal'
+]
 
-// Define all pose templates
 export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
   power_classic: {
     id: 'power_classic',
-    label: 'Classic Power',
-    description: 'Traditional executive stance',
-    category: 'power',
     icon: '👔',
     pose: {
       body_angle: 'Square to camera',
       head_position: 'Level, direct gaze',
+      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'Squared and relaxed',
       weight_distribution: 'Even',
       arms: 'Relaxed at sides',
@@ -79,13 +62,11 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
   },
   power_crossed: {
     id: 'power_crossed',
-    label: 'Arms Crossed',
-    description: 'Confident authority',
-    category: 'power',
     icon: '💪',
     pose: {
       body_angle: 'Slight angle',
       head_position: 'Turned to camera',
+      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'Relaxed',
       weight_distribution: 'Back foot',
       arms: 'Crossed confidently',
@@ -95,13 +76,11 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
   },
   casual_confident: {
     id: 'casual_confident',
-    label: 'Casual Confident',
-    description: 'Relaxed professional',
-    category: 'approachable',
     icon: '😎',
     pose: {
       body_angle: 'Angled',
       head_position: 'Tilted slightly',
+      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'One dropped',
       weight_distribution: 'Relaxed',
       arms: 'One hand in pocket',
@@ -111,13 +90,11 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
   },
   approachable_cross: {
     id: 'approachable_cross',
-    label: 'Approachable',
-    description: 'Warm and welcoming',
-    category: 'approachable',
     icon: '🤝',
     pose: {
       body_angle: 'Open',
       head_position: 'Friendly tilt',
+      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'Relaxed',
       weight_distribution: 'Forward lean',
       arms: 'Loosely crossed or open',
@@ -127,13 +104,11 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
   },
   walking_confident: {
     id: 'walking_confident',
-    label: 'Walking',
-    description: 'Dynamic movement',
-    category: 'dynamic',
     icon: '🚶',
     pose: {
       body_angle: 'In motion',
       head_position: 'Looking forward',
+      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'Natural movement',
       weight_distribution: 'Mid-stride',
       arms: 'Natural swing',
@@ -143,13 +118,11 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
   },
   sitting_engaged: {
     id: 'sitting_engaged',
-    label: 'Sitting Engaged',
-    description: 'Active listening',
-    category: 'seated',
     icon: '🪑',
     pose: {
       body_angle: 'Seated, leaning forward',
       head_position: 'Attentive',
+      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'Relaxed',
       weight_distribution: 'Seated',
       arms: 'On knees or table',
@@ -159,13 +132,11 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
   },
   executive_seated: {
     id: 'executive_seated',
-    label: 'Executive Seated',
-    description: 'Relaxed authority',
-    category: 'seated',
     icon: '🛋️',
     pose: {
       body_angle: 'Seated back',
       head_position: 'Relaxed',
+      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'Open',
       weight_distribution: 'Seated',
       arms: 'On armrests or lap',
@@ -175,36 +146,52 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
   },
   thinker: {
     id: 'thinker',
-    label: 'The Thinker',
-    description: 'Contemplative',
-    category: 'thoughtful',
     icon: '🤔',
     pose: {
       body_angle: 'Angled',
       head_position: 'Resting on hand',
+      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
       shoulders: 'Relaxed',
       weight_distribution: 'Leaning',
       arms: 'Hand to chin/face',
       description: 'Thoughtful pose with hand near face'
     },
     prompt_instructions: 'Subject with hand near chin or face, thoughtful expression.'
+  },
+  jacket_reveal: {
+    id: 'jacket_reveal',
+    icon: '👔',
+    pose: {
+      body_angle: 'Slightly angled to camera (15-20 degrees)',
+      head_position: 'Turned towards camera, chin slightly down',
+      chin_technique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
+      shoulders: 'Relaxed, back straight',
+      weight_distribution: 'Balanced on both feet',
+      arms: 'if the subject is male, opening the jacket widely with both hands. If the subject is female, elegantly opening the jacket with both hands',
+      description: 'Professional pose highlighting attire'
+    },
+    prompt_instructions: 'Subject is elegantly opening their jacket with both hands, opening it partially to reveal the logo on the shirt underneath. Keep the jacket partially open so the logo remains clearly visible. This creates a natural and professional look that showcases the outfit and prominently displays the branding.'
   }
 }
 
 // Re-export from legacy for now to maintain compatibility
 // In a future refactor, these definitions should move here fully
 export function getPoseTemplate(id: string): PoseTemplate | undefined {
-  return POSE_TEMPLATES[id]
+  // Safe access to POSE_TEMPLATES to avoid undefined errors if id is not in the record
+  return POSE_TEMPLATES[id as keyof typeof POSE_TEMPLATES]
 }
 
 export function getPoseUIInfo() {
-  return Object.values(POSE_TEMPLATES).map(t => ({
-    value: t.id,
-    label: t.label,
-    description: t.description,
-    icon: t.icon,
-    category: t.category
-  }))
+  return ALL_POSE_IDS.map(id => {
+    if (id === 'user-choice') {
+      return { value: id, icon: '📷' }
+    }
+    const template = POSE_TEMPLATES[id]
+    return {
+      value: id,
+      icon: template?.icon || '❓'
+    }
+  })
 }
 
 export function generatePoseInstructions(template: PoseTemplate): string {
@@ -433,6 +420,7 @@ export function resolveSittingPose(input?: string): PoseConfig<SittingPoseSettin
   return config ?? SITTING_POSE_CONFIGS[DEFAULT_SITTING_POSE]
 }
 
+// Deprecated: merged into PoseSettings
 export interface GranularPoseSettings {
   bodyAngle?: BodyAngleSetting
   weightDistribution?: WeightDistributionSetting
@@ -526,30 +514,20 @@ export function applyPosePresetToSettings(
 
   const updatedSettings: PhotoStyleSettings = { ...settings }
 
-  // Update pose setting
-  updatedSettings.pose = { type: poseType }
+  // Update pose setting structure - nesting granular settings
+  updatedSettings.pose = { 
+    type: poseType,
+    bodyAngle: poseConfig.bodyAngle,
+    weightDistribution: poseConfig.weightDistribution,
+    armPosition: poseConfig.armPosition,
+    headPosition: poseConfig.headPosition,
+    shoulderPosition: poseConfig.shoulderPosition,
+    sittingPose: poseConfig.sittingPose
+  } as PoseSettings
 
-  // Apply individual pose component settings
-  if (poseConfig.bodyAngle) {
-    updatedSettings.bodyAngle = poseConfig.bodyAngle
-  }
-  if (poseConfig.weightDistribution) {
-    updatedSettings.weightDistribution = poseConfig.weightDistribution
-  }
-  if (poseConfig.armPosition) {
-    updatedSettings.armPosition = poseConfig.armPosition
-  }
+  // Also update expression if it's part of the preset
   if (poseConfig.expression) {
     updatedSettings.expression = { type: poseConfig.expression }
-  }
-  if (poseConfig.headPosition) {
-    updatedSettings.headPosition = poseConfig.headPosition
-  }
-  if (poseConfig.shoulderPosition) {
-    updatedSettings.shoulderPosition = poseConfig.shoulderPosition
-  }
-  if (poseConfig.sittingPose) {
-    updatedSettings.sittingPose = poseConfig.sittingPose
   }
 
   return updatedSettings

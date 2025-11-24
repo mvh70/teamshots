@@ -1,4 +1,3 @@
-import { ClothingSettings } from '@/types/photo-style'
 
 export type KnownClothingStyle = 'business' | 'startup' | 'black-tie'
 

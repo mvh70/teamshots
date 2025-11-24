@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       scope: body.scope,
       userId: session.user.id,
       styleId: body.contextId || null,
-      stylePreset: body.stylePreset,
+      packageId: body.packageId,
       settings: body.settings,
       name: body.name
     })

@@ -124,6 +124,8 @@ export function generateWardrobePrompt({
 
   const wardrobe: Record<string, unknown> = {
     style: clothing?.style ?? styleKey,
+    style_key: styleKey, // Store normalized style for branding lookup
+    detail_key: detailKey, // Store detail key for branding lookup
     details: descriptor.details,
     base_layer: descriptor.baseLayer
   }

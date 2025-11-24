@@ -13,7 +13,7 @@ export async function createOrUpdateStyleServer(params: {
   scope: Scope
   userId: string
   styleId?: string | null
-  stylePreset: string
+  packageId: string
   settings: Record<string, unknown>
   name?: string | null
 }): Promise<{ id: string }> {
@@ -24,7 +24,7 @@ export async function createOrUpdateStyleServer(params: {
       where: { id: params.styleId },
       data: {
         name: effectiveName,
-        stylePreset: params.stylePreset,
+        packageName: params.packageId,
         settings: params.settings as unknown as Parameters<typeof prisma.context.update>[0]['data']['settings']
       },
       select: { id: true }
@@ -34,7 +34,7 @@ export async function createOrUpdateStyleServer(params: {
 
   const baseData = {
     name: effectiveName,
-    stylePreset: params.stylePreset,
+    packageName: params.packageId,
     settings: params.settings as unknown as Parameters<typeof prisma.context.create>[0]['data']['settings']
   }
   let dataToCreate: Parameters<typeof prisma.context.create>[0]['data'] = baseData

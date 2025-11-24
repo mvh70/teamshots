@@ -31,38 +31,25 @@ export interface PhotoStyleSummarySettings {
 
 interface StyleSummaryProps {
   settings?: PhotoStyleSummarySettings | null
-  legacyBackgroundUrl?: string | null
-  legacyBackgroundPrompt?: string | null
-  legacyLogoUrl?: string | null
-}
-
-function extractKeyFromUrl(url: string | null | undefined): string | undefined {
-  try {
-    if (!url) return undefined
-    const urlObj = new URL(url)
-    return urlObj.searchParams.get('key') || undefined
-  } catch {
-    return undefined
-  }
 }
 
 function getThumbnailUrl(key: string): string {
   return `/api/files/get?key=${encodeURIComponent(key)}`
 }
 
-export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBackgroundPrompt, legacyLogoUrl }: StyleSummaryProps) {
+export default function StyleSummary({ settings }: StyleSummaryProps) {
   const t = useTranslations('customization.photoStyle.pose')
-  const backgroundKey = settings?.background?.key || extractKeyFromUrl(legacyBackgroundUrl)
-  const backgroundPrompt = settings?.background?.prompt || legacyBackgroundPrompt || undefined
+  const backgroundKey = settings?.background?.key
+  const backgroundPrompt = settings?.background?.prompt
   const backgroundType = settings?.background?.type
   const backgroundColor = settings?.background?.color
-  const backgroundImageUrl = backgroundKey ? getThumbnailUrl(backgroundKey) : (legacyBackgroundUrl || undefined)
+  const backgroundImageUrl = backgroundKey ? getThumbnailUrl(backgroundKey) : undefined
   const isHexColor = (value?: string): boolean => {
     if (!value) return false
     return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value)
   }
 
-  const logoKey = settings?.branding?.logoKey || extractKeyFromUrl(legacyLogoUrl)
+  const logoKey = settings?.branding?.logoKey
   const brandingType = settings?.branding?.type
   const logoPosition = settings?.branding?.position
   // Style preset computed but intentionally not displayed on the summary card
@@ -103,55 +90,54 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
               )}
             </div>
           </div>
-          ) : (
-            (backgroundKey || backgroundImageUrl) ? (
-              <div id="style-background" className="flex flex-col space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-700 underline">Background</span>
-                </div>
-              <div className="flex items-center gap-2 ml-6 text-xs text-gray-600">
-                <Image
-                  src={backgroundImageUrl as string}
-                  alt="Background thumbnail"
-                  width={80}
-                  height={80}
-                  className="w-20 h-20 rounded-lg object-cover border-2 border-gray-300 shadow-md"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-                />
-              </div>
+        ) : backgroundKey && backgroundImageUrl ? (
+          <div id="style-background" className="flex flex-col space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700 underline">Background</span>
             </div>
-          ) : (!backgroundImageUrl && backgroundType === 'custom') ? (
-            <div id="style-background" className="flex flex-col space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-700 underline">Background</span>
-              </div>
-              <div className="ml-6 text-xs text-red-600 font-medium">Custom background missing</div>
+            <div className="flex items-center gap-2 ml-6 text-xs text-gray-600">
+              <Image
+                src={backgroundImageUrl}
+                alt="Background thumbnail"
+                width={80}
+                height={80}
+                className="w-20 h-20 rounded-lg object-cover border-2 border-gray-300 shadow-md"
+                unoptimized
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
             </div>
-          ) : backgroundPrompt ? (
-            <div id="style-background" className="flex flex-col space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-700 underline">Background</span>
-              </div>
-              <div className="ml-6 text-xs text-gray-600">AI Generated: {backgroundPrompt}</div>
+          </div>
+        ) : backgroundType === 'custom' && !backgroundKey ? (
+          <div id="style-background" className="flex flex-col space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700 underline">Background</span>
             </div>
-          ) : backgroundType === 'user-choice' ? (
-            <div id="style-background" className="flex flex-col space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-700 underline">Background</span>
-              </div>
-              <div className="ml-6 text-xs text-gray-600 flex items-center gap-1">
-                <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
-                <span>User choice</span>
-              </div>
+            <div className="ml-6 text-xs text-red-600 font-medium">Custom background missing</div>
+          </div>
+        ) : backgroundPrompt ? (
+          <div id="style-background" className="flex flex-col space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700 underline">Background</span>
             </div>
-          ) : (
-            <div id="style-background" className="flex flex-col space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-700 underline">Background</span>
-              </div>
-              <div className="ml-6 text-xs text-gray-600 capitalize">{((backgroundType || 'office') as string).replace(/-/g, ' ')} style</div>
+            <div className="ml-6 text-xs text-gray-600">AI Generated: {backgroundPrompt}</div>
+          </div>
+        ) : backgroundType === 'user-choice' ? (
+          <div id="style-background" className="flex flex-col space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700 underline">Background</span>
             </div>
-          )
+            <div className="ml-6 text-xs text-gray-600 flex items-center gap-1">
+              <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
+              <span>User choice</span>
+            </div>
+          </div>
+        ) : (
+          <div id="style-background" className="flex flex-col space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-700 underline">Background</span>
+            </div>
+            <div className="ml-6 text-xs text-gray-600 capitalize">{((backgroundType || 'office') as string).replace(/-/g, ' ')} style</div>
+          </div>
         )
       )}
 
@@ -169,7 +155,15 @@ export default function StyleSummary({ settings, legacyBackgroundUrl, legacyBack
                   width={120}
                   height={72}
                   className="max-w-full max-h-full object-contain"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                  unoptimized
+                  onError={(e) => { 
+                    const img = e.currentTarget as HTMLImageElement
+                    img.style.display = 'none'
+                    const parent = img.parentElement
+                    if (parent) {
+                      parent.innerHTML = '<span class="text-gray-400 text-xs">Logo not available</span>'
+                    }
+                  }}
                 />
               </div>
               {logoPosition && (

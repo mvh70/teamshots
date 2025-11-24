@@ -1,30 +1,25 @@
 const identity = {
-  source: 'composite selfies',
-  immutable_features:
-    'The images in the selfies show the exact same individual. Your primary task is to synthesize a single, photorealistic, and coherent identity from these images. Do not average or blend features in a way that creates a new person. Pay special attention to facial features, form of the eyes, hair color, and skin tone. Use the selfies to understand the 3D structure of the face from different angles. The final generated person must be clearly identifiable as the person. Do not alter the fundamental facial structure, shape of the eyes, eye color, shape of the nose, or unique skin details like moles, scars, or freckles visible in the source selfies.',
-  reference_roles: [
-    {
-      reference: 'subject1-selfies',
-      label: 'Reference – Main Likeness',
-      instructions: [
-        'From all provided selfies, choose the shot that best matches the requested pose and lighting as the primary likeness. Use the remaining selfies only to reinforce 3D structure and facial detail, and do not display the raw selfies in the final image.'
-      ]
-    }
-  ] as const,
-  identity_guidelines: [
-    'All generated results must clearly depict the same individual from the provided selfies.',
-    'Prioritize natural, photorealistic rendering quality matching the supplied source imagery.',
-    'Pay special attention to the form of the eyes, form of the nose, hair color, and skin tone.',
-    'Integrate expression and lighting cues from supporting references without deviating from the core identity.'
-  ] as const
+  source: 'Attached is a composite of selfies. Each selfie is labeled with a clear label (SUBJECT1-SELFIE1, SUBJECT1-SELFIE2, etc.) for easy reference.',
+  task: 'You must synthesize a single, photorealistic, and coherent identity from these images. For this take the selfie that resembles the most the actual pose, and use this as a basis. Use the other selfies to reinforce the 3D structure and facial detail. Do not average or blend features in a way that creates a new person.',
+  face: ['Do not alter the fundamental facial structure, and carefully check the following features:',
+        '- form of the eyes, nose, mouth, ears, eyebrows, cheeks, chin',
+        '- color of the eyes, skintone and hair color',
+        '- unique skin details like moles, scars, or freckles visible in the source selfies',
+        '- any other unique features, like glasses, hair style, etc. that are visible in the source selfies',
+        ],
+  accessories: ['If the person wears glasses in the selfies, add exactly the same glasses to the resulting image',
+                'If the person has earrings or a watch in the selfies, add exactly the same earrings or watch to the resulting image',
+  ],
 } as const
 
 const rendering = {
-  texture: 'retain fabric weave and hair detail and facial features like wrinkles, freckles, moles, etc.',
+  identity: 'retain the identity of the person in the selfies as much as possible, do not beautify the resulting image, it should resemble as much as possible the selfies in the composite',
+  texture: 'retain hair detail, facial features like wrinkles, freckles, moles, etc., and glasses',
   cleanliness: 'no text, labels, borders, or UI artifacts',
   framing: 'the original selfies of the subject should not be shown in the final image',
   proportions: 'pay special attention to size of the head compared to the rest of the body - maintain realistic head-to-body proportions',
-  quality: 'high resolution, print-ready'
+  quality: 'Make the image as realistic as possible, with all the natural imperfections. Add realistic effects, taken from the selfies, like some hairs sticking out',
+
 } as const
 
 export const subject = {

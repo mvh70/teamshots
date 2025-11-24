@@ -125,21 +125,27 @@ export async function getPersonCreditBalance(personId: string): Promise<number> 
   // If person has a team invite, calculate remaining allocation
   // Credits are tracked per person, so we look at person transactions, not invite transactions
   if (invite) {
-    // Get all generation transactions for this person (credits are tracked per person)
+    // Get all transactions for this person (generation debits and refund credits)
+    // We need to include both 'generation' (debits) and 'refund' (credits) transactions
     const personTransactions = await prisma.creditTransaction.findMany({
       where: {
         personId,
-        type: 'generation' // Only count generation transactions
+        type: { in: ['generation', 'refund'] } // Include both generation debits and refund credits
       }
     })
     
-    // Calculate used credits from person transactions
-    const usedCredits = personTransactions.reduce((sum: number, transaction: { credits: number }) => {
-      return sum + Math.abs(transaction.credits) // Credits is negative for debits
+    // Calculate net credits used: sum of all transaction credits
+    // Generation transactions are negative (debits), refund transactions are positive (credits)
+    // So summing them gives us the net credits used
+    const netCreditsUsed = personTransactions.reduce((sum: number, transaction: { credits: number }) => {
+      // For generation: credits is negative, so we add the absolute value (it's a debit)
+      // For refund: credits is positive, so we subtract it (it's a credit that reduces usage)
+      return sum - transaction.credits // Subtract because credits is negative for debits, positive for credits
     }, 0)
     
-    // Return remaining: allocation - usage
-    const remaining = Math.max(0, (invite.creditsAllocated ?? 0) - usedCredits)
+    // Return remaining: allocation - net usage
+    // netCreditsUsed will be positive (representing total debits minus refunds)
+    const remaining = Math.max(0, (invite.creditsAllocated ?? 0) - netCreditsUsed)
     return remaining
   }
 

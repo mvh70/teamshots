@@ -1,0 +1,140 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - navigation [ref=e4]:
+        - link "TeamShotsPro" [ref=e6]:
+          - /url: /
+          - img "TeamShotsPro" [ref=e7]
+        - button "Toggle menu" [ref=e8] [cursor=pointer]:
+          - img [ref=e9]
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - heading "Simple, Transparent Pricing" [level=1] [ref=e14]
+        - paragraph [ref=e15]: You're one click from professional team photos that make everyone look great. Choose a plan and get going.
+        - generic [ref=e17]:
+          - button "Monthly" [pressed] [ref=e18] [cursor=pointer]
+          - button "Yearly" [ref=e19] [cursor=pointer]
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - heading "Try Once" [level=3] [ref=e23]
+            - paragraph [ref=e24]: Perfect for testing the service
+            - generic [ref=e25]:
+              - generic [ref=e26]: $5.00
+              - generic [ref=e27]: one-time
+            - paragraph [ref=e28]: 10 credits
+            - generic [ref=e33]:
+              - generic [ref=e34]:
+                - generic [ref=e35]: $2.50
+                - generic [ref=e36]: per photo variation
+              - generic [ref=e38]: Includes 2 variations per photo
+          - list [ref=e39]:
+            - listitem [ref=e40]:
+              - img [ref=e41]
+              - generic [ref=e43]:
+                - strong [ref=e44]: "1"
+                - text: photo generation
+            - listitem [ref=e45]:
+              - img [ref=e46]
+              - generic [ref=e48]: Retry up to 2 times to perfect each photo
+            - listitem [ref=e49]:
+              - img [ref=e50]
+              - generic [ref=e52]: Photos retained for 30 days from generation
+            - listitem [ref=e53]:
+              - img [ref=e54]
+              - generic [ref=e56]: Top-up credits available
+            - listitem [ref=e57]:
+              - img [ref=e58]
+              - generic [ref=e60]: No support
+          - link "Test drive a headshot" [ref=e61]:
+            - /url: /auth/signup?period=try_once
+        - generic [ref=e62]:
+          - generic [ref=e64]: Most Popular
+          - generic [ref=e65]:
+            - heading "Pro" [level=3] [ref=e66]
+            - paragraph [ref=e67]: For teams who want everyone to look equally amazing
+            - generic [ref=e68]:
+              - generic [ref=e69]: $59.00
+              - generic [ref=e70]: monthly
+            - paragraph [ref=e71]: 200 credits monthly
+            - generic [ref=e76]:
+              - generic [ref=e77]:
+                - generic [ref=e78]: $0.74
+                - generic [ref=e79]: per photo variation
+              - generic [ref=e81]: Includes 4 variations per photo
+          - list [ref=e82]:
+            - listitem [ref=e83]:
+              - img [ref=e84]
+              - generic [ref=e86]:
+                - strong [ref=e87]: "20"
+                - text: photo generations
+            - listitem [ref=e88]:
+              - img [ref=e89]
+              - generic [ref=e91]: Retry up to 4 times to perfect each photo
+            - listitem [ref=e92]:
+              - img [ref=e93]
+              - generic [ref=e95]: "All Individual features, plus:"
+            - listitem [ref=e96]:
+              - img [ref=e97]
+              - generic [ref=e99]: Team member invitations
+            - listitem [ref=e100]:
+              - img [ref=e101]
+              - generic [ref=e103]: Team photo management
+            - listitem [ref=e104]:
+              - img [ref=e105]
+              - generic [ref=e107]: Company style templates
+            - listitem [ref=e108]:
+              - img [ref=e109]
+              - generic [ref=e111]: Admin approval workflow
+            - listitem [ref=e112]:
+              - img [ref=e113]
+              - generic [ref=e115]: Discounted top-up credits
+            - listitem [ref=e116]:
+              - img [ref=e117]
+              - generic [ref=e119]: Priority support with dedicated account manager
+            - listitem [ref=e120]:
+              - img [ref=e121]
+              - generic [ref=e123]:
+                - text: High quality downloads
+                - generic [ref=e124]: Coming Soon
+            - listitem [ref=e126]:
+              - img [ref=e127]
+              - generic [ref=e129]:
+                - text: Style packages
+                - generic [ref=e130]: Coming Soon
+          - link "Level up the team" [ref=e132]:
+            - /url: /auth/signup?tier=team&period=monthly
+      - generic [ref=e133]:
+        - heading "Frequently Asked Questions" [level=2] [ref=e134]
+        - generic [ref=e135]:
+          - generic [ref=e136]:
+            - heading "Do I get a free generation?" [level=3] [ref=e137]
+            - paragraph [ref=e138]: Yes! We give new users one free test generation in a set style so you can see if our AI lives up to the hype. It normally costs 10 credits and lets you retry up to 4 times (depending on your package).
+          - generic [ref=e139]:
+            - heading "How do credits work?" [level=3] [ref=e140]
+            - paragraph [ref=e141]: Each photo generation uses 10 credits and allows up to 4 high-quality retries. Your credits roll over month-to-month and never expire. No rush, they're yours to keep!
+          - generic [ref=e142]:
+            - heading "Can I top up credits?" [level=3] [ref=e143]
+            - paragraph [ref=e144]: Yes! Subscribers can purchase additional credits at any time. Pricing varies by tier.
+          - generic [ref=e145]:
+            - heading "What if I'm not satisfied?" [level=3] [ref=e146]
+            - paragraph [ref=e147]: Every photo includes 2-4 retries depending on your plan, so you can refine the results until they're perfect. That's why we offer a free test generation in a predefined style when you sign up - try it first, no obligations.
+    - contentinfo [ref=e148]:
+      - generic [ref=e150]:
+        - img "TeamShotsPro" [ref=e152]
+        - paragraph [ref=e153]: Professional team photos in 60 seconds
+        - generic [ref=e154]:
+          - link "Home" [ref=e155]:
+            - /url: /
+          - link "Pricing" [ref=e156]:
+            - /url: /pricing
+          - link "Get Started" [ref=e157]:
+            - /url: /auth/signup
+        - paragraph [ref=e158]: © 2025 TeamShotsPro. All rights reserved.
+  - button "Open Next.js Dev Tools" [ref=e164] [cursor=pointer]:
+    - img [ref=e165]
+  - alert [ref=e170]
+```

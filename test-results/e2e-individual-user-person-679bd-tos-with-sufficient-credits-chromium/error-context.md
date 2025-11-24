@@ -1,0 +1,43 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "TeamShotsPro" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "TeamShotsPro" [ref=e6]
+    - main [ref=e7]:
+      - generic [ref=e9]:
+        - generic [ref=e13]:
+          - heading "Welcome back" [level=1] [ref=e14]
+          - paragraph [ref=e15]: Sign in to continue generating professional team photos. We missed you!
+          - generic [ref=e16]:
+            - generic [ref=e19]: Fast, consistent headshots for your whole team
+            - generic [ref=e22]: No photoshoot needed - remote-friendly
+            - generic [ref=e25]: Brand-aligned backgrounds and styles
+        - generic [ref=e27]:
+          - heading "Sign in to your account" [level=2] [ref=e29]
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - generic [ref=e33]: Email address
+              - textbox "Email address" [ref=e35]: personal-generation-1763556548427-q8ggcwrqh@example.com
+            - generic [ref=e36]:
+              - generic [ref=e37]: Password
+              - generic [ref=e38]:
+                - textbox "Password" [ref=e39]: TestPassword123!
+                - button "Show password" [ref=e40] [cursor=pointer]: 👁️ Show
+            - generic [ref=e41]:
+              - generic [ref=e42]:
+                - checkbox "Use magic link instead of password" [ref=e43]
+                - text: Use magic link instead of password
+              - link "Forgot password?" [ref=e44] [cursor=pointer]:
+                - /url: "#"
+            - paragraph [ref=e48]: Those credentials don't look right. Double-check your email and password, or try resetting your password.
+            - button "Sign in" [ref=e49] [cursor=pointer]
+            - link "Don't have an account? Sign up" [ref=e51] [cursor=pointer]:
+              - /url: /auth/signup
+  - button "Open Next.js Dev Tools" [ref=e57] [cursor=pointer]:
+    - img [ref=e58]
+  - alert [ref=e61]
+```

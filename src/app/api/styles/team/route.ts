@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
-
+import { getPackageConfig } from '@/domain/style/packages'
+import { extractPackageId } from '@/domain/style/settings-resolver'
 
 export const runtime = 'nodejs'
 export async function GET() {
@@ -46,14 +47,28 @@ export async function GET() {
       })
     }
 
-    // Return team contexts
-    const teamData = (user as { person?: { team?: { contexts: unknown[]; activeContext: unknown } } })?.person?.team
-    const teamContexts = (teamData as { contexts: unknown[] }).contexts || []
-    const teamActive = (teamData as { activeContext: unknown }).activeContext || null
+    // Return team contexts with deserialized settings
+    const teamData = (user as { person?: { team?: { contexts: Array<{ id: string; name: string | null; settings: unknown; packageName: string | null; createdAt: Date }>; activeContext: { id: string; name: string | null; settings: unknown; packageName: string | null; createdAt: Date } | null } } })?.person?.team
+    const rawContexts = (teamData as { contexts: Array<{ id: string; name: string | null; settings: unknown; packageName: string | null; createdAt: Date }> }).contexts || []
+    const rawActive = (teamData as { activeContext: { id: string; name: string | null; settings: unknown; packageName: string | null; createdAt: Date } | null }).activeContext || null
+
+    // Deserialize settings for each context
+    const deserializeContext = (ctx: { id: string; name: string | null; settings: unknown; packageName: string | null; createdAt: Date }) => {
+      const packageId = extractPackageId(ctx.settings as Record<string, unknown>) || ctx.packageName || 'headshot1'
+      const pkg = getPackageConfig(packageId)
+      const deserializedSettings = pkg.persistenceAdapter.deserialize(ctx.settings as Record<string, unknown>)
+      return {
+        ...ctx,
+        settings: deserializedSettings
+      }
+    }
+
+    const contexts = rawContexts.map(deserializeContext)
+    const activeContext = rawActive ? deserializeContext(rawActive) : null
 
     return NextResponse.json({
-      contexts: teamContexts,
-      activeContext: teamActive,
+      contexts,
+      activeContext,
       contextType: 'team'
     })
 

@@ -133,22 +133,16 @@ export default function TeamGenerationsPage() {
 
   // Trigger generation-detail tour after first completed generation
   useEffect(() => {
-    console.log('[Tour Debug] Effect running - loading:', loading, '_loaded:', onboardingContext._loaded, 'generated.length:', generated.length)
-    
     // Skip if still loading or onboarding context not loaded
     if (loading || !onboardingContext._loaded) {
-      console.log('[Tour Debug] Skipping - loading:', loading, '_loaded:', onboardingContext._loaded)
       return
     }
     
     // Only check for completed generations (status === 'completed')
     const completedGenerations = generated.filter(g => g.status === 'completed')
     
-    console.log('[Tour Debug] Completed generations:', completedGenerations.length, 'Total:', generated.length)
-    
     // If there are no completed generations, nothing to do
     if (completedGenerations.length === 0) {
-      console.log('[Tour Debug] No completed generations, exiting')
       return
     }
     
@@ -161,18 +155,13 @@ export default function TeamGenerationsPage() {
       ? onboardingContext.pendingTours?.includes('generation-detail')
       : false
 
-    console.log('[Tour Debug] Tour status - hasSeenTour:', hasSeenTour, 'isPendingTour:', isPendingTour, 'personId:', onboardingContext.personId)
-    console.log('[Tour Debug] completedTours:', onboardingContext.completedTours, 'pendingTours:', onboardingContext.pendingTours)
-
     // If tour has already been seen, nothing to do
     if (hasSeenTour) {
-      console.log('[Tour Debug] Tour already seen, exiting')
       return
     }
 
     // If we've already attempted to trigger the tour, don't do it again
     if (tourTriggerAttemptedRef.current) {
-      console.log('[Tour Debug] Tour trigger already attempted, exiting')
       return
     }
 
@@ -191,15 +180,12 @@ export default function TeamGenerationsPage() {
     // Trigger tour if it's pending or if this is the first time we see completed generations
     if (isPendingTour) {
       // Tour is already pending, just start it
-      console.log('[Tour Debug] Tour is pending, starting it')
       tourTriggerAttemptedRef.current = true
       setTimeout(() => {
-        console.log('[Tour Debug] Calling startTour')
         startTour('generation-detail')
       }, 1500)
     } else if (completedGenerations.length > 0) {
       // Set the tour as pending if there are completed generations and tour hasn't been seen
-      console.log('[Tour Debug] Setting tour as pending and starting it')
       tourTriggerAttemptedRef.current = true
       if (onboardingContext.personId) {
         fetch('/api/onboarding/pending-tour', {
@@ -207,7 +193,6 @@ export default function TeamGenerationsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tourName: 'generation-detail' }),
         }).then(() => {
-          console.log('[Tour Debug] Tour set as pending, starting it')
           // Start the tour after setting it as pending
           setTimeout(() => {
             startTour('generation-detail')
@@ -217,7 +202,6 @@ export default function TeamGenerationsPage() {
         })
       } else {
         // If no personId, still try to start the tour
-        console.log('[Tour Debug] No personId, starting tour directly')
         setTimeout(() => {
           startTour('generation-detail')
         }, 1500)

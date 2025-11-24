@@ -63,3 +63,27 @@ export function resolveAspectRatio(
   return defaultAspectRatioForShot(shotType)
 }
 
+/**
+ * Resolves aspect ratio configuration from a string ID with fallback
+ * Centralized utility to avoid duplication across worker and V2 workflow
+ * 
+ * @param aspectRatio - Aspect ratio ID string (e.g., '1:1', '16:9')
+ * @returns Aspect ratio configuration with fallback to default
+ * 
+ * @example
+ * ```typescript
+ * const config = resolveAspectRatioConfig('16:9')
+ * // Returns: { id: '16:9', width: 1344, height: 768 }
+ * 
+ * const fallback = resolveAspectRatioConfig('invalid')
+ * // Returns: { id: '1:1', width: 1024, height: 1024 } (default)
+ * ```
+ */
+export function resolveAspectRatioConfig(
+  aspectRatio?: string
+): AspectRatioConfig {
+  const resolvedId = (aspectRatio as AspectRatioId | undefined) ?? 
+                     (DEFAULT_ASPECT_RATIO.id as AspectRatioId)
+  return ASPECT_RATIOS[resolvedId] ?? DEFAULT_ASPECT_RATIO
+}
+

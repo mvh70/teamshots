@@ -58,7 +58,7 @@ type GenerationWithRelations = {
   context: {
     id: string;
     name: string;
-    stylePreset: string;
+    settings: unknown;
   } | null;
   styleSettings?: unknown;
 };
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               name: true,
-              stylePreset: true
+              settings: true
             }
           }
         },
@@ -282,7 +282,11 @@ export async function GET(request: NextRequest) {
         email: generation.person.email,
         team: generation.person.team
       },
-      context: generation.context,
+      context: generation.context ? {
+        id: generation.context.id,
+        name: generation.context.name,
+        stylePreset: (generation.context.settings as Record<string, unknown> | undefined)?.stylePreset as string | undefined,
+      } : null,
       
       // Grouping information
       generationGroupId: generation.generationGroupId,

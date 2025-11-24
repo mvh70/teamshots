@@ -24,7 +24,8 @@ export const freepackageServer: FreePackageServerPackage = {
   }: GenerationContext): Promise<GenerationPayload> => {
     const { settings: effectiveSettings } = applyStandardPreset(
       styleSettings.presetId || freepackageBase.defaultPresetId,
-      styleSettings
+      styleSettings,
+      freepackageBase.presets || {}
     )
 
     // Fixed to medium-shot for freepackage

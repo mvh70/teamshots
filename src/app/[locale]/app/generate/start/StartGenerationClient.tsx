@@ -73,16 +73,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   // Plan info from server data
   const { isFreePlan, isProUser, isTeamAdmin, isTeamMember } = initialData.planInfo
   const subscriptionTier = initialData.planInfo.tier
-  
-  // Debug logging
-  console.log('[Client] Plan info:', JSON.stringify({
-    isFreePlan,
-    isProUser,
-    tier: subscriptionTier,
-    selectedPackageId: initialData.styleData.selectedPackageId,
-    photoStyleSettings: initialData.styleData.photoStyleSettings,
-    originalContextSettings: initialData.styleData.originalContextSettings
-  }, null, 2))
 
   const headerThumbs = useMemo(() => {
     const items = selectedSelfies.length > 0 ? selectedSelfies : (keyFromQuery ? [{ id: 'legacy', key: keyFromQuery }] : [])
@@ -447,10 +437,10 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                           const enrichedContext = {
                             id: selectedContext.id,
                             name: updatedName,
-                            customPrompt: context?.customPrompt ?? selectedContext.customPrompt ?? null,
+                            customPrompt: (context?.settings as Record<string, unknown> | undefined)?.['customPrompt'] as string | null | undefined ?? null,
                             settings: context?.settings ?? selectedContext.settings,
                             backgroundPrompt: (context?.settings as Record<string, unknown> | undefined)?.['backgroundPrompt'] as string | undefined,
-                            stylePreset: context?.stylePreset
+                            stylePreset: (context?.settings as Record<string, unknown> | undefined)?.['stylePreset'] as string | undefined
                           }
                           setActiveContext(enrichedContext)
                           setPhotoStyleSettings(ui)

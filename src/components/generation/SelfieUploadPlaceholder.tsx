@@ -1,25 +1,18 @@
 'use client'
 
-import { PlusIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import { PhotoIcon } from '@heroicons/react/24/outline'
 
 interface SelfieUploadPlaceholderProps {
-  onUploadClick: () => void
-  onCameraClick?: () => void
+  onCameraClick: () => void
+  onFilePickerClick: () => void
   disabled?: boolean
 }
 
-/**
- * Reusable placeholder component for uploading/taking selfies
- * Shows two buttons: "Use Camera" and "Choose from Gallery"
- * Used consistently across individual/team-admin and invite dashboard flows
- */
 export default function SelfieUploadPlaceholder({
-  onUploadClick,
   onCameraClick,
+  onFilePickerClick,
   disabled = false
 }: SelfieUploadPlaceholderProps) {
-  // If no separate camera handler provided, both buttons use the same handler
-  const handleCameraClick = onCameraClick || onUploadClick
   
   return (
     <div
@@ -29,7 +22,9 @@ export default function SelfieUploadPlaceholder({
       <div className="w-full flex flex-col items-center">
         {/* Plus icon */}
         <div className="mb-2 flex items-center justify-center">
-          <PlusIcon className="w-12 h-12 md:w-16 md:h-16 text-gray-400" />
+          <svg className="w-12 h-12 md:w-16 md:h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
         </div>
         
         {/* Buttons - vertically stacked */}
@@ -39,7 +34,7 @@ export default function SelfieUploadPlaceholder({
             className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-brand-primary text-white hover:bg-brand-primary-hover transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={(e) => {
               e.stopPropagation()
-              handleCameraClick()
+              onCameraClick()
             }}
             disabled={disabled}
             aria-label="Open camera to take a photo"
@@ -57,7 +52,7 @@ export default function SelfieUploadPlaceholder({
             className="w-full px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={(e) => {
               e.stopPropagation()
-              onUploadClick()
+              onFilePickerClick()
             }}
             disabled={disabled}
             aria-label="Choose a file from your device"

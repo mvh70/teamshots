@@ -34,10 +34,12 @@ export async function GET(request: NextRequest) {
     const person = invite.person
 
     // Get generations for the person
+    // Exclude failed generations (they show temporarily in UI then disappear)
     const generations = await prisma.generation.findMany({
       where: {
         personId: person.id,
         deleted: false, // Exclude soft-deleted generations
+        status: { not: 'failed' }, // Exclude failed generations
       },
       orderBy: {
         createdAt: 'desc'

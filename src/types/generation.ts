@@ -63,6 +63,7 @@ export interface Step1Input {
 export interface Step1Output {
   personBuffer: Buffer
   personBase64: string
+  personPrompt: string
 }
 
 export interface Step2Input {
@@ -113,6 +114,8 @@ export interface Step5Input {
   expectedWidth: number
   expectedHeight: number
   resolution?: '1K' | '2K' | '4K'
+  styleSettings?: PhotoStyleSettings
+  shotDescription?: string
 }
 
 export interface Step5Output {

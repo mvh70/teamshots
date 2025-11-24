@@ -1,0 +1,41 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "TeamShotsPro" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "TeamShotsPro" [ref=e6]
+    - main [ref=e7]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - heading "Create your account" [level=2] [ref=e13]
+          - generic [ref=e15]:
+            - generic [ref=e17]: Includes 1 free test generation in a predefined style
+            - paragraph [ref=e22]: Step 1 of 2
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: First name
+            - textbox "First name" [active] [ref=e28]
+          - generic [ref=e29]:
+            - generic [ref=e30]: Email address
+            - textbox "Email address" [ref=e32]
+          - generic [ref=e33]:
+            - generic [ref=e34]: Password
+            - generic [ref=e35]:
+              - textbox "Password" [ref=e36]
+              - button "Show password" [ref=e37] [cursor=pointer]: 👁️ Show
+            - paragraph [ref=e41]: 👶 Weak
+          - generic [ref=e42]:
+            - generic [ref=e43]: Confirm password
+            - generic [ref=e44]:
+              - textbox "Confirm password" [ref=e45]
+              - button "Show password" [ref=e46] [cursor=pointer]: 👁️ Show
+          - button "Send verification code" [disabled] [ref=e47]
+          - link "Already have an account? Sign in" [ref=e49] [cursor=pointer]:
+            - /url: /auth/signin
+  - button "Open Next.js Dev Tools" [ref=e55] [cursor=pointer]:
+    - img [ref=e56]
+  - alert [ref=e59]
+```

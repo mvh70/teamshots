@@ -97,11 +97,7 @@ model Context {
   name             String
   teamId           String?
   userId           String?
-  backgroundUrl    String?
-  backgroundPrompt String?
-  logoUrl          String?
-  stylePreset      String       @default("corporate")
-  customPrompt     String?
+  packageName      String       @default("headshot1")
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   settings         Json         @default("{}")
@@ -113,6 +109,7 @@ model Context {
 
   @@index([teamId])
   @@index([userId])
+  @@index([packageName])
 }
 
 model Generation {

@@ -1,19 +1,11 @@
 import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
 import type {
-  FocalLengthSetting,
   ApertureSetting,
+  FocalLengthSetting,
   LightingQualitySetting,
-  ShutterSpeedSetting
-} from '@/types/photo-style'
-
-export type CanonicalShotType =
-  | 'extreme-close-up'
-  | 'close-up'
-  | 'medium-close-up'
-  | 'medium-shot'
-  | 'three-quarter'
-  | 'full-length'
-  | 'wide-shot'
+  ShutterSpeedSetting,
+  ShotTypeValue
+} from './types'
 
 export type LightingDirection =
   | 'front'
@@ -24,7 +16,16 @@ export type LightingDirection =
   | 'multi'
   | 'creative'
 
-export const DEFAULT_SHOT_TYPE: CanonicalShotType = 'medium-close-up'
+export const DEFAULT_SHOT_TYPE: ShotTypeValue = 'medium-close-up'
+
+export type CanonicalShotType =
+  | 'extreme-close-up'
+  | 'close-up'
+  | 'medium-close-up'
+  | 'medium-shot'
+  | 'three-quarter'
+  | 'full-length'
+  | 'wide-shot'
 
 export interface ShotTypeConfig {
   id: CanonicalShotType
@@ -97,7 +98,7 @@ export const SHOT_TYPE_ALIASES: Record<string, CanonicalShotType> = {
 
 export function resolveShotType(input?: string): ShotTypeConfig {
   if (!input) {
-    return SHOT_TYPE_CONFIGS[DEFAULT_SHOT_TYPE]
+    return SHOT_TYPE_CONFIGS[DEFAULT_SHOT_TYPE as CanonicalShotType]
   }
 
   const normalized = input.trim().toLowerCase()
@@ -105,7 +106,7 @@ export function resolveShotType(input?: string): ShotTypeConfig {
     (SHOT_TYPE_ALIASES[normalized] as CanonicalShotType | undefined) ||
     (SHOT_TYPE_CONFIGS[normalized as CanonicalShotType]
       ? (normalized as CanonicalShotType)
-      : DEFAULT_SHOT_TYPE)
+      : DEFAULT_SHOT_TYPE as CanonicalShotType)
 
   return SHOT_TYPE_CONFIGS[canonical]
 }
@@ -449,4 +450,3 @@ export function resolveShutterSpeed(input?: string): ShutterSpeedConfig {
 export function shotTypeSuggestedAspectRatio(shotType?: string) {
   return defaultAspectRatioForShot(shotType)
 }
-
