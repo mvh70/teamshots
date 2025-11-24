@@ -164,7 +164,9 @@ async function fetchStyleData(params: {
   generationType: 'personal' | 'team'
   teamId: string | null
 }): Promise<GenerationPageData['styleData']> {
-  // Free plan: load system admin's configured freepackage style
+  // CRITICAL: Free plan users ALWAYS use the freepackage style, regardless of any
+  // personal/team contexts they may have created when testing plan tiers.
+  // This ensures free plan users cannot bypass the freepackage restrictions.
   if (params.isFreePlan) {
     // Query database directly instead of using fetch (Server Actions requirement)
     const setting = await prisma.appSetting.findUnique({ 
@@ -304,7 +306,53 @@ async function fetchStyleData(params: {
     }
   }
 
-  // Personal contexts
+  // Personal contexts - ONLY for paid users
+  // Double-check: ensure we never load personal contexts for free plan users
+  // (This is a safeguard in case isFreePlan was miscalculated)
+  const subscriptionCheck = await getUserSubscription(params.userId)
+  const isActuallyFreePlan = !subscriptionCheck?.tier || subscriptionCheck?.period === 'free'
+  
+  if (isActuallyFreePlan) {
+    // User is actually on free plan - return freepackage style instead
+    const setting = await prisma.appSetting.findUnique({ 
+      where: { key: 'freePackageStyleId' } 
+    })
+    const freepackagePkg = getPackageConfig('freepackage')
+    
+    if (setting?.value) {
+      const ctx = await prisma.context.findUnique({
+        where: { id: setting.value },
+        select: { id: true, name: true, settings: true, packageName: true }
+      })
+      
+      if (ctx) {
+        const ui = freepackagePkg.persistenceAdapter.deserialize(
+          (ctx.settings as Record<string, unknown>) || {}
+        )
+        return {
+          photoStyleSettings: ui,
+          originalContextSettings: ui,
+          selectedPackageId: 'freepackage',
+          activeContext: {
+            id: ctx.id,
+            name: ctx.name || 'Free Package Style',
+            settings: ui as Record<string, unknown>,
+            customPrompt: (ctx.settings as Record<string, unknown>)?.customPrompt as string | null
+          },
+          availableContexts: []
+        }
+      }
+    }
+    
+    return {
+      photoStyleSettings: freepackagePkg.defaultSettings,
+      originalContextSettings: freepackagePkg.defaultSettings,
+      selectedPackageId: 'freepackage',
+      activeContext: null,
+      availableContexts: []
+    }
+  }
+  
   const [user, rawContexts] = await Promise.all([
     prisma.user.findUnique({
       where: { id: params.userId },

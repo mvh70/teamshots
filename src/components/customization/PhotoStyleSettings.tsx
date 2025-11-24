@@ -716,7 +716,7 @@ export default function PhotoStyleSettings({
               </div>
             </div>
             <CardGrid>
-              {currentEditableCategories.map(renderCategoryCard)}
+            {currentEditableCategories.map(renderCategoryCard)}
             </CardGrid>
           </div>
           
@@ -744,15 +744,15 @@ export default function PhotoStyleSettings({
                       </div>
                     </div>
                     <CardGrid>
-                      {currentLockedCategories.map((cat, idx) => (
-                        <div 
-                          key={cat.key}
-                          className="animate-fade-in"
-                          style={{ animationDelay: `${idx * 100}ms` }}
-                        >
-                          {renderCategoryCard(cat)}
-                        </div>
-                      ))}
+                    {currentLockedCategories.map((cat, idx) => (
+                      <div 
+                        key={cat.key}
+                        className="animate-fade-in"
+                        style={{ animationDelay: `${idx * 100}ms` }}
+                      >
+                        {renderCategoryCard(cat)}
+                      </div>
+                    ))}
                     </CardGrid>
                   </div>
                 </>
