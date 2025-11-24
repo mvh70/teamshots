@@ -143,12 +143,13 @@ export const freepackage: ClientStylePackage = {
       package: 'freepackage',
       settings: {
         // presetId removed - derived from package
+        // Only serialize categories in visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'expression']
         background: ui.background,
         branding: ui.branding,
         clothing: ui.clothing,
         clothingColors: ui.clothingColors || { type: 'user-choice' },
-        pose: ui.pose, // Now includes nested granular settings
         expression: ui.expression,
+        // Note: pose is NOT in visibleCategories, so it should not be serialized
       }
     }),
     deserialize: (raw) => {
@@ -160,14 +161,13 @@ export const freepackage: ClientStylePackage = {
         : r
 
       // Deserialize only the categories exposed to users via visibleCategories
-      // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'pose', 'expression']
+      // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'expression']
+      // Note: pose is NOT in visibleCategories, so it should not be deserialized (use default instead)
       // Note: aspectRatio is derived from preset/shotType, not a direct user input
       const backgroundResult = backgroundElement.deserialize(inner)
       const brandingResult = branding.deserialize(inner)
       const clothingResult = clothing.deserialize(inner, DEFAULTS.clothing)
       const clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
-      // deserializePose handles nesting if the input structure is correct
-      const poseResult = pose.deserialize(inner, DEFAULTS.pose)
       const expressionResult = expression.deserialize(inner, DEFAULTS.expression)
 
       return {
@@ -176,7 +176,8 @@ export const freepackage: ClientStylePackage = {
         branding: brandingResult,
         clothing: clothingResult,
         clothingColors: clothingColorsResult,
-        pose: poseResult,
+        // Use default pose (not from database) since pose is not in visibleCategories
+        pose: DEFAULTS.pose,
         expression: expressionResult,
       }
     }
