@@ -70,13 +70,13 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const beforeKey = item.selfieKey || item.uploadedKey
   const normalizedBeforeKey = beforeKey && beforeKey !== 'undefined' ? beforeKey : null
 
-  // Use real-time status polling for potentially incomplete generations
-  // Always enable the hook to fetch at least once, but use a longer interval if generation appears complete
+  // Use real-time status polling only for incomplete generations
+  // Skip polling for completed generations and invite flows (invite flows have their own refresh mechanism)
   const initialShouldPoll = (item.status === 'pending' || item.status === 'processing') || (!item.generatedKey && !item.acceptedKey)
   const { generation: liveGeneration } = useGenerationStatus({
     generationId: item.id,
-    enabled: true, // Always enabled to fetch at least once, even for completed generations
-    pollInterval: initialShouldPoll ? 1000 : 5000, // Poll every second if incomplete, every 5 seconds if complete (to catch updates)
+    enabled: initialShouldPoll && !token, // Only enable for incomplete generations in non-invite flows
+    pollInterval: 1000, // Poll every second for incomplete generations
   })
 
   // Use live data if available, otherwise fall back to static item data
@@ -124,27 +124,6 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const isFailed = currentStatus === 'failed' && !failedGenerationHidden
   const isIncomplete = (currentStatus === 'pending' || currentStatus === 'processing') || (!effectiveGeneratedKey && !effectiveAcceptedKey && !isFailed)
 
-  // Debug live generation data
-  console.log('GenerationCard live data:', {
-    id: item.id,
-    hasLiveGeneration: !!liveGeneration,
-    liveStatus: liveGeneration?.status,
-    liveJobStatus: liveGeneration?.jobStatus,
-    currentJobStatus: currentJobStatus,
-    currentStatus: currentStatus,
-    isIncomplete,
-    liveGeneratedImageUrls: liveGeneration?.generatedImageUrls,
-    liveGeneratedKey,
-    liveAcceptedKey,
-    effectiveGeneratedKey,
-    effectiveAcceptedKey,
-    afterKey,
-    normalizedAfterKey,
-    itemGeneratedKey: item.generatedKey,
-    itemAcceptedKey: item.acceptedKey
-  })
-
-
   // Update pos when live generation status changes
   useEffect(() => {
     if (isIncomplete) {
@@ -156,18 +135,6 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   }, [isIncomplete, currentJobStatus?.progress])
 
   // Force re-render when live generation completes to show the image
-  useEffect(() => {
-    if (liveGeneration && (liveGeneration.status === 'completed' || liveGeneration.status === 'failed')) {
-      // Generation completed - component will re-render with updated keys
-      console.log('Generation completed, updating display:', {
-        id: liveGeneration.id,
-        status: liveGeneration.status,
-        hasGeneratedImages: liveGeneration.generatedImageUrls?.length > 0,
-        acceptedKey: liveGeneration.acceptedPhotoKey
-      })
-    }
-  }, [liveGeneration])
-
   // Auto-hide failed generations after 10 seconds
   useEffect(() => {
     if (isFailed && !failedGenerationHidden) {

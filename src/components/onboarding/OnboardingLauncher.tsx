@@ -1,14 +1,15 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { usePathname } from 'next/navigation'
 
 export function OnboardingLauncher() {
   const { pendingTour, clearPendingTour, startTour } = useOnbordaTours()
-  const { context: onboardingContext } = useOnboardingState()
+  const { context: onboardingContext, updateContext } = useOnboardingState()
   const pathname = usePathname()
+  const processingToursRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     // Check for database-based pending tours and trigger them
@@ -27,20 +28,35 @@ export function OnboardingLauncher() {
         return
       }
 
-      // Start the first pending tour (we can extend this logic later for multiple tours)
-      const tourToStart = databasePendingTours[0]
+      // Start the first pending tour that isn't currently being processed
+      const tourToStart = databasePendingTours.find(tour => !processingToursRef.current.has(tour))
+      if (!tourToStart) {
+        return
+      }
+      processingToursRef.current.add(tourToStart)
 
       // Start the tour after a brief delay
       setTimeout(() => {
         startTour(tourToStart)
+        const removeTourLocally = () => {
+          const remainingTours = databasePendingTours.filter(tour => tour !== tourToStart)
+          updateContext({ pendingTours: remainingTours })
+        }
+        removeTourLocally()
 
         // Remove from pending tours in database after starting
         if (onboardingContext.personId) {
           fetch(`/api/onboarding/pending-tour?tourName=${encodeURIComponent(tourToStart)}`, {
             method: 'DELETE',
-          }).catch(error => {
-            console.error('Failed to remove pending tour from database:', error)
           })
+            .catch(error => {
+              console.error('Failed to remove pending tour from database:', error)
+            })
+            .finally(() => {
+              processingToursRef.current.delete(tourToStart)
+            })
+        } else {
+          processingToursRef.current.delete(tourToStart)
         }
       }, 1000)
     }
@@ -49,7 +65,7 @@ export function OnboardingLauncher() {
     if (pendingTour) {
       clearPendingTour()
     }
-  }, [onboardingContext.pendingTours, onboardingContext.personId, pendingTour, clearPendingTour, startTour, pathname])
+  }, [onboardingContext.pendingTours, onboardingContext.personId, pendingTour, clearPendingTour, startTour, pathname, updateContext])
 
   return null
 }

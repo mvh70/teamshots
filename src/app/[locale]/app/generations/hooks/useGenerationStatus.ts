@@ -94,13 +94,6 @@ export function useGenerationStatus({
 
     try {
       const data = await jsonFetcher<GenerationStatus>(`/api/generations/${generationId}`)
-      console.log('useGenerationStatus API response:', {
-        generationId,
-        status: data.status,
-        jobStatus: data.jobStatus,
-        progress: data.jobStatus?.progress,
-        message: data.jobStatus?.message?.substring(0, 50)
-      })
       setGeneration(data)
       setError(null)
 
