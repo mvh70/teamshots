@@ -4,6 +4,7 @@ import { resolveAspectRatio } from '../../elements/aspect-ratio/config'
 import { applyStandardPreset } from '../standard-settings'
 import { resolveShotType } from '../../elements/shot-type/config'
 import { Logger } from '@/lib/logger'
+import { ensureServerDefaults, mergeUserSettings } from '../shared/utils'
 import type { AspectRatioId } from '../../elements/aspect-ratio/config'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
 
@@ -22,13 +23,29 @@ export const freepackageServer: FreePackageServerPackage = {
     assets,
     options
   }: GenerationContext): Promise<GenerationPayload> => {
-    const { settings: effectiveSettings } = applyStandardPreset(
+    // Apply correct priority hierarchy:
+    // 1. Preset defaults (base layer - CORPORATE_HEADSHOT)
+    // 2. Package defaults (middle layer - overwrites ALL categories from preset)
+    // 3. User settings (top layer - overwrites only visible categories)
+    
+    // 1. Start with preset defaults (base configuration)
+    const { settings: presetDefaults } = applyStandardPreset(
       styleSettings.presetId || freepackageBase.defaultPresetId,
-      styleSettings,
+      {},  // Empty - get pure preset defaults
       freepackageBase.presets || {}
     )
 
-    // Fixed to medium-shot for freepackage
+    // 2. Apply package defaults for ALL categories (package baseline)
+    const withPackageDefaults = ensureServerDefaults(freepackageBase, presetDefaults)
+
+    // 3. Apply user settings ONLY for visible categories (user customizations)
+    const effectiveSettings = mergeUserSettings(
+      withPackageDefaults,
+      styleSettings,
+      freepackageBase.visibleCategories
+    )
+
+    // Fixed to medium-shot for freepackage (package standard, already applied above)
     effectiveSettings.shotType = { type: 'medium-shot' }
     const shotTypeConfig = resolveShotType('medium-shot')
     const shotText = shotTypeConfig.label
@@ -100,4 +117,5 @@ export const freepackageServer: FreePackageServerPackage = {
     }
   }
 }
+
 

@@ -1,29 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
-import { getPackageConfig } from '@/domain/style/packages'
-import { extractPackageId } from '@/domain/style/settings-resolver'
+import { RegenerationService } from '@/domain/generation'
 
-interface JobData {
-  generationId: string;
-  personId: string;
-  userId: string | undefined;
-  selfieS3Key: string;
-  styleSettings: Record<string, unknown>;
-  prompt: string;
-  providerOptions: {
-    model: string;
-    numVariations: number;
-    useV2?: boolean;
-    debugMode?: boolean;
-  };
-  creditSource: 'team';
-  selfieId: string;
-}
-
+/**
+ * Team Member Regeneration Endpoint (Token-Based)
+ * 
+ * Allows invited team members to regenerate photos using a shareable token link.
+ * Authentication via invite token, no session required.
+ */
 export async function POST(request: NextRequest) {
   try {
+    // Extract and validate token
     const { searchParams } = new URL(request.url)
     const token = searchParams.get('token')
 
@@ -55,6 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 })
     }
 
+    // Parse request body
     const body = await request.json()
     const { generationId } = body
 
@@ -62,138 +51,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Generation ID is required' }, { status: 400 })
     }
 
-    // Get the generation to regenerate from
-    const sourceGeneration = await prisma.generation.findFirst({
-      where: {
-        id: generationId,
-        personId: person.id
-      },
-      include: {
-        context: true
-      }
-    })
-
-    if (!sourceGeneration || !sourceGeneration.selfieId) {
-      return NextResponse.json({ error: 'Generation or selfie not found' }, { status: 404 })
-    }
-
-    // Find the original generation in the group to check remaining regenerations
-    let originalGeneration = sourceGeneration
-    if (!sourceGeneration.isOriginal && sourceGeneration.generationGroupId) {
-      const foundOriginal = await prisma.generation.findFirst({
-        where: {
-          generationGroupId: sourceGeneration.generationGroupId,
-          isOriginal: true
-        },
-        include: {
-          context: true
-        }
-      })
-      if (foundOriginal) {
-        originalGeneration = foundOriginal
-      }
-    }
-
-    // Check if regeneration is allowed
-    if (originalGeneration.remainingRegenerations <= 0) {
-      return NextResponse.json({ error: 'No regenerations left' }, { status: 400 })
-    }
-
-    // Find the latest groupIndex in this generation group
-    const latestInGroup = await prisma.generation.findFirst({
-      where: { generationGroupId: sourceGeneration.generationGroupId },
-      orderBy: { groupIndex: 'desc' },
-      select: { groupIndex: true },
-    })
-    const nextGroupIndex = (latestInGroup?.groupIndex ?? 0) + 1
-
-    // Get style settings from source generation (includes user customizations)
-    // Use the source generation's saved styleSettings (most accurate)
-    let finalStyleSettings: Record<string, unknown> = {}
-    if (sourceGeneration.styleSettings && typeof sourceGeneration.styleSettings === 'object' && !Array.isArray(sourceGeneration.styleSettings)) {
-      finalStyleSettings = sourceGeneration.styleSettings as Record<string, unknown>
-      Logger.debug('Using styleSettings from source generation for team regeneration')
-    } else if (sourceGeneration.context?.settings) {
-      // Fallback to context settings if generation doesn't have saved styleSettings
-      finalStyleSettings = sourceGeneration.context.settings as Record<string, unknown>
-      Logger.debug('Using context settings from source generation for team regeneration (fallback)')
-    }
-
-    // Serialize style settings for storage
-    const packageId = extractPackageId(finalStyleSettings) || 'headshot1'
-    const pkg = getPackageConfig(packageId)
-    const serializedStyleSettingsBase = pkg.persistenceAdapter.serialize(finalStyleSettings)
-    // Try to reuse stored selfie keys from the source generation
-    const storedSelfieKeys = (sourceGeneration.styleSettings as unknown as { inputSelfies?: { keys?: string[] } } | null)?.inputSelfies?.keys
-    const serializedStyleSettings = {
-      ...serializedStyleSettingsBase,
-      inputSelfies: { keys: Array.isArray(storedSelfieKeys) ? storedSelfieKeys : [] }
-    } as Record<string, unknown>
-
-    // Create new generation record
-    const generation = await prisma.generation.create({
-      data: {
-        personId: person.id,
-        uploadedPhotoKey: sourceGeneration.uploadedPhotoKey,
-        contextId: sourceGeneration.contextId,
-        selfieId: sourceGeneration.selfieId,
-        // generationType removed - now derived from person.teamId (single source of truth)
-        status: 'pending',
-        maxRegenerations: 0, // Regenerations cannot be regenerated
-        remainingRegenerations: 0,
-        generationGroupId: sourceGeneration.generationGroupId,
-        isOriginal: false,
-        groupIndex: nextGroupIndex,
-        creditsUsed: 0, // Regenerations don't cost credits
-        creditSource: 'team',
-        styleSettings: serializedStyleSettings as unknown as Parameters<typeof prisma.generation.create>[0]['data']['styleSettings'],
-      },
-    })
-
-    // Update the original generation's remaining regenerations
-    await prisma.generation.update({
-      where: { id: originalGeneration.id },
-      data: {
-        remainingRegenerations: originalGeneration.remainingRegenerations - 1
-      }
-    })
-    
-    const jobData: JobData = {
-      generationId: generation.id,
+    // Use RegenerationService to handle the regeneration
+    const result = await RegenerationService.regenerate({
+      sourceGenerationId: generationId,
       personId: person.id,
       userId: person.userId || undefined,
-      selfieS3Key: sourceGeneration.uploadedPhotoKey,
-      styleSettings: finalStyleSettings,
-      prompt: 'Professional headshot with same style as original',
-      providerOptions: {
-        model: Env.string('GEMINI_IMAGE_MODEL'),
-        numVariations: 4,
-        useV2: true, // Use V2 workflow for regenerations
-        debugMode: false,
-      },
-      creditSource: 'team',
-      selfieId: sourceGeneration.selfieId,
-    }
-
-    // If we have multiple stored selfie keys, add them to the job as selfieS3Keys
-    if (Array.isArray(storedSelfieKeys) && storedSelfieKeys.length > 1) {
-      ;(jobData as unknown as { selfieS3Keys?: string[] }).selfieS3Keys = storedSelfieKeys
-    }
-
-    // Lazy import to avoid build-time issues
-    const { imageGenerationQueue } = await import('@/queue')
-    
-    const job = await imageGenerationQueue.add('generate', jobData, {
-      priority: 1, // Higher priority for team generations
-      jobId: `gen-${generation.id}`,
+      creditSource: 'team'
     })
 
-    Logger.info('Team regeneration job queued', { jobId: job.id })
+    Logger.info('Team regeneration completed', { 
+      generationId: result.generation.id,
+      jobId: result.jobId 
+    })
 
     return NextResponse.json({
       success: true,
-      generationId: generation.id,
-      jobId: job.id
+      generationId: result.generation.id,
+      jobId: result.jobId
     })
 
   } catch (error) {

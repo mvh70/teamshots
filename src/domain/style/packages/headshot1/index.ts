@@ -137,7 +137,10 @@ export const headshot1: ClientStylePackage = {
     return buildPrompt(resolvedSettings)
   },
   extractUiSettings: (rawStyleSettings) => {
-    // Extract UI settings from request for visible categories: background, branding, clothing, clothingColors, pose, expression
+    // Extract UI settings from request for visible categories only
+    // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'pose', 'expression']
+    // Note: shotType is NOT extracted here (not visible to users)
+    // It will be applied from package defaults during server-side generation
     return {
       presetId: headshot1.defaultPresetId,
       background: rawStyleSettings.background as PhotoStyleSettings['background'],
@@ -146,8 +149,6 @@ export const headshot1: ClientStylePackage = {
       clothingColors: rawStyleSettings.clothingColors as PhotoStyleSettings['clothingColors'],
       pose: rawStyleSettings.pose as PhotoStyleSettings['pose'],
       expression: rawStyleSettings.expression as PhotoStyleSettings['expression'],
-      // Fixed settings for headshot1
-      shotType: DEFAULTS.shotType,
     }
   },
   persistenceAdapter: {

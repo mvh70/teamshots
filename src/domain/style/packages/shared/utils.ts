@@ -2,6 +2,8 @@
  * Shared utility functions for style packages
  */
 
+export * from './server-defaults'
+
 type NestedRecord = Record<string, unknown>
 
 /**

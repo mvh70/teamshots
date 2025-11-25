@@ -44,8 +44,9 @@ const AVAILABLE_EXPRESSIONS = [
 const FREE_PRESET = CORPORATE_HEADSHOT
 const FREE_PRESET_DEFAULTS = getDefaultPresetSettings(FREE_PRESET)
 
-// Server-side defaults (includes pose for generation)
-const SERVER_DEFAULTS = {
+// Package defaults - complete configuration for all categories
+// Note: visibleCategories controls what users can customize, not this object
+const DEFAULTS = {
   ...FREE_PRESET_DEFAULTS,
   clothingColors: {
     type: 'predefined' as const,
@@ -56,27 +57,9 @@ const SERVER_DEFAULTS = {
       bottom: 'Gray'
     }
   },
-  pose: { type: 'jacket_reveal' as const }, // Used server-side for generation
-  shotType: { type: 'medium-shot' as const },
+  pose: { type: 'jacket_reveal' as const }, // Package standard (not in visibleCategories)
+  shotType: { type: 'medium-shot' as const }, // Package standard (not in visibleCategories)
   subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts
-}
-
-// Client-side defaults (excludes pose since it's not in visibleCategories)
-const DEFAULTS: Omit<typeof SERVER_DEFAULTS, 'pose'> = {
-  ...FREE_PRESET_DEFAULTS,
-  clothingColors: {
-    type: 'predefined' as const,
-    colors: {
-      topBase: 'White',
-      topCover: 'Dark blue',
-      shoes: 'brown',
-      bottom: 'Gray'
-    }
-  },
-  // pose is NOT included - it's not in visibleCategories
-  // pose will be applied server-side during generation using SERVER_DEFAULTS
-  shotType: { type: 'medium-shot' as const },
-  subjectCount: '1' as const
 }
 
 function buildPrompt(settings: PhotoStyleSettings): string {
@@ -132,7 +115,7 @@ export const freepackage: ClientStylePackage = {
       branding: getValueOrDefault(settings.branding, DEFAULTS.branding),
       clothing: getValueOrDefault(settings.clothing, DEFAULTS.clothing),
       clothingColors: getValueOrDefault(settings.clothingColors, DEFAULTS.clothingColors),
-      pose: getValueOrDefault(settings.pose, SERVER_DEFAULTS.pose),
+      pose: getValueOrDefault(settings.pose, DEFAULTS.pose),
       expression: getValueOrDefault(settings.expression, DEFAULTS.expression),
       shotType: DEFAULTS.shotType, // Fixed to medium-shot for freepackage
       // Runtime context (passed in by caller, not from persisted settings)
@@ -144,8 +127,10 @@ export const freepackage: ClientStylePackage = {
     return buildPrompt(resolvedSettings)
   },
   extractUiSettings: (rawStyleSettings) => {
-    // Extract UI settings from request for visible categories: background, branding, clothing, clothingColors, expression
-    // pose is NOT included since it's not in visibleCategories
+    // Extract UI settings from request for visible categories only
+    // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'expression']
+    // Note: Non-visible categories (pose, shotType) are NOT extracted here
+    // They will be applied from package defaults during server-side generation
     return {
       presetId: freepackage.defaultPresetId,
       background: rawStyleSettings.background as PhotoStyleSettings['background'],
@@ -153,23 +138,19 @@ export const freepackage: ClientStylePackage = {
       clothing: rawStyleSettings.clothing as PhotoStyleSettings['clothing'],
       clothingColors: rawStyleSettings.clothingColors as PhotoStyleSettings['clothingColors'],
       expression: rawStyleSettings.expression as PhotoStyleSettings['expression'],
-      // Fixed settings for freepackage
-      shotType: DEFAULTS.shotType,
-      // pose is omitted - not in visibleCategories, will be applied server-side
     }
   },
   persistenceAdapter: {
     serialize: (ui) => ({
       package: 'freepackage',
       settings: {
-        // presetId removed - derived from package
-        // Only serialize categories in visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'expression']
+        // Only serialize visible categories: ['background', 'branding', 'clothing', 'clothingColors', 'expression']
+        // Non-visible categories (pose, shotType) are package standards and don't need to be persisted
         background: ui.background,
         branding: ui.branding,
         clothing: ui.clothing,
         clothingColors: ui.clothingColors || { type: 'user-choice' },
         expression: ui.expression,
-        // Note: pose is NOT in visibleCategories, so it should not be serialized
       }
     }),
     deserialize: (raw) => {
@@ -180,27 +161,23 @@ export const freepackage: ClientStylePackage = {
         ? r.settings as Record<string, unknown>
         : r
 
-      // Deserialize only the categories exposed to users via visibleCategories
+      // Deserialize visible categories only
       // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'expression']
-      // Note: pose is NOT in visibleCategories, so it should not be deserialized (use default instead)
-      // Note: aspectRatio is derived from preset/shotType, not a direct user input
       const backgroundResult = backgroundElement.deserialize(inner)
       const brandingResult = branding.deserialize(inner)
       const clothingResult = clothing.deserialize(inner, DEFAULTS.clothing)
       const clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
       const expressionResult = expression.deserialize(inner, DEFAULTS.expression)
 
-      // Build settings object - only include categories that are in visibleCategories
-      // pose is NOT in visibleCategories, so we omit it entirely (it's optional in PhotoStyleSettings)
+      // Return settings with only visible categories
+      // Non-visible categories (pose, shotType) will be applied from package defaults during generation
       const settings: PhotoStyleSettings = {
-        presetId: freepackage.defaultPresetId, // Always derive from package
+        presetId: freepackage.defaultPresetId,
         background: backgroundResult || { type: 'user-choice' },
         branding: brandingResult,
         clothing: clothingResult,
         clothingColors: clothingColorsResult,
         expression: expressionResult,
-        // Explicitly omit pose since it's not in visibleCategories
-        // The default pose will be applied server-side during generation if needed
       }
       
       return settings

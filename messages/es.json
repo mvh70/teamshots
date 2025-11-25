@@ -1273,7 +1273,17 @@
       "retryFailedMessage": "Error al reintentar la imagen. Por favor, inténtalo de nuevo.",
       "retriesLeft": "{count} reintentos restantes",
       "noRetriesLeft": "No quedan reintentos",
-      "retriedPhoto": "Foto reintentada"
+      "retriedPhoto": "Foto reintentada",
+      "deleteConfirmation": {
+        "title": "Espera un momento",
+        "description": "Te {count, plural, one {queda # reintento} other {quedan # reintentos}} para esta foto. Una vez que la elimines, esos reintentos desaparecerán para siempre (y no decimos 'para siempre' a la ligera).",
+        "descriptionNoRetries": "Estás a punto de eliminar esta foto. Esta acción es permanente.",
+        "suggestion": "¿No te gusta? Prueba reintentarla primero. Podrías amar lo que obtengas.",
+        "suggestionNoRetries": "Verifica que has descargado todas las versiones que quieres conservar.",
+        "confirmButton": "Eliminar de todos modos",
+        "cancelButton": "Conservarla (y quizás reintentar)",
+        "cancelButtonNoRetries": "Cancelar"
+      }
     },
     "status": {
       "used": "usado",

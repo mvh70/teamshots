@@ -8,6 +8,7 @@ import { LoadingSpinner } from '@/components/ui'
 import { GenerationRating } from '@/components/feedback/GenerationRating'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { useGenerationStatus } from '../hooks/useGenerationStatus'
+import { DeleteConfirmationDialog } from '@/components/generation/DeleteConfirmationDialog'
 
 export type GenerationListItem = {
   id: string
@@ -58,6 +59,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const t = useTranslations('generations')
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [beforeImageError, setBeforeImageError] = useState(false)
   const [afterImageError, setAfterImageError] = useState(false)
   const [beforeRetryCount, setBeforeRetryCount] = useState(0)
@@ -264,13 +266,12 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
     }
   }
 
-  const handleDelete = async () => {
+  const handleDeleteClick = () => {
+    setShowDeleteDialog(true)
+  }
+
+  const handleDeleteConfirm = async () => {
     if (isDeleting) return
-    
-    // Confirm deletion
-    if (!confirm('Are you sure you want to delete this generation? This action cannot be undone.')) {
-      return
-    }
     
     setIsDeleting(true)
     try {
@@ -296,6 +297,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
     } catch (error) {
       console.error('Failed to delete generation:', error)
       alert('Failed to delete generation. Please try again.')
+      setShowDeleteDialog(false)
     } finally {
       setIsDeleting(false)
     }
@@ -676,7 +678,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
                 {/* Only show delete button if user owns this generation */}
                 {item.isOwnGeneration === true && (
                   <button 
-                    onClick={handleDelete}
+                    onClick={handleDeleteClick}
                     disabled={isDeleting}
                     className="relative group text-sm text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded hover:bg-red-50 transition-colors"
                     id={`delete-button-${item.id}`}
@@ -713,6 +715,15 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
           </div>
         </div>
       </div>
+      
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDeleteConfirm}
+        remainingRegenerations={item.remainingRegenerations}
+        isDeleting={isDeleting}
+      />
     </div>
   )
 }

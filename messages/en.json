@@ -1264,6 +1264,16 @@
       "retryPrompt": "Retry with same settings",
       "retryFailed": "Failed to retry",
       "retryFailedMessage": "Failed to retry image. Please try again.",
+      "deleteConfirmation": {
+        "title": "Hold up a second",
+        "description": "You've got {count, plural, one {# retry left} other {# retries left}} on this photo. Once you delete it, those retries disappear forever (and we don't mean 'forever' in the casual way).",
+        "descriptionNoRetries": "You're about to delete this photo. This action is permanent.",
+        "suggestion": "Not happy with it? Hit retry first. You might love what you get.",
+        "suggestionNoRetries": "Double-check you've downloaded any versions you want to keep.",
+        "confirmButton": "Delete anyway",
+        "cancelButton": "Keep it (and maybe retry)",
+        "cancelButtonNoRetries": "Cancel"
+      },
       "retriesLeft": "{count} retries left",
       "noRetriesLeft": "No retries left",
       "retriedPhoto": "Retried photo"

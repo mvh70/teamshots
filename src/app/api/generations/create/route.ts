@@ -24,6 +24,7 @@ import { Telemetry } from '@/lib/telemetry'
 import { getPackageConfig } from '@/domain/style/packages'
 import { CreditService } from '@/domain/services/CreditService'
 import { UserService } from '@/domain/services/UserService'
+import { RegenerationService } from '@/domain/generation'
 import { deriveGenerationType, deriveCreditSource } from '@/domain/generation/utils'
 import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
 
@@ -308,6 +309,48 @@ export async function POST(request: NextRequest) {
     }
 
 
+    // Handle regeneration early - use RegenerationService
+    if (isRegeneration && originalGenerationId) {
+      try {
+        const result = await RegenerationService.regenerate({
+          sourceGenerationId: originalGenerationId,
+          personId: primarySelfie.personId,
+          userId: session.user.id,
+          creditSource: enforcedCreditSource
+        })
+
+        Logger.info('Session-based regeneration completed', {
+          generationId: result.generation.id,
+          jobId: result.jobId
+        })
+
+        // Return account mode info to avoid redundant API call on client
+        const isPro = userContext.roles.isTeamAdmin ?? false
+        const redirectUrl = isPro ? '/app/generations/team' : 
+          (session.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
+
+        return NextResponse.json({
+          success: true,
+          generationId: result.generation.id,
+          message: 'Regeneration started successfully',
+          redirectUrl,
+          accountMode: {
+            isPro,
+            isTeamMember: !!session.user?.person?.teamId,
+            redirectUrl
+          }
+        })
+      } catch (error) {
+        Logger.error('Session-based regeneration error', { 
+          error: error instanceof Error ? error.message : String(error) 
+        })
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : 'Failed to start regeneration' },
+          { status: 500 }
+        )
+      }
+    }
+
     // Check credits using CreditService (skip for regenerations which are free)
     if (!isRegeneration) {
       const canAfford = await CreditService.canAffordOperation(
@@ -351,47 +394,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle regeneration logic
+    // Determine regeneration limits for new generations
+    // Note: Regenerations are handled early with RegenerationService and return immediately
+    // 3 types: Individual, Team admin (proSmall/proLarge), Invited (not on a plan, credits assigned by team admin)
     let maxRegenerations = 2 // Default for new generations
-    
-    if (isRegeneration && originalGenerationId) {
-      // This is a regeneration - check the original generation
-      const originalGeneration = await prisma.generation.findUnique({
-        where: { id: originalGenerationId },
-        include: {
-          person: {
-            select: { userId: true, inviteToken: true }
-          }
-        }
-      })
-      
-      if (!originalGeneration) {
-        return NextResponse.json(
-          { error: 'Original generation not found' },
-          { status: 404 }
-        )
-      }
-      
-      if (originalGeneration.remainingRegenerations <= 0) {
-        return NextResponse.json(
-          { error: 'No regenerations remaining for this generation' },
-          { status: 400 }
-        )
-      }
-      
-      // Regenerations cannot be regenerated themselves
-      maxRegenerations = 0
-      
-      // Update the original generation's remaining regenerations (decrement by 1)
-      await prisma.generation.update({
-        where: { id: originalGenerationId },
-        data: { 
-          remainingRegenerations: originalGeneration.remainingRegenerations - 1
-        }
-      })
-    } else {
-      // This is a new generation - determine regeneration limits
-      // 3 types: Individual, Team admin (proSmall/proLarge), Invited (not on a plan, credits assigned by team admin)
       
       // Check if person was invited (has inviteToken) - they're not on a plan
       if (ownerPerson.inviteToken && ownerPerson.teamId) {
@@ -453,50 +459,12 @@ export async function POST(request: NextRequest) {
         // No user session - default to tryOnce
         maxRegenerations = getRegenerationCount('tryOnce')
       }
-    }
 
-    // Handle generation grouping
-    let generationGroupId: string
-    let isOriginal = true
-    let groupIndex = 0
-
-    if (isRegeneration && originalGenerationId) {
-      // This is a regeneration - find the original generation's group and context
-      const originalGeneration = await prisma.generation.findUnique({
-        where: { id: originalGenerationId },
-        select: { 
-          generationGroupId: true, 
-          groupIndex: true,
-          contextId: true
-        }
-      })
-
-      if (originalGeneration) {
-        generationGroupId = originalGeneration.generationGroupId || originalGenerationId
-        isOriginal = false
-        
-        // Find the latest groupIndex in this generation group
-        const latestInGroup = await prisma.generation.findFirst({
-          where: { generationGroupId: generationGroupId },
-          orderBy: { groupIndex: 'desc' },
-          select: { groupIndex: true },
-        })
-        groupIndex = (latestInGroup?.groupIndex ?? 0) + 1
-
-        // Copy the context from the original generation
-        resolvedContextId = originalGeneration.contextId
-      } else {
-        // Fallback if original not found
-        generationGroupId = originalGenerationId
-        isOriginal = false
-        groupIndex = 1
-      }
-    } else {
-      // This is an original generation - create new group
-      generationGroupId = randomUUID()
-      isOriginal = true
-      groupIndex = 0
-    }
+    // Handle generation grouping (for new generations only)
+    // Note: Regenerations are handled early with RegenerationService
+    const generationGroupId = randomUUID()
+    const isOriginal = true
+    const groupIndex = 0
 
     // Calculate final style settings before creating generation
     const packageId = (styleSettings?.packageId as string) || PACKAGES_CONFIG.defaultPlanPackage
@@ -569,47 +537,21 @@ export async function POST(request: NextRequest) {
       Logger.error('Failed to enforce free package style', { error: e instanceof Error ? e.message : String(e) })
     }
     
-    // Handle regeneration - use existing serialized settings if available
-    let serializedStyleSettings: Record<string, unknown> | null = null
-    if (isRegeneration && originalGenerationId) {
-      // Fetch the original generation's styleSettings and context
-      const originalGeneration = await prisma.generation.findUnique({
-        where: { id: originalGenerationId },
-        include: { context: true }
-      })
+    // Serialize style settings with package info (for new generations)
+    // Note: Regenerations are handled early with RegenerationService
+    const pkg = getPackageConfig(resolvedPackageId)
+    let serializedStyleSettings = pkg.persistenceAdapter.serialize(finalStyleSettingsObj)
       
-      // Use the original generation's saved styleSettings (includes user customizations)
-      // This is more accurate than context settings because it contains the actual settings used
-      if (originalGeneration?.styleSettings && typeof originalGeneration.styleSettings === 'object' && !Array.isArray(originalGeneration.styleSettings)) {
-        serializedStyleSettings = originalGeneration.styleSettings as Record<string, unknown>
-        Logger.debug('Using styleSettings from original generation', { 
-          contextName: originalGeneration.context?.name 
-        })
-      } else if (originalGeneration?.context?.settings) {
-        // Fallback to context settings if generation doesn't have saved styleSettings
-        serializedStyleSettings = originalGeneration.context.settings as Record<string, unknown>
-        Logger.debug('Using context settings from original generation (fallback)', { 
-          contextName: originalGeneration.context.name 
-        })
+    // Normalize potential UI variants after serialization
+    try {
+      const clothing = (serializedStyleSettings['clothing'] as { colors?: unknown } | undefined)
+      const clothingColors = serializedStyleSettings['clothingColors'] as Record<string, unknown> | null | undefined
+      // Some UIs may send colors under clothing.colors; lift to clothingColors if present
+      if (!clothingColors && clothing && clothing.colors && typeof clothing.colors === 'object') {
+        serializedStyleSettings['clothingColors'] = { colors: clothing.colors as Record<string, unknown> }
+        // keep clothing.colors as-is for backward compatibility; do not delete
       }
-    }
-
-    // Serialize style settings with package info (only if not already serialized from regeneration)
-    if (!serializedStyleSettings) {
-      const pkg = getPackageConfig(resolvedPackageId)
-      serializedStyleSettings = pkg.persistenceAdapter.serialize(finalStyleSettingsObj)
-      
-      // Normalize potential UI variants after serialization
-      try {
-        const clothing = (serializedStyleSettings['clothing'] as { colors?: unknown } | undefined)
-        const clothingColors = serializedStyleSettings['clothingColors'] as Record<string, unknown> | null | undefined
-        // Some UIs may send colors under clothing.colors; lift to clothingColors if present
-        if (!clothingColors && clothing && clothing.colors && typeof clothing.colors === 'object') {
-          serializedStyleSettings['clothingColors'] = { colors: clothing.colors as Record<string, unknown> }
-          // keep clothing.colors as-is for backward compatibility; do not delete
-        }
-      } catch {}
-    }
+    } catch {}
     
     // Persist style settings and also embed selected selfie keys for future regenerations
     serializedStyleSettings = {
@@ -628,7 +570,7 @@ export async function POST(request: NextRequest) {
         // generationType removed - now derived from person.teamId (single source of truth)
         creditSource: enforcedCreditSource,
         status: 'pending',
-        creditsUsed: isRegeneration ? 0 : PRICING_CONFIG.credits.perGeneration, // Regenerations are free
+        creditsUsed: PRICING_CONFIG.credits.perGeneration, // New generations cost credits
         provider: 'gemini',
         maxRegenerations,
         remainingRegenerations: maxRegenerations,
@@ -639,36 +581,36 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Reserve credits using CreditService (skip for regenerations - they are free)
-    if (!isRegeneration) {
-      try {
-        const reservationResult = await CreditService.reserveCreditsForGeneration(
-          session.user.id,
-          primarySelfie.personId,
-          PRICING_CONFIG.credits.perGeneration,
-          userContext
-        )
+    // Reserve credits using CreditService
+    // Note: Regenerations are handled early with RegenerationService and don't reach this code
+    try {
+      const reservationResult = await CreditService.reserveCreditsForGeneration(
+        session.user.id,
+        primarySelfie.personId,
+        PRICING_CONFIG.credits.perGeneration,
+        userContext
+      )
 
-    if (!reservationResult.success) {
-      Logger.error('Credit reservation failed', { error: reservationResult.error })
-      try {
-        await prisma.generation.delete({ where: { id: generation.id } })
-      } catch (deleteError) {
-        // Ignore if generation was already deleted or doesn't exist
-        Logger.warn('Failed to delete generation after credit reservation failure', {
-          generationId: generation.id,
-          error: deleteError instanceof Error ? deleteError.message : String(deleteError)
-        })
+      if (!reservationResult.success) {
+        Logger.error('Credit reservation failed', { error: reservationResult.error })
+        try {
+          await prisma.generation.delete({ where: { id: generation.id } })
+        } catch (deleteError) {
+          // Ignore if generation was already deleted or doesn't exist
+          Logger.warn('Failed to delete generation after credit reservation failure', {
+            generationId: generation.id,
+            error: deleteError instanceof Error ? deleteError.message : String(deleteError)
+          })
+        }
+        throw new Error(reservationResult.error || 'Credit reservation failed')
       }
-      throw new Error(reservationResult.error || 'Credit reservation failed')
-    }
 
-        Logger.debug('Credits reserved successfully', {
-          generationId: generation.id,
-          transactionId: reservationResult.transactionId,
-          individualCreditsUsed: reservationResult.individualCreditsUsed,
-          teamCreditsUsed: reservationResult.teamCreditsUsed
-        })
+      Logger.debug('Credits reserved successfully', {
+        generationId: generation.id,
+        transactionId: reservationResult.transactionId,
+        individualCreditsUsed: reservationResult.individualCreditsUsed,
+        teamCreditsUsed: reservationResult.teamCreditsUsed
+      })
     } catch (creditError) {
       // If credit reservation fails, delete the generation record
       try {
@@ -682,24 +624,16 @@ export async function POST(request: NextRequest) {
       }
       throw creditError
     }
-    }
 
     // Lazy import to avoid build-time issues
     const { imageGenerationQueue } = await import('@/queue')
     
-    // Default to the keys from the current selection
-    let jobSelfieS3Keys = selfieS3Keys
+    // Use the selected selfie keys for the job
+    // Note: Regenerations are handled early with RegenerationService
+    const jobSelfieS3Keys = selfieS3Keys
 
-    // If this is a regeneration and the request did not carry multiple selfies, try to reuse stored keys from the original
-    if (isRegeneration && originalGenerationId && (!Array.isArray(jobSelfieS3Keys) || jobSelfieS3Keys.length <= 1)) {
-      try {
-        const originalGen = await prisma.generation.findUnique({ where: { id: originalGenerationId }, select: { styleSettings: true } })
-        const storedKeys = (originalGen?.styleSettings as unknown as { inputSelfies?: { keys?: string[] } } | null)?.inputSelfies?.keys
-        if (Array.isArray(storedKeys) && storedKeys.length > 1) {
-          jobSelfieS3Keys = storedKeys
-        }
-      } catch {}
-    }
+    // For the job, deserialize settings so worker can apply overrides correctly
+    const jobStyleSettings = pkg.persistenceAdapter.deserialize(serializedStyleSettings)
 
     const job = await imageGenerationQueue.add('generate', {
       generationId: generation.id,
@@ -708,7 +642,7 @@ export async function POST(request: NextRequest) {
       selfieId: primarySelfie.id,
       selfieS3Key: primarySelfie.key,
       selfieS3Keys: jobSelfieS3Keys,
-      styleSettings: serializedStyleSettings,
+      styleSettings: jobStyleSettings as Record<string, unknown>,
       prompt,
       providerOptions: {
         model: Env.string('GEMINI_IMAGE_MODEL'),
