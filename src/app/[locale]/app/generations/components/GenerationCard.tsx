@@ -491,11 +491,20 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
 
         {/* Scroll hint arrow when content overflows */}
         {!isIncomplete && canScrollDown && (
-          <div className="absolute bottom-2 right-2 bg-white/80 text-gray-700 rounded-full shadow p-1">
+          <button
+            onClick={() => {
+              const el = scrollContainerRef.current
+              if (el) {
+                el.scrollBy({ top: 100, behavior: 'smooth' })
+              }
+            }}
+            className="absolute bottom-2 right-2 bg-white/80 hover:bg-white text-gray-700 rounded-full shadow p-1 cursor-pointer transition-colors animate-bounce"
+            aria-label="Scroll down"
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 9l6 6 6-6" />
             </svg>
-          </div>
+          </button>
         )}
 
         {/* Handle knob (also used to start drag) - only show if not incomplete */}
