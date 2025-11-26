@@ -223,7 +223,7 @@ export default function UploadPage() {
               Sign up for a personal account to generate photos with full creative control.
             </p>
             <button
-              onClick={() => router.push('/auth/signup')}
+              onClick={() => window.location.href = 'https://www.photoshotspro.com'}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium"
             >
               Sign Up for Personal Use

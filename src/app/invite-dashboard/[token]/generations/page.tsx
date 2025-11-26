@@ -2,6 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { PhotoIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
@@ -20,6 +21,7 @@ export default function GenerationsPage() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const t = useTranslations('inviteDashboard')
   const token = params.token as string
   const { generations, loading, error } = useInvitedGenerations(token)
   const { startTour, pendingTour } = useOnbordaTours()
@@ -262,6 +264,31 @@ export default function GenerationsPage() {
               </div>
             </div>
           )}
+
+          {/* Sign up CTA - Hidden on mobile */}
+          <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
+              {t('signUpCta.title')}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {t('signUpCta.description')}
+            </p>
+            <button
+              onClick={() => window.location.href = 'https://www.photoshotspro.com'}
+              className="px-4 py-2 text-white rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-cta-ring"
+              style={{
+                backgroundColor: BRAND_CONFIG.colors.cta,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.ctaHover
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.cta
+              }}
+            >
+              {t('signUpCta.button')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

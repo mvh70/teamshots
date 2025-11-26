@@ -1091,7 +1091,7 @@ export default function InviteDashboardPage() {
               {t('signUpCta.description')}
             </p>
             <button
-              onClick={() => router.push('/auth/signup')}
+              onClick={() => window.location.href = 'https://www.photoshotspro.com'}
               className="px-4 py-2 text-white rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-cta-ring"
               style={{
                 backgroundColor: BRAND_CONFIG.colors.cta,
