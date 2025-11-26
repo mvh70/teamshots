@@ -201,15 +201,20 @@ export async function POST(request: NextRequest) {
 
     // Create user with correct role
     Logger.info('18. Creating user...')
+    
+    // Extract and normalize the signup domain for email links later
+    const signupDomain = domain ? domain.replace(/^www\./, '') : null
+    
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         role: initialRole,
         locale,
+        signupDomain,
       }
     })
-    Logger.info('19. User created', { userId: user.id, role: initialRole })
+    Logger.info('19. User created', { userId: user.id, role: initialRole, signupDomain })
 
     let person
     let teamId = null

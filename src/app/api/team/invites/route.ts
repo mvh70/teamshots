@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendTeamInviteEmail } from '@/lib/email'
-import { Env } from '@/lib/env'
 import { randomBytes } from 'crypto'
 import { withTeamPermission } from '@/domain/access/permissions'
 import { getEffectiveTeamCreditBalance, getTeamInviteRemainingCredits } from '@/domain/credits/credits'
@@ -9,6 +8,7 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import { Logger } from '@/lib/logger'
 import { getTranslation } from '@/lib/translations'
 import { getPackageConfig } from '@/domain/style/packages'
+import { getBaseUrl } from '@/lib/url'
 
 export async function POST(request: NextRequest) {
   try {
@@ -203,8 +203,8 @@ export async function POST(request: NextRequest) {
     const inviterName = session.user.name || ''
     const inviterFirstName = inviterName.split(' ')[0] || inviterName || 'Team Admin'
 
-    // Send email with invite link
-    const baseUrl = Env.string('NEXTAUTH_URL', 'http://localhost:3000')
+    // Send email with invite link (detect domain from request)
+    const baseUrl = getBaseUrl(request.headers)
     const inviteLink = `${baseUrl}/invite/${token}`
     
     const emailResult = await sendTeamInviteEmail({

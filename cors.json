@@ -1,7 +1,18 @@
 {
   "CORSRules": [
     {
-      "AllowedOrigins": ["http://localhost:3000","http://127.0.0.1:3000","https://app.teamshots.vip","https://www.teamshots.vip"],
+      "AllowedOrigins": [
+        "http://localhost:3000",
+        "https://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://127.0.0.1:3000",
+        "https://teamshotspro.com",
+        "https://www.teamshotspro.com",
+        "https://photoshotspro.com",
+        "https://www.photoshotspro.com",
+        "https://app.teamshots.vip",
+        "https://www.teamshots.vip"
+      ],
       "AllowedMethods": ["GET", "PUT", "POST"],
       "AllowedHeaders": [
         "Authorization",

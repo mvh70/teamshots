@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { PRICING_CONFIG } from '@/config/pricing';
 import { Logger } from '@/lib/logger';
 import { Env } from '@/lib/env';
+import { getBaseUrl } from '@/lib/url';
 
 
 export const runtime = 'nodejs'
@@ -65,10 +66,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Determine the base URL with fallback - force HTTP for local development
+    // Determine the base URL dynamically from the request
+    // This allows the same deployment to serve multiple domains
     // Note: Stripe webhooks must point to HTTPS (https://app.teamshotspro.com/api/stripe/webhook)
-    // but local redirects should use HTTP (https://localhost:3000)
-    const baseUrl = Env.string('NEXT_PUBLIC_BASE_URL')
+    const baseUrl = getBaseUrl(request.headers)
     
     // Prefer returning to the page that initiated checkout. Accept explicit body.returnUrl or Referer header.
     // Validate to prevent open redirects: must start with our baseUrl; otherwise, fall back to dashboard.

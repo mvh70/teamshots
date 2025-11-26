@@ -43,9 +43,10 @@ export async function sendFeedbackNotificationEmail({
   }
 
   // Build generation link if applicable
+  // For background jobs, default to the team domain (admin access)
   let generationLink = ''
   if (generationId) {
-    const baseUrl = process.env.NEXTAUTH_URL || 'https://app.teamshots.vip'
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://teamshotspro.com'
     generationLink = `\n\nView Generation: ${baseUrl}/app/generations/${generationId}`
   }
 

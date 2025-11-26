@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendTeamInviteEmail } from '@/lib/email'
-import { Env } from '@/lib/env'
 import { withTeamPermission } from '@/domain/access/permissions'
 import { Logger } from '@/lib/logger'
+import { getBaseUrl } from '@/lib/url'
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Send email with invite link
-    const baseUrl = Env.string('NEXTAUTH_URL', 'http://localhost:3000')
+    // Send email with invite link (detect domain from request)
+    const baseUrl = getBaseUrl(request.headers)
     const inviteLink = `${baseUrl}/invite/${invite.token}`
     
     const emailResult = await sendTeamInviteEmail({

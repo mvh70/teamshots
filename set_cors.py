@@ -11,13 +11,23 @@ s3 = boto3.client(
     region_name='eu-central'
 )
 
-# Simpler CORS configuration - remove ExposeHeaders which Hetzner might not support
+# CORS configuration for all production domains
 cors_configuration = {
     'CORSRules': [
-	        {
+        {
             'AllowedOrigins': [
+                # Local development
+                'http://localhost:3000',
                 'https://localhost:3000',
+                'http://127.0.0.1:3000',
                 'https://127.0.0.1:3000',
+                # Team domain (teamshotspro.com)
+                'https://teamshotspro.com',
+                'https://www.teamshotspro.com',
+                # Individual domain (photoshotspro.com)
+                'https://photoshotspro.com',
+                'https://www.photoshotspro.com',
+                # Legacy domains (keep for backwards compatibility)
                 'https://app.teamshots.vip',
                 'https://www.teamshots.vip'
             ],

@@ -13,6 +13,7 @@ model User {
   password             String?
   emailVerified        DateTime?
   locale               String               @default("en")
+  signupDomain         String?              // Domain user signed up from (e.g., "teamshotspro.com", "photoshotspro.com")
   subscriptionStatus   String?
   stripeCustomerId     String?              @unique
   stripeSubscriptionId String?              @unique

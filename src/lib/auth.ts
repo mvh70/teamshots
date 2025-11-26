@@ -331,4 +331,8 @@ export const authOptions = {
     verifyRequest: "/auth/verify-request",
     error: "/auth/error",
   },
+  
+  // Trust the Host header to support multiple domains from the same deployment
+  // This allows NextAuth to build correct callback URLs based on the incoming request
+  trustHost: true,
 }
