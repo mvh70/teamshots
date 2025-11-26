@@ -389,8 +389,7 @@ export default function InviteDashboardPage() {
         // Generate a prompt from the photo style settings
         prompt: generatePromptFromSettings(photoStyleSettings),
         selfieIds: validSelectedIds,
-        // V2 workflow and debug flags
-        useV2: true, // Enable the new 4-step workflow
+        // Debug flags (workflow version is controlled by GENERATION_WORKFLOW_VERSION env var on server)
         debugMode: true // Enable debug mode (logs prompts, saves intermediate files)
       }
       

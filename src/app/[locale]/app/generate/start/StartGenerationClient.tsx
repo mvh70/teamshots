@@ -158,9 +158,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
         styleSettings: { ...photoStyleSettings, packageId },
         prompt: activeContext?.customPrompt || 'Professional headshot',
         selfieIds: selectedSelfies.map(s => s.id),
-        // V2 workflow and debug flags
-        useV2: true, // Enable the new 8-step workflow
-        debugMode: true // Enable debug mode (logs prompts, saves intermediate files)
+        // Debug flags (workflow version is controlled by GENERATION_WORKFLOW_VERSION env var on server)
+        debugMode: true, // Enable debug mode (logs prompts, saves intermediate files)
+        // stopAfterStep removed - full flow will now execute
       }
       
       const response = await jsonFetcher<{ 
@@ -195,15 +195,15 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                           (effectiveGenerationType === 'personal' && userCredits.individual >= PRICING_CONFIG.credits.perGeneration)
   const hasRequiredSelfies = selectedSelfies.length >= 2
 
+  const effectivePackageId = isFreePlan ? 'freepackage' : (selectedPackageId || PACKAGES_CONFIG.defaultPlanPackage)
+
   const hasUneditedFields = originalContextSettings
-    ? hasUneditedEditableFields(photoStyleSettings as Record<string, unknown>, originalContextSettings as Record<string, unknown>)
+    ? hasUneditedEditableFields(photoStyleSettings as Record<string, unknown>, originalContextSettings as Record<string, unknown>, effectivePackageId)
     : false
 
   const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && !hasUneditedFields
   
   const hasAnyCredits = userCredits.team > 0 || userCredits.individual > 0
-
-  const effectivePackageId = isFreePlan ? 'freepackage' : (selectedPackageId || PACKAGES_CONFIG.defaultPlanPackage)
   const selectedPackage = getPackageConfig(effectivePackageId)
   const selectedPhotoStyleLabel = activeContext?.name || selectedPackage.label
   const remainingCreditsForType = effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual

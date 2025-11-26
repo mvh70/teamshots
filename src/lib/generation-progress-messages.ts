@@ -92,6 +92,38 @@ const STEP_MESSAGES: Record<string, ProgressMessage[]> = {
     { message: 'You\'re about to meet your professional twin...', emoji: '👯' },
     { message: 'Your true professional image is ready...', emoji: '🚀' },
   ],
+  'v3-generating-person': [
+    { message: 'Crafting your professional silhouette...', emoji: '🎨' },
+    { message: 'Building you from the ground up...', emoji: '🧱' },
+    { message: 'Your professional foundation is taking shape...', emoji: '🏗️' },
+    { message: 'Getting your pose and style just right...', emoji: '✨' },
+    { message: 'Making you look professional and approachable...', emoji: '💼' },
+    { message: 'Your professional self is emerging...', emoji: '🌟' },
+  ],
+  'v3-generating-background': [
+    { message: 'Setting the stage for your professional debut...', emoji: '🎭' },
+    { message: 'Preparing the perfect backdrop...', emoji: '🖼️' },
+    { message: 'Your brand environment is coming together...', emoji: '🏢' },
+    { message: 'Creating the right atmosphere for success...', emoji: '⚡' },
+    { message: 'Making sure your background tells your story...', emoji: '📖' },
+    { message: 'Your professional setting is almost ready...', emoji: '🎯' },
+  ],
+  'v3-compositing': [
+    { message: 'Bringing you and your world together...', emoji: '🤝' },
+    { message: 'Your professional image is becoming one...', emoji: '🔗' },
+    { message: 'Merging your presence with your environment...', emoji: '🌍' },
+    { message: 'This is where the magic happens...', emoji: '✨' },
+    { message: 'Your complete professional picture emerges...', emoji: '🎨' },
+    { message: 'Almost there - you\'re looking cohesive...', emoji: '💫' },
+  ],
+  'v3-refining': [
+    { message: 'Adding those final personal touches...', emoji: '🔍' },
+    { message: 'Making sure it\'s really you...', emoji: '👀' },
+    { message: 'Your authentic self shines through...', emoji: '🌟' },
+    { message: 'Perfecting the details that matter most...', emoji: '⚡' },
+    { message: 'You\'re about to meet your professional twin...', emoji: '👯' },
+    { message: 'Your true professional image is ready...', emoji: '🚀' },
+  ],
 }
 
 const DEFAULT_MESSAGES: ProgressMessage[] = [

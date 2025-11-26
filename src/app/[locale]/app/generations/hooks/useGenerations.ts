@@ -214,17 +214,25 @@ export function useGenerations(
     loadGenerations(1, false)
   }, [effectiveScope, effectiveTeamView, selectedUserId, loadGenerations])
 
-  // Poll for updates every 30 seconds (reduced frequency to prevent refresh loops)
+  // Poll for updates - faster when there are active generations, slower otherwise
   useEffect(() => {
+    // Check if any generations are still processing
+    const hasActiveGenerations = generated.some(
+      g => g.status === 'pending' || g.status === 'processing'
+    )
+    
+    // Poll every 5 seconds when there are active generations, otherwise every 30 seconds
+    const pollIntervalMs = hasActiveGenerations ? 5000 : 30000
+    
     const interval = setInterval(() => {
       // Only poll if we're not currently loading and not on a paginated view
       if (!loading && (!pagination || pagination.page === 1)) {
         loadGenerations(1, false)
       }
-    }, 30000) // Poll every 30 seconds instead of 5
+    }, pollIntervalMs)
 
     return () => clearInterval(interval)
-  }, [loading, pagination, loadGenerations])
+  }, [loading, pagination, loadGenerations, generated])
 
   const loadMore = () => {
     if (pagination?.hasNextPage && !loading) {

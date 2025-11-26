@@ -1,6 +1,6 @@
 import { Logger } from '@/lib/logger'
 import { generateWithGemini } from '../gemini'
-import { composeRefinementPrompt } from '../prompt-composers/refinement'
+import { composeRefinementPrompt } from '../prompt-composers/refinement-v2'
 import sharp from 'sharp'
 import type { Step7Input, Step7Output, RetryContext, ReferenceImage } from '@/types/generation'
 

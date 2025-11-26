@@ -74,7 +74,6 @@ export async function executeStep5(
   // Compose composition prompt from package-built base prompt
   let compositionPrompt = composeCompositionPrompt(
     basePrompt,
-    !!backgroundBuffer,
     aspectRatioDescription,
     styleSettings,
     shotDescription

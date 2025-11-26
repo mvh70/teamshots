@@ -32,10 +32,6 @@ async function resolveProjectId(): Promise<string> {
         const credentials = JSON.parse(credentialsContent) as { project_id?: string }
         if (credentials.project_id) {
           projectId = credentials.project_id
-          Logger.debug('Extracted project ID from service account credentials', {
-            projectId,
-            credentialsPath
-          })
         }
       } catch (error) {
         Logger.warn('Failed to read project ID from service account credentials', {
@@ -78,12 +74,6 @@ export async function getVertexGenerativeModel(modelName: string): Promise<Gener
   }
   cachedLocation = location
   
-  // Log model initialization attempt for debugging
-  Logger.debug('Initializing Vertex AI model', {
-    modelName: normalizedModelName,
-    location,
-    projectId: projectId.substring(0, 8) + '...' // Partial project ID for security
-  })
   
   const vertexAI = new VertexAI({ project: projectId, location })
   
@@ -155,6 +145,29 @@ async function generateWithGeminiVertex(
   resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
 ): Promise<Buffer[]> {
+  // Validate images before sending
+  if (!images || images.length === 0) {
+    Logger.error('generateWithGeminiVertex: No reference images provided!', {
+      modelName: Env.string('GEMINI_IMAGE_MODEL'),
+      imagesCount: images?.length || 0
+    })
+    throw new Error('No reference images provided to Gemini API')
+  }
+
+  // Validate each image has required fields
+  for (let i = 0; i < images.length; i++) {
+    const img = images[i]
+    if (!img.base64 || !img.mimeType) {
+      Logger.error('generateWithGeminiVertex: Invalid reference image', {
+        index: i,
+        hasBase64: !!img.base64,
+        hasMimeType: !!img.mimeType,
+        description: img.description?.substring(0, 100)
+      })
+      throw new Error(`Reference image at index ${i} is missing base64 or mimeType`)
+    }
+  }
+
   const modelName = Env.string('GEMINI_IMAGE_MODEL')
   const model = await getVertexGenerativeModel(modelName)
 
@@ -165,6 +178,21 @@ async function generateWithGeminiVertex(
     }
     parts.push({ inlineData: { mimeType: image.mimeType, data: image.base64 } })
   }
+
+  Logger.debug('Sending Gemini Vertex AI request', {
+    modelName,
+    partsCount: parts.length,
+    hasTextPrompt: parts.some(p => 'text' in p),
+    imageCount: parts.filter(p => 'inlineData' in p).length,
+    imageDetails: images.map((img, idx) => ({
+      index: idx,
+      mimeType: img.mimeType,
+      base64Length: img.base64?.length || 0,
+      description: img.description?.substring(0, 80) || 'NO_DESCRIPTION'
+    })),
+    hasAspectRatio: !!aspectRatio,
+    hasResolution: !!resolution
+  })
 
   const contents: Content[] = [
     {

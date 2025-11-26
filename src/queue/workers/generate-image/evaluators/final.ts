@@ -15,7 +15,9 @@ export async function evaluateFinalImage(
   expectedWidth: number,
   expectedHeight: number,
   aspectRatioId: string,
-  debugMode = false
+  debugMode = false,
+  logoReference?: ReferenceImage,
+  brandingInfo?: { position?: string; placement?: string }
 ): Promise<EvaluationFeedback> {
   const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
   const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
@@ -94,20 +96,56 @@ export async function evaluateFinalImage(
     '3. overall_quality',
     '   - Is the image professional and high quality?',
     '   - Are there no obvious defects or artifacts?',
-    '   - Does the composition work well overall?',
-    '',
-    'Return ONLY valid JSON with all fields and explanations.',
-    'Example format:',
-    '{',
-    '  "face_similarity": "YES",',
-    '  "characteristic_preservation": "YES",',
-    '  "overall_quality": "YES",',
-    '  "explanations": {',
-    '    "face_similarity": "Face matches selfie characteristics",',
-    '    ...',
-    '  }',
-    '}'
+    '   - Does the composition work well overall?'
   ]
+
+  // Add branding evaluation if applicable
+  if (brandingInfo && logoReference) {
+    instructions.push(
+      '',
+      '4. branding_placement',
+      `   - Is the logo visible in the ${brandingInfo.position === 'background' ? 'background' : 'scene elements'}?`,
+      `   - Does it match the reference logo provided?`,
+      `   - Is it placed according to specifications: ${brandingInfo.placement || 'as specified'}?`,
+      `   - Does it look natural and properly integrated into the scene?`
+    )
+  }
+
+  instructions.push(
+    '',
+    'Return ONLY valid JSON with all fields and explanations.'
+  )
+
+  // Update example format based on whether branding is present
+  if (brandingInfo && logoReference) {
+    instructions.push(
+      'Example format:',
+      '{',
+      '  "face_similarity": "YES",',
+      '  "characteristic_preservation": "YES",',
+      '  "overall_quality": "YES",',
+      '  "branding_placement": "YES",',
+      '  "explanations": {',
+      '    "face_similarity": "Face matches selfie characteristics",',
+      '    "branding_placement": "Logo visible and properly placed",',
+      '    ...',
+      '  }',
+      '}'
+    )
+  } else {
+    instructions.push(
+      'Example format:',
+      '{',
+      '  "face_similarity": "YES",',
+      '  "characteristic_preservation": "YES",',
+      '  "overall_quality": "YES",',
+      '  "explanations": {',
+      '    "face_similarity": "Face matches selfie characteristics",',
+      '    ...',
+      '  }',
+      '}'
+    )
+  }
 
   const parts: Part[] = [{ text: instructions.join('\n') }]
 
@@ -117,6 +155,12 @@ export async function evaluateFinalImage(
   for (const selfie of selfieReferences) {
     parts.push({ text: `Reference ${selfie.description || 'selfie'}` })
     parts.push({ inlineData: { mimeType: selfie.mimeType, data: selfie.base64 } })
+  }
+
+  // Add logo reference if branding evaluation is needed
+  if (brandingInfo && logoReference) {
+    parts.push({ text: logoReference.description || 'Reference logo for branding evaluation' })
+    parts.push({ inlineData: { mimeType: logoReference.mimeType, data: logoReference.base64 } })
   }
 
   const contents: Content[] = [{ role: 'user', parts }]
@@ -150,10 +194,17 @@ export async function evaluateFinalImage(
           evaluation.characteristic_preservation === 'NO'
         ].some(Boolean)
 
-        const allApproved =
+        // Check all required criteria including branding if applicable
+        const baseApproved =
           evaluation.face_similarity === 'YES' &&
           evaluation.characteristic_preservation === 'YES' &&
           evaluation.overall_quality === 'YES'
+        
+        const brandingApproved = (brandingInfo && logoReference)
+          ? evaluation.branding_placement === 'YES'
+          : true // If no branding required, consider it approved
+
+        const allApproved = baseApproved && brandingApproved
 
         const finalStatus: 'Approved' | 'Not Approved' = autoReject || !allApproved ? 'Not Approved' : 'Approved'
 
@@ -164,6 +215,19 @@ export async function evaluateFinalImage(
             const explanation = evaluation.explanations[key] || 'No explanation provided'
             failedCriteria.push(`${key}: ${value} (${explanation})`)
           }
+        })
+
+        // Log detailed evaluation results
+        Logger.info('Final Image Evaluation Details', {
+          face_similarity: evaluation.face_similarity,
+          characteristic_preservation: evaluation.characteristic_preservation,
+          overall_quality: evaluation.overall_quality,
+          branding_placement: evaluation.branding_placement,
+          explanations: evaluation.explanations,
+          finalStatus,
+          autoReject,
+          baseApproved,
+          brandingApproved
         })
 
         return {
@@ -194,12 +258,25 @@ function parseFinalEvaluation(text: string) {
 
   try {
     const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>
-    return {
+    const result: {
+      face_similarity: 'YES' | 'NO' | 'UNCERTAIN'
+      characteristic_preservation: 'YES' | 'NO' | 'UNCERTAIN'
+      overall_quality: 'YES' | 'NO' | 'UNCERTAIN'
+      branding_placement?: 'YES' | 'NO' | 'UNCERTAIN'
+      explanations: Record<string, string>
+    } = {
       face_similarity: normalizeYesNoUncertain(parsed.face_similarity),
       characteristic_preservation: normalizeYesNoUncertain(parsed.characteristic_preservation),
       overall_quality: normalizeYesNoUncertain(parsed.overall_quality),
       explanations: (parsed.explanations as Record<string, string>) || {}
     }
+    
+    // Add branding_placement if present in response
+    if (parsed.branding_placement !== undefined) {
+      result.branding_placement = normalizeYesNoUncertain(parsed.branding_placement)
+    }
+    
+    return result
   } catch (error) {
     Logger.warn('Failed to parse final evaluation JSON', {
       error: error instanceof Error ? error.message : String(error)
@@ -225,6 +302,9 @@ function generateAdjustmentSuggestions(failedCriteria: string[]): string {
     }
     if (criterion.includes('characteristic_preservation')) {
       suggestions.push('Maintain unique facial features without beautification or idealization')
+    }
+    if (criterion.includes('branding_placement')) {
+      suggestions.push('Ensure logo is visible and properly placed according to branding specifications')
     }
     if (criterion.includes('overall_quality')) {
       suggestions.push('Improve overall image quality and remove any visible defects')

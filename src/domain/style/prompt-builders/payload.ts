@@ -1,6 +1,6 @@
 import type { StandardPresetConfig } from '../packages/index'
 
-import { subject } from './subject'
+import { subject } from '../elements/subject'
 
 export type PromptPayload = Record<string, unknown>
 
@@ -27,7 +27,8 @@ export function createBasePayload({
         location_type: defaults.environment.description,
         distance_from_background_ft: backgroundDistance,
         notes: environmentNotes
-      }
+      },
+      branding: {}
     },
     subject: {
       identity: { ...subject.identity },

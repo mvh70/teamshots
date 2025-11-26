@@ -12,11 +12,6 @@ export interface ReferenceImage {
   description?: string
 }
 
-export interface GenerationAssets {
-  downloadSelfie: DownloadSelfieFn
-  downloadAsset: DownloadAssetFn
-  preprocessSelfie: (selfieKey: string) => Promise<Buffer>
-}
 
 export interface GenerationContext {
   generationId: string
@@ -25,19 +20,19 @@ export interface GenerationContext {
   prompt?: string | null
   styleSettings: PhotoStyleSettings
   selfieKeys: string[]
-  primarySelfieKey: string
   processedSelfies: Record<string, Buffer>
   options: {
     useCompositeReference: boolean
-    skipLogoInComposite?: boolean // Skip adding logo to composite (for V2 workflow)
+    workflowVersion?: 'v1' | 'v2' | 'v3' // Workflow version to determine labelInstruction generation
   }
-  assets: GenerationAssets
 }
 
 export interface GenerationPayload {
-  prompt: string
+  prompt: string // JSON only (no rules)
+  mustFollowRules: string[] // Must follow rules from elements
+  freedomRules: string[] // Freedom rules from elements
   referenceImages: ReferenceImage[]
-  labelInstruction: string
+  labelInstruction?: string // Optional for V3 (V3 builds its own prompt structure)
   aspectRatio: string
   aspectRatioDescription: string
 }

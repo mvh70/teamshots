@@ -7,6 +7,9 @@ import { Logger } from '@/lib/logger'
 import { httpFetch } from '@/lib/http'
 import { getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
 
+import sharp from 'sharp'
+import type { SelfieReference } from './evaluator'
+
 interface DownloadParams {
   bucketName: string
   s3Client: S3Client
@@ -131,5 +134,50 @@ export async function uploadGeneratedImagesToS3({
   }
 
   return uploadedKeys
+}
+
+export async function prepareSelfies({
+  bucketName,
+  s3Client,
+  selfieKeys
+}: {
+  bucketName: string
+  s3Client: S3Client
+  selfieKeys: string[]
+}): Promise<{
+  selfieReferences: SelfieReference[]
+  processedSelfies: Record<string, Buffer>
+}> {
+  const prepareSelfieReference = async (
+    key: string
+  ): Promise<{ reference: SelfieReference; buffer: Buffer }> => {
+    const selfieData = await downloadSelfieAsBase64({ bucketName, s3Client, key })
+    const selfieBuffer = Buffer.from(selfieData.base64, 'base64')
+
+    // Rotate based on EXIF orientation (Sharp's .rotate() auto-applies EXIF orientation)
+    const rotatedBuffer = await sharp(selfieBuffer).rotate().toBuffer()
+    const pngBuffer = await sharp(rotatedBuffer).png().toBuffer()
+
+    return {
+      reference: {
+        // No label: labels are only rendered on the composite image, not individual selfies
+        base64: pngBuffer.toString('base64'),
+        mimeType: 'image/png'
+      },
+      buffer: pngBuffer // Use PNG buffer for consistency
+    }
+  }
+
+  const results = await Promise.all(
+    selfieKeys.map((key) => prepareSelfieReference(key))
+  )
+
+  const selfieReferences = results.map((r) => r.reference)
+  const processedSelfies: Record<string, Buffer> = {}
+  selfieKeys.forEach((key, index) => {
+    processedSelfies[key] = results[index].buffer
+  })
+
+  return { selfieReferences, processedSelfies }
 }
 

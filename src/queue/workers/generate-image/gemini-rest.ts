@@ -98,28 +98,122 @@ export async function generateWithGeminiRest(
 
   const safetySettings = mapSafetySettings(options?.safetySettings) || defaultSafetySettings
 
+  // Validate images before sending
+  if (!images || images.length === 0) {
+    Logger.error('generateWithGeminiRest: No reference images provided!', {
+      modelName,
+      imagesCount: images?.length || 0
+    })
+    throw new Error('No reference images provided to Gemini API')
+  }
+
+  // Validate each image has required fields and log missing descriptions
+  for (let i = 0; i < images.length; i++) {
+    const img = images[i]
+    if (!img.base64 || !img.mimeType) {
+      Logger.error('generateWithGeminiRest: Invalid reference image', {
+        index: i,
+        hasBase64: !!img.base64,
+        hasMimeType: !!img.mimeType,
+        description: img.description?.substring(0, 100)
+      })
+      throw new Error(`Reference image at index ${i} is missing base64 or mimeType`)
+    }
+    // Warn if description is missing (critical for model understanding)
+    if (!img.description || img.description.trim().length === 0) {
+      Logger.warn('generateWithGeminiRest: Reference image missing description', {
+        index: i,
+        mimeType: img.mimeType,
+        base64Length: img.base64.length,
+        note: 'Model may not understand the purpose of this image without a description'
+      })
+    }
+  }
+
   // Build the contents array
+  // Match Vertex AI behavior: add description as text part before each image
+  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+    { text: prompt }
+  ]
+  
+  for (const image of images) {
+    // Add description as text part before image (if present)
+    if (image.description) {
+      parts.push({ text: image.description })
+    }
+    // Add image data
+    parts.push({
+      inlineData: {
+        mimeType: image.mimeType,
+        data: image.base64
+      }
+    })
+  }
+  
   const contents = [
     {
       role: 'user' as const,
-      parts: [
-        { text: prompt },
-        // Add reference images
-        ...images.map(img => ({
-          inlineData: {
-            mimeType: img.mimeType,
-            data: img.base64
-          }
-        }))
-      ]
+      parts
     }
   ]
 
-  Logger.debug('Sending Gemini REST API request', {
+  const imageParts = contents[0].parts.filter(p => 'inlineData' in p)
+  const textParts = contents[0].parts.filter(p => 'text' in p)
+  
+  // Log detailed structure to verify descriptions are included
+  // Verify that each image has a description text part before it
+  const expectedTextParts = 1 + images.filter(img => img.description).length // prompt + descriptions
+  const expectedImageParts = images.length
+  
+  if (textParts.length !== expectedTextParts) {
+    Logger.warn('generateWithGeminiRest: Unexpected text parts count', {
+      expected: expectedTextParts,
+      actual: textParts.length,
+      note: 'Some image descriptions may be missing'
+    })
+  }
+  
+  if (imageParts.length !== expectedImageParts) {
+    Logger.warn('generateWithGeminiRest: Unexpected image parts count', {
+      expected: expectedImageParts,
+      actual: imageParts.length
+    })
+  }
+  
+  Logger.info('Sending Gemini REST API request', {
     modelName,
     partsCount: contents[0].parts.length,
-    hasTextPrompt: contents[0].parts.some(p => 'text' in p),
-    imageCount: contents[0].parts.filter(p => 'inlineData' in p).length,
+    textPartsCount: textParts.length,
+    expectedTextParts,
+    imagePartsCount: imageParts.length,
+    expectedImageParts,
+    partsStructure: contents[0].parts.map((part, idx) => {
+      if ('text' in part) {
+        const isPrompt = idx === 0
+        const isDescription = !isPrompt && part.text.includes('REFERENCE IMAGE') || part.text.includes('Company logo') || part.text.includes('Custom background') || part.text.includes('FORMAT')
+        return {
+          index: idx,
+          type: isPrompt ? 'prompt' : (isDescription ? 'description' : 'text'),
+          preview: part.text.substring(0, 150) + (part.text.length > 150 ? '...' : ''),
+          length: part.text.length
+        }
+      } else if ('inlineData' in part) {
+        return {
+          index: idx,
+          type: 'image',
+          mimeType: part.inlineData.mimeType,
+          dataLength: part.inlineData.data.length
+        }
+      }
+      return { index: idx, type: 'unknown' }
+    }),
+    imageDetails: images.map((img, idx) => ({
+      index: idx,
+      mimeType: img.mimeType,
+      base64Length: img.base64?.length || 0,
+      hasDescription: !!img.description,
+      description: img.description?.substring(0, 150) || 'NO_DESCRIPTION'
+    })),
     hasAspectRatio: !!aspectRatio,
     hasResolution: !!resolution,
     generationConfig: Object.keys(generationConfig).length > 0 ? generationConfig : undefined

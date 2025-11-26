@@ -80,7 +80,9 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   })
 
   // Use live data if available, otherwise fall back to static item data
-  const currentJobStatus = liveGeneration?.jobStatus || item.jobStatus
+  // IMPORTANT: Use ternary instead of || to avoid falling back to stale item.jobStatus
+  // when liveGeneration exists but jobStatus is null (happens when generation completes)
+  const currentJobStatus = liveGeneration !== null ? liveGeneration.jobStatus : item.jobStatus
   const currentStatus = liveGeneration?.status || item.status
   
   // Extract generated key from live generation if available
@@ -205,7 +207,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
             creditSource: 'individual',
             isRegeneration: true,
             originalGenerationId: item.id,
-            useV2: true, // Use V2 workflow for regenerations
+            workflowVersion: 'v3', // Use V3 workflow (4-step with parallel person/background generation)
           })
 
       const response = await fetch(apiUrl, {
@@ -234,7 +236,13 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   }
 
   const handleDeleteClick = () => {
-    setShowDeleteDialog(true)
+    // Only show confirmation dialog for original photos with regenerations left
+    // For regenerated images or originals with 0 regenerations, delete directly
+    if (item.isOriginal && item.remainingRegenerations > 0) {
+      setShowDeleteDialog(true)
+    } else {
+      handleDeleteConfirm()
+    }
   }
 
   const handleDeleteConfirm = async () => {

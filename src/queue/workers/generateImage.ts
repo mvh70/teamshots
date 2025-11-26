@@ -6,6 +6,8 @@
 
 import { Worker, Job, UnrecoverableError } from 'bullmq'
 import sharp from 'sharp'
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { randomUUID } from 'node:crypto'
 
 import { ImageGenerationJobData, redis } from '@/queue'
 import { prisma } from '@/lib/prisma'
@@ -16,33 +18,37 @@ import { Env } from '@/lib/env'
 import { sendSupportNotificationEmail } from '@/lib/email'
 import type { SupportNotificationAttachment } from '@/lib/email'
 import { getProgressMessage, formatProgressWithAttempt } from '@/lib/generation-progress-messages'
-import { createS3Client, getS3BucketName } from '@/lib/s3-client'
+import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 import { PhotoStyleSettings } from '@/types/photo-style'
-import { isRateLimitError, MAX_RATE_LIMIT_RETRIES, RATE_LIMIT_SLEEP_MS, delay } from '@/lib/rate-limit-retry'
+import { isRateLimitError, MAX_RATE_LIMIT_RETRIES, RATE_LIMIT_SLEEP_MS } from '@/lib/rate-limit-retry'
 import { asRecord } from '@/lib/type-guards'
+
+// Import shared utilities for V1 workflow improvements
+import { executeWithRateLimitRetry, createProgressRetryCallback } from './generate-image/utils/retry-handler'
 
 import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/domain/style/elements/aspect-ratio/config'
 import type { AspectRatioId } from '@/domain/style/elements/aspect-ratio/config'
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
-import { resolveStyleSettings } from './generate-image/style-settings'
-import { preprocessSelfie } from './generate-image/preprocessing'
+import { extractPackageId } from '@/domain/style/settings-resolver'
+import { getServerPackageConfig } from '@/domain/style/packages/server'
 import { generateWithGemini } from './generate-image/gemini'
 import { evaluateGeneratedImage } from './generate-image/evaluator'
-import type { ImageEvaluationResult, SelfieReference } from './generate-image/evaluator'
+import type { ImageEvaluationResult } from './generate-image/evaluator'
 import { executeV2Workflow } from './generate-image/workflow-v2'
+import { executeV3Workflow } from './generate-image/workflow-v3'
 import {
   downloadAssetAsBase64,
-  downloadSelfieAsBase64,
-  uploadGeneratedImagesToS3
+  uploadGeneratedImagesToS3,
+  prepareSelfies
 } from './generate-image/s3-utils'
-import type { DownloadAssetFn, DownloadSelfieFn } from '@/types/generation'
+import type { V3WorkflowState, PersistedImageReference } from '@/types/workflow'
+import { getWorkflowState, setWorkflowState } from './generate-image/utils/workflow-state'
 
 const USE_COMPOSITE_REFERENCE = Env.boolean('USE_COMPOSITE_REFERENCE', true)
 const SKIP_GEMINI_PROMPT = Env.boolean('SKIP_GEMINI_PROMPT', false)
 
 const s3Client = createS3Client({ forcePathStyle: false })
 const BUCKET_NAME = getS3BucketName()
-const PROGRESS_UPDATE_DEBOUNCE_MS = 100 // Minimum time between identical progress updates
 
 // Note: RATE_LIMIT_SLEEP_MS and MAX_RATE_LIMIT_RETRIES now exported from @/lib/rate-limit-retry
 
@@ -50,7 +56,100 @@ const PROGRESS_UPDATE_DEBOUNCE_MS = 100 // Minimum time between identical progre
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
   'image-generation',
   async (job: Job<ImageGenerationJobData>) => {
-    const { generationId, personId, userId, selfieS3Key, selfieS3Keys, styleSettings, prompt, creditSource, providerOptions } = job.data
+    const { generationId, personId, userId, selfieS3Keys, prompt, creditSource, providerOptions } = job.data as (typeof job.data) & {
+      workflowState?: V3WorkflowState
+    }
+
+    let workflowState = getWorkflowState(job)
+    let cleanupAfterSuccess = false
+
+    const persistWorkflowState = async (nextState: V3WorkflowState | undefined) => {
+      workflowState = nextState
+      await setWorkflowState(job, nextState)
+    }
+
+    const buildIntermediateKey = (fileName: string): string =>
+      `generations/${personId}/${generationId}/intermediate/${fileName}`
+
+    const uploadIntermediateAsset = async (
+      buffer: Buffer,
+      meta: { fileName: string; description?: string; mimeType?: string }
+    ): Promise<PersistedImageReference> => {
+      const relativeKey = buildIntermediateKey(meta.fileName)
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: getS3Key(relativeKey),
+          Body: buffer,
+          ContentType: meta.mimeType ?? 'image/png'
+        })
+      )
+      return {
+        key: relativeKey,
+        mimeType: meta.mimeType ?? 'image/png',
+        description: meta.description
+      }
+    }
+
+    const downloadIntermediateAsset = async (reference: PersistedImageReference): Promise<Buffer> => {
+      const asset = await downloadAssetAsBase64({ bucketName: BUCKET_NAME, s3Client, key: reference.key })
+      if (!asset) {
+        throw new Error(`Intermediate asset missing: ${reference.key}`)
+      }
+      return Buffer.from(asset.base64, 'base64')
+    }
+
+    const referenceFromPersisted = async (reference: PersistedImageReference) => {
+      const buffer = await downloadIntermediateAsset(reference)
+      return {
+        base64: buffer.toString('base64'),
+        mimeType: reference.mimeType,
+        description: reference.description
+      }
+    }
+
+    const deleteIntermediateAssets = async (references: PersistedImageReference[]): Promise<void> => {
+      await Promise.all(
+        references.map((reference) =>
+          s3Client
+            .send(
+              new DeleteObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: getS3Key(reference.key)
+              })
+            )
+            .catch((error: unknown) => {
+              Logger.warn('Failed to delete intermediate asset', {
+                key: reference.key,
+                error: error instanceof Error ? error.message : String(error)
+              })
+            })
+        )
+      )
+    }
+
+    const collectIntermediateReferences = (state?: V3WorkflowState): PersistedImageReference[] => {
+      if (!state) return []
+
+      const refs: PersistedImageReference[] = []
+
+      if (state.composites?.selfie) refs.push(state.composites.selfie)
+      if (state.composites?.background) refs.push(state.composites.background)
+      if (state.step1a?.personImage) refs.push(state.step1a.personImage)
+      if (state.step1a?.backgroundImage) refs.push(state.step1a.backgroundImage)
+      if (state.step1b?.backgroundImage) refs.push(state.step1b.backgroundImage)
+
+      return refs
+    }
+
+    const cleanupIntermediateState = async (): Promise<void> => {
+      const refs = collectIntermediateReferences(workflowState)
+      if (refs.length > 0) {
+        const uniqueRefs = Array.from(new Map(refs.map((ref) => [ref.key, ref])).values())
+        await deleteIntermediateAssets(uniqueRefs)
+      }
+      await persistWorkflowState(undefined)
+    }
     
     // Get attempt info for inclusion in all progress messages
     const maxAttempts = job.opts?.attempts || 3
@@ -59,18 +158,11 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
     // Helper to format progress messages with attempt info (uses centralized utility)
     const formatProgress = (progressMsg: { message: string; emoji?: string }, progress: number): string => {
       const result = formatProgressWithAttempt(progressMsg, progress, currentAttempt)
-      Logger.debug('Progress message formatted', { 
-        original: progressMsg.message.substring(0, 50), 
-        progress,
-        attempt: currentAttempt,
-        final: result.substring(0, 80) 
-      })
       return result
     }
     
     try {
       Logger.info(`Starting image generation for job ${job.id}, generation ${generationId}, attempt ${currentAttempt}/${maxAttempts}`)
-      Logger.debug('Reference mode selected', { useCompositeReference: USE_COMPOSITE_REFERENCE })
       
       // Check if generation exists before processing
       const generation = await prisma.generation.findUnique({
@@ -78,13 +170,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         select: {
           id: true,
           status: true,
-          styleSettings: true,
-          context: {
-            select: {
-              name: true,
-              settings: true
-            }
-          }
+          styleSettings: true
         }
       })
 
@@ -129,19 +215,25 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       }
       
       // Background removal processing disabled - using original selfie
-      Logger.debug('Using original selfie without background removal processing')
+
+      if (!generation.styleSettings) {
+        throw new Error(`Generation ${generationId} is missing styleSettings. This should never happen for valid generations.`)
+      }
 
       const savedStyleSettings = asRecord(generation.styleSettings)
-      const contextSettings = asRecord(generation.context?.settings)
-      const jobStyleSettingsRecord = asRecord(styleSettings)
+      if (!savedStyleSettings) {
+        throw new Error(`Generation ${generationId} has invalid styleSettings format. Expected object, got: ${typeof generation.styleSettings}`)
+      }
 
-      const styleResolution = resolveStyleSettings({
-        savedStyleSettings,
-        contextSettings,
-        jobStyleSettings: jobStyleSettingsRecord
-      })
-
-      const { packageId, stylePackage, mergedStyleSettings } = styleResolution
+      // Extract packageId and deserialize settings
+      const packageId = extractPackageId(savedStyleSettings) || 'headshot1'
+      const stylePackage = getServerPackageConfig(packageId)
+      const mergedStyleSettings = stylePackage.persistenceAdapter.deserialize(savedStyleSettings) as PhotoStyleSettings
+      
+      // Ensure presetId is set
+      if (!mergedStyleSettings.presetId) {
+        mergedStyleSettings.presetId = stylePackage.defaultPresetId
+      }
 
       const shotTypeInput =
         typeof mergedStyleSettings.shotType?.type === 'string'
@@ -150,126 +242,70 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       const shotTypeConfig = resolveShotType(shotTypeInput)
       const shotLabel = shotTypeConfig.label
       const shotDescription = shotTypeConfig.framingDescription
-
-      Logger.debug('Generation context', { name: generation.context?.name })
-      Logger.debug('Raw saved styleSettings', { savedStyleSettings })
-      Logger.debug('Raw context settings', { settings: generation.context?.settings })
-      Logger.debug('Raw job styleSettings', { styleSettings })
-      Logger.debug('Package ID', { packageId })
-      Logger.debug('ShotType in mergedStyleSettings', { shotType: mergedStyleSettings.shotType })
       
-      const downloadSelfie: DownloadSelfieFn = (key) =>
-        downloadSelfieAsBase64({ bucketName: BUCKET_NAME, s3Client, key })
+      const providedKeys = selfieS3Keys
 
-      const downloadAsset: DownloadAssetFn = (key) =>
-        downloadAssetAsBase64({ bucketName: BUCKET_NAME, s3Client, key })
-
-      const providedKeys = Array.isArray(selfieS3Keys) && selfieS3Keys.length > 0
-        ? selfieS3Keys
-        : (selfieS3Key ? [selfieS3Key] : [])
-
-      if (providedKeys.length === 0) {
+      if (!providedKeys || providedKeys.length === 0) {
         throw new Error('At least one selfieS3Key is required')
       }
 
-      // Check if V2 workflow is requested (needed to skip preprocessing progress)
-      const useV2 = providerOptions?.useV2 === true
-      const skipPreprocessingProgress = useV2 // Skip preprocessing progress for V2 (Step 2 handles it)
+      // Determine workflow version (defaults to v3)
+      const workflowVersion = (providerOptions?.workflowVersion as 'v1' | 'v2' | 'v3' | undefined) || 'v3'
 
-      const primarySelfieKey = selfieS3Key ?? providedKeys[0]
-
-      const processedSelfies: Record<string, Buffer> = {}
-
-      let lastProgressMessage = ''
-      let lastProgressUpdateTime = 0
-      const preprocessWithProgress = async (key: string): Promise<Buffer> => {
-        if (processedSelfies[key]) {
-          return processedSelfies[key]
-        }
-        const buffer = await preprocessSelfie({
-          packageId,
-          selfieKey: key,
-          styleSettings: mergedStyleSettings,
-          downloadSelfie,
-          skipLogoPlacement: useV2, // Skip logo placement for V2 (Step 1 handles it separately)
-          skipBackgroundProcessing: useV2, // Skip background processing for V2 (Step 2 handles it)
-          onStepProgress: skipPreprocessingProgress 
-            ? undefined // Skip progress updates for V2 workflow
-            : async (stepName) => {
-                const progressMsg = getProgressMessage(stepName)
-                const formattedMsg = formatProgress(progressMsg, 15)
-
-                // Only debounce identical messages within a short time window
-                const now = Date.now()
-                if (formattedMsg === lastProgressMessage && now - lastProgressUpdateTime < PROGRESS_UPDATE_DEBOUNCE_MS) {
-                  Logger.debug('Skipping duplicate progress update', {
-                    stepName,
-                    message: formattedMsg.substring(0, 50)
-                  })
-                  return
-                }
-
-                try {
-                  await job.updateProgress({ progress: 15, message: formattedMsg })
-                  lastProgressMessage = formattedMsg
-                  lastProgressUpdateTime = Date.now()
-                  Logger.debug('Progress update sent for preprocessing step', {
-                    stepName,
-                    progress: 15,
-                    messagePreview: formattedMsg.substring(0, 50)
-                  })
-                } catch (err: unknown) {
-                  Logger.warn('Failed to update progress', {
-                    error: err instanceof Error ? err.message : String(err)
-                  })
-                }
-              }
-        })
-        processedSelfies[key] = buffer
-        return buffer
-      }
-
-      await preprocessWithProgress(primarySelfieKey)
-
-      const selfieReferences: SelfieReference[] = []
-      for (let index = 0; index < providedKeys.length; index += 1) {
-        const key = providedKeys[index]
-        const processedBuffer = await preprocessWithProgress(key)
-        const pngBuffer = await sharp(processedBuffer).png().toBuffer()
-        selfieReferences.push({
-          label: `SELFIE${index + 1}`,
-          base64: pngBuffer.toString('base64'),
-          mimeType: 'image/png'
-        })
-      }
-
-      const generationPayload = await stylePackage.buildGenerationPayload({
-        generationId,
-        personId,
-        userId,
-        prompt,
-        styleSettings: mergedStyleSettings as PhotoStyleSettings,
-        selfieKeys: providedKeys,
-        primarySelfieKey,
-        processedSelfies,
-        options: {
-          useCompositeReference: USE_COMPOSITE_REFERENCE,
-          skipLogoInComposite: useV2 // Skip logo in composite for V2 (Step 1/2 handle it separately)
-        },
-        assets: {
-          downloadSelfie,
-          downloadAsset,
-          preprocessSelfie: preprocessWithProgress
-        }
+      // Centralized selfie preparation (download, rotate, normalize)
+      const { selfieReferences, processedSelfies } = await prepareSelfies({
+        bucketName: BUCKET_NAME,
+        s3Client,
+        selfieKeys: providedKeys
       })
 
-      const {
-        prompt: basePrompt,
-        referenceImages,
-        labelInstruction,
-        aspectRatio,
-        aspectRatioDescription
-      } = generationPayload
+      let basePrompt: string
+      let mustFollowRulesFromPayload: string[] = []
+      let freedomRulesFromPayload: string[] = []
+      let referenceImages =
+        [] as {
+          description?: string
+          base64: string
+          mimeType: string
+        }[]
+      let labelInstruction: string | undefined
+      let aspectRatioFromPayload: string
+      let aspectRatioDescription: string
+
+      const canUseCachedPayload =
+        workflowVersion === 'v3' &&
+        Boolean(workflowState?.cachedPayload) &&
+        Boolean(workflowState?.composites?.selfie)
+
+      if (canUseCachedPayload && workflowState?.cachedPayload) {
+        basePrompt = workflowState.cachedPayload.prompt
+        mustFollowRulesFromPayload = workflowState.cachedPayload.mustFollowRules
+        freedomRulesFromPayload = workflowState.cachedPayload.freedomRules
+        aspectRatioFromPayload = workflowState.cachedPayload.aspectRatio
+        aspectRatioDescription = workflowState.cachedPayload.aspectRatioDescription
+      } else {
+        const generationPayload = await stylePackage.buildGenerationPayload({
+          generationId,
+          personId,
+          userId,
+          prompt,
+          styleSettings: mergedStyleSettings as PhotoStyleSettings,
+          selfieKeys: providedKeys,
+          processedSelfies,
+          options: {
+            useCompositeReference: USE_COMPOSITE_REFERENCE,
+            workflowVersion
+          }
+        })
+
+        basePrompt = generationPayload.prompt
+        mustFollowRulesFromPayload = generationPayload.mustFollowRules || []
+        freedomRulesFromPayload = generationPayload.freedomRules || []
+        referenceImages = generationPayload.referenceImages
+        labelInstruction = generationPayload.labelInstruction
+        aspectRatioFromPayload = generationPayload.aspectRatio
+        aspectRatioDescription = generationPayload.aspectRatioDescription
+      }
 
       const finalPrompt = labelInstruction ? `${basePrompt}\n\n${labelInstruction}` : basePrompt
 
@@ -281,18 +317,105 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         })
       }
 
-      Logger.info('Generated Prompt for Gemini', { prompt: finalPrompt })
+      Logger.info('Generated Prompt for Gemini', { prompt: basePrompt })
 
       let approvedImageBuffers: Buffer[] | undefined
 
-      if (useV2) {
+      if (workflowVersion === 'v3') {
+        try {
+          const v3SelfieReferences = selfieReferences.map((ref, index) => ({
+            label: ref.label || `SELFIE${index + 1}`,
+            base64: ref.base64,
+            mimeType: ref.mimeType
+          }))
+
+          let v3SelfieComposite
+
+          if (workflowState?.composites?.selfie) {
+            v3SelfieComposite = await referenceFromPersisted(workflowState.composites.selfie)
+          } else {
+            const generatedComposite = referenceImages.find((reference) =>
+              reference.description?.toLowerCase().includes('composite')
+            )
+
+            if (!generatedComposite) {
+              throw new Error('V3 workflow requires a selfie composite, but none was generated.')
+            }
+
+            v3SelfieComposite = generatedComposite
+
+            const persistedComposite = await uploadIntermediateAsset(
+              Buffer.from(generatedComposite.base64, 'base64'),
+              {
+                fileName: `selfie-composite-${randomUUID()}.png`,
+                description: generatedComposite.description,
+                mimeType: generatedComposite.mimeType ?? 'image/png'
+              }
+            )
+
+            const patch: V3WorkflowState = {
+              ...workflowState,
+              cachedPayload: {
+                prompt: basePrompt,
+                mustFollowRules: mustFollowRulesFromPayload,
+                freedomRules: freedomRulesFromPayload,
+                aspectRatio: aspectRatioFromPayload,
+                aspectRatioDescription
+              },
+              composites: {
+                ...(workflowState?.composites ?? {}),
+                selfie: persistedComposite
+              }
+            }
+
+            await persistWorkflowState(patch)
+            workflowState = patch
+          }
+
+          const intermediateStorage = {
+            saveBuffer: uploadIntermediateAsset,
+            loadBuffer: (reference: PersistedImageReference) => downloadIntermediateAsset(reference)
+          }
+
+          const v3Result = await executeV3Workflow({
+            job,
+            generationId,
+            personId,
+            userId,
+            selfieReferences: v3SelfieReferences,
+            selfieComposite: v3SelfieComposite,
+            styleSettings: mergedStyleSettings,
+            prompt: basePrompt,
+            mustFollowRules: mustFollowRulesFromPayload,
+            freedomRules: freedomRulesFromPayload,
+            aspectRatio: aspectRatioFromPayload,
+            downloadAsset: (key) => downloadAssetAsBase64({ bucketName: BUCKET_NAME, s3Client, key }),
+            currentAttempt,
+            maxAttempts,
+            debugMode: providerOptions?.debugMode === true,
+            stopAfterStep: providerOptions?.stopAfterStep as number | undefined,
+            workflowState,
+            persistWorkflowState,
+            intermediateStorage
+          })
+
+          approvedImageBuffers = v3Result.approvedImageBuffers
+          cleanupAfterSuccess = true
+        } catch (error) {
+          Logger.error('V3 workflow failed', {
+            generationId,
+            error: error instanceof Error ? error.message : String(error)
+          })
+          throw error
+        }
+      } else if (workflowVersion === 'v2') {
         Logger.info('Using V2 workflow for image generation', { generationId })
 
         try {
           // For V2 workflow, we need to modify the selfie references to exclude logos
           // The V2 workflow handles logos separately in Step 2
-          const v2SelfieReferences = selfieReferences.map(ref => ({
-            label: ref.label,
+          const v2SelfieReferences = selfieReferences.map((ref, index) => ({
+            label: ref.label || `SELFIE${index + 1}`, // Provide default label if missing
             base64: ref.base64,
             mimeType: ref.mimeType
           }))
@@ -305,9 +428,9 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             selfieReferences: v2SelfieReferences,
             styleSettings: mergedStyleSettings,
             prompt: basePrompt, // Use base prompt without label instructions for V2
-            aspectRatio,
+            aspectRatio: aspectRatioFromPayload,
             resolution: undefined, // V2 workflow handles resolution internally
-            downloadAsset,
+            downloadAsset: (key) => downloadAssetAsBase64({ bucketName: BUCKET_NAME, s3Client, key }),
             currentAttempt,
             maxAttempts,
             debugMode: providerOptions?.debugMode === true
@@ -357,7 +480,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       }
 
       const resolvedAspectRatioId =
-        (aspectRatio as AspectRatioId | undefined) ?? (DEFAULT_ASPECT_RATIO.id as AspectRatioId)
+        (aspectRatioFromPayload as AspectRatioId | undefined) ?? (DEFAULT_ASPECT_RATIO.id as AspectRatioId)
       const aspectRatioConfig =
         ASPECT_RATIOS[resolvedAspectRatioId] ?? DEFAULT_ASPECT_RATIO
 
@@ -380,71 +503,46 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       )
 
       while (localAttempt < MAX_LOCAL_GENERATION_ATTEMPTS) {
-        let generatedBuffers: Buffer[] = []
-
-        let rateLimitRetries = 0
-        while (true) {
-          try {
-            generatedBuffers = await generateWithGemini(finalPrompt, referenceImages, aspectRatio, resolution)
-            break
-          } catch (error) {
-            if (isModelNotFoundError(error)) {
-              Logger.error('Gemini model not found for generation', {
-                generationId,
-                model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
-              })
-              await job.updateProgress({
-                progress: 55,
-                message: formatProgress({
-                  message:
-                    'Gemini model configuration error. Please verify GEMINI_IMAGE_MODEL or Vertex AI access.',
-                  emoji: '⚠️'
-                }, 55)
-              })
-              throw error
+        // Use shared retry handler for rate limit retries
+        const generatedBuffers = await executeWithRateLimitRetry(
+          async () => {
+            const buffers = await generateWithGemini(finalPrompt, referenceImages, aspectRatioFromPayload, resolution)
+            
+            // Check for model not found error after generation
+            if (!buffers || buffers.length === 0) {
+              throw new Error('AI generation returned no images')
             }
-
-            if (isRateLimitError(error)) {
-              rateLimitRetries += 1
-              if (rateLimitRetries > MAX_RATE_LIMIT_RETRIES) {
-                Logger.error('Exceeded Gemini rate-limit retries', {
-                  generationId,
-                  rateLimitRetries
-                })
-                throw error
-              }
-
-              const waitSeconds = Math.round(RATE_LIMIT_SLEEP_MS / 1000)
-              Logger.warn('Gemini request rate limited; waiting before retry', {
-                generationId,
-                waitSeconds,
-                rateLimitRetries
-              })
-
-              await job.updateProgress({
-                progress: 55,
-                message: formatProgress({
-                  message: `Gemini is busy (rate limited). Trying again in ${waitSeconds} seconds...`,
-                  emoji: '⏳'
-                }, 55)
-              })
-
-              await delay(RATE_LIMIT_SLEEP_MS)
-              continue
-            }
-
-            throw error
+            
+            return buffers
+          },
+          {
+            maxRetries: MAX_RATE_LIMIT_RETRIES,
+            sleepMs: RATE_LIMIT_SLEEP_MS,
+            operationName: 'V1 Gemini generation'
+          },
+          createProgressRetryCallback(job, 55)
+        ).catch((error) => {
+          // Handle model not found error specifically
+          if (isModelNotFoundError(error)) {
+            Logger.error('Gemini model not found for generation', {
+              generationId,
+              model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
+            })
+            job.updateProgress({
+              progress: 55,
+              message: formatProgress({
+                message: 'Gemini model configuration error. Please verify GEMINI_IMAGE_MODEL or Vertex AI access.',
+                emoji: '⚠️'
+              }, 55)
+            }).catch(() => {}) // Ignore progress update errors
           }
-        }
+          throw error
+        })
 
         await job.updateProgress({
           progress: 60,
           message: formatProgress(getProgressMessage(), 60)
         })
-
-        if (!generatedBuffers.length) {
-          throw new Error('AI generation returned no images')
-        }
 
         const processedVariants = await Promise.all(
           generatedBuffers.map(async (buffer) => {
@@ -575,9 +673,10 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       } // End of original V1 workflow
 
       // Run final evaluation on V2 output if using V2 workflow
-      if (useV2 && approvedImageBuffers && approvedImageBuffers.length > 0) {
+      // Note: V3 has its own evaluation in Step 4, so we skip this for V3
+      if (workflowVersion === 'v2' && approvedImageBuffers && approvedImageBuffers.length > 0) {
         const resolvedAspectRatioId =
-          (aspectRatio as AspectRatioId | undefined) ?? (DEFAULT_ASPECT_RATIO.id as AspectRatioId)
+          (aspectRatioFromPayload as AspectRatioId | undefined) ?? (DEFAULT_ASPECT_RATIO.id as AspectRatioId)
         const aspectRatioConfig =
           ASPECT_RATIOS[resolvedAspectRatioId] ?? DEFAULT_ASPECT_RATIO
 
@@ -693,6 +792,11 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       Logger.info(`Image generation completed for job ${job.id}`)
       
       Telemetry.increment('generation.worker.success')
+
+      if (cleanupAfterSuccess) {
+        await cleanupIntermediateState()
+      }
+
       return {
         success: true,
         generationId,
@@ -702,7 +806,6 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       
     } catch (error) {
       Telemetry.increment('generation.worker.error')
-      
       // Extract comprehensive error details
       let errorMessage = error instanceof Error ? error.message : String(error)
       const errorDetails: Record<string, unknown> = {
@@ -776,6 +879,17 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       )
       
       const isFinalAttempt = job.attemptsMade >= maxAttempts - 1 || isWorkflowFailure
+
+      if (isFinalAttempt) {
+        try {
+          await cleanupIntermediateState()
+        } catch (cleanupError) {
+          Logger.warn('Failed to cleanup intermediate assets after final failure', {
+            generationId,
+            error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+          })
+        }
+      }
       
       // Get current progress for retry message
       const currentProgress = typeof job.progress === 'object' && job.progress !== null && 'progress' in job.progress 
@@ -880,6 +994,15 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             select: { email: true }
           }).then(u => u?.email) : undefined
 
+          // Extract packageId from generation record for error reporting
+          const errorGeneration = await prisma.generation.findUnique({
+            where: { id: generationId },
+            select: { styleSettings: true }
+          })
+          const errorPackageId = errorGeneration?.styleSettings && typeof errorGeneration.styleSettings === 'object' && !Array.isArray(errorGeneration.styleSettings)
+            ? extractPackageId(errorGeneration.styleSettings as Record<string, unknown>) || 'unknown'
+            : 'unknown'
+
           await sendSupportNotificationEmail({
             subject: `Image Generation Failed - Generation ${generationId}`,
             message: `Image generation has failed after ${maxAttempts} attempts.
@@ -905,8 +1028,8 @@ Error Details: ${JSON.stringify(errorDetails, null, 2)}`,
               errorMessage: finalErrorMessage,
               errorName: error instanceof Error ? error.name : 'Unknown',
               errorDetails,
-              selfieS3Key,
-              packageId: (styleSettings as { packageId?: string })?.packageId || 'unknown'
+              selfieS3Keys,
+              packageId: errorPackageId
             }
           })
           Logger.info(`Support notification sent for failed generation ${generationId}`)

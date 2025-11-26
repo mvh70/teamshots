@@ -7,17 +7,17 @@
 
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
-import { Env } from '@/lib/env'
 import { getPackageConfig } from '@/domain/style/packages'
 import { extractPackageId } from '@/domain/style/settings-resolver'
-import { imageGenerationQueue } from '@/queue'
 import type { Generation } from '@prisma/client'
+import { enqueueGenerationJob, determineWorkflowVersion } from './generation-helpers'
 
 export interface RegenerateOptions {
   sourceGenerationId: string
   personId: string
   userId?: string
   creditSource: 'individual' | 'team'
+  workflowVersion?: 'v1' | 'v2' | 'v3' // Workflow version to use (defaults to v3)
 }
 
 export interface RegenerationResult {
@@ -30,7 +30,7 @@ export class RegenerationService {
    * Regenerates an existing generation with preserved style settings
    */
   static async regenerate(options: RegenerateOptions): Promise<RegenerationResult> {
-    const { sourceGenerationId, personId, userId, creditSource } = options
+    const { sourceGenerationId, personId, userId, creditSource, workflowVersion } = options
 
     // Get the source generation to regenerate from
     const sourceGeneration = await prisma.generation.findFirst({
@@ -106,11 +106,6 @@ export class RegenerationService {
       }
     }
     
-    // For the job, we need to deserialize to get PhotoStyleSettings format
-    const packageId = extractPackageId(serializedStyleSettings) || 'headshot1'
-    const pkg = getPackageConfig(packageId)
-    const finalStyleSettings = pkg.persistenceAdapter.deserialize(serializedStyleSettings)
-
     // Create new generation record
     const generation = await prisma.generation.create({
       data: {
@@ -143,32 +138,16 @@ export class RegenerationService {
       ? storedSelfieKeys 
       : [sourceGeneration.uploadedPhotoKey]
 
-    const job = await imageGenerationQueue.add('generate', {
+    const job = await enqueueGenerationJob({
       generationId: generation.id,
       personId: personId,
       userId: userId,
-      selfieS3Key: sourceGeneration.uploadedPhotoKey,
       selfieS3Keys: jobSelfieS3Keys,
-      styleSettings: finalStyleSettings as Record<string, unknown>,
       prompt: 'Professional headshot with same style as original',
-      providerOptions: {
-        model: Env.string('GEMINI_IMAGE_MODEL'),
-        numVariations: 4,
-        useV2: true, // Use V2 workflow for regenerations
-        debugMode: false,
-      },
+      workflowVersion: determineWorkflowVersion(workflowVersion),
+      debugMode: false,
       creditSource: creditSource,
-      selfieId: sourceGeneration.selfieId,
-    }, {
       priority: creditSource === 'team' ? 1 : 0,
-      jobId: `gen-${generation.id}`,
-    })
-
-    Logger.info('Regeneration queued', {
-      generationId: generation.id,
-      sourceGenerationId: sourceGeneration.id,
-      jobId: job.id,
-      creditSource
     })
 
     return {

@@ -83,6 +83,17 @@ export const EXPRESSION_LABELS: Record<NonNullable<ExpressionType>, string> = {
   'user-choice': 'use photographer-selected expression'
 }
 
+export const EXPRESSION_DESCRIPTIONS: Record<ExpressionType, string> = {
+  genuine_smile: 'Genuine smile showing teeth - approachable, friendly.',
+  soft_smile: 'Soft professional smile without showing teeth - professional, subtle.',
+  neutral_serious: 'Neutral/serious expression - executive, dramatic.',
+  laugh_joy: 'Joyful laugh with bright smile - lifestyle, authentic.',
+  contemplative: 'Thoughtful engaged expression - editorial, artistic.',
+  confident: 'Confident poised look - professional, subtle.',
+  sad: 'Subtle contemplative expression - editorial, artistic.',
+  'user-choice': 'Natural expression facing camera.'
+}
+
 export function resolveExpression(value: string): ExpressionConfig | undefined {
   return EXPRESSION_CONFIGS.find(e => e.value === value)
 }
@@ -91,4 +102,9 @@ export function getExpressionLabel(type?: ExpressionType | null): string {
   if (!type) return EXPRESSION_LABELS.neutral_serious
   const expressionType = type as NonNullable<ExpressionType>
   return EXPRESSION_LABELS[expressionType] ?? EXPRESSION_LABELS.neutral_serious
+}
+
+export function getExpressionDescription(type?: ExpressionType | null): string {
+  const expressionType = type || 'soft_smile'
+  return EXPRESSION_DESCRIPTIONS[expressionType] ?? EXPRESSION_DESCRIPTIONS.soft_smile
 }

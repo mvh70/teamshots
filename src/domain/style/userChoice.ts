@@ -31,11 +31,47 @@ export function hasUserDefinedFields(obj: unknown): boolean {
 
 export function hasUneditedEditableFields(
   current: Record<string, unknown>,
-  original: Record<string, unknown>
+  original: Record<string, unknown>,
+  packageId?: string
 ): boolean {
   // First check if there are any editable fields at all
   if (!hasUserDefinedFields(current)) {
     return false
+  }
+
+  // Special handling for clothingColors at top level: resolve defaults before checking
+  if (packageId && current.clothingColors && original.clothingColors) {
+    const pkg = getPackageConfig(packageId)
+    const packageDefaults = pkg.defaultSettings?.clothingColors
+    const defaultColors = (packageDefaults as { colors?: Record<string, unknown> } | undefined)?.colors || {}
+    
+    const currentClothingColors = current.clothingColors as Record<string, unknown>
+    const originalClothingColors = original.clothingColors as Record<string, unknown>
+    
+    // Check if it's user-choice
+    if ((currentClothingColors.type === 'user-choice' || originalClothingColors.type === 'user-choice')) {
+      const currentColors = (currentClothingColors.colors as Record<string, unknown>) || {}
+      
+      // Merge defaults with current (same logic as PhotoStyleSettings.tsx)
+      const resolvedColors = {
+        ...defaultColors,
+        ...currentColors
+      }
+      
+      const hasColors = !!(resolvedColors.topCover || resolvedColors.topBase || resolvedColors.bottom || resolvedColors.shoes)
+      
+      // If resolved colors exist (from defaults or current), consider it as finished
+      if (hasColors) {
+        // Remove clothingColors from comparison since it's considered finished
+        const currentWithoutClothingColors = { ...current }
+        const originalWithoutClothingColors = { ...original }
+        delete currentWithoutClothingColors.clothingColors
+        delete originalWithoutClothingColors.clothingColors
+        
+        // Continue checking other fields
+        return hasUneditedEditableFields(currentWithoutClothingColors, originalWithoutClothingColors, packageId)
+      }
+    }
   }
 
   const seen = new Set<unknown>()
@@ -54,6 +90,14 @@ export function hasUneditedEditableFields(
 
     // If this is a user-choice field, check if it has been modified
     if (normalize(currentType) === 'user-choice') {
+      // Check if colors are present (for clothingColors or similar)
+      const currentColors = (currentRecord.colors as Record<string, unknown>) || {}
+      const hasCurrentColors = !!(currentColors.topCover || currentColors.topBase || currentColors.bottom || currentColors.shoes)
+      
+      if (hasCurrentColors) {
+        return false // Not unedited - has colors so it's considered finished
+      }
+      
       // Compare the current and original objects
       return JSON.stringify(currentRecord) === JSON.stringify(originalRecord)
     }
@@ -145,12 +189,25 @@ export function areAllCustomizableSectionsCustomized(
     const settings = currentSettings as Record<string, unknown>
     
     if (categoryKey === 'clothingColors') {
-      // For clothingColors, check if colors are set
-      const colors = (settings.colors as Record<string, unknown>) || {}
-      const hasColors = !!(colors.topCover || colors.topBase || colors.bottom || colors.shoes)
-      if (!hasColors) {
-        return false // clothingColors is user-choice but no colors set
+      // Resolve clothingColors the same way the UI does - merge defaults with current values
+      const packageDefaults = pkg.defaultSettings?.clothingColors
+      const defaultColors = (packageDefaults as { colors?: Record<string, unknown> } | undefined)?.colors || {}
+      const currentColors = (settings.colors as Record<string, unknown>) || {}
+      
+      // Merge defaults with current (same logic as PhotoStyleSettings.tsx resolvedClothingColors)
+      const resolvedColors = {
+        ...defaultColors,
+        ...currentColors
       }
+      
+      // Check if resolved colors have any values set
+      const hasColors = !!(resolvedColors.topCover || resolvedColors.topBase || resolvedColors.bottom || resolvedColors.shoes)
+      
+      // If no colors are set (neither in current nor defaults), it's not customized
+      if (!hasColors) {
+        return false // clothingColors is user-choice but no colors set and no package defaults
+      }
+      // If colors exist (either from current settings or defaults), consider it as finished
     } else {
       // For other categories, if type/style is still 'user-choice', it means not customized
       // When user selects an option, type changes from 'user-choice' to the actual value

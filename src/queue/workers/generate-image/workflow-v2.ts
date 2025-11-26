@@ -2,7 +2,6 @@ import { Logger } from '@/lib/logger'
 import { getProgressMessage, formatProgressMessage } from '@/lib/generation-progress-messages'
 import { promises as fs } from 'fs'
 import path from 'path'
-import sharp from 'sharp'
 import type { Job } from 'bullmq'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import type { ReferenceImage, DownloadAssetFn } from '@/types/generation'
@@ -115,20 +114,9 @@ export async function executeV2Workflow({
     expectedDimensions: `${expectedWidth}x${expectedHeight}`
   })
 
-  // Normalize selfie rotation (handle EXIF orientation)
-  const processedSelfieReferences = await Promise.all(selfieReferences.map(async (ref) => {
-    try {
-      const buffer = Buffer.from(ref.base64, 'base64')
-      const normalizedBuffer = await sharp(buffer).rotate().toBuffer()
-      return {
-        ...ref,
-        base64: normalizedBuffer.toString('base64')
-      }
-    } catch (error) {
-      Logger.warn('Failed to normalize selfie rotation', { error })
-      return ref
-    }
-  }))
+  // Selfie rotation is already normalized in generateImage.ts before PNG conversion
+  // No need to normalize again here
+  const processedSelfieReferences = selfieReferences
 
   // Log base prompt from package builder in debug mode
   if (debugMode) {

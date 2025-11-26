@@ -34,7 +34,10 @@ export default function BrandingSelector({
   const previewSetRef = useRef<string | null>(null)
 
   const handleTypeChange = (type: BrandingSettings['type']) => {
-    const newSettings: BrandingSettings = { type }
+    const newSettings: BrandingSettings = { 
+      type,
+      position: value.position // Preserve position when toggling type
+    }
     
     // Set default values based on type
     switch (type) {

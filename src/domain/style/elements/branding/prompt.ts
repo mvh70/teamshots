@@ -49,7 +49,7 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
     ]
   },
   'business-casual': {
-    placement: 'center chest area of the base layer (t-shirt, knit top, or blouse)',
+    placement: 'center chest area of the base layer (t-shirt, knit top, or blouse). The logo should not spill over the edge of the garment. For more realistic effect, part of the logo can be hidden behind the top layer.',
     rules: [
       'Place the provided brand logo exactly once on the center chest area of the base garment.',
       ...CLOTHING_BRANDING_RULES_BASE
@@ -188,19 +188,24 @@ export function generateBrandingPrompt({
       branding: {
         enabled: true,
         position: 'background',
-        placement: typeof placement === 'string' ? placement : 'on background wall'
+        placement: typeof placement === 'string' ? placement : 'on background wall',
+        rules // Store rules in the branding object for Step 3
       },
       rules
     }
   }
 
   if (position === 'elements') {
-    // Extract all instructions (logo_source, rules) from ELEMENT_BRANDING_PROMPT
-    const { logo_source, rules: configRules, allowed_elements } = ELEMENT_BRANDING_PROMPT
+    // Extract all instructions (logo_source, placement, rules) from ELEMENT_BRANDING_PROMPT
+    const { logo_source, placement, rules: configRules, allowed_elements } = ELEMENT_BRANDING_PROMPT
     const rules: string[] = []
     
     if (typeof logo_source === 'string') {
       rules.push(logo_source)
+    }
+    
+    if (typeof placement === 'string') {
+      rules.push(placement)
     }
     
     if (Array.isArray(configRules)) {
@@ -211,7 +216,9 @@ export function generateBrandingPrompt({
       branding: {
         enabled: true,
         position: 'elements',
-        allowed_elements
+        placement: typeof placement === 'string' ? placement : 'on standing banner flag',
+        allowed_elements,
+        rules // Store rules in the branding object for Step 3
       },
       rules
     }

@@ -22,7 +22,8 @@ export function generateShotTypePrompt(settings: PhotoStyleSettings): ShotTypePr
 
   return {
     framing: {
-      shot_type: shotType.label,
+      // Store the ID (not label) so workflow can resolve it consistently for both generation and evaluation
+      shot_type: shotType.id,
       crop_points: shotType.framingDescription,
       composition: shotType.compositionNotes ?? shotType.framingDescription
     }

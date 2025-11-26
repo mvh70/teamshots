@@ -7,6 +7,7 @@
 import { Queue, type ConnectionOptions } from 'bullmq'
 import IORedis from 'ioredis'
 import { Env } from '@/lib/env'
+import type { V3WorkflowState } from '@/types/workflow'
 
 // Redis connection configuration
 const connection: ConnectionOptions = {
@@ -34,13 +35,11 @@ export interface ImageGenerationJobData {
   generationId: string
   personId: string
   userId?: string
-  selfieId: string
-  selfieS3Key: string
-  selfieS3Keys?: string[] // Optional array of multiple selfies for multi-selfie generation
-  styleSettings: Record<string, unknown>
+  selfieS3Keys: string[] // Array of multiple selfies for multi-selfie generation
   prompt: string
   providerOptions?: Record<string, unknown>
   creditSource: 'individual' | 'team'
+  workflowState?: V3WorkflowState
 }
 
 export interface BackgroundRemovalJobData {

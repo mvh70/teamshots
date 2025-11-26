@@ -2,105 +2,101 @@ import { Logger } from '@/lib/logger'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 
 /**
- * Compose composition prompt from package-built base prompt and scene specifications
- * Uses full base prompt with scene specifications and adds integration instructions
+ * Compose composition prompt from package-built base prompt (JSON only) and element rules
+ * Base prompt contains only JSON - rules are passed separately from elements
+ * Backward compatible: if rules are embedded in basePrompt (V2), they will be extracted
  */
 export function composeCompositionPrompt(
-  basePrompt: string,
-  hasCustomBackground: boolean,
+  basePrompt: string, // JSON only (no rules) for V3, or JSON + rules for V2 (backward compat)
   aspectRatioDescription?: string,
   styleSettings?: PhotoStyleSettings,
-  shotDescription?: string
+  shotDescription?: string,
+  mustFollowRules?: string[], // Rules from elements (V3)
+  freedomRules?: string[] // Freedom rules from elements (V3)
 ): string {
   try {
-    // Split base prompt into JSON and rules sections
+    // Check if basePrompt contains rules section (V2 backward compatibility)
     const parts = basePrompt.split('## Rules to Follow')
     const jsonPart = parts[0].trim()
+    const rulesSection = parts[1] ? parts[1].trim() : ''
     
     // Parse the JSON prompt from package builder
     const promptObj = JSON.parse(jsonPart)
     
-    // Build composition prompt with scene-related elements only
-    // Subject is already generated in Step 1, so we only need:
-    // - scene (environment, background)
-    // - framing (shot_type, crop_points, composition)
-    // - camera (lens, focal_length, depth_of_field, etc.)
-    // - lighting (all lighting specifications)
-    // - rendering (rendering settings)
-    const compositionPrompt: Record<string, unknown> = {
-      scene: promptObj.scene || {},
-      framing: promptObj.framing || {},
-      camera: promptObj.camera || {},
-      lighting: promptObj.lighting || {},
-      rendering: promptObj.rendering || {}
-    }
+    // For V3: Use the complete prompt object (includes subject, scene, framing, camera, lighting, rendering)
+    // This is a full composition in one call, not split like V2
+    const jsonPrompt = JSON.stringify(promptObj, null, 2)
     
-    const jsonPrompt = JSON.stringify(compositionPrompt, null, 2)
-    
-    // Add step-specific instructions
-    const instructionLines: string[] = [
+    // Build the structured prompt with four distinct sections
+    const structuredPrompt = [
+      // Section 1: Intro & Task
+      "You are a world-class professional photographer with an IQ of 145, specializing in corporate and professional portraits. Your task is to create a photorealistic portrait composition from the attached selfies and scene specifications. Below first you'll find a JSON describing the complete scene, subject, framing, camera, lighting, and rendering. Below that there are rules you must absolutely follow.",
+
+      // Section 2: Composition JSON
       '',
-      '=== STEP 5: PERSON + BACKGROUND COMPOSITION ===',
+      'Composition JSON',
+      jsonPrompt,
+
+      // Section 3: Must Follow Rules
       '',
-      'Combine the person from the first reference image with the specified background.',
-      '',
-      'REQUIREMENTS:',
-      '- Integration: Blend the person naturally with the background. Ensure consistent lighting, perspective, and scale.',
-      '- Scene Specifications: Apply ALL specifications from the JSON above (framing, camera, lighting, rendering, scene).',
-      '- Quality: Ensure professional appearance with no visible seams, artifacts, or compositing errors.'
+      'Must Follow Rules:',
+      '- Scene Specifications: Apply ALL specifications from the JSON above (scene, framing, camera, lighting, rendering, subject).',
+      '- Integration: Blend the person naturally with the background. Ensure consistent lighting, perspective, and scale. No visible seams, artifacts, or compositing errors.',
+      '- Quality: Make the image as realistic as possible, with all the natural imperfections. Add realistic effects, taken from the selfies, like some hairs sticking out',
+      
+      aspectRatioDescription
+        ? `- Format Frame (${aspectRatioDescription}): The FORMAT reference image defines the exact output bounds. Compose the final ${shotDescription ? shotDescription.toLowerCase() : 'image'} so all important content stays inside this frame without cropping.`
+        : '- Aspect Ratio: Match the requested aspect ratio exactly.',
+      shotDescription
+        ? `- Shot Type: Respect the requested shot type (${shotDescription}) and ensure proper framing.`
+        : '- Shot Type: Follow the shot type specifications in the JSON.'
     ]
-
-    // Add custom background rule if applicable
-    if (hasCustomBackground) {
-      instructionLines.push(
-        '- **Custom Background:** Use the provided custom background image and match the background to the final aspect ratio determined by the FORMAT frame.'
-      )
-    } else {
-      instructionLines.push(
-        '- Background: Generate the background as specified in the scene environment description.'
-      )
-    }
-
-    // Add branding rules if branding is on background or elements
-    if (styleSettings?.branding?.type === 'include' && 
-        styleSettings.branding.position && 
-        ['background', 'elements'].includes(styleSettings.branding.position)) {
-      instructionLines.push(
-        '- **Branding:** Place the logo exactly once following the BRANDING guidance from the reference assets. Recreate the placement faithfully and ensure the composite reference itself is not visible in the final image.'
-      )
-    }
-
-    // Add format frame rule
-    if (aspectRatioDescription) {
-      const shotDesc = shotDescription ? shotDescription.toLowerCase() : 'image'
-      instructionLines.push(
-        `- **Format Frame (${aspectRatioDescription}):** This empty frame defines the exact output bounds. Compose the final ${shotDesc} so all important content stays inside this frame without cropping.`
-      )
-    }
-
-    instructionLines.push('')
     
-    // Add final instruction about respecting shot type and aspect ratio
-    if (aspectRatioDescription) {
-      const shotDesc = shotDescription || 'image'
-      instructionLines.push(
-        `Respect the requested shot type (${shotDesc}) and match the ${aspectRatioDescription} aspect ratio exactly by following the FORMAT frame.`
-      )
-    } else {
-      instructionLines.push(
-        'The person should appear naturally placed in the scene with proper integration.'
-      )
+    // Add element-specific must follow rules
+    // Priority: passed rules (V3) > extracted rules from basePrompt (V2 backward compat)
+    const rulesToAdd = mustFollowRules && mustFollowRules.length > 0 
+      ? mustFollowRules 
+      : rulesSection 
+        ? (() => {
+            // Extract rules from V2 format (backward compatibility)
+            const extractedRules: string[] = []
+            const ruleLines = rulesSection.split('\n').filter(line => line.trim())
+            for (const line of ruleLines) {
+              const match = line.match(/^\d+\.\s+(.+)$/)
+              if (match && match[1]) {
+                extractedRules.push(match[1])
+              }
+            }
+            return extractedRules
+          })()
+        : []
+    
+    if (rulesToAdd.length > 0) {
+      for (const rule of rulesToAdd) {
+        structuredPrompt.push(`- ${rule}`)
+      }
+    }
+    
+    // Section 4: Freedom Rules
+    structuredPrompt.push('')
+    structuredPrompt.push('Freedom Rules:')
+    structuredPrompt.push('- You are free to optimize lighting, shadows, and micro-details to ensure realistic 3D volume, texture, and natural scene integration.')
+    structuredPrompt.push('- You may adjust subtle color grading and contrast to enhance the professional appearance, provided all specifications from the JSON are maintained.')
+    
+    // Add element-specific freedom rules
+    if (freedomRules && freedomRules.length > 0) {
+      for (const rule of freedomRules) {
+        structuredPrompt.push(`- ${rule}`)
+      }
     }
 
-    const instructions = instructionLines.filter(line => line !== '')
-    
-    return jsonPrompt + '\n' + instructions.join('\n')
+    return structuredPrompt.join('\n')
   } catch (error) {
     Logger.error('Failed to parse base prompt for composition', {
       error: error instanceof Error ? error.message : String(error)
     })
-    // Fallback: use base prompt with composition instruction
-    return basePrompt + '\n\nCombine the person with the background ensuring natural integration.'
+    // Fallback: use base prompt as-is
+    return basePrompt
   }
 }
 

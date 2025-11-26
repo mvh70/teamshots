@@ -49,8 +49,8 @@ export const FALLBACK_DETAIL_BY_STYLE: Record<KnownClothingStyle, string> = {
 export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, WardrobeDetailConfig>> = {
   business: {
     formal: {
-      details: 'Tailored business suit ensemble with clean lines',
-      baseLayer: 'crisp dress shirt with subtle sheen and coordinating tie',
+      details: 'Tailored business suit ensemble with clean lines. Do NOT add a tie by default, only add it when specifificially specified in the accessories section.',
+      baseLayer: 'crisp dress shirt with subtle sheen',
       outerLayer: 'structured suit jacket fastened with a single button',
       notes: 'Pressed fabrics and polished appearance suitable for boardroom settings.'
     },

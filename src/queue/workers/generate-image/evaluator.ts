@@ -4,7 +4,7 @@ import { getVertexGenerativeModel } from './gemini'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 
 export interface SelfieReference {
-  label: string
+  label?: string // Optional: labels are only rendered on composite images, not individual selfies
   base64: string
   mimeType: string
 }
@@ -33,11 +33,13 @@ export interface ImageEvaluationInput {
     mimeType: string
     description?: string
   }
+  isClothingLogo?: boolean // True if logo is for clothing branding (enables overflow check)
   backgroundReference?: {
     base64: string
     mimeType: string
     description?: string
   }
+  skipBackgroundValidation?: boolean // True to skip background validation (for Step 1a white BG)
 }
 
 export interface StructuredEvaluation {
@@ -52,6 +54,7 @@ export interface StructuredEvaluation {
   branding_logo_matches: 'YES' | 'NO' | 'N/A'
   branding_positioned_correctly: 'YES' | 'NO' | 'N/A'
   branding_scene_aligned: 'YES' | 'NO' | 'N/A'
+  clothing_logo_no_overflow: 'YES' | 'NO' | 'N/A'
   explanations: Record<string, string>
 }
 
@@ -91,6 +94,7 @@ export async function evaluateGeneratedImage({
   selfieReferences,
   compositeReference,
   logoReference,
+  isClothingLogo = false,
   backgroundReference
 }: ImageEvaluationInput): Promise<ImageEvaluationResult> {
   const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
@@ -215,12 +219,33 @@ export async function evaluateGeneratedImage({
       '   - Does lighting, perspective, and scale match the environment realistically?',
       '   - Does the logo follow the contours of the clothing/surface it\'s placed on?'
     )
+    
+    // Only add clothing overflow check when logo is specifically for clothing
+    if (isClothingLogo) {
+      baseInstructions.push(
+        '',
+        '12. clothing_logo_no_overflow (CRITICAL CHECK FOR CLOTHING LOGOS)',
+        '   - **This is a STRICT rejection criterion**: The logo MUST be confined to the BASE LAYER ONLY',
+        '   - Check if the person is wearing OUTER LAYERS such as: jackets, blazers, coats, cardigans, hoodies, vests, or any open outerwear',
+        '   - If outer layers are present: Is the logo COMPLETELY HIDDEN beneath the outer layer, or ONLY visible on the base layer (shirt/polo) in the exposed area?',
+        '   - Answer NO (REJECT) if: The logo overflows, bleeds through, or appears ON TOP of any outer layer (jacket, blazer, etc.)',
+        '   - Answer NO (REJECT) if: The logo is partially visible on both the base layer AND the outer layer simultaneously',
+        '   - Answer YES (APPROVE) if: No outer layers are present, OR the logo is fully confined to the visible base layer area with no overflow',
+        '   - This check ensures the logo respects clothing layer hierarchy and doesn\'t create unrealistic compositing artifacts'
+      )
+    } else {
+      baseInstructions.push(
+        '',
+        '12. clothing_logo_no_overflow: N/A (logo is for background/elements, not clothing)'
+      )
+    }
   } else {
     baseInstructions.push(
       '',
       '9. branding_logo_matches: N/A (no logo required)',
       '10. branding_positioned_correctly: N/A (no logo required)',
-      '11. branding_scene_aligned: N/A (no logo required)'
+      '11. branding_scene_aligned: N/A (no logo required)',
+      '12. clothing_logo_no_overflow: N/A (no logo required)'
     )
   }
 
@@ -240,6 +265,7 @@ export async function evaluateGeneratedImage({
     '  "branding_logo_matches": "N/A",',
     '  "branding_positioned_correctly": "N/A",',
     '  "branding_scene_aligned": "N/A",',
+    '  "clothing_logo_no_overflow": "N/A",',
     '  "explanations": {',
     '    "dimensions_and_aspect_correct": "Image meets size requirements",',
     '    "is_fully_generated": "Fully AI-generated, no selfie portions visible",',
@@ -294,17 +320,21 @@ export async function evaluateGeneratedImage({
     })
   }
 
-  if (selfieReferences.length > 0) {
+  // Optimization: If a composite is provided, the AI can use that for identity verification.
+  // We only send individual selfies if no composite is available (e.g. V2 workflow).
+  if (!compositeReference && selfieReferences.length > 0) {
     parts.push({
       text: 'Reference selfies provided for comparison:'
     })
-  }
 
-  for (const selfie of selfieReferences) {
-    parts.push({ text: `Reference ${selfie.label}` })
-    parts.push({
-      inlineData: { mimeType: selfie.mimeType, data: selfie.base64 }
-    })
+    // Labels are only shown on composite images, not individual selfies
+    for (let i = 0; i < selfieReferences.length; i += 1) {
+      const selfie = selfieReferences[i]
+      parts.push({ text: `Reference selfie ${i + 1}` })
+      parts.push({
+        inlineData: { mimeType: selfie.mimeType, data: selfie.base64 }
+      })
+    }
   }
 
   const contents: Content[] = [
@@ -393,7 +423,8 @@ export async function evaluateGeneratedImage({
     structuredEvaluation.custom_background_matches === 'NO',
     structuredEvaluation.branding_logo_matches === 'NO',
     structuredEvaluation.branding_positioned_correctly === 'NO',
-    structuredEvaluation.branding_scene_aligned === 'NO'
+    structuredEvaluation.branding_scene_aligned === 'NO',
+    structuredEvaluation.clothing_logo_no_overflow === 'NO' // Critical: Logo must not overflow onto outer layers
   ].some(Boolean)
 
   // Count uncertain responses
@@ -416,6 +447,8 @@ export async function evaluateGeneratedImage({
       structuredEvaluation.branding_positioned_correctly === 'N/A') &&
     (structuredEvaluation.branding_scene_aligned === 'YES' ||
       structuredEvaluation.branding_scene_aligned === 'N/A') &&
+    (structuredEvaluation.clothing_logo_no_overflow === 'YES' ||
+      structuredEvaluation.clothing_logo_no_overflow === 'N/A') &&
     uncertainCount === 0
 
   const finalStatus: 'Approved' | 'Not Approved' = autoReject || !allApproved ? 'Not Approved' : 'Approved'
@@ -485,6 +518,7 @@ function parseStructuredEvaluation(text: string): StructuredEvaluation | null {
       branding_logo_matches: normalizeYesNoNA(parsed.branding_logo_matches),
       branding_positioned_correctly: normalizeYesNoNA(parsed.branding_positioned_correctly),
       branding_scene_aligned: normalizeYesNoNA(parsed.branding_scene_aligned),
+      clothing_logo_no_overflow: normalizeYesNoNA(parsed.clothing_logo_no_overflow),
       explanations:
         typeof parsed.explanations === 'object' && parsed.explanations !== null
           ? (parsed.explanations as Record<string, string>)

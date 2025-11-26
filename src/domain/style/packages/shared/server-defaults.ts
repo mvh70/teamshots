@@ -41,6 +41,41 @@
 import { PhotoStyleSettings, CategoryType } from '@/types/photo-style'
 
 /**
+ * Returns a value or a default if the value is undefined or has type 'user-choice'/'predefined' without custom data
+ * @param value - The value to check
+ * @param defaultValue - The default value to return if value is invalid
+ */
+export function getValueOrDefault<T>(value: T | undefined | { type?: string }, defaultValue: T): T {
+  if (!value) return defaultValue
+  
+  // If value has type: 'user-choice' or 'predefined', check if it contains actual user data
+  if (typeof value === 'object' && value !== null && 'type' in value) {
+    const settingsObj = value as Record<string, unknown>
+    
+    // For 'user-choice' or 'predefined' type, check if there's custom data beyond just the type
+    if (settingsObj.type === 'user-choice' || settingsObj.type === 'predefined') {
+      // Check if there's any custom data (excluding the 'type' field itself)
+      const hasCustomData = Object.keys(settingsObj).some(key => {
+        if (key === 'type') return false
+        const val = settingsObj[key]
+        // Check if the property has meaningful data
+        if (val === null || val === undefined) return false
+        if (typeof val === 'object') {
+          // For nested objects (like colors), check if they have any properties
+          return Object.keys(val as Record<string, unknown>).length > 0
+        }
+        return true
+      })
+      
+      // If no custom data, use package defaults
+      if (!hasCustomData) return defaultValue
+    }
+  }
+  
+  return value as T
+}
+
+/**
  * Applies package defaults for ALL categories, overwriting preset defaults.
  * 
  * This is step 2 of the 3-step priority hierarchy:
@@ -133,9 +168,14 @@ export function mergeUserSettings(
   
   for (const [category, field] of Object.entries(categoryFields)) {
     if (visibleSet.has(category as CategoryType) && field && userSettings[field]) {
-      // Type assertion needed because we're dynamically assigning different setting types
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (result as any)[field] = userSettings[field]
+      // Use getValueOrDefault to check if user setting has meaningful data
+      // If it's just { type: 'user-choice' } with no colors/data, keep the base default
+    // Type assertion needed because we're dynamically accessing different setting types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (result as Record<string, unknown>)[field] = getValueOrDefault<unknown>(
+      userSettings[field] as unknown,
+      baseSettings[field] as unknown
+    )
     }
   }
   

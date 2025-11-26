@@ -19,4 +19,10 @@ export function applyToPayload(context: PromptBuildContext): void {
       setPath(context.payload, 'scene.environment.branding', bgPrompt.branding)
     }
   }
+  
+  // Note: Background rules are NOT added here
+  // Step 1a: Generates person on white background (no background rules needed)
+  // Step 1b: Builds its own background generation rules (hardcoded in v3-step1b-background-generation.ts)
+  // Step 2: Builds its own composition rules (hardcoded in v3-step2-final-composition.ts)
+  // Background is handled via JSON prompt structure and reference images, not via rules
 }

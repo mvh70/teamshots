@@ -5,6 +5,17 @@ import { applyStandardPreset } from '../standard-settings'
 import { resolveShotType } from '../../elements/shot-type/config'
 import { Logger } from '@/lib/logger'
 import { ensureServerDefaults, mergeUserSettings } from '../shared/utils'
+import { downloadAssetAsBase64 } from '@/queue/workers/generate-image/s3-utils'
+import { getS3BucketName, createS3Client } from '@/lib/s3-client'
+import { buildStandardPrompt } from '../../prompt-builders/context'
+import * as shotTypeElement from '../../elements/shot-type'
+import * as cameraSettings from '../../elements/camera-settings'
+import * as lighting from '../../elements/lighting'
+import * as pose from '../../elements/pose'
+import * as backgroundElement from '../../elements/background'
+import * as clothing from '../../elements/clothing'
+import * as subjectElement from '../../elements/subject'
+import * as branding from '../../elements/branding'
 import type { AspectRatioId } from '../../elements/aspect-ratio/config'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
 
@@ -18,9 +29,7 @@ export const headshot1Server: Headshot1ServerPackage = {
     generationId,
     styleSettings,
     selfieKeys,
-    primarySelfieKey,
     processedSelfies,
-    assets,
     options
   }: GenerationContext): Promise<GenerationPayload> => {
     // Apply correct priority hierarchy:
@@ -72,44 +81,60 @@ export const headshot1Server: Headshot1ServerPackage = {
     const aspectRatioDescription = `${ratioConfig.id} (${ratioConfig.width}x${ratioConfig.height})`
 
     const getSelfieBuffer = async (key: string): Promise<Buffer> => {
-      if (processedSelfies[key]) {
-        return processedSelfies[key]
+      const buffer = processedSelfies[key]
+      if (!buffer) {
+        throw new Error(`Selfie buffer not found for key: ${key}. All selfies should be preprocessed before calling buildGenerationPayload.`)
       }
-      const buffer = await assets.preprocessSelfie(key)
-      processedSelfies[key] = buffer
       return buffer
     }
 
-    if (!processedSelfies[primarySelfieKey]) {
-      processedSelfies[primarySelfieKey] = await assets.preprocessSelfie(primarySelfieKey)
-    }
-
     const shouldUseComposite: boolean =
-      options.useCompositeReference &&
-      (styleSettings.background?.type === 'custom' ||
-        (styleSettings.branding?.type !== 'exclude' && Boolean(styleSettings.branding?.logoKey)))
+      options.workflowVersion === 'v3' ||
+      (options.useCompositeReference &&
+        (styleSettings.background?.type === 'custom' ||
+          (styleSettings.branding?.type !== 'exclude' && Boolean(styleSettings.branding?.logoKey))))
 
+    const bucketName = getS3BucketName()
+    const s3Client = createS3Client({ forcePathStyle: false })
+    
     const payload = await buildDefaultReferencePayload({
       styleSettings: effectiveSettings,
       selfieKeys,
       getSelfieBuffer,
-      downloadAsset: assets.downloadAsset,
+      downloadAsset: (key) => downloadAssetAsBase64({ bucketName, s3Client, key }),
       useCompositeReference: shouldUseComposite,
       generationId,
       shotDescription: shotText,
       aspectRatioDescription,
       aspectRatioSize: { width: ratioConfig.width, height: ratioConfig.height },
-      skipLogoInComposite: options.skipLogoInComposite ?? false
+      workflowVersion: options.workflowVersion
     })
     const referenceImages = payload.referenceImages
     const labelInstruction = payload.labelInstruction
 
-    const promptResult = headshot1Base.promptBuilder(effectiveSettings, { generationId })
-    const promptString =
-      typeof promptResult === 'string' ? promptResult : JSON.stringify(promptResult, null, 2)
+    // Build context to get rules (same logic as buildPrompt but we need the context)
+    const context = buildStandardPrompt({
+      settings: effectiveSettings,
+      defaultPresetId: headshot1Base.defaultPresetId,
+      presets: headshot1Base.presets || {}
+    })
+
+    // Apply elements in dependency order (same as buildPrompt)
+    shotTypeElement.applyToPayload(context)
+    cameraSettings.applyToPayload(context)
+    lighting.applyToPayload(context)
+    pose.applyToPayload(context)
+    backgroundElement.applyToPayload(context)
+    clothing.applyToPayload(context)
+    subjectElement.applyToPayload(context)
+    branding.applyToPayload(context)
+
+    const promptString = JSON.stringify(context.payload, null, 2)
 
     return {
       prompt: promptString,
+      mustFollowRules: context.mustFollowRules,
+      freedomRules: context.freedomRules,
       referenceImages,
       labelInstruction,
       aspectRatio,

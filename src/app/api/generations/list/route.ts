@@ -294,7 +294,11 @@ export async function GET(request: NextRequest) {
       groupIndex: generation.groupIndex,
       
       // Permission flags
-      isOwnGeneration: generation.person.userId === sessionUserId
+      // Personal generations (teamId is null) are always owned by the user
+      // Team generations check if person.userId matches sessionUserId
+      isOwnGeneration: generation.person.teamId === null 
+        ? true 
+        : generation.person.userId === sessionUserId
     })
     })
 

@@ -9,7 +9,6 @@ import { auth } from '@/auth'
 
 export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
-import { Env } from '@/lib/env'
 import { getPersonCreditBalance } from '@/domain/credits/credits'
 import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
 import { PACKAGES_CONFIG } from '@/config/packages'
@@ -27,6 +26,10 @@ import { UserService } from '@/domain/services/UserService'
 import { RegenerationService } from '@/domain/generation'
 import { deriveGenerationType, deriveCreditSource } from '@/domain/generation/utils'
 import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
+import {
+  enqueueGenerationJob,
+  determineWorkflowVersion,
+} from '@/domain/generation/generation-helpers'
 
 
 // Request validation schema
@@ -51,7 +54,7 @@ const createGenerationSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),
   isRegeneration: z.boolean().optional().default(false), // Flag to indicate this is a regeneration
   originalGenerationId: z.string().optional(), // ID of the original generation being regenerated
-  useV2: z.boolean().optional().default(false), // Enable V2 workflow
+  workflowVersion: z.enum(['v1', 'v2', 'v3']).optional(), // Workflow version: v1 (legacy), v2 (8-step), v3 (4-step). Defaults to GENERATION_WORKFLOW_VERSION env var or 'v3'
   debugMode: z.boolean().optional().default(false), // Enable debug mode (logs prompts, saves intermediate files)
   stopAfterStep: z.number().int().min(1).max(4).optional(), // Stop workflow after this step (1-4). Useful for testing intermediate results.
 })
@@ -83,7 +86,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createGenerationSchema.parse(body)
     
-    const { selfieId, selfieKey, selfieIds, selfieKeys, contextId, styleSettings, prompt, isRegeneration, originalGenerationId, useV2, debugMode, stopAfterStep } = validatedData
+    const { selfieId, selfieKey, selfieIds, selfieKeys, contextId, styleSettings, prompt, isRegeneration, originalGenerationId, workflowVersion, debugMode, stopAfterStep } = validatedData
+    
+    // Determine workflow version
+    const finalWorkflowVersion = determineWorkflowVersion(workflowVersion)
 
     // Determine requested selfies (multiple preferred)
     const requestedIds = Array.isArray(selfieIds) ? selfieIds : (selfieId ? [selfieId] : [])
@@ -316,7 +322,8 @@ export async function POST(request: NextRequest) {
           sourceGenerationId: originalGenerationId,
           personId: primarySelfie.personId,
           userId: session.user.id,
-          creditSource: enforcedCreditSource
+          creditSource: enforcedCreditSource,
+          workflowVersion: finalWorkflowVersion
         })
 
         Logger.info('Session-based regeneration completed', {
@@ -625,36 +632,21 @@ export async function POST(request: NextRequest) {
       throw creditError
     }
 
-    // Lazy import to avoid build-time issues
-    const { imageGenerationQueue } = await import('@/queue')
-    
     // Use the selected selfie keys for the job
     // Note: Regenerations are handled early with RegenerationService
     const jobSelfieS3Keys = selfieS3Keys
 
-    // For the job, deserialize settings so worker can apply overrides correctly
-    const jobStyleSettings = pkg.persistenceAdapter.deserialize(serializedStyleSettings)
-
-    const job = await imageGenerationQueue.add('generate', {
+    const job = await enqueueGenerationJob({
       generationId: generation.id,
       personId: primarySelfie.personId,
       userId: primarySelfie.person.userId || undefined,
-      selfieId: primarySelfie.id,
-      selfieS3Key: primarySelfie.key,
       selfieS3Keys: jobSelfieS3Keys,
-      styleSettings: jobStyleSettings as Record<string, unknown>,
       prompt,
-      providerOptions: {
-        model: Env.string('GEMINI_IMAGE_MODEL'),
-        numVariations: 4,
-        useV2,
-        debugMode,
-        stopAfterStep,
-      },
+      workflowVersion: finalWorkflowVersion,
+      debugMode,
+      stopAfterStep,
       creditSource: enforcedCreditSource,
-    }, {
-      priority: derivedGenerationType === 'team' ? 1 : 0, // Higher priority for team generations
-      jobId: `gen-${generation.id}`, // Custom ID for easier tracking
+      priority: derivedGenerationType === 'team' ? 1 : 0,
     })
 
     Telemetry.increment('generation.create.success')

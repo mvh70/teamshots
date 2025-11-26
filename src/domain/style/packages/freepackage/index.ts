@@ -13,6 +13,7 @@ import * as expression from '../../elements/expression'
 import * as shotTypeElement from '../../elements/shot-type'
 import * as cameraSettings from '../../elements/camera-settings'
 import * as lighting from '../../elements/lighting'
+import * as subjectElement from '../../elements/subject'
 
 
 const VISIBLE_CATEGORIES: CategoryType[] = [
@@ -76,19 +77,11 @@ function buildPrompt(settings: PhotoStyleSettings): string {
   pose.applyToPayload(context)
   backgroundElement.applyToPayload(context)
   clothing.applyToPayload(context)
+  subjectElement.applyToPayload(context)
   branding.applyToPayload(context)
 
-  // Build the final prompt with JSON and rules
-  let prompt = JSON.stringify(context.payload, null, 2)
-  
-  if (context.rules.length > 0) {
-    prompt += '\n\n## Rules to Follow\n\n'
-    context.rules.forEach((rule, index) => {
-      prompt += `${index + 1}. ${rule}\n`
-    })
-  }
-
-  return prompt
+  // Build the final prompt with JSON only (no rules - rules are handled separately)
+  return JSON.stringify(context.payload, null, 2)
 }
 
 

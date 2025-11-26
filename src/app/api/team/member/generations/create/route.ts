@@ -9,11 +9,15 @@ import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
 import { PACKAGES_CONFIG } from '@/config/packages'
 import { getPersonCreditBalance, getTeamInviteRemainingCredits } from '@/domain/credits/credits'
 import { getPackageConfig } from '@/domain/style/packages'
-import { Env } from '@/lib/env'
 import { resolveSelfies } from '@/domain/generation/selfieResolver'
 import { getRegenerationCount } from '@/domain/pricing'
 import { CreditService } from '@/domain/services/CreditService'
 import { UserService } from '@/domain/services/UserService'
+import {
+  enqueueGenerationJob,
+  determineWorkflowVersion,
+  createGenerationRecord,
+} from '@/domain/generation/generation-helpers'
 
 // Minimal validation schema aligned with /api/generations/create (now supports arrays)
 const createSchema = z.object({
@@ -23,7 +27,7 @@ const createSchema = z.object({
   contextId: z.string().optional(),
   styleSettings: z.record(z.string(), z.unknown()).optional(),
   prompt: z.string().min(1),
-  useV2: z.boolean().optional().default(false), // Enable V2 workflow
+  workflowVersion: z.enum(['v1', 'v2', 'v3']).optional(), // Workflow version: v1 (legacy), v2 (8-step), v3 (4-step). Defaults to GENERATION_WORKFLOW_VERSION env var or 'v3'
   debugMode: z.boolean().optional().default(false), // Enable debug mode
 })
 
@@ -57,7 +61,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { selfieKey, selfieKeys, selfieIds, contextId, styleSettings, prompt, useV2, debugMode } = createSchema.parse(body)
+    const { selfieKey, selfieKeys, selfieIds, contextId, styleSettings, prompt, workflowVersion, debugMode } = createSchema.parse(body)
+    
+    // Determine workflow version
+    const finalWorkflowVersion = determineWorkflowVersion(workflowVersion)
 
     // Check invite's remaining credits first (invited members have their own allocation)
     const inviteCreditsRemaining = await getTeamInviteRemainingCredits(invite.id)
@@ -189,22 +196,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const generation = await prisma.generation.create({
-      data: {
-        personId: invite.person.id,
-        selfieId: primarySelfie.id,
-        contextId: contextId ?? invite.person.team?.activeContextId ?? null,
-        uploadedPhotoKey: primarySelfie.key,
-        generatedPhotoKeys: [],
-        // generationType removed - now derived from person.teamId (single source of truth)
-        creditSource: 'team',
-        status: 'pending',
-        creditsUsed: PRICING_CONFIG.credits.perGeneration,
-        provider: 'gemini',
-        maxRegenerations: invitedRegenerations,
-        remainingRegenerations: invitedRegenerations,
-        styleSettings: serializedStyleSettings as unknown as Parameters<typeof prisma.generation.create>[0]['data']['styleSettings'],
-      },
+    const generation = await createGenerationRecord({
+      personId: invite.person.id,
+      selfieId: primarySelfie.id,
+      uploadedPhotoKey: primarySelfie.key,
+      styleSettings: serializedStyleSettings,
+      creditSource: 'team',
+      creditsUsed: PRICING_CONFIG.credits.perGeneration,
+      contextId: contextId ?? invite.person.team?.activeContextId ?? undefined,
+      provider: 'gemini',
+      maxRegenerations: invitedRegenerations,
+      remainingRegenerations: invitedRegenerations,
     })
 
     // Reserve team credits using CreditService
@@ -250,28 +252,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Enqueue the generation job
-    const { imageGenerationQueue } = await import('@/queue')
-    const job = await imageGenerationQueue.add(
-      'generate',
-      {
-        generationId: generation.id,
-        personId: invite.person.id,
-        userId: teamUser?.id || undefined,
-        selfieId: primarySelfie.id,
-        selfieS3Key: primarySelfie.key,
-        selfieS3Keys: selfieKeysForJob,
-        styleSettings: serializedStyleSettings,
-        prompt,
-        providerOptions: {
-          model: Env.string('GEMINI_IMAGE_MODEL'),
-          numVariations: 4,
-          useV2,
-          debugMode,
-        },
-        creditSource: 'team',
-      },
-      { priority: 1, jobId: `gen-${generation.id}` }
-    )
+    const job = await enqueueGenerationJob({
+      generationId: generation.id,
+      personId: invite.person.id,
+      userId: teamUser?.id || undefined,
+      selfieS3Keys: selfieKeysForJob,
+      prompt,
+      workflowVersion: finalWorkflowVersion,
+      debugMode,
+      creditSource: 'team',
+      priority: 1,
+    })
 
     Telemetry.increment('generation.create.success')
     return NextResponse.json({ success: true, generationId: generation.id, jobId: job.id, status: 'queued' })

@@ -61,6 +61,7 @@ export function buildStandardPrompt({
   return {
     settings: effectiveSettings,
     payload,
-    rules: []
+    mustFollowRules: [],
+    freedomRules: []
   }
 }

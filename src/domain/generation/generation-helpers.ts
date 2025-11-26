@@ -1,0 +1,226 @@
+/**
+ * Shared helper functions for generation creation endpoints
+ * Extracts common logic to reduce duplication between routes
+ */
+
+import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
+import type { PhotoStyleSettings } from '@/types/photo-style'
+import type { Prisma } from '@prisma/client'
+
+export interface JobEnqueueOptions {
+  generationId: string
+  personId: string
+  userId: string | undefined
+  selfieS3Keys: string[]
+  prompt: string
+  workflowVersion: 'v1' | 'v2' | 'v3'
+  debugMode: boolean
+  stopAfterStep?: string | number
+  creditSource: 'individual' | 'team'
+  priority?: number
+}
+
+/**
+ * Enqueue a generation job with standardized configuration
+ */
+export async function enqueueGenerationJob(options: JobEnqueueOptions) {
+  const { imageGenerationQueue } = await import('@/queue')
+  
+  const {
+    generationId,
+    personId,
+    userId,
+    selfieS3Keys,
+    prompt,
+    workflowVersion,
+    debugMode,
+    stopAfterStep,
+    creditSource,
+    priority
+  } = options
+
+  const job = await imageGenerationQueue.add(
+    'generate',
+    {
+      generationId,
+      personId,
+      userId,
+      selfieS3Keys,
+      prompt,
+      providerOptions: {
+        model: Env.string('GEMINI_IMAGE_MODEL'),
+        numVariations: 4,
+        workflowVersion,
+        debugMode,
+        ...(stopAfterStep && { stopAfterStep }),
+      },
+      creditSource,
+    },
+    {
+      priority: priority ?? (creditSource === 'team' ? 1 : 0),
+      jobId: `gen-${generationId}`,
+    }
+  )
+
+  Logger.info('Generation job enqueued', {
+    generationId,
+    jobId: job.id,
+    creditSource,
+    workflowVersion,
+  })
+
+  return job
+}
+
+/**
+ * Determine the final workflow version from request or environment
+ * Defaults to 'v3' (current recommended version)
+ */
+export function determineWorkflowVersion(
+  requestVersion?: 'v1' | 'v2' | 'v3'
+): 'v1' | 'v2' | 'v3' {
+  return (
+    requestVersion ||
+    (process.env.GENERATION_WORKFLOW_VERSION as 'v1' | 'v2' | 'v3' | undefined) ||
+    'v3'
+  )
+}
+
+/**
+ * Resolve selfie S3 keys from various input formats
+ */
+export async function resolveSelfieKeys(
+  selfieId?: string,
+  selfieKey?: string,
+  selfieIds?: string[],
+  selfieKeys?: string[]
+): Promise<{ primaryKey: string; allKeys: string[] }> {
+  // Priority 1: Multiple selfie keys
+  if (selfieKeys && selfieKeys.length > 0) {
+    return {
+      primaryKey: selfieKeys[0],
+      allKeys: selfieKeys,
+    }
+  }
+
+  // Priority 2: Multiple selfie IDs
+  if (selfieIds && selfieIds.length > 0) {
+    const selfies = await prisma.selfie.findMany({
+      where: { id: { in: selfieIds } },
+      select: { key: true },
+    })
+
+    if (selfies.length === 0) {
+      throw new Error('No selfies found for provided IDs')
+    }
+
+    const keys = selfies.map((s) => s.key)
+    return {
+      primaryKey: keys[0],
+      allKeys: keys,
+    }
+  }
+
+  // Priority 3: Single selfie key
+  if (selfieKey) {
+    return {
+      primaryKey: selfieKey,
+      allKeys: [selfieKey],
+    }
+  }
+
+  // Priority 4: Single selfie ID
+  if (selfieId) {
+    const selfie = await prisma.selfie.findUnique({
+      where: { id: selfieId },
+      select: { key: true },
+    })
+
+    if (!selfie) {
+      throw new Error('Selfie not found')
+    }
+
+    return {
+      primaryKey: selfie.key,
+      allKeys: [selfie.key],
+    }
+  }
+
+  throw new Error('No selfie information provided')
+}
+
+/**
+ * Get primary selfie with person data
+ */
+export async function getPrimarySelfie(selfieId: string) {
+  const selfie = await prisma.selfie.findUnique({
+    where: { id: selfieId },
+    include: {
+      person: {
+        select: {
+          id: true,
+          userId: true,
+          teamId: true,
+        },
+      },
+    },
+  })
+
+  if (!selfie) {
+    throw new Error('Primary selfie not found')
+  }
+
+  return selfie
+}
+
+/**
+ * Validate that a person belongs to a team
+ */
+export async function validatePersonTeamMembership(
+  personId: string,
+  teamId: string
+): Promise<boolean> {
+  const person = await prisma.person.findUnique({
+    where: { id: personId },
+    select: { teamId: true },
+  })
+
+  return person?.teamId === teamId
+}
+
+/**
+ * Create generation record with standardized fields
+ * Note: This is a minimal helper. Routes may need to add additional fields directly.
+ */
+export async function createGenerationRecord(data: {
+  personId: string
+  selfieId: string
+  uploadedPhotoKey: string
+  styleSettings: PhotoStyleSettings | Record<string, unknown>
+  creditSource: 'individual' | 'team'
+  creditsUsed: number
+  contextId?: string
+  provider?: string
+  maxRegenerations?: number
+  remainingRegenerations?: number
+}) {
+  return await prisma.generation.create({
+    data: {
+      personId: data.personId,
+      selfieId: data.selfieId,
+      uploadedPhotoKey: data.uploadedPhotoKey,
+      generatedPhotoKeys: [],
+      styleSettings: data.styleSettings as unknown as Prisma.InputJsonValue,
+      creditSource: data.creditSource,
+      creditsUsed: data.creditsUsed,
+      status: 'pending',
+      contextId: data.contextId,
+      provider: data.provider ?? 'gemini',
+      maxRegenerations: data.maxRegenerations ?? 2,
+      remainingRegenerations: data.remainingRegenerations ?? 2,
+    },
+  })
+}
+

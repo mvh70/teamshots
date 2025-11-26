@@ -22,10 +22,10 @@ export const BRANDING_POSITIONS = [
 
 export const BACKGROUND_BRANDING_PROMPT: Record<string, unknown> = {
   logo_source: 'Use the attached image labeled "logo" as the branding element for the scene',
-  placement: 'Place the provided brand logo ONCE as a framed element on a background wall.',
+  placement: 'Place the provided brand logo ONCE as a framed element on a background wall. Ensure that it is fully placed within the frame. Ideally place it off center, so that we can compose the person in the center later. If there are any elements, like plants, or cables, that would overlap the logo, that is ok, as it adds realism and depth.',
   rules: [
     'Align with scene perspective and lighting.',
-    'If the background is blurred, apply the same blurring to the framed logo',
+    'Ensure that elements like plants, or cables, that would overlap the logo, are not hidden by the logo, but place the logo behind thes, as it adds realism and depth.',
     'Do not place on subject, floors, windows, or floating in space.',
     'Maintain original aspect ratio and colors.',
     'Single placement only, no duplication or patterns.'
@@ -33,12 +33,13 @@ export const BACKGROUND_BRANDING_PROMPT: Record<string, unknown> = {
 }
 
 export const ELEMENT_BRANDING_PROMPT: Record<string, unknown> = {
-  logo_source: 'Place the provided brand logo once on a standing banner flag. The element must be grounded in the scene behind the subject, standing on the floor. The logo must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.',
-  allowed_elements: ['coffee mug label', 'laptop sticker', 'notebook cover', 'standing banner', 'door plaque'],
+  logo_source: 'Use the attached image labeled "logo" as the branding element for the scene',
+  placement: 'Place the provided brand logo once on a standing banner flag. The element must be grounded in the scene behind the subject, standing on the floor. The logo must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.',
+  allowed_elements: ['standing banner'],
   rules: [
     'Ground the element in the scene with correct perspective.',
     'Single placement only. No duplicates or floating marks.',
-    'Maintain original colors and aspect ratio.'
+    'Keep original aspect ratio and colors; The colors of each letter and icon should be the same as the original.'
   ]
 }
 

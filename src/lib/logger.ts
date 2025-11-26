@@ -5,8 +5,8 @@ const BOLD = '\x1b[1m'
 const RESET = '\x1b[0m'
 
 function log(level: Level, message: string, meta?: Record<string, unknown>): void {
-  // Check if this is a step log (V2 Step X:)
-  const isStepLog = message.includes('V2 Step') && message.includes(':')
+  // Check if this is a step log (V2 Step X: or V3 Step X:)
+  const isStepLog = (message.includes('V2 Step') || message.includes('V3 Step')) && message.includes(':')
   
   // Format the message with bold for step logs
   const formattedMessage = isStepLog 

@@ -6,7 +6,10 @@ import type { Step8Input, Step8Output } from '@/types/generation'
  * Step 8: Final evaluation
  * Checks face similarity, characteristic preservation, overall quality
  */
-export async function executeStep8(input: Step8Input, debugMode = false): Promise<Step8Output> {
+export async function executeStep8(
+  input: Step8Input, 
+  debugMode = false
+): Promise<Step8Output> {
   const { refinedBuffer, refinedBase64, selfieReferences, expectedWidth, expectedHeight, aspectRatio } = input
   
   Logger.info('V2 Step 8: Evaluating final refined image')
