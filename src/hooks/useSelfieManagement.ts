@@ -203,6 +203,7 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
   }, [autoSelectNewUploads, selectionHook, fetchInviteUploads, onSelfiesApproved])
 
   // Initialize data based on flow type - ONLY RUN ONCE
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     if (inviteMode) {
       fetchInviteUploads()
@@ -211,6 +212,7 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Empty deps - only run on mount
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   // Selected selfies reload is handled in handleInviteSelfiesApproved callback
 

@@ -238,7 +238,8 @@ export default function InviteDashboardPage() {
     }
   }, [token, validateInvite, fetchRecentPhotos])
 
-  // If returning from upload page, reopen the start flow
+  // If returning from upload page, reopen the start flow - intentional client-only pattern
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const shouldOpen = sessionStorage.getItem('openStartFlow') === 'true'
@@ -248,13 +249,17 @@ export default function InviteDashboardPage() {
       }
     }
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
+  // Fetch selfies when showing generation flow - intentional data fetching
+  /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
     if (showGenerationFlow || showStartFlow) {
       fetchAvailableSelfies()
       loadSelected()
     }
   }, [showGenerationFlow, showStartFlow, fetchAvailableSelfies, loadSelected])
+  /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
 
   // Filter selectedIds to only include selfies that actually exist in the current list
   // This prevents stale selections from showing incorrect counts

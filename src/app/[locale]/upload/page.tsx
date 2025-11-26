@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { jsonFetcher } from '@/lib/fetcher'
@@ -25,30 +25,31 @@ export default function UploadPage() {
   const personId = searchParams.get('personId')
   const token = searchParams.get('token')
 
-  const [personData, setPersonData] = useState<PersonData | null>(null)
-  const [key, setKey] = useState<string>('')
-  const [isApproved, setIsApproved] = useState<boolean>(false)
-  const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
+  // Compute person data and validation state during render
+  const { personData, error } = useMemo(() => {
     if (personId && token) {
       // In a real app, you'd fetch person data from the API
       // For now, we'll use the data from the invite acceptance
-      setPersonData({
-        id: personId,
-        firstName: 'Team Member', // This would come from the API
-        email: 'team@team.com',
-        teamId: 'team-id',
-        creditsAllocated: 5
-      })
-      setLoading(false)
-    } else {
-      setError('Invalid access')
-      setLoading(false)
+      return {
+        personData: {
+          id: personId,
+          firstName: 'Team Member', // This would come from the API
+          email: 'team@team.com',
+          teamId: 'team-id',
+          creditsAllocated: 5
+        } as PersonData,
+        error: null
+      }
     }
+    return { personData: null, error: 'Invalid access' }
   }, [personId, token])
+
+  const [key, setKey] = useState<string>('')
+  const [isApproved, setIsApproved] = useState<boolean>(false)
+  const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
+  // Loading is false since we compute data synchronously (mock data)
+  // In a real app with API fetch, you'd use a data fetching library
+  const loading = false
 
   const onPhotoUploaded = (result: { key: string; url?: string } | { key: string; url?: string }[]) => {
     const key = Array.isArray(result) ? result[0]?.key : result.key;

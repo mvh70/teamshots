@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import PricingCard from '@/components/pricing/PricingCard'
 import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
@@ -10,15 +10,14 @@ import { getPricePerPhoto, formatPrice } from '@/domain/pricing/utils'
 export default function PricingContent() {
   const t = useTranslations('pricing');
 
-  // Domain-based pricing restriction
-  const [domainSignupType, setDomainSignupType] = useState<'individual' | 'team' | null>(null);
-
-  useEffect(() => {
-    const domain = getClientDomain();
-    const forcedType = getForcedSignupType();
-    const signupType = forcedType || getSignupTypeFromDomain(domain);
-    setDomainSignupType(signupType);
-  }, []);
+  // Domain-based pricing restriction - compute from domain detection functions.
+  // These functions access browser APIs (window.location) so must run client-side.
+  const [domainSignupType] = useState<'individual' | 'team' | null>(() => {
+    if (typeof window === 'undefined') return null
+    const domain = getClientDomain()
+    const forcedType = getForcedSignupType()
+    return forcedType || getSignupTypeFromDomain(domain)
+  })
 
   const tryOncePlan = {
     id: 'tryOnce' as const,

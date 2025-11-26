@@ -35,7 +35,8 @@ export default function InvitePage() {
   ]
   const randomSample = samplePairs[Math.floor(Math.random() * samplePairs.length)]
 
-  // Mobile detection
+  // Mobile detection - intentional client-only pattern
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     const checkMobile = () => {
       const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -48,6 +49,7 @@ export default function InvitePage() {
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   const validateInvite = useCallback(async () => {
     try {

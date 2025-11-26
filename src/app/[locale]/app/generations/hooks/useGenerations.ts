@@ -39,6 +39,7 @@ export function useGenerations(
         if (Array.isArray(data.users)) setTeamUsers(data.users)
       } catch {}
     }
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-adjust-state-on-prop-change -- intentional data fetching when prop changes
     if (isTeamAdmin) load()
   }, [isTeamAdmin])
 

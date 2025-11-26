@@ -39,6 +39,8 @@ function SelfieSelectionPageContent() {
   }) as { uploads: UploadListItem[], selectedIds: string[], loading: boolean, loadSelected: () => Promise<void>, handleSelfiesApproved?: (results: { key: string; selfieId?: string }[]) => Promise<void>, handleUploadError?: (error: string) => void }
   
   // Detect mobile viewport
+  // Detect mobile screen size - intentional client-only pattern
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const checkMobile = () => {
@@ -49,6 +51,7 @@ function SelfieSelectionPageContent() {
       return () => window.removeEventListener('resize', checkMobile)
     }
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
 
   // Use a ref to prevent infinite loops

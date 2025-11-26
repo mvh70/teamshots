@@ -60,6 +60,8 @@ export default function TeamGenerationsPage() {
   const filterInitializedRef = useRef(false)
   
   // Adjust filter based on team admin status once roles have been loaded
+  // Initialize filter based on user role - intentional one-time initialization
+  /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
     // Only adjust filter once, after roles have been loaded
     if (rolesLoaded && !filterInitializedRef.current) {
@@ -71,6 +73,7 @@ export default function TeamGenerationsPage() {
       // If user is an admin, keep the default 'team' (All users) - no change needed
     }
   }, [rolesLoaded, isTeamAdmin, setUserFilter])
+  /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
   const { href: buyCreditsHref } = useBuyCreditsLink()
   const [teamView] = useState<'mine' | 'team'>('mine')
   

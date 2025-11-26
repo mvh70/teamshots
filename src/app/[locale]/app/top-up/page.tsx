@@ -17,6 +17,8 @@ export default function TopUpPage() {
   const [planTier, setPlanTier] = useState<UIPlanTier | null>(null)
   // Local loading/error states are not used in UI here; omit to avoid lint warnings
 
+  // Fetch subscription on mount - intentional data fetching
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     let isMounted = true
     const fetchSubscription = async () => {
@@ -37,6 +39,7 @@ export default function TopUpPage() {
     fetchSubscription()
     return () => { isMounted = false }
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   const topUpDetails = useMemo(() => {
     if (planTier === 'proSmall') {
@@ -73,11 +76,13 @@ export default function TopUpPage() {
   // Price-per-photo display is computed inside `TopUpCard`
 
   // Redirect free users away from the top-up page to the upgrade chooser
+  /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
     if (planTier === 'free') {
       router.push('/app/upgrade')
     }
   }, [planTier, router])
+  /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
 
   // Errors are surfaced inside the nested components
 

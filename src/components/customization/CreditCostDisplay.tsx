@@ -24,13 +24,18 @@ export default function CreditCostDisplay({
   className = ''
 }: CreditCostDisplayProps) {
   const t = useTranslations('customization')
-  const [isLoading, setIsLoading] = useState(true)
-  const [credits, setCredits] = useState(remainingCredits)
+  // Only track loading/fetched state when we need to fetch
+  const [isLoading, setIsLoading] = useState(remainingCredits === undefined)
+  const [fetchedCredits, setFetchedCredits] = useState<number | undefined>(undefined)
 
-  // Fetch credits if not provided
+  // Use prop directly if provided, otherwise use fetched value
+  const credits = remainingCredits ?? fetchedCredits
+
+  // Fetch credits only if not provided via props.
+  // The prop sync (checking remainingCredits) is intentional to skip fetch when prop is available.
+  /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
   useEffect(() => {
     if (remainingCredits !== undefined) {
-      setCredits(remainingCredits)
       setIsLoading(false)
       return
     }
@@ -41,7 +46,7 @@ export default function CreditCostDisplay({
         const response = await fetch(`/api/credits/balance?type=${creditType}`)
         if (response.ok) {
           const data = await response.json()
-          setCredits(data.balance || 0)
+          setFetchedCredits(data.balance || 0)
         }
       } catch (error) {
         console.error('Failed to fetch credits:', error)
@@ -52,6 +57,7 @@ export default function CreditCostDisplay({
 
     fetchCredits()
   }, [creditType, remainingCredits])
+  /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 
   // Convert credits to photos for display
   const photoCost = calculatePhotosFromCredits(creditCost)

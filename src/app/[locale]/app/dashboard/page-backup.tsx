@@ -75,6 +75,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [resending, setResending] = useState<string | null>(null)
 
+  // Fetch dashboard data on mount - intentional data fetching pattern
+  /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -115,6 +117,7 @@ export default function DashboardPage() {
       fetchDashboardData()
     }
   }, [session?.user?.id, userPermissions.isTeamAdmin])
+  /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString)

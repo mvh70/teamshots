@@ -166,7 +166,9 @@ export default function StyleForm({
     }
   }, [mode, params.id, apiEndpoint, scope, contextId, contextType])
 
-  // Sync autosave context ID
+  // Sync autosave context ID from hook result.
+  // This is intentional: the autosave hook creates a new contextId on first save,
+  // and we need to track it locally to use in the save handler.
   useEffect(() => {
     if (autosaveContextId && autosaveContextId !== styleContextId) {
       setStyleContextId(autosaveContextId)
@@ -214,6 +216,10 @@ export default function StyleForm({
     }
   }
 
+  // Activate style when set-as-active is triggered and we have a valid ID.
+  // This is an intentional event-driven pattern: user clicks "set as active",
+  // we wait for autosave to complete, then activate the style.
+  /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
     if (!setAsActive || !pendingSetActive) return
     const targetId = styleContextId || autosaveContextId
@@ -221,6 +227,7 @@ export default function StyleForm({
       void activateStyle(targetId)
     }
   }, [setAsActive, pendingSetActive, styleContextId, autosaveContextId])
+  /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
 
   const handleSave = async () => {
     setSaving(true)
@@ -375,7 +382,9 @@ export default function StyleForm({
   const AutosaveBadge = ({ status }: { status: typeof styleStatus }) => {
     const [showBadge, setShowBadge] = useState(false)
 
-    // Auto-hide the badge after 3 seconds when status is "saved"
+    // Control badge visibility based on status with auto-hide timer for "saved" state.
+    // This is intentional: we show the badge during saving/error, and auto-hide after 3s when saved.
+    /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
     useEffect(() => {
       if (status === 'saved') {
         setShowBadge(true)
@@ -391,6 +400,7 @@ export default function StyleForm({
         setShowBadge(false)
       }
     }, [status])
+    /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 
     const getStatusConfig = () => {
       switch (status) {

@@ -54,6 +54,8 @@ export default function SelfieUploadFlow({
   const [shouldOpenCamera, setShouldOpenCamera] = useState(false) // Track if camera should open
   
   // Reset shouldOpenCamera after a short delay to allow camera to open
+  // This is an intentional timer pattern for managing camera open state
+  /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
     if (shouldOpenCamera) {
       const timer = setTimeout(() => {
@@ -62,6 +64,7 @@ export default function SelfieUploadFlow({
       return () => clearTimeout(timer)
     }
   }, [shouldOpenCamera])
+  /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
 
   // Wrapper for handlePhotoUpload - detect camera captures and show approval
   const handlePhotoUploadWrapper = async (file: File): Promise<{ key: string; url?: string }> => {

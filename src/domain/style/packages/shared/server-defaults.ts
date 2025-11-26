@@ -171,7 +171,6 @@ export function mergeUserSettings(
       // Use getValueOrDefault to check if user setting has meaningful data
       // If it's just { type: 'user-choice' } with no colors/data, keep the base default
     // Type assertion needed because we're dynamically accessing different setting types
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (result as Record<string, unknown>)[field] = getValueOrDefault<unknown>(
       userSettings[field] as unknown,
       baseSettings[field] as unknown

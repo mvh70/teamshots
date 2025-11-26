@@ -174,6 +174,7 @@ export default function TeamPage() {
   }, [session?.user])
 
   // Check for welcome popup after hydration to avoid hydration mismatch
+  /* eslint-disable react-you-might-not-need-an-effect/no-chain-state-updates */
   useEffect(() => {
     if (needsTeamSetup && !hasCheckedWelcomePopup.current) {
       hasCheckedWelcomePopup.current = true
@@ -194,8 +195,11 @@ export default function TeamPage() {
       }
     }
   }, [needsTeamSetup])
+  /* eslint-enable react-you-might-not-need-an-effect/no-chain-state-updates */
 
-  // Check if we should auto-open invite modal from onboarding
+  // Check if we should auto-open invite modal from onboarding.
+  // The chained state updates are intentional: we need to initialize the form state
+  // when opening the modal from onboarding. These are related initialization calls.
   useEffect(() => {
     const shouldOpenModal = sessionStorage.getItem('open-invite-modal')
     if (shouldOpenModal === 'true' && !loading && teamData && userRoles.isTeamAdmin) {

@@ -25,7 +25,32 @@ interface CreditsProviderProps {
 
 export function CreditsProvider({ children, initialCredits }: CreditsProviderProps) {
   const { data: session } = useSession()
-  const [credits, setCredits] = useState(initialCredits || { individual: 0, team: 0 })
+  
+  // Initialize credits state: try sessionStorage first, then props, then defaults
+  const [credits, setCredits] = useState(() => {
+    // Props take precedence
+    if (initialCredits) {
+      return initialCredits
+    }
+    // Check sessionStorage for cached data (SSR-safe with function initializer)
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('teamshots.initialData')
+        if (stored) {
+          const initialData = JSON.parse(stored)
+          if (initialData.credits) {
+            return {
+              individual: initialData.credits.individual || 0,
+              team: initialData.credits.team || 0
+            }
+          }
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    return { individual: 0, team: 0 }
+  })
   const [loading, setLoading] = useState(!initialCredits)
 
   const fetchCredits = useCallback(async () => {
@@ -56,36 +81,33 @@ export function CreditsProvider({ children, initialCredits }: CreditsProviderPro
   }, [session?.user?.id]) // Stable callback - session is checked at runtime, API uses server-side auth
 
   useEffect(() => {
-    // If we have initialCredits from props, use them and skip fetching
+    // Skip fetching if we have initial credits from props
     if (initialCredits) {
-      setCredits(initialCredits)
       setLoading(false)
       return
     }
 
-    // Check sessionStorage for initial data first (from /api/user/initial-data)
-    try {
-      const stored = sessionStorage.getItem('teamshots.initialData')
-      if (stored) {
-        const initialData = JSON.parse(stored)
-        if (initialData.credits) {
-          setCredits({
-            individual: initialData.credits.individual || 0,
-            team: initialData.credits.team || 0
-          })
-          setLoading(false)
-          // Only fetch fresh data if data is stale (>5 seconds)
-          // This prevents redundant calls immediately after login/registration
-          const dataAge = Date.now() - (initialData._timestamp || 0)
-          if (dataAge > 5000) {
-            // Fetch in background, don't block render
-            fetchCredits()
+    // Check if we have cached data and if it's fresh enough
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('teamshots.initialData')
+        if (stored) {
+          const initialData = JSON.parse(stored)
+          if (initialData.credits) {
+            // Data already loaded in useState initializer
+            setLoading(false)
+            // Only fetch fresh data if data is stale (>5 seconds)
+            const dataAge = Date.now() - (initialData._timestamp || 0)
+            if (dataAge > 5000) {
+              // Fetch in background, don't block render
+              fetchCredits()
+            }
+            return
           }
-          return
         }
+      } catch {
+        // Ignore parse errors, fall through to fetch
       }
-    } catch {
-      // Ignore parse errors, fall through to fetch
     }
     
     // Only fetch if we don't have cached data

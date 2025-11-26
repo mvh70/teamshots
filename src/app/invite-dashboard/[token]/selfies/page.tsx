@@ -134,6 +134,8 @@ export default function SelfiesPage() {
   const [isInGenerationFlow, setIsInGenerationFlow] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   
+  // Initialize state from sessionStorage and detect mobile - intentional client-only pattern
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const fromGeneration = sessionStorage.getItem('fromGeneration') === 'true'
@@ -150,6 +152,7 @@ export default function SelfiesPage() {
       return () => window.removeEventListener('resize', checkMobile)
     }
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
   
 
   const handleContinue = () => {

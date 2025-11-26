@@ -25,16 +25,20 @@ export function useAutosaveStyle(params: {
   const [contextId, setContextId] = useState<string | null>(initialContextId ?? null)
 
   // Keep internal contextId in sync only when the caller-provided id changes.
-  // Depending on contextId creates a feedback loop with parents that mirror this value.
+  // This is a controlled component pattern where we need to sync external changes
+  // while allowing internal updates (from save callback). Depending on contextId
+  // creates a feedback loop with parents that mirror this value.
+  /* eslint-disable react-you-might-not-need-an-effect/no-derived-state */
   useEffect(() => {
     if (initialContextId === undefined) return
     // Avoid redundant state updates
     if (initialContextId !== contextId) {
       setContextId(initialContextId)
     }
-  // We intentionally do not include `contextId` to avoid a feedback loop with parents mirroring this value.
+  // Intentionally exclude `contextId` to avoid feedback loop with parents mirroring this value.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialContextId])
+  /* eslint-enable react-you-might-not-need-an-effect/no-derived-state */
 
   const payloadValue = useMemo(() => ({ settings, name: (name ?? '').trim() }), [settings, name])
 

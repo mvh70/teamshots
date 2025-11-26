@@ -106,7 +106,10 @@ export default function BrandingSelector({
     onChange({ ...value, position })
   }
 
-  // If parent provides a logoKey (saved or prefilled), show it
+  // Sync preview URL from value.logoKey when editing existing logos.
+  // This is an intentional prop sync pattern: when the parent provides a saved logoKey,
+  // we need to generate the preview URL. The ref tracks processed keys to avoid redundant updates.
+  /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
   useEffect(() => {
     // Only set preview if logoKey changed and we haven't set it yet
     if (value.logoKey && previewSetRef.current !== value.logoKey) {
@@ -121,6 +124,7 @@ export default function BrandingSelector({
       previewSetRef.current = null
     }
   }, [value.logoKey, token])
+  /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 
   return (
     <div className={`${className}`}>

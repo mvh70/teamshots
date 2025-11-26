@@ -64,9 +64,12 @@ export default function SubscriptionSection({
   const [loading, setLoading] = useState(true)
   
 
+  // Fetch subscription when userId changes - intentional data fetching on prop change
+  /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
   useEffect(() => {
     loadSubscription()
   }, [userId])
+  /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 
   const loadSubscription = async () => {
     try {

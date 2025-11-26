@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { getPackageConfig } from '@/domain/style/packages'
 
 interface Package {
@@ -18,14 +18,14 @@ interface PackageSelectorProps {
 export default function PackageSelector({ value, onChange }: PackageSelectorProps) {
   const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedPackage, setSelectedPackage] = useState<string>(value || '')
+  // Track if we've set the initial value to avoid calling onChange multiple times
+  const hasSetInitialValue = useRef(false)
 
-  useEffect(() => {
-    if (value) {
-      setSelectedPackage(value)
-    }
-  }, [value])
+  // Use value prop directly (controlled component)
+  const selectedPackage = value || ''
 
+  // Intentional data fetching effect - only auto-selects when no value provided
+  /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
   useEffect(() => {
     const fetchPackages = async () => {
       try {
@@ -40,15 +40,11 @@ export default function PackageSelector({ value, onChange }: PackageSelectorProp
           // Always set packages (needed for single package case too)
           setPackages(userPackages)
           
-          // Set initial value if not already set and we have packages
-          if (!selectedPackage && userPackages.length > 0) {
+          // Set initial value only once if not already set and we have packages
+          if (!hasSetInitialValue.current && !value && userPackages.length > 0) {
+            hasSetInitialValue.current = true
             const firstPackage = userPackages[0].packageId
-            setSelectedPackage(firstPackage)
             onChange(firstPackage)
-          } else if (userPackages.length === 1 && !selectedPackage) {
-            // Single package - set it
-            setSelectedPackage(userPackages[0].packageId)
-            onChange(userPackages[0].packageId)
           }
         }
       } catch (error) {
@@ -59,10 +55,10 @@ export default function PackageSelector({ value, onChange }: PackageSelectorProp
     }
 
     fetchPackages()
-  }, [onChange, selectedPackage])
+  }, [onChange, value])
+  /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 
   const handleChange = (packageId: string) => {
-    setSelectedPackage(packageId)
     onChange(packageId)
   }
 

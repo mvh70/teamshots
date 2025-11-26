@@ -29,6 +29,8 @@ function SelfiesPageContent() {
   // Hook handles initialization internally
   
   // Detect mobile viewport
+  // Detect mobile screen size - intentional client-only pattern
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const checkMobile = () => {
@@ -39,6 +41,7 @@ function SelfiesPageContent() {
       return () => window.removeEventListener('resize', checkMobile)
     }
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   const handleSelfiesApproved = async () => {
     // Reload uploads after successful upload

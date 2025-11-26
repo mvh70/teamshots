@@ -113,7 +113,9 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
   const { credits } = useCredits()
   const [isMobile, setIsMobile] = useState(false)
 
-  // Detect mobile and force collapsed on mobile
+  // Detect mobile screen size for responsive behavior.
+  // This is an intentional client-only pattern - window.innerWidth is not available during SSR.
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024) // lg breakpoint
@@ -122,6 +124,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   // On mobile, always use collapsed styling (icons-only), but respect collapsed prop for visibility
   // On desktop, use collapsed prop for both visibility and styling
@@ -235,7 +238,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
     }
   }, [session?.user?.id, session?.user?.role, initialRole, initialAccountMode])
 
-  // Fetch allocated credits only for team admins
+  // Fetch allocated credits only for team admins - intentional data fetching on state change
+  /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
     const fetchAllocatedCredits = async () => {
       if (!isTeamAdmin) return
@@ -256,6 +260,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
       setAllocatedCredits(0)
     }
   }, [session?.user?.id, isTeamAdmin, needsTeamSetup])
+  /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
 
 
   // OPTIMIZATION: Only fetch subscription if not provided as prop

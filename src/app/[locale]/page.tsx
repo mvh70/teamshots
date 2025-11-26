@@ -16,6 +16,7 @@ import { FeedbackButton } from '@/components/feedback/FeedbackButton';
 export default function LandingPage() {
   const t = useTranslations('hero');
   const tFeatures = useTranslations('features');
+  
   const [heroVisible, setHeroVisible] = useState(false);
   const [reducedMotion] = useState(() => {
     // Safely check for reduced motion preference
@@ -27,20 +28,12 @@ export default function LandingPage() {
     }
   });
 
+  // Trigger hero animations after hydration - intentional SSR pattern for staggered animations
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
-    // Trigger hero animations on mount
-    try {
-      if (!reducedMotion) {
-        setHeroVisible(true);
-      } else {
-        setHeroVisible(true); // Show immediately if reduced motion
-      }
-    } catch (error) {
-      console.error('Error setting hero visibility:', error);
-      // Fallback: show content immediately
-      setHeroVisible(true);
-    }
-  }, [reducedMotion]);
+    setHeroVisible(true);
+  }, []);
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   return (
     <div className="min-h-screen bg-bg-white relative grain-texture">

@@ -46,10 +46,13 @@ export default function AppShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [hydrated, setHydrated] = useState(false)
 
-  // Hydration indicator for Playwright tests
+  // Hydration indicator for Playwright tests - intentional SSR pattern.
+  // This allows tests to wait for React hydration to complete before interacting.
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     setHydrated(true)
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   useEffect(() => {
     if (hydrated && typeof document !== 'undefined') {
@@ -57,7 +60,10 @@ export default function AppShell({
     }
   }, [hydrated])
 
-  // Load sidebar collapsed state from localStorage on mount
+  // Load sidebar collapsed state from localStorage on mount.
+  // This is an intentional client-only initialization pattern since localStorage is not
+  // available during SSR. We initialize with a default and then sync with localStorage after hydration.
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     try {
       const stored = typeof window !== 'undefined' ? localStorage.getItem('app.sidebarCollapsed') : null
@@ -67,6 +73,7 @@ export default function AppShell({
       }
     } catch {}
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   // Persist sidebar collapsed state
   useEffect(() => {

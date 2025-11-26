@@ -22,12 +22,17 @@ export default function GenerationDetailPage({ params }: { params: Promise<{ id:
   const t = useTranslations('generations')
   const [id, setId] = useState<string>('')
   
+  // Extract params from promise - intentional async pattern for Next.js App Router
+  /* eslint-disable react-you-might-not-need-an-effect/no-pass-live-state-to-parent */
   useEffect(() => {
     params.then(({ id: paramId }) => setId(paramId))
   }, [params])
+  /* eslint-enable react-you-might-not-need-an-effect/no-pass-live-state-to-parent */
   const [data, setData] = useState<GenDetail | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Fetch generation data when ID changes
+  /* eslint-disable react-you-might-not-need-an-effect/no-chain-state-updates */
   useEffect(() => {
     const load = async () => {
       setLoading(true)
@@ -42,6 +47,7 @@ export default function GenerationDetailPage({ params }: { params: Promise<{ id:
     }
     load()
   }, [id])
+  /* eslint-enable react-you-might-not-need-an-effect/no-chain-state-updates */
 
   if (loading) return <div className="text-gray-600">{t('detail.loading')}</div>
   if (!data) return <div className="text-gray-600">{t('detail.notFound')}</div>

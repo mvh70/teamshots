@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn, getSession } from 'next-auth/react'
 import {useTranslations} from 'next-intl'
@@ -31,22 +31,6 @@ export default function SignUpPage() {
   const isTryOnce = periodParam === 'try_once'
   const inferredTier: 'individual' | 'team' | null = tierParam ? tierParam : null
 
-  // Initialize formData with URL params
-  const initialFormData = useMemo(() => {
-    const emailParam = searchParams.get('email')
-
-    return {
-      email: emailParam || '',
-      password: '',
-      confirmPassword: '',
-      firstName: '',
-      otpCode: '',
-      userType: inferredTier || 'individual',
-    }
-  }, [searchParams, inferredTier])
-
-  const [formData, setFormData] = useState(initialFormData)
-
   // Domain-based signup restriction: auto-detect domain and restrict userType
   const [domainRestrictedUserType] = useState(() => {
     const domain = getClientDomain()
@@ -54,12 +38,23 @@ export default function SignUpPage() {
     return forcedType || getSignupTypeFromDomain(domain)
   })
 
-  // Sync domain restriction to formData
-  useEffect(() => {
-    if (domainRestrictedUserType) {
-      setFormData(prev => ({ ...prev, userType: domainRestrictedUserType }))
+  // Initialize formData with URL params and domain restriction
+  const initialFormData = useMemo(() => {
+    const emailParam = searchParams.get('email')
+    // Domain restriction takes precedence over URL params
+    const userType = domainRestrictedUserType || inferredTier || 'individual'
+
+    return {
+      email: emailParam || '',
+      password: '',
+      confirmPassword: '',
+      firstName: '',
+      otpCode: '',
+      userType,
     }
-  }, [domainRestrictedUserType])
+  }, [searchParams, inferredTier, domainRestrictedUserType])
+
+  const [formData, setFormData] = useState(initialFormData)
 
   const handleSendOTP = async () => {
     setIsLoading(true)

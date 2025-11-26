@@ -266,6 +266,8 @@ export default function SettingsPage() {
   // Check if user needs to purchase
   const needsPurchase = searchParams.get('purchase') === 'required'
 
+  // Initialize settings and tab state - intentional tab switching on state changes
+  /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
     fetchUserSettings()
     
@@ -289,6 +291,7 @@ export default function SettingsPage() {
       setInitialTabSet(true)
     }
   }, [needsPurchase, session, activeTab, userRoles.isTeamAdmin, rolesLoaded, initialTabSet, searchParams])
+  /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
 
   // If success present, show subscription tab so banner is contextually relevant
   useEffect(() => {

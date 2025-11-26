@@ -2,7 +2,7 @@
 
 import { Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 
 export type UploadListItem = {
@@ -32,21 +32,50 @@ const buildImageUrl = (key: string, retryVersion: number) => {
   return `/api/files/get?${params.toString()}`
 }
 
+// Separate component for image with retry logic - uses key prop for reset
+function UploadImage({ 
+  uploadedKey, 
+  onError 
+}: { 
+  uploadedKey: string
+  onError: () => void 
+}) {
+  const [imageError, setImageError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
+
+  const imgSrc = !imageError
+    ? buildImageUrl(uploadedKey, retryCount)
+    : '/placeholder-image.png'
+
+  return (
+    <Image
+      src={imgSrc}
+      alt="upload"
+      width={300}
+      height={300}
+      className="w-full h-full object-cover"
+      unoptimized
+      onError={() => {
+        if (retryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
+          setRetryCount(prev => prev + 1)
+          return
+        }
+        setImageError(true)
+        onError()
+      }}
+      onLoadingComplete={() => {
+        if (retryCount !== 0) {
+          setRetryCount(0)
+        }
+      }}
+    />
+  )
+}
+
 export default function UploadCard({ item, onDelete, onToggleSelect, hideGenerateCta = false }: UploadCardProps) {
   const t = useTranslations('generations')
   const [isDeleting, setIsDeleting] = useState(false)
-  const [imageError, setImageError] = useState(false)
-  const [retryCount, setRetryCount] = useState(0)
   const normalizedKey = item.uploadedKey && item.uploadedKey !== 'undefined' ? item.uploadedKey : null
-
-  useEffect(() => {
-    setImageError(false)
-    setRetryCount(0)
-  }, [normalizedKey])
-
-  const imgSrc = normalizedKey && !imageError
-    ? buildImageUrl(normalizedKey, retryCount)
-    : '/placeholder-image.png'
 
   const handleDelete = async () => {
     if (!onDelete) return
@@ -89,27 +118,22 @@ export default function UploadCard({ item, onDelete, onToggleSelect, hideGenerat
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"><rect x="3" y="3" width="14" height="14" rx="2" ry="2" strokeWidth="2" /></svg>
           )}
         </button>
-        <Image
-          src={imgSrc}
-          alt="upload"
-          width={300}
-          height={300}
-          className="w-full h-full object-cover"
-          unoptimized
-          onError={() => {
-            if (retryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
-              setRetryCount(prev => prev + 1)
-              return
-            }
-            setImageError(true)
-            console.warn('Image failed to load, may not be migrated to Backblaze yet:', item.uploadedKey)
-          }}
-          onLoadingComplete={() => {
-            if (retryCount !== 0) {
-              setRetryCount(0)
-            }
-          }}
-        />
+        {normalizedKey ? (
+          <UploadImage 
+            key={normalizedKey} // Key-based reset: when key changes, component resets
+            uploadedKey={normalizedKey}
+            onError={() => console.warn('Image failed to load, may not be migrated to Backblaze yet:', item.uploadedKey)}
+          />
+        ) : (
+          <Image
+            src="/placeholder-image.png"
+            alt="upload"
+            width={300}
+            height={300}
+            className="w-full h-full object-cover"
+            unoptimized
+          />
+        )}
       </div>
       <div className="p-3 space-y-2">
         <div className="flex items-center justify-between">

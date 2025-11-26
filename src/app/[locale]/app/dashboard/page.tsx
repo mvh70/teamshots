@@ -17,7 +17,8 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import dynamic from 'next/dynamic'
 import { useRouter } from '@/i18n/routing'
-import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { jsonFetcher } from '@/lib/fetcher'
 import { useCredits } from '@/contexts/CreditsContext'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
@@ -76,6 +77,7 @@ const normalizeUserPermissions = (
 
 export default function DashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { data: session } = useSession()
   const t = useTranslations('app.dashboard')
   const { credits, loading: creditsLoading } = useCredits()
@@ -94,10 +96,35 @@ export default function DashboardPage() {
 
   const [loading, setLoading] = useState(true)
   const [resending, setResending] = useState<string | null>(null)
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
+  const [showSuccessMessage, setShowSuccessMessage] = useState(() => 
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('success') === 'true'
+  )
+  const urlCleanedRef = useRef(false)
   const [showUploadFlow, setShowUploadFlow] = useState(false)
   const [mounted, setMounted] = useState(false)
+
+  // Compute success message from URL params (derived during render, not in effect)
+  const successMessage = useMemo(() => {
+    const successParam = searchParams.get('success')
+    if (successParam !== 'true') return ''
+    
+    const messageType = searchParams.get('type')
+    switch (messageType) {
+      case 'try_once_success':
+        return t('successMessages.tryOnce', { credits: PRICING_CONFIG.tryOnce.credits })
+      case 'individual_success':
+        return t('successMessages.individual', { credits: PRICING_CONFIG.individual.credits })
+      case 'pro_success':
+      case 'pro_small_success':
+        return t('successMessages.proSmall', { credits: PRICING_CONFIG.proSmall.credits })
+      case 'pro_large_success':
+        return t('successMessages.proLarge', { credits: PRICING_CONFIG.proLarge.credits })
+      case 'top_up_success':
+        return t('successMessages.topUp')
+      default:
+        return t('successMessages.default')
+    }
+  }, [searchParams, t])
 
   // Onboarding state
   const { context: onboardingContext, updateContext: updateOnboardingContext } = useOnboardingState()
@@ -107,7 +134,9 @@ export default function DashboardPage() {
   const [showOnboardingImmediately, setShowOnboardingImmediately] = useState(false)
   const [onboardingStartedTracked, setOnboardingStartedTracked] = useState(false)
   
-  // Check for transition flag immediately on mount
+  // Check for transition flag immediately on mount.
+  // This reads from sessionStorage (client-only) to determine onboarding state from signup flow.
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const showImmediately = sessionStorage.getItem('show-onboarding-immediately') === 'true'
@@ -128,6 +157,7 @@ export default function DashboardPage() {
       }
     }
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
   
   const shouldShowOnboarding = !hasCompletedMainOnboarding && onboardingContext._loaded
 
@@ -240,51 +270,24 @@ export default function DashboardPage() {
     }
   }, [onboardingContext._loaded, onboardingContext.completedTours, showOnboardingImmediately])
 
-  // Check for success parameter in URL
+  // Handle success message: cleanup URL and auto-hide
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    if (urlParams.get('success') === 'true') {
-      setShowSuccessMessage(true)
-      
-      // Get specific success message based on type
-      const messageType = urlParams.get('type')
-      let message = t('successMessages.default')
-      
-      switch (messageType) {
-        case 'try_once_success':
-          message = t('successMessages.tryOnce', { credits: PRICING_CONFIG.tryOnce.credits })
-          break
-        case 'individual_success':
-          message = t('successMessages.individual', { credits: PRICING_CONFIG.individual.credits })
-          break
-        case 'pro_success':
-        case 'pro_small_success':
-          message = t('successMessages.proSmall', { credits: PRICING_CONFIG.proSmall.credits })
-          break
-        case 'pro_large_success':
-          message = t('successMessages.proLarge', { credits: PRICING_CONFIG.proLarge.credits })
-          break
-        case 'top_up_success':
-          message = t('successMessages.topUp')
-          break
-        default:
-          message = t('successMessages.default')
-      }
-      
-      setSuccessMessage(message)
-      
-      // Remove the success parameters from URL
-      const newUrl = new URL(window.location.href)
-      newUrl.searchParams.delete('success')
-      newUrl.searchParams.delete('type')
-      window.history.replaceState({}, '', newUrl.toString())
-      
-      // Hide message after 5 seconds
-      setTimeout(() => {
-        setShowSuccessMessage(false)
-      }, 5000)
-    }
-  }, [t])
+    if (!showSuccessMessage || urlCleanedRef.current) return
+    
+    // Remove the success parameters from URL (one-time cleanup)
+    urlCleanedRef.current = true
+    const newUrl = new URL(window.location.href)
+    newUrl.searchParams.delete('success')
+    newUrl.searchParams.delete('type')
+    window.history.replaceState({}, '', newUrl.toString())
+    
+    // Hide message after 5 seconds
+    const timer = setTimeout(() => {
+      setShowSuccessMessage(false)
+    }, 5000)
+    
+    return () => clearTimeout(timer)
+  }, [showSuccessMessage])
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -367,9 +370,12 @@ export default function DashboardPage() {
     }
   }
 
+  // SSR hydration indicator - prevents hydration mismatch for client-only content
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     setMounted(true)
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
     // Redirect to generation start with the first approved selfie

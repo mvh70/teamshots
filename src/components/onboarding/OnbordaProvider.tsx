@@ -203,7 +203,8 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
   const [tours, setTours] = useState<ReturnType<typeof generateTours> | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   
-  // Track window size for responsive tour positioning
+  // Track window size for responsive tour positioning - intentional client-only pattern
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 640)
@@ -216,6 +217,7 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
   
   // Track context values to detect changes - only track what actually affects tour generation
   const contextRef = useRef<{ teamName?: string; firstName?: string; isFreePlan?: boolean; accountMode?: string }>({})

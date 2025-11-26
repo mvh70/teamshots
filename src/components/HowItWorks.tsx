@@ -77,6 +77,8 @@ export default function HowItWorks() {
     }
   ];
 
+  // Intersection observer for visibility animation - intentional client-only pattern
+  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -94,6 +96,7 @@ export default function HowItWorks() {
 
     return () => observer.disconnect();
   }, []);
+  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   return (
     <section id="how-it-works" className="py-24 lg:py-32 bg-bg-gray-50 relative grain-texture">

@@ -56,7 +56,8 @@ export function GenerationRating({
   const pendingToastMessage = useRef<string>('') // Store toast message to prevent it from being lost
   const feedbackControlRef = useRef<HTMLDivElement>(null) // Ref for the button container
 
-  // Load existing feedback on mount
+  // Load existing feedback on mount - fetches feedback when props change
+  /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
   useEffect(() => {
     const loadExistingFeedback = async () => {
       if (generationStatus !== 'completed') {
@@ -90,8 +91,12 @@ export function GenerationRating({
 
     void loadExistingFeedback()
   }, [generationId, token, generationStatus])
+  /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 
-  // Show thank you message briefly after new submission (not for loaded existing feedback)
+  // Show thank you message briefly after new submission, then transition to toast.
+  // This is an intentional animation sequence: thank you (3s) -> toast notification.
+  // The chained state updates are necessary for the timing sequence.
+  /* eslint-disable react-you-might-not-need-an-effect/no-chain-state-updates, react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
     if (justSubmitted) {
       setShowThankYou(true)
@@ -110,6 +115,7 @@ export function GenerationRating({
       return () => clearTimeout(timer)
     }
   }, [justSubmitted, toastMessage])
+  /* eslint-enable react-you-might-not-need-an-effect/no-chain-state-updates, react-you-might-not-need-an-effect/no-event-handler */
 
   // Only show rating for completed generations
   if (generationStatus !== 'completed') {

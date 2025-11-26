@@ -120,8 +120,10 @@ export default function BackgroundSelector({
     }
   }
 
-  // Clean up preview URL when component unmounts or file changes
-  // Set preview URL from existing value when editing
+  // Sync preview URL from value.key when editing existing backgrounds.
+  // This is an intentional prop sync pattern: when the parent provides a saved key,
+  // we need to generate the preview URL. The ref tracks processed keys to avoid redundant updates.
+  /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
   useEffect(() => {
     const currentKey = value.type === 'custom' ? value.key : null
     
@@ -138,6 +140,7 @@ export default function BackgroundSelector({
       previewSetRef.current = null
     }
   }, [value.type, value.key, token])
+  /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 
   useEffect(() => {
     return () => {
