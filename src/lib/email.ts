@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 import { Resend } from 'resend';
 import WaitlistWelcomeEmail from '@/emails/WaitlistWelcome';
 import TeamInviteEmail from '@/emails/TeamInvite';
-import { BRAND_CONFIG } from '@/config/brand';
+import { BRAND_CONFIG, getBrandContact } from '@/config/brand';
 import { getEmailTranslation } from '@/lib/translations';
 import { Env } from '@/lib/env';
 import { Logger } from '@/lib/logger';
@@ -10,9 +10,16 @@ import { Logger } from '@/lib/logger';
 // Initialize Resend
 const resend = new Resend(Env.string('RESEND_API_KEY'));
 
-// Email configuration - uses brand config for consistency
-const FROM_EMAIL = `${BRAND_CONFIG.name} <${BRAND_CONFIG.contact.hello}>`;
-const REPLY_TO_EMAIL = BRAND_CONFIG.contact.support;
+// Email configuration helpers - uses brand config for consistency
+function getFromEmail(requestHeaders?: Headers): string {
+  const contact = getBrandContact(requestHeaders);
+  return `${BRAND_CONFIG.name} <${contact.hello}>`;
+}
+
+function getReplyToEmail(requestHeaders?: Headers): string {
+  const contact = getBrandContact(requestHeaders);
+  return contact.support;
+}
 
 interface SendWaitlistWelcomeEmailParams {
   email: string;
@@ -30,9 +37,9 @@ export async function sendWaitlistWelcomeEmail({
     const subject = getEmailTranslation('waitlistWelcome.subject', locale);
 
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: getFromEmail(),
       to: email,
-      replyTo: REPLY_TO_EMAIL,
+      replyTo: getReplyToEmail(),
       subject,
       react: WaitlistWelcomeEmail({ locale }),
     });
@@ -87,9 +94,9 @@ export async function sendOTPEmail({
     const text = getEmailTranslation('otp.body', locale, { code });
 
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: getFromEmail(),
       to: email,
-      replyTo: REPLY_TO_EMAIL,
+      replyTo: getReplyToEmail(),
       subject,
       text,
     });
@@ -126,9 +133,9 @@ export async function sendMagicLinkEmail({
     const text = getEmailTranslation('magicLink.body', locale, { link: magicLink });
 
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: getFromEmail(),
       to: email,
-      replyTo: REPLY_TO_EMAIL,
+      replyTo: getReplyToEmail(),
       subject,
       text,
     });
@@ -177,9 +184,9 @@ export async function sendTeamInviteEmail({
     });
 
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: getFromEmail(),
       to: email,
-      replyTo: REPLY_TO_EMAIL,
+      replyTo: getReplyToEmail(),
       subject,
       text,
       react: TeamInviteEmail({ 
@@ -242,10 +249,11 @@ export async function sendSupportNotificationEmail({
       </div>
     `;
 
+    const replyTo = getReplyToEmail();
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: REPLY_TO_EMAIL, // Send to support email
-      replyTo: REPLY_TO_EMAIL,
+      from: getFromEmail(),
+      to: replyTo, // Send to support email
+      replyTo: replyTo,
       subject: `[Support Notification] ${subject}`,
       html,
       text: `${message}${metadataText}`,
@@ -288,7 +296,8 @@ export async function sendAdminSignupNotificationEmail({
   teamId,
   teamWebsite,
 }: SendAdminSignupNotificationEmailParams) {
-  const adminRecipient = BRAND_CONFIG.contact.hello || BRAND_CONFIG.contact.support;
+  const contact = getBrandContact();
+  const adminRecipient = contact.hello || contact.support;
 
   if (!adminRecipient) {
     Logger.warn('Admin signup notification skipped - no admin recipient configured');
@@ -340,9 +349,9 @@ export async function sendAdminSignupNotificationEmail({
 
   try {
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: getFromEmail(),
       to: adminRecipient,
-      replyTo: REPLY_TO_EMAIL,
+      replyTo: getReplyToEmail(),
       subject,
       text: textBody,
       html: htmlBody,
