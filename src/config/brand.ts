@@ -1,4 +1,3 @@
-import { headers } from 'next/headers'
 import { INDIVIDUAL_DOMAIN } from './domain'
 
 export const BRAND_CONFIG = {
@@ -65,10 +64,11 @@ function getCurrentDomain(requestHeaders?: Headers): string | null {
   }
   
   // Server-side detection using Next.js headers() (server components only)
-  // This will throw if called in a client component, which we catch below
+  // Use dynamic import to avoid importing next/headers at module level
   if (typeof window === 'undefined') {
     try {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
+      // Dynamic import to avoid issues when this module is imported by client components
+      const { headers } = require('next/headers')
       const headersList = headers()
       const host = headersList.get('host') || headersList.get('x-forwarded-host')
       if (host) {

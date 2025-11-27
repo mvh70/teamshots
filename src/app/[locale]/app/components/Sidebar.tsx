@@ -500,7 +500,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
       (collapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0') + ' ' + 
       (effectiveCollapsed ? 'overflow-visible' : '')
     }`}>
-      <div className={`flex flex-col h-screen ${effectiveCollapsed ? 'overflow-visible' : ''}`}>
+      <div className={`flex flex-col h-dvh max-h-screen ${effectiveCollapsed ? 'overflow-visible' : ''}`}>
         {/* Top Section - Header and Primary Action */}
         <div className="flex-shrink-0">
           {/* Header */}
@@ -570,7 +570,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
         {/* Navigation - Takes up available space */}
         <nav className={`flex-1 px-4 space-y-1 min-h-0 ${effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto overflow-x-visible'}`}>
           {!effectiveCollapsed ? (
-            <div className="h-full overflow-y-auto overflow-x-visible">
+            <div className="h-full overflow-x-visible">
               {!navReady ? null : navigation.map((item) => {
                 const Icon = item.current ? item.iconSolid : item.icon
                 return (

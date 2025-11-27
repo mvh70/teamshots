@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import type { GenerationListItem } from '@/app/[locale]/app/generations/components/GenerationCard'
 import { transformInvitedGeneration } from './utils'
+
+const COMPLETION_REFRESH_WINDOW_MS = 4000
 
 export function useInvitedGenerations(token: string) {
   const [generations, setGenerations] = useState<GenerationListItem[]>([])
@@ -10,6 +12,9 @@ export function useInvitedGenerations(token: string) {
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const previousGenerationsRef = useRef<GenerationListItem[]>([])
+  const [isCompletionRefreshActive, setIsCompletionRefreshActive] = useState(false)
+  const completionRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const previouslyProcessingRef = useRef(false)
 
   const fetchGenerations = useCallback(async () => {
     try {
@@ -43,13 +48,43 @@ export function useInvitedGenerations(token: string) {
     fetchGenerations()
   }, [fetchGenerations])
 
-  // Auto-refresh when there are processing generations
-  useEffect(() => {
-    const hasProcessingGenerations = generations.some(
-      gen => gen.status === 'processing' || gen.status === 'pending'
-    )
+  const hasProcessingGenerations = useMemo(() => (
+    generations.some(gen => gen.status === 'processing' || gen.status === 'pending')
+  ), [generations])
 
-    if (!hasProcessingGenerations) {
+  // Keep refreshing briefly after the last generation completes to ensure we fetch generated keys
+  useEffect(() => {
+    if (hasProcessingGenerations) {
+      previouslyProcessingRef.current = true
+      if (completionRefreshTimeoutRef.current) {
+        clearTimeout(completionRefreshTimeoutRef.current)
+        completionRefreshTimeoutRef.current = null
+      }
+      if (isCompletionRefreshActive) {
+        setIsCompletionRefreshActive(false)
+      }
+      return
+    }
+
+    if (previouslyProcessingRef.current && !hasProcessingGenerations) {
+      previouslyProcessingRef.current = false
+      if (completionRefreshTimeoutRef.current) {
+        clearTimeout(completionRefreshTimeoutRef.current)
+      }
+      setIsCompletionRefreshActive(true)
+      completionRefreshTimeoutRef.current = setTimeout(() => {
+        setIsCompletionRefreshActive(false)
+        completionRefreshTimeoutRef.current = null
+      }, COMPLETION_REFRESH_WINDOW_MS)
+
+      // Force an immediate refresh to pick up the generated photo keys before the tour runs
+      fetchGenerations()
+    }
+  }, [hasProcessingGenerations, fetchGenerations, isCompletionRefreshActive])
+
+  // Auto-refresh when there are processing generations or we're inside the completion refresh window
+  useEffect(() => {
+    if (!hasProcessingGenerations && !isCompletionRefreshActive) {
       return
     }
 
@@ -60,7 +95,15 @@ export function useInvitedGenerations(token: string) {
     return () => {
       clearInterval(interval)
     }
-  }, [generations, fetchGenerations])
+  }, [hasProcessingGenerations, isCompletionRefreshActive, fetchGenerations])
+
+  useEffect(() => {
+    return () => {
+      if (completionRefreshTimeoutRef.current) {
+        clearTimeout(completionRefreshTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return { generations, loading, error, refetch: fetchGenerations }
 }
