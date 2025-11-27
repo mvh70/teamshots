@@ -2,6 +2,7 @@ import { PhotoStyleSettings, PoseSettings } from '@/types/photo-style'
 import { resolveBodyAngle, resolveHeadPosition, resolveShoulderPosition, resolveWeightDistribution, resolveArmPosition, resolveSittingPose } from './config'
 import { getExpressionLabel } from '../expression/config'
 import { getPoseTemplate } from './config'
+import { Logger } from '@/lib/logger'
 
 export interface PosePromptResult {
   bodyAngle: string
@@ -23,9 +24,20 @@ export const generatePosePrompt = (
   const poseType = settings.pose?.type
   const isUserChoice = poseType === 'user-choice'
   
+  Logger.debug('generatePosePrompt - checking pose type:', {
+    poseType,
+    isUserChoice,
+    willUseTemplate: poseType && !isUserChoice
+  })
+  
   // If a specific pose preset is selected (not user-choice), use the template
   if (poseType && !isUserChoice) {
     const template = getPoseTemplate(poseType)
+    Logger.debug('generatePosePrompt - template lookup:', {
+      poseType,
+      templateFound: !!template,
+      templateArms: template?.pose?.arms
+    })
     if (template) {
       const expression = getExpressionLabel(settings.expression?.type)
       

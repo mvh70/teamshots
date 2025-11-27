@@ -34,7 +34,7 @@ export const BACKGROUND_BRANDING_PROMPT: Record<string, unknown> = {
 
 export const ELEMENT_BRANDING_PROMPT: Record<string, unknown> = {
   logo_source: 'Use the attached image labeled "logo" as the branding element for the scene',
-  placement: 'Place the provided brand logo once on a standing banner flag. The element must be grounded in the scene behind the subject, standing on the floor. The logo must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.',
+  placement: 'Place the provided brand logo once on a WHITE vertical standing banner flag. The element must be grounded in the scene behind the subject, standing on the floor. The logo must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.',
   allowed_elements: ['standing banner'],
   rules: [
     'Ground the element in the scene with correct perspective.',

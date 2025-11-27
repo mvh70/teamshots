@@ -33,6 +33,18 @@ const AVAILABLE_BACKGROUNDS = [
   'custom'
 ]
 
+const AVAILABLE_POSES = [
+  'power_classic',
+  'power_crossed',
+  'casual_confident',
+  'approachable_cross',
+  'walking_confident',
+  'sitting_engaged',
+  'executive_seated',
+  'thinker',
+  'jacket_reveal'
+]
+
 const AVAILABLE_EXPRESSIONS = [
   'genuine_smile',
   'soft_smile',
@@ -95,6 +107,7 @@ export const freepackage: ClientStylePackage = {
   compositionCategories: ['background', 'branding', 'pose'],
   userStyleCategories: ['clothing', 'clothingColors', 'expression'],
   availableBackgrounds: AVAILABLE_BACKGROUNDS,
+  availablePoses: AVAILABLE_POSES,
   availableExpressions: AVAILABLE_EXPRESSIONS,
   defaultSettings: DEFAULTS,
   defaultPresetId: FREE_PRESET.id,

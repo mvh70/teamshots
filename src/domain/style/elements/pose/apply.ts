@@ -1,9 +1,22 @@
 import { generatePosePrompt } from './prompt'
 import type { PromptBuildContext } from '../../prompt-builders/context-types'
 import { setPath } from '../../prompt-builders/context'
+import { Logger } from '@/lib/logger'
 
 export function applyToPayload(context: PromptBuildContext): void {
+  // Debug logging to trace pose handling
+  Logger.debug('Pose applyToPayload - input settings.pose:', {
+    poseType: context.settings.pose?.type,
+    fullPose: context.settings.pose
+  })
+  
   const poseResult = generatePosePrompt(context.settings)
+  
+  Logger.debug('Pose applyToPayload - generated result:', {
+    arms: poseResult.arms,
+    description: poseResult.description,
+    bodyAngle: poseResult.bodyAngle
+  })
 
   // Set expression if present (uses user's expression selection)
   if (poseResult.expression) {
