@@ -19,6 +19,7 @@ import * as subjectElement from '../../elements/subject'
 const VISIBLE_CATEGORIES: CategoryType[] = [
   'background', 
   'branding', 
+  'pose',
   'clothing', 
   'clothingColors', 
   'expression'
@@ -58,7 +59,7 @@ const DEFAULTS = {
       bottom: 'Gray'
     }
   },
-  pose: { type: 'jacket_reveal' as const }, // Package standard (not in visibleCategories)
+  //pose: { type: 'jacket_reveal' as const }, // Package standard (not in visibleCategories)
   shotType: { type: 'medium-shot' as const }, // Package standard (not in visibleCategories)
   subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts
 }
@@ -91,7 +92,7 @@ export const freepackage: ClientStylePackage = {
   label: 'Free Package',
   version: 1,
   visibleCategories: VISIBLE_CATEGORIES,
-  compositionCategories: ['background', 'branding'],
+  compositionCategories: ['background', 'branding', 'pose'],
   userStyleCategories: ['clothing', 'clothingColors', 'expression'],
   availableBackgrounds: AVAILABLE_BACKGROUNDS,
   availableExpressions: AVAILABLE_EXPRESSIONS,
@@ -121,13 +122,14 @@ export const freepackage: ClientStylePackage = {
   },
   extractUiSettings: (rawStyleSettings) => {
     // Extract UI settings from request for visible categories only
-    // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'expression']
-    // Note: Non-visible categories (pose, shotType) are NOT extracted here
+    // visibleCategories: ['background', 'branding', 'pose', 'clothing', 'clothingColors', 'expression']
+    // Note: Non-visible categories (shotType) are NOT extracted here
     // They will be applied from package defaults during server-side generation
     return {
       presetId: freepackage.defaultPresetId,
       background: rawStyleSettings.background as PhotoStyleSettings['background'],
       branding: rawStyleSettings.branding as PhotoStyleSettings['branding'],
+      pose: rawStyleSettings.pose as PhotoStyleSettings['pose'],
       clothing: rawStyleSettings.clothing as PhotoStyleSettings['clothing'],
       clothingColors: rawStyleSettings.clothingColors as PhotoStyleSettings['clothingColors'],
       expression: rawStyleSettings.expression as PhotoStyleSettings['expression'],
@@ -137,10 +139,11 @@ export const freepackage: ClientStylePackage = {
     serialize: (ui) => ({
       package: 'freepackage',
       settings: {
-        // Only serialize visible categories: ['background', 'branding', 'clothing', 'clothingColors', 'expression']
-        // Non-visible categories (pose, shotType) are package standards and don't need to be persisted
+        // Only serialize visible categories: ['background', 'branding', 'pose', 'clothing', 'clothingColors', 'expression']
+        // Non-visible categories (shotType) are package standards and don't need to be persisted
         background: ui.background,
         branding: ui.branding,
+        pose: ui.pose,
         clothing: ui.clothing,
         clothingColors: ui.clothingColors || { type: 'user-choice' },
         expression: ui.expression,
@@ -155,19 +158,21 @@ export const freepackage: ClientStylePackage = {
         : r
 
       // Deserialize visible categories only
-      // visibleCategories: ['background', 'branding', 'clothing', 'clothingColors', 'expression']
+      // visibleCategories: ['background', 'branding', 'pose', 'clothing', 'clothingColors', 'expression']
       const backgroundResult = backgroundElement.deserialize(inner)
       const brandingResult = branding.deserialize(inner)
+      const poseResult = pose.deserialize(inner, DEFAULTS.pose)
       const clothingResult = clothing.deserialize(inner, DEFAULTS.clothing)
       const clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
       const expressionResult = expression.deserialize(inner, DEFAULTS.expression)
 
       // Return settings with only visible categories
-      // Non-visible categories (pose, shotType) will be applied from package defaults during generation
+      // Non-visible categories (shotType) will be applied from package defaults during generation
       const settings: PhotoStyleSettings = {
         presetId: freepackage.defaultPresetId,
         background: backgroundResult || { type: 'user-choice' },
         branding: brandingResult,
+        pose: poseResult,
         clothing: clothingResult,
         clothingColors: clothingColorsResult,
         expression: expressionResult,

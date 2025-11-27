@@ -7,7 +7,7 @@ import { getUserEffectiveRoles, getUserWithRoles } from '@/domain/access/roles'
 export type OwnershipRecord =
   | { type: 'selfie'; personId: string | null; userId: string | null; teamId: string | null }
   | { type: 'generation'; personId: string | null; userId: string | null; teamId: string | null }
-  | { type: 'context'; personId: null; userId: string | null; teamId: string | null }
+  | { type: 'context'; personId: null; userId: string | null; teamId: string | null; contextId: string | null }
 
 /**
  * Find file ownership by checking selfie, generation, and context tables
@@ -61,8 +61,8 @@ export async function findFileOwnership(key: string): Promise<OwnershipRecord | 
     // Use raw SQL to query JSON fields efficiently
     // Settings are stored with nested structure: { packageName, version, settings: { background: { key }, branding: { logoKey } } }
     // So we need to navigate: settings->'settings'->'background'->>'key'
-    prisma.$queryRaw<Array<{ userId: string | null; teamId: string | null }>>`
-      SELECT "userId", "teamId"
+    prisma.$queryRaw<Array<{ id: string; userId: string | null; teamId: string | null }>>`
+      SELECT "id", "userId", "teamId"
       FROM "Context"
       WHERE 
         ("settings"->'settings'->'branding'->>'logoKey') = ${trimmedKey}
@@ -98,6 +98,7 @@ export async function findFileOwnership(key: string): Promise<OwnershipRecord | 
       personId: null,
       userId: context.userId ?? null,
       teamId: context.teamId ?? null,
+      contextId: context.id ?? null,
     }
   }
 
@@ -105,9 +106,9 @@ export async function findFileOwnership(key: string): Promise<OwnershipRecord | 
 }
 
 /**
- * Validate invite token and return person ID and team ID if valid
+ * Validate invite token and return person ID, team ID, and context ID if valid
  */
-export async function validateInviteToken(token: string | null): Promise<{ personId: string; teamId: string | null } | null> {
+export async function validateInviteToken(token: string | null): Promise<{ personId: string; teamId: string | null; contextId: string | null } | null> {
   if (!token) {
     return null
   }
@@ -133,22 +134,38 @@ export async function validateInviteToken(token: string | null): Promise<{ perso
 
   return {
     personId: invite.person.id,
-    teamId: invite.person.teamId
+    teamId: invite.person.teamId,
+    contextId: invite.contextId
   }
 }
 
 /**
  * Check if invite token authorizes access to file
  */
-export function isInviteAuthorized(ownership: OwnershipRecord, invitePersonId: string, inviteTeamId: string | null, fileKey?: string): boolean {
+export function isInviteAuthorized(
+  ownership: OwnershipRecord, 
+  invitePersonId: string, 
+  inviteTeamId: string | null, 
+  inviteContextId: string | null,
+  fileKey?: string
+): boolean {
   // For selfies and generations, check personId match
   if (ownership.personId) {
     return ownership.personId === invitePersonId
   }
 
-  // For context files (backgrounds/logos), check teamId match
-  if (ownership.type === 'context' && ownership.teamId && inviteTeamId) {
-    return ownership.teamId === inviteTeamId
+  // For context files (backgrounds/logos), check teamId match OR contextId match
+  // The contextId match is important for cross-team contexts like freepackage
+  // where the invite's context may not belong to the same team
+  if (ownership.type === 'context') {
+    // Allow if the file belongs to the context assigned to this invite
+    if (ownership.contextId && inviteContextId && ownership.contextId === inviteContextId) {
+      return true
+    }
+    // Also allow if the file belongs to a context owned by the same team
+    if (ownership.teamId && inviteTeamId && ownership.teamId === inviteTeamId) {
+      return true
+    }
   }
 
   // Special case: Allow invited users to access background and logo files they've uploaded
@@ -222,10 +239,11 @@ export function isFileAuthorized(
   roles: Awaited<ReturnType<typeof getUserEffectiveRoles>> | null,
   invitePersonId: string | null,
   inviteTeamId: string | null = null,
+  inviteContextId: string | null = null,
   fileKey?: string
 ): boolean {
   if (invitePersonId) {
-    return isInviteAuthorized(ownership, invitePersonId, inviteTeamId, fileKey)
+    return isInviteAuthorized(ownership, invitePersonId, inviteTeamId, inviteContextId, fileKey)
   }
   return isSessionAuthorized(ownership, user, roles)
 }

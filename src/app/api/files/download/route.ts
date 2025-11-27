@@ -49,11 +49,13 @@ export async function GET(req: NextRequest) {
 
     let invitePersonId: string | null = null
     let inviteTeamId: string | null = null
+    let inviteContextId: string | null = null
     if (!session?.user?.id && token) {
       const inviteData = await validateInviteToken(token)
       if (!inviteData) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
       invitePersonId = inviteData.personId
       inviteTeamId = inviteData.teamId
+      inviteContextId = inviteData.contextId
     }
 
     let userWithRoles = null
@@ -85,7 +87,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const authorized = ownership ? isFileAuthorized(ownership, userWithRoles, roles, invitePersonId, inviteTeamId, key) : allowAccessWithoutOwnership
+    const authorized = ownership ? isFileAuthorized(ownership, userWithRoles, roles, invitePersonId, inviteTeamId, inviteContextId, key) : allowAccessWithoutOwnership
     if (!authorized) {
       if (session?.user?.id) {
         await SecurityLogger.logPermissionDenied(session.user.id, 'files.download', key)
