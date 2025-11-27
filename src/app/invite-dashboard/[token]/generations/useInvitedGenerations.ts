@@ -60,9 +60,7 @@ export function useInvitedGenerations(token: string) {
         clearTimeout(completionRefreshTimeoutRef.current)
         completionRefreshTimeoutRef.current = null
       }
-      if (isCompletionRefreshActive) {
-        setIsCompletionRefreshActive(false)
-      }
+      setIsCompletionRefreshActive(false)
       return
     }
 
@@ -80,7 +78,7 @@ export function useInvitedGenerations(token: string) {
       // Force an immediate refresh to pick up the generated photo keys before the tour runs
       fetchGenerations()
     }
-  }, [hasProcessingGenerations, fetchGenerations, isCompletionRefreshActive])
+  }, [hasProcessingGenerations, fetchGenerations])
 
   // Auto-refresh when there are processing generations or we're inside the completion refresh window
   useEffect(() => {

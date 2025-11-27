@@ -63,24 +63,6 @@ function getCurrentDomain(requestHeaders?: Headers): string | null {
     }
   }
   
-  // Server-side detection using Next.js headers() (server components only)
-  // Use dynamic import to avoid importing next/headers at module level
-  if (typeof window === 'undefined') {
-    try {
-      // Dynamic import to avoid issues when this module is imported by client components
-      const { headers } = require('next/headers')
-      const headersList = headers()
-      const host = headersList.get('host') || headersList.get('x-forwarded-host')
-      if (host) {
-        const normalizedHost = host.split(':')[0].replace(/^www\./, '').toLowerCase()
-        return normalizedHost
-      }
-    } catch {
-      // headers() not available in this context (e.g., during build or in client component)
-      // This is expected and safe to ignore
-    }
-  }
-  
   return null
 }
 
