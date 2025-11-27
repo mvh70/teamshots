@@ -80,6 +80,11 @@ export async function executeV3Step2(
       })
     }
     
+    // Add specific positioning and depth rule for scene branding
+    brandingRules.push(
+      'The branding element should be positioned off-center, either to the left or right side of the frame, and not cut off. Ideally, the subject should partially hide or overlap the logo element to create visual depth and make the composition feel more natural and integrated.'
+    )
+    
     // Remove rules from branding object to avoid duplication in prompt
     // Rules will be added as clear text instructions separately
     delete sceneBranding.rules

@@ -4,7 +4,7 @@ import { usePathname } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
-import { BRAND_CONFIG } from '@/config/brand';
+import { BRAND_CONFIG, getBrandLogo } from '@/config/brand';
 
 export default function Footer() {
   const pathname = usePathname();
@@ -25,7 +25,7 @@ export default function Footer() {
           <div className="mb-6 flex justify-center">
             {/* Dark background footer uses the dark logo variant */}
             <Image 
-              src={BRAND_CONFIG.logo.dark} 
+              src={getBrandLogo('dark')} 
               alt={BRAND_CONFIG.name} 
               width={150} 
               height={40} 

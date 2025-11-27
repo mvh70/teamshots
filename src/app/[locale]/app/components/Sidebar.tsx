@@ -23,7 +23,7 @@ import {
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import {useTranslations} from 'next-intl'
-import { BRAND_CONFIG } from '@/config/brand'
+import { BRAND_CONFIG, getBrandLogo } from '@/config/brand'
 import { normalizePlanTierForUI, isFreePlan, type PlanPeriod, type UIPlanTier } from '@/domain/subscription/utils'
 import { AccountMode, fetchAccountMode } from '@/domain/account/accountMode'
 import { SubscriptionInfo } from '@/domain/subscription/subscription'
@@ -507,7 +507,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
           <div className={`flex p-4 border-b border-gray-200 ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
             {!effectiveCollapsed && (
               <div className="flex items-center space-x-2">
-                <Image src={BRAND_CONFIG.logo.light} alt={BRAND_CONFIG.name} width={112} height={28} className="h-7 w-auto" style={{ width: 'auto' }} priority />
+                <Image src={getBrandLogo('light')} alt={BRAND_CONFIG.name} width={112} height={28} className="h-7 w-auto" style={{ width: 'auto' }} priority />
               </div>
             )}
             {effectiveCollapsed && (

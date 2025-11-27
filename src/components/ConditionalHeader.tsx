@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import LanguageSwitcher from './LanguageSwitcher'
-import { BRAND_CONFIG } from '@/config/brand'
+import { BRAND_CONFIG, getBrandLogo } from '@/config/brand'
 import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
 import { useAnalytics } from '@/hooks/useAnalytics'
@@ -36,7 +36,7 @@ export default function ConditionalHeader() {
           <Link href="/" className="flex items-center" aria-label={BRAND_CONFIG.name}>
             {/* Light background header uses the light logo variant */}
             <Image 
-              src={BRAND_CONFIG.logo.light} 
+              src={getBrandLogo('light')} 
               alt={BRAND_CONFIG.name}
               width={120}
               height={32}
