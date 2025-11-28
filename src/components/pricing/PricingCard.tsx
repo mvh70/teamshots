@@ -132,8 +132,15 @@ export default function PricingCard({
             )}
           </div>
         </div>
-        <div className={`inline-flex items-center px-5 py-2.5 rounded-xl font-bold text-sm lg:text-base mb-6 ${isFree ? 'bg-brand-secondary-light text-brand-secondary' : 'bg-brand-primary-light text-brand-primary'}`}>
+        <div className="flex items-center gap-3 flex-wrap mb-6">
+          <div className={`inline-flex items-center px-5 py-2.5 rounded-xl font-bold text-sm lg:text-base ${isFree ? 'bg-brand-secondary-light text-brand-secondary' : 'bg-brand-primary-light text-brand-primary'}`}>
           {calculatePhotosFromCredits(credits)} {calculatePhotosFromCredits(credits) === 1 ? t('photo') : t('photos')}
+          </div>
+          {!isFree && regenerations !== undefined && (
+            <span className="text-xs lg:text-sm text-text-muted font-semibold">
+              ({t('includesVariationsPerPhoto', { count: regenerations || 0 })})
+            </span>
+          )}
         </div>
 
         {!isFree && displayPricePerPhoto && (
@@ -143,7 +150,6 @@ export default function PricingCard({
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <span className="text-3xl lg:text-4xl xl:text-5xl font-black text-text-dark">{displayPricePerPhoto}</span>
                   <span className="text-sm lg:text-base font-bold text-text-body">{t('perPhotoVariation')}</span>
-                  <span className="text-xs lg:text-sm text-text-muted font-semibold">({t('includesVariationsPerPhoto', { count: regenerations || 0 })})</span>
                 </div>
               </div>
             </div>

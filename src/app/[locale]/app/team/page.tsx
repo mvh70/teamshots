@@ -7,7 +7,8 @@ import { jsonFetcher } from '@/lib/fetcher'
 import { Link } from '@/i18n/routing'
 import { PlusIcon, EnvelopeIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { calculatePhotosFromCredits } from '@/domain/pricing'
+import { calculatePhotosFromCredits, getRegenerationCount } from '@/domain/pricing'
+import { getPricingTier } from '@/config/pricing'
 import { getBrandColor } from '@/config/brand'
 import { useCredits } from '@/contexts/CreditsContext'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
@@ -58,7 +59,17 @@ export default function TeamPage() {
   const { data: session } = useSession()
   const t = useTranslations('team')
   const { credits } = useCredits()
-  const { isFreePlan } = usePlanInfo()
+  const { isFreePlan, tier, period } = usePlanInfo()
+  
+  // Get regeneration count for invited users (same as team admin's plan)
+  const invitedRegenerations = useMemo(() => {
+    if (tier && period) {
+      const pricingTier = getPricingTier(tier, period)
+      return getRegenerationCount(pricingTier, period)
+    }
+    // Fallback to proSmall as default team plan
+    return getRegenerationCount('proSmall')
+  }, [tier, period])
   const [teamData, setTeamData] = useState<TeamData | null>(null)
   const [invites, setInvites] = useState<TeamInvite[]>([])
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -1481,8 +1492,8 @@ export default function TeamPage() {
                             </div>
                             <div className="text-gray-300 text-xs leading-relaxed">
                               {t('inviteForm.photos.tooltip', {
-                                count: PRICING_CONFIG.regenerations.invited,
-                                default: `This is the number of photos they can generate with customization. Each customization can be retried up to ${PRICING_CONFIG.regenerations.invited} times.`
+                                count: invitedRegenerations,
+                                default: `This is the number of photos they can generate with customization. Each customization can be retried up to ${invitedRegenerations} times.`
                               })}
                             </div>
                           </div>
@@ -1528,8 +1539,8 @@ export default function TeamPage() {
                   ) : (
                     <p className="text-xs text-gray-500 mt-2 font-medium">
                       {t('inviteForm.photos.hint', {
-                        count: PRICING_CONFIG.regenerations.invited,
-                        default: `Each photo can be retried up to ${PRICING_CONFIG.regenerations.invited} times for free`
+                        count: invitedRegenerations,
+                        default: `Each photo can be retried up to ${invitedRegenerations} times for free`
                       })}
                     </p>
                   )}

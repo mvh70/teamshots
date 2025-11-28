@@ -430,8 +430,8 @@ export async function POST(request: NextRequest) {
           const adminPricingTier = getPricingTier(adminPlanTier, adminPlanPeriod)
           maxRegenerations = getRegenerationCount(adminPricingTier, adminPlanPeriod)
         } else {
-          // Fallback if team admin not found
-          maxRegenerations = PRICING_CONFIG.regenerations.invited
+          // Fallback if team admin not found - use proSmall as default team plan
+          maxRegenerations = getRegenerationCount('proSmall')
         }
       } else if (session.user.id) {
         // Check user's subscription to determine plan

@@ -314,7 +314,6 @@
         "period": "free",
         "description": "See what all the fuss is about. No credit card, no commitment, just one free test to prove we're not messing around.",
         "features": [
-          "1 free photo generation ({shots} shots)",
           "Includes TeamShotsPro branding",
           "Retry up to {regenerations} times to perfect your photo",
           "Perfect for testing before you commit"

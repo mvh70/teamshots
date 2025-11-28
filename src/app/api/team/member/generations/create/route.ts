@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
 
     // Create generation
     // Determine regeneration allowances for invited users - they get the same as their team admin's plan
-    let invitedRegenerations: number = PRICING_CONFIG.regenerations.invited // Fallback
+    let invitedRegenerations: number = getRegenerationCount('proSmall') // Fallback - use proSmall as default team plan
     
     if (invite.person.teamId) {
       // Fetch team admin's plan to determine regeneration count

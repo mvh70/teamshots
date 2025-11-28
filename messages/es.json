@@ -321,7 +321,6 @@
         "period": "gratis",
         "description": "Ve de qué se trata todo el alboroto. Sin tarjeta de crédito, sin compromiso, solo una prueba gratis para demostrar que no estamos bromeando.",
         "features": [
-          "1 generación de foto gratis ({shots} disparos)",
           "Incluye marca TeamShotsPro",
           "Reintenta hasta {regenerations} veces para perfeccionar tu foto",
           "Perfecto para probar antes de comprometerte"

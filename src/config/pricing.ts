@@ -43,15 +43,13 @@ export const PRICING_CONFIG = {
   regenerations: {
     tryItForFree: 2,
     individual: 3,
-    proSmall: 4,
+    proSmall: 3,
     proLarge: 4,
-    invited: 4,
   },
 
   // Try It For Free (free tier - grants credits on signup)
   tryItForFree: {
     credits: 10, // Credits granted on signup
-    regenerations: 2,
   },
 
   // Individual tier (Personal - one-time purchase)
