@@ -109,5 +109,114 @@ export const PRICING_CONFIG = {
   },
 } as const;
 
-// Pricing tier type
+// Pricing tier type (maps to pricing config keys)
 export type PricingTier = 'tryItForFree' | 'individual' | 'proSmall' | 'proLarge';
+
+// Import types from subscription utils
+import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
+
+/**
+ * Map tier+period combination to pricing config key
+ * @param tier - Plan tier (individual or pro)
+ * @param period - Plan period (free, small, or large)
+ * @returns Pricing config key or null for free plans
+ */
+export function getPricingConfigKey(
+  tier: PlanTier | string | null,
+  period: PlanPeriod | string | null | undefined
+): 'individual' | 'proSmall' | 'proLarge' | null {
+  // Free plans don't map to a pricing config key
+  if (!period || period === 'free' || period === 'tryOnce' || period === 'try_once') {
+    return null
+  }
+
+  // Map tier+period combinations to pricing config keys
+  if (tier === 'individual' && period === 'small') {
+    return 'individual'
+  }
+  if (tier === 'pro' && period === 'small') {
+    return 'proSmall'
+  }
+  if (tier === 'pro' && period === 'large') {
+    return 'proLarge'
+  }
+
+  // Backward compatibility: handle legacy period values
+  if (period === 'individual') return 'individual'
+  if (period === 'proSmall') return 'proSmall'
+  if (period === 'proLarge') return 'proLarge'
+
+  // Backward compatibility: handle legacy tier values
+  if (tier === 'proSmall') return 'proSmall'
+  if (tier === 'proLarge') return 'proLarge'
+
+  return null
+}
+
+/**
+ * Get PricingTier from tier+period combination
+ * @param tier - Plan tier
+ * @param period - Plan period
+ * @returns PricingTier for use with pricing config
+ */
+export function getPricingTier(
+  tier: PlanTier | string | null,
+  period: PlanPeriod | string | null | undefined
+): PricingTier {
+  const configKey = getPricingConfigKey(tier, period)
+  if (configKey === 'individual') return 'individual'
+  if (configKey === 'proSmall') return 'proSmall'
+  if (configKey === 'proLarge') return 'proLarge'
+  return 'tryItForFree'
+}
+
+/**
+ * Get credits for a tier+period combination
+ * @param tier - Plan tier
+ * @param period - Plan period
+ * @returns Number of credits
+ */
+export function getCreditsForPlan(
+  tier: PlanTier | string | null,
+  period: PlanPeriod | string | null | undefined
+): number {
+  // Handle free plans
+  if (!period || period === 'free' || period === 'tryOnce' || period === 'try_once') {
+    if (tier === 'pro') {
+      return PRICING_CONFIG.freeTrial.pro
+    }
+    return PRICING_CONFIG.freeTrial.individual
+  }
+
+  // Map tier+period to credits
+  const configKey = getPricingConfigKey(tier, period)
+  if (configKey === 'individual') return PRICING_CONFIG.individual.credits
+  if (configKey === 'proSmall') return PRICING_CONFIG.proSmall.credits
+  if (configKey === 'proLarge') return PRICING_CONFIG.proLarge.credits
+
+  return 0
+}
+
+/**
+ * Get regenerations for a tier+period combination
+ * @param tier - Plan tier
+ * @param period - Plan period
+ * @returns Number of regenerations
+ */
+export function getRegenerationsForPlan(
+  tier: PlanTier | string | null,
+  period: PlanPeriod | string | null | undefined
+): number {
+  // Handle free plans
+  if (!period || period === 'free' || period === 'tryOnce' || period === 'try_once') {
+    return PRICING_CONFIG.regenerations.tryItForFree
+  }
+
+  // Map tier+period to regenerations
+  const configKey = getPricingConfigKey(tier, period)
+  if (configKey === 'individual') return PRICING_CONFIG.regenerations.individual
+  if (configKey === 'proSmall') return PRICING_CONFIG.regenerations.proSmall
+  if (configKey === 'proLarge') return PRICING_CONFIG.regenerations.proLarge
+
+  return PRICING_CONFIG.regenerations.tryItForFree
+}

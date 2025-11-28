@@ -167,7 +167,7 @@ export function CheckoutButton({
   onError,
   ...props
 }: Omit<ButtonProps, 'variant' | 'type'> & {
-  type?: 'subscription' | 'try_once' | 'top_up' | 'plan'
+  type?: 'subscription' | 'top_up' | 'plan'
   priceId?: string
   metadata?: Record<string, unknown>
   returnUrl?: string
@@ -218,8 +218,8 @@ export function CheckoutButton({
 
   const handleClick = (e?: React.MouseEvent<HTMLButtonElement>) => {
     // For top_up, we don't need priceId (price is calculated dynamically)
-    // For subscription and try_once, we need priceId
-    const needsPriceId = type === 'subscription' || type === 'try_once'
+    // For subscription and plan, we need priceId
+    const needsPriceId = type === 'subscription' || type === 'plan'
     if (type && (!needsPriceId || priceId)) {
       // If checkout props provided, handle checkout
       handleCheckout()

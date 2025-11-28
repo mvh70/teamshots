@@ -20,7 +20,7 @@ export type SubscriptionSummary = {
   nextChange?: {
     action: 'start' | 'change' | 'cancel' | 'schedule'
     planTier: PlanTier
-    planPeriod: Exclude<PlanPeriod, 'free' | 'tryOnce' | null>
+    planPeriod: Exclude<PlanPeriod, null>
     effectiveDate: string
   } | null
 }
@@ -43,10 +43,9 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
 
   const isActive = subscription?.status === "active"
   const currentTier = subscription?.tier
-  const currentPeriod: PlanPeriod = subscription?.period || null
-  const isTryOnce = currentPeriod === "tryOnce"
+  const currentPeriod: PlanPeriod | null = subscription?.period || null
   const userIsFreePlan = isFreePlan(currentPeriod)
-  const hasActiveSubscription = isActive && !userIsFreePlan && !isTryOnce
+  const hasActiveSubscription = isActive && !userIsFreePlan
   const isCancelling = subscription?.nextChange?.action === 'cancel'
   // Deprecated subscription logic - simplified for transactional pricing
   const pendingPeriodChangeToMonthly = false
@@ -63,17 +62,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
   // const pricing = useMemo(() => getPricingDisplay(), []) // Disabled for transactional pricing
 
   // Build standardized plan objects (matching PricingPreview/PricingContent pattern)
-  // Note: tryOnce was replaced with tryItForFree, so we conditionally build tryOncePlan
-  // only if tryOnce exists in PRICING_CONFIG (for backward compatibility)
-  const tryOnceConfig = (PRICING_CONFIG as Record<string, any>).tryOnce
-  const tryOncePlan = tryOnceConfig ? {
-    id: 'tryOnce' as const,
-    price: `$${tryOnceConfig.price}`,
-    credits: tryOnceConfig.credits,
-    regenerations: (PRICING_CONFIG.regenerations as Record<string, number>).tryOnce || PRICING_CONFIG.regenerations.tryItForFree,
-    pricePerPhoto: formatPrice(getPricePerPhoto('tryOnce')),
-    popular: false,
-  } : null
+  // Note: tryItForFree is automatically granted on signup, so it's not shown as a purchasable option
 
   const individualPlan = {
     id: 'individual' as const,
@@ -104,60 +93,52 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
 
   // Filter plans based on user mode
   const plansToShow = [
-    // Show Try Once only if it exists in config (for backward compatibility)
-    ...(tryOncePlan ? [tryOncePlan] : []),
     // Show Individual if user mode, Pro Small and Pro Large if team mode
+    // tryItForFree is automatically granted on signup, not a purchasable option
     ...(userMode === 'team' ? [proSmallPlan, proLargePlan] : [individualPlan]),
   ]
 
 
   return (
     <div className="space-y-4">
-      {isTryOnce ? (
+      {userIsFreePlan ? (
         <div className="space-y-4">
           <SubscriptionStatusBanner
-            title={`${currentTier === 'pro' ? tPricing('plans.pro.name', { default: 'Pro' }) : tPricing('plans.individual.name', { default: 'Individual' })} • ${tPricing('plans.tryOnce.name', { default: 'Try Once' })}`}
-            subtitle={tPricing('plans.tryOnce.description', { default: 'One-time purchase' })}
+            title={tPricing('plans.free.name', { default: 'Free Plan' })}
+            subtitle={tPricing('plans.free.description', { default: 'Upgrade to unlock more features' })}
           />
 
-          {/* Billing toggle hidden - now transactional pricing only */}
-          {/* <div className="flex items-center justify-center mb-6">
-            <BillingToggle isYearly={isYearly} onChange={setIsYearly} />
-          </div> */}
           <br />
 
-          <div className="grid md:grid-cols-2 gap-8 mt-2">
-            <div>
-              <PricingCard
-                id="individual"
-                titleOverride={tAll("app.settings.subscription.plan.individual", { default: "Individual subscription" })}
-                price={`$${PRICING_CONFIG.individual.price}`}
-                credits={PRICING_CONFIG.individual.credits}
-                regenerations={PRICING_CONFIG.regenerations.individual}
-                popular
-                ctaSlot={
-                  <CheckoutButton
-                    loadingText={tAll("common.loading", { default: "Loading..." })}
-                    type="plan"
-                    priceId={PRICING_CONFIG.individual.stripePriceId}
-                    onError={onCheckoutError}
-                    fullWidth
-                    useBrandCtaColors
-                  >
-                    {tPricing("plans.individual.cta")}
-                  </CheckoutButton>
-                }
-                popularLabelKey="pricingPreview.recommended"
-                className="h-full"
-              />
-            </div>
-            <TopUpCard tier="try_once" onError={onCheckoutError} regenerationsOverride={(PRICING_CONFIG.regenerations as Record<string, number>).tryOnce || PRICING_CONFIG.regenerations.tryItForFree} />
+          <div className="grid md:grid-cols-1 gap-8 mt-2">
+            <PricingCard
+              id="individual"
+              titleOverride={tAll("app.settings.subscription.plan.individual", { default: "Individual subscription" })}
+              price={`$${PRICING_CONFIG.individual.price}`}
+              credits={PRICING_CONFIG.individual.credits}
+              regenerations={PRICING_CONFIG.regenerations.individual}
+              popular
+              ctaSlot={
+                <CheckoutButton
+                  loadingText={tAll("common.loading", { default: "Loading..." })}
+                  type="plan"
+                  priceId={PRICING_CONFIG.individual.stripePriceId}
+                  onError={onCheckoutError}
+                  fullWidth
+                  useBrandCtaColors
+                >
+                  {tPricing("plans.individual.cta")}
+                </CheckoutButton>
+              }
+              popularLabelKey="pricingPreview.recommended"
+              className="h-full"
+            />
           </div>
         </div>
       ) : hasActiveSubscription ? (
         <div className="space-y-4">
           <SubscriptionStatusBanner
-            title={`${(currentTier === 'pro' || currentTier === 'proSmall') ? 'Pro Small' : currentTier === 'proLarge' ? 'Pro Large' : 'Individual'} plan${isCancelling ? ' • Cancelling' : ''}`}
+            title={`${currentTier === 'pro' && currentPeriod === 'small' ? 'Pro Small' : currentTier === 'pro' && currentPeriod === 'large' ? 'Pro Large' : currentTier === 'individual' ? 'Individual' : 'Free'} plan${isCancelling ? ' • Cancelling' : ''}`}
             subtitle={isCancelling 
               ? `${nextRenewalNote || '—'} • ${tPricing('photosRetainedAfterSubscription', { default: 'Photos retained while active + 30 days after' })}`
               : pendingPeriodChangeToMonthly
@@ -205,7 +186,12 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
           {/* Show top-up card for all active subscription states */}
           {(isCancelling || pendingPeriodChangeToMonthly) && (
             <div className="border border-gray-200 rounded-lg p-4">
-              <TopUpCard tier={(currentTier === "pro" || currentTier === "proSmall") ? "proSmall" : currentTier === "proLarge" ? "proLarge" : "individual"} onError={onCheckoutError} />
+              <TopUpCard tier={
+                currentTier === "pro" && currentPeriod === "large" ? "proLarge" :
+                currentTier === "pro" && currentPeriod === "small" ? "proSmall" :
+                currentTier === "individual" ? "individual" :
+                "individual" // Default fallback
+              } onError={onCheckoutError} />
             </div>
           )}
 
@@ -227,15 +213,12 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
             'md:grid-cols-1'
           }`}>
             {plansToShow.map((plan) => {
-              const checkoutType = plan.id === 'tryOnce' ? 'try_once' : 'plan'
-              const tryOnceConfig = (PRICING_CONFIG as Record<string, any>).tryOnce
-              const stripePriceId = plan.id === 'tryOnce' 
-                ? (tryOnceConfig?.stripePriceId || '')
-                : plan.id === 'proSmall'
-                  ? PRICING_CONFIG.proSmall.stripePriceId
-                  : plan.id === 'proLarge'
-                    ? PRICING_CONFIG.proLarge.stripePriceId
-                    : PRICING_CONFIG.individual.stripePriceId
+              const checkoutType = 'plan'
+              const stripePriceId = plan.id === 'proSmall'
+                ? PRICING_CONFIG.proSmall.stripePriceId
+                : plan.id === 'proLarge'
+                  ? PRICING_CONFIG.proLarge.stripePriceId
+                  : PRICING_CONFIG.individual.stripePriceId
 
               return (
                 <PricingCard

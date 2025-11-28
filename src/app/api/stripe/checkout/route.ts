@@ -6,6 +6,7 @@ import { PRICING_CONFIG } from '@/config/pricing';
 import { Logger } from '@/lib/logger';
 import { Env } from '@/lib/env';
 import { getBaseUrl } from '@/lib/url';
+import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils';
 
 
 export const runtime = 'nodejs'
@@ -51,16 +52,11 @@ export async function POST(request: NextRequest) {
 
     // Enforce business rules before creating session
     if (!unauth && user) {
-      if (type === 'try_once') {
-        const priorTryOnce = await prisma.creditTransaction.findFirst({
-          where: { userId: user.id, planPeriod: 'try_once' }
-        })
-        if (priorTryOnce) {
-          return NextResponse.json({ error: 'TRY_ONCE_ALREADY_USED' }, { status: 400 })
-        }
-      }
       if (type === 'top_up') {
-        if ((user.planPeriod || '') === 'free') {
+        // Block top-ups for free plan users - they should buy a plan instead
+        const planPeriod = (user as unknown as { planPeriod?: string | null })?.planPeriod
+        // isFreePlan handles tryOnce/try_once legacy periods
+        if (!planPeriod || planPeriod === 'free' || planPeriod === 'tryOnce' || planPeriod === 'try_once') {
           return NextResponse.json({ error: 'TOP_UP_NOT_ALLOWED_ON_FREE' }, { status: 400 })
         }
       }
@@ -139,20 +135,17 @@ export async function POST(request: NextRequest) {
     // Create specific success messages based on purchase type
     let successMessage = ''
     let successTier = ''
-    if (type === 'try_once') {
-      successMessage = 'try_once_success'
-      successTier = 'tryOnce'
-    } else if (type === 'plan') {
-      // Determine tier from price ID
+    if (type === 'plan') {
+      // Determine tier and period from price ID
       if (priceId === PRICING_CONFIG.individual.stripePriceId) {
         successMessage = 'individual_success'
-        successTier = 'individual'
+        successTier = 'individual' // For metadata - actual tier will be 'individual', period 'small'
       } else if (priceId === PRICING_CONFIG.proSmall.stripePriceId) {
         successMessage = 'pro_small_success'
-        successTier = 'proSmall'
+        successTier = 'proSmall' // For metadata - actual tier will be 'pro', period 'small'
       } else if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
         successMessage = 'pro_large_success'
-        successTier = 'proLarge'
+        successTier = 'proLarge' // For metadata - actual tier will be 'pro', period 'large'
       }
     } else if (type === 'top_up') {
       successMessage = 'top_up_success'
@@ -177,13 +170,14 @@ export async function POST(request: NextRequest) {
       } else if (tier === 'proLarge') {
         creditsPerPackage = PRICING_CONFIG.proLarge.topUp.credits;
       } else {
-        creditsPerPackage = PRICING_CONFIG.tryOnce.topUp.credits;
+        // Fallback to individual top-up (tryOnce was replaced with tryItForFree which has no top-up)
+        creditsPerPackage = PRICING_CONFIG.individual.topUp.credits;
       }
       const totalCredits = typeof requestedCredits === 'number' 
         ? Math.max(creditsPerPackage, Math.ceil(requestedCredits / creditsPerPackage) * creditsPerPackage)
         : creditsPerPackage;
       queryExtras.credits = String(totalCredits)
-      queryExtras.tier = encodeURIComponent(tier || 'try_once')
+      queryExtras.tier = encodeURIComponent(tier || 'individual')
     }
 
     // Add redirect parameters:
@@ -249,8 +243,8 @@ export async function POST(request: NextRequest) {
     };
 
     // Add line items based on type
-    if (type === 'try_once' || type === 'plan') {
-      // Use provided price ID for plans and try once
+    if (type === 'plan') {
+      // Use provided price ID for plans
       if (priceId) {
         sessionParams.line_items = [
           {
@@ -258,24 +252,32 @@ export async function POST(request: NextRequest) {
             quantity,
           },
         ];
-      } else if (type === 'try_once') {
-        // Fallback for Try Once if price ID is not configured
-        sessionParams.line_items = [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: 'Try Once',
-                description: `${PRICING_CONFIG.tryOnce.credits} credits for one generation`,
-              },
-              unit_amount: Math.round(PRICING_CONFIG.tryOnce.price * 100),
-            },
-            quantity,
-          },
-        ];
+
+        // Set planTier and planPeriod in metadata based on price ID
+        let planTier: PlanTier | null = null
+        let planPeriod: PlanPeriod | null = null
+
+        if (priceId === PRICING_CONFIG.individual.stripePriceId) {
+          planTier = 'individual'
+          planPeriod = 'small'
+        } else if (priceId === PRICING_CONFIG.proSmall.stripePriceId) {
+          planTier = 'pro'
+          planPeriod = 'small'
+        } else if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
+          planTier = 'pro'
+          planPeriod = 'large'
+        }
+
+        if (planTier && planPeriod) {
+          sessionParams.metadata = {
+            ...sessionParams.metadata,
+            planTier,
+            planPeriod,
+          }
+        }
       }
     } else if (type === 'top_up') {
-      // For top-ups, create a one-time payment. Support tiers: 'individual' | 'proSmall' | 'proLarge' | 'try_once'
+      // For top-ups, create a one-time payment. Support tiers: 'individual' | 'proSmall' | 'proLarge'
       const { tier, credits } = metadata as { tier?: string; credits?: number };
       // Allow repeat purchases of top-ups; no one-per-tier restriction
       let pricePerPackage = 0;
@@ -290,8 +292,9 @@ export async function POST(request: NextRequest) {
         pricePerPackage = PRICING_CONFIG.proLarge.topUp.price;
         creditsPerPackage = PRICING_CONFIG.proLarge.topUp.credits;
       } else {
-        pricePerPackage = PRICING_CONFIG.tryOnce.topUp.price;
-        creditsPerPackage = PRICING_CONFIG.tryOnce.topUp.credits;
+        // Fallback to individual top-up (tryOnce was replaced with tryItForFree which has no top-up)
+        pricePerPackage = PRICING_CONFIG.individual.topUp.price;
+        creditsPerPackage = PRICING_CONFIG.individual.topUp.credits;
       }
 
       const requestedCredits = typeof credits === 'number' ? credits : creditsPerPackage;
@@ -314,7 +317,7 @@ export async function POST(request: NextRequest) {
       sessionParams.metadata = {
         ...sessionParams.metadata,
         credit_topup: 'true',
-        tier: tier || 'try_once',
+        tier: tier || 'individual',
         credits: String(totalCredits),
       };
     }

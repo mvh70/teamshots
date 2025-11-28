@@ -115,9 +115,9 @@ export default function PricingPreview() {
               {...plan}
             ctaMode="link"
               href={`/auth/signup?${
-                plan.id === 'proSmall' ? 'tier=team&period=proSmall' :
-                plan.id === 'proLarge' ? 'tier=team&period=proLarge' :
-                plan.id === 'individual' ? 'tier=individual&period=individual' :
+                plan.id === 'proSmall' ? 'plan=pro&period=small&autoCheckout=true' :
+                plan.id === 'proLarge' ? 'plan=pro&period=large&autoCheckout=true' :
+                plan.id === 'individual' ? 'plan=individual&period=small&autoCheckout=true' :
                 'period=tryItForFree'
               }`}
             className="h-full"

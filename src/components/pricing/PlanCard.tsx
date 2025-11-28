@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 
-type PlanId = 'proSmall' | 'proLarge' | 'individual' | 'tryOnce'
+type PlanId = 'proSmall' | 'proLarge' | 'individual'
 
 interface PlanCardProps {
   id: PlanId
@@ -33,14 +33,10 @@ export default function PlanCard({
 
   const displayPrice = price
 
-  const displayPeriod = id === 'tryOnce'
-    ? t(`plans.${id}.period`)
-    : 'one-time'
+  const displayPeriod = 'one-time'
   const displayPricePerPhoto = pricePerPhoto
 
-  const borderColor = id === 'tryOnce'
-    ? 'border-2 border-gray-200'
-    : id === 'individual'
+  const borderColor = id === 'individual'
       ? 'border-2 border-gray-200'
       : popular
         ? 'ring-3 ring-brand-cta-ring border-2 border-brand-cta-ring scale-105 shadow-brand-cta-shadow'

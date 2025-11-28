@@ -10,7 +10,8 @@ import { auth } from '@/auth'
 export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
 import { getPersonCreditBalance } from '@/domain/credits/credits'
-import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
+import { PRICING_CONFIG, type PricingTier, getPricingTier } from '@/config/pricing'
+import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
 import { PACKAGES_CONFIG } from '@/config/packages'
 import { getRegenerationCount } from '@/domain/pricing'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -422,18 +423,12 @@ export async function POST(request: NextRequest) {
         })
         
         if (team?.admin) {
-          const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod
-          const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier
+          const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod as PlanPeriod | null
+          const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier as PlanTier | null
           
-          // Determine team admin's PricingTier to get regeneration count
-          let adminPricingTier: PricingTier = 'proSmall' // Default fallback
-          if (adminPlanPeriod === 'proLarge' || adminPlanTier === 'proLarge') {
-            adminPricingTier = 'proLarge'
-          } else if (adminPlanPeriod === 'proSmall' || adminPlanTier === 'pro' || adminPlanTier === 'proSmall') {
-            adminPricingTier = 'proSmall'
-          }
-          
-          maxRegenerations = getRegenerationCount(adminPricingTier)
+          // Determine team admin's PricingTier from tier+period to get regeneration count
+          const adminPricingTier = getPricingTier(adminPlanTier, adminPlanPeriod)
+          maxRegenerations = getRegenerationCount(adminPricingTier, adminPlanPeriod)
         } else {
           // Fallback if team admin not found
           maxRegenerations = PRICING_CONFIG.regenerations.invited
@@ -446,7 +441,7 @@ export async function POST(request: NextRequest) {
         const userPlanTier = (user as unknown as { planTier?: string | null })?.planTier
         const userPlanPeriod = (user as unknown as { planPeriod?: string | null })?.planPeriod
         
-        let pricingTier: PricingTier = 'tryOnce' // Default fallback
+        let pricingTier: PricingTier = 'tryItForFree' // Default fallback
         
         if (userPlanTier === 'individual') {
           // Individual user - 1 plan only
@@ -463,8 +458,8 @@ export async function POST(request: NextRequest) {
         
         maxRegenerations = getRegenerationCount(pricingTier)
       } else {
-        // No user session - default to tryOnce
-        maxRegenerations = getRegenerationCount('tryOnce')
+        // No user session - default to tryItForFree
+        maxRegenerations = getRegenerationCount('tryItForFree')
       }
 
     // Handle generation grouping (for new generations only)

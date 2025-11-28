@@ -217,20 +217,6 @@
     "viewFullPricing": "View full pricing details",
     "poweredBy": "Powered by advanced photo technology",
     "plans": {
-      "tryOnce": {
-        "name": "Try Once",
-        "price": "$5",
-        "period": "one-time",
-        "credits": "{credits} credits",
-        "description": "Test before you commit",
-        "features": {
-          "0": "1 photo generation (4 variations)",
-          "1": "1024x1024px high-res downloads",
-          "2": "30-day photo retention",
-          "3": "Email support"
-        },
-        "cta": "Test drive it"
-      },
       "starter": {
         "name": "Individual",
         "price": "$29",
@@ -310,7 +296,6 @@
     "individualTopUp": "Individual top-up",
     "proSmallTopUp": "Pro Small top-up",
     "proLargeTopUp": "Pro Large top-up",
-    "tryItForFreeTopUp": "Try It For Free top-up",
     "topUpSubtitle": "For occasional use",
     "topUpPackageLabel": "Top-up package",
     "confirmTopUp": "Refill my photos",

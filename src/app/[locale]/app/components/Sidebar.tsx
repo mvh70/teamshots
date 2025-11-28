@@ -54,7 +54,6 @@ type TeamOnboardingStep = 'team_setup' | 'style_setup' | 'invite_members'
 function mapUITierToStateTier(uiTier: UIPlanTier): 'free' | 'individual' | 'pro' {
   switch (uiTier) {
     case 'free':
-    case 'tryOnce':
       return 'free'
     case 'individual':
       return 'individual'
@@ -140,18 +139,22 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
       const normalized = normalizePlanTierForUI(tierRaw, period)
       setPlanTier(mapUITierToStateTier(normalized))
 
-      // Compute human-readable label based on tier (transactional pricing)
+      // Compute human-readable label based on tier+period (transactional pricing)
       let label = 'Free package'
       if (isFreePlan(period)) {
-        label = 'Free package'
-      } else if (period === 'tryOnce') {
-        label = 'Try Once'
-      } else if (tierRaw === 'individual') {
+        label = tierRaw === 'pro' ? 'Pro Free' : 'Individual Free'
+      } else if (tierRaw === 'individual' && period === 'small') {
         label = 'Individual'
-      } else if ((tierRaw as string) === 'proSmall') {
+      } else if (tierRaw === 'pro' && period === 'small') {
         label = 'Pro Small'
-      } else if ((tierRaw as string) === 'proLarge') {
+      } else if (tierRaw === 'pro' && period === 'large') {
         label = 'Pro Large'
+      } else {
+        // Backward compatibility: handle legacy period values (cast to string for comparison)
+        const periodStr = period ? String(period) : null
+        if (tierRaw === 'individual') label = 'Individual'
+        else if (periodStr === 'proSmall') label = 'Pro Small'
+        else if (periodStr === 'proLarge') label = 'Pro Large'
       }
       setPlanLabel(label)
     }
@@ -285,19 +288,22 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
             const normalized = normalizePlanTierForUI(tierRaw, period)
             setPlanTier(mapUITierToStateTier(normalized))
 
-            // Compute human-readable label based on tier (transactional pricing)
+            // Compute human-readable label based on tier+period (transactional pricing)
             let label = 'Free package'
             if (isFreePlan(period)) {
-              label = 'Free package'
-            } else if (period === 'tryOnce') {
-              label = 'Try Once'
-            } else if ((tierRaw as string) === 'individual') {
+              label = tierRaw === 'pro' ? 'Pro Free' : 'Individual Free'
+            } else if (tierRaw === 'individual' && period === 'small') {
               label = 'Individual'
-            } else if ((tierRaw as string) === 'proSmall') {
+            } else if (tierRaw === 'pro' && period === 'small') {
               label = 'Pro Small'
-            } else if ((tierRaw as string) === 'proLarge') {
+            } else if (tierRaw === 'pro' && period === 'large') {
               label = 'Pro Large'
-            }
+      } else {
+        // Backward compatibility: handle legacy period values (cast to string for comparison)
+        if (tierRaw === 'individual') label = 'Individual'
+        else if (period && String(period) === 'proSmall') label = 'Pro Small'
+        else if (period && String(period) === 'proLarge') label = 'Pro Large'
+      }
             setPlanLabel(label)
             
             // Only fetch fresh data if stale (>5 seconds)
@@ -314,8 +320,6 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                   let label = 'Free package'
                   if (isFreePlan(freshPeriod)) {
                     label = 'Free package'
-                  } else if (freshPeriod === 'tryOnce') {
-                    label = 'Try Once'
                   } else if (freshTier === 'individual') {
                     label = 'Individual'
                   } else if (freshTier === 'proSmall') {
@@ -349,13 +353,11 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
         let label = 'Free package'
         if (isFreePlan(period)) {
           label = 'Free package'
-        } else if (period === 'tryOnce') {
-          label = 'Try Once'
         } else if (tierRaw === 'individual') {
           label = 'Individual'
-        } else if (tierRaw === 'proSmall') {
+        } else if (period && String(period) === 'proSmall') {
           label = 'Pro Small'
-        } else if (tierRaw === 'proLarge') {
+        } else if (period && String(period) === 'proLarge') {
           label = 'Pro Large'
         }
         setPlanLabel(label)

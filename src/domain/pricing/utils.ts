@@ -1,4 +1,5 @@
-import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
+import { PRICING_CONFIG, type PricingTier, getRegenerationsForPlan } from '@/config/pricing'
+import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
 
 // Removed: calculateAnnualSavings - no longer needed for transactional pricing
 
@@ -9,8 +10,19 @@ export function formatPrice(price: number, currency: string = 'USD'): string {
   return `${price.toFixed(2)} ${currency}`
 }
 
-export function getRegenerationCount(tier: PricingTier): number {
-  return PRICING_CONFIG.regenerations[tier]
+/**
+ * Get regeneration count for a pricing tier or tier+period combination
+ * @param tier - Pricing tier OR plan tier
+ * @param period - Plan period (optional, if provided uses tier+period mapping)
+ * @returns Number of regenerations
+ */
+export function getRegenerationCount(tier: PricingTier | PlanTier, period?: PlanPeriod | null): number {
+  // If period is provided, use tier+period mapping
+  if (period !== undefined && period !== null) {
+    return getRegenerationsForPlan(tier as PlanTier, period)
+  }
+  // Otherwise, use direct pricing tier lookup
+  return PRICING_CONFIG.regenerations[tier as PricingTier]
 }
 
 export function calculatePhotosFromCredits(credits: number): number {
@@ -27,13 +39,13 @@ export function calculatePricePerPhoto(
 }
 
 export function getPricePerPhoto(tier: PricingTier): number {
-  const tierConfig = PRICING_CONFIG[tier]
-  const regenerations = PRICING_CONFIG.regenerations[tier]
-
   // Try It For Free is free, so price per photo is 0
   if (tier === 'tryItForFree') {
     return 0
   }
+
+  const tierConfig = PRICING_CONFIG[tier] as Extract<typeof PRICING_CONFIG[PricingTier], { price: number }>
+  const regenerations = PRICING_CONFIG.regenerations[tier]
 
   return calculatePricePerPhoto(
     tierConfig.price,

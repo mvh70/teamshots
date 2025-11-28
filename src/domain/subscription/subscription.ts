@@ -2,22 +2,19 @@ import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getUserCreditBalance } from '@/domain/credits/credits'
-
-export type PlanTier = 'individual' | 'pro' | 'try_once' | null
-export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due' | 'unpaid' | null
-export type PlanPeriod = 'free' | 'try_once' | 'monthly' | 'annual' | null
+import type { PlanTier, PlanPeriod, SubscriptionStatus } from '@/domain/subscription/utils'
 
 export interface SubscriptionInfo {
   tier: PlanTier
   status: SubscriptionStatus
   stripeSubscriptionId: string | null
   stripeCustomerId: string | null
-  period?: PlanPeriod
+  period: PlanPeriod
   nextRenewal?: Date | null
   nextChange?: {
     action: 'start' | 'change' | 'cancel' | 'schedule'
-    planTier: Exclude<PlanTier, null>
-    planPeriod: Exclude<PlanPeriod, null>
+    planTier: PlanTier
+    planPeriod: PlanPeriod
     effectiveDate: Date
   } | null
 }
@@ -101,25 +98,48 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
   if (!user) return null
 
   // Use planTier as single source of truth - never overwrite it
-  // planPeriod indicates billing frequency, not tier
-  const storedTier = (user as unknown as { planTier?: PlanTier }).planTier ?? null
+  // planPeriod indicates size (free, small, large) for transactional pricing
+  const storedTierRaw = (user as unknown as { planTier?: string | null }).planTier
+  const storedTier: PlanTier = (storedTierRaw === 'pro' || storedTierRaw === 'individual') ? storedTierRaw : 'individual'
+
   const rawPeriod = (user as unknown as { planPeriod?: string | null }).planPeriod ?? null
+  
+  // Normalize period: handle legacy values and map to new structure
   const period = ((): PlanPeriod => {
-    if (rawPeriod === 'month') return 'monthly'
-    if (rawPeriod === 'year') return 'annual'
-    return (rawPeriod as PlanPeriod) ?? null
+    // Legacy periods that need mapping
+    if (rawPeriod === 'month' || rawPeriod === 'monthly') {
+      // Legacy monthly - map based on tier
+      return 'small'
+    }
+    if (rawPeriod === 'year' || rawPeriod === 'annual') {
+      // Legacy annual - map based on tier
+      if (storedTier === 'pro') return 'large'
+      return 'small'
+    }
+    // Legacy individual/proSmall/proLarge periods
+    if (rawPeriod === 'individual') return 'small'
+    if (rawPeriod === 'proSmall') return 'small'
+    if (rawPeriod === 'proLarge') return 'large'
+    // New structure
+    if (rawPeriod === 'free' || rawPeriod === 'small' || rawPeriod === 'large') {
+      return rawPeriod as PlanPeriod
+    }
+    // Default to free
+    return 'free'
   })()
 
   // Compute next renewal date when applicable
+  // Note: For transactional pricing, there's no recurring billing, so nextRenewal is null
   let nextRenewal: Date | null = null
-  if (user.subscriptionStatus === 'active' && (period === 'monthly' || period === 'annual')) {
+  // Legacy monthly/annual subscriptions (shouldn't exist in new structure, but handle for backward compatibility)
+  if (user.subscriptionStatus === 'active' && (rawPeriod === 'monthly' || rawPeriod === 'annual' || rawPeriod === 'month' || rawPeriod === 'year')) {
     // Use the latestEffective result from parallel query (already fetched above)
     if (latestEffective?.effectiveDate) {
       const base = new Date(latestEffective.effectiveDate)
-      if (period === 'monthly') {
+      if (rawPeriod === 'monthly' || rawPeriod === 'month') {
         nextRenewal = new Date(base)
         nextRenewal.setMonth(nextRenewal.getMonth() + 1)
-      } else if (period === 'annual') {
+      } else if (rawPeriod === 'annual' || rawPeriod === 'year') {
         nextRenewal = new Date(base)
         nextRenewal.setFullYear(nextRenewal.getFullYear() + 1)
       }
@@ -144,8 +164,8 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
     nextChange: upcoming
       ? {
           action: upcoming.action,
-          planTier: upcoming.planTier as Exclude<PlanTier, null>,
-          planPeriod: upcoming.planPeriod as Exclude<PlanPeriod, null>,
+          planTier: (upcoming.planTier === 'pro' ? 'pro' : 'individual') as PlanTier,
+          planPeriod: (upcoming.planPeriod === 'small' || upcoming.planPeriod === 'large' ? upcoming.planPeriod : 'free') as PlanPeriod,
           effectiveDate: new Date(upcoming.effectiveDate),
         }
       : null,
@@ -163,17 +183,44 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
 }
 
 /**
- * Get credits allocated for a subscription tier
+ * Get credits allocated for a tier+period combination
+ * @param tier - Plan tier
+ * @param period - Plan period
+ * @returns Number of credits
  */
-export function getCreditsForTier(tier: PlanTier): number {
+export function getCreditsForTier(tier: PlanTier, period: PlanPeriod | null | undefined): number {
+  // Import isFreePlan from utils
+  const isFreePlan = (p: PlanPeriod | string | null | undefined): boolean => {
+    return p === 'free' || p === 'tryOnce' || p === 'try_once' || !p
+  }
+
+  // Handle free plans
+  if (isFreePlan(period)) {
+    if (tier === 'pro') {
+      return PRICING_CONFIG.freeTrial.pro
+    }
+    return PRICING_CONFIG.freeTrial.individual
+  }
+
+  // Map tier+period to credits
+  if (tier === 'individual' && period === 'small') {
+    return PRICING_CONFIG.individual.credits
+  }
+  if (tier === 'pro' && period === 'small') {
+    return PRICING_CONFIG.proSmall.credits
+  }
+  if (tier === 'pro' && period === 'large') {
+    return PRICING_CONFIG.proLarge.credits
+  }
+
+  // Backward compatibility
   if (tier === 'individual') {
     return PRICING_CONFIG.individual.credits
-  } else if (tier === 'pro') {
-    // Legacy 'pro' tier - default to proSmall credits
-    return PRICING_CONFIG.proSmall.credits
-  } else if (tier === 'try_once') {
-    return PRICING_CONFIG.tryOnce.credits
   }
+  if (tier === 'pro') {
+    return PRICING_CONFIG.proSmall.credits
+  }
+
   return 0
 }
 
@@ -221,41 +268,99 @@ export function isSubscriptionPastDue(status: SubscriptionStatus | null): boolea
 
 /**
  * Get formatted subscription tier name
+ * @param tier - Plan tier
+ * @param period - Plan period (optional)
+ * @returns Formatted tier name
  */
-export function formatTierName(tier: PlanTier): string {
-  if (tier === 'individual') return 'Starter'
+export function formatTierName(tier: PlanTier, period?: PlanPeriod | null): string {
+  const isFreePlan = (p: PlanPeriod | string | null | undefined): boolean => {
+    return p === 'free' || p === 'tryOnce' || p === 'try_once' || !p
+  }
+
+  if (isFreePlan(period)) {
+    if (tier === 'pro') return 'Pro Free'
+    return 'Individual Free'
+  }
+
+  if (tier === 'individual' && period === 'small') return 'Individual'
+  if (tier === 'pro' && period === 'small') return 'Pro Small'
+  if (tier === 'pro' && period === 'large') return 'Pro Large'
+
+  // Backward compatibility
+  if (tier === 'individual') return 'Individual'
   if (tier === 'pro') return 'Pro'
-  if (tier === 'try_once') return 'Try Once'
   return 'Free'
 }
 
 /**
- * Get subscription features for a tier
+ * Get subscription features for a tier+period combination
+ * @param tier - Plan tier
+ * @param period - Plan period
+ * @returns Object with credits, regenerations, and topUpPrice
  */
-export function getTierFeatures(tier: PlanTier) {
+export function getTierFeatures(tier: PlanTier, period: PlanPeriod | null | undefined) {
+  const isFreePlan = (p: PlanPeriod | string | null | undefined): boolean => {
+    return p === 'free' || p === 'tryOnce' || p === 'try_once' || !p
+  }
+
+  // Handle free plans
+  if (isFreePlan(period)) {
+    if (tier === 'pro') {
+      return {
+        credits: PRICING_CONFIG.freeTrial.pro,
+        regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+        topUpPrice: 0,
+      }
+    }
+    return {
+      credits: PRICING_CONFIG.freeTrial.individual,
+      regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+      topUpPrice: 0,
+    }
+  }
+
+  // Map tier+period to features
+  if (tier === 'individual' && period === 'small') {
+    return {
+      credits: PRICING_CONFIG.individual.credits,
+      regenerations: PRICING_CONFIG.regenerations.individual,
+      topUpPrice: PRICING_CONFIG.individual.topUp.price,
+    }
+  }
+  if (tier === 'pro' && period === 'small') {
+    return {
+      credits: PRICING_CONFIG.proSmall.credits,
+      regenerations: PRICING_CONFIG.regenerations.proSmall,
+      topUpPrice: PRICING_CONFIG.proSmall.topUp.price,
+    }
+  }
+  if (tier === 'pro' && period === 'large') {
+    return {
+      credits: PRICING_CONFIG.proLarge.credits,
+      regenerations: PRICING_CONFIG.regenerations.proLarge,
+      topUpPrice: PRICING_CONFIG.proLarge.topUp.price,
+    }
+  }
+
+  // Backward compatibility
   if (tier === 'individual') {
     return {
       credits: PRICING_CONFIG.individual.credits,
       regenerations: PRICING_CONFIG.regenerations.individual,
       topUpPrice: PRICING_CONFIG.individual.topUp.price,
     }
-  } else if (tier === 'pro') {
-    // Legacy 'pro' tier - default to proSmall features
+  }
+  if (tier === 'pro') {
     return {
       credits: PRICING_CONFIG.proSmall.credits,
       regenerations: PRICING_CONFIG.regenerations.proSmall,
       topUpPrice: PRICING_CONFIG.proSmall.topUp.price,
     }
-  } else if (tier === 'try_once') {
-    return {
-      credits: PRICING_CONFIG.tryOnce.credits,
-      regenerations: PRICING_CONFIG.regenerations.tryOnce,
-      topUpPrice: 0,
-    }
   }
+
   return {
     credits: 0,
-    regenerations: PRICING_CONFIG.regenerations.tryOnce,
+    regenerations: PRICING_CONFIG.regenerations.tryItForFree,
     topUpPrice: 0,
   }
 }

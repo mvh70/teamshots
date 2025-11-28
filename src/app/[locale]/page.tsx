@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import SampleGallery from '@/components/SampleGallery';
 import HeroGallery from '@/components/HeroGallery';
 import TrustIndicators from '@/components/TrustIndicators';
-import SocialProof from '@/components/SocialProof';
 import HowItWorks from '@/components/HowItWorks';
 import FAQ from '@/components/FAQ';
 import PricingPreview from '@/components/PricingPreview';
@@ -15,7 +14,6 @@ import { FeedbackButton } from '@/components/feedback/FeedbackButton';
 
 export default function LandingPage() {
   const t = useTranslations('hero');
-  const tFeatures = useTranslations('features');
   
   const [heroVisible, setHeroVisible] = useState(false);
   const [reducedMotion] = useState(() => {

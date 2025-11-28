@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { useRouter } from '@/i18n/routing'
+import { useRouter, Link } from '@/i18n/routing'
 import StripeNotice from '@/components/stripe/StripeNotice'
 import { useSearchParams } from 'next/navigation'
 import TopUpCard from '@/components/pricing/TopUpCard'
@@ -63,13 +63,6 @@ export default function TopUpPage() {
         credits: PRICING_CONFIG.individual.topUp.credits,
       }
     }
-    if (planTier === 'tryOnce') {
-      return {
-        tier: 'try_once' as const,
-        price: PRICING_CONFIG.tryOnce.topUp.price,
-        credits: PRICING_CONFIG.tryOnce.topUp.credits,
-      }
-    }
     return null
   }, [planTier])
 
@@ -102,6 +95,13 @@ export default function TopUpPage() {
         </h1>
         {planTier && planTier !== 'free' && topUpDetails ? (
           <TopUpCard tier={topUpDetails.tier} returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined} />
+        ) : planTier === 'free' ? (
+          <div className="text-center py-8">
+            <p className="text-gray-600 mb-4">{t('pricing.topUpNotAvailableForFree', { default: 'Top-ups are not available on the free plan. Please purchase a plan to continue.' })}</p>
+            <Link href="/app/upgrade" className="inline-block px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover">
+              {t('pricing.viewPlans', { default: 'View Plans' })}
+            </Link>
+          </div>
         ) : (
           <div className="text-center py-8 text-gray-500">
             {t('common.loading', { default: 'Loading...' })}

@@ -1,4 +1,4 @@
-export type CheckoutType = 'subscription' | 'try_once' | 'top_up'
+export type CheckoutType = 'subscription' | 'top_up' | 'plan'
 
 interface CreateCheckoutParams {
   type: CheckoutType

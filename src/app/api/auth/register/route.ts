@@ -75,27 +75,26 @@ export async function POST(request: NextRequest) {
       password, 
       firstName, 
       lastName,
-      userType = 'individual', 
+      userType: clientUserType = 'individual', 
       teamWebsite, 
       otpCode,
       locale
     } = validationResult.data
 
-    // Domain-based signup restriction validation
-    Logger.info('9. Validating domain restrictions...')
+    // Domain-based signup type: server is authoritative
+    // If domain has a restriction, use it. Otherwise, use client's choice.
+    Logger.info('9. Determining user type from domain...')
     const domain = getRequestDomain(request)
     const domainRestrictedUserType = getSignupTypeFromDomain(domain)
+    const userType = domainRestrictedUserType || clientUserType
 
-    if (domainRestrictedUserType && userType !== domainRestrictedUserType) {
-      Logger.warn('Domain restriction violation', {
+    if (domainRestrictedUserType && clientUserType !== domainRestrictedUserType) {
+      Logger.info('Domain override applied', {
         domain,
         domainRestrictedUserType,
-        requestedUserType: userType
+        clientRequestedType: clientUserType,
+        appliedUserType: userType
       })
-      return NextResponse.json(
-        badRequest('DOMAIN_RESTRICTION_VIOLATION', 'auth.signup.Domain restriction violation', `This domain only allows ${domainRestrictedUserType} subscription signup`),
-        { status: 400 }
-      )
     }
 
     // Verify OTP

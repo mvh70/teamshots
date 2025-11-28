@@ -34,25 +34,24 @@ export function getRequestDomain(request: NextRequest): string | null {
 export function getSignupTypeFromDomain(domain: string | null): 'individual' | 'team' | null {
   if (!domain) return null
 
-  // Normalize domain (handle www. prefix)
-  const normalizedDomain = domain.replace(/^www\./, '')
+  // Normalize domain (handle www. and app. prefixes)
+  const normalizedDomain = domain.replace(/^(www\.|app\.)/, '')
 
-  // Check for forced domain override (localhost only)
-  if (normalizedDomain === 'localhost') {
-    const forcedType = process.env.FORCE_DOMAIN_SIGNUP_TYPE
-    if (forcedType === 'team' || forcedType === 'individual') {
-      return forcedType
-    }
-  }
-
+  // Check known domains
   switch (normalizedDomain) {
     case 'teamshotspro.com':
       return 'team'
     case 'photoshotspro.com':
       return 'individual'
-    default:
-      return null // Allow selection UI
   }
+
+  // Fallback to forced domain override from environment
+  const forcedType = process.env.FORCE_DOMAIN_SIGNUP_TYPE
+  if (forcedType === 'team' || forcedType === 'individual') {
+    return forcedType
+  }
+
+  return null // Allow selection UI if no override set
 }
 
 /**

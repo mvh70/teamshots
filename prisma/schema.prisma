@@ -312,7 +312,7 @@ model SubscriptionChange {
   userId               String
   teamId               String?
   planTier             String // 'individual' | 'pro'
-  planPeriod           String // 'free' | 'try_once' | 'monthly' | 'annual'
+  planPeriod           String // 'free' | 'small' | 'large'
   action               String // 'start' | 'change' | 'cancel' | 'schedule'
   actionDate           DateTime @default(now())
   effectiveDate        DateTime @default(now())

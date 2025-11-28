@@ -27,6 +27,58 @@ export default function UpgradePage() {
   const successType = searchParams.get('type')
   // Get returnTo parameter if user came from another page (e.g., generation page)
   const returnTo = searchParams.get('returnTo')
+  
+  // Auto-checkout params (from signup flow)
+  const autoCheckout = searchParams.get('autoCheckout') === 'true'
+  const planParam = searchParams.get('plan')
+  const periodParam = searchParams.get('period')
+  const [isAutoCheckingOut, setIsAutoCheckingOut] = useState(false)
+
+  // Auto-checkout effect
+  useEffect(() => {
+    if (!isAutoCheckingOut && autoCheckout && planParam && periodParam && !isCheckingSubscription && !isSuccess) {
+      const performAutoCheckout = async () => {
+        setIsAutoCheckingOut(true)
+        try {
+          let priceId = ''
+          if (planParam === 'individual' && periodParam === 'small') {
+            priceId = PRICING_CONFIG.individual.stripePriceId
+          } else if (planParam === 'pro' && periodParam === 'small') {
+            priceId = PRICING_CONFIG.proSmall.stripePriceId
+          } else if (planParam === 'pro' && periodParam === 'large') {
+            priceId = PRICING_CONFIG.proLarge.stripePriceId
+          }
+
+          if (priceId) {
+            const res = await fetch('/api/stripe/checkout', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'plan',
+                priceId,
+                metadata: {
+                  planTier: planParam,
+                  planPeriod: periodParam
+                },
+                returnUrl: returnTo ? decodeURIComponent(returnTo) : undefined
+              })
+            })
+            
+            if (res.ok) {
+              const data = await res.json()
+              if (data.checkoutUrl) {
+                window.location.href = data.checkoutUrl
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Auto-checkout failed:', error)
+          setIsAutoCheckingOut(false)
+        }
+      }
+      performAutoCheckout()
+    }
+  }, [autoCheckout, planParam, periodParam, isCheckingSubscription, isSuccess, isAutoCheckingOut, returnTo])
 
   // Check subscription and determine tier
   useEffect(() => {
@@ -70,7 +122,7 @@ export default function UpgradePage() {
 
   // Clear success params from URL after display (prevents showing on refresh)
   useEffect(() => {
-    if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
+    if (isSuccess && (successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('success')
       newUrl.searchParams.delete('type')
@@ -84,14 +136,6 @@ export default function UpgradePage() {
 
   // Determine which plans to show based on selected tier
   const plansToShow = useMemo(() => {
-    const tryOncePlan = {
-      id: 'tryOnce' as const,
-      price: `$${PRICING_CONFIG.tryOnce.price}`,
-      credits: PRICING_CONFIG.tryOnce.credits,
-      regenerations: PRICING_CONFIG.regenerations.tryOnce,
-      pricePerPhoto: formatPrice(getPricePerPhoto('tryOnce')),
-    }
-
     const individualPlan = {
       id: 'individual' as const,
       price: `$${PRICING_CONFIG.individual.price}`,
@@ -119,10 +163,10 @@ export default function UpgradePage() {
     }
 
     if (selectedTier === 'individual') {
-      return [tryOncePlan, individualPlan]
+      return [individualPlan]
     }
     // For 'pro' tier, show both proSmall and proLarge
-    return [tryOncePlan, proSmallPlan, proLargePlan]
+    return [proSmallPlan, proLargePlan]
   }, [selectedTier])
 
   // If success state, show purchase success screen (check this first to avoid redirects)
@@ -130,13 +174,13 @@ export default function UpgradePage() {
     return <PurchaseSuccess />
   }
 
-  // Show loading while checking subscription
-  if (isCheckingSubscription) {
+  // Show loading while checking subscription or auto-checking out
+  if (isCheckingSubscription || isAutoCheckingOut) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-10">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">{isAutoCheckingOut ? 'Redirecting to checkout...' : 'Loading...'}</p>
         </div>
       </div>
     )
@@ -162,36 +206,25 @@ export default function UpgradePage() {
             key={plan.id}
             {...plan}
             ctaSlot={
-              plan.id === 'tryOnce' ? (
-                <CheckoutButton
-                  loadingText={tAll('common.loading', { default: 'Loading...' })}
-                  type="try_once"
-                  priceId={PRICING_CONFIG.tryOnce.stripePriceId}
-                  returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined}
-                >
-                  {t('plans.tryOnce.cta')}
-                </CheckoutButton>
-              ) : (
-                <CheckoutButton
-                  loadingText={tAll('common.loading', { default: 'Loading...' })}
-                  type="plan"
-                  priceId={
-                    plan.id === 'individual'
-                      ? PRICING_CONFIG.individual.stripePriceId
-                      : plan.id === 'proSmall'
-                        ? PRICING_CONFIG.proSmall.stripePriceId
-                        : PRICING_CONFIG.proLarge.stripePriceId
-                  }
-                  metadata={{
-                    tier: plan.id === 'individual' ? 'individual' : plan.id === 'proSmall' ? 'proSmall' : 'proLarge',
-                    period: plan.id === 'individual' ? 'individual' : plan.id === 'proSmall' ? 'proSmall' : 'proLarge'
-                  }}
-                  returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined}
-                  useBrandCtaColors
-                >
-                  {t('plans.' + plan.id + '.cta')}
-                </CheckoutButton>
-              )
+              <CheckoutButton
+                loadingText={tAll('common.loading', { default: 'Loading...' })}
+                type="plan"
+                priceId={
+                  plan.id === 'individual'
+                    ? PRICING_CONFIG.individual.stripePriceId
+                    : plan.id === 'proSmall'
+                      ? PRICING_CONFIG.proSmall.stripePriceId
+                      : PRICING_CONFIG.proLarge.stripePriceId
+                }
+                metadata={{
+                  planTier: plan.id === 'individual' ? 'individual' : 'pro',
+                  planPeriod: plan.id === 'proLarge' ? 'large' : 'small'
+                }}
+                returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined}
+                useBrandCtaColors
+              >
+                {t('plans.' + plan.id + '.cta')}
+              </CheckoutButton>
             }
             popularLabelKey={(plan.id === 'individual' || plan.id === 'proSmall') ? "pricingPreview.recommended" : undefined}
             className="h-full"

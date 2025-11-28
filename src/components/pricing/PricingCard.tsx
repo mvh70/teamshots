@@ -52,9 +52,6 @@ export default function PricingCard({
   // Match pricing page calculations
   const numberOfPhotos = calculatePhotosFromCredits(credits)
   const displayPrice = price
-  const displayPeriod = id === 'tryItForFree'
-    ? t(`plans.${id}.period`)
-    : 'one-time'
   const displayPricePerPhoto = pricePerPhoto
 
   const rawFeatures = t.raw(`plans.${id}.features`) as string[]

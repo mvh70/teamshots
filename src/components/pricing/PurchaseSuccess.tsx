@@ -19,15 +19,13 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { refetch: refetchCredits, loading: creditsLoading } = useCredits()
-  const [planType, setPlanType] = useState<'try_once' | 'individual' | 'proSmall' | 'proLarge' | 'topUp' | null>(null)
+  const [planType, setPlanType] = useState<'individual' | 'proSmall' | 'proLarge' | 'topUp' | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
     const successType = searchParams.get('type')
     // Map success types from checkout to plan types
-    if (successType === 'try_once_success') {
-      setPlanType('try_once')
-    } else if (successType === 'individual_success') {
+    if (successType === 'individual_success') {
       setPlanType('individual')
     } else if (successType === 'pro_small_success') {
       setPlanType('proSmall')
@@ -67,19 +65,6 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
     const creditsPerGeneration = PRICING_CONFIG.credits.perGeneration
     
     switch (planType) {
-      case 'try_once': {
-        const credits = PRICING_CONFIG.tryOnce.credits
-        const regenerations = PRICING_CONFIG.regenerations.tryOnce
-        const uniquePhotos = credits / creditsPerGeneration // 1 unique photo
-        
-        return {
-          title: t('tryOnce.title'),
-          features: [
-            t('tryOnce.credits', { uniquePhotos }),
-            t('tryOnce.retries', { count: regenerations })
-          ]
-        }
-      }
       case 'individual': {
         const credits = PRICING_CONFIG.individual.credits
         const regenerations = PRICING_CONFIG.regenerations.individual
@@ -213,10 +198,7 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
     }
     
     // Not on either page - decide where to go based on plan type
-    if (planType === 'try_once') {
-      // Try Once users go to generation page
-      return { path: '/app/generate/start', buttonText: t('continueToGenerate'), clearParams: false }
-    } else {
+    {
       // Other plan types go to dashboard
       return { path: '/app/dashboard', buttonText: t('continueToDashboard'), clearParams: false }
     }

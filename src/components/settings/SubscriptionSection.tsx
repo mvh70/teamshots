@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { formatTierName, PlanPeriod } from '@/domain/subscription/utils'
+import { formatTierName, PlanPeriod, PlanTier } from '@/domain/subscription/utils'
 import { CreditCardIcon } from '@heroicons/react/24/outline'
 import { jsonFetcher } from '@/lib/fetcher'
 import SubscriptionPanel from '@/components/subscription/SubscriptionPanel'
@@ -14,45 +14,57 @@ interface SubscriptionSectionProps {
 
 interface Subscription {
   status: string
-  tier: 'individual' | 'pro' | 'try_once' | null
-  period?: 'free' | 'try_once' | 'monthly' | 'annual' | null
+  tier: PlanTier
+  period: PlanPeriod
   nextRenewal?: string | null
   nextChange?: {
     action: 'start' | 'change' | 'cancel' | 'schedule'
-    planTier: 'individual' | 'pro'
-    planPeriod: 'monthly' | 'annual'
+    planTier: PlanTier
+    planPeriod: PlanPeriod
     effectiveDate: string
   } | null
 }
 
 // Helper to normalize tier names for formatTierName function
-const formatSubscriptionTier = (tier: unknown): 'individual' | 'pro' | null => {
+const formatSubscriptionTier = (tier: unknown): PlanTier => {
   if (tier === 'individual' || tier === 'pro') return tier
-  return null
+  return 'individual' // Default fallback
 }
 
 // Helper to normalize period from API format to PlanPeriod type
 const normalizePeriod = (period: unknown): PlanPeriod => {
-  if (period === 'free' || period === 'tryOnce' || period === 'individual' || period === 'proSmall' || period === 'proLarge') {
+  // Valid PlanPeriod values
+  if (period === 'free' || period === 'small' || period === 'large') {
     return period as PlanPeriod
   }
-  // Convert legacy API format to new format
-  if (period === 'try_once') return 'tryOnce'
-  // Legacy subscription periods map to null (transactional pricing doesn't use monthly/annual)
-  if (period === 'monthly' || period === 'annual') return null
-  return null
+  // Legacy periods map to free (tryOnce/try_once are free plans)
+  if (period === 'try_once' || period === 'tryOnce') return 'free'
+  // Legacy subscription periods map to small/large as best effort, or free
+  if (period === 'monthly') return 'small'
+  if (period === 'annual') return 'large'
+  
+  // Default fallback
+  return 'free'
 }
 
-// Helper to normalize planPeriod for nextChange (must exclude null/free/tryOnce)
-const normalizeNextChangePeriod = (period: unknown): Exclude<PlanPeriod, 'free' | 'tryOnce' | null> => {
-  if (period === 'individual' || period === 'proSmall' || period === 'proLarge') {
-    return period as Exclude<PlanPeriod, 'free' | 'tryOnce' | null>
+// Helper to normalize planPeriod for nextChange (must exclude null)
+// Returns 'free' | 'small' | 'large' (valid PlanPeriod values)
+const normalizeNextChangePeriod = (period: unknown): Exclude<PlanPeriod, null> => {
+  // Valid PlanPeriod values (already correct)
+  if (period === 'free' || period === 'small' || period === 'large') {
+    return period as 'free' | 'small' | 'large'
   }
-  // Legacy periods: map monthly/annual to individual (default fallback)
+  // Map UIPlanTier values to PlanPeriod values
+  if (period === 'proLarge') return 'large'
+  if (period === 'individual' || period === 'proSmall') return 'small'
+  // Legacy periods: map monthly/annual to small/large
   // This is a best-effort mapping since transactional pricing doesn't have monthly/annual
-  if (period === 'monthly' || period === 'annual') return 'individual'
-  // Default fallback
-  return 'individual'
+  if (period === 'annual') return 'large'
+  if (period === 'monthly') return 'small'
+  // Legacy tryOnce/try_once periods map to free
+  if (period === 'try_once' || period === 'tryOnce') return 'free'
+  // Default fallback to small
+  return 'small'
 }
 
 export default function SubscriptionSection({ 
@@ -199,7 +211,7 @@ export default function SubscriptionSection({
       <SubscriptionPanel
         subscription={{
           status: subscription?.status || null,
-          tier: formatSubscriptionTier(currentTier) || null,
+          tier: formatSubscriptionTier(currentTier),
           period: currentPeriod,
           nextRenewal: subscription?.nextRenewal ?? null,
           nextChange: subscription?.nextChange ? {

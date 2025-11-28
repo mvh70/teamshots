@@ -6,7 +6,7 @@ import { CheckoutButton } from '@/components/ui'
 import { calculatePricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing'
 import { PRICING_CONFIG } from '@/config/pricing'
 
-type Tier = 'individual' | 'proSmall' | 'proLarge' | 'try_once'
+type Tier = 'individual' | 'proSmall' | 'proLarge'
 
 interface TopUpCardProps {
   tier: Tier
@@ -30,8 +30,8 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
     if (tier === 'individual') {
       return { price: PRICING_CONFIG.individual.topUp.price, credits: PRICING_CONFIG.individual.topUp.credits }
     }
-    // try_once
-    return { price: PRICING_CONFIG.tryOnce.topUp.price, credits: PRICING_CONFIG.tryOnce.topUp.credits }
+    // Default fallback
+    return { price: PRICING_CONFIG.individual.topUp.price, credits: PRICING_CONFIG.individual.topUp.credits }
   }, [tier])
 
   const displayPricePerPhoto = useMemo(() => {
@@ -43,7 +43,7 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
             ? PRICING_CONFIG.regenerations.proLarge
           : tier === 'individual'
               ? PRICING_CONFIG.regenerations.individual
-            : PRICING_CONFIG.regenerations.tryOnce)
+            : PRICING_CONFIG.regenerations.individual) // Default fallback
     const ppf = calculatePricePerPhoto(details.price, details.credits, regenerations)
     return { value: formatPrice(ppf), regenerations }
   }, [details, tier, regenerationsOverride])
@@ -56,9 +56,7 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
             ? t('proSmallTopUp', { defaultMessage: 'Pro Small top-up' })
             : tier === 'proLarge'
               ? t('proLargeTopUp', { defaultMessage: 'Pro Large top-up' })
-            : tier === 'individual'
-              ? t('individualTopUp', { defaultMessage: 'Individual top-up' })
-              : t('tryOnceTopUp', { defaultMessage: 'Try Once top-up' })}
+            : t('individualTopUp', { defaultMessage: 'Individual top-up' })}
         </h3>
         <p className="text-gray-600 mb-4">
           {t('topUpSubtitle', { defaultMessage: 'For occasional use' })}
@@ -101,7 +99,7 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
                   ? PRICING_CONFIG.regenerations.proLarge
                 : tier === 'individual'
                     ? PRICING_CONFIG.regenerations.individual
-                  : PRICING_CONFIG.regenerations.tryOnce)
+                  : PRICING_CONFIG.regenerations.individual) // Default fallback
           const photos = calculatePhotosFromCredits(details.credits)
           const regenerationText = t('variationsBullet', { count: regenerations })
           return (

@@ -211,7 +211,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   
   const shouldShowGenerationTypeSelector = false
 
-  if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
+  if (isSuccess && (successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
     return <PurchaseSuccess />
   }
 

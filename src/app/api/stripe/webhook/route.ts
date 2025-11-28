@@ -3,9 +3,10 @@ import Stripe from 'stripe';
 import { getRequestHeader } from '@/lib/server-headers';
 import { Env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
-import { PRICING_CONFIG } from '@/config/pricing';
+import { PRICING_CONFIG, getPricingConfigKey } from '@/config/pricing';
 import { PrismaClient } from '@prisma/client';
 import { Logger } from '@/lib/logger';
+import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils';
 
 const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
   apiVersion: '2025-10-29.clover',
@@ -150,32 +151,47 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   try {
     if (purchaseType === 'plan') {
       // Handle one-time plan purchase
+      // Extract tier and period from metadata (set in checkout route)
+      const planTier = session.metadata?.planTier as PlanTier | undefined
+      const planPeriod = session.metadata?.planPeriod as PlanPeriod | undefined
       const priceId = checkoutSession.line_items?.data[0]?.price?.id;
-      const tier = determineTier(priceId);
       
-      if (!tier) {
-        Logger.error('Could not determine tier for plan purchase', { 
+      // Fallback: determine tier+period from price ID if not in metadata
+      let finalTier: PlanTier | null = planTier || null
+      let finalPeriod: PlanPeriod | null = planPeriod || null
+      
+      if (!finalTier || !finalPeriod) {
+        if (priceId === PRICING_CONFIG.individual.stripePriceId) {
+          finalTier = 'individual'
+          finalPeriod = 'small'
+        } else if (priceId === PRICING_CONFIG.proSmall.stripePriceId) {
+          finalTier = 'pro'
+          finalPeriod = 'small'
+        } else if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
+          finalTier = 'pro'
+          finalPeriod = 'large'
+        }
+      }
+      
+      if (!finalTier || !finalPeriod) {
+        Logger.error('Could not determine tier/period for plan purchase', { 
+          planTier,
+          planPeriod,
           priceId, 
           sessionId: session.id,
           lineItems: checkoutSession.line_items?.data 
         });
-        throw new Error(`Unable to determine tier for price ID: ${priceId}`);
+        throw new Error(`Unable to determine tier/period for price ID: ${priceId}`);
       }
       
-      // Determine credits based on tier
-      let credits = 0;
-      if (tier === 'individual') {
-        credits = PRICING_CONFIG.individual.credits;
-      } else if (tier === 'proSmall') {
-        credits = PRICING_CONFIG.proSmall.credits;
-      } else if (tier === 'proLarge') {
-        credits = PRICING_CONFIG.proLarge.credits;
+      // Get pricing config key to determine credits
+      const configKey = getPricingConfigKey(finalTier, finalPeriod)
+      if (!configKey) {
+        Logger.error('Invalid tier/period combination', { tier: finalTier, period: finalPeriod });
+        throw new Error(`Invalid tier/period combination: ${finalTier}/${finalPeriod}`);
       }
       
-      if (credits === 0) {
-        Logger.error('Credits are 0 for plan purchase', { tier, priceId, sessionId: session.id });
-        throw new Error(`No credits configured for tier: ${tier}`);
-      }
+      const credits = PRICING_CONFIG[configKey].credits
       
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
         // Update user plan info
@@ -183,14 +199,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           where: { id: userId },
           data: {
             subscriptionStatus: 'active',
-            planTier: tier,
-            planPeriod: tier, // Use tier as period for one-time purchases
+            planTier: finalTier,
+            planPeriod: finalPeriod,
           },
         });
         
-        // For proSmall/proLarge tiers, get teamId from person
+        // For pro tiers, get teamId from person
         const person = await tx.person.findUnique({ where: { userId: userId || '' } })
-        const teamId = (tier === 'proSmall' || tier === 'proLarge') ? person?.teamId || null : null
+        const teamId = (finalTier === 'pro') ? person?.teamId || null : null
         
         // Record credit transaction
         await tx.creditTransaction.create({
@@ -199,58 +215,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             teamId: teamId || undefined,
             credits: credits,
             type: 'purchase',
-            description: `Plan purchase - ${tier}`,
+            description: `Plan purchase - ${finalTier} ${finalPeriod}`,
             amount: session.amount_total ? session.amount_total / 100 : 0,
             currency: 'USD',
             stripePaymentId: session.payment_intent as string,
-            planTier: tier,
-            planPeriod: tier,
+            planTier: finalTier,
+            planPeriod: finalPeriod,
             metadata: {
               stripePriceId: priceId,
               sessionId: session.id,
             },
           },
         });
-      });
-      
-    } else if (purchaseType === 'try_once') {
-      // Handle Try Once purchase
-      const credits = PRICING_CONFIG.tryOnce.credits;
-      const price = PRICING_CONFIG.tryOnce.price;
-      
-      await prisma.$transaction(async (tx: PrismaTransactionClient) => {
-        await tx.user.update({
-          where: { id: userId },
-          data: {
-            subscriptionStatus: 'active',
-            planTier: 'individual', // default; real tier remains guided by account mode elsewhere
-            planPeriod: 'try_once',
-          },
-        });
         
-        await tx.creditTransaction.create({
-          data: {
-            userId,
-            credits: credits,
-            type: 'purchase',
-            description: 'Try Once purchase',
-            amount: price,
-            currency: 'USD',
-            stripePaymentId: session.payment_intent as string,
-            planTier: 'individual',
-            planPeriod: 'try_once',
-            metadata: {
-              stripeSessionId: session.id,
-            },
-          },
-        });
+        // Record subscription change
         type PrismaWithSubscriptionChange = typeof prisma & { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
         const txEx = tx as unknown as PrismaWithSubscriptionChange
         await txEx.subscriptionChange.create({
           data: {
             userId,
-            planTier: 'individual',
-            planPeriod: 'try_once',
+            planTier: finalTier,
+            planPeriod: finalPeriod,
             action: 'start',
             metadata: { checkoutSessionId: session.id },
           }
@@ -277,6 +262,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         const person = await tx.person.findUnique({ where: { userId: userId || '' } })
         const teamId = (tier === 'proSmall' || tier === 'proLarge') ? person?.teamId || null : null
         
+        // Get user's current planPeriod for top-up transaction
+        const user = await tx.user.findUnique({ where: { id: userId || '' }, select: { planPeriod: true } })
+        const planPeriod = (user?.planPeriod && user.planPeriod !== 'free' && user.planPeriod !== 'tryOnce' && user.planPeriod !== 'try_once') 
+          ? user.planPeriod 
+          : (tier === 'proLarge' ? 'large' : 'small')
+        
         await tx.creditTransaction.create({
           data: {
             userId,
@@ -290,7 +281,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             currency: 'USD',
             stripePaymentId: session.payment_intent as string,
             planTier: tier,
-            planPeriod: 'try_once',
+            planPeriod: planPeriod,
             metadata: {
               stripeSessionId: session.id,
               topUpCredits: credits,
@@ -362,20 +353,35 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     
     // Determine tier from subscription
     const price = subscription.items.data[0]?.price;
-    const tier = determineTier(price?.id);
+    const tierStr = determineTier(price?.id);
     
-    if (!tier) {
+    if (!tierStr) {
       Logger.error('Could not determine tier for subscription', { subscriptionId });
       return;
+    }
+
+    // Map to strict PlanTier/PlanPeriod
+    let finalTier: PlanTier = 'individual';
+    let finalPeriod: PlanPeriod = 'small';
+    
+    if (tierStr === 'proSmall') {
+        finalTier = 'pro';
+        finalPeriod = 'small';
+    } else if (tierStr === 'proLarge') {
+        finalTier = 'pro';
+        finalPeriod = 'large';
+    } else {
+        finalTier = 'individual';
+        finalPeriod = 'small';
     }
     
     // Get credits for this tier
     let credits = 0;
-    if (tier === 'individual') {
+    if (tierStr === 'individual') {
       credits = PRICING_CONFIG.individual.credits;
-    } else if (tier === 'proSmall') {
+    } else if (tierStr === 'proSmall') {
       credits = PRICING_CONFIG.proSmall.credits;
-    } else if (tier === 'proLarge') {
+    } else if (tierStr === 'proLarge') {
       credits = PRICING_CONFIG.proLarge.credits;
     }
     
@@ -388,14 +394,14 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
           userId: user.id,
           credits: credits,
           type: 'purchase',
-          description: `Monthly credits - ${tier} subscription renewal`,
+          description: `Monthly credits - ${tierStr} subscription renewal`,
           amount: price?.unit_amount ? price.unit_amount / 100 : 0,
           currency: 'USD',
           stripePaymentId: invoice.id,
           stripeInvoiceId: invoice.id,
           stripeSubscriptionId: subscriptionId,
-          planTier: tier,
-          planPeriod: price?.recurring?.interval === 'year' ? 'annual' : 'monthly',
+          planTier: finalTier,
+          planPeriod: finalPeriod,
           metadata: {
             stripePriceId: price?.id,
             subscriptionId: subscriptionId,
@@ -426,7 +432,13 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
     }
 
     const credits = parseInt(invoice.metadata?.credits || '0');
-    const tier = invoice.metadata?.tier || 'try_once';
+    const tierStr = invoice.metadata?.tier || 'individual';
+    
+    // Map legacy/metadata tier strings to strict PlanTier
+    let finalTier: PlanTier = 'individual';
+    if (tierStr === 'proSmall' || tierStr === 'proLarge') {
+      finalTier = 'pro';
+    }
 
     if (credits <= 0) {
       Logger.error('Invalid credits amount for top-up', { credits, invoiceId: invoice.id });
@@ -451,7 +463,13 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
 
       // For pro tier, always allocate as team credits (even without a team)
       // This allows pro users to use team features and credits get migrated when they create a team
-      const shouldBeTeamCredits = tier === 'pro'
+      const shouldBeTeamCredits = finalTier === 'pro'
+
+      // Get user's current planPeriod for top-up transaction
+      const userWithPeriod = await tx.user.findUnique({ where: { id: user.id }, select: { planPeriod: true } })
+      const planPeriod = (userWithPeriod?.planPeriod && userWithPeriod.planPeriod !== 'free' && userWithPeriod.planPeriod !== 'tryOnce' && userWithPeriod.planPeriod !== 'try_once') 
+        ? userWithPeriod.planPeriod as PlanPeriod
+        : (tierStr === 'proLarge' ? 'large' : 'small')
 
       await tx.creditTransaction.create({
         data: {
@@ -459,17 +477,17 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
           teamId: shouldBeTeamCredits ? (person?.teamId || null) : null, // null for pro = unmigrated team credits
           credits: credits,
           type: 'purchase',
-          description: `Credit top-up - ${tier} (${credits} credits)`,
+          description: `Credit top-up - ${tierStr} (${credits} credits)`,
           amount: invoice.amount_paid ? invoice.amount_paid / 100 : 0,
           currency: 'USD',
           stripePaymentId: getInvoicePaymentIntentId(invoice),
           stripeInvoiceId: invoice.id,
-          planTier: tier,
-          planPeriod: 'try_once',
+          planTier: finalTier,
+          planPeriod: planPeriod as PlanPeriod,
           metadata: {
             stripeInvoiceId: invoice.id,
             topUpCredits: credits,
-            tier: tier,
+            tier: tierStr,
           },
         },
       });
@@ -478,7 +496,7 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
     Logger.info('Credit top-up processed successfully', { 
       userId: user.id, 
       credits, 
-      tier, 
+      tier: tierStr, 
       invoiceId: invoice.id 
     });
   } catch (error) {
@@ -502,9 +520,8 @@ function determineTier(priceId: string | undefined): string | null {
     return 'proLarge';
   }
 
-  if (priceId === PRICING_CONFIG.tryOnce.stripePriceId) {
-    return 'tryOnce';
-  }
+  // tryOnce was replaced with tryItForFree (free tier, no stripePriceId)
+  // Legacy tryOnce priceIds will return null
   
   return null;
 }

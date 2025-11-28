@@ -310,7 +310,7 @@ export default function TeamGenerationsPage() {
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">{tg('title')}</h1>
-        <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed">Manage and view your team's generated professional photos</p>
+        <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed">Manage and view your team&apos;s generated professional photos</p>
       </div>
 
       {/* Filters and Generate Button Row */}

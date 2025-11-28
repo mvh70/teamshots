@@ -30,6 +30,7 @@ import {
   checkMaxAttemptsAndThrow
 } from './utils/evaluation-orchestrator'
 import { EvaluationFailedError } from './errors'
+import type { ImageEvaluationResult } from './evaluator'
 import { getProgressMessage } from '@/lib/generation-progress-messages'
 import { buildBackgroundComposite } from '@/lib/generation/reference-utils'
 
@@ -787,16 +788,53 @@ export async function executeV3Workflow({
   if (step3Output.evaluation.status !== 'Approved') {
     Logger.warn('V3 Step 3: Final evaluation not approved', { reason: step3Output.evaluation.reason })
     
+    // Get actual image dimensions for evaluation details
+    const sharp = (await import('sharp')).default
+    const metadata = await sharp(step2Output.refinedBuffer).metadata()
+    const actualWidth = metadata.width ?? null
+    const actualHeight = metadata.height ?? null
+    
+    // Calculate dimension and aspect ratio mismatches
+    const DIMENSION_TOLERANCE_PX = 2
+    const ASPECT_RATIO_TOLERANCE = 0.02
+    const expectedRatio = expectedWidth / expectedHeight
+    const actualRatio = actualWidth && actualHeight && actualHeight !== 0 ? actualWidth / actualHeight : null
+    
+    const dimensionMismatch =
+      actualWidth === null ||
+      actualHeight === null ||
+      Math.abs(actualWidth - expectedWidth) > DIMENSION_TOLERANCE_PX ||
+      Math.abs(actualHeight - expectedHeight) > DIMENSION_TOLERANCE_PX
+    
+    const aspectMismatch =
+      actualRatio === null ? true : Math.abs(actualRatio - expectedRatio) > ASPECT_RATIO_TOLERANCE
+    
+    // Construct ImageEvaluationResult from EvaluationFeedback
+    const evaluationResult: ImageEvaluationResult = {
+      status: step3Output.evaluation.status,
+      reason: step3Output.evaluation.reason,
+      details: {
+        actualWidth,
+        actualHeight,
+        dimensionMismatch,
+        aspectMismatch,
+        selfieDuplicate: false, // V3 Step 3 doesn't check for selfie duplicates
+        matchingReferenceLabel: null,
+        uncertainCount: undefined,
+        autoReject: step3Output.evaluation.failedCriteria?.some(c => c.includes('face_similarity') || c.includes('characteristic_preservation')) || false
+      }
+    }
+    
     // Throw specific error that carries the image data for support notification
     throw new EvaluationFailedError(
       `V3 Step 3 final evaluation failed: ${step3Output.evaluation.reason}`,
       {
-        evaluation: step3Output.evaluation,
+        evaluation: evaluationResult,
         imageBase64: step2Output.refinedBase64,
         generationId,
+        prompt,
         attempt: currentAttempt,
-        aspectRatio,
-        shotLabel: 'unknown' // workflow v3 doesn't pass shotLabel, but it's okay, it's optional in error or we can resolve it if needed
+        aspectRatio
       }
     )
   }

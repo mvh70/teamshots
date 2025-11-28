@@ -218,20 +218,6 @@
     "viewFullPricing": "Ver detalles completos",
     "poweredBy": "Impulsado por Google Gemini AI",
     "plans": {
-      "tryOnce": {
-        "name": "Prueba Una Vez",
-        "price": "$5",
-        "period": "único",
-        "credits": "{credits} créditos",
-        "description": "Perfecto para probar el servicio",
-        "features": {
-          "0": "1 generación de foto (4 variaciones)",
-          "1": "Descargas de alta resolución 1024x1024px",
-          "2": "Retención de foto por 30 días",
-          "3": "Soporte por correo electrónico"
-        },
-        "cta": "Obtén mi prueba"
-      },
       "starter": {
         "name": "Individual",
         "price": "$29",
@@ -312,7 +298,6 @@
     "individualTopUp": "Recarga individual",
     "proSmallTopUp": "Recarga Pro Pequeño",
     "proLargeTopUp": "Recarga Pro Grande",
-    "tryOnceTopUp": "Recarga Prueba Una Vez",
     "topUpSubtitle": "Para uso ocasional",
     "topUpPackageLabel": "Paquete de recarga",
     "confirmTopUp": "Recargar mis créditos",
@@ -331,17 +316,17 @@
     "checkoutError": "¡Ups! Algo salió mal. Vuelve a intentar. (Si persiste, avísanos—estamos para ayudar)",
     "checkoutApiError": "Error al crear sesión de pago",
     "plans": {
-      "tryOnce": {
-        "name": "Prueba Una Vez",
-        "period": "pago único",
-        "description": "Perfecto para probar el servicio",
+      "tryItForFree": {
+        "name": "Pruébalo Gratis",
+        "period": "gratis",
+        "description": "Ve de qué se trata todo el alboroto. Sin tarjeta de crédito, sin compromiso, solo una prueba gratis para demostrar que no estamos bromeando.",
         "features": [
-          "Regenera hasta {regenerations} veces para perfeccionar cada foto",
-          "Fotos retenidas hasta el cierre de la cuenta",
-          "Recarga de créditos disponible",
-          "Soporte por correo"
+          "1 generación de foto gratis ({shots} disparos)",
+          "Incluye marca TeamShotsPro",
+          "Reintenta hasta {regenerations} veces para perfeccionar tu foto",
+          "Perfecto para probar antes de comprometerte"
         ],
-        "cta": "Prueba un retrato"
+        "cta": "Regístrate gratis"
       },
       "individual": {
         "name": "Individual",
@@ -410,8 +395,8 @@
     "purchaseSuccess": {
       "title": "¡Bienvenido a bordo!",
       "subtitle": "Tu compra fue exitosa. Esto es lo que desbloqueaste:",
-      "tryOnce": {
-        "title": "Paquete Prueba Una Vez",
+      "tryItForFree": {
+        "title": "¡Bienvenido! Tu prueba gratis está lista",
         "credits": "{uniquePhotos} foto",
         "photos": "{count} fotos para generación de fotos",
         "retries": "{count} reintentos gratis para perfeccionar tus fotos"
@@ -487,10 +472,10 @@
       "planPro": "Pro",
       "planIndividual": "Individual",
       "planGeneric": "tu plan",
-      "planTryOnce": "Prueba una vez",
-      "planSummaryTryOnce": "{credits} créditos, {photos} fotos",
+      "planTryItForFree": "Pruébalo Gratis",
+      "planSummaryTryItForFree": "{credits} créditos, {photos} fotos",
       "planSummaryPro": "{credits} créditos, {photos} fotos",
-      "planSummaryIndividual": "{credits} créditos/mes, {photos} fotos/mes",
+      "planSummaryIndividual": "{credits} créditos, {photos} fotos",
       "welcomeMessage": "Bienvenido",
       "planSummaryWelcome": "{credits} créditos, {photos} fotos para comenzar",
       "selectPlanPrompt": "Selecciona un plan para continuar",
@@ -688,12 +673,12 @@
         "manageTeam": "Gestionar equipo"
       },
       "successMessages": {
-        "tryOnce": "¡Paquete Try Once comprado exitosamente! Se han agregado {credits} créditos a tu cuenta.",
+        "tryItForFree": "¡Tu prueba gratis está lista! Se han agregado {photos} fotos a tu cuenta.",
         "individual": "¡Plan Individual activado exitosamente! Se han agregado {credits} créditos a tu cuenta.",
         "pro": "¡Plan Pro activado exitosamente! Se han agregado {credits} créditos a tu cuenta.",
         "topUp": "¡Recarga de créditos completada exitosamente! Se han agregado créditos a tu cuenta.",
         "default": "¡Compra completada exitosamente! Se han agregado créditos a tu cuenta.",
-        "titleTryOnce": "¡Listo! 🎉",
+        "titleTryItForFree": "¡Bienvenido! 🎉",
         "titleIndividual": "¡Entraste! 🚀",
         "titlePro": "¡Pro desbloqueado! 🎯",
         "titleTopUp": "¡Créditos cargados! ⚡"
@@ -901,8 +886,8 @@
         "paid": {
           "message": "🎉 ¡Genial, eres un usuario de negocios y necesitas estas facturas! Lo sabemos y te las daremos lo antes posible (porque las finanzas organizadas son geniales y apoyamos esa energía)."
         },
-        "tryOnce": {
-          "message": "🎉 ¡Genial, compraste algunas fotos! Las facturas aparecerán aquí pronto (solo estamos agregando los toques finales para que se vean profesionales, porque así somos)."
+        "tryItForFree": {
+          "message": "🎉 ¡Estás en el plan gratis! Actualiza para desbloquear facturas y más funciones (porque las finanzas organizadas están de moda, y apoyamos esa energía)."
         },
         "individual": {
           "message": "🎉 ¡Genial, compraste algunas fotos! Las facturas aparecerán aquí pronto (solo estamos agregando los toques finales para que se vean profesionales, porque así somos)."
@@ -2086,7 +2071,7 @@
         "styleCreationNotAvailable": "La creación de estilos de foto no está disponible en el plan gratuito. ¡Actualiza para desbloquear esta función y crear estilos personalizados!"
       },
       "stripe": {
-        "tryOnceAlreadyUsed": "Ya usaste el paquete Prueba Una Vez. ¿Listo para actualizar? ¡Nos encantaría tenerte de vuelta!",
+        "tryItForFreeAlreadyUsed": "Ya usaste tu prueba gratis. ¿Listo para actualizar? ¡Nos encantaría tenerte de vuelta!",
         "topUpNotAllowedOnFree": "Las recargas no están disponibles en el plan gratuito. Actualiza a un plan de pago para recargar tus créditos.",
         "missingSubscriptionIdOrNewPriceId": "Falta información de suscripción. Por favor, actualiza y vuelve a intentar, o contacta al soporte si esto persiste.",
         "missingSubscriptionIdOrNewLowerPriceId": "Falta información de suscripción. Por favor, actualiza y vuelve a intentar.",

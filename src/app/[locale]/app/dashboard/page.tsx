@@ -110,8 +110,6 @@ export default function DashboardPage() {
     
     const messageType = searchParams.get('type')
     switch (messageType) {
-      case 'try_once_success':
-        return t('successMessages.tryOnce', { credits: PRICING_CONFIG.tryOnce.credits })
       case 'individual_success':
         return t('successMessages.individual', { credits: PRICING_CONFIG.individual.credits })
       case 'pro_success':

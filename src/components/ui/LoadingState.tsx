@@ -6,6 +6,7 @@ interface LoadingStateProps {
   className?: string
   'data-testid'?: string
   children?: React.ReactNode
+  style?: React.CSSProperties
 }
 
 export function LoadingState({

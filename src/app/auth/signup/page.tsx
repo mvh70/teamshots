@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn, getSession } from 'next-auth/react'
-import {useTranslations} from 'next-intl'
+import {useTranslations, useLocale} from 'next-intl'
 import Link from 'next/link'
 import { jsonFetcher } from '@/lib/fetcher'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
@@ -11,11 +11,10 @@ import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
-import { PlanSelection } from '@/components/auth/PlanSelection'
-import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
 
 export default function SignUpPage() {
   const t = useTranslations('auth.signup')
+  const locale = useLocale()
   const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
@@ -25,36 +24,20 @@ export default function SignUpPage() {
 
   const router = useRouter()
 
-  // Derived: infer plan from URL params
-  const tierParam = searchParams.get('tier') as 'individual' | 'team' | null
-  const periodParam = (searchParams.get('period') || 'monthly') as 'monthly' | 'annual' | 'tryItForFree'
+  // URL params for checkout flow
+  const planParam = searchParams.get('plan')
+  const periodParam = searchParams.get('period')
+  const autoCheckout = searchParams.get('autoCheckout') === 'true'
   const isTryItForFree = periodParam === 'tryItForFree'
-  const inferredTier: 'individual' | 'team' | null = tierParam ? tierParam : null
 
-  // Domain-based signup restriction: auto-detect domain and restrict userType
-  const [domainRestrictedUserType] = useState(() => {
-    const domain = getClientDomain()
-    const forcedType = getForcedSignupType()
-    return forcedType || getSignupTypeFromDomain(domain)
-  })
-
-  // Initialize formData with URL params and domain restriction
-  const initialFormData = useMemo(() => {
-    const emailParam = searchParams.get('email')
-    // Domain restriction takes precedence over URL params
-    const userType = domainRestrictedUserType || inferredTier || 'individual'
-
-    return {
-      email: emailParam || '',
-      password: '',
-      confirmPassword: '',
-      firstName: '',
-      otpCode: '',
-      userType,
-    }
-  }, [searchParams, inferredTier, domainRestrictedUserType])
-
-  const [formData, setFormData] = useState(initialFormData)
+  // Form state - userType is determined server-side based on domain
+  const [formData, setFormData] = useState(() => ({
+    email: searchParams.get('email') || '',
+    password: '',
+    confirmPassword: '',
+    firstName: '',
+    otpCode: '',
+  }))
 
   const handleSendOTP = async () => {
     setIsLoading(true)
@@ -100,7 +83,7 @@ export default function SignUpPage() {
     setError('')
 
     try {
-      // Register directly; server will validate OTP (single verification)
+      // Register directly; server determines userType from domain
       const registerData = await jsonFetcher<{ success?: boolean; error?: string }>('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,7 +92,6 @@ export default function SignUpPage() {
           password: formData.password,
           firstName: formData.firstName,
           otpCode: formData.otpCode,
-          userType: formData.userType,
           period: isTryItForFree ? 'tryItForFree' : undefined,
         }),
       })
@@ -136,8 +118,10 @@ export default function SignUpPage() {
                   window.sessionStorage.setItem('teamshots.initialData', JSON.stringify(dataWithTimestamp))
                 } catch {}
                 
-                // Redirect based on onboarding state
-                if (data.onboarding?.needsTeamSetup) {
+                // Redirect based on onboarding state or checkout intent
+                if (autoCheckout && planParam && periodParam) {
+                  router.push(`/${locale}/app/upgrade?autoCheckout=true&plan=${planParam}&period=${periodParam}`)
+                } else if (data.onboarding?.needsTeamSetup) {
                   router.push('/app/team')
                 } else {
                   router.push('/app/dashboard')
@@ -219,14 +203,6 @@ export default function SignUpPage() {
         <div className="space-y-7 lg:space-y-8">
           {step === 1 && (
             <>
-              {/* Plan selection - only show when no domain restriction */}
-              {!domainRestrictedUserType && !inferredTier && !isTryItForFree && (
-                <PlanSelection
-                  selectedPlan={formData.userType}
-                  onPlanSelect={(plan) => setFormData({ ...formData, userType: plan })}
-                />
-              )}
-
               <AuthInput
                 id="firstName"
                 name="firstName"

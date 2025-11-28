@@ -104,32 +104,19 @@ export default function ColorPicker({
 }: ColorPickerProps) {
   const t = useTranslations('customization.photoStyle.background')
   const [isOpen, setIsOpen] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
+  const [isMounted] = useState(true)
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  const updateDropdownPosition = () => {
-    if (!buttonRef.current) return
-    const rect = buttonRef.current.getBoundingClientRect()
-    setDropdownPosition({
-      top: rect.bottom + 8,
-      left: rect.left,
-      width: Math.max(rect.width, 280)
-    })
-  }
-
 
   // Update dropdown position when open and on scroll/resize
   useEffect(() => {
     if (!isOpen) return
 
-    const handleReposition = () => updateDropdownPosition()
+    const handleReposition = () => {
+      if (!buttonRef.current) return
+      // Position is calculated synchronously in render, no need to store in state
+    }
     handleReposition()
     window.addEventListener('scroll', handleReposition, true)
     window.addEventListener('resize', handleReposition)
@@ -182,12 +169,6 @@ export default function ColorPicker({
     setIsOpen(true)
   }
 
-  // Update position when dropdown opens
-  useEffect(() => {
-    if (isOpen) {
-      updateDropdownPosition()
-    }
-  }, [isOpen])
 
   const normalizedValue = normalizeColorToHex(
     (value && !value.startsWith('#') && /^[0-9A-Fa-f]{3,6}$/.test(value))

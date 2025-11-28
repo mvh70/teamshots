@@ -13,8 +13,8 @@ interface BillingSectionProps {
 
 interface Subscription {
   status: string
-  tier: 'individual' | 'pro' | 'try_once' | null
-  period?: 'free' | 'try_once' | 'monthly' | 'annual' | null
+  tier: 'individual' | 'pro' | null
+  period?: 'free' | 'monthly' | 'annual' | null
 }
 
 export default function BillingSection({ 
@@ -46,7 +46,7 @@ export default function BillingSection({
   const currentTier = subscription?.tier
   const currentPeriod = subscription?.period || null
   const isFree = currentPeriod === 'free' || !currentTier
-  const isPaid = !isFree && (currentTier === 'try_once' || currentTier === 'individual' || currentTier === 'pro')
+  const isPaid = !isFree && (currentTier === 'individual' || currentTier === 'pro')
 
   if (loading) {
     return (
