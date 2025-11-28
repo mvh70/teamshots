@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const isUsed = !!invite.usedAt
 
     // Helper function to send new invite email
-    const sendNewInviteEmail = async (newToken: string, newExpiresAt: Date) => {
+    const sendNewInviteEmail = async (newToken: string) => {
       const baseUrl = getBaseUrl(request.headers)
       const inviteLink = `${baseUrl}/invite/${newToken}`
       
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        const emailResult = await sendNewInviteEmail(newToken, newExpiresAt)
+        const emailResult = await sendNewInviteEmail(newToken)
 
         if (emailResult.success) {
           Logger.info('Auto-updated and sent new token for expired used invite', { 
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      const emailResult = await sendNewInviteEmail(newToken, newExpiresAt)
+      const emailResult = await sendNewInviteEmail(newToken)
 
       if (emailResult.success) {
         Logger.info('Auto-resent expired invite', { 
