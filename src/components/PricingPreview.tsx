@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import PricingCard from '@/components/pricing/PricingCard'
+import { CheckoutButton } from '@/components/ui'
 import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice } from '@/domain/pricing/utils'
@@ -109,20 +110,56 @@ export default function PricingPreview() {
           plansToShow.length === 2 ? 'md:grid-cols-2 max-w-5xl mx-auto' :
           'md:grid-cols-1 max-w-md mx-auto'
         }`}>
-          {plansToShow.map((plan) => (
-          <PricingCard
-              key={plan.id}
-              {...plan}
-            ctaMode="link"
-              href={`/auth/signup?${
-                plan.id === 'proSmall' ? 'plan=pro&period=small&autoCheckout=true' :
-                plan.id === 'proLarge' ? 'plan=pro&period=large&autoCheckout=true' :
-                plan.id === 'individual' ? 'plan=individual&period=small&autoCheckout=true' :
-                'period=tryItForFree'
-              }`}
-            className="h-full"
-          />
-          ))}
+          {plansToShow.map((plan) => {
+            // Free plan still uses signup flow
+            if (plan.id === 'tryItForFree') {
+              return (
+                <PricingCard
+                  key={plan.id}
+                  {...plan}
+                  ctaMode="link"
+                  href="/auth/signup?period=tryItForFree"
+                  className="h-full"
+                />
+              )
+            }
+            
+            // Paid plans use guest checkout (Stripe collects email)
+            const priceId = plan.id === 'individual' 
+              ? PRICING_CONFIG.individual.stripePriceId
+              : plan.id === 'proSmall'
+                ? PRICING_CONFIG.proSmall.stripePriceId
+                : PRICING_CONFIG.proLarge.stripePriceId
+            
+            const planTier = plan.id === 'individual' ? 'individual' : 'pro'
+            const planPeriod = plan.id === 'proLarge' ? 'large' : 'small'
+            
+            return (
+              <PricingCard
+                key={plan.id}
+                {...plan}
+                ctaSlot={
+                  <CheckoutButton
+                    type="plan"
+                    priceId={priceId}
+                    unauth={true}
+                    metadata={{
+                      planTier,
+                      planPeriod,
+                    }}
+                    useBrandCtaColors={'popular' in plan && plan.popular}
+                    className={'popular' in plan && plan.popular 
+                      ? '' 
+                      : 'bg-bg-gray-50 text-text-dark hover:bg-gradient-to-r hover:from-brand-primary-light hover:to-brand-primary-lighter hover:text-brand-primary border-2 border-transparent hover:border-brand-primary-lighter/50'
+                    }
+                  >
+                    {t(`plans.${plan.id}.cta`)}
+                  </CheckoutButton>
+                }
+                className="h-full"
+              />
+            )
+          })}
         </div>
       </div>
     </section>

@@ -153,6 +153,87 @@ export async function sendMagicLinkEmail({
   }
 }
 
+interface SendWelcomeAfterPurchaseEmailParams {
+  email: string;
+  setupLink: string;
+  photos: number;
+  locale?: 'en' | 'es';
+}
+
+/**
+ * Send welcome email after guest checkout with password setup link
+ */
+export async function sendWelcomeAfterPurchaseEmail({
+  email,
+  setupLink,
+  photos,
+  locale = 'en',
+}: SendWelcomeAfterPurchaseEmailParams) {
+  try {
+    const subject = getEmailTranslation('welcomeAfterPurchase.subject', locale);
+    const text = getEmailTranslation('welcomeAfterPurchase.body', locale, { 
+      setupLink, 
+      photos: String(photos) 
+    });
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #333; margin-bottom: 20px;">${getEmailTranslation('welcomeAfterPurchase.heading', locale)}</h1>
+        
+        <p style="color: #666; font-size: 16px; line-height: 1.6;">
+          ${getEmailTranslation('welcomeAfterPurchase.intro', locale)}
+        </p>
+        
+        <div style="background-color: #f0f9ff; border-radius: 8px; padding: 16px; margin: 24px 0;">
+          <p style="color: #0369a1; font-size: 18px; font-weight: bold; margin: 0;">
+            ${getEmailTranslation('welcomeAfterPurchase.photosReceived', locale, { photos: String(photos) })}
+          </p>
+        </div>
+        
+        <p style="color: #666; font-size: 16px; line-height: 1.6;">
+          ${getEmailTranslation('welcomeAfterPurchase.setupInstructions', locale)}
+        </p>
+        
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${setupLink}" style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+            ${getEmailTranslation('welcomeAfterPurchase.ctaButton', locale)}
+          </a>
+        </div>
+        
+        <p style="color: #999; font-size: 14px; margin-top: 32px;">
+          ${getEmailTranslation('welcomeAfterPurchase.linkExpiry', locale)}
+        </p>
+        
+        <p style="color: #999; font-size: 12px; margin-top: 16px;">
+          ${getEmailTranslation('welcomeAfterPurchase.footer', locale)}
+        </p>
+      </div>
+    `;
+
+    const { data, error } = await resend.emails.send({
+      from: getFromEmail(),
+      to: email,
+      replyTo: getReplyToEmail(),
+      subject,
+      text,
+      html,
+    });
+
+    if (error) {
+      Logger.error('Error sending welcome after purchase email:', { error });
+      return { success: false, error };
+    }
+
+    Logger.info('Welcome after purchase email sent successfully:', { id: data?.id });
+    return { success: true, data };
+  } catch (error) {
+    Logger.error('Failed to send welcome after purchase email:', { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    return { success: false, error };
+  }
+}
+
 interface SendTeamInviteEmailParams {
   email: string;
   teamName: string;

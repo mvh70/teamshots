@@ -165,6 +165,7 @@ export function CheckoutButton({
   metadata,
   returnUrl,
   onError,
+  unauth = false,
   ...props
 }: Omit<ButtonProps, 'variant' | 'type'> & {
   type?: 'subscription' | 'top_up' | 'plan'
@@ -172,6 +173,8 @@ export function CheckoutButton({
   metadata?: Record<string, unknown>
   returnUrl?: string
   onError?: (message: string) => void
+  /** If true, allows guest checkout without requiring authentication */
+  unauth?: boolean
 }) {
   const {
     onClick,
@@ -198,7 +201,8 @@ export function CheckoutButton({
           type,
           priceId,
           metadata,
-          returnUrl: returnUrl || (typeof window !== 'undefined' ? window.location.href : undefined)
+          returnUrl: returnUrl || (typeof window !== 'undefined' ? window.location.href : undefined),
+          unauth
         })
       })
       const data = (await res.json()) as { checkoutUrl?: string; error?: string }

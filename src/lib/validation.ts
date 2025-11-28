@@ -19,10 +19,11 @@ export const nameSchema = z.string()
   .refine((name) => /^[a-zA-Z\s\-'\.]+$/.test(name), 'Invalid characters in name')
 
 // Registration schema (with basic validation)
+// Supports both normal signup (with password) and guest checkout (no password, user already exists)
 export const registrationSchema = z.object({
   email: emailSchema,
-  password: passwordSchema,
-  firstName: nameSchema,
+  password: passwordSchema.optional(), // Optional for guest checkout
+  firstName: nameSchema.optional(), // Optional for guest checkout (name already set by webhook)
   lastName: nameSchema.optional(),
   userType: z.enum(['individual', 'team']).optional(),
   teamWebsite: z.string().optional().refine(
@@ -31,7 +32,11 @@ export const registrationSchema = z.object({
   ),
   otpCode: z.string().length(6).regex(/^\d{6}$/, 'Invalid OTP format'),
   locale: z.enum(['en', 'es']).default('en'),
-})
+  guestCheckout: z.boolean().optional(), // Flag for guest checkout flow
+}).refine(
+  (data) => data.guestCheckout || (data.password && data.firstName),
+  { message: 'Password and firstName are required for normal signup' }
+)
 
 // Sanitize HTML (simple server-side version)
 export function sanitizeHtml(input: string): string {

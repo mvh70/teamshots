@@ -91,15 +91,58 @@ export const authOptions = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     // Email/password authentication with OTP verification
+    // Also supports one-time sign-in tokens for guest checkout
     CredentialsProvider({
       id: "credentials",
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        signInToken: { label: "Sign-in Token", type: "text" }
       },
-      async authorize(credentials: Partial<Record<"email" | "password", unknown>>) {
-        if (!credentials?.email || !credentials?.password) {
+      async authorize(credentials: Partial<Record<"email" | "password" | "signInToken", unknown>>) {
+        if (!credentials?.email) {
+          return null
+        }
+
+        const email = credentials.email as string
+
+        // Check for sign-in token (guest checkout flow)
+        if (credentials.signInToken) {
+          const { verifyAndConsumeSignInToken } = await import('@/domain/auth/password-setup')
+          const tokenResult = await verifyAndConsumeSignInToken(credentials.signInToken as string)
+          
+          if (!tokenResult.success) {
+            console.error('Sign-in token verification failed:', tokenResult.reason)
+            return null
+          }
+
+          // Verify the token email matches the provided email
+          if (tokenResult.email.toLowerCase() !== email.toLowerCase()) {
+            console.error('Sign-in token email mismatch')
+            return null
+          }
+
+          // Find the user
+          const user = await prisma.user.findUnique({
+            where: { email: tokenResult.email }
+          })
+
+          if (!user) {
+            return null
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            isAdmin: user.isAdmin,
+            locale: user.locale,
+          }
+        }
+
+        // Standard password authentication
+        if (!credentials.password) {
           return null
         }
 
@@ -109,7 +152,7 @@ export const authOptions = {
         // This ensures security while maintaining compatibility with Edge Runtime
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string }
+          where: { email }
         })
 
         if (!user || !user.password) {

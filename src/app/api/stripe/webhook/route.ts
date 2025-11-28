@@ -7,6 +7,10 @@ import { PRICING_CONFIG, getPricingConfigKey } from '@/config/pricing';
 import { PrismaClient } from '@prisma/client';
 import { Logger } from '@/lib/logger';
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils';
+import { generatePasswordSetupToken } from '@/domain/auth/password-setup';
+import { sendWelcomeAfterPurchaseEmail } from '@/lib/email';
+import { getBaseUrl } from '@/lib/url';
+import { calculatePhotosFromCredits } from '@/domain/pricing/utils';
 
 const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
   apiVersion: '2025-10-29.clover',
@@ -112,6 +116,8 @@ function getInvoicePaymentIntentId(invoice: Stripe.Invoice): string {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   let userId = session.metadata?.userId as string | undefined;
   const purchaseType = session.metadata?.type;
+  let isNewGuestUser = false;
+  let guestEmail = '';
   
   // In unauthenticated checkout flows, we won't have a userId.
   // Fallback: look up/create a user by email from the session and attach the Stripe customer ID.
@@ -122,24 +128,82 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       Logger.error('No userId and no email on checkout session; cannot attribute purchase', { sessionId: session.id });
       return;
     }
+    guestEmail = email;
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       userId = existing.id;
       if (customerId && !existing.stripeCustomerId) {
         await prisma.user.update({ where: { id: existing.id }, data: { stripeCustomerId: customerId } });
       }
+      
+      // Ensure Person record exists for existing user (in case they didn't complete signup)
+      const existingPerson = await prisma.person.findUnique({ where: { userId: existing.id } });
+      if (!existingPerson) {
+        const customerName = session.customer_details?.name || '';
+        const firstName = customerName.split(' ')[0] || 'User';
+        const lastName = customerName.split(' ').slice(1).join(' ') || null;
+        
+        await prisma.person.create({
+          data: {
+            firstName,
+            lastName,
+            email,
+            userId: existing.id,
+            onboardingState: JSON.stringify({
+              state: 'not_started',
+              completedTours: [],
+              pendingTours: [],
+              lastUpdated: new Date().toISOString(),
+            }),
+          }
+        });
+        Logger.info('Person created for existing user without Person', { userId: existing.id, email });
+      }
+      
+      // Existing user with no password set also needs password setup email
+      if (!existing.password) {
+        isNewGuestUser = true;
+      }
     } else {
+      // Create user and person record together for guest checkout
+      const customerName = session.customer_details?.name || '';
+      const firstName = customerName.split(' ')[0] || 'User';
+      const lastName = customerName.split(' ').slice(1).join(' ') || null;
+      
+      // Determine role based on plan tier - pro plans get team_admin role
+      const planTier = session.metadata?.planTier;
+      const userRole = (planTier === 'pro') ? 'team_admin' : 'user';
+      
       const created = await prisma.user.create({
         data: {
           email,
-          // password will be set after OTP verification; leave null/empty if allowed by schema
-          role: 'user',
+          // password will be set via email link; leave null for guest checkout
+          role: userRole,
           stripeCustomerId: customerId || null,
           subscriptionStatus: 'active',
         },
         select: { id: true }
       });
       userId = created.id;
+      
+      // Create Person record so user can generate photos
+      await prisma.person.create({
+        data: {
+          firstName,
+          lastName,
+          email,
+          userId: created.id,
+          onboardingState: JSON.stringify({
+            state: 'not_started',
+            completedTours: [],
+            pendingTours: [],
+            lastUpdated: new Date().toISOString(),
+          }),
+        }
+      });
+      
+      isNewGuestUser = true;
+      Logger.info('Guest user and person created', { userId: created.id, email, firstName, role: userRole });
     }
   }
 
@@ -290,6 +354,46 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           },
         });
       });
+    }
+    
+    // Send welcome email with password setup link for new guest users
+    if (isNewGuestUser && guestEmail) {
+      try {
+        // Determine photos from purchase for the email (convert credits to photos)
+        let purchasedCredits = 0;
+        if (purchaseType === 'plan') {
+          const planTier = session.metadata?.planTier as PlanTier | undefined;
+          const planPeriod = session.metadata?.planPeriod as PlanPeriod | undefined;
+          const configKey = getPricingConfigKey(planTier || 'individual', planPeriod || 'small');
+          if (configKey) {
+            purchasedCredits = PRICING_CONFIG[configKey].credits;
+          }
+        } else if (purchaseType === 'top_up') {
+          purchasedCredits = parseInt(session.metadata?.credits || '0');
+        }
+        
+        // Convert credits to photos for display
+        const purchasedPhotos = calculatePhotosFromCredits(purchasedCredits);
+        
+        const token = await generatePasswordSetupToken(guestEmail);
+        const baseUrl = await getBaseUrl();
+        const setupLink = `${baseUrl}/auth/set-password?token=${token}`;
+        
+        await sendWelcomeAfterPurchaseEmail({
+          email: guestEmail,
+          setupLink,
+          photos: purchasedPhotos,
+          locale: 'en', // Default to English, could be stored in session metadata
+        });
+        
+        Logger.info('Welcome email sent to guest user', { email: guestEmail, photos: purchasedPhotos });
+      } catch (emailError) {
+        // Don't fail the webhook if email fails - user can still request a new link
+        Logger.error('Failed to send welcome email', { 
+          error: emailError instanceof Error ? emailError.message : String(emailError),
+          email: guestEmail 
+        });
+      }
     }
   } catch (error) {
     Logger.error('Error processing checkout', { error: error instanceof Error ? error.message : String(error) });

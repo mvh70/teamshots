@@ -78,7 +78,8 @@ export async function POST(request: NextRequest) {
       userType: clientUserType = 'individual', 
       teamWebsite, 
       otpCode,
-      locale
+      locale,
+      guestCheckout
     } = validationResult.data
 
     // Domain-based signup type: server is authoritative
@@ -114,6 +115,54 @@ export async function POST(request: NextRequest) {
         badRequest('OTP_INVALID', 'auth.signup.Invalid OTP', errorMessages[otpResult.reason]),
         { status: 400 }
       )
+    }
+
+    // Handle guest checkout flow (user already exists from Stripe webhook, no password)
+    if (guestCheckout) {
+      Logger.info('Guest checkout flow - looking for existing user', { email })
+      
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, email: true, role: true, locale: true }
+      })
+
+      if (!existingUser) {
+        Logger.warn('Guest checkout: User not found - webhook may not have processed yet', { email })
+        return NextResponse.json(
+          badRequest('USER_NOT_FOUND', 'auth.signup.userNotFound', 'Account not found. Please wait a moment and try again.'),
+          { status: 400 }
+        )
+      }
+
+      // Generate a short-lived sign-in token
+      const { generateSignInToken } = await import('@/domain/auth/password-setup')
+      const signInToken = await generateSignInToken(email)
+
+      Logger.info('Guest checkout: Sign-in token generated', { userId: existingUser.id })
+
+      // Get person info for response
+      const person = await prisma.person.findFirst({
+        where: { userId: existingUser.id },
+        select: { id: true, firstName: true, teamId: true }
+      })
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          signInToken,
+          user: {
+            id: existingUser.id,
+            email: existingUser.email,
+            role: existingUser.role,
+            locale: existingUser.locale,
+          },
+          person: person ? {
+            id: person.id,
+            firstName: person.firstName,
+          } : null,
+          teamId: person?.teamId ?? null,
+        }
+      })
     }
 
     // Batch existence check for user and person
@@ -164,6 +213,13 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       // User may have been created via Stripe webhook during checkout.
       // Since OTP is verified, safely set password and ensure a Person exists/linked.
+      // Note: password is required for normal signup (guest checkout returns earlier)
+      if (!password) {
+        return NextResponse.json(
+          badRequest('PASSWORD_REQUIRED', 'auth.signup.passwordRequired', 'Password is required'),
+          { status: 400 }
+        )
+      }
       Logger.info('Existing user found; updating credentials and linking person')
       const hashedPasswordExisting = await bcrypt.hash(password, 13)
       const updated = await prisma.user.update({
@@ -174,7 +230,7 @@ export async function POST(request: NextRequest) {
       let person = await prisma.person.findFirst({ where: { userId: updated.id } })
       if (!person) {
         person = await prisma.person.create({
-          data: { firstName, lastName: lastName || null, email, userId: updated.id }
+          data: { firstName: firstName || 'User', lastName: lastName || null, email, userId: updated.id }
         })
       }
       Logger.info('User updated and person ensured')
@@ -188,6 +244,13 @@ export async function POST(request: NextRequest) {
 
     // Hash password with increased cost factor for better security
     // Cost factor 13 provides good security while maintaining reasonable performance
+    // Note: password is required for normal signup (guest checkout returns earlier)
+    if (!password) {
+      return NextResponse.json(
+        badRequest('PASSWORD_REQUIRED', 'auth.signup.passwordRequired', 'Password is required'),
+        { status: 400 }
+      )
+    }
     Logger.info('14. Hashing password...')
     const hashedPassword = await bcrypt.hash(password, 13)
     Logger.debug('15. Password hashed')
@@ -274,7 +337,7 @@ export async function POST(request: NextRequest) {
       // Create new person record with properly initialized onboardingState (JSON format)
       person = await prisma.person.create({
         data: {
-          firstName,
+          firstName: firstName || 'User',
           lastName: lastName || null,
           email,
           userId: user.id,
@@ -403,7 +466,7 @@ export async function POST(request: NextRequest) {
       }),
       sendAdminSignupNotificationEmail({
         email,
-        firstName,
+        firstName: firstName || 'User',
         lastName,
         userType,
         locale,

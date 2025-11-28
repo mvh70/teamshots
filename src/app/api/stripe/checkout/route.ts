@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
     }
 
     const successUrl = unauth
-      ? `${baseUrl}/auth/verify?success=true&type=${successMessage}${type === 'plan' && successTier ? `&tier=${encodeURIComponent(successTier)}` : ''}&email=${encodeURIComponent(email || '')}`
+      ? `${baseUrl}/auth/verify?checkout_session_id={CHECKOUT_SESSION_ID}&type=${successMessage}${type === 'plan' && successTier ? `&tier=${encodeURIComponent(successTier)}` : ''}`
       : finalSuccessUrl
 
     const cancelUrl = unauth
