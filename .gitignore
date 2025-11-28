@@ -25,6 +25,7 @@
 *.pem
 /tmp/**
 /app/tmp/**
+/test-results/**
 
 # debug
 npm-debug.log*
