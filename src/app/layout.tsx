@@ -3,25 +3,36 @@ import { PostHogProvider } from '@/components/PostHogProvider'
 import { auth } from '@/auth'
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
-import { BRAND_CONFIG } from '@/config/brand'
+import { getBrand } from '@/config/brand'
+import { headers } from 'next/headers'
 import './globals.css'
 
-export const metadata: Metadata = {
-  icons: {
-    icon: [
-      { url: '/favicon.ico' },
-      { url: BRAND_CONFIG.logo.icon, type: 'image/png' },
-    ],
-    apple: '/apple-icon.png',
-    shortcut: '/favicon.ico',
-  },
-  referrer: 'strict-origin-when-cross-origin',
-  other: {
-    'format-detection': 'telephone=no',
-    'apple-mobile-web-app-capable': 'yes',
-    'mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'default',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers()
+  const brandConfig = getBrand(headersList)
+
+  return {
+    title: {
+      template: `%s | ${brandConfig.name}`,
+      default: brandConfig.name,
+    },
+    description: `Professional AI headshots with ${brandConfig.name}`,
+    icons: {
+      icon: [
+        { url: '/favicon.ico' },
+        { url: brandConfig.logo.icon, type: 'image/png' },
+      ],
+      apple: '/apple-icon.png',
+      shortcut: '/favicon.ico',
+    },
+    referrer: 'strict-origin-when-cross-origin',
+    other: {
+      'format-detection': 'telephone=no',
+      'apple-mobile-web-app-capable': 'yes',
+      'mobile-web-app-capable': 'yes',
+      'apple-mobile-web-app-status-bar-style': 'default',
+    },
+  }
 }
 
 export const viewport: Viewport = {
