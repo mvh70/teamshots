@@ -402,7 +402,7 @@ export default function InviteDashboardPage() {
         prompt: generatePromptFromSettings(photoStyleSettings),
         selfieIds: validSelectedIds,
         // Debug flags (workflow version is controlled by GENERATION_WORKFLOW_VERSION env var on server)
-        debugMode: true // Enable debug mode (logs prompts, saves intermediate files)
+        debugMode: process.env.NODE_ENV !== 'production' // Enable debug mode only in development (logs prompts, saves intermediate files)
       }
       
       // Use token-authenticated endpoint for invite dashboard flows
