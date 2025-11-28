@@ -13,7 +13,7 @@
   "hero": {
     "titleMain": "Professional team photos",
     "titleHighlightTime": "in 60 seconds",
-    "subtitle": "Your team website looks unprofessional. New hires break your brand consistency. Traditional photoshoots cost thousands and take forever. What if you could get consistent, on-brand headshots in 60 seconds from any selfie?",
+    "subtitle": "You set the brand essentials (e.g. logo, clothing style, backgrounds). Your team picks the rest (e.g. colors and poses). Everyone looks unified yet personal. Professional headshots from any selfie in 60 seconds, no photographer or scheduling drama required.",
     "subtitleMain": "Turn any selfie into consistent, on-brand headshots. No photographer, no coordination.",
     "finalCtaTitle": "Ready to transform your team photos?",
     "finalCtaSubtitle": "Get your team's professional headshots and see the difference in 60 seconds.",
@@ -109,7 +109,9 @@
       },
       "2": {
         "question": "How much does it cost?",
-        "answer": "When you sign up, you get a free test generation with TeamShotsPro branding so you can see the quality. After that: Individual plan at $19.99 (5 photos), Pro Small at $19.99 (5 photos for teams up to 5), or Pro Large at $59.99 (20 photos for larger teams). Credits never expire, so you can hoard them like digital gold. Each generation uses 10 credits and produces 4 variations."
+        "answer": "When you sign up, you get a free test generation with TeamShotsPro branding so you can see the quality. After that: Individual plan at $19.99 (5 photos), Pro Small at $19.99 (5 photos for teams up to 5), or Pro Large at $59.99 (20 photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces 4 variations.",
+        "answerTeam": "When you sign up, you get a free test generation with TeamShotsPro branding so you can see the quality. After that: Pro Small at $19.99 (5 photos for teams up to 5), or Pro Large at $59.99 (20 photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces 4 variations.",
+        "answerIndividual": "When you sign up, you get a free test generation with PhotoShotsPro branding so you can see the quality. After that: Individual plan at $19.99 (5 photos). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces 4 variations."
       },
       "3": {
         "question": "What types of photos work best?",
@@ -173,7 +175,8 @@
         "period": "free",
         "description": "See what all the fuss is about. No credit card, no commitment, just one free test to prove we're not messing around.",
         "features": [
-          "Includes TeamShotsPro branding",
+          "Includes fixed TeamShotsPro branding (our way of saying hello)",
+          "Limited customization to give you a taste",
           "Retry up to {regenerations} times to perfect your photo",
           "Perfect for testing before you commit"
         ],
@@ -184,11 +187,10 @@
         "period": "one-time",
         "description": "For solo professionals. One-time purchase, no monthly fees.",
         "features": [
-          "One-time payment, no recurring charges",
-          "Credits never expire, use anytime",
-          "Retry up to {regenerations} times to perfect each photo",
-          "Photos retained until account closure",
-          "Top-up credits available"
+          "Full customization: you control pose, background, branding, clothing colors, and facial expressions (be the director of your own photoshoot)",
+          "Retry up to {regenerations} times to perfect each photo (because perfection takes practice)",
+          "Credits never expire, use anytime (hoard them like digital treasure)",
+          "Top-up credits available (for when you can't stop looking amazing)"
         ],
         "cta": "Get my photos"
       },
@@ -197,10 +199,9 @@
         "period": "one-time",
         "description": "For small teams up to 5 members. Pay once, no subscription.",
         "features": [
-          "One-time payment, no recurring charges",
-          "Credits never expire, use anytime",
+          "Full customization: control pose, background, branding, clothing colors, and expressions",
           "Retry up to {regenerations} times to perfect each photo",
-          "Photos retained until account closure",
+          "Credits never expire, use anytime",
           "Team photo management",
           "Top-up credits available"
         ],
@@ -211,10 +212,9 @@
         "period": "one-time",
         "description": "For larger teams. One-time payment, no recurring charges.",
         "features": [
-          "One-time payment, no recurring charges",
+          "Full customization: control pose, background, branding, clothing colors, and expressions",
+          "Retry up to {regenerations} times to perfect each photo",
           "Credits never expire, use anytime",
-          "Retry up to 4 times to perfect each photo",
-          "Photos retained until account closure",
           "Team photo management",
           "Company style templates",
           "Top-up credits available"
@@ -230,19 +230,21 @@
       "questions": {
         "freeGen": {
           "question": "Do I get a free generation?",
-          "answer": "Yes! We give new users one free test generation in a set style so you can see if our AI lives up to the hype. It normally costs 10 credits and lets you retry up to 4 times (depending on your package)."
+          "answer": "Yes! We give new users one free test generation in a set style so you can see if our AI lives up to the hype. It normally costs 1 photo credit and lets you retry up to 4 times (depending on your package)."
         },
         "howCreditsWork": {
-          "question": "How do credits work?",
-          "answer": "Each photo generation uses 10 credits and allows up to 4 high-quality retries. Your credits roll over month-to-month and never expire. No rush, they're yours to keep!"
+          "question": "How do photo credits work?",
+          "answer": "Each photo generation uses 1 photo credit and allows up to 4 high-quality retries depending on your plan. Your photo credits never expire. No rush, they're yours to keep!"
         },
         "topUp": {
-          "question": "Can I top up credits?",
-          "answer": "Yes! Subscribers can purchase additional credits at any time. Pricing varies by tier."
+          "question": "Can I top up photo credits?",
+          "answer": "Yes! You can purchase additional photo credits at any time. Pricing varies by tier."
         },
         "satisfaction": {
           "question": "What if I'm not satisfied?",
-          "answer": "Every photo includes 2-4 retries depending on your plan, so you can refine the results until they're perfect. That's why we offer a free test generation in a predefined style when you sign up - try it first, no obligations."
+          "answer": "Every photo includes 2-4 retries depending on your plan (free plan: 2 retries, Individual and Pro Small: 3 retries, Pro Large: 4 retries), so you can refine the results until they're perfect. That's why we offer a free test generation in a predefined style when you sign up. Try it first, no obligations.",
+          "answerTeam": "Every photo includes 2-4 retries depending on your plan (free plan: 2 retries, Pro Small: 3 retries, Pro Large: 4 retries), so you can refine the results until they're perfect. That's why we offer a free test generation in a predefined style when you sign up. Try it first, no obligations.",
+          "answerIndividual": "Every photo includes 2-3 retries depending on your plan (free plan: 2 retries, Individual: 3 retries), so you can refine the results until they're perfect. That's why we offer a free test generation in a predefined style when you sign up. Try it first, no obligations."
         }
       }
     },
@@ -389,7 +391,15 @@
     "benefit2": "Results in 60 seconds",
     "benefit3": "No account setup needed",
     "mobileRequired": "Please open this link on your mobile device",
-    "mobileReason": "That's where all the good selfies are 📸"
+    "mobileReason": "That's where all the good selfies are 📸",
+    "expired": {
+      "title": "New invite sent",
+      "invalidTitle": "Invalid Invite",
+      "securityTitle": "Why we did this",
+      "securityMessage": "We automatically sent you a fresh invite link because the old one expired. This keeps your team's data secure: expired links can't be used by anyone who might have stumbled upon them. Your new link is valid for 24 hours.",
+      "checkInbox": "Check your inbox for the new invite link.",
+      "goToHomepage": "Go to Homepage"
+    }
   },
   "app": {
     "header": {
@@ -1211,6 +1221,8 @@
     "teamInvite": {
       "subject": "Team invitation from {teamName}",
       "text": "You've been invited to join {teamName} on TeamShotsPro.\n\nUse this link to accept: {inviteLink}\n\nYou have {photosAllocated} photos to get started.",
+      "greeting": "You've been invited to join {teamName}!",
+      "greetingWithName": "Hi {firstName}! {inviterFirstName} invited you to get professional headshots for {teamName}.",
       "photosDescription": "You can generate {photos} customizable photos. And each photo can be redone up to 4 times each. From just a selfie.\n\nYour selfie doesn't need to be perfect. We'll handle the professional polish.",
       "mobileAdvice": "For the best experience, open this on your mobile device. That's where you'll take your selfie.",
       "acceptButton": "Accept invitation",
@@ -1470,7 +1482,7 @@
         "member": "Team member",
         "selfies": "Selfies",
         "generations": "Generations",
-        "availablePhotos": "Available photos",
+        "availablePhotos": "Photo credits left",
         "status": "Status",
         "actions": "Actions"
       },
@@ -1482,15 +1494,23 @@
       "you": "YOU",
       "status": {
         "registered": "Registered",
-        "guest": "Guest"
+        "guest": "Guest",
+        "revoked": "Revoked"
+      },
+      "revoked": {
+        "title": "Revoked members ({count})"
       },
       "actions": {
         "makeAdmin": "Make admin",
         "demote": "Demote",
         "remove": "Remove",
+        "revoke": "Revoke",
+        "reactivate": "Reactivate",
         "promoting": "Promoting...",
         "demoting": "Demoting...",
-        "removing": "Removing..."
+        "removing": "Removing...",
+        "revoking": "Revoking...",
+        "reactivating": "Reactivating..."
       }
     },
     "teamInvites": {
@@ -1501,21 +1521,39 @@
       "status": {
         "accepted": "Accepted",
         "expired": "Expired",
-        "pending": "Pending"
+        "pending": "Pending",
+        "revoked": "Revoked"
       },
       "actions": {
         "resend": "Resend",
         "resending": "Resending...",
         "resendSuccess": "Invite resent successfully",
         "revoke": "Revoke",
-        "revoking": "Revoking..."
+        "revoking": "Revoking...",
+        "addPhotos": "Add photos"
       }
+    },
+    "addPhotosModal": {
+      "title": "Add photos to {name}",
+      "currentAllocation": "Current allocation: {count} photos",
+      "availableTeamPhotos": "Available team photos: {count}",
+      "photosLeft": "Photos left: {count}",
+      "photosToAdd": "Photos to add",
+      "insufficientCredits": "You only have {available} team photos available",
+      "invalidAmount": "Please enter a valid number of photos",
+      "success": "Added {count} photos to {name}",
+      "adding": "Adding...",
+      "addButton": "Add photos",
+      "cancel": "Cancel"
     },
     "inviteForm": {
       "title": "Invite team member",
       "email": {
         "label": "Email address",
-        "placeholder": "colleague@company.com"
+        "placeholder": "colleague@company.com",
+        "checking": "Checking...",
+        "alreadyMember": "This email is already a member of your team",
+        "pendingInvite": "An invite has already been sent to this email"
       },
       "firstName": {
         "label": "First name",
@@ -1711,6 +1749,14 @@
     },
     "error": {
       "invalidInvite": "Invalid Invite",
+      "goToHomepage": "Go to Homepage"
+    },
+    "expired": {
+      "title": "New invite sent",
+      "invalidTitle": "Invalid Invite",
+      "securityTitle": "Why we did this",
+      "securityMessage": "We automatically sent you a fresh invite link because the old one expired. This keeps your team's data secure: expired links can't be used by anyone who might have stumbled upon them. Your new link is valid for 24 hours.",
+      "checkInbox": "Check your inbox for the new invite link.",
       "goToHomepage": "Go to Homepage"
     },
     "alerts": {

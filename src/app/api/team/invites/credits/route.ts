@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { withTeamPermission } from '@/domain/access/permissions'
-import { getTeamInviteRemainingCredits } from '@/domain/credits/credits'
+import { getTeamInviteRemainingCredits, getTeamInviteTotalAllocated } from '@/domain/credits/credits'
 import { Logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
@@ -45,32 +45,39 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Calculate remaining credits for each invite
-    const invitesWithRemainingCredits = await Promise.all(
+    // Calculate remaining and allocated credits for each invite
+    // Uses CreditTransaction records as single source of truth for accepted invites
+    const invitesWithCredits = await Promise.all(
       user.person.team.teamInvites.map(async (invite) => {
-        const remainingCredits = await getTeamInviteRemainingCredits(invite.id)
+        const [remainingCredits, totalAllocated] = await Promise.all([
+          getTeamInviteRemainingCredits(invite.id),
+          getTeamInviteTotalAllocated(invite.id)
+        ])
+        // For pending invites (no transactions), fall back to creditsAllocated field
+        const creditsAllocated = totalAllocated > 0 ? totalAllocated : (invite.creditsAllocated ?? 0)
         return {
           ...invite,
-          remainingCredits
+          remainingCredits,
+          creditsAllocated
         }
       })
     )
 
-    const totalRemainingCredits = invitesWithRemainingCredits.reduce(
+    const totalRemainingCredits = invitesWithCredits.reduce(
       (sum, invite) => sum + invite.remainingCredits,
       0
     )
 
-    // Calculate total allocated credits (credits assigned to invites)
-    const totalAllocatedCredits = user.person.team.teamInvites.reduce(
-      (sum, invite) => sum + (invite.creditsAllocated ?? 0),
+    // Calculate total allocated credits from CreditTransaction (single source of truth)
+    const totalAllocatedCredits = invitesWithCredits.reduce(
+      (sum, invite) => sum + invite.creditsAllocated,
       0
     )
 
     return NextResponse.json({
       totalAllocatedCredits,
       totalRemainingCredits,
-      invites: invitesWithRemainingCredits
+      invites: invitesWithCredits
     })
 
   } catch (error) {

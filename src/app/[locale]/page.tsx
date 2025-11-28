@@ -47,7 +47,7 @@ export default function LandingPage() {
           <div className="lg:col-span-3 text-left relative z-10">
             {/* Hero Title - Large, Bold, Left-aligned */}
             <h1 
-              className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-black text-text-dark mb-8 leading-[1.1] tracking-tight ${
+              className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold text-text-dark mb-8 leading-[1.1] tracking-tight ${
                 heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               } transition-all duration-700 ease-out`}
               style={{ 
@@ -136,64 +136,6 @@ export default function LandingPage() {
 
       {/* Trust Indicators */}
       <TrustIndicators />
-
-      {/* Features Section - Hidden for now */}
-      {/* <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24 lg:py-40 bg-bg-gray-50">
-        <div className="text-center mb-20">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
-            {tFeatures('sectionTitle')}
-          </h2>
-          <p className="text-lg sm:text-xl lg:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed">
-            {tFeatures('sectionSubtitle')}
-          </p>
-        </div>
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-10 max-w-5xl mx-auto">
-          <div className="group p-8 lg:p-10 xl:p-12 bg-bg-white rounded-3xl shadow-depth-lg border-2 border-brand-primary-lighter/30 hover:shadow-depth-2xl hover:border-brand-primary-lighter hover:-translate-y-3 transition-all duration-500 cursor-pointer">
-            <div className="w-16 h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-brand-primary-light rounded-2xl flex items-center justify-center mb-8 group-hover:bg-brand-primary group-hover:scale-110 transition-all duration-500 shadow-depth-md group-hover:shadow-depth-xl group-hover:shadow-brand-primary/20">
-              <svg className="w-8 h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-brand-primary group-hover:text-white transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h3 className="text-xl lg:text-2xl xl:text-3xl font-bold mb-5 text-text-dark font-display leading-tight">{tFeatures('fast.title')}</h3>
-            <p className="text-text-body text-base lg:text-lg leading-relaxed">
-              {tFeatures('fast.description')}
-            </p>
-          </div>
-          <div className="group p-8 lg:p-10 xl:p-12 bg-bg-white rounded-3xl shadow-depth-lg border-2 border-brand-primary-lighter/30 hover:shadow-depth-2xl hover:border-brand-primary-lighter hover:-translate-y-3 transition-all duration-500 cursor-pointer">
-            <div className="w-16 h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-brand-primary-light rounded-2xl flex items-center justify-center mb-8 group-hover:bg-brand-primary group-hover:scale-110 transition-all duration-500 shadow-depth-md group-hover:shadow-depth-xl group-hover:shadow-brand-primary/20">
-              <svg className="w-8 h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-brand-primary group-hover:text-white transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M4 7l2 12h12l2-12M7 7l2-3h6l2 3" />
-              </svg>
-            </div>
-            <h3 className="text-xl lg:text-2xl xl:text-3xl font-bold mb-5 text-text-dark font-display leading-tight">{tFeatures('consistency.title')}</h3>
-            <p className="text-text-body text-base lg:text-lg leading-relaxed">
-              {tFeatures('consistency.description')}
-            </p>
-          </div>
-          <div className="group p-8 lg:p-10 xl:p-12 bg-bg-white rounded-3xl shadow-depth-lg border-2 border-brand-primary-lighter/30 hover:shadow-depth-2xl hover:border-brand-primary-lighter hover:-translate-y-3 transition-all duration-500 cursor-pointer">
-            <div className="w-16 h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-brand-primary-light rounded-2xl flex items-center justify-center mb-8 group-hover:bg-brand-primary group-hover:scale-110 transition-all duration-500 shadow-depth-md group-hover:shadow-depth-xl group-hover:shadow-brand-primary/20">
-              <svg className="w-8 h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-brand-primary group-hover:text-white transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-              </svg>
-            </div>
-            <h3 className="text-xl lg:text-2xl xl:text-3xl font-bold mb-5 text-text-dark font-display leading-tight">{tFeatures('control.title')}</h3>
-            <p className="text-text-body text-base lg:text-lg leading-relaxed">
-              {tFeatures('control.description')}
-            </p>
-          </div>
-          <div className="group p-8 lg:p-10 xl:p-12 bg-bg-white rounded-3xl shadow-depth-lg border-2 border-brand-primary-lighter/30 hover:shadow-depth-2xl hover:border-brand-primary-lighter hover:-translate-y-3 transition-all duration-500 cursor-pointer">
-            <div className="w-16 h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-brand-primary-light rounded-2xl flex items-center justify-center mb-8 group-hover:bg-brand-primary group-hover:scale-110 transition-all duration-500 shadow-depth-md group-hover:shadow-depth-xl group-hover:shadow-brand-primary/20">
-              <svg className="w-8 h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-brand-primary group-hover:text-white transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl lg:text-2xl xl:text-3xl font-bold mb-5 text-text-dark font-display leading-tight">{tFeatures('costEffective.title')}</h3>
-            <p className="text-text-body text-base lg:text-lg leading-relaxed">
-              {tFeatures('costEffective.description')}
-            </p>
-          </div>
-        </div>
-      </section> */}
 
       {/* How It Works */}
       <HowItWorks />

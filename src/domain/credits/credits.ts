@@ -10,6 +10,7 @@ export type CreditTransactionType =
   | 'generation'
   | 'refund'
   | 'invite_allocated'
+  | 'invite_revoked'
 
 export interface CreateCreditTransactionParams {
   credits: number
@@ -123,29 +124,27 @@ export async function getPersonCreditBalance(personId: string): Promise<number> 
   })
 
   // If person has a team invite, calculate remaining allocation
-  // Credits are tracked per person, so we look at person transactions, not invite transactions
+  // Credits are tracked per person via CreditTransaction (single source of truth)
   if (invite) {
-    // Get all transactions for this person (generation debits and refund credits)
-    // We need to include both 'generation' (debits) and 'refund' (credits) transactions
+    // Get total allocated from transactions (single source of truth)
+    const totalAllocated = await getTeamInviteTotalAllocated(invite.id)
+    
+    // Get all usage transactions for this person (generation debits and refund credits)
     const personTransactions = await prisma.creditTransaction.findMany({
       where: {
         personId,
-        type: { in: ['generation', 'refund'] } // Include both generation debits and refund credits
+        type: { in: ['generation', 'refund'] }
       }
     })
     
     // Calculate net credits used: sum of all transaction credits
     // Generation transactions are negative (debits), refund transactions are positive (credits)
-    // So summing them gives us the net credits used
     const netCreditsUsed = personTransactions.reduce((sum: number, transaction: { credits: number }) => {
-      // For generation: credits is negative, so we add the absolute value (it's a debit)
-      // For refund: credits is positive, so we subtract it (it's a credit that reduces usage)
       return sum - transaction.credits // Subtract because credits is negative for debits, positive for credits
     }, 0)
     
-    // Return remaining: allocation - net usage
-    // netCreditsUsed will be positive (representing total debits minus refunds)
-    const remaining = Math.max(0, (invite.creditsAllocated ?? 0) - netCreditsUsed)
+    // Return remaining: allocation from transactions - net usage
+    const remaining = Math.max(0, totalAllocated - netCreditsUsed)
     return remaining
   }
 
@@ -414,8 +413,7 @@ export async function getTeamInviteRemainingCredits(teamInviteId: string): Promi
   const invite = await prisma.teamInvite.findUnique({
     where: { id: teamInviteId },
     select: {
-      personId: true,
-      creditsAllocated: true
+      personId: true
     }
   })
 
@@ -425,6 +423,24 @@ export async function getTeamInviteRemainingCredits(teamInviteId: string): Promi
 
   // Credits are tracked per person, so use getPersonCreditBalance
   return await getPersonCreditBalance(invite.personId)
+}
+
+/**
+ * Get total credits allocated to a team invite from CreditTransaction records
+ * This is the single source of truth for "photos allocated"
+ */
+export async function getTeamInviteTotalAllocated(teamInviteId: string): Promise<number> {
+  const result = await prisma.creditTransaction.aggregate({
+    where: {
+      teamInviteId,
+      type: 'invite_allocated'
+    },
+    _sum: {
+      credits: true
+    }
+  })
+
+  return result._sum.credits ?? 0
 }
 
 /**

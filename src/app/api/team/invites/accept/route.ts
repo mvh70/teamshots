@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
           include: {
             activeContext: true
           }
-        }
+        },
+        person: true // Include person if it exists
       }
     })
 
@@ -41,7 +42,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invite has expired' }, { status: 410 })
     }
 
-    if (invite.usedAt) {
+    // For returning users (personId exists), allow through even if usedAt is set
+    // They got a new token but are the same person
+    if (invite.usedAt && !invite.personId) {
       return NextResponse.json({ error: 'Invite has already been used' }, { status: 410 })
     }
 
@@ -63,30 +66,45 @@ export async function POST(request: NextRequest) {
     }
     // proLarge has no team size limit
 
-    // Create person record using firstName from invite
-    const person = await prisma.person.create({
-      data: {
-        firstName: invite.firstName,
-        lastName: null, // No last name required for team invites
-        email: invite.email,
-        teamId: invite.teamId,
-        inviteToken: token,
-        onboardingState: JSON.stringify({
-          state: 'not_started',
-          completedTours: [],
-          pendingTours: [],
-          lastUpdated: new Date().toISOString(),
-        }),
+    // Check if person already exists (from previous acceptance before token reset)
+    let person
+    if (invite.personId && invite.person) {
+      // Person already exists - reuse it (token was reset but personId was kept)
+      person = invite.person
+      
+      // Update invite token on person if needed
+      if (person.inviteToken !== token) {
+        await prisma.person.update({
+          where: { id: person.id },
+          data: { inviteToken: token }
+        })
       }
-    })
+    } else {
+      // Create new person record using firstName from invite
+      person = await prisma.person.create({
+        data: {
+          firstName: invite.firstName,
+          lastName: null, // No last name required for team invites
+          email: invite.email,
+          teamId: invite.teamId,
+          inviteToken: token,
+          onboardingState: JSON.stringify({
+            state: 'not_started',
+            completedTours: [],
+            pendingTours: [],
+            lastUpdated: new Date().toISOString(),
+          }),
+        }
+      })
 
-    // Allocate credits to the person via credit transaction
-    await allocateCreditsFromInvite(
-      person.id,
-      invite.id,
-      invite.creditsAllocated,
-      `Credits allocated from team invite to ${invite.email}`
-    )
+      // Allocate credits to the person via credit transaction (only for new persons)
+      await allocateCreditsFromInvite(
+        person.id,
+        invite.id,
+        invite.creditsAllocated,
+        `Credits allocated from team invite to ${invite.email}`
+      )
+    }
 
     // Mark invite as used and link to person
     await prisma.teamInvite.update({

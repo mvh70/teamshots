@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { sendTeamInviteEmail } from '@/lib/email'
 import { randomBytes } from 'crypto'
 import { withTeamPermission } from '@/domain/access/permissions'
-import { getEffectiveTeamCreditBalance, getTeamInviteRemainingCredits } from '@/domain/credits/credits'
+import { getEffectiveTeamCreditBalance, getTeamInviteRemainingCredits, getTeamInviteTotalAllocated } from '@/domain/credits/credits'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { Logger } from '@/lib/logger'
 import { getTranslation } from '@/lib/translations'
@@ -288,7 +288,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Calculate credits used for each invite
+    // Calculate credits from transactions (single source of truth)
     const invitesWithCredits = await Promise.all(
       user.person.team.teamInvites.map(async (invite: unknown) => {
         const typedInvite = invite as {
@@ -302,8 +302,19 @@ export async function GET(request: NextRequest) {
           createdAt: Date
           context: { id: string; name: string } | null
         }
+        
+        // Get total allocated from CreditTransaction records (single source of truth)
+        const totalAllocated = await getTeamInviteTotalAllocated(typedInvite.id)
         const remainingCredits = await getTeamInviteRemainingCredits(typedInvite.id)
-        const creditsUsed = typedInvite.creditsAllocated - remainingCredits
+        
+        // For pending invites (no transactions yet), fall back to creditsAllocated from invite
+        const creditsAllocated = totalAllocated > 0 ? totalAllocated : typedInvite.creditsAllocated
+        const creditsUsed = creditsAllocated - remainingCredits
+        
+        // Detect if invite was revoked: expiresAt was set to before createdAt (impossible naturally)
+        // This happens when admin manually revokes an invite
+        const isRevoked = typedInvite.expiresAt < typedInvite.createdAt
+        
         return {
           id: typedInvite.id,
           email: typedInvite.email,
@@ -311,12 +322,13 @@ export async function GET(request: NextRequest) {
           token: typedInvite.token,
           expiresAt: typedInvite.expiresAt,
           usedAt: typedInvite.usedAt,
-          creditsAllocated: typedInvite.creditsAllocated,
-          creditsUsed,
+          creditsAllocated,
+          creditsUsed: Math.max(0, creditsUsed), // Ensure non-negative
           creditsRemaining: remainingCredits,
           createdAt: typedInvite.createdAt,
           contextId: typedInvite.context?.id,
-          contextName: typedInvite.context?.name
+          contextName: typedInvite.context?.name,
+          isRevoked
         }
       })
     )

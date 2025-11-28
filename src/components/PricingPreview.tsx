@@ -65,7 +65,7 @@ export default function PricingPreview() {
   return (
     <section className="py-20 sm:py-24 lg:py-32 bg-bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20">
+        <div className="text-center mb-12 sm:mb-16 lg:mb-20 xl:mb-24">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
             {t('title')}
           </h2>

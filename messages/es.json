@@ -13,7 +13,7 @@
   "hero": {
     "titleMain": "Fotos profesionales de equipo",
     "titleHighlightTime": "en 60 segundos",
-    "subtitle": "Tu sitio web se ve poco profesional. Las nuevas incorporaciones rompen la consistencia de tu marca. Las sesiones tradicionales de fotos cuestan miles y tardan una eternidad. ¿Qué tal si consigues retratos acordes a tu marca en 60 segundos desde cualquier selfie?",
+    "subtitle": "Tú defines lo esencial de la marca (ej. logo, estilo de ropa, fondos). Tu equipo elige el resto (ej. colores y poses). Todos lucen unificados pero personales. Retratos profesionales desde cualquier selfie en 60 segundos, sin drama de fotógrafos ni coordinación.",
     "subtitleMain": "Convierte cualquier selfie en retratos consistentes y acordes a tu marca. Sin fotógrafo, sin coordinación.",
     "finalCtaTitle": "¿Listo para transformar las fotos de tu equipo?",
     "finalCtaSubtitle": "Obtén retratos profesionales para tu equipo y ve la diferencia en 60 segundos.",
@@ -106,11 +106,13 @@
     "items": {
       "1": {
         "question": "¿Mis datos son seguros y privados?",
-        "answer": "Absolutamente. Usamos cifrado empresarial y nunca almacenamos fotos permanentemente. Se eliminan automáticamente 30 días después de que termine tu suscripción, o puedes solicitarlo cuando quieras. No compartimos datos con terceros—ni siquiera con tu jefe, lo prometemos."
+        "answer": "Absolutamente. Usamos cifrado empresarial y nunca almacenamos fotos permanentemente. Se eliminan automáticamente 30 días después de que termine tu suscripción, o puedes solicitarlo cuando quieras. No compartimos datos con terceros, ni siquiera con tu jefe, lo prometemos."
       },
       "2": {
         "question": "¿Cuánto cuesta?",
-        "answer": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: paquete Prueba Una Vez por $5 (2 generaciones), plan Individual a $29/mes (25 generaciones/mes), o plan Pro a $59/mes (70 generaciones/mes). Planes anuales te ahorran más. Créditos nunca caducan, así que acumúlalos como oro digital. Cada generación usa 10 créditos y produce 4 variaciones."
+        "answer": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a $19.99 (5 fotos), Pro Pequeño a $19.99 (5 fotos para equipos hasta 5 miembros), o Pro Grande a $59.99 (20 fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce 4 variaciones.",
+        "answerTeam": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: Pro Pequeño a $19.99 (5 fotos para equipos hasta 5 miembros), o Pro Grande a $59.99 (20 fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce 4 variaciones.",
+        "answerIndividual": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a $19.99 (5 fotos). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce 4 variaciones."
       },
       "3": {
         "question": "¿Qué tipos de fotos funcionan mejor?",
@@ -122,11 +124,11 @@
       },
       "5": {
         "question": "¿Cómo funciona la generación de fotos con IA?",
-        "answer": "Nuestra IA analiza tu foto con algoritmos avanzados de reconocimiento facial y transferencia de estilo (prometemos que no es magia, solo matemáticas inteligentes). Crea retratos profesionales aplicando estilos corporativos mientras mantiene tus rasgos únicos—sí, seguirás pareciendo tú, solo más pulido."
+        "answer": "Nuestra IA analiza tu foto con algoritmos avanzados de reconocimiento facial y transferencia de estilo (prometemos que no es magia, solo matemáticas inteligentes). Crea retratos profesionales aplicando estilos corporativos mientras mantiene tus rasgos únicos. Sí, seguirás pareciendo tú, solo más pulido."
       },
       "6": {
         "question": "¿Cuántas fotos obtengo por generación?",
-        "answer": "Cada generación produce 4 variaciones profesionales diferentes. Descárgalas todas y elige favoritas. Te da opciones para contextos diferentes—LinkedIn serio, sitio web amigable, ya sabes."
+        "answer": "Cada generación produce 4 variaciones profesionales diferentes. Descárgalas todas y elige favoritas. Te da opciones para contextos diferentes: LinkedIn serio, sitio web amigable, ya sabes."
       },
       "7": {
         "question": "¿Soportan fotos de equipo o solo retratos individuales?",
@@ -180,7 +182,8 @@
         "period": "gratis",
         "description": "Ve de qué se trata todo el alboroto. Sin tarjeta de crédito, sin compromiso, solo una prueba gratis para demostrar que no estamos bromeando.",
         "features": [
-          "Incluye marca TeamShotsPro",
+          "Incluye branding fijo de TeamShotsPro (nuestra forma de decir hola)",
+          "Personalización limitada para darte un adelanto",
           "Reintenta hasta {regenerations} veces para perfeccionar tu foto",
           "Perfecto para probar antes de comprometerte"
         ],
@@ -191,11 +194,10 @@
         "period": "pago único",
         "description": "Para profesionales independientes. Pago único, sin cuotas mensuales.",
         "features": [
-          "Pago único, sin cargos recurrentes",
-          "Los créditos nunca expiran, úsalos cuando quieras",
-          "Regenera hasta {regenerations} veces para perfeccionar cada foto",
-          "Fotos retenidas hasta el cierre de la cuenta",
-          "Recarga de créditos disponible"
+          "Personalización completa: tú controlas pose, fondo, branding, colores de ropa y expresiones faciales (sé el director de tu propia sesión de fotos)",
+          "Reintenta hasta {regenerations} veces para perfeccionar cada foto (porque la perfección toma práctica)",
+          "Créditos nunca expiran, úsalos cuando quieras (acumúlalos como tesoro digital)",
+          "Recarga de créditos disponible (para cuando no puedas dejar de lucir increíble)"
         ],
         "cta": "Obtén mis fotos"
       },
@@ -204,11 +206,10 @@
         "period": "pago único",
         "description": "Para equipos pequeños hasta 5 miembros. Paga una vez, sin suscripción.",
         "features": [
-          "Pago único, sin cargos recurrentes",
-          "Los créditos nunca expiran, úsalos cuando quieras",
-          "Regenera hasta {regenerations} veces para perfeccionar cada foto",
-          "Fotos retenidas hasta el cierre de la cuenta",
-          "Gestión de fotos del equipo",
+          "Personalización completa: controla pose, fondo, branding, colores de ropa y expresiones",
+          "Reintenta hasta {regenerations} veces para perfeccionar cada foto",
+          "Créditos nunca expiran, úsalos cuando quieras",
+          "Gestión de fotos de equipo",
           "Recarga de créditos disponible"
         ],
         "cta": "Obtén fotos del equipo"
@@ -218,11 +219,10 @@
         "period": "pago único",
         "description": "Para equipos más grandes. Pago único, sin cargos recurrentes.",
         "features": [
-          "Pago único, sin cargos recurrentes",
-          "Los créditos nunca expiran, úsalos cuando quieras",
-          "Regenera hasta {regenerations} veces para perfeccionar cada foto",
-          "Fotos retenidas hasta el cierre de la cuenta",
-          "Gestión de fotos del equipo",
+          "Personalización completa: controla pose, fondo, branding, colores de ropa y expresiones",
+          "Reintenta hasta {regenerations} veces para perfeccionar cada foto",
+          "Créditos nunca expiran, úsalos cuando quieras",
+          "Gestión de fotos de equipo",
           "Plantillas de estilo de empresa",
           "Recarga de créditos disponible"
         ],
@@ -234,19 +234,21 @@
       "questions": {
         "freeGen": {
           "question": "¿Tengo una generación gratis?",
-          "answer": "¡Sí! Damos a los nuevos usuarios una generación de prueba gratuita en un estilo establecido para que veas si nuestra IA cumple con las expectativas. Normalmente cuesta 10 créditos y te permite reintentar hasta 4 veces (dependiendo de tu paquete)."
+          "answer": "¡Sí! Damos a los nuevos usuarios una generación de prueba gratuita en un estilo establecido para que veas si nuestra IA cumple con las expectativas. Normalmente cuesta 1 crédito de foto y te permite reintentar hasta 4 veces (dependiendo de tu paquete)."
         },
         "howCreditsWork": {
-          "question": "¿Cómo funcionan los créditos?",
-          "answer": "Cada generación de foto usa 10 créditos y permite hasta 4 reintentos de alta calidad. Tus créditos se acumulan mes a mes y nunca expiran. ¡Sin prisa, son tuyos para siempre!"
+          "question": "¿Cómo funcionan los créditos de foto?",
+          "answer": "Cada generación de foto usa 1 crédito de foto y permite hasta 4 reintentos de alta calidad dependiendo de tu plan. Tus créditos de foto nunca expiran. ¡Sin prisa, son tuyos para siempre!"
         },
         "topUp": {
-          "question": "¿Puedo recargar créditos?",
-          "answer": "¡Sí! Suscriptores pueden comprar créditos adicionales cuando quieran. Precios varían por nivel."
+          "question": "¿Puedo recargar créditos de foto?",
+          "answer": "¡Sí! Puedes comprar créditos de foto adicionales cuando quieras. Los precios varían por nivel."
         },
         "satisfaction": {
           "question": "¿Qué si no estoy satisfecho?",
-          "answer": "Cada foto incluye 2-4 reintentos según tu plan, para refinar hasta que quede perfecta. Por eso ofrecemos generación de prueba gratis al registrarte—prueba primero, sin obligaciones."
+          "answer": "Cada foto incluye 2-4 reintentos según tu plan (plan gratuito: 2 reintentos, Individual y Pro Pequeño: 3 reintentos, Pro Grande: 4 reintentos), para refinar hasta que quede perfecta. Por eso ofrecemos generación de prueba gratis al registrarte. Prueba primero, sin obligaciones.",
+          "answerTeam": "Cada foto incluye 2-4 reintentos según tu plan (plan gratuito: 2 reintentos, Pro Pequeño: 3 reintentos, Pro Grande: 4 reintentos), para refinar hasta que quede perfecta. Por eso ofrecemos generación de prueba gratis al registrarte. Prueba primero, sin obligaciones.",
+          "answerIndividual": "Cada foto incluye 2-3 reintentos según tu plan (plan gratuito: 2 reintentos, Individual: 3 reintentos), para refinar hasta que quede perfecta. Por eso ofrecemos generación de prueba gratis al registrarte. Prueba primero, sin obligaciones."
         }
       }
     },
@@ -394,7 +396,15 @@
     "benefit2": "Resultados en 60 segundos",
     "benefit3": "Sin configuración de cuenta necesaria",
     "mobileRequired": "Por favor, abre este enlace en tu dispositivo móvil",
-    "mobileReason": "Ahí es donde están las mejores selfies 📸"
+    "mobileReason": "Ahí es donde están las mejores selfies 📸",
+    "expired": {
+      "title": "Nueva invitación enviada",
+      "invalidTitle": "Invitación Inválida",
+      "securityTitle": "Por qué hicimos esto",
+      "securityMessage": "Te enviamos automáticamente un nuevo enlace de invitación porque el anterior expiró. Esto mantiene seguros los datos de tu equipo: los enlaces expirados no pueden ser usados por nadie que pueda haberlos encontrado. Tu nuevo enlace es válido por 24 horas.",
+      "checkInbox": "Revisa tu bandeja de entrada para el nuevo enlace de invitación.",
+      "goToHomepage": "Ir a Inicio"
+    }
   },
   "app": {
     "header": {
@@ -1220,6 +1230,8 @@
     "teamInvite": {
       "subject": "Invitación al equipo de {teamName}",
       "text": "Has sido invitado a unirte a {teamName} en TeamShotsPro.\n\nUsa este enlace para aceptar: {inviteLink}\n\nTienes {creditsAllocated} créditos para empezar.",
+      "greeting": "¡Has sido invitado a unirte a {teamName}!",
+      "greetingWithName": "¡Hola {firstName}! {inviterFirstName} te invitó a obtener retratos profesionales para {teamName}.",
       "photosDescription": "Puedes generar {photos} fotos personalizables. Y cada foto se puede rehacer hasta 4 veces cada una. Desde solo un selfie.\n\nTu selfie no tiene que ser perfecto. Nosotros nos encargamos del acabado profesional.",
       "mobileAdvice": "Para la mejor experiencia, abre esto en tu dispositivo móvil. Ahí es donde tomarás tu selfie.",
       "acceptButton": "Aceptar invitación",
@@ -1481,7 +1493,7 @@
         "generations": "Generaciones",
         "personalCredits": "Créditos personales",
         "teamCredits": "Créditos del equipo",
-        "availablePhotos": "Fotos disponibles",
+        "availablePhotos": "Créditos de fotos restantes",
         "status": "Estado",
         "actions": "Acciones"
       },
@@ -1493,15 +1505,23 @@
       "you": "TÚ",
       "status": {
         "registered": "Registrado",
-        "guest": "Invitado"
+        "guest": "Invitado",
+        "revoked": "Revocado"
+      },
+      "revoked": {
+        "title": "Miembros revocados ({count})"
       },
       "actions": {
         "makeAdmin": "Hacer admin",
         "demote": "Degradar",
         "remove": "Eliminar",
+        "revoke": "Revocar",
+        "reactivate": "Reactivar",
         "promoting": "Promoviendo...",
         "demoting": "Degradando...",
-        "removing": "Eliminando..."
+        "removing": "Eliminando...",
+        "revoking": "Revocando...",
+        "reactivating": "Reactivando..."
       }
     },
     "teamInvites": {
@@ -1512,14 +1532,16 @@
       "status": {
         "accepted": "Aceptado",
         "expired": "Expirado",
-        "pending": "Pendiente"
+        "pending": "Pendiente",
+        "revoked": "Revocado"
       },
       "actions": {
         "resend": "Reenviar",
         "resending": "Reenviando...",
         "resendSuccess": "Invitación reenviada exitosamente",
         "revoke": "Revocar",
-        "revoking": "Revocando..."
+        "revoking": "Revocando...",
+        "addPhotos": "Añadir fotos"
       },
       "noCredits": {
         "title": "Sin Créditos del Equipo",
@@ -1527,11 +1549,27 @@
         "button": "Recargar Créditos"
       }
     },
+    "addPhotosModal": {
+      "title": "Añadir fotos a {name}",
+      "currentAllocation": "Asignación actual: {count} fotos",
+      "availableTeamPhotos": "Fotos del equipo disponibles: {count}",
+      "photosLeft": "Fotos restantes: {count}",
+      "photosToAdd": "Fotos a añadir",
+      "insufficientCredits": "Solo tienes {available} fotos del equipo disponibles",
+      "invalidAmount": "Por favor, ingresa un número válido de fotos",
+      "success": "Se añadieron {count} fotos a {name}",
+      "adding": "Añadiendo...",
+      "addButton": "Añadir fotos",
+      "cancel": "Cancelar"
+    },
     "inviteForm": {
       "title": "Invitar Miembro del Equipo",
       "email": {
         "label": "Dirección de Correo",
-        "placeholder": "colega@empresa.com"
+        "placeholder": "colega@empresa.com",
+        "checking": "Verificando...",
+        "alreadyMember": "Este correo ya es miembro de tu equipo",
+        "pendingInvite": "Ya se ha enviado una invitación a este correo"
       },
       "firstName": {
         "label": "Nombre",
@@ -1732,6 +1770,14 @@
     },
     "error": {
       "invalidInvite": "Invitación Inválida",
+      "goToHomepage": "Ir a Inicio"
+    },
+    "expired": {
+      "title": "Nueva invitación enviada",
+      "invalidTitle": "Invitación Inválida",
+      "securityTitle": "Por qué hicimos esto",
+      "securityMessage": "Te enviamos automáticamente un nuevo enlace de invitación porque el anterior expiró. Esto mantiene seguros los datos de tu equipo: los enlaces expirados no pueden ser usados por nadie que pueda haberlos encontrado. Tu nuevo enlace es válido por 24 horas.",
+      "checkInbox": "Revisa tu bandeja de entrada para el nuevo enlace de invitación.",
       "goToHomepage": "Ir a Inicio"
     },
     "alerts": {

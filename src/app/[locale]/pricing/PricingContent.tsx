@@ -67,7 +67,7 @@ export default function PricingContent() {
     <div className="min-h-screen bg-bg-gray-50 py-20 lg:py-32 relative grain-texture">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12 sm:mb-16 lg:mb-20 xl:mb-24">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
             {t('title')}
           </h1>
@@ -170,16 +170,29 @@ export default function PricingContent() {
             {t('faq.title')}
           </h2>
           <div className="space-y-6">
-            {['freeGen', 'howCreditsWork', 'topUp', 'satisfaction'].map((faqKey) => (
-              <div key={faqKey} className="bg-bg-white rounded-2xl p-6 lg:p-8 shadow-depth-md hover:shadow-depth-lg transition-all duration-300">
-                <h3 className="text-lg lg:text-xl font-bold mb-3 text-text-dark font-display">
-                  {t(`faq.questions.${faqKey}.question`)}
-                </h3>
-                <p className="text-base lg:text-lg text-text-body leading-relaxed">
-                  {t(`faq.questions.${faqKey}.answer`)}
-                </p>
-              </div>
-            ))}
+            {['freeGen', 'howCreditsWork', 'topUp', 'satisfaction'].map((faqKey) => {
+              // Get domain-specific answer key
+              const getAnswerKey = (baseKey: string) => {
+                if (domainSignupType === 'team') {
+                  return `${baseKey}Team`;
+                } else if (domainSignupType === 'individual') {
+                  return `${baseKey}Individual`;
+                }
+                return baseKey;
+              };
+              
+              const answerKey = getAnswerKey('answer');
+              return (
+                <div key={faqKey} className="bg-bg-white rounded-2xl p-6 lg:p-8 shadow-depth-md hover:shadow-depth-lg transition-all duration-300">
+                  <h3 className="text-lg lg:text-xl font-bold mb-3 text-text-dark font-display">
+                    {t(`faq.questions.${faqKey}.question`)}
+                  </h3>
+                  <p className="text-base lg:text-lg text-text-body leading-relaxed">
+                    {t(`faq.questions.${faqKey}.${answerKey}`)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

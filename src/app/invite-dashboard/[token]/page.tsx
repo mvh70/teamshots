@@ -78,6 +78,7 @@ export default function InviteDashboardPage() {
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [emailResent, setEmailResent] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   
   // Upload flow state
@@ -182,7 +183,13 @@ export default function InviteDashboardPage() {
           await fetchDashboardData()
         }
       } else {
-        setError(data.error)
+        // Check if email was auto-resent
+        if (data.expired && data.emailResent) {
+          setEmailResent(true)
+          setError(data.message || data.error)
+        } else {
+          setError(data.error)
+        }
       }
     } catch {
       setError('Failed to validate invite')
@@ -509,19 +516,44 @@ export default function InviteDashboardPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t('error.invalidInvite')}</h1>
-            <p className="text-sm text-gray-600 mb-4">{error}</p>
-            <button
-              onClick={() => router.push(`/${locale}`)}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
-            >
-              {t('error.goToHomepage')}
-            </button>
+            {emailResent ? (
+              <>
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t('expired.title')}</h1>
+                <p className="text-sm text-gray-600 mb-3">{error}</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-left">
+                  <p className="text-xs text-blue-800 font-medium mb-1">{t('expired.securityTitle')}</p>
+                  <p className="text-xs text-blue-700 leading-relaxed">{t('expired.securityMessage')}</p>
+                </div>
+                <p className="text-xs text-gray-500 mb-4">{t('expired.checkInbox')}</p>
+                <button
+                  onClick={() => router.push(`/${locale}`)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
+                >
+                  {t('expired.goToHomepage')}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t('error.invalidInvite')}</h1>
+                <p className="text-sm text-gray-600 mb-4">{error}</p>
+                <button
+                  onClick={() => router.push(`/${locale}`)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
+                >
+                  {t('error.goToHomepage')}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

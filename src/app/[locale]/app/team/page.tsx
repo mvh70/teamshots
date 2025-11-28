@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { jsonFetcher } from '@/lib/fetcher'
@@ -29,6 +29,7 @@ interface TeamInvite {
   createdAt: string
   contextId?: string
   contextName?: string
+  isRevoked?: boolean
 }
 
 interface TeamData {
@@ -47,6 +48,7 @@ interface TeamMember {
   email?: string
   isAdmin?: boolean
   isCurrentUser?: boolean
+  isRevoked?: boolean
   stats?: {
     selfies: number
     generations: number
@@ -81,7 +83,8 @@ export default function TeamPage() {
   const [resending, setResending] = useState<string | null>(null)
   const [revoking, setRevoking] = useState<string | null>(null)
   const [changingRole, setChangingRole] = useState<string | null>(null)
-  const [removing, setRemoving] = useState<string | null>(null)
+  const [revokingMember, setRevokingMember] = useState<string | null>(null)
+  const [reactivating, setReactivating] = useState<string | null>(null)
   const [userRoles, setUserRoles] = useState<{
     isTeamAdmin: boolean
     isTeamMember: boolean
@@ -92,7 +95,59 @@ export default function TeamPage() {
     isPlatformAdmin: false
   })
   const [inviteError, setInviteError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [checkingEmail, setCheckingEmail] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  
+  // Add photos modal state
+  const [addPhotosInvite, setAddPhotosInvite] = useState<TeamInvite | null>(null)
+  const [addPhotosValue, setAddPhotosValue] = useState('1')
+  const [addingPhotos, setAddingPhotos] = useState(false)
+  const [addPhotosError, setAddPhotosError] = useState<string | null>(null)
+
+  // Check if email is already part of the team
+  const checkEmailInTeam = useCallback(async (email: string) => {
+    const trimmedEmail = email.trim().toLowerCase()
+    
+    // Basic email validation
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      setEmailError(null)
+      return
+    }
+
+    setCheckingEmail(true)
+    setEmailError(null)
+
+    try {
+      const response = await fetch('/api/team/members/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmedEmail })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        if (data.isMember) {
+          setEmailError(t('inviteForm.email.alreadyMember'))
+        } else if (data.hasPendingInvite) {
+          setEmailError(t('inviteForm.email.pendingInvite'))
+        } else {
+          setEmailError(null)
+        }
+      } else {
+        // Don't show error for API errors, just log
+        console.error('Error checking email:', data.error)
+        setEmailError(null)
+      }
+    } catch (error) {
+      // Don't show error for network errors, just log
+      console.error('Error checking email:', error)
+      setEmailError(null)
+    } finally {
+      setCheckingEmail(false)
+    }
+  }, [t])
   // Convert between photos and credits (1 photo = 10 credits)
   const defaultPhotos = PRICING_CONFIG.team.defaultInviteCredits / PRICING_CONFIG.credits.perGeneration
   const [allocatedPhotos, setAllocatedPhotos] = useState<number>(defaultPhotos)
@@ -373,6 +428,36 @@ export default function TeamPage() {
       return
     }
 
+    // Check if email is already a member (prevent submission)
+    if (emailError) {
+      setInviting(false)
+      return
+    }
+
+    // Do a final check before submitting
+    try {
+      const checkResponse = await fetch('/api/team/members/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase() })
+      })
+
+      const checkData = await checkResponse.json()
+
+      if (checkResponse.ok && (checkData.isMember || checkData.hasPendingInvite)) {
+        if (checkData.isMember) {
+          setEmailError(t('inviteForm.email.alreadyMember'))
+        } else if (checkData.hasPendingInvite) {
+          setEmailError(t('inviteForm.email.pendingInvite'))
+        }
+        setInviting(false)
+        return
+      }
+    } catch (error) {
+      // Continue with submission if check fails
+      console.error('Error checking email before submit:', error)
+    }
+
     if (allocatedPhotos <= 0) {
       setInviteError(t('inviteForm.photos.required'))
       setInviting(false)
@@ -408,6 +493,7 @@ export default function TeamPage() {
         setFirstNameValue('')
         setPhotosInputValue(defaultPhotos.toString())
         setAllocatedPhotos(defaultPhotos)
+        setEmailError(null)
         setSuccessMessage(t('inviteForm.success', { email }))
         // Clear success message after 5 seconds
         setTimeout(() => setSuccessMessage(null), 5000)
@@ -479,6 +565,50 @@ export default function TeamPage() {
     }
   }
 
+  const handleAddPhotos = async () => {
+    if (!addPhotosInvite) return
+    
+    const photosToAdd = parseInt(addPhotosValue)
+    if (isNaN(photosToAdd) || photosToAdd < 1) {
+      setAddPhotosError(t('addPhotosModal.invalidAmount'))
+      return
+    }
+
+    // Check if team has enough credits
+    const creditsNeeded = photosToAdd * PRICING_CONFIG.credits.perGeneration
+    if (credits.team < creditsNeeded) {
+      setAddPhotosError(t('addPhotosModal.insufficientCredits', { available: calculatePhotosFromCredits(credits.team) }))
+      return
+    }
+
+    setAddingPhotos(true)
+    setAddPhotosError(null)
+    
+    try {
+      const response = await fetch(`/api/team/invites/${addPhotosInvite.id}/credits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photosToAdd })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        await fetchTeamData()
+        setSuccessMessage(t('addPhotosModal.success', { count: photosToAdd, name: addPhotosInvite.firstName || addPhotosInvite.email }))
+        setAddPhotosInvite(null)
+        setAddPhotosValue('1')
+        setAddPhotosError(null)
+      } else {
+        setAddPhotosError(data.error || 'Failed to add photos')
+      }
+    } catch {
+      setAddPhotosError('Failed to add photos')
+    } finally {
+      setAddingPhotos(false)
+    }
+  }
+
   const handleChangeMemberRole = async (memberId: string, newRole: 'team_member' | 'team_admin') => {
     setChangingRole(memberId)
     try {
@@ -507,12 +637,12 @@ export default function TeamPage() {
     }
   }
 
-  const handleRemoveMember = async (memberId: string) => {
-    if (!confirm('Are you sure you want to remove this member from the team?')) {
+  const handleRevokeMember = async (memberId: string) => {
+    if (!confirm('Are you sure you want to revoke this member\'s access to the team?')) {
       return
     }
 
-    setRemoving(memberId)
+    setRevokingMember(memberId)
     try {
       const response = await fetch('/api/team/members/remove', {
         method: 'POST',
@@ -530,9 +660,34 @@ export default function TeamPage() {
         setError(data.error)
       }
     } catch {
-      setError('Failed to remove member')
+      setError('Failed to revoke member access')
     } finally {
-      setRemoving(null)
+      setRevokingMember(null)
+    }
+  }
+
+  const handleReactivateMember = async (memberId: string) => {
+    setReactivating(memberId)
+    try {
+      const response = await fetch('/api/team/members/reactivate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personId: memberId })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        await fetchTeamData()
+        setError(null)
+        // TODO: Show success message
+      } else {
+        setError(data.error)
+      }
+    } catch {
+      setError('Failed to reactivate member')
+    } finally {
+      setReactivating(null)
     }
   }
 
@@ -542,19 +697,42 @@ export default function TeamPage() {
     return new Date(expiresAt) < new Date()
   }
 
-  // Filter out accepted invites (they should only appear as team members)
-  const pendingInvites = useMemo(() => invites.filter(invite => !invite.usedAt), [invites])
-  
-  // Sort team members: admins first, then non-admins
-  const sortedTeamMembers = useMemo(() => {
-    return [...teamMembers].sort((a, b) => {
-      // Admins first
+  // Separate active and revoked members, then sort
+  const { activeMembers, revokedMembers } = useMemo(() => {
+    const active = teamMembers.filter(m => !m.isRevoked)
+    const revoked = teamMembers.filter(m => m.isRevoked)
+    
+    // Sort active members: admins first, then non-admins
+    const sortedActive = active.sort((a, b) => {
       if (a.isAdmin && !b.isAdmin) return -1
       if (!a.isAdmin && b.isAdmin) return 1
-      // Otherwise maintain original order
       return 0
     })
+    
+    return { activeMembers: sortedActive, revokedMembers: revoked }
   }, [teamMembers])
+  
+  // Filter out invites that are already active team members
+  // An invite should only show as "pending" if:
+  // 1. usedAt is null (not yet accepted), AND
+  // 2. The invited email is not already an active team member
+  const pendingInvites = useMemo(() => {
+    const activeMemberEmails = new Set(
+      activeMembers
+        .filter(m => m.email)
+        .map(m => m.email!.toLowerCase())
+    )
+    
+    return invites.filter(invite => {
+      // If usedAt is set, they already accepted - don't show as pending
+      if (invite.usedAt) return false
+      
+      // If the email is already an active team member, don't show as pending invite
+      if (activeMemberEmails.has(invite.email.toLowerCase())) return false
+      
+      return true
+    })
+  }, [invites, activeMembers])
   
   // Create a map of invites by email for easy lookup
   const invitesByEmail = useMemo(() => {
@@ -913,7 +1091,7 @@ export default function TeamPage() {
                 </div>
                 
                 {/* Team Members - Admins first, then non-admins */}
-                {sortedTeamMembers.map((member) => {
+                {activeMembers.map((member) => {
                   // Find corresponding invite for this member
                   const memberInvite = member.email ? invitesByEmail.get(member.email.toLowerCase()) : null
                   const creditsAllocated = memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
@@ -1008,12 +1186,31 @@ export default function TeamPage() {
                       )}
                     </div>
                     
-                    {/* Available Photos */}
-                    <div className="flex justify-center">
-                      {member.stats ? (
+                    {/* Photo Credits Left */}
+                    <div className="flex justify-center items-center gap-1.5">
+                      {member.isAdmin ? (
                         <span className="text-base font-bold text-gray-900">
-                          {member.isAdmin ? calculatePhotosFromCredits(credits.team) : calculatePhotosFromCredits(member.stats.teamCredits ?? 0)}
+                          {calculatePhotosFromCredits(credits.team)}
                         </span>
+                      ) : memberInvite?.creditsRemaining !== undefined ? (
+                        <>
+                          <span className="text-base font-bold text-gray-900">
+                            {calculatePhotosFromCredits(memberInvite.creditsRemaining)}
+                          </span>
+                          {userRoles.isTeamAdmin && !memberInvite.isRevoked && (
+                            <button
+                              onClick={() => {
+                                setAddPhotosInvite(memberInvite)
+                                setAddPhotosValue('1')
+                                setAddPhotosError(null)
+                              }}
+                              className="w-5 h-5 flex items-center justify-center rounded-full bg-brand-secondary/10 text-brand-secondary hover:bg-brand-secondary/20 transition-colors"
+                              title={t('teamInvites.actions.addPhotos')}
+                            >
+                              <span className="text-sm font-bold leading-none">+</span>
+                            </button>
+                          )}
+                        </>
                       ) : (
                         <span className="text-sm text-gray-400">-</span>
                       )}
@@ -1066,14 +1263,16 @@ export default function TeamPage() {
                                 {changingRole === member.id ? t('teamMembers.actions.demoting') : t('teamMembers.actions.demote')}
                               </button>
                             )}
-                            <button
-                              onClick={() => handleRemoveMember(member.id)}
-                              disabled={removing === member.id}
-                              className="text-xs px-3.5 py-2 rounded-lg text-red-600 border border-red-600/30 hover:bg-red-50 hover:border-red-600/50 disabled:opacity-50 font-medium transition-all duration-200"
-                            >
-                              {removing === member.id ? t('teamMembers.actions.removing') : t('teamMembers.actions.remove')}
-                            </button>
                           </>
+                        )}
+                        {!member.isCurrentUser && (
+                          <button
+                            onClick={() => handleRevokeMember(member.id)}
+                            disabled={revokingMember === member.id}
+                            className="text-xs px-3.5 py-2 rounded-lg text-red-600 border border-red-600/30 hover:bg-red-50 hover:border-red-600/50 disabled:opacity-50 font-medium transition-all duration-200"
+                          >
+                            {revokingMember === member.id ? t('teamMembers.actions.revoking') : t('teamMembers.actions.revoke')}
+                          </button>
                         )}
                       </div>
                     )}
@@ -1081,6 +1280,128 @@ export default function TeamPage() {
                 </div>
                   )
                 })}
+
+                {/* Revoked Members Section */}
+                {revokedMembers.length > 0 && userRoles.isTeamAdmin && (
+                  <>
+                    <div className="px-7 py-4 border-t-2 border-gray-200 mt-4">
+                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                        {t('teamMembers.revoked.title', { count: revokedMembers.length })}
+                      </h3>
+                    </div>
+                    {revokedMembers.map((member) => {
+                      const memberInvite = member.email ? invitesByEmail.get(member.email.toLowerCase()) : null
+                      const creditsAllocated = memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
+                      const creditsUsed = memberInvite?.creditsUsed ?? 0
+                      const photoStyle = memberInvite?.contextName ?? teamData?.activeContext?.name
+                      
+                      return (
+                        <div key={`revoked-${member.id}`} className="px-7 py-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0 group opacity-60">
+                          <div 
+                            className={`grid gap-6 items-center ${
+                              userRoles.isTeamAdmin 
+                                ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
+                                : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                            }`}
+                          >
+                            {/* Member Info */}
+                            <div className="flex items-center gap-4 min-w-0">
+                              <div className="w-12 h-12 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center flex-shrink-0 ring-2 ring-gray-300/50 group-hover:ring-gray-400/50 transition-all shadow-sm">
+                                <span className="text-sm font-bold text-gray-600">
+                                  {member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                </span>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <p className="text-base font-semibold text-gray-600 truncate">
+                                    {member.name}
+                                  </p>
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-700 border border-red-200 flex-shrink-0">
+                                    {t('teamMembers.status.revoked')}
+                                  </span>
+                                </div>
+                                {member.email && (
+                                  <p className="text-xs text-gray-400 truncate font-medium">{member.email}</p>
+                                )}
+                                {!member.isAdmin && (
+                                  <p className="text-xs text-gray-400 mt-1.5 font-medium">
+                                    {t('teamInvites.photosAllocated', { count: calculatePhotosFromCredits(creditsAllocated) })}
+                                    {creditsUsed > 0 && (
+                                      <span className="ml-2 text-gray-500 font-semibold">
+                                        • {t('teamInvites.photosUsed', { count: calculatePhotosFromCredits(creditsUsed) })}
+                                      </span>
+                                    )}
+                                  </p>
+                                )}
+                                {photoStyle && !member.isAdmin && (
+                                  <p className="text-xs text-gray-400 mt-1.5 font-medium">
+                                    Photo style:{' '}
+                                    <Link 
+                                      href="/app/styles/team"
+                                      className="text-gray-500 hover:text-gray-600 font-semibold underline decoration-2 underline-offset-2 transition-colors"
+                                    >
+                                      {photoStyle}
+                                    </Link>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Selfies */}
+                            <div className="flex justify-center">
+                              {member.stats ? (
+                                <span className="text-base font-bold text-gray-500">{member.stats.selfies}</span>
+                              ) : (
+                                <span className="text-sm text-gray-400">-</span>
+                              )}
+                            </div>
+                            
+                            {/* Generations */}
+                            <div className="flex justify-center">
+                              {member.stats ? (
+                                <span className="text-base font-bold text-gray-500">{member.stats.generations}</span>
+                              ) : (
+                                <span className="text-sm text-gray-400">-</span>
+                              )}
+                            </div>
+                            
+                            {/* Photo Credits Left */}
+                            <div className="flex justify-center">
+                              {memberInvite?.creditsRemaining !== undefined ? (
+                                <span className="text-base font-bold text-gray-500">
+                                  {calculatePhotosFromCredits(memberInvite.creditsRemaining)}
+                                </span>
+                              ) : (
+                                <span className="text-sm text-gray-400">-</span>
+                              )}
+                            </div>
+                            
+                            {/* Status */}
+                            <div className="flex justify-center">
+                              <div className="flex items-center justify-center gap-2 text-red-600">
+                                <div className="w-2 h-2 bg-red-600 rounded-full ring-2 ring-red-600/20"></div>
+                                <span className="text-sm font-semibold">{t('teamMembers.status.revoked')}</span>
+                              </div>
+                            </div>
+                            
+                            {/* Admin Actions */}
+                            {userRoles.isTeamAdmin && (
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => handleReactivateMember(member.id)}
+                                  disabled={reactivating === member.id}
+                                  className="text-xs px-3.5 py-2 rounded-lg text-green-600 border border-green-600/30 hover:bg-green-50 hover:border-green-600/50 disabled:opacity-50 font-medium transition-all duration-200"
+                                >
+                                  {reactivating === member.id ? t('teamMembers.actions.reactivating') : t('teamMembers.actions.reactivate')}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
 
                 {/* Team Invites - only show pending invites */}
                 {pendingInvites.map((invite) => (
@@ -1148,6 +1469,11 @@ export default function TeamPage() {
                           <div className="w-2 h-2 bg-brand-secondary rounded-full ring-2 ring-brand-secondary/20 animate-pulse"></div>
                           <span className="text-sm font-semibold">{t('teamInvites.status.accepted')}</span>
                         </div>
+                      ) : invite.isRevoked ? (
+                        <div className="flex items-center justify-center gap-2 text-gray-500">
+                          <div className="w-2 h-2 bg-gray-500 rounded-full ring-2 ring-gray-500/20"></div>
+                          <span className="text-sm font-semibold">{t('teamInvites.status.revoked')}</span>
+                        </div>
                       ) : isExpired(invite.expiresAt) ? (
                         <div className="flex items-center justify-center gap-2 text-red-600">
                           <div className="w-2 h-2 bg-red-600 rounded-full ring-2 ring-red-600/20"></div>
@@ -1171,7 +1497,8 @@ export default function TeamPage() {
                         >
                           {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
                         </button>
-                        {!invite.usedAt && (
+                        {/* Hide revoke button when already revoked or used */}
+                        {!invite.usedAt && !invite.isRevoked && (
                           <button
                             onClick={() => handleRevokeInvite(invite.id)}
                             disabled={revoking === invite.id}
@@ -1190,7 +1517,7 @@ export default function TeamPage() {
               {/* Mobile: Card Layout */}
               <div className="md:hidden divide-y divide-gray-200">
                 {/* Team Members - Admins first, then non-admins */}
-                {sortedTeamMembers.map((member) => {
+                {activeMembers.map((member) => {
                   // Find corresponding invite for this member
                   const memberInvite = member.email ? invitesByEmail.get(member.email.toLowerCase()) : null
                   const creditsAllocated = memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
@@ -1272,9 +1599,24 @@ export default function TeamPage() {
                       </div>
                       <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                         <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">{t('teamMembers.headers.availablePhotos')}</p>
-                        <p className="text-lg font-bold text-gray-900">
-                          {member.isAdmin ? calculatePhotosFromCredits(credits.team) : calculatePhotosFromCredits(member.stats.teamCredits ?? 0)}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-lg font-bold text-gray-900">
+                            {member.isAdmin ? calculatePhotosFromCredits(credits.team) : calculatePhotosFromCredits(memberInvite?.creditsRemaining ?? 0)}
+                          </p>
+                          {!member.isAdmin && memberInvite && userRoles.isTeamAdmin && !memberInvite.isRevoked && (
+                            <button
+                              onClick={() => {
+                                setAddPhotosInvite(memberInvite)
+                                setAddPhotosValue('1')
+                                setAddPhotosError(null)
+                              }}
+                              className="w-6 h-6 flex items-center justify-center rounded-full bg-brand-secondary/10 text-brand-secondary hover:bg-brand-secondary/20 transition-colors"
+                              title={t('teamInvites.actions.addPhotos')}
+                            >
+                              <span className="text-sm font-bold leading-none">+</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </Grid>
                   )}
@@ -1326,20 +1668,128 @@ export default function TeamPage() {
                               {changingRole === member.id ? t('teamMembers.actions.demoting') : t('teamMembers.actions.demote')}
                             </button>
                           )}
-                          <button
-                            onClick={() => handleRemoveMember(member.id)}
-                            disabled={removing === member.id}
-                            className="text-xs px-3.5 py-2 rounded-lg text-red-600 border border-red-600/30 hover:bg-red-50 hover:border-red-600/50 disabled:opacity-50 min-h-[44px] font-medium transition-all duration-200"
-                          >
-                            {removing === member.id ? t('teamMembers.actions.removing') : t('teamMembers.actions.remove')}
-                          </button>
                         </>
+                      )}
+                      {!member.isCurrentUser && (
+                        <button
+                          onClick={() => handleRevokeMember(member.id)}
+                          disabled={revokingMember === member.id}
+                          className="text-xs px-3.5 py-2 rounded-lg text-red-600 border border-red-600/30 hover:bg-red-50 hover:border-red-600/50 disabled:opacity-50 min-h-[44px] font-medium transition-all duration-200"
+                        >
+                          {revokingMember === member.id ? t('teamMembers.actions.revoking') : t('teamMembers.actions.revoke')}
+                        </button>
                       )}
                     </div>
                   )}
                 </div>
                   )
                 })}
+
+                {/* Revoked Members Section - Mobile */}
+                {revokedMembers.length > 0 && userRoles.isTeamAdmin && (
+                  <>
+                    <div className="p-5 border-t-2 border-gray-200 mt-4">
+                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                        {t('teamMembers.revoked.title', { count: revokedMembers.length })}
+                      </h3>
+                    </div>
+                    {revokedMembers.map((member) => {
+                      const memberInvite = member.email ? invitesByEmail.get(member.email.toLowerCase()) : null
+                      const creditsAllocated = memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
+                      const creditsUsed = memberInvite?.creditsUsed ?? 0
+                      const photoStyle = memberInvite?.contextName ?? teamData?.activeContext?.name
+                      
+                      return (
+                        <div key={`revoked-mobile-${member.id}`} className="p-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0 opacity-60">
+                          <div className="flex items-start gap-4 mb-5">
+                            <div className="w-12 h-12 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center flex-shrink-0 ring-2 ring-gray-300/50 shadow-sm">
+                              <span className="text-sm font-bold text-gray-600">
+                                {member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                              </span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <p className="text-base font-semibold text-gray-600">
+                                  {member.name}
+                                </p>
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                                  {t('teamMembers.status.revoked')}
+                                </span>
+                              </div>
+                              {member.email && (
+                                <p className="text-xs text-gray-400">{member.email}</p>
+                              )}
+                              {!member.isAdmin && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {t('teamInvites.photosAllocated', { count: calculatePhotosFromCredits(creditsAllocated) })}
+                                  {creditsUsed > 0 && (
+                                    <span className="ml-2 text-gray-500">
+                                      • {t('teamInvites.photosUsed', { count: calculatePhotosFromCredits(creditsUsed) })}
+                                    </span>
+                                  )}
+                                </p>
+                              )}
+                              {photoStyle && !member.isAdmin && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Photo style:{' '}
+                                  <Link 
+                                    href="/app/styles/team"
+                                    className="text-gray-500 hover:text-gray-600 underline"
+                                  >
+                                    {photoStyle}
+                                  </Link>
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Stats Grid */}
+                          {member.stats && (
+                            <div className="mb-5 pl-[64px]">
+                              <Grid cols={{ mobile: 3, tablet: 3, desktop: 3 }} gap="md">
+                                <div>
+                                  <p className="text-xs text-gray-400 mb-1">{t('teamMembers.headers.selfies')}</p>
+                                  <p className="text-base font-bold text-gray-500">{member.stats.selfies}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-400 mb-1">{t('teamMembers.headers.generations')}</p>
+                                  <p className="text-base font-bold text-gray-500">{member.stats.generations}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-400 mb-1">{t('teamMembers.headers.availablePhotos')}</p>
+                                  <p className="text-base font-bold text-gray-500">
+                                    {calculatePhotosFromCredits(memberInvite?.creditsRemaining ?? 0)}
+                                  </p>
+                                </div>
+                              </Grid>
+                            </div>
+                          )}
+
+                          {/* Status */}
+                          <div className="mb-5 pl-[64px]">
+                            <div className="flex items-center gap-2 text-red-600">
+                              <div className="w-2 h-2 bg-red-600 rounded-full ring-2 ring-red-600/20"></div>
+                              <span className="text-sm font-semibold">{t('teamMembers.status.revoked')}</span>
+                            </div>
+                          </div>
+
+                          {/* Admin Actions */}
+                          {userRoles.isTeamAdmin && (
+                            <div className="flex flex-wrap gap-2.5 pl-[64px]">
+                              <button
+                                onClick={() => handleReactivateMember(member.id)}
+                                disabled={reactivating === member.id}
+                                className="text-xs px-3.5 py-2 rounded-lg text-green-600 border border-green-600/30 hover:bg-green-50 hover:border-green-600/50 disabled:opacity-50 min-h-[44px] font-medium transition-all duration-200"
+                              >
+                                {reactivating === member.id ? t('teamMembers.actions.reactivating') : t('teamMembers.actions.reactivate')}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
 
                 {/* Team Invites - only show pending invites */}
                 {pendingInvites.map((invite) => (
@@ -1393,6 +1843,11 @@ export default function TeamPage() {
                         <div className="w-2 h-2 bg-brand-secondary rounded-full ring-2 ring-brand-secondary/20 animate-pulse"></div>
                         <span className="text-sm font-semibold">{t('teamInvites.status.accepted')}</span>
                       </div>
+                    ) : invite.isRevoked ? (
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <div className="w-2 h-2 bg-gray-500 rounded-full ring-2 ring-gray-500/20"></div>
+                        <span className="text-sm font-semibold">{t('teamInvites.status.revoked')}</span>
+                      </div>
                     ) : isExpired(invite.expiresAt) ? (
                       <div className="flex items-center gap-2 text-red-600">
                         <div className="w-2 h-2 bg-red-600 rounded-full ring-2 ring-red-600/20"></div>
@@ -1416,7 +1871,8 @@ export default function TeamPage() {
                       >
                         {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
                       </button>
-                      {!invite.usedAt && (
+                      {/* Hide revoke button when already revoked or used */}
+                      {!invite.usedAt && !invite.isRevoked && (
                         <button
                           onClick={() => handleRevokeInvite(invite.id)}
                           disabled={revoking === invite.id}
@@ -1453,10 +1909,40 @@ export default function TeamPage() {
                     name="email"
                     required
                     value={emailValue}
-                    onChange={(e) => setEmailValue(e.target.value)}
-                    className="w-full px-5 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm hover:border-gray-300"
+                    onChange={(e) => {
+                      setEmailValue(e.target.value)
+                      // Clear error when user starts typing
+                      if (emailError) {
+                        setEmailError(null)
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const email = e.target.value.trim()
+                      if (email) {
+                        checkEmailInTeam(email)
+                      }
+                    }}
+                    className={`w-full px-5 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all shadow-sm ${
+                      emailError
+                        ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500'
+                        : 'border-gray-200 focus:ring-brand-primary/20 focus:border-brand-primary hover:border-gray-300'
+                    }`}
                     placeholder={t('inviteForm.email.placeholder')}
                   />
+                  {checkingEmail && (
+                    <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1.5">
+                      <div className="animate-spin rounded-full h-3 w-3 border-2 border-gray-300 border-t-gray-600"></div>
+                      {t('inviteForm.email.checking')}
+                    </p>
+                  )}
+                  {emailError && (
+                    <p className="text-xs text-red-600 mt-1.5 font-medium flex items-center gap-1.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {emailError}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1680,9 +2166,22 @@ export default function TeamPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-8">
                   <button
                     type="submit"
-                    disabled={inviting || allocatedPhotos <= 0 || allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team}
+                    disabled={
+                      inviting || 
+                      checkingEmail ||
+                      allocatedPhotos <= 0 || 
+                      allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team ||
+                      !emailValue.trim() ||
+                      !firstNameValue.trim() ||
+                      !!emailError
+                    }
                     className={`flex-1 px-7 py-3.5 rounded-xl font-semibold text-base min-h-[48px] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
-                      allocatedPhotos <= 0 || allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team
+                      allocatedPhotos <= 0 || 
+                      allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team ||
+                      !emailValue.trim() ||
+                      !firstNameValue.trim() ||
+                      !!emailError ||
+                      checkingEmail
                         ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                         : 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-md hover:shadow-lg disabled:opacity-50 transform hover:-translate-y-0.5'
                     }`}
@@ -1698,6 +2197,7 @@ export default function TeamPage() {
                       setFirstNameValue('')
                       setPhotosInputValue(defaultPhotos.toString())
                       setAllocatedPhotos(defaultPhotos)
+                      setEmailError(null)
                       setShowInviteForm(false)
                     }}
                     className="px-7 py-3.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 min-h-[48px] sm:w-auto font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 shadow-sm hover:shadow"
@@ -1706,6 +2206,85 @@ export default function TeamPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Photos Modal */}
+      {addPhotosInvite && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full my-4 shadow-2xl animate-scale-in border border-gray-200">
+            <div className="p-6 sm:p-7">
+              <h2 className="text-xl font-bold text-gray-900 mb-1 tracking-tight">
+                {t('addPhotosModal.title', { name: addPhotosInvite.firstName || addPhotosInvite.email })}
+              </h2>
+              <p className="text-sm text-gray-500 mb-6">
+                {t('addPhotosModal.currentAllocation', { count: calculatePhotosFromCredits(addPhotosInvite.creditsAllocated) })}
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('addPhotosModal.photosToAdd')}
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={Math.floor(credits.team / PRICING_CONFIG.credits.perGeneration)}
+                  value={addPhotosValue}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setAddPhotosValue(value)
+                    
+                    // Validate and show appropriate error
+                    const numValue = parseInt(value)
+                    const availablePhotos = Math.floor(credits.team / PRICING_CONFIG.credits.perGeneration)
+                    
+                    if (!value || isNaN(numValue) || numValue < 1) {
+                      setAddPhotosError(t('addPhotosModal.invalidAmount'))
+                    } else if (numValue > availablePhotos) {
+                      setAddPhotosError(t('addPhotosModal.insufficientCredits', { available: availablePhotos.toString() }))
+                    } else {
+                      setAddPhotosError(null)
+                    }
+                  }}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  {t('addPhotosModal.availableTeamPhotos', { count: calculatePhotosFromCredits(credits.team) })}
+                </p>
+              </div>
+
+              {addPhotosError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+                  <p className="text-sm text-red-700 font-medium">{addPhotosError}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleAddPhotos}
+                  disabled={addingPhotos || !addPhotosValue || parseInt(addPhotosValue) < 1 || parseInt(addPhotosValue) * PRICING_CONFIG.credits.perGeneration > credits.team}
+                  className={`flex-1 px-5 py-3 rounded-xl font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                    addingPhotos || !addPhotosValue || parseInt(addPhotosValue) < 1 || parseInt(addPhotosValue) * PRICING_CONFIG.credits.perGeneration > credits.team
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-md hover:shadow-lg'
+                  }`}
+                >
+                  {addingPhotos ? t('addPhotosModal.adding') : t('addPhotosModal.addButton')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddPhotosInvite(null)
+                    setAddPhotosValue('1')
+                    setAddPhotosError(null)
+                  }}
+                  className="px-5 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+                >
+                  {t('addPhotosModal.cancel')}
+                </button>
+              </div>
             </div>
           </div>
         </div>

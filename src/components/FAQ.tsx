@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { getBrandContact } from '@/config/brand';
+import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain';
 
 interface FAQItem {
   id: string;
@@ -17,6 +18,24 @@ export default function FAQ() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
+  // Detect domain signup type for domain-specific FAQ answers
+  const [domainSignupType] = useState<'individual' | 'team' | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const domain = getClientDomain();
+    const forcedType = getForcedSignupType();
+    return forcedType || getSignupTypeFromDomain(domain);
+  });
+
+  // Get domain-specific answer key suffix
+  const getAnswerKey = (baseKey: string) => {
+    if (domainSignupType === 'team') {
+      return `${baseKey}Team`;
+    } else if (domainSignupType === 'individual') {
+      return `${baseKey}Individual`;
+    }
+    return baseKey;
+  };
+
   const FAQ_ITEMS: FAQItem[] = [
     {
       id: '1',
@@ -27,7 +46,7 @@ export default function FAQ() {
     {
       id: '2',
       question: t('items.2.question'),
-      answer: t('items.2.answer'),
+      answer: t(`items.2.${getAnswerKey('answer')}`),
       category: 'technical'
     },
     {

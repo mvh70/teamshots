@@ -53,7 +53,15 @@ export async function POST(request: NextRequest) {
         firstName: true,
         token: true,
         expiresAt: true,
+        createdAt: true,
         creditsAllocated: true,
+        personId: true,
+        person: {
+          select: {
+            id: true,
+            teamId: true
+          }
+        },
         team: {
           select: {
             name: true
@@ -66,16 +74,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
     }
 
-    // If invite is expired, extend expiration date by 24 hours
     const now = new Date()
     let expiresAt = invite.expiresAt
-    if (invite.expiresAt < now) {
+    
+    // Check if invite was revoked (expiresAt before createdAt) or expired
+    const isRevoked = invite.expiresAt < invite.createdAt
+    const isExpired = invite.expiresAt < now
+    
+    if (isRevoked || isExpired) {
+      // Extend expiration date by 24 hours
       expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours from now
       
       // Update the invite expiration date
       await prisma.teamInvite.update({
         where: { id: invite.id },
         data: { expiresAt }
+      })
+    }
+    
+    // If the invite has a linked person who was revoked (removed from team),
+    // re-add them to the team when resending
+    if (invite.personId && invite.person && invite.person.teamId !== user.person.team.id) {
+      await prisma.person.update({
+        where: { id: invite.personId },
+        data: { teamId: user.person.team.id }
+      })
+      
+      // Also set usedAt since the person is now active in the team
+      await prisma.teamInvite.update({
+        where: { id: invite.id },
+        data: { usedAt: new Date() }
+      })
+      
+      Logger.info('Re-added revoked person to team via invite resend', {
+        personId: invite.personId,
+        teamId: user.person.team.id,
+        inviteId: invite.id
       })
     }
 

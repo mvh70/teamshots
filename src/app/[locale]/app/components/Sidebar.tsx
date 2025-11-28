@@ -248,8 +248,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
       if (!isTeamAdmin) return
       try {
         const data = await jsonFetcher<{ totalAllocatedCredits: number; totalRemainingCredits: number }>('/api/team/invites/credits')
-        // Show total allocated credits (credits assigned to invites)
-        setAllocatedCredits(data.totalAllocatedCredits ?? 0)
+        // Show remaining credits across all invites (allocated minus used)
+        setAllocatedCredits(data.totalRemainingCredits ?? 0)
       } catch (err) {
         setAllocatedCredits(0)
         console.error('Failed to fetch allocated credits:', err)

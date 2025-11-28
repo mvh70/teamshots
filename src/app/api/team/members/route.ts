@@ -68,6 +68,45 @@ export async function GET(request: NextRequest) {
       allPersonIds.push(user.person.id)
     }
 
+    // Fetch revoked members (persons with teamId=null but have used invites for this team)
+    const revokedInvites = await prisma.teamInvite.findMany({
+      where: {
+        teamId: team.id,
+        usedAt: { not: null },
+        person: {
+          teamId: null // Revoked members
+        }
+      },
+      include: {
+        person: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            userId: true,
+            email: true,
+            _count: {
+              select: {
+                selfies: true,
+                generations: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    const revokedPersonIds = revokedInvites
+      .map(invite => invite.person?.id)
+      .filter((id): id is string => Boolean(id))
+    
+    // Add revoked person IDs to the list for credit/generation queries
+    revokedPersonIds.forEach(id => {
+      if (!allPersonIds.includes(id)) {
+        allPersonIds.push(id)
+      }
+    })
+
     // OPTIMIZATION: Batch fetch all credit transactions for all users and persons
     const userIds = team.teamMembers.filter(p => p.userId).map(p => p.userId as string)
     // Include current user's userId
@@ -168,7 +207,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Build response for all team members
+    // Build response for all active team members
     const usersWithCredits = team.teamMembers.map((p) => {
       let individualCredits = 0
       let teamCredits = 0
@@ -190,6 +229,7 @@ export async function GET(request: NextRequest) {
         userId: p.userId,
         isAdmin: p.userId === team.adminId,
         isCurrentUser: p.userId === session.user.id,
+        isRevoked: false,
         stats: {
           selfies: p._count.selfies,
           generations: activeGenerations,
@@ -197,6 +237,39 @@ export async function GET(request: NextRequest) {
           teamCredits
         }
       }
+    })
+
+    // Add revoked members to the list
+    revokedInvites.forEach((invite) => {
+      if (!invite.person) return
+      
+      const p = invite.person
+      let individualCredits = 0
+      let teamCredits = 0
+      
+      if (p.userId) {
+        individualCredits = userCreditsMap.get(p.userId) || 0
+      } else {
+        teamCredits = personCreditsMap.get(p.id) || 0
+      }
+
+      const activeGenerations = generationCounts.get(p.id) || 0
+
+      usersWithCredits.push({
+        id: p.id,
+        name: [p.firstName, p.lastName].filter(Boolean).join(' ') || p.email || 'Member',
+        email: p.email,
+        userId: p.userId,
+        isAdmin: false, // Revoked members can't be admin
+        isCurrentUser: p.userId === session.user.id,
+        isRevoked: true,
+        stats: {
+          selfies: p._count.selfies,
+          generations: activeGenerations,
+          individualCredits,
+          teamCredits
+        }
+      })
     })
 
     // Ensure current admin is included
@@ -211,6 +284,7 @@ export async function GET(request: NextRequest) {
         userId: session.user.id,
         isAdmin: true,
         isCurrentUser: true,
+        isRevoked: false,
         stats: {
           selfies: user.person?._count.selfies || 0,
           generations: adminActiveGenerations,
