@@ -43,10 +43,23 @@ export default function Footer() {
             <Link href="/pricing" className="text-white hover:text-brand-primary-light transition-colors duration-300 font-medium">
               {t('pricing')}
             </Link>
+            <Link href="/blog" className="text-white hover:text-brand-primary-light transition-colors duration-300 font-medium">
+              {t('blog')}
+            </Link>
             <Link href="/auth/signup" className="text-white hover:text-brand-primary-light transition-colors duration-300 font-medium">
               Get Started
             </Link>
           </div>
+          
+          <div className="flex flex-wrap justify-center gap-6 mb-8 text-sm">
+            <Link href="/legal/privacy" className="text-gray-400 hover:text-white transition-colors duration-300">
+              {tFooter('privacy')}
+            </Link>
+            <Link href="/legal/terms" className="text-gray-400 hover:text-white transition-colors duration-300">
+              {tFooter('terms')}
+            </Link>
+          </div>
+
           <p className="text-gray-400 text-sm">
             {tFooter('copyright')}
           </p>

@@ -47,8 +47,7 @@ const AVAILABLE_EXPRESSIONS = [
   'neutral_serious',
   'laugh_joy',
   'contemplative',
-  'confident',
-  'sad'
+  'confident'
 ]
 
 const HEADSHOT1_PRESET = CORPORATE_HEADSHOT

@@ -17,6 +17,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const publicRoutes = [
     '',           // Landing page
     '/pricing',   // Pricing page
+    '/blog',      // Blog index
+    '/blog/best-ai-headshot-generators', // Blog post
+    '/legal/privacy', // Privacy Policy
+    '/legal/terms',   // Terms of Service
   ]
   
   // Generate sitemap entries for the current domain, route, and locale

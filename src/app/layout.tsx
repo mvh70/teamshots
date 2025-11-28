@@ -4,14 +4,17 @@ import { auth } from '@/auth'
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import { getBrand } from '@/config/brand'
+import { getBaseUrl } from '@/lib/url'
 import { headers } from 'next/headers'
 import './globals.css'
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers()
   const brandConfig = getBrand(headersList)
+  const baseUrl = getBaseUrl(headersList)
 
   return {
+    metadataBase: new URL(baseUrl),
     title: {
       template: `%s | ${brandConfig.name}`,
       default: brandConfig.name,
@@ -26,6 +29,22 @@ export async function generateMetadata(): Promise<Metadata> {
       shortcut: '/favicon.ico',
     },
     referrer: 'strict-origin-when-cross-origin',
+    alternates: {
+      canonical: '/',
+      languages: {
+        'en': '/',
+        'es': '/es',
+      },
+    },
+    openGraph: {
+      type: 'website',
+      siteName: brandConfig.name,
+      locale: 'en_US',
+      alternateLocale: ['es_ES'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+    },
     other: {
       'format-detection': 'telephone=no',
       'apple-mobile-web-app-capable': 'yes',

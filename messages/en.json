@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "title": "Professional Team Photos in 60 Seconds",
+    "description": "Turn any selfie into consistent, on-brand headshots. No photographer, no coordination. Professional AI headshots for your entire team."
+  },
   "common": {
     "processingImage": "Processing image...",
     "processingImages": "Processing {count} images..."
@@ -6,6 +10,7 @@
   "nav": {
     "home": "Home",
     "pricing": "Pricing",
+    "blog": "Blog",
     "signin": "Sign in",
     "dashboard": "Dashboard",
     "getStarted": "Get Started"
@@ -151,7 +156,9 @@
   },
   "footer": {
     "tagline": "Professional team photos in 60 seconds",
-    "copyright": "© 2025 TeamShotsPro. All rights reserved."
+    "copyright": "© 2025 TeamShotsPro. All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
   },
   "pricing": {
     "title": "Simple, Transparent Pricing",

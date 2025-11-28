@@ -95,7 +95,7 @@ export default function HeroGallery() {
             alt={`${t('after')} - AI transformation`}
             fill
             className="object-cover"
-            unoptimized
+            priority
           />
           
           {/* Foreground: Before image clipped to slider position */}
@@ -105,7 +105,7 @@ export default function HeroGallery() {
               alt={`${t('before')} - AI transformation`}
               fill
               className="object-cover"
-              unoptimized
+              priority
               style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
             />
           </div>

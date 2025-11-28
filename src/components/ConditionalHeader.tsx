@@ -60,6 +60,12 @@ export default function ConditionalHeader() {
           >
             {t('pricing')}
           </Link>
+          <Link 
+            href="/blog" 
+            className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
+          >
+            {t('blog')}
+          </Link>
           <LanguageSwitcher />
           <Link
             href={session ? "/app/dashboard" : "/auth/signin"}
@@ -118,6 +124,13 @@ export default function ConditionalHeader() {
               className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
             >
               {t('pricing')}
+            </Link>
+            <Link 
+              href="/blog"
+              onClick={toggleMobileMenu}
+              className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
+            >
+              {t('blog')}
             </Link>
             <div className="py-2">
               <LanguageSwitcher />
