@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from '@/i18n/routing'
+import { useRouter, Link } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
 import { formatDate } from '@/lib/format'
+import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 
 interface FeedbackItem {
   id: string
@@ -134,6 +135,13 @@ export default function AdminFeedbackPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-6">
+        <Link 
+          href="/app/admin" 
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 group"
+        >
+          <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+          Back to admin dashboard
+        </Link>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('title')}</h1>
         <p className="text-gray-600">{t('description')}</p>
       </div>

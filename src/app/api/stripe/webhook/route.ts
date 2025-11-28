@@ -8,7 +8,7 @@ import { PrismaClient } from '@prisma/client';
 import { Logger } from '@/lib/logger';
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils';
 import { generatePasswordSetupToken } from '@/domain/auth/password-setup';
-import { sendWelcomeAfterPurchaseEmail } from '@/lib/email';
+import { sendWelcomeAfterPurchaseEmail, sendOrderNotificationEmail } from '@/lib/email';
 import { getBaseUrl } from '@/lib/url';
 import { calculatePhotosFromCredits } from '@/domain/pricing/utils';
 
@@ -353,6 +353,55 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             },
           },
         });
+      });
+    }
+    
+    // Send order notification to support
+    try {
+      const customerName = session.customer_details?.name || '';
+      const customerEmail = guestEmail || session.customer_details?.email || session.customer_email || '';
+      
+      let orderCredits = 0;
+      let orderTier: string | null = null;
+      let orderPeriod: string | null = null;
+      
+      if (purchaseType === 'plan') {
+        orderTier = session.metadata?.planTier || null;
+        orderPeriod = session.metadata?.planPeriod || null;
+        const configKey = getPricingConfigKey(
+          (orderTier as PlanTier) || 'individual', 
+          (orderPeriod as PlanPeriod) || 'small'
+        );
+        if (configKey) {
+          orderCredits = PRICING_CONFIG[configKey].credits;
+        }
+      } else if (purchaseType === 'top_up') {
+        orderCredits = parseInt(session.metadata?.credits || '0');
+        orderTier = session.metadata?.tier || null;
+      }
+      
+      await sendOrderNotificationEmail({
+        customerEmail,
+        customerName,
+        orderType: purchaseType as 'plan' | 'top_up',
+        planTier: orderTier,
+        planPeriod: orderPeriod,
+        credits: orderCredits,
+        amountPaid: session.amount_total ? session.amount_total / 100 : 0,
+        currency: session.currency || 'USD',
+        stripeSessionId: session.id,
+        isNewUser: isNewGuestUser,
+      });
+      
+      Logger.info('Order notification sent to support', { 
+        customerEmail, 
+        orderType: purchaseType, 
+        amount: session.amount_total ? session.amount_total / 100 : 0 
+      });
+    } catch (notifyError) {
+      // Don't fail the webhook if notification fails
+      Logger.error('Failed to send order notification', {
+        error: notifyError instanceof Error ? notifyError.message : String(notifyError),
       });
     }
     

@@ -297,8 +297,8 @@ export default function StyleForm({
 
   const formContent = (
     <div className="space-y-8">
-      {/* Show name field only if we're not using autosave name */}
-      {!autosaveName && (
+      {/* Show name field only if we're not using autosave name and not freePackage (singleton) */}
+      {!autosaveName && scope !== 'freePackage' && (
         <div id="style-name-input-section">
           <label className="block text-sm font-semibold text-gray-900 mb-3">
             Style Name *

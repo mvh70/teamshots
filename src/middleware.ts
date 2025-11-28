@@ -7,6 +7,7 @@ import { auth } from '@/auth'
 export const runtime = 'nodejs'
 
 const PROTECTED_PATH_PREFIXES = ['/app']
+const ADMIN_PATH_PREFIXES = ['/app/admin']
 
 function removeLocalePrefix(pathname: string) {
   const segments = pathname.split('/')
@@ -19,6 +20,11 @@ function removeLocalePrefix(pathname: string) {
 function isProtectedPath(pathname: string) {
   const normalized = removeLocalePrefix(pathname)
   return PROTECTED_PATH_PREFIXES.some(prefix => normalized.startsWith(prefix))
+}
+
+function isAdminPath(pathname: string) {
+  const normalized = removeLocalePrefix(pathname)
+  return ADMIN_PATH_PREFIXES.some(prefix => normalized.startsWith(prefix))
 }
 
 function addSecurityHeaders(response: NextResponse) {
@@ -148,6 +154,11 @@ export default async function middleware(request: NextRequest) {
         const loginUrl = new URL('/auth/signin', request.url)
         loginUrl.searchParams.set('callbackUrl', `${request.nextUrl.pathname}${request.nextUrl.search}`)
         return addSecurityHeaders(NextResponse.redirect(loginUrl))
+      }
+      
+      // Admin route protection - redirect non-admins to dashboard
+      if (isAdminPath(request.nextUrl.pathname) && !session?.user?.isAdmin) {
+        return addSecurityHeaders(NextResponse.redirect(new URL('/app/dashboard', request.url)))
       }
     }
 

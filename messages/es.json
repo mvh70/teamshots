@@ -423,7 +423,8 @@
         "personalPhotoStyles": "Estilos Personales",
         "teamPhotoStyles": "Estilos de foto predefinidos",
         "analytics": "Analítica",
-        "settings": "Ajustes"
+        "settings": "Ajustes",
+        "admin": "Admin"
       },
       "primary": {
         "generate": "Generar Fotos"
@@ -1757,6 +1758,77 @@
         "previous": "Anterior",
         "next": "Siguiente"
       }
+    }
+  },
+  "admin": {
+    "badge": "ADMIN",
+    "title": "Panel de administración",
+    "subtitle": "Herramientas de administración y monitoreo de la plataforma",
+    "lastUpdated": "Última actualización",
+    "stats": {
+      "totalUsers": "Usuarios totales",
+      "paid": "de pago",
+      "creditsPurchased": "Créditos comprados",
+      "creditsUsed": "Créditos usados",
+      "teamInvites": "Invitaciones de equipo",
+      "accepted": "aceptadas"
+    },
+    "quickAccess": {
+      "title": "Acceso rápido",
+      "analytics": "Analíticas",
+      "analyticsDesc": "Ver tasas de conversión, ARPU y métricas de usuarios",
+      "feedback": "Comentarios",
+      "feedbackDesc": "Revisar y gestionar comentarios de usuarios"
+    },
+    "sections": {
+      "adminTools": "Herramientas de admin",
+      "freeStyle": "Estilo plan gratuito"
+    },
+    "tools": {
+      "roleManagement": "Gestión de roles de admin",
+      "roleManagementDesc": "Esta sección solo es visible para administradores de la plataforma. Usar con precaución para pruebas.",
+      "currentRole": "Rol de usuario actual",
+      "platformAdmin": "Admin de plataforma",
+      "changeRoleTitle": "Cambiar rol (solo pruebas)",
+      "setAsIndividual": "Establecer como usuario individual",
+      "setAsTeamAdmin": "Establecer como admin de equipo",
+      "roleChangeWarning": "Esto cambiará tu rol inmediatamente. Usar solo para pruebas.",
+      "sessionManagement": "Gestión de sesión",
+      "refreshSession": "Actualizar datos de sesión",
+      "refreshing": "Actualizando...",
+      "refreshSessionHint": "Actualiza tu sesión para ver información de rol actualizada.",
+      "sessionMismatch": "¡Discrepancia de sesión detectada! Base de datos: {dbRole}, Sesión: {sessionRole}. Por favor, cierra sesión usando el menú del perfil en la barra lateral y vuelve a iniciar sesión.",
+      "sessionUpToDate": "La sesión está actualizada. Rol en base de datos: {role}",
+      "refreshFailed": "Error al actualizar sesión",
+      "onlyAdminsCanChangeRoles": "Solo los administradores de plataforma pueden cambiar roles",
+      "roleChanged": "Rol cambiado a {role}. Por favor, cierra sesión y vuelve a iniciar sesión para ver los cambios.",
+      "roleChangeFailed": "Error al cambiar rol"
+    },
+    "impersonation": {
+      "badge": "SUPLANTAR",
+      "title": "Suplantación de usuario",
+      "description": "Suplanta a un usuario para ver la aplicación desde su perspectiva. Todas las acciones serán registradas.",
+      "searchUser": "Buscar usuario",
+      "searchPlaceholder": "Buscar por nombre o email...",
+      "selected": "Seleccionado",
+      "warning": "No puedes suplantar a otros administradores de plataforma.",
+      "start": "Iniciar suplantación",
+      "starting": "Iniciando...",
+      "stop": "Detener suplantación",
+      "stopping": "Deteniendo...",
+      "currentlyImpersonating": "Actualmente estás suplantando a un usuario. Todas las acciones serán registradas y atribuidas al usuario suplantado.",
+      "started": "Suplantación iniciada. Redirigiendo...",
+      "stopped": "Suplantación detenida. Redirigiendo...",
+      "startFailed": "Error al iniciar suplantación",
+      "stopFailed": "Error al detener suplantación"
+    },
+    "roles": {
+      "teamAdmin": "Admin de equipo",
+      "teamAdminNoTeam": "Admin de equipo (sin equipo)",
+      "teamMember": "Miembro de equipo",
+      "individualUser": "Usuario individual",
+      "teamSetupHint": "Eres admin de equipo pero aún no has configurado un equipo.",
+      "goToTeam": "Ir a página de equipo"
     }
   },
   "inviteDashboard": {

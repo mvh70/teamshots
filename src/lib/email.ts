@@ -368,6 +368,132 @@ interface SendAdminSignupNotificationEmailParams {
   teamWebsite?: string | null;
 }
 
+interface SendOrderNotificationEmailParams {
+  customerEmail: string;
+  customerName: string;
+  orderType: 'plan' | 'top_up';
+  planTier?: string | null;
+  planPeriod?: string | null;
+  credits: number;
+  amountPaid: number;
+  currency: string;
+  stripeSessionId: string;
+  isNewUser: boolean;
+}
+
+/**
+ * Send notification email to support when an order is placed
+ */
+export async function sendOrderNotificationEmail({
+  customerEmail,
+  customerName,
+  orderType,
+  planTier,
+  planPeriod,
+  credits,
+  amountPaid,
+  currency,
+  stripeSessionId,
+  isNewUser,
+}: SendOrderNotificationEmailParams) {
+  const contact = getBrandContact();
+  const adminRecipient = contact.hello || contact.support;
+
+  if (!adminRecipient) {
+    Logger.warn('Order notification skipped - no admin recipient configured');
+    return { success: false, error: 'ADMIN_EMAIL_NOT_CONFIGURED' };
+  }
+
+  const orderTypeLabel = orderType === 'plan' ? 'Plan Purchase' : 'Credit Top-up';
+  const planLabel = planTier && planPeriod ? `${planTier} ${planPeriod}` : 'N/A';
+  const formattedAmount = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(amountPaid);
+
+  const subject = `[${BRAND_CONFIG.name}] New ${orderTypeLabel} - ${formattedAmount}`;
+
+  const textBody = [
+    `New ${orderTypeLabel}`,
+    '',
+    `Customer: ${customerName || 'N/A'}`,
+    `Email: ${customerEmail}`,
+    `New user: ${isNewUser ? 'Yes' : 'No'}`,
+    '',
+    `Order Type: ${orderTypeLabel}`,
+    `Plan: ${planLabel}`,
+    `Credits: ${credits}`,
+    `Amount: ${formattedAmount}`,
+    '',
+    `Stripe Session: ${stripeSessionId}`,
+  ].join('\n');
+
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">New ${orderTypeLabel} 🎉</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tbody>
+          <tr style="background-color: #f9f9f9;">
+            <td style="padding: 12px; font-weight: bold; width: 140px;">Customer</td>
+            <td style="padding: 12px;">${customerName || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px; font-weight: bold;">Email</td>
+            <td style="padding: 12px;"><a href="mailto:${customerEmail}">${customerEmail}</a></td>
+          </tr>
+          <tr style="background-color: #f9f9f9;">
+            <td style="padding: 12px; font-weight: bold;">New user</td>
+            <td style="padding: 12px;">${isNewUser ? '<span style="color: #22c55e;">Yes</span>' : 'No'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px; font-weight: bold;">Order Type</td>
+            <td style="padding: 12px;">${orderTypeLabel}</td>
+          </tr>
+          <tr style="background-color: #f9f9f9;">
+            <td style="padding: 12px; font-weight: bold;">Plan</td>
+            <td style="padding: 12px;">${planLabel}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px; font-weight: bold;">Credits</td>
+            <td style="padding: 12px;"><strong>${credits}</strong></td>
+          </tr>
+          <tr style="background-color: #e8f5e9;">
+            <td style="padding: 12px; font-weight: bold;">Amount</td>
+            <td style="padding: 12px;"><strong style="color: #22c55e;">${formattedAmount}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top: 16px; font-size: 12px; color: #666;">
+        Stripe Session: <code>${stripeSessionId}</code>
+      </p>
+    </div>
+  `;
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: getFromEmail(),
+      to: adminRecipient,
+      replyTo: getReplyToEmail(),
+      subject,
+      text: textBody,
+      html: htmlBody,
+    });
+
+    if (error) {
+      Logger.error('Error sending order notification email', { error });
+      return { success: false, error };
+    }
+
+    Logger.info('Order notification email sent', { id: data?.id });
+    return { success: true, data };
+  } catch (error) {
+    Logger.error('Failed to send order notification email', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, error };
+  }
+}
+
 export async function sendAdminSignupNotificationEmail({
   email,
   firstName,

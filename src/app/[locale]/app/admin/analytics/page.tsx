@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from '@/i18n/routing'
+import { useRouter, Link } from '@/i18n/routing'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 
 interface AnalyticsData {
   totalUsers: number
@@ -66,6 +67,13 @@ export default function AdminAnalyticsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
+        <Link 
+          href="/app/admin" 
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 group"
+        >
+          <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+          Back to admin dashboard
+        </Link>
         <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
         <p className="text-gray-600 mt-2">Key metrics for TeamShots performance</p>
         {analytics?.lastUpdated && (

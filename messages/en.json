@@ -418,7 +418,8 @@
         "personalPhotoStyles": "Personal photo styles",
         "teamPhotoStyles": "Predefined photo styles",
         "analytics": "Analytics",
-        "settings": "Settings"
+        "settings": "Settings",
+        "admin": "Admin"
       },
       "primary": {
         "generate": "Generate Photos"
@@ -1736,6 +1737,77 @@
         "previous": "Previous",
         "next": "Next"
       }
+    }
+  },
+  "admin": {
+    "badge": "ADMIN",
+    "title": "Admin Dashboard",
+    "subtitle": "Platform administration and monitoring tools",
+    "lastUpdated": "Last updated",
+    "stats": {
+      "totalUsers": "Total users",
+      "paid": "paid",
+      "creditsPurchased": "Credits purchased",
+      "creditsUsed": "Credits used",
+      "teamInvites": "Team invites",
+      "accepted": "accepted"
+    },
+    "quickAccess": {
+      "title": "Quick access",
+      "analytics": "Analytics",
+      "analyticsDesc": "View conversion rates, ARPU, and user metrics",
+      "feedback": "Feedback",
+      "feedbackDesc": "Review and manage user feedback"
+    },
+    "sections": {
+      "adminTools": "Admin tools",
+      "freeStyle": "Free plan style"
+    },
+    "tools": {
+      "roleManagement": "Admin role management",
+      "roleManagementDesc": "This section is only visible to platform administrators. Use with caution for testing purposes.",
+      "currentRole": "Current user role",
+      "platformAdmin": "Platform admin",
+      "changeRoleTitle": "Change role (testing only)",
+      "setAsIndividual": "Set as individual user",
+      "setAsTeamAdmin": "Set as team admin",
+      "roleChangeWarning": "This will change your role immediately. Use for testing only.",
+      "sessionManagement": "Session management",
+      "refreshSession": "Refresh session data",
+      "refreshing": "Refreshing...",
+      "refreshSessionHint": "Refresh your session to see updated role information.",
+      "sessionMismatch": "Session mismatch detected! Database: {dbRole}, Session: {sessionRole}. Please sign out using the profile menu in the sidebar and sign back in.",
+      "sessionUpToDate": "Session is up to date. Database role: {role}",
+      "refreshFailed": "Failed to refresh session",
+      "onlyAdminsCanChangeRoles": "Only platform administrators can change roles",
+      "roleChanged": "Role changed to {role}. Please sign out and sign back in to see the changes.",
+      "roleChangeFailed": "Failed to change role"
+    },
+    "impersonation": {
+      "badge": "IMPERSONATE",
+      "title": "User impersonation",
+      "description": "Impersonate a user to see the application from their perspective. All actions will be logged.",
+      "searchUser": "Search user",
+      "searchPlaceholder": "Search by name or email...",
+      "selected": "Selected",
+      "warning": "You cannot impersonate other platform administrators.",
+      "start": "Start impersonation",
+      "starting": "Starting...",
+      "stop": "Stop impersonation",
+      "stopping": "Stopping...",
+      "currentlyImpersonating": "You are currently impersonating a user. All actions will be logged and attributed to the impersonated user.",
+      "started": "Impersonation started. Redirecting...",
+      "stopped": "Impersonation stopped. Redirecting...",
+      "startFailed": "Failed to start impersonation",
+      "stopFailed": "Failed to stop impersonation"
+    },
+    "roles": {
+      "teamAdmin": "Team admin",
+      "teamAdminNoTeam": "Team admin (no team)",
+      "teamMember": "Team member",
+      "individualUser": "Individual user",
+      "teamSetupHint": "You're a team admin but haven't set up a team yet.",
+      "goToTeam": "Go to team page"
     }
   },
   "inviteDashboard": {

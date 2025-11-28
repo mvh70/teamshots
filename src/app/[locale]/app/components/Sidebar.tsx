@@ -18,7 +18,8 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
@@ -796,6 +797,22 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                   <Cog6ToothIcon className="h-4 w-4 text-gray-500" />
                   <span>{t('nav.settings')}</span>
                 </Link>
+                {session?.user?.isAdmin && (
+                  <>
+                    <div className="h-px bg-gray-200" />
+                    <Link
+                      href="/app/admin"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-transparent transition-all duration-150"
+                      onClick={() => {
+                        setMenuOpen(false)
+                        onMenuItemClick?.()
+                      }}
+                    >
+                      <ShieldCheckIcon className="h-4 w-4 text-red-500" />
+                      <span>{t('nav.admin')}</span>
+                    </Link>
+                  </>
+                )}
                 <div className="h-px bg-gray-200" />
                 <button
                   onClick={() => {
