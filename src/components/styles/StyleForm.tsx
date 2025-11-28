@@ -296,11 +296,11 @@ export default function StyleForm({
   }
 
   const formContent = (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Show name field only if we're not using autosave name */}
       {!autosaveName && (
         <div id="style-name-input-section">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-900 mb-3">
             Style Name *
           </label>
           <input
@@ -308,14 +308,14 @@ export default function StyleForm({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-400"
             placeholder={contextType === 'personal' ? 'My Personal Style' : 'Corporate Headshots'}
           />
         </div>
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-4">
+        <label className="block text-lg font-semibold text-gray-900 mb-6">
           Photo Style Settings
         </label>
         <PhotoStyleSettings
@@ -328,14 +328,14 @@ export default function StyleForm({
       {/* Custom Prompt only for personal and team (not freePackage) */}
       {scope !== 'freePackage' && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-900 mb-3">
             Custom Prompt
           </label>
           <textarea
             value={customPrompt}
             onChange={(e) => setCustomPrompt(e.target.value)}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+            rows={4}
+            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-400 resize-y"
             placeholder={`Additional instructions for this ${contextType} style...`}
           />
         </div>
@@ -343,15 +343,15 @@ export default function StyleForm({
 
       {/* Set as Active checkbox only for personal and team (not freePackage) */}
       {scope !== 'freePackage' && (
-        <div className="flex items-center">
+        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors duration-200">
           <input
             type="checkbox"
             id="setAsActive"
             checked={setAsActive}
             onChange={(e) => handleSetAsActiveChange(e.target.checked)}
-            className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+            className="h-5 w-5 text-brand-primary focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 border-gray-300 rounded transition-all duration-200 cursor-pointer"
           />
-          <label htmlFor="setAsActive" className="ml-2 text-sm text-gray-700">
+          <label htmlFor="setAsActive" className="text-sm font-medium text-gray-900 cursor-pointer">
             Set as default {contextType === 'personal' ? 'personal' : 'team'} style
           </label>
         </div>
@@ -443,22 +443,22 @@ export default function StyleForm({
     const tProgress = useTranslations('customization.photoStyle.progress')
 
     return (
-      <div className="fixed top-20 right-6 z-20 flex flex-col gap-2 animate-fade-in">
+      <div className="fixed top-20 right-4 md:right-6 z-20 flex flex-col gap-3 animate-fade-in max-w-[280px] md:max-w-none">
         {/* Autosave status badge - conditionally rendered */}
         {showBadge && (
           <div 
-            className={`${config.bgColor} ${config.borderColor} border-2 rounded-lg shadow-lg px-4 py-2.5 flex items-center gap-2 transition-all duration-200 ${
+            className={`${config.bgColor} ${config.borderColor} border-2 rounded-xl shadow-xl px-4 py-3 flex items-center gap-2.5 transition-all duration-300 backdrop-blur-sm ${
               status === 'saved' ? 'animate-scale-in' : ''
             }`}
           >
             <span className={config.textColor}>{config.icon}</span>
-            <span className={`text-sm font-medium ${config.textColor}`}>
+            <span className={`text-sm font-semibold ${config.textColor}`}>
               {config.text}
             </span>
             {status === 'error' && (
               <button
                 onClick={() => setPhotoStyleSettings({ ...photoStyleSettings })}
-                className="ml-2 text-xs underline hover:no-underline"
+                className="ml-auto text-xs font-medium underline hover:no-underline transition-all"
               >
                 {t('retry', { default: 'Retry' })}
               </button>
@@ -468,9 +468,9 @@ export default function StyleForm({
         
         {/* Progress counter */}
         {progress.totalCount > 0 && (
-          <div className="bg-white border-2 border-gray-200 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
-            <div className="flex-1">
-              <div className="text-xs text-gray-600 mb-1">
+          <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl px-4 py-3 flex items-center gap-3 backdrop-blur-sm">
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-medium text-gray-700 mb-2 leading-tight">
                 {scope === 'pro' 
                   ? tProgress('editableTeam', { 
                       count: progress.editableCount, 
@@ -484,9 +484,9 @@ export default function StyleForm({
                     })
                 }
               </div>
-              <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-purple-500 transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-purple-500 to-purple-600 transition-all duration-500 ease-out rounded-full"
                   style={{ width: `${(progress.editableCount / progress.totalCount) * 100}%` }}
                 />
               </div>
@@ -520,7 +520,7 @@ export default function StyleForm({
       {hideFormCard ? (
         formContent
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8">
           {formContent}
         </div>
       )}

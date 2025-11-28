@@ -92,11 +92,21 @@ export default function AppShell({
     if (typeof window !== 'undefined') {
       if (!sidebarCollapsed && showSidebar && window.innerWidth < 1024) {
         document.body.style.overflow = 'hidden'
+        document.body.style.overscrollBehavior = 'none'
+        // Prevent scroll on html element as well
+        document.documentElement.style.overflow = 'hidden'
+        document.documentElement.style.overscrollBehavior = 'none'
       } else {
         document.body.style.overflow = ''
+        document.body.style.overscrollBehavior = ''
+        document.documentElement.style.overflow = ''
+        document.documentElement.style.overscrollBehavior = ''
       }
       return () => {
         document.body.style.overflow = ''
+        document.body.style.overscrollBehavior = ''
+        document.documentElement.style.overflow = ''
+        document.documentElement.style.overscrollBehavior = ''
       }
     }
   }, [sidebarCollapsed, showSidebar])

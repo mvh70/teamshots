@@ -59,134 +59,142 @@ export default function StyleSummary({ settings }: StyleSummaryProps) {
   const poseType = settings?.pose?.type
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {(backgroundKey || backgroundPrompt || backgroundType) && (
         backgroundType === 'gradient' && backgroundColor ? (
-          <div id="style-background" className="flex flex-col space-y-1">
+          <div id="style-background" className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700 underline">Background</span>
+              <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Background</span>
             </div>
-            <div className="flex items-center gap-2 ml-6 text-xs text-gray-600">
+            <div className="flex items-center gap-3 ml-6">
               {isHexColor(backgroundColor) ? (
                 <div
-                  className="w-16 h-16 rounded-lg border-2 border-gray-300 shadow-md"
+                  className="w-20 h-20 rounded-xl border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow ring-2 ring-transparent hover:ring-gray-200"
                   style={{ background: `linear-gradient(135deg, ${backgroundColor}, ${backgroundColor}40)` }}
                 />
               ) : (
-                <span>{backgroundColor}</span>
+                <span className="text-sm text-gray-700 font-medium">{backgroundColor}</span>
               )}
             </div>
           </div>
         ) : backgroundType === 'neutral' && backgroundColor ? (
-          <div id="style-background" className="flex flex-col space-y-1">
+          <div id="style-background" className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700 underline">Background</span>
+              <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Background</span>
             </div>
-            <div className="flex items-center gap-2 ml-6 text-xs text-gray-600">
+            <div className="flex items-center gap-3 ml-6">
               {isHexColor(backgroundColor) ? (
-                <div className="w-16 h-16 rounded-lg border-2 border-gray-300 shadow-md" style={{ backgroundColor }} />
+                <div className="w-20 h-20 rounded-xl border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor }} />
               ) : (
-                <span>{backgroundColor}</span>
+                <span className="text-sm text-gray-700 font-medium">{backgroundColor}</span>
               )}
             </div>
           </div>
         ) : backgroundKey && backgroundImageUrl ? (
-          <div id="style-background" className="flex flex-col space-y-1">
+          <div id="style-background" className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700 underline">Background</span>
+              <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Background</span>
             </div>
-            <div className="flex items-center gap-2 ml-6 text-xs text-gray-600">
-              <Image
-                src={backgroundImageUrl}
-                alt="Background thumbnail"
-                width={80}
-                height={80}
-                className="w-20 h-20 rounded-lg object-cover border-2 border-gray-300 shadow-md"
-                unoptimized
-                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-              />
+            <div className="flex items-center gap-3 ml-6">
+              <div className="relative group">
+                <Image
+                  src={backgroundImageUrl}
+                  alt="Background thumbnail"
+                  width={96}
+                  height={96}
+                  className="w-24 h-24 rounded-xl object-cover border-2 border-gray-300 shadow-md hover:shadow-lg transition-all duration-300 group-hover:scale-105"
+                  unoptimized
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
             </div>
           </div>
         ) : backgroundType === 'custom' && !backgroundKey ? (
-          <div id="style-background" className="flex flex-col space-y-1">
+          <div id="style-background" className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700 underline">Background</span>
+              <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Background</span>
             </div>
-            <div className="ml-6 text-xs text-red-600 font-medium">Custom background missing</div>
+            <div className="ml-6 text-sm text-red-600 font-medium flex items-center gap-1.5">
+              <ExclamationTriangleIcon className="h-4 w-4" />
+              <span>Custom background missing</span>
+            </div>
           </div>
         ) : backgroundPrompt ? (
-          <div id="style-background" className="flex flex-col space-y-1">
+          <div id="style-background" className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700 underline">Background</span>
+              <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Background</span>
             </div>
-            <div className="ml-6 text-xs text-gray-600">AI Generated: {backgroundPrompt}</div>
+            <div className="ml-6 text-sm text-gray-700 font-medium">AI Generated: <span className="text-gray-600 font-normal">{backgroundPrompt}</span></div>
           </div>
         ) : backgroundType === 'user-choice' ? (
-          <div id="style-background" className="flex flex-col space-y-1">
+          <div id="style-background" className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700 underline">Background</span>
+              <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Background</span>
             </div>
-            <div className="ml-6 text-xs text-gray-600 flex items-center gap-1">
-              <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
+            <div className="ml-6 text-sm text-gray-600 flex items-center gap-1.5">
+              <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
               <span>User choice</span>
             </div>
           </div>
         ) : (
-          <div id="style-background" className="flex flex-col space-y-1">
+          <div id="style-background" className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700 underline">Background</span>
+              <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Background</span>
             </div>
-            <div className="ml-6 text-xs text-gray-600 capitalize">{((backgroundType || 'office') as string).replace(/-/g, ' ')} style</div>
+            <div className="ml-6 text-sm text-gray-700 capitalize font-medium">{((backgroundType || 'office') as string).replace(/-/g, ' ')} style</div>
           </div>
         )
       )}
 
       {(logoKey || brandingType) && (
         logoKey ? (
-          <div id="style-branding" className="flex flex-col space-y-1">
+          <div id="style-branding" className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700 underline">Branding</span>
+              <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Branding</span>
             </div>
-            <div className="ml-6 text-xs text-gray-600">
-              <div className="w-32 h-20 bg-white rounded-lg border-2 border-gray-300 shadow-md flex items-center justify-center p-2">
-                <Image
-                  src={getThumbnailUrl(logoKey)}
-                  alt="Logo thumbnail"
-                  width={120}
-                  height={72}
-                  className="max-w-full max-h-full object-contain"
-                  unoptimized
-                  onError={(e) => { 
-                    const img = e.currentTarget as HTMLImageElement
-                    img.style.display = 'none'
-                    const parent = img.parentElement
-                    if (parent) {
-                      parent.innerHTML = '<span class="text-gray-400 text-xs">Logo not available</span>'
-                    }
-                  }}
-                />
+            <div className="ml-6">
+              <div className="relative group">
+                <div className="w-40 h-28 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-gray-300 shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center p-4 group-hover:border-brand-primary/30">
+                  <Image
+                    src={getThumbnailUrl(logoKey)}
+                    alt="Logo thumbnail"
+                    width={140}
+                    height={84}
+                    className="max-w-full max-h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                    unoptimized
+                    onError={(e) => { 
+                      const img = e.currentTarget as HTMLImageElement
+                      img.style.display = 'none'
+                      const parent = img.parentElement
+                      if (parent) {
+                        parent.innerHTML = '<span class="text-gray-400 text-sm">Logo not available</span>'
+                      }
+                    }}
+                  />
+                </div>
               </div>
               {logoPosition && (
-                <div className="text-xs text-gray-600 mt-2">Position: {logoPosition}</div>
+                <div className="text-sm text-gray-700 mt-3 font-semibold">Position: <span className="font-normal capitalize text-gray-600">{logoPosition}</span></div>
               )}
             </div>
           </div>
         ) : brandingType === 'user-choice' ? (
-          <div id="style-branding" className="flex flex-col space-y-1">
+          <div id="style-branding" className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700 underline">Branding</span>
+              <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Branding</span>
             </div>
-            <div className="ml-6 text-xs text-gray-600 flex items-center gap-1">
-              <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
+            <div className="ml-6 text-sm text-gray-600 flex items-center gap-1.5">
+              <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
               <span>User choice</span>
             </div>
           </div>
         ) : (
-          <div id="style-branding" className="flex flex-col space-y-1">
+          <div id="style-branding" className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-700 underline">Branding</span>
+              <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Branding</span>
             </div>
-            <div className="ml-6 text-xs text-gray-600">
+            <div className="ml-6 text-sm text-gray-700 font-medium">
               {brandingType === 'include' ? 'Logo included' : 'Logo excluded'}
             </div>
           </div>
@@ -196,25 +204,25 @@ export default function StyleSummary({ settings }: StyleSummaryProps) {
       {/* Style preset intentionally not displayed on summary card */}
 
       {shotType && (
-        <div id="style-shot-type" className="flex flex-col space-y-1">
+        <div id="style-shot-type" className="flex flex-col space-y-2">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-700 underline">Shot type</span>
+            <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Shot type</span>
           </div>
-          <div className="ml-6 text-xs text-gray-600 capitalize">
+          <div className="ml-6 text-sm capitalize">
             {shotType === 'user-choice' ? (
-              <span className="inline-flex items-center gap-1">
-                <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
-                User choice
+              <span className="inline-flex items-center gap-1.5">
+                <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
+                <span className="text-gray-600">User choice</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-gray-700 normal-case">
-                <span className="font-medium">
+              <span className="inline-flex items-center gap-2 text-gray-700 normal-case">
+                <span className="font-semibold">
                   {shotTypeConfig?.label ?? shotType.replace(/-/g, ' ')}
                 </span>
                 {shotTypeConfig?.framingDescription && (
                   <span className="relative inline-flex group">
-                    <QuestionMarkCircleIcon className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600 transition-colors" />
-                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 w-56 -translate-x-1/2 rounded-lg bg-gray-900 px-3 py-2 text-[10px] leading-snug text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100">
+                    <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 hover:text-brand-primary transition-colors cursor-help" />
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-xl bg-gray-900 px-4 py-2.5 text-xs leading-relaxed text-white opacity-0 shadow-2xl transition-opacity duration-200 group-hover:opacity-100">
                       {shotTypeConfig.framingDescription}
                     </span>
                   </span>
@@ -226,27 +234,27 @@ export default function StyleSummary({ settings }: StyleSummaryProps) {
       )}
 
       {poseType && (
-        <div id="style-pose" className="flex flex-col space-y-1">
+        <div id="style-pose" className="flex flex-col space-y-2">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-700 underline">Pose</span>
+            <span className="font-semibold text-gray-800 underline decoration-2 underline-offset-2">Pose</span>
           </div>
-          <div className="ml-6 text-xs text-gray-600">
+          <div className="ml-6 text-sm">
             {poseType === 'user-choice' ? (
-              <span className="inline-flex items-center gap-1">
-                <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
-                User choice
+              <span className="inline-flex items-center gap-1.5">
+                <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
+                <span className="text-gray-600">User choice</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-gray-700">
-                <span className="font-medium">
+              <span className="inline-flex items-center gap-2 text-gray-700">
+                <span className="font-semibold">
                   {t(`poses.${poseType}.label`, { 
                     default: poseType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                   })}
                 </span>
                 {t(`poses.${poseType}.description`, { default: '' }) && (
                   <span className="relative inline-flex group">
-                    <QuestionMarkCircleIcon className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600 transition-colors" />
-                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 w-56 -translate-x-1/2 rounded-lg bg-gray-900 px-3 py-2 text-[10px] leading-snug text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100">
+                    <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 hover:text-brand-primary transition-colors cursor-help" />
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-xl bg-gray-900 px-4 py-2.5 text-xs leading-relaxed text-white opacity-0 shadow-2xl transition-opacity duration-200 group-hover:opacity-100">
                       {t(`poses.${poseType}.description`, { default: '' })}
                     </span>
                   </span>

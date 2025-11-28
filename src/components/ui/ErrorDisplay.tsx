@@ -31,7 +31,7 @@ export function ErrorDisplay({
   const baseClasses = 'rounded-md border'
 
   const variantClasses = {
-    inline: 'text-red-600',
+    inline: 'text-red-600 font-medium text-sm',
     banner: `${baseClasses} bg-red-50 border-red-200 ${sizeClasses[size]}`,
     card: `${baseClasses} bg-white border-red-200 shadow-sm ${sizeClasses[size]}`
   }

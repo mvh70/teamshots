@@ -333,27 +333,46 @@ export default function SelfieGallery({
         const isSelected = selectedSet.has(selfie.id)
         const isLoaded = loadedSet.has(selfie.id)
         return (
-          <div key={selfie.id} className={`relative group rounded-lg`}>
+          <div 
+            key={selfie.id} 
+            className={`relative group rounded-xl transition-all duration-300 ${
+              isSelected 
+                ? 'ring-2 ring-brand-secondary ring-offset-2 shadow-xl shadow-brand-secondary/30 scale-[1.02]' 
+                : 'hover:shadow-xl hover:shadow-gray-300/60 hover:-translate-y-1.5 hover:scale-[1.01]'
+            }`}
+          >
             <button
               type="button"
-              className={`absolute top-2 left-2 z-10 inline-flex items-center justify-center w-7 h-7 rounded-md border ${isSelected ? 'bg-brand-secondary text-white border-brand-secondary' : 'bg-white text-gray-600 border-gray-300'} shadow-sm`}
+              className={`absolute top-3 left-3 z-10 inline-flex items-center justify-center w-9 h-9 rounded-lg border-2 transition-all duration-200 ${
+                isSelected 
+                  ? 'bg-gradient-to-br from-brand-secondary to-emerald-600 text-white border-brand-secondary shadow-lg scale-110 ring-2 ring-brand-secondary/30' 
+                  : 'bg-white/95 backdrop-blur-sm text-gray-600 border-gray-300 hover:border-brand-secondary hover:scale-110 hover:bg-white hover:shadow-md'
+              } shadow-sm`}
               aria-pressed={isSelected ? 'true' : 'false'}
               onClick={() => handleToggle(selfie.id, !isSelected)}
             >
               {isSelected ? (
-                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0L4 11.414a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                <svg className="w-5 h-5 transition-transform duration-200" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0L4 11.414a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                </svg>
               ) : (
-                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"><rect x="3" y="3" width="14" height="14" rx="2" ry="2" strokeWidth="2" /></svg>
+                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <rect x="3" y="3" width="14" height="14" rx="2" ry="2" />
+                </svg>
               )}
             </button>
-            <div className={`aspect-square bg-gray-100 rounded-lg overflow-hidden ${isSelected ? 'ring-2 ring-brand-secondary' : ''} relative`}>
+            <div className={`aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+              isSelected 
+                ? 'border-brand-secondary shadow-inner ring-1 ring-brand-secondary/20' 
+                : 'border-gray-200/50 group-hover:border-gray-300 group-hover:shadow-md'
+            } relative`}>
               {!isLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 z-10">
                   <LoadingSpinner />
                 </div>
               )}
               {/* Fill square on all screen sizes */}
-              <div className="absolute inset-0">
+              <div className={`absolute inset-0 transition-transform duration-300 ${isSelected ? 'scale-100' : 'group-hover:scale-105'}`}>
                 <Image
                   src={selfie.url}
                   alt="Selfie"
@@ -365,8 +384,14 @@ export default function SelfieGallery({
                   onError={() => setLoadedSet(prev => new Set(prev).add(selfie.id))}
                 />
               </div>
+              {/* Overlay on hover */}
+              <div className={`absolute inset-0 transition-all duration-300 pointer-events-none ${
+                isSelected 
+                  ? 'bg-brand-secondary/5 ring-1 ring-brand-secondary/10' 
+                  : 'bg-black/0 group-hover:bg-black/5'
+              }`} />
               {selfie.used && hoveredDeleteId === selfie.id && (
-                <div className="absolute inset-x-0 bottom-0 bg-black/70 text-white text-[11px] leading-tight px-2 py-1 flex items-center gap-1">
+                <div className="absolute inset-x-0 bottom-0 bg-black/80 text-white text-[11px] leading-tight px-3 py-2 flex items-center gap-1.5 backdrop-blur-sm">
                   <InformationCircleIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <span>{t('deleteDisabledMessage')}</span>
                 </div>
@@ -374,10 +399,10 @@ export default function SelfieGallery({
             </div>
             {allowDelete && (
               <div
-                className={`absolute top-2 right-2 z-20 inline-flex items-center justify-center rounded-full transition-opacity ${
+                className={`absolute top-3 right-3 z-20 inline-flex items-center justify-center rounded-full transition-all duration-200 ${
                   selfie.used 
                     ? 'bg-gray-300 text-white cursor-not-allowed opacity-70' 
-                    : 'bg-red-500 text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 md:hover:opacity-100'
+                    : 'bg-red-500 text-white shadow-lg md:opacity-0 md:group-hover:opacity-100 md:hover:opacity-100 md:scale-90 md:group-hover:scale-100'
                 }`}
                 onMouseEnter={selfie.used ? () => setHoveredDeleteId(selfie.id) : undefined}
                 onMouseLeave={selfie.used ? () => setHoveredDeleteId((current) => current === selfie.id ? null : current) : undefined}
@@ -399,7 +424,7 @@ export default function SelfieGallery({
                   disabled={Boolean(selfie.used)}
                   aria-disabled={selfie.used ? 'true' : 'false'}
                   aria-label={selfie.used ? t('deleteDisabledAria') : t('deleteAria')}
-                  className="p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 touch-manipulation"
+                  className="p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 touch-manipulation transition-transform hover:scale-110 active:scale-95"
                   style={{ WebkitTapHighlightColor: 'transparent', pointerEvents: 'auto' }}
                 >
                   <TrashIcon className="h-4 w-4" />
@@ -422,18 +447,26 @@ export default function SelfieGallery({
               isProcessing={isProcessingMultiple}
             />
           ) : onUploadClick ? (
-            <div className="aspect-square rounded-2xl p-3 md:p-6 lg:p-8 flex flex-col items-center justify-center text-center border border-gray-200 bg-gradient-to-br from-white via-gray-50 to-gray-100 hover:shadow-lg transition-all duration-200 cursor-pointer"
+            <div 
+              className="aspect-square rounded-xl p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center text-center border-2 border-dashed border-gray-300 bg-gradient-to-br from-brand-primary-light/20 via-white to-gray-50/50 hover:border-brand-primary hover:shadow-xl hover:shadow-brand-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer group touch-manipulation relative overflow-hidden"
               onClick={onUploadClick}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter') onUploadClick(); }}
               data-testid="selfie-upload-trigger"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
             >
-              <div className="w-full flex flex-col items-center gap-3">
-                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <p className="text-sm font-medium text-gray-700">Add selfie</p>
+              <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/0 to-indigo-50/0 group-hover:from-brand-primary/5 group-hover:to-indigo-50/20 transition-all duration-300" />
+              <div className="relative w-full flex flex-col items-center gap-4 z-10">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-primary/10 to-indigo-100/50 flex items-center justify-center group-hover:from-brand-primary/20 group-hover:to-indigo-200/50 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm group-hover:shadow-md">
+                  <svg className="w-8 h-8 text-brand-primary group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold text-gray-700 group-hover:text-brand-primary transition-colors duration-200">Add selfie</p>
+                  <p className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200">Click to upload</p>
+                </div>
               </div>
             </div>
           ) : null}

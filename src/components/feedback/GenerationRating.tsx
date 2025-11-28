@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { Toast } from '@/components/ui/Toast'
-import { ThumbsUp, ThumbsDown } from 'lucide-react'
+import { ThumbsUp, ThumbsDown, ChevronUp, ChevronDown } from 'lucide-react'
 
 interface GenerationRatingProps {
   generationId: string
@@ -55,6 +55,9 @@ export function GenerationRating({
   const [justSubmitted, setJustSubmitted] = useState(false) // Track if feedback was just submitted (not loaded)
   const pendingToastMessage = useRef<string>('') // Store toast message to prevent it from being lost
   const feedbackControlRef = useRef<HTMLDivElement>(null) // Ref for the button container
+  const formRef = useRef<HTMLFormElement>(null) // Ref for the form container
+  const [canScrollUp, setCanScrollUp] = useState(false)
+  const [canScrollDown, setCanScrollDown] = useState(false)
 
   // Load existing feedback on mount - fetches feedback when props change
   /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
@@ -116,6 +119,38 @@ export function GenerationRating({
     }
   }, [justSubmitted, toastMessage])
   /* eslint-enable react-you-might-not-need-an-effect/no-chain-state-updates, react-you-might-not-need-an-effect/no-event-handler */
+
+  // Track scroll position for scroll indicators
+  useEffect(() => {
+    const form = formRef.current
+    if (!form || !showForm) {
+      setCanScrollUp(false)
+      setCanScrollDown(false)
+      return
+    }
+
+    const checkScrollability = () => {
+      const { scrollTop, scrollHeight, clientHeight } = form
+      const isScrollable = scrollHeight > clientHeight
+      setCanScrollUp(isScrollable && scrollTop > 0)
+      setCanScrollDown(isScrollable && scrollTop < scrollHeight - clientHeight - 1)
+    }
+
+    // Check initially
+    checkScrollability()
+
+    // Check on scroll
+    form.addEventListener('scroll', checkScrollability)
+    
+    // Check when form content changes
+    const resizeObserver = new ResizeObserver(checkScrollability)
+    resizeObserver.observe(form)
+
+    return () => {
+      form.removeEventListener('scroll', checkScrollability)
+      resizeObserver.disconnect()
+    }
+  }, [showForm, selectedReasons, comment])
 
   // Only show rating for completed generations
   if (generationStatus !== 'completed') {
@@ -349,8 +384,9 @@ export function GenerationRating({
           </>
         ) : (
           <form
+            ref={formRef}
             onSubmit={handleSubmitFeedback}
-            className="bg-white/95 backdrop-blur-sm rounded-lg p-4 space-y-3 shadow-xl border border-gray-200 min-w-[280px] max-w-sm"
+            className="bg-white/95 backdrop-blur-sm rounded-lg p-4 space-y-3 shadow-xl border border-gray-200 min-w-[280px] max-w-sm max-h-[320px] overflow-y-auto relative"
           >
             <div>
               <p className="text-sm font-medium text-gray-900 mb-2">
@@ -387,7 +423,7 @@ export function GenerationRating({
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary resize-none"
+                className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary resize-none placeholder:text-gray-500"
                 placeholder={t('generation.commentPlaceholder')}
                 required
               />
@@ -414,6 +450,18 @@ export function GenerationRating({
                 {loading ? t('submitting') : t('form.submit')}
               </button>
             </div>
+
+            {/* Scroll indicators */}
+            {canScrollUp && (
+              <div className="absolute top-2 right-2 pointer-events-none">
+                <ChevronUp className="w-4 h-4 text-gray-400 animate-pulse" />
+              </div>
+            )}
+            {canScrollDown && (
+              <div className="absolute bottom-2 right-2 pointer-events-none">
+                <ChevronDown className="w-4 h-4 text-gray-400 animate-pulse" />
+              </div>
+            )}
           </form>
         )}
       </div>

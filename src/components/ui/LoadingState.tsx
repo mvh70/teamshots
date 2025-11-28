@@ -15,8 +15,12 @@ export function LoadingState({
 }: LoadingStateProps) {
   return (
     <div
-      className={`animate-pulse bg-gray-200 rounded ${className}`}
+      className={`animate-pulse bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 rounded-lg ${className}`}
       data-testid={testId}
+      style={{
+        backgroundSize: '200% 100%',
+        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+      }}
     >
       {children}
     </div>
@@ -26,13 +30,15 @@ export function LoadingState({
 // Common loading state patterns
 export function LoadingCard({ className = '', ...props }: LoadingStateProps) {
   return (
-    <LoadingState className={`p-4 ${className}`} {...props}>
-      <div className="space-y-3">
-        <LoadingState className="h-4 w-3/4" />
-        <LoadingState className="h-4 w-1/2" />
-        <LoadingState className="h-4 w-2/3" />
-      </div>
-    </LoadingState>
+    <div className={`rounded-xl overflow-hidden shadow-sm border border-gray-200/50 ${className}`} {...props}>
+      <LoadingState className="p-5">
+        <div className="space-y-3">
+          <LoadingState className="h-4 w-3/4 rounded-md" />
+          <LoadingState className="h-4 w-1/2 rounded-md" />
+          <LoadingState className="h-4 w-2/3 rounded-md" />
+        </div>
+      </LoadingState>
+    </div>
   )
 }
 
@@ -52,9 +58,11 @@ export function LoadingGrid({
                         'grid-cols-3'
 
   return (
-    <div className={`grid ${gridColsClass} gap-4 ${className}`}>
-      {items.map((item) => (
-        <LoadingCard key={item} className="h-32" {...props} />
+    <div className={`grid ${gridColsClass} gap-5 ${className}`}>
+      {items.map((item, index) => (
+        <div key={item} className="aspect-square">
+          <LoadingCard className="h-full rounded-xl" style={{ animationDelay: `${index * 100}ms` }} {...props} />
+        </div>
       ))}
     </div>
   )

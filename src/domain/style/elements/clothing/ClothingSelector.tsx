@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { ClothingSettings } from '@/types/photo-style'
 import { Grid } from '@/components/ui'
 import { CLOTHING_STYLES, CLOTHING_DETAILS, CLOTHING_ACCESSORIES } from './config'
@@ -25,7 +23,6 @@ export default function ClothingSelector({
   showHeader = false
 }: ClothingSelectorProps) {
   const t = useTranslations('customization.photoStyle.clothing')
-  const [showAccessorySelector, setShowAccessorySelector] = useState(false)
 
   const handleStyleChange = (style: ClothingSettings['style'], event?: React.MouseEvent) => {
     if (event) {
@@ -66,15 +63,6 @@ export default function ClothingSelector({
     onChange({ ...value, accessories: newAccessories })
   }
 
-  const removeAccessory = (accessory: string, event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
-    if (isPredefined) return
-    const newAccessories = (value.accessories || []).filter(a => a !== accessory)
-    onChange({ ...value, accessories: newAccessories })
-  }
 
   return (
     <div className={`${className}`}>
@@ -181,47 +169,10 @@ export default function ClothingSelector({
               <label className="text-sm font-medium text-gray-700">
                 {t('accessories.label', { default: 'Accessories' })}
               </label>
-              {!(isPredefined || isDisabled) && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setShowAccessorySelector(!showAccessorySelector)
-                  }}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs text-brand-primary hover:text-brand-primary-hover"
-                >
-                  <PlusIcon className="h-3 w-3" />
-                  {t('addMore', { default: 'Add' })}
-                </button>
-              )}
             </div>
             
-            {/* Selected Accessories */}
-            {value.accessories && value.accessories.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {value.accessories.map((accessory) => (
-                  <span
-                    key={accessory}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-brand-primary-light text-brand-primary text-xs rounded-full"
-                  >
-                    {accessory}
-                    {!(isPredefined || isDisabled) && (
-                      <button
-                        type="button"
-                        onClick={(e) => removeAccessory(accessory, e)}
-                        className="hover:text-brand-primary-hover"
-                      >
-                        <XMarkIcon className="h-3 w-3" />
-                      </button>
-                    )}
-                  </span>
-                ))}
-              </div>
-            )}
-            
             {/* Accessory Selector */}
-            {showAccessorySelector && !(isPredefined || isDisabled) && (
+            {!(isPredefined || isDisabled) && (
               <Grid cols={{ mobile: 2 }} gap="sm" className="p-3 border border-gray-200 rounded-lg bg-gray-50">
                 {CLOTHING_ACCESSORIES[value.style]?.map((accessory) => {
                   const isSelected = value.accessories?.includes(accessory) || false
@@ -230,12 +181,15 @@ export default function ClothingSelector({
                       type="button"
                       key={accessory}
                       onClick={(e) => handleAccessoryToggle(accessory, e)}
-                      className={`p-2 text-xs rounded border transition-colors ${
+                      className={`p-2 text-xs rounded border transition-colors flex items-center gap-1.5 ${
                         isSelected
                           ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
                           : 'border-gray-300 hover:border-gray-400 text-gray-700'
                       }`}
                     >
+                      {isSelected && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
+                      )}
                       {accessory}
                     </button>
                   )

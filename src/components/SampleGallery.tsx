@@ -146,13 +146,13 @@ export default function SampleGallery() {
 
   return (
     <>
-      <section className="py-20 lg:py-32 bg-bg-white">
+      <section className="py-20 sm:py-24 lg:py-32 bg-bg-gray-50 relative grain-texture">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
               {t('title')}
             </h2>
-            <p className="text-xl text-text-body max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl lg:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed">
               {t('subtitle')}
             </p>
           </div>
@@ -168,7 +168,7 @@ export default function SampleGallery() {
                 className="gallery-image"
               >
                 <div 
-                  className={`group relative bg-bg-gray-50 rounded-2xl overflow-hidden shadow-depth-lg hover:shadow-depth-2xl transition-all duration-500 hover:-translate-y-2 ${
+                  className={`group relative bg-bg-gray-50 rounded-3xl overflow-hidden shadow-depth-lg border-2 border-brand-primary-lighter/20 hover:shadow-depth-2xl hover:border-brand-primary-lighter/50 transition-all duration-500 hover:-translate-y-3 ${
                     index === 1 ? 'lg:mt-8' : '' // Stagger middle item on desktop
                   }`}
                 >
@@ -255,7 +255,7 @@ export default function SampleGallery() {
                   action: 'signup',
                 })
               }
-              className="inline-flex items-center justify-center bg-brand-cta text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-brand-cta-hover transition-all duration-300 shadow-depth-xl hover:shadow-depth-2xl transform hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2"
+              className="inline-flex items-center justify-center bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white px-12 py-6 rounded-2xl font-bold text-lg lg:text-xl hover:shadow-depth-2xl hover:shadow-brand-cta-shadow/50 transition-all duration-300 shadow-depth-xl transform hover:-translate-y-2 hover:scale-[1.03] active:scale-[0.97] focus:outline-none focus:ring-4 focus:ring-brand-cta-ring focus:ring-offset-2 ring-offset-bg-white"
             >
               {tHero('getStarted')}
             </Link>

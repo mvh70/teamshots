@@ -260,7 +260,7 @@ export async function sendSupportNotificationEmail({
       attachments: attachments.map(({ filename, base64, mimeType }) => ({
         filename,
         content: Buffer.from(base64, 'base64'),
-        mimeType: mimeType ?? 'application/octet-stream',
+        contentType: mimeType ?? 'application/octet-stream',
       })),
     });
 

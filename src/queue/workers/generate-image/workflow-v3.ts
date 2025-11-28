@@ -29,6 +29,7 @@ import {
   logEvaluationResult,
   checkMaxAttemptsAndThrow
 } from './utils/evaluation-orchestrator'
+import { EvaluationFailedError } from './errors'
 import { getProgressMessage } from '@/lib/generation-progress-messages'
 import { buildBackgroundComposite } from '@/lib/generation/reference-utils'
 
@@ -785,7 +786,19 @@ export async function executeV3Workflow({
 
   if (step3Output.evaluation.status !== 'Approved') {
     Logger.warn('V3 Step 3: Final evaluation not approved', { reason: step3Output.evaluation.reason })
-    throw new Error(`V3 Step 3 final evaluation failed: ${step3Output.evaluation.reason}`)
+    
+    // Throw specific error that carries the image data for support notification
+    throw new EvaluationFailedError(
+      `V3 Step 3 final evaluation failed: ${step3Output.evaluation.reason}`,
+      {
+        evaluation: step3Output.evaluation,
+        imageBase64: step2Output.refinedBase64,
+        generationId,
+        attempt: currentAttempt,
+        aspectRatio,
+        shotLabel: 'unknown' // workflow v3 doesn't pass shotLabel, but it's okay, it's optional in error or we can resolve it if needed
+      }
+    )
   }
 
   Logger.info('V3 Step 3: Final image approved')

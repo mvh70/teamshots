@@ -27,6 +27,12 @@ export const PACKAGES_CONFIG = {
       description: 'Free photo style package with background and branding customization options. Perfect for getting started.',
       price: 0, // Free
     } as PackageMetadata,
+    tryitforfree: {
+      id: 'tryitforfree',
+      name: 'Try It For Free',
+      description: 'Free test package with TeamShotsPro branding. Perfect for trying the service before upgrading.',
+      price: 0, // Free
+    } as PackageMetadata,
   },
   
   // Default package for paid plans (free plans always use 'freepackage')
@@ -36,6 +42,7 @@ export const PACKAGES_CONFIG = {
   prices: {
     headshot1: 0, // Free
     freepackage: 0, // Free
+    tryitforfree: 0, // Free
   },
 } as const
 

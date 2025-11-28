@@ -1,6 +1,7 @@
 import { CategoryType, PhotoStyleSettings } from '@/types/photo-style'
 import { headshot1 } from './headshot1'
 import { freepackage } from './freepackage'
+import { tryitforfree } from './tryitforfree'
 import { StandardPresetConfig } from './defaults'
 
 export type { StandardPresetConfig, StandardPresetDefaults } from './defaults'
@@ -36,7 +37,8 @@ export interface ClientStylePackage {
 
 export const CLIENT_PACKAGES: Record<string, ClientStylePackage> = {
   [headshot1.id]: headshot1,
-  [freepackage.id]: freepackage
+  [freepackage.id]: freepackage,
+  [tryitforfree.id]: tryitforfree
 }
 
 export const getPackageConfig = (id?: string): ClientStylePackage => {

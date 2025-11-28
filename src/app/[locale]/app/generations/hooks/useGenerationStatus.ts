@@ -109,10 +109,18 @@ export function useGenerationStatus({
       setError(null)
       errorCountRef.current = 0 // Reset error count on success
 
-      // Stop polling if generation is completed or failed
-      if (data.status === 'completed' || data.status === 'failed') {
+      // Stop polling if generation is completed (with images) or failed
+      if (data.status === 'failed') {
         setShouldPoll(false)
         setLoading(false)
+      } else if (data.status === 'completed') {
+        // Only stop polling if we have the generated images
+        // This prevents the race condition where status is completed but keys aren't available yet
+        if (data.generatedImageUrls && data.generatedImageUrls.length > 0) {
+          setShouldPoll(false)
+          setLoading(false)
+        }
+        // If completed but no images, continue polling to get the final data
       }
 
     } catch (err) {

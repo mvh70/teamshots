@@ -37,10 +37,10 @@ export default function GenerateButton({
     <button
       onClick={onClick}
       disabled={isDisabled}
-      className={`w-full ${sizeClasses[size]} font-semibold md:font-medium rounded-2xl md:rounded-md transition-colors shadow-md hover:shadow-lg ${
+      className={`w-full ${sizeClasses[size]} font-semibold md:font-medium rounded-xl transition-all duration-200 ${
         isEnabled
-          ? 'bg-brand-primary text-white hover:bg-brand-primary-hover'
-          : 'bg-brand-primary/30 text-white/70 cursor-not-allowed'
+          ? 'bg-gradient-to-r from-brand-primary to-indigo-600 text-white hover:from-brand-primary-hover hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0'
+          : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-sm'
       } ${className}`}
     >
       {isGenerating ? (
@@ -60,20 +60,20 @@ export default function GenerateButton({
   // If integrating in popover and popover should show, render button inside popover
   if (integrateInPopover && showPopover) {
     return (
-      <div className="w-full bg-amber-50 border border-amber-200 rounded-xl shadow-sm animate-fade-in overflow-hidden">
-        <div className="px-4 pt-4 pb-3">
+      <div className="w-full bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200/60 rounded-xl shadow-md animate-fade-in overflow-hidden">
+        <div className="px-5 pt-5 pb-4">
           <div className="flex items-start gap-3 mb-4">
-            <div className="flex-shrink-0 mt-0.5">
-              <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
+              <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="flex-1 text-sm text-amber-900 leading-relaxed">
+            <p className="flex-1 text-sm font-medium text-amber-900 leading-relaxed">
               {disabledReason}
             </p>
           </div>
         </div>
-        <div className="px-4 pb-4">
+        <div className="px-5 pb-5">
           {buttonElement}
         </div>
       </div>
@@ -85,14 +85,14 @@ export default function GenerateButton({
     <div className="relative">
       {buttonElement}
       {showPopover && (
-        <div className="mt-2 w-full px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl shadow-sm animate-fade-in">
+        <div className="mt-3 w-full px-5 py-4 bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200/60 rounded-xl shadow-md animate-fade-in">
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 mt-0.5">
-              <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
+              <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="flex-1 text-sm text-amber-900 leading-relaxed">
+            <p className="flex-1 text-sm font-medium text-amber-900 leading-relaxed">
               {disabledReason}
             </p>
           </div>

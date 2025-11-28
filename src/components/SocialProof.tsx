@@ -47,8 +47,8 @@ export default function SocialProof() {
     return Array.from({ length: 5 }, (_, i) => (
       <span
         key={i}
-        className={`text-lg ${
-          i < rating ? 'text-yellow-400' : 'text-gray-300'
+        className={`text-xl ${
+          i < rating ? 'text-yellow-400 drop-shadow-sm' : 'text-gray-300'
         }`}
       >
         ★
@@ -57,19 +57,19 @@ export default function SocialProof() {
   };
 
   return (
-    <section className="py-20 lg:py-32 bg-bg-white">
+    <section className="py-20 sm:py-24 lg:py-32 bg-bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* User Count */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center bg-brand-primary-light text-brand-primary px-6 py-3 rounded-full shadow-depth-md">
-            <span className="w-2 h-2 bg-brand-secondary rounded-full mr-2 animate-pulse"></span>
-            {tHero('joinedBadge')}
+          <div className="inline-flex items-center bg-gradient-to-r from-brand-primary-light to-brand-primary-lighter text-brand-primary px-8 py-4 rounded-full shadow-depth-lg border-2 border-brand-primary-lighter/50">
+            <span className="w-2.5 h-2.5 bg-brand-secondary rounded-full mr-3 animate-pulse shadow-sm"></span>
+            <span className="font-semibold text-base">{tHero('joinedBadge')}</span>
           </div>
         </div>
 
         {/* Testimonials Grid */}
         <div className="max-w-6xl mx-auto">
-          <h3 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-center mb-12 text-text-dark">
+          <h3 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-display font-bold text-center mb-16 text-text-dark leading-tight">
             {t('testimonialsTitle')}
           </h3>
           
@@ -77,22 +77,24 @@ export default function SocialProof() {
             {TESTIMONIALS.map((testimonial) => (
               <div
                 key={testimonial.id}
-                className="bg-bg-white rounded-2xl p-8 shadow-depth-md border-2 border-transparent hover:shadow-depth-xl hover:border-brand-primary-lighter hover:-translate-y-2 transition-all duration-500"
+                className="bg-bg-white rounded-3xl p-8 lg:p-10 shadow-depth-lg border-2 border-brand-primary-lighter/30 hover:shadow-depth-2xl hover:border-brand-primary-lighter hover:-translate-y-3 transition-all duration-500 cursor-pointer"
               >
-                <div className="flex justify-center mb-4">
-                  {renderStars(testimonial.rating)}
+                <div className="flex justify-center mb-6">
+                  <div className="flex gap-1">
+                    {renderStars(testimonial.rating)}
+                  </div>
                 </div>
                 
-                <blockquote className="text-base text-text-body mb-6 leading-relaxed">
+                <blockquote className="text-base lg:text-lg text-text-body mb-8 leading-relaxed font-medium">
                   &ldquo;{testimonial.content}&rdquo;
                 </blockquote>
                 
-                <div className="border-t border-brand-primary-lighter pt-4">
-                  <div className="font-bold text-text-dark font-display">
+                <div className="border-t-2 border-brand-primary-lighter/50 pt-6">
+                  <div className="font-bold text-lg text-text-dark font-display">
                     {testimonial.name}
                   </div>
-                  <div className="text-sm text-text-muted mt-1">
-                    {testimonial.role}, {testimonial.team}
+                  <div className="text-sm text-text-muted mt-2 font-medium">
+                    {testimonial.role} • {testimonial.team}
                   </div>
                 </div>
               </div>

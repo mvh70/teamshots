@@ -31,6 +31,9 @@ import PoseSelector from '@/domain/style/elements/pose/PoseSelector'
 import { getPackageConfig } from '@/domain/style/packages'
 import { applyPosePresetToSettings } from '@/domain/style/elements/pose/config'
 import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
+import { resolveShotType } from '@/domain/style/elements/shot-type/config'
+import { WARDROBE_DETAILS, FALLBACK_DETAIL_BY_STYLE, KnownClothingStyle } from '@/domain/style/elements/clothing/config'
+import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
 import { CardGrid, Tooltip } from '@/components/ui'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 
@@ -176,6 +179,35 @@ export default function PhotoStyleSettings({
 
     return { type: 'user-choice' }
   }, [packageDefaults.clothingColors, value.clothingColors])
+
+  // Compute which clothing color pickers to hide based on shot type and clothing style
+  const excludedClothingColors = React.useMemo<ClothingColorKey[]>(() => {
+    const exclusions = new Set<ClothingColorKey>()
+    
+    // Get exclusions from shot type (check value first, then package defaults)
+    const shotTypeValue = value.shotType?.type || packageDefaults.shotType?.type
+    if (shotTypeValue && shotTypeValue !== 'user-choice') {
+      const shotTypeConfig = resolveShotType(shotTypeValue)
+      if (shotTypeConfig.excludeClothingColors) {
+        shotTypeConfig.excludeClothingColors.forEach(c => exclusions.add(c))
+      }
+    }
+    
+    // Get exclusions from clothing style + detail (check value first, then package defaults)
+    const clothingStyle = value.clothing?.style || packageDefaults.clothing?.style
+    if (clothingStyle && clothingStyle !== 'user-choice') {
+      const knownStyle = clothingStyle as KnownClothingStyle
+      const styleDetails = WARDROBE_DETAILS[knownStyle]
+      // Use explicit detail if set, otherwise use the fallback detail for this style
+      const clothingDetail = value.clothing?.details || packageDefaults.clothing?.details || FALLBACK_DETAIL_BY_STYLE[knownStyle]
+      const detailConfig = styleDetails?.[clothingDetail]
+      if (detailConfig?.excludeClothingColors) {
+        detailConfig.excludeClothingColors.forEach(c => exclusions.add(c))
+      }
+    }
+    
+    return Array.from(exclusions)
+  }, [value.shotType?.type, value.clothing?.style, value.clothing?.details, packageDefaults.shotType?.type, packageDefaults.clothing?.style, packageDefaults.clothing?.details])
 
   // Auto-reveal locked sections after user customizes editable sections (Context B only)
   React.useEffect(() => {
@@ -437,29 +469,45 @@ export default function PhotoStyleSettings({
       <div
         key={category.key}
         id={`${category.key}-settings`}
-        className={`transition-all duration-200 ${
+        className={`transition-all duration-300 ease-out ${
           isPredefined
-            ? 'rounded-lg border shadow-sm bg-white border-gray-200'
+            ? 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
             : isUserChoice
-              ? 'rounded-lg border shadow-sm bg-brand-primary-light border-brand-primary/50 hover:ring-1 hover:ring-brand-primary/60'
-              : 'rounded-lg border shadow-sm bg-white border-gray-200'
-        }`}
+              ? 'rounded-xl border-2 shadow-lg bg-gradient-to-br from-brand-primary-light/50 to-brand-primary-light/30 border-brand-primary/60 hover:shadow-xl hover:border-brand-primary/80 hover:scale-[1.01] hover:-translate-y-0.5'
+              : 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
+        } ${isLockedByPreset ? 'opacity-75' : ''}`}
       >
         {/* Category Header */}
         <div
           className={`${
             isPredefined 
-              ? 'p-4 border-b border-gray-200' 
-              : 'p-5 md:p-4 border-b border-gray-200'
+              ? 'p-5 md:p-4 border-b border-gray-200/80' 
+              : 'p-5 md:p-4 border-b border-gray-200/80'
           }`}
         >
           <div className="flex items-center justify-between gap-3 overflow-hidden">
             {/* Left side: Icon, title, and current value */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <Icon className="h-6 w-6 md:h-5 md:w-5 text-gray-600 flex-shrink-0" />
+              <div className={`p-2 rounded-lg flex-shrink-0 ${
+                isUserChoice 
+                  ? 'bg-brand-primary/10' 
+                  : isLockedByPreset 
+                    ? 'bg-red-50' 
+                    : 'bg-gray-50'
+              }`}>
+                <Icon className={`h-5 w-5 md:h-5 md:w-5 flex-shrink-0 ${
+                  isUserChoice 
+                    ? 'text-brand-primary' 
+                    : isLockedByPreset 
+                      ? 'text-red-600' 
+                      : 'text-gray-600'
+                }`} />
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-base md:text-lg font-semibold text-gray-900">
+                  <h3 className={`text-base md:text-lg font-bold ${
+                    isUserChoice ? 'text-gray-900' : 'text-gray-900'
+                  }`}>
                     {t(`categories.${category.key}.title`, { default: category.label })}
                   </h3>
                   {/* Help tooltip */}
@@ -467,26 +515,26 @@ export default function PhotoStyleSettings({
                     content={t(`tooltips.${category.key}`, { default: category.description })}
                     position="top"
                   >
-                    <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 hover:text-brand-primary transition-colors" />
+                    <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 hover:text-brand-primary transition-all duration-200 cursor-help" />
                   </Tooltip>
                   {/* Status badge - hide when showToggles is true (admin setting style) */}
                   {!showToggles && (
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                      isUserChoice ? 'bg-purple-100 text-purple-800' :
-                      isLockedByPreset ? 'bg-red-50 text-red-600 border border-red-200' :
-                      'bg-gray-100 text-gray-600'
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0 shadow-sm transition-all duration-200 ${
+                      isUserChoice ? 'bg-gradient-to-r from-purple-100 to-blue-100 text-purple-800 border border-purple-200/50' :
+                      isLockedByPreset ? 'bg-gradient-to-r from-red-50 to-orange-50 text-red-700 border border-red-200' :
+                      'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 border border-gray-200'
                     }`}>
                       {isUserChoice ? (
                         <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
                       ) : (
-                        <LockClosedIcon className={`h-3.5 w-3.5 ${isLocked ? 'text-red-600' : ''}`} aria-hidden="true" />
+                        <LockClosedIcon className={`h-3.5 w-3.5 ${isLocked ? 'text-red-600' : 'text-gray-500'}`} aria-hidden="true" />
                       )}
                       {chipLabel}
                     </span>
                   )}
                 </div>
                 {/* Show description */}
-                <p className="text-sm text-gray-600 mt-0.5 hidden md:block">
+                <p className="text-sm text-gray-500 mt-1 hidden md:block leading-relaxed">
                   {t(`categories.${category.key}.description`, { default: category.description })}
                 </p>
               </div>
@@ -503,13 +551,13 @@ export default function PhotoStyleSettings({
                       e.stopPropagation()
                       handleCategoryToggle(category.key, !isPredefined, e)
                     }}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1 flex-shrink-0"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 flex-shrink-0"
                   >
-                    <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${
-                      isPredefined ? 'bg-brand-primary' : 'bg-gray-300'
+                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 flex-shrink-0 shadow-inner ${
+                      isPredefined ? 'bg-brand-primary shadow-brand-primary/30' : 'bg-gray-300'
                     }`}>
-                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        isPredefined ? 'translate-x-5' : 'translate-x-1'
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-all duration-300 ${
+                        isPredefined ? 'translate-x-6' : 'translate-x-1'
                       }`} />
                     </div>
                     <span className={`hidden md:inline ${isPredefined ? 'text-brand-primary' : 'text-gray-600'}`}>
@@ -523,7 +571,7 @@ export default function PhotoStyleSettings({
                     content={t('tooltips.predefinedToggle', { default: 'Predefined locks this for all team members. User Choice lets each person customize.' })}
                     position="top"
                   >
-                    <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 hover:text-brand-primary transition-colors" />
+                    <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 hover:text-brand-primary transition-all duration-200 cursor-help" />
                   </Tooltip>
                 </div>
               )}
@@ -534,9 +582,9 @@ export default function PhotoStyleSettings({
         {/* Category Settings */}
         <div className={`${
           isPredefined 
-            ? 'p-0 md:p-4' 
-            : 'p-5 md:p-4'
-        } ${isLockedByPreset ? 'opacity-60' : ''}`}>
+            ? 'p-4 md:p-5' 
+            : 'p-5 md:p-5'
+        }`}>
           {category.key === 'background' && (
             <BackgroundSelector
               value={value.background || { type: 'user-choice' }}
@@ -566,6 +614,7 @@ export default function PhotoStyleSettings({
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
               showPredefinedBadge={isPredefined}
               showHeader
+              excludeColors={excludedClothingColors}
             />
           )}
 
@@ -668,19 +717,19 @@ export default function PhotoStyleSettings({
     if (showToggles || currentLockedCategories.length === 0 || hasCustomizedEditable) return null
 
     return (
-      <div className="bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-blue-400 rounded-full flex items-center justify-center">
-            <LockClosedIcon className="h-6 w-6 text-white" />
+      <div className="bg-gradient-to-r from-gray-50 via-blue-50 to-purple-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center shadow-sm">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 bg-gradient-to-br from-gray-400 via-blue-400 to-purple-400 rounded-full flex items-center justify-center shadow-md">
+            <LockClosedIcon className="h-7 w-7 text-white" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900 mb-1">
+            <p className="text-base font-bold text-gray-900 mb-2">
               {t('lockedSections.teaser.title', { 
                 default: `${currentLockedCategories.length} more settings configured`,
                 count: currentLockedCategories.length 
               })}
             </p>
-            <p className="text-xs text-gray-600">
+            <p className="text-sm text-gray-600 leading-relaxed">
               {t('lockedSections.teaser.subtitle', { 
                 default: 'Customize the sections above to see what else has been set' 
               })}
@@ -694,68 +743,70 @@ export default function PhotoStyleSettings({
 
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-8 ${className}`}>
       {/* Context B: Show editable sections, then teaser or revealed locked sections */}
-      {!showToggles && currentEditableCategories.length > 0 && (
+      {!showToggles && (
         <>
-          {/* Editable sections with header */}
-          <div className="space-y-4">
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 rounded-lg p-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <SparklesIcon className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-gray-900">
-                    {t('sections.customizable', { default: 'Customize Your Style' })}
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-0.5">
-                    {t('sections.customizableDesc', { default: 'Personalize these settings to match your preferences' })}
-                  </p>
+          {/* Editable sections with header - only show if there are editable categories */}
+          {currentEditableCategories.length > 0 && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-purple-50 via-blue-50 to-purple-50 border-l-4 border-purple-500 rounded-xl p-5 shadow-md">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <SparklesIcon className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                      {t('sections.customizable', { default: 'Customize Your Style' })}
+                    </h2>
+                    <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                      {t('sections.customizableDesc', { default: 'Personalize these settings to match your preferences' })}
+                    </p>
+                  </div>
                 </div>
               </div>
+              <CardGrid gap="lg">
+              {currentEditableCategories.map(renderCategoryCard)}
+              </CardGrid>
             </div>
-            <CardGrid>
-            {currentEditableCategories.map(renderCategoryCard)}
-            </CardGrid>
-          </div>
+          )}
           
-          {/* Locked sections teaser or revealed sections */}
+          {/* Locked/predefined sections */}
           {currentLockedCategories.length > 0 && (
             <>
-              <LockedSectionsTeaser />
-              {hasCustomizedEditable && (
-                <>
-                  {/* Locked sections with header */}
-                  <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200 rounded-xl p-5 shadow-md">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                          <LockClosedIcon className="h-7 w-7 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h2 className="text-xl font-bold text-gray-900 mb-1">
-                            {t('sections.preset', { default: 'Team Preset Settings' })}
-                          </h2>
-                          <p className="text-sm text-gray-700">
-                            {t('sections.presetDesc', { default: 'These settings are configured by your team admin' })}
-                          </p>
-                        </div>
+              {/* Show teaser only if there are editable sections and user hasn't customized yet */}
+              {currentEditableCategories.length > 0 && <LockedSectionsTeaser />}
+              
+              {/* Show locked sections if: no editable sections OR user has customized editable sections */}
+              {(currentEditableCategories.length === 0 || hasCustomizedEditable) && (
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200 rounded-xl p-6 shadow-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <LockClosedIcon className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                          {t('sections.preset', { default: 'Team Preset Settings' })}
+                        </h2>
+                        <p className="text-sm md:text-base text-gray-700 leading-relaxed">
+                          {t('sections.presetDesc', { default: 'These settings are configured by your team admin' })}
+                        </p>
                       </div>
                     </div>
-                    <CardGrid>
-                    {currentLockedCategories.map((cat, idx) => (
-                      <div 
-                        key={cat.key}
-                        className="animate-fade-in"
-                        style={{ animationDelay: `${idx * 100}ms` }}
-                      >
-                        {renderCategoryCard(cat)}
-                      </div>
-                    ))}
-                    </CardGrid>
                   </div>
-                </>
+                  <CardGrid gap="lg">
+                  {currentLockedCategories.map((cat, idx) => (
+                    <div 
+                      key={cat.key}
+                      className="animate-fade-in"
+                      style={{ animationDelay: `${idx * 100}ms` }}
+                    >
+                      {renderCategoryCard(cat)}
+                    </div>
+                  ))}
+                  </CardGrid>
+                </div>
               )}
             </>
           )}
@@ -766,52 +817,52 @@ export default function PhotoStyleSettings({
       {showToggles && (
         <>
           {/* Mobile: All categories in single grid */}
-          <div className="md:hidden space-y-4">
-            <CardGrid>
+          <div className="md:hidden space-y-6">
+            <CardGrid gap="lg">
               {allCategories.map(renderCategoryCard)}
             </CardGrid>
           </div>
 
           {/* Desktop: Original order - Photo Style Section */}
-          <div className="hidden md:block space-y-4">
-            <div id="composition-settings-section" className="bg-gradient-to-r from-brand-primary/5 to-brand-secondary/5 border-l-4 border-brand-primary rounded-lg p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-brand-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                  <CameraIcon className="h-6 w-6 text-white" />
+          <div className="hidden md:block space-y-6">
+            <div id="composition-settings-section" className="bg-gradient-to-r from-brand-primary/10 via-brand-secondary/5 to-brand-primary/10 border-l-4 border-brand-primary rounded-xl p-6 shadow-md">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <CameraIcon className="h-7 w-7 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold text-gray-900">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
                     {t('sections.composition', { default: 'Composition Settings' })}
                   </h2>
-                  <p className="text-sm text-gray-600 mt-0.5">
+                  <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                     {t('sections.compositionDesc', { default: 'Background, branding, and shot type' })}
                   </p>
                 </div>
               </div>
             </div>
-            <CardGrid>
+            <CardGrid gap="lg">
               {visiblePhotoCategories.map(renderCategoryCard)}
             </CardGrid>
           </div>
 
           {/* Desktop: User Style Section */}
-          <div className="hidden md:block space-y-4">
-            <div id="user-style-settings-section" className="bg-gradient-to-r from-brand-secondary/5 to-brand-primary/5 border-l-4 border-brand-secondary rounded-lg p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-brand-secondary rounded-lg flex items-center justify-center flex-shrink-0">
-                  <UserIcon className="h-6 w-6 text-white" />
+          <div className="hidden md:block space-y-6 mt-8">
+            <div id="user-style-settings-section" className="bg-gradient-to-r from-brand-secondary/10 via-brand-primary/5 to-brand-secondary/10 border-l-4 border-brand-secondary rounded-xl p-6 shadow-md">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-brand-secondary to-brand-primary rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <UserIcon className="h-7 w-7 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold text-gray-900">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
                     {t('sections.userStyle', { default: 'User Style Settings' })}
                   </h2>
-                  <p className="text-sm text-gray-600 mt-0.5">
+                  <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                     {t('sections.userStyleDesc', { default: 'Clothing, expression, and lighting preferences' })}
                   </p>
                 </div>
               </div>
             </div>
-            <CardGrid>
+            <CardGrid gap="lg">
               {visibleUserCategories.map(renderCategoryCard)}
             </CardGrid>
           </div>

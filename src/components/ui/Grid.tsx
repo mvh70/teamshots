@@ -68,7 +68,7 @@ export function UploadGrid({ children, ...props }: Omit<GridProps, 'cols'>) {
 
 export function GenerationGrid({ children, ...props }: Omit<GridProps, 'cols'>) {
   return (
-    <Grid cols={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg" {...props}>
+    <Grid cols={{ mobile: 1, tablet: 2, desktop: 3 }} gap="lg" className="gap-6" {...props}>
       {children}
     </Grid>
   )
@@ -84,6 +84,7 @@ export function CardGrid({ children, ...props }: Omit<GridProps, 'cols'>) {
 
 export function SelfieGrid({ children, ...props }: Omit<GridProps, 'cols' | 'responsive'>) {
   // Use responsive grid that progressively shows more images on larger screens
+  // Enhanced with better spacing and visual hierarchy
   // Mobile: 1 image per row (full width for maximum visibility)
   // Small tablet: 2 images per row
   // Tablet: 2-3 images per row
@@ -93,27 +94,31 @@ export function SelfieGrid({ children, ...props }: Omit<GridProps, 'cols' | 'res
   const styleTag = `
     .selfie-grid-responsive {
       display: grid;
-      gap: 0.5rem;
+      gap: 0.75rem;
       grid-template-columns: 1fr;
     }
     @media (min-width: 480px) {
       .selfie-grid-responsive {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 300px));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 280px));
+        gap: 1rem;
       }
     }
     @media (min-width: 768px) {
       .selfie-grid-responsive {
-        grid-template-columns: repeat(auto-fit, minmax(220px, 320px));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 300px));
+        gap: 1.25rem;
       }
     }
     @media (min-width: 1024px) {
       .selfie-grid-responsive {
-        grid-template-columns: repeat(auto-fit, minmax(240px, 360px));
+        grid-template-columns: repeat(auto-fit, minmax(220px, 320px));
+        gap: 1.5rem;
       }
     }
     @media (min-width: 1280px) {
       .selfie-grid-responsive {
-        grid-template-columns: repeat(auto-fit, minmax(260px, 400px));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 360px));
+        gap: 1.75rem;
       }
     }
   `

@@ -306,63 +306,103 @@ export default function TeamGenerationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-4">{tg('title')}</h1>
+      <div className="space-y-2">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">{tg('title')}</h1>
+        <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed">Manage and view your team's generated professional photos</p>
       </div>
 
       {/* Filters and Generate Button Row */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Filters - Enhanced Dropdowns */}
+        <div className="flex flex-wrap items-center gap-3 overflow-x-auto pb-2 -mb-2 sm:pb-0 sm:mb-0">
           {/* Team members can only see their own photos - no team gallery filter needed */}
           {/* Only team admins (pro users) can see all team photos and filter by user */}
 
           {/* Admin User Filter - only for team admins (pro users) */}
           {isTeamAdmin && (
-            <select value={userFilter} onChange={(e) => setUserFilter(e.target.value)} className="border rounded-md px-2 py-1 text-sm">
-              <option value="me">My generations</option>
-              <option value="team">{tg('filters.allUsers')}</option>
-            </select>
+            <div className="relative">
+              <select 
+                value={userFilter} 
+                onChange={(e) => setUserFilter(e.target.value)} 
+                className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[160px]"
+              >
+                <option value="me">My generations</option>
+                <option value="team">{tg('filters.allUsers')}</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           )}
-          {isTeamAdmin && userFilter === 'team' && (
-            <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="border rounded-md px-2 py-1 text-sm">
-              <option value="all">All users</option>
-              {teamUsers.map(u => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
+          {isTeamAdmin && userFilter === 'team' && teamUsers.length > 0 && (
+            <div className="relative">
+              <select 
+                value={selectedUserId} 
+                onChange={(e) => setSelectedUserId(e.target.value)} 
+                className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[140px]"
+              >
+                <option value="all">All users</option>
+                {teamUsers.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           )}
 
-          <select value={timeframe} onChange={(e) => setTimeframe(e.target.value as 'all'|'7d'|'30d')} className="border rounded-md px-2 py-1 text-sm">
-            <option value="all">All time</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-          </select>
-          <select value={context} onChange={(e) => setContext(e.target.value)} className="border rounded-md px-2 py-1 text-sm">
-            <option value="all">All photo styles</option>
-            {styleOptions.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
+          {/* Timeframe filter - Enhanced dropdown */}
+          <div className="relative">
+            <select 
+              value={timeframe} 
+              onChange={(e) => setTimeframe(e.target.value as 'all'|'7d'|'30d')} 
+              className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[140px]"
+            >
+              <option value="all">All time</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+          
+          {/* Style filter - Enhanced dropdown */}
+          {styleOptions.length > 0 && (
+            <div className="relative">
+              <select 
+                value={context} 
+                onChange={(e) => setContext(e.target.value)} 
+                className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[160px]"
+              >
+                <option value="all">All photo styles</option>
+                {styleOptions.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Prominent Generate Button with Cost Info */}
-        <div className="flex flex-col items-end md:items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-col items-stretch sm:items-end md:items-center gap-3 w-full sm:w-auto">
           <Link 
             href="/app/generate/selfie?type=team" 
-            className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-lg font-semibold text-base md:text-lg lg:text-xl shadow-sm transition-all hover:shadow-md flex items-center gap-2 whitespace-nowrap"
-            style={{
-              backgroundColor: BRAND_CONFIG.colors.primary,
-              color: 'white'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
-            }}
+            className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-xl font-bold text-base md:text-lg lg:text-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-2.5 whitespace-nowrap bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white touch-manipulation"
           >
             <svg 
               className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" 
@@ -380,16 +420,18 @@ export default function TeamGenerationsPage() {
             New generation
           </Link>
           
-          {/* Cost information */}
-          <div className="text-xs md:text-sm text-gray-600 text-right md:text-center space-y-0.5">
-            <div>
-              <span className="font-medium" style={{ color: BRAND_CONFIG.colors.primary }}>
-                {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)} {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration) === 1 ? t('photoCredit') : t('photoCredits')}
-              </span>
-              <span> {t('perPhoto')}</span>
-            </div>
-            <div className="text-gray-500">
-              {subscriptionTier ? getRegenerationCount(subscriptionTier) : 4} {t('retriesPerPhoto')}
+          {/* Cost information - Enhanced card style */}
+          <div className="bg-white rounded-lg border border-gray-200 px-4 py-2.5 shadow-sm text-xs md:text-sm text-gray-600 text-right md:text-center">
+            <div className="space-y-1">
+              <div>
+                <span className="font-semibold" style={{ color: BRAND_CONFIG.colors.primary }}>
+                  {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)} {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration) === 1 ? t('photoCredit') : t('photoCredits')}
+                </span>
+                <span className="text-gray-500"> {t('perPhoto')}</span>
+              </div>
+              <div className="text-gray-500">
+                {subscriptionTier ? getRegenerationCount(subscriptionTier) : 4} {t('retriesPerPhoto')}
+              </div>
             </div>
           </div>
         </div>

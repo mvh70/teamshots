@@ -136,19 +136,19 @@ export default function TeamPhotoStylesPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <div className="flex items-center gap-4">
-            <h1 id="team-photo-styles-heading" className="text-3xl font-bold text-gray-900">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
+        <div className="space-y-2 flex-1">
+          <div className="flex items-center gap-4 flex-wrap">
+            <h1 id="team-photo-styles-heading" className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
               Team Photo Styles
             </h1>
-            <span className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-sm">
+            <span className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-md shadow-brand-primary/20 ring-2 ring-brand-primary/10">
               Team Styles
             </span>
           </div>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed max-w-2xl">
             {t('subtitle')}
           </p>
         </div>
@@ -156,60 +156,65 @@ export default function TeamPhotoStylesPage() {
           id="create-team-style-btn"
           onClick={() => { if (!isFreePlan) window.location.href = '/app/styles/team/create' }}
           disabled={isFreePlan}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+          className={`flex items-center gap-2.5 px-7 py-4 rounded-xl font-bold text-sm transition-all duration-300 ${
             isFreePlan 
               ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-              : 'bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white hover:shadow-lg hover:scale-105'
+              : 'bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary text-white shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/40 hover:scale-[1.02] active:scale-[0.98] ring-2 ring-brand-primary/20 hover:ring-brand-primary/30'
           }`}
         >
           <PlusIcon className="h-5 w-5" />
-          Create Team Style
+          <span>Create Team Style</span>
         </button>
       </div>
 
       {/* Warning when no active context - only show for paid plans (free plan uses free package style) */}
       {!isFreePlan && !contextsData?.activeContext && (
-        <div className="bg-brand-cta-light border border-brand-cta/20 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <svg className="h-5 w-5 text-brand-cta" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-            <span className="text-brand-cta font-medium">
-              No Active Team Style
-            </span>
+        <div className="bg-gradient-to-r from-brand-cta-light via-orange-50 to-brand-cta-light border-2 border-brand-cta/30 rounded-xl p-5 shadow-md shadow-brand-cta/10">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-brand-cta/10 flex items-center justify-center flex-shrink-0">
+              <svg className="h-6 w-6 text-brand-cta" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <span className="text-brand-cta font-bold text-base block">
+                No Active Team Style
+              </span>
+              <p className="text-brand-cta/90 text-sm mt-1 leading-relaxed">
+                Set an active team style to enable team member invitations and ensure consistent team photo generation.
+              </p>
+            </div>
           </div>
-          <p className="text-brand-cta text-sm mt-1">
-            Set an active team style to enable team member invitations and ensure consistent team photo generation.
-          </p>
         </div>
       )}
 
       {/* Success Message */}
       {success && (
-        <div className="bg-brand-secondary/10 border border-brand-secondary/20 rounded-lg p-4">
-          <p className="text-brand-secondary">{success}</p>
+        <div className="bg-gradient-to-r from-brand-secondary/10 via-green-50 to-brand-secondary/10 border-2 border-brand-secondary/30 rounded-xl p-5 shadow-md shadow-brand-secondary/10">
+          <p className="text-brand-secondary font-semibold">{success}</p>
         </div>
       )}
 
       {/* Contexts List */}
       {isFreePlan ? (
-        <div className="space-y-6">
+        <div className="space-y-8">
           <FreePlanBanner variant="team" />
-          <div className="relative overflow-hidden rounded-2xl border-2 border-brand-secondary/30 bg-white shadow-lg max-w-5xl">
+          <div className="relative overflow-hidden rounded-3xl border-2 border-brand-secondary/30 bg-white shadow-xl shadow-brand-secondary/10 max-w-5xl transition-all duration-300 hover:shadow-2xl hover:shadow-brand-secondary/15">
             {/* Decorative background */}
-            <div className="absolute top-0 right-0 -mt-8 -mr-8 h-32 w-32 rounded-full bg-gradient-to-br from-brand-secondary/10 to-brand-primary/10 blur-2xl" />
-            <div className="absolute bottom-0 left-0 -mb-8 -ml-8 h-32 w-32 rounded-full bg-gradient-to-tr from-brand-primary/5 to-brand-secondary/5 blur-2xl" />
+            <div className="absolute top-0 right-0 -mt-12 -mr-12 h-40 w-40 rounded-full bg-gradient-to-br from-brand-secondary/15 to-brand-primary/15 blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+            <div className="absolute bottom-0 left-0 -mb-12 -ml-12 h-40 w-40 rounded-full bg-gradient-to-tr from-brand-primary/10 to-brand-secondary/10 blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-gradient-to-r from-brand-primary/5 to-brand-secondary/5 blur-3xl opacity-50" />
             
-            <div className="relative p-8">
+            <div className="relative p-8 md:p-10">
               {/* Header */}
-              <div className="flex items-start justify-between mb-8 pb-6 border-b border-gray-200">
+              <div className="flex items-start justify-between mb-10 pb-7 border-b border-gray-200/60">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h3 className="text-2xl font-bold text-gray-900">Free Package Style</h3>
+                  <h3 className="text-2xl font-display font-bold text-gray-900 tracking-tight">Free Package Style</h3>
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-sm">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-sm shadow-brand-primary/20">
                       Team
                     </span>
-                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-sm">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-sm shadow-brand-secondary/20">
                       Default
                     </span>
                   </div>
@@ -220,7 +225,7 @@ export default function TeamPhotoStylesPage() {
               </div>
               
               {/* Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
                 <StyleSummaryCard
                   settings={freePackageContext?.settings}
                 />
@@ -230,35 +235,65 @@ export default function TeamPhotoStylesPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
-        {contextsData?.contexts.map((context) => (
+        <div className="space-y-8">
+        {contextsData?.contexts.length === 0 ? (
+          <div className="relative overflow-hidden rounded-3xl border-2 border-dashed border-gray-300 bg-gradient-to-br from-gray-50 to-white p-16 text-center max-w-3xl mx-auto">
+            <div className="absolute top-0 right-0 -mt-8 -mr-8 h-32 w-32 rounded-full bg-gradient-to-br from-brand-primary/5 to-brand-secondary/5 blur-2xl" />
+            <div className="relative">
+              <div className="h-16 w-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 flex items-center justify-center">
+                <PlusIcon className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-display font-bold text-gray-900 mb-2">No Team Styles Yet</h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Create your first team photo style to ensure consistent, professional photos across your team.
+              </p>
+              <button
+                onClick={() => { if (!isFreePlan) window.location.href = '/app/styles/team/create' }}
+                disabled={isFreePlan}
+                className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-sm transition-all ${
+                  isFreePlan 
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary text-white shadow-lg shadow-brand-primary/30 hover:shadow-xl hover:shadow-brand-primary/40 hover:scale-[1.02]'
+                }`}
+              >
+                <PlusIcon className="h-5 w-5" />
+                Create Your First Style
+              </button>
+            </div>
+          </div>
+        ) : (
+        contextsData?.contexts.map((context) => (
           <div
             key={context.id}
-            className={`relative overflow-hidden rounded-2xl border-2 shadow-lg transition-all hover:shadow-xl max-w-5xl ${
+            className={`relative overflow-hidden rounded-3xl border-2 transition-all duration-300 max-w-5xl group ${
               contextsData.activeContext?.id === context.id
-                ? 'border-brand-secondary/40 bg-white'
-                : 'border-gray-200 bg-white'
+                ? 'border-brand-secondary/50 bg-white shadow-xl shadow-brand-secondary/15 hover:shadow-2xl hover:shadow-brand-secondary/20'
+                : 'border-gray-200/60 bg-white shadow-lg shadow-gray-200/30 hover:shadow-xl hover:shadow-gray-300/40 hover:border-gray-300/80'
             }`}
           >
             {/* Decorative background */}
             {contextsData.activeContext?.id === context.id && (
               <>
-                <div className="absolute top-0 right-0 -mt-8 -mr-8 h-32 w-32 rounded-full bg-gradient-to-br from-brand-secondary/10 to-brand-primary/10 blur-2xl" />
-                <div className="absolute bottom-0 left-0 -mb-8 -ml-8 h-32 w-32 rounded-full bg-gradient-to-tr from-brand-primary/5 to-brand-secondary/5 blur-2xl" />
+                <div className="absolute top-0 right-0 -mt-12 -mr-12 h-40 w-40 rounded-full bg-gradient-to-br from-brand-secondary/15 to-brand-primary/15 blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+                <div className="absolute bottom-0 left-0 -mb-12 -ml-12 h-40 w-40 rounded-full bg-gradient-to-tr from-brand-primary/10 to-brand-secondary/10 blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-gradient-to-r from-brand-primary/5 to-brand-secondary/5 blur-3xl opacity-50" />
               </>
+            )}
+            {contextsData.activeContext?.id !== context.id && (
+              <div className="absolute top-0 right-0 -mt-8 -mr-8 h-24 w-24 rounded-full bg-gradient-to-br from-gray-100/40 to-gray-200/40 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             )}
             
             <div className="relative p-8">
               {/* Header */}
-              <div className="flex items-start justify-between mb-8 pb-6 border-b border-gray-200">
+              <div className="flex items-start justify-between mb-8 pb-6 border-b border-gray-200/60">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h3 className="text-2xl font-bold text-gray-900">{context.name}</h3>
+                  <h3 className="text-2xl font-display font-bold text-gray-900 tracking-tight">{context.name}</h3>
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-sm">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-sm shadow-brand-primary/20">
                       Team
                     </span>
                     {contextsData.activeContext?.id === context.id && (
-                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-sm">
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-sm shadow-brand-secondary/20">
                         Default
                       </span>
                     )}
@@ -269,14 +304,14 @@ export default function TeamPhotoStylesPage() {
                     onClick={() => {
                       window.location.href = `/app/styles/team/${context.id}/edit`
                     }}
-                    className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    className="p-2.5 rounded-xl text-gray-400 hover:text-brand-primary hover:bg-brand-primary/10 transition-all duration-200 hover:scale-110 active:scale-95"
                     title="Edit style"
                   >
                     <PencilIcon className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => handleDeleteContext(context.id)}
-                    className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    className="p-2.5 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 hover:scale-110 active:scale-95"
                     title="Delete style"
                   >
                     <TrashIcon className="h-5 w-5" />
@@ -285,7 +320,7 @@ export default function TeamPhotoStylesPage() {
               </div>
 
                                             {/* Grid */}
-               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 mb-8">
                  <StyleSummaryCard
                    settings={context.settings}
                  />
@@ -294,10 +329,10 @@ export default function TeamPhotoStylesPage() {
 
               {/* Actions */}
               {contextsData.activeContext?.id !== context.id && (
-                <div className="pt-4 border-t border-gray-200">
+                <div className="pt-5 border-t border-gray-200/60">
                   <button
                     onClick={() => handleActivateContext(context.id)}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white rounded-xl hover:shadow-lg transition-all font-semibold"
+                    className="w-full px-6 py-3.5 bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary text-white rounded-xl hover:shadow-xl hover:shadow-brand-primary/30 transition-all duration-300 font-bold text-sm hover:scale-[1.01] active:scale-[0.99]"
                   >
                     Set as Default
                   </button>
@@ -305,7 +340,7 @@ export default function TeamPhotoStylesPage() {
               )}
             </div>
           </div>
-        ))}
+        )))}
       </div>
       )}
 

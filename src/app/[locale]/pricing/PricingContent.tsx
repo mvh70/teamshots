@@ -19,12 +19,12 @@ export default function PricingContent() {
     return forcedType || getSignupTypeFromDomain(domain)
   })
 
-  const tryOncePlan = {
-    id: 'tryOnce' as const,
-    price: `$${PRICING_CONFIG.tryOnce.price}`,
-    credits: PRICING_CONFIG.tryOnce.credits,
-    regenerations: PRICING_CONFIG.regenerations.tryOnce,
-    pricePerPhoto: formatPrice(getPricePerPhoto('tryOnce')),
+  const tryItForFreePlan = {
+    id: 'tryItForFree' as const,
+    price: 'Free',
+    credits: PRICING_CONFIG.tryItForFree.credits,
+    regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+    pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
   }
 
   const individualPlan = {
@@ -54,8 +54,8 @@ export default function PricingContent() {
 
   // Filter plans based on domain restrictions
   const plansToShow = [
-    // Always show Try Once
-    tryOncePlan,
+    // Always show Try It For Free first
+    tryItForFreePlan,
     // Show Individual if individual domain or no domain restriction
     ...(domainSignupType === 'individual' || domainSignupType === null ? [individualPlan] : []),
     // Show Pro Small and Pro Large if team domain or no domain restriction
@@ -120,7 +120,7 @@ export default function PricingContent() {
                 plan.id === 'proSmall' ? 'tier=team&period=proSmall' :
                 plan.id === 'proLarge' ? 'tier=team&period=proLarge' :
                 plan.id === 'individual' ? 'tier=individual&period=individual' :
-                'period=tryOnce'
+                'period=tryItForFree'
               }`}
             className="h-full"
           />

@@ -2,7 +2,32 @@
 
 import { useTranslations } from 'next-intl'
 import { ClothingColorSettings } from '@/types/photo-style'
-import { normalizeColorToHex } from './config'
+import type { ClothingColorKey } from './types'
+import ColorPicker from '@/components/ui/ColorPicker'
+
+// Common clothing color presets
+const CLOTHING_COLOR_PRESETS = [
+  '#000000', // Black
+  '#1f2937', // Charcoal
+  '#374151', // Dark gray
+  '#6b7280', // Gray
+  '#9ca3af', // Light gray
+  '#ffffff', // White
+  '#f5f5dc', // Beige
+  '#d2b48c', // Tan
+  '#8b4513', // Brown
+  '#4a3728', // Dark brown
+  '#000080', // Navy
+  '#1e3a5f', // Dark blue
+  '#3b82f6', // Blue
+  '#60a5fa', // Light blue
+  '#14532d', // Dark green
+  '#166534', // Forest green
+  '#800020', // Burgundy
+  '#7f1d1d', // Dark red
+  '#78350f', // Olive
+  '#fef3c7', // Cream
+]
 
 interface ClothingColorSelectorProps {
   value: ClothingColorSettings
@@ -12,6 +37,7 @@ interface ClothingColorSelectorProps {
   className?: string
   showHeader?: boolean
   showPredefinedBadge?: boolean // If true, show the badge even when editable
+  excludeColors?: ClothingColorKey[] // Colors to hide based on shot type and clothing style
 }
 
 export default function ClothingColorSelector({
@@ -21,11 +47,14 @@ export default function ClothingColorSelector({
   isDisabled = false,
   className = '',
   showHeader = false,
-  showPredefinedBadge = false
+  showPredefinedBadge = false,
+  excludeColors = []
 }: ClothingColorSelectorProps) {
   const t = useTranslations('customization.photoStyle.clothingColors')
 
-  const handleColorChange = (colorType: 'topCover' | 'topBase' | 'bottom' | 'shoes', color: string) => {
+  const isExcluded = (colorKey: ClothingColorKey) => excludeColors.includes(colorKey)
+
+  const handleColorChange = (colorType: ClothingColorKey, color: string) => {
     if (isPredefined) return
     
     onChange({ 
@@ -37,6 +66,8 @@ export default function ClothingColorSelector({
       } 
     })
   }
+
+  const visibleCount = 4 - excludeColors.length
 
   return (
     <div className={`${className}`}>
@@ -58,136 +89,105 @@ export default function ClothingColorSelector({
         </div>
       )}
 
-      {/* Colors Section */}
-      <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
-        {/* Outer Layer */}
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-lg" role="img" aria-label="jacket">🧥</span>
-            <div>
-              <label className="block text-sm font-medium text-gray-900">
-                {t('outerLayer', { default: 'Outer Layer' })}
-              </label>
-              <p className="text-xs text-gray-500">
-                {t('outerLayerDesc', { default: 'Blazer, jacket, cardigan' })}
-              </p>
+      {visibleCount === 0 ? (
+        <p className="text-sm text-gray-500 italic">
+          {t('noVisibleColors', { default: 'No clothing colors applicable for this shot type and style.' })}
+        </p>
+      ) : (
+        <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
+          {/* Outer Layer */}
+          {!isExcluded('topCover') && (
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg" role="img" aria-label="jacket">🧥</span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900">
+                    {t('outerLayer', { default: 'Outer Layer' })}
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    {t('outerLayerDesc', { default: 'Blazer, jacket, cardigan' })}
+                  </p>
+                </div>
+              </div>
+              <ColorPicker
+                value={value.colors?.topCover ?? ''}
+                onChange={(color) => handleColorChange('topCover', color)}
+                presets={CLOTHING_COLOR_PRESETS}
+                disabled={isPredefined || isDisabled}
+              />
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={normalizeColorToHex(value.colors?.topCover)}
-              onChange={(e) => handleColorChange('topCover', e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="h-10 w-14 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-            <input
-              type="text"
-              value={value.colors?.topCover || ''}
-              onChange={(e) => handleColorChange('topCover', e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="flex-1 px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-              placeholder="e.g., navy, black"
-            />
-          </div>
-        </div>
+          )}
 
-        {/* Shirt/Blouse */}
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-lg" role="img" aria-label="shirt">👔</span>
-            <div>
-              <label className="block text-sm font-medium text-gray-900">
-                {t('shirtBlouse', { default: 'Shirt/Blouse' })}
-              </label>
-              <p className="text-xs text-gray-500">
-                {t('shirtBlouseDesc', { default: 'Dress shirt, blouse, polo' })}
-              </p>
+          {/* Shirt/Blouse */}
+          {!isExcluded('topBase') && (
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg" role="img" aria-label="shirt">👔</span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900">
+                    {t('shirtBlouse', { default: 'Shirt/Blouse' })}
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    {t('shirtBlouseDesc', { default: 'Dress shirt, blouse, polo' })}
+                  </p>
+                </div>
+              </div>
+              <ColorPicker
+                value={value.colors?.topBase ?? ''}
+                onChange={(color) => handleColorChange('topBase', color)}
+                presets={CLOTHING_COLOR_PRESETS}
+                disabled={isPredefined || isDisabled}
+              />
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={normalizeColorToHex(value.colors?.topBase)}
-              onChange={(e) => handleColorChange('topBase', e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="h-10 w-14 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-            <input
-              type="text"
-              value={value.colors?.topBase || ''}
-              onChange={(e) => handleColorChange('topBase', e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="flex-1 px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-              placeholder="e.g., white, blue"
-            />
-          </div>
-        </div>
+          )}
 
-        {/* Pants/Skirt */}
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-lg" role="img" aria-label="pants">👖</span>
-            <div>
-              <label className="block text-sm font-medium text-gray-900">
-                {t('pantsSkirt', { default: 'Pants/Skirt' })}
-              </label>
-              <p className="text-xs text-gray-500">
-                {t('pantsSkirtDesc', { default: 'Trousers, slacks, skirt' })}
-              </p>
+          {/* Pants/Skirt */}
+          {!isExcluded('bottom') && (
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg" role="img" aria-label="pants">👖</span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900">
+                    {t('pantsSkirt', { default: 'Pants/Skirt' })}
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    {t('pantsSkirtDesc', { default: 'Trousers, slacks, skirt' })}
+                  </p>
+                </div>
+              </div>
+              <ColorPicker
+                value={value.colors?.bottom ?? ''}
+                onChange={(color) => handleColorChange('bottom', color)}
+                presets={CLOTHING_COLOR_PRESETS}
+                disabled={isPredefined || isDisabled}
+              />
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={normalizeColorToHex(value.colors?.bottom)}
-              onChange={(e) => handleColorChange('bottom', e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="h-10 w-14 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-            <input
-              type="text"
-              value={value.colors?.bottom || ''}
-              onChange={(e) => handleColorChange('bottom', e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="flex-1 px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-              placeholder="e.g., black, gray"
-            />
-          </div>
-        </div>
+          )}
 
-        {/* Shoes */}
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-lg" role="img" aria-label="shoes">👞</span>
-            <div>
-              <label className="block text-sm font-medium text-gray-900">
-                {t('shoes', { default: 'Shoes' })}
-              </label>
-              <p className="text-xs text-gray-500">
-                {t('shoesDesc', { default: 'Dress shoes, casual shoes' })}
-              </p>
+          {/* Shoes */}
+          {!isExcluded('shoes') && (
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg" role="img" aria-label="shoes">👞</span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900">
+                    {t('shoes', { default: 'Shoes' })}
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    {t('shoesDesc', { default: 'Dress shoes, casual shoes' })}
+                  </p>
+                </div>
+              </div>
+              <ColorPicker
+                value={value.colors?.shoes ?? ''}
+                onChange={(color) => handleColorChange('shoes', color)}
+                presets={CLOTHING_COLOR_PRESETS}
+                disabled={isPredefined || isDisabled}
+              />
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={normalizeColorToHex(value.colors?.shoes)}
-              onChange={(e) => handleColorChange('shoes', e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="h-10 w-14 p-1 border border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-            <input
-              type="text"
-              value={value.colors?.shoes || ''}
-              onChange={(e) => handleColorChange('shoes', e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="flex-1 px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-              placeholder="e.g., black, brown"
-            />
-          </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -18,12 +18,12 @@ export default function PricingPreview() {
     return forcedType || getSignupTypeFromDomain(domain);
   });
 
-  const tryOncePlan = {
-    id: 'tryOnce' as const,
-    price: `$${PRICING_CONFIG.tryOnce.price}`,
-    credits: PRICING_CONFIG.tryOnce.credits,
-    regenerations: PRICING_CONFIG.regenerations.tryOnce,
-    pricePerPhoto: formatPrice(getPricePerPhoto('tryOnce')),
+  const tryItForFreePlan = {
+    id: 'tryItForFree' as const,
+    price: 'Free',
+    credits: PRICING_CONFIG.tryItForFree.credits,
+    regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+    pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
   }
 
   const individualPlan = {
@@ -53,8 +53,8 @@ export default function PricingPreview() {
 
   // Filter plans based on domain restrictions
   const plansToShow = [
-    // Always show Try Once
-    tryOncePlan,
+    // Always show Try It For Free first
+    tryItForFreePlan,
     // Show Individual if individual domain or no domain restriction
     ...(domainSignupType === 'individual' || domainSignupType === null ? [individualPlan] : []),
     // Show Pro Small and Pro Large if team domain or no domain restriction
@@ -62,13 +62,13 @@ export default function PricingPreview() {
   ]
 
   return (
-    <section className="py-20 lg:py-32 bg-bg-gray-50 relative grain-texture">
+    <section className="py-20 sm:py-24 lg:py-32 bg-bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
+        <div className="text-center mb-20">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
             {t('title')}
           </h2>
-          <p className="text-xl text-text-body max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl lg:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed">
             {t('subtitle')}
           </p>
           
@@ -104,9 +104,9 @@ export default function PricingPreview() {
         </div>
 
         {/* Pricing Cards (shared) */}
-        <div className={`grid gap-8 lg:gap-10 overflow-visible ${
+        <div className={`grid gap-8 lg:gap-10 xl:gap-12 overflow-visible items-start ${
           plansToShow.length === 3 ? 'md:grid-cols-3' :
-          plansToShow.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' :
+          plansToShow.length === 2 ? 'md:grid-cols-2 max-w-5xl mx-auto' :
           'md:grid-cols-1 max-w-md mx-auto'
         }`}>
           {plansToShow.map((plan) => (
@@ -118,7 +118,7 @@ export default function PricingPreview() {
                 plan.id === 'proSmall' ? 'tier=team&period=proSmall' :
                 plan.id === 'proLarge' ? 'tier=team&period=proLarge' :
                 plan.id === 'individual' ? 'tier=individual&period=individual' :
-                'period=tryOnce'
+                'period=tryItForFree'
               }`}
             className="h-full"
           />

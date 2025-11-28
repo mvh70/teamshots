@@ -336,7 +336,7 @@
         "period": "pago único",
         "description": "Perfecto para probar el servicio",
         "features": [
-          "Regenera hasta 2 veces para perfeccionar cada foto",
+          "Regenera hasta {regenerations} veces para perfeccionar cada foto",
           "Fotos retenidas hasta el cierre de la cuenta",
           "Recarga de créditos disponible",
           "Soporte por correo"
@@ -346,9 +346,11 @@
       "individual": {
         "name": "Individual",
         "period": "pago único",
-        "description": "Para profesionales independientes que quieren lucir bien",
+        "description": "Para profesionales independientes. Pago único, sin cuotas mensuales.",
         "features": [
-          "Regenera hasta 3 veces para perfeccionar cada foto",
+          "Pago único, sin cargos recurrentes",
+          "Los créditos nunca expiran, úsalos cuando quieras",
+          "Regenera hasta {regenerations} veces para perfeccionar cada foto",
           "Fotos retenidas hasta el cierre de la cuenta",
           "Recarga de créditos disponible"
         ],
@@ -357,9 +359,11 @@
       "proSmall": {
         "name": "Pro Pequeño",
         "period": "pago único",
-        "description": "Para equipos pequeños hasta 5 miembros",
+        "description": "Para equipos pequeños hasta 5 miembros. Paga una vez, sin suscripción.",
         "features": [
-          "Regenera hasta 4 veces para perfeccionar cada foto",
+          "Pago único, sin cargos recurrentes",
+          "Los créditos nunca expiran, úsalos cuando quieras",
+          "Regenera hasta {regenerations} veces para perfeccionar cada foto",
           "Fotos retenidas hasta el cierre de la cuenta",
           "Gestión de fotos del equipo",
           "Recarga de créditos disponible"
@@ -369,9 +373,11 @@
       "proLarge": {
         "name": "Pro Grande",
         "period": "pago único",
-        "description": "Para equipos más grandes",
+        "description": "Para equipos más grandes. Pago único, sin cargos recurrentes.",
         "features": [
-          "Regenera hasta 4 veces para perfeccionar cada foto",
+          "Pago único, sin cargos recurrentes",
+          "Los créditos nunca expiran, úsalos cuando quieras",
+          "Regenera hasta {regenerations} veces para perfeccionar cada foto",
           "Fotos retenidas hasta el cierre de la cuenta",
           "Gestión de fotos del equipo",
           "Plantillas de estilo de empresa",
@@ -596,6 +602,7 @@
         "insufficientPhotosMessage": "Necesitas {required} fotos para generar. Tienes {current}. ¡Recarga!",
     "generatePhoto": "Generar foto",
     "customizeFirstTooltip": "Personaliza tu foto con las secciones editables a continuación",
+    "customizeFirstTooltipMobile": "Personaliza tu foto con las secciones editables arriba",
         "buyMorePhotos": "Comprar más fotos",
         "insufficientCredits": "Créditos de foto insuficientes",
         "insufficientCreditsMessage": "Necesitas {required, plural, one {# crédito de foto} other {# créditos de foto}} para generar. Actualmente tienes {current, plural, one {# crédito de foto} other {# créditos de foto}}. ¡Es hora de recargar!",
@@ -838,6 +845,7 @@
       },
       "teamInfo": {
         "title": "Información del Equipo",
+        "subtitle": "Gestiona los detalles e información de tu equipo",
         "name": {
           "label": "Nombre del Equipo",
           "placeholder": "Ingresa el nombre de tu equipo"
@@ -1708,7 +1716,11 @@
         "customUpload": "Subir Fondo",
         "uploadPrompt": "Haz clic para subir o arrastra y suelta",
         "chooseFile": "Elegir Archivo",
-        "uploadedFile": "Subido:"
+        "uploadedFile": "Subido:",
+        "colorValue": "Color",
+        "colorHint": "Código hex o nombre de color",
+        "variations": "Variaciones",
+        "presets": "Elige un color"
       },
       "branding": {
         "title": "Marca",

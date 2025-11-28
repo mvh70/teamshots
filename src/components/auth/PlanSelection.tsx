@@ -42,11 +42,11 @@ export function PlanSelection({ selectedPlan, onPlanSelect, className = '' }: Pl
 
   return (
     <div className={`w-full ${className}`}>
-      <div className="text-center mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+      <div className="text-center mb-7">
+        <h3 className="text-xl font-bold text-slate-900 mb-2 tracking-tight">
           Choose your plan
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-slate-600 font-medium">
           Select the option that best fits your needs
         </p>
       </div>
@@ -58,18 +58,18 @@ export function PlanSelection({ selectedPlan, onPlanSelect, className = '' }: Pl
             key={plan.id}
             onClick={() => onPlanSelect(plan.id)}
             className={`
-              group relative p-5 rounded-xl border-2 transition-all duration-200
-              min-h-[140px] text-left
+              group relative p-6 rounded-xl border-2 transition-all duration-200
+              min-h-[150px] text-left
               ${selectedPlan === plan.id
-                ? 'border-brand-primary bg-brand-primary/5 shadow-lg'
-                : 'border-gray-200 bg-white hover:border-brand-primary/50 hover:shadow-md'
+                ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-blue-100/50 shadow-lg ring-2 ring-blue-500/20'
+                : 'border-slate-200 bg-white hover:border-blue-400 hover:shadow-md hover:bg-slate-50/50'
               }
             `}
           >
             {/* Popular badge */}
             {plan.popular && (
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <div className="bg-brand-primary text-white px-3 py-1 rounded-full text-xs font-medium shadow-sm">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-md">
                   Most Popular
                 </div>
               </div>
@@ -77,7 +77,7 @@ export function PlanSelection({ selectedPlan, onPlanSelect, className = '' }: Pl
 
             {/* Selection indicator */}
             {selectedPlan === plan.id && (
-              <div className="absolute top-4 right-4 w-6 h-6 bg-brand-primary rounded-full flex items-center justify-center">
+              <div className="absolute top-5 right-5 w-7 h-7 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center shadow-md">
                 <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
@@ -86,24 +86,24 @@ export function PlanSelection({ selectedPlan, onPlanSelect, className = '' }: Pl
 
             <div className="flex items-start gap-4">
               {/* Icon */}
-              <div className="text-3xl flex-shrink-0 mt-1">
+              <div className="text-4xl flex-shrink-0 mt-0.5">
                 {plan.icon}
               </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <h4 className="text-lg font-semibold text-gray-900 mb-1">
+                <h4 className="text-lg font-bold text-slate-900 mb-1.5 tracking-tight">
                   {plan.title}
                 </h4>
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-sm text-slate-600 mb-4 leading-relaxed">
                   {plan.description}
                 </p>
 
                 {/* Benefits list */}
-                <ul className="space-y-1">
+                <ul className="space-y-2">
                   {plan.benefits.map((benefit, index) => (
-                    <li key={index} className="text-xs text-gray-500 flex items-center gap-2">
-                      <div className="w-1 h-1 bg-gray-400 rounded-full flex-shrink-0" />
+                    <li key={index} className="text-xs text-slate-600 flex items-center gap-2.5 font-medium">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full flex-shrink-0" />
                       {benefit}
                     </li>
                   ))}
@@ -114,16 +114,16 @@ export function PlanSelection({ selectedPlan, onPlanSelect, className = '' }: Pl
             {/* Hover state indicator */}
             <div className={`
               absolute inset-0 rounded-xl transition-opacity duration-200 pointer-events-none
-              ${selectedPlan === plan.id ? 'opacity-0' : 'opacity-0 group-hover:opacity-10'}
-              bg-brand-primary
+              ${selectedPlan === plan.id ? 'opacity-0' : 'opacity-0 group-hover:opacity-5'}
+              bg-blue-500
             `} />
           </button>
         ))}
       </div>
 
       {/* Mobile-specific hint */}
-      <div className="mt-4 text-center">
-        <p className="text-xs text-gray-500">
+      <div className="mt-5 text-center">
+        <p className="text-xs text-slate-500 font-medium">
           💡 You can change your plan anytime
         </p>
       </div>

@@ -674,24 +674,24 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-8">
       {/* Success Message */}
       {successMessage && (
-        <div className="bg-brand-secondary-light border border-brand-secondary-lighter rounded-xl p-4 flex items-center gap-3 shadow-sm">
-          <div className="flex-shrink-0 w-8 h-8 bg-brand-secondary-lighter rounded-full flex items-center justify-center">
-            <Sparkles className="h-5 w-5 text-brand-secondary" />
+        <div className="bg-gradient-to-r from-brand-secondary-light via-brand-secondary-lighter to-white border-2 border-brand-secondary-border rounded-2xl p-5 flex items-center gap-4 shadow-lg animate-fade-in">
+          <div className="flex-shrink-0 w-12 h-12 bg-brand-secondary rounded-2xl flex items-center justify-center shadow-md ring-4 ring-brand-secondary/10">
+            <Sparkles className="h-6 w-6 text-white" />
           </div>
-          <p className="text-brand-secondary-text-light font-medium">{successMessage}</p>
+          <p className="text-brand-secondary-text-light font-semibold text-base">{successMessage}</p>
         </div>
       )}
 
       {/* Header */}
-      <div id="welcome-section" className="flex flex-col gap-6">
-        <div className="space-y-2">
-          <h1 id="team-name-header" className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
+      <div id="welcome-section" className="flex flex-col gap-8 mb-2">
+        <div className="space-y-3">
+          <h1 id="team-name-header" className="text-4xl sm:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
             {teamData?.name || t('title')}
           </h1>
-          <p className="text-base sm:text-lg text-gray-600">
+          <p className="text-lg sm:text-xl text-gray-500 leading-relaxed">
             {t('subtitle')}
           </p>
         </div>
@@ -699,55 +699,55 @@ export default function TeamPage() {
         {userRoles.isTeamAdmin && (
           <div className="flex flex-col gap-4">
             {!teamData?.activeContext && !isFreePlan ? (
-              <div className="bg-gradient-to-br from-brand-primary-light to-white border-2 border-brand-primary-lighter rounded-xl p-6 shadow-sm">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-brand-primary rounded-xl flex items-center justify-center shadow-sm">
-                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-gradient-to-br from-brand-primary-light via-brand-primary/10 to-white border-2 border-brand-primary-lighter rounded-2xl p-7 shadow-md">
+                <div className="flex items-start gap-5">
+                  <div className="flex-shrink-0 w-14 h-14 bg-brand-primary rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-brand-primary/10">
+                    <svg className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-brand-primary font-bold text-lg block mb-2">
+                    <h3 className="text-brand-primary font-bold text-xl block mb-3 tracking-tight">
                       {t('setupRequired.title')}
                     </h3>
-                    <p className="text-gray-700 text-sm mb-5 leading-relaxed">
+                    <p className="text-gray-700 text-base mb-6 leading-relaxed">
                       {t('setupRequired.message')}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 items-start">
                       <Link
                         href="/app/styles/team/create"
-                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover text-sm font-semibold transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+                        className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover text-base font-semibold transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transform hover:-translate-y-0.5 shadow-md"
                       >
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
                         {t('setupRequired.createButton')}
                       </Link>
-                      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500">
+                      <div className="flex items-center gap-2.5 px-5 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm text-gray-500 shadow-sm">
                         <PlusIcon className="h-5 w-5 text-gray-400" />
-                        <span className="font-medium">{t('buttons.inviteTeamMember')}</span>
-                        <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">Locked</span>
+                        <span className="font-semibold">{t('buttons.inviteTeamMember')}</span>
+                        <span className="text-xs bg-gray-200 px-2.5 py-1 rounded-lg font-medium">Locked</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-gradient-to-br from-brand-secondary-light to-white border-2 border-brand-secondary-border rounded-xl p-6 shadow-sm">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-brand-secondary rounded-xl flex items-center justify-center shadow-sm">
-                    <CheckIcon className="h-6 w-6 text-white" />
+              <div className="bg-gradient-to-br from-brand-secondary-light via-brand-secondary-lighter to-white border-2 border-brand-secondary-border rounded-2xl p-7 shadow-md">
+                <div className="flex items-start gap-5">
+                  <div className="flex-shrink-0 w-14 h-14 bg-brand-secondary rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-brand-secondary/10">
+                    <CheckIcon className="h-7 w-7 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-brand-secondary font-bold text-lg block mb-2">
+                    <h3 className="text-brand-secondary font-bold text-xl block mb-3 tracking-tight">
                       {t('readyToInvite.title')}
                     </h3>
-                    <p className="text-gray-700 text-sm mb-5 leading-relaxed">
+                    <p className="text-gray-700 text-base mb-6 leading-relaxed">
                       Active photo style:{' '}
                       {teamData?.activeContext?.id ? (
                         <Link
                           href={`/app/styles/team/${teamData.activeContext.id}/edit`}
-                          className="font-bold text-brand-secondary hover:text-brand-secondary-hover underline decoration-2 underline-offset-2 transition-colors"
+                          className="font-bold text-brand-secondary hover:text-brand-secondary-hover underline decoration-2 underline-offset-3 transition-all hover:decoration-brand-secondary-hover"
                         >
                           {(isFreePlan && (!teamData.activeContext.name || teamData.activeContext.name === 'unnamed')) 
                             ? 'Free Package Style' 
@@ -773,9 +773,9 @@ export default function TeamPage() {
                         setShowInviteForm(true)
                       }}
                       disabled={credits.team === 0}
-                      className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                      className={`inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                         credits.team > 0
-                          ? 'bg-brand-secondary text-white hover:bg-brand-secondary-hover shadow-sm hover:shadow-md focus:ring-brand-secondary'
+                          ? 'bg-brand-secondary text-white hover:bg-brand-secondary-hover shadow-md hover:shadow-lg focus:ring-brand-secondary transform hover:-translate-y-0.5'
                           : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       }`}
                     >
@@ -791,42 +791,42 @@ export default function TeamPage() {
       </div>
 
       {/* Team Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
-        <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-200">
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0 w-14 h-14 bg-brand-primary-light rounded-xl flex items-center justify-center ring-2 ring-brand-primary-light">
-              <Users className="h-7 w-7" style={{ color: getBrandColor('primary') }} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 lg:gap-6 mb-8">
+        <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
+          <div className="flex items-center gap-5">
+            <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-primary/10 group-hover:ring-brand-primary/30 transition-all">
+              <Users className="h-8 w-8" style={{ color: getBrandColor('primary') }} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-600 mb-1">Team members</p>
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Team members</p>
+              <p className="text-4xl font-extrabold text-gray-900 leading-none">
                 {(teamMembers?.length || 0) + (invites?.filter(inv => !inv.usedAt).length || 0)}
               </p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-200">
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0 w-14 h-14 bg-brand-primary-light rounded-xl flex items-center justify-center ring-2 ring-brand-primary-light">
-              <Camera className="h-7 w-7" style={{ color: getBrandColor('primary') }} />
+        <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
+          <div className="flex items-center gap-5">
+            <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-primary/10 group-hover:ring-brand-primary/30 transition-all">
+              <Camera className="h-8 w-8" style={{ color: getBrandColor('primary') }} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-600 mb-1">Available photos</p>
-              <p className="text-3xl font-bold text-gray-900">{calculatePhotosFromCredits(credits.team)}</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Available photos</p>
+              <p className="text-4xl font-extrabold text-gray-900 leading-none">{calculatePhotosFromCredits(credits.team)}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-200">
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0 w-14 h-14 bg-brand-secondary-light rounded-xl flex items-center justify-center ring-2 ring-brand-secondary-light">
+        <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
+          <div className="flex items-center gap-5">
+            <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-secondary-light to-brand-secondary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-secondary/10 group-hover:ring-brand-secondary/30 transition-all">
               {/* eslint-disable-next-line jsx-a11y/alt-text */}
-              <Image className="h-7 w-7" style={{ color: getBrandColor('secondary') }} aria-hidden="true" />
+              <Image className="h-8 w-8" style={{ color: getBrandColor('secondary') }} aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-600 mb-1">Photos generated</p>
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Photos generated</p>
+              <p className="text-4xl font-extrabold text-gray-900 leading-none">
                 {teamMembers?.reduce((acc, member) => acc + (member.stats?.generations || 0), 0) || 0}
               </p>
             </div>
@@ -842,34 +842,36 @@ export default function TeamPage() {
       )}
 
       {/* Team Members & Invites */}
-      <div id="team-invites-table" className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div id="team-invites-table" className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
         {teamMembers.length === 0 && pendingInvites.length === 0 ? (
-          <div className="p-6 text-center">
+          <div className="p-12 text-center">
             {credits.team === 0 ? (
               <>
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm ring-2 ring-red-100">
+                  <svg className="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">{t('teamInvites.noCredits.title')}</h3>
-                <p className="text-gray-600 mb-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">{t('teamInvites.noCredits.title')}</h3>
+                <p className="text-gray-600 mb-6 text-base leading-relaxed max-w-md mx-auto">
                   {t('teamInvites.noCredits.subtitle')}
                 </p>
                 <Link
                   href={isFreePlan ? '/app/upgrade' : '/app/top-up'}
-                  className="inline-block px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-hover transition-colors text-center"
+                  className="inline-block px-7 py-3.5 bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover transition-all text-center font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                 >
                   {t('teamInvites.noCredits.button')}
                 </Link>
               </>
             ) : (
               <>
-                <svg className="h-12 w-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                </svg>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">{t('teamMembers.noMembers.title')}</h3>
-                <p className="text-gray-600 mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm ring-2 ring-gray-100">
+                  <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">{t('teamMembers.noMembers.title')}</h3>
+                <p className="text-gray-600 mb-4 text-base leading-relaxed max-w-md mx-auto">
                   {t('teamMembers.noMembers.subtitle')}
                 </p>
               </>
@@ -880,9 +882,9 @@ export default function TeamPage() {
             {/* Desktop: Table Layout */}
             <div className="hidden md:block divide-y divide-gray-200">
                 {/* Header row */}
-                <div className="px-6 py-4 bg-white border-b border-gray-200">
+                <div className="px-7 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
                   <div 
-                    className={`grid gap-6 text-sm font-bold text-gray-900 ${
+                    className={`grid gap-6 text-xs font-bold text-gray-500 uppercase tracking-wider ${
                       userRoles.isTeamAdmin 
                         ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
                         : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
@@ -910,7 +912,7 @@ export default function TeamPage() {
                   const photoStyle = memberInvite?.contextName ?? teamData?.activeContext?.name
                   
                   return (
-                <div key={`member-${member.id}`} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                <div key={`member-${member.id}`} className="px-7 py-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0 group">
                   <div 
                     className={`grid gap-6 items-center ${
                       userRoles.isTeamAdmin 
@@ -919,9 +921,9 @@ export default function TeamPage() {
                     }`}
                   >
                     {/* Member Info */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 bg-brand-primary-light rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-medium text-brand-primary">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-12 h-12 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 ring-2 ring-brand-primary/5 group-hover:ring-brand-primary/20 transition-all shadow-sm">
+                        <span className="text-sm font-bold text-brand-primary">
                           {member.isCurrentUser 
                             ? t('teamMembers.you') 
                             : member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -929,34 +931,34 @@ export default function TeamPage() {
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <p className="text-base font-semibold text-gray-900 truncate">
                             {member.isCurrentUser ? 'You' : member.name}
                           </p>
                           {member.isAdmin && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-premium/10 text-brand-premium flex-shrink-0">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-premium/10 to-brand-premium/5 text-brand-premium border border-brand-premium/20 flex-shrink-0">
                               {t('teamMembers.roles.teamAdmin')}
                             </span>
                           )}
                           {!member.isAdmin && member.userId && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-primary-light text-brand-primary flex-shrink-0">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-primary-light to-brand-primary/10 text-brand-primary border border-brand-primary/20 flex-shrink-0">
                               {t('teamMembers.roles.teamMember')}
                             </span>
                           )}
                           {!member.userId && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 flex-shrink-0">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200 flex-shrink-0">
                               {t('teamMembers.roles.guest')}
                             </span>
                           )}
                         </div>
                         {member.email && (
-                          <p className="text-xs text-gray-500 truncate">{member.email}</p>
+                          <p className="text-xs text-gray-500 truncate font-medium">{member.email}</p>
                         )}
                         {!member.isAdmin && (
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-xs text-gray-500 mt-1.5 font-medium">
                             {t('teamInvites.photosAllocated', { count: calculatePhotosFromCredits(creditsAllocated) })}
                             {creditsUsed > 0 && (
-                              <span className="ml-2 text-brand-cta">
+                              <span className="ml-2 text-brand-cta font-semibold">
                                 • {t('teamInvites.photosUsed', { count: calculatePhotosFromCredits(creditsUsed) })}
                               </span>
                             )}
@@ -964,11 +966,11 @@ export default function TeamPage() {
                         )}
                         {/* Team admins don't show photo style or photos used - they use company photos */}
                         {photoStyle && !member.isAdmin && (
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-xs text-gray-500 mt-1.5 font-medium">
                             Photo style:{' '}
                             <Link 
                               href="/app/styles/team"
-                              className="text-brand-primary hover:text-brand-primary-hover underline"
+                              className="text-brand-primary hover:text-brand-primary-hover font-semibold underline decoration-2 underline-offset-2 transition-colors"
                             >
                               {photoStyle}
                             </Link>
@@ -980,7 +982,7 @@ export default function TeamPage() {
                     {/* Selfies */}
                     <div className="flex justify-center">
                       {member.stats ? (
-                        <span className="text-sm font-semibold text-gray-900">{member.stats.selfies}</span>
+                        <span className="text-base font-bold text-gray-900">{member.stats.selfies}</span>
                       ) : (
                         <span className="text-sm text-gray-400">-</span>
                       )}
@@ -989,7 +991,7 @@ export default function TeamPage() {
                     {/* Generations */}
                     <div className="flex justify-center">
                       {member.stats ? (
-                        <span className="text-sm font-semibold text-gray-900">{member.stats.generations}</span>
+                        <span className="text-base font-bold text-gray-900">{member.stats.generations}</span>
                       ) : (
                         <span className="text-sm text-gray-400">-</span>
                       )}
@@ -998,7 +1000,7 @@ export default function TeamPage() {
                     {/* Available Photos */}
                     <div className="flex justify-center">
                       {member.stats ? (
-                        <span className="text-sm font-semibold text-gray-900">
+                        <span className="text-base font-bold text-gray-900">
                           {member.isAdmin ? calculatePhotosFromCredits(credits.team) : calculatePhotosFromCredits(member.stats.teamCredits ?? 0)}
                         </span>
                       ) : (
@@ -1009,14 +1011,14 @@ export default function TeamPage() {
                     {/* Status */}
                     <div className="flex justify-center">
                       {member.userId ? (
-                        <div className="flex items-center justify-center gap-1.5 text-brand-secondary">
-                          <CheckIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('teamMembers.status.registered')}</span>
+                        <div className="flex items-center justify-center gap-2 text-brand-secondary">
+                          <div className="w-2 h-2 bg-brand-secondary rounded-full ring-2 ring-brand-secondary/20"></div>
+                          <span className="text-sm font-semibold">{t('teamMembers.status.registered')}</span>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-1.5 text-brand-secondary">
-                          <CheckIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('teamMembers.status.guest')}</span>
+                        <div className="flex items-center justify-center gap-2 text-brand-secondary">
+                          <div className="w-2 h-2 bg-brand-secondary rounded-full ring-2 ring-brand-secondary/20"></div>
+                          <span className="text-sm font-semibold">{t('teamMembers.status.guest')}</span>
                         </div>
                       )}
                     </div>
@@ -1028,7 +1030,7 @@ export default function TeamPage() {
                           <button
                             onClick={() => handleResendInvite(memberInvite.id)}
                             disabled={resending === memberInvite.id}
-                            className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50"
+                            className="text-xs px-3.5 py-2 rounded-lg text-brand-primary border border-brand-primary/30 hover:bg-brand-primary/10 hover:border-brand-primary/50 disabled:opacity-50 font-medium transition-all duration-200"
                           >
                             {resending === memberInvite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
                           </button>
@@ -1039,7 +1041,7 @@ export default function TeamPage() {
                               <button
                                 onClick={() => handleChangeMemberRole(member.id, 'team_admin')}
                                 disabled={changingRole === member.id}
-                                className="text-xs px-3 py-1.5 rounded-md text-brand-premium border border-brand-premium hover:bg-brand-premium/10 disabled:opacity-50"
+                                className="text-xs px-3.5 py-2 rounded-lg text-brand-premium border border-brand-premium/30 hover:bg-brand-premium/10 hover:border-brand-premium/50 disabled:opacity-50 font-medium transition-all duration-200"
                               >
                                 {changingRole === member.id ? t('teamMembers.actions.promoting') : t('teamMembers.actions.makeAdmin')}
                               </button>
@@ -1048,7 +1050,7 @@ export default function TeamPage() {
                               <button
                                 onClick={() => handleChangeMemberRole(member.id, 'team_member')}
                                 disabled={changingRole === member.id}
-                                className="text-xs px-3 py-1.5 rounded-md text-brand-cta border border-brand-cta hover:bg-brand-cta/10 disabled:opacity-50"
+                                className="text-xs px-3.5 py-2 rounded-lg text-brand-cta border border-brand-cta/30 hover:bg-brand-cta/10 hover:border-brand-cta/50 disabled:opacity-50 font-medium transition-all duration-200"
                               >
                                 {changingRole === member.id ? t('teamMembers.actions.demoting') : t('teamMembers.actions.demote')}
                               </button>
@@ -1056,7 +1058,7 @@ export default function TeamPage() {
                             <button
                               onClick={() => handleRemoveMember(member.id)}
                               disabled={removing === member.id}
-                              className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50"
+                              className="text-xs px-3.5 py-2 rounded-lg text-red-600 border border-red-600/30 hover:bg-red-50 hover:border-red-600/50 disabled:opacity-50 font-medium transition-all duration-200"
                             >
                               {removing === member.id ? t('teamMembers.actions.removing') : t('teamMembers.actions.remove')}
                             </button>
@@ -1071,7 +1073,7 @@ export default function TeamPage() {
 
                 {/* Team Invites - only show pending invites */}
                 {pendingInvites.map((invite) => (
-                <div key={`invite-${invite.id}`} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                <div key={`invite-${invite.id}`} className="px-7 py-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0 group">
                   <div 
                     className={`grid gap-6 items-center ${
                       userRoles.isTeamAdmin 
@@ -1080,31 +1082,31 @@ export default function TeamPage() {
                     }`}
                   >
                     {/* Invite Info */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <EnvelopeIcon className="h-5 w-5 text-gray-600" />
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 ring-2 ring-gray-200/50 group-hover:ring-gray-300/50 transition-all shadow-sm">
+                        <EnvelopeIcon className="h-6 w-6 text-gray-600" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-base font-semibold text-gray-900 truncate">
                           {invite.firstName || invite.email}
                         </p>
                         {invite.firstName && invite.email && (
-                          <p className="text-xs text-gray-500 truncate">{invite.email}</p>
+                          <p className="text-xs text-gray-500 truncate mt-0.5">{invite.email}</p>
                         )}
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-500 mt-1.5 font-medium">
                           {t('teamInvites.creditsAllocated', { count: calculatePhotosFromCredits(invite.creditsAllocated) })}
                           {invite.usedAt && invite.creditsUsed !== undefined && invite.creditsUsed > 0 && (
-                            <span className="ml-2 text-brand-cta">
+                            <span className="ml-2 text-brand-cta font-semibold">
                               • {t('teamInvites.creditsUsed', { count: calculatePhotosFromCredits(invite.creditsUsed) })}
                             </span>
                           )}
                         </p>
                         {invite.contextName && (
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-xs text-gray-500 mt-1.5 font-medium">
                             Photo style:{' '}
                             <Link 
                               href="/app/styles/team"
-                              className="text-brand-primary hover:text-brand-primary-hover underline"
+                              className="text-brand-primary hover:text-brand-primary-hover font-semibold underline decoration-2 underline-offset-2 transition-colors"
                             >
                               {invite.contextName}
                             </Link>
@@ -1125,36 +1127,36 @@ export default function TeamPage() {
                     
                     {/* Available Credits */}
                     <div className="flex justify-center">
-                      <span className="text-sm font-semibold text-gray-900">{calculatePhotosFromCredits(invite.creditsAllocated)}</span>
+                      <span className="text-base font-bold text-gray-900">{calculatePhotosFromCredits(invite.creditsAllocated)}</span>
                     </div>
                     
                     {/* Status */}
                     <div className="flex justify-center">
                       {invite.usedAt ? (
-                        <div className="flex items-center justify-center gap-1.5 text-brand-secondary">
-                          <CheckIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('teamInvites.status.accepted')}</span>
+                        <div className="flex items-center justify-center gap-2 text-brand-secondary">
+                          <div className="w-2 h-2 bg-brand-secondary rounded-full ring-2 ring-brand-secondary/20 animate-pulse"></div>
+                          <span className="text-sm font-semibold">{t('teamInvites.status.accepted')}</span>
                         </div>
                       ) : isExpired(invite.expiresAt) ? (
-                        <div className="flex items-center justify-center gap-1.5 text-red-600">
-                          <XMarkIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('teamInvites.status.expired')}</span>
+                        <div className="flex items-center justify-center gap-2 text-red-600">
+                          <div className="w-2 h-2 bg-red-600 rounded-full ring-2 ring-red-600/20"></div>
+                          <span className="text-sm font-semibold">{t('teamInvites.status.expired')}</span>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-1.5 text-yellow-600">
-                          <ClockIcon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('teamInvites.status.pending')}</span>
+                        <div className="flex items-center justify-center gap-2 text-yellow-600">
+                          <div className="w-2 h-2 bg-yellow-600 rounded-full ring-2 ring-yellow-600/20 animate-pulse"></div>
+                          <span className="text-sm font-semibold">{t('teamInvites.status.pending')}</span>
                         </div>
                       )}
                     </div>
                     
                     {/* Admin Actions */}
                     {userRoles.isTeamAdmin && (
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-2.5">
                         <button
                           onClick={() => handleResendInvite(invite.id)}
                           disabled={resending === invite.id}
-                          className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50"
+                          className="text-xs px-3.5 py-2 rounded-lg text-brand-primary border border-brand-primary/30 hover:bg-brand-primary/10 hover:border-brand-primary/50 disabled:opacity-50 font-medium transition-all duration-200"
                         >
                           {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
                         </button>
@@ -1162,7 +1164,7 @@ export default function TeamPage() {
                           <button
                             onClick={() => handleRevokeInvite(invite.id)}
                             disabled={revoking === invite.id}
-                            className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50"
+                            className="text-xs px-3.5 py-2 rounded-lg text-red-600 border border-red-600/30 hover:bg-red-50 hover:border-red-600/50 disabled:opacity-50 font-medium transition-all duration-200"
                           >
                             {revoking === invite.id ? t('teamInvites.actions.revoking') : t('teamInvites.actions.revoke')}
                           </button>
@@ -1187,10 +1189,10 @@ export default function TeamPage() {
                   const photoStyle = memberInvite?.contextName ?? teamData?.activeContext?.name
                   
                   return (
-                <div key={`member-${member.id}`} className="p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="w-10 h-10 bg-brand-primary-light rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-medium text-brand-primary">
+                <div key={`member-${member.id}`} className="p-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0">
+                  <div className="flex items-start gap-4 mb-5">
+                    <div className="w-12 h-12 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 ring-2 ring-brand-primary/5 shadow-sm">
+                      <span className="text-sm font-bold text-brand-primary">
                         {member.isCurrentUser 
                           ? t('teamMembers.you') 
                           : member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -1198,22 +1200,22 @@ export default function TeamPage() {
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <p className="text-sm font-medium text-gray-900">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <p className="text-base font-semibold text-gray-900">
                           {member.isCurrentUser ? 'You' : member.name}
                         </p>
                         {member.isAdmin && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-premium/10 text-brand-premium">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-premium/10 to-brand-premium/5 text-brand-premium border border-brand-premium/20">
                             {t('teamMembers.roles.teamAdmin')}
                           </span>
                         )}
                         {!member.isAdmin && member.userId && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-primary-light text-brand-primary">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-primary-light to-brand-primary/10 text-brand-primary border border-brand-primary/20">
                             {t('teamMembers.roles.teamMember')}
                           </span>
                         )}
                         {!member.userId && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
                             {t('teamMembers.roles.guest')}
                           </span>
                         )}
@@ -1248,18 +1250,18 @@ export default function TeamPage() {
 
                   {/* Stats Grid */}
                   {member.stats && (
-                    <Grid cols={{ mobile: 2 }} gap="sm" className="mb-4 pl-[52px]">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('teamMembers.headers.selfies')}</p>
-                        <p className="text-sm font-semibold text-gray-900">{member.stats.selfies}</p>
+                    <Grid cols={{ mobile: 2 }} gap="sm" className="mb-5 pl-[64px]">
+                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">{t('teamMembers.headers.selfies')}</p>
+                        <p className="text-lg font-bold text-gray-900">{member.stats.selfies}</p>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('teamMembers.headers.generations')}</p>
-                        <p className="text-sm font-semibold text-gray-900">{member.stats.generations}</p>
+                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">{t('teamMembers.headers.generations')}</p>
+                        <p className="text-lg font-bold text-gray-900">{member.stats.generations}</p>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('teamMembers.headers.availablePhotos')}</p>
-                        <p className="text-sm font-semibold text-gray-900">
+                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">{t('teamMembers.headers.availablePhotos')}</p>
+                        <p className="text-lg font-bold text-gray-900">
                           {member.isAdmin ? calculatePhotosFromCredits(credits.team) : calculatePhotosFromCredits(member.stats.teamCredits ?? 0)}
                         </p>
                       </div>
@@ -1267,28 +1269,28 @@ export default function TeamPage() {
                   )}
 
                   {/* Status */}
-                  <div className="mb-4 pl-[52px]">
+                  <div className="mb-5 pl-[64px]">
                     {member.userId ? (
-                      <div className="flex items-center gap-1.5 text-brand-secondary">
-                        <CheckIcon className="h-4 w-4" />
-                        <span className="text-sm font-medium">{t('teamMembers.status.registered')}</span>
+                      <div className="flex items-center gap-2 text-brand-secondary">
+                        <div className="w-2 h-2 bg-brand-secondary rounded-full ring-2 ring-brand-secondary/20"></div>
+                        <span className="text-sm font-semibold">{t('teamMembers.status.registered')}</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 text-brand-secondary">
-                        <CheckIcon className="h-4 w-4" />
-                        <span className="text-sm font-medium">{t('teamMembers.status.guest')}</span>
+                      <div className="flex items-center gap-2 text-brand-secondary">
+                        <div className="w-2 h-2 bg-brand-secondary rounded-full ring-2 ring-brand-secondary/20"></div>
+                        <span className="text-sm font-semibold">{t('teamMembers.status.guest')}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Admin Actions */}
                   {userRoles.isTeamAdmin && (
-                    <div className="flex flex-wrap gap-2 pl-[52px]">
+                    <div className="flex flex-wrap gap-2.5 pl-[64px]">
                       {memberInvite && (
                         <button
                           onClick={() => handleResendInvite(memberInvite.id)}
                           disabled={resending === memberInvite.id}
-                          className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50 min-h-[44px]"
+                          className="text-xs px-3.5 py-2 rounded-lg text-brand-primary border border-brand-primary/30 hover:bg-brand-primary/10 hover:border-brand-primary/50 disabled:opacity-50 min-h-[44px] font-medium transition-all duration-200"
                         >
                           {resending === memberInvite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
                         </button>
@@ -1299,7 +1301,7 @@ export default function TeamPage() {
                             <button
                               onClick={() => handleChangeMemberRole(member.id, 'team_admin')}
                               disabled={changingRole === member.id}
-                              className="text-xs px-3 py-1.5 rounded-md text-brand-premium border border-brand-premium hover:bg-brand-premium/10 disabled:opacity-50 min-h-[44px]"
+                              className="text-xs px-3.5 py-2 rounded-lg text-brand-premium border border-brand-premium/30 hover:bg-brand-premium/10 hover:border-brand-premium/50 disabled:opacity-50 min-h-[44px] font-medium transition-all duration-200"
                             >
                               {changingRole === member.id ? t('teamMembers.actions.promoting') : t('teamMembers.actions.makeAdmin')}
                             </button>
@@ -1308,7 +1310,7 @@ export default function TeamPage() {
                             <button
                               onClick={() => handleChangeMemberRole(member.id, 'team_member')}
                               disabled={changingRole === member.id}
-                              className="text-xs px-3 py-1.5 rounded-md text-brand-cta border border-brand-cta hover:bg-brand-cta/10 disabled:opacity-50 min-h-[44px]"
+                              className="text-xs px-3.5 py-2 rounded-lg text-brand-cta border border-brand-cta/30 hover:bg-brand-cta/10 hover:border-brand-cta/50 disabled:opacity-50 min-h-[44px] font-medium transition-all duration-200"
                             >
                               {changingRole === member.id ? t('teamMembers.actions.demoting') : t('teamMembers.actions.demote')}
                             </button>
@@ -1316,7 +1318,7 @@ export default function TeamPage() {
                           <button
                             onClick={() => handleRemoveMember(member.id)}
                             disabled={removing === member.id}
-                            className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50 min-h-[44px]"
+                            className="text-xs px-3.5 py-2 rounded-lg text-red-600 border border-red-600/30 hover:bg-red-50 hover:border-red-600/50 disabled:opacity-50 min-h-[44px] font-medium transition-all duration-200"
                           >
                             {removing === member.id ? t('teamMembers.actions.removing') : t('teamMembers.actions.remove')}
                           </button>
@@ -1330,17 +1332,17 @@ export default function TeamPage() {
 
                 {/* Team Invites - only show pending invites */}
                 {pendingInvites.map((invite) => (
-                <div key={`invite-${invite.id}`} className="p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <EnvelopeIcon className="h-5 w-5 text-gray-600" />
+                <div key={`invite-${invite.id}`} className="p-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0">
+                  <div className="flex items-start gap-4 mb-5">
+                    <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 ring-2 ring-gray-200/50 shadow-sm">
+                      <EnvelopeIcon className="h-6 w-6 text-gray-600" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 break-words">
+                      <p className="text-base font-semibold text-gray-900 break-words">
                         {invite.firstName || invite.email}
                       </p>
                       {invite.firstName && invite.email && (
-                        <p className="text-xs text-gray-500">{invite.email}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{invite.email}</p>
                       )}
                       <p className="text-xs text-gray-400 mt-1">
                         {t('teamInvites.creditsAllocated', { count: calculatePhotosFromCredits(invite.creditsAllocated) })}
@@ -1374,32 +1376,32 @@ export default function TeamPage() {
                   </div>
 
                   {/* Status */}
-                  <div className="mb-4 pl-[52px]">
+                  <div className="mb-5 pl-[64px]">
                     {invite.usedAt ? (
-                      <div className="flex items-center gap-1.5 text-brand-secondary">
-                        <CheckIcon className="h-4 w-4" />
-                        <span className="text-sm font-medium">{t('teamInvites.status.accepted')}</span>
+                      <div className="flex items-center gap-2 text-brand-secondary">
+                        <div className="w-2 h-2 bg-brand-secondary rounded-full ring-2 ring-brand-secondary/20 animate-pulse"></div>
+                        <span className="text-sm font-semibold">{t('teamInvites.status.accepted')}</span>
                       </div>
                     ) : isExpired(invite.expiresAt) ? (
-                      <div className="flex items-center gap-1.5 text-red-600">
-                        <XMarkIcon className="h-4 w-4" />
-                        <span className="text-sm font-medium">{t('teamInvites.status.expired')}</span>
+                      <div className="flex items-center gap-2 text-red-600">
+                        <div className="w-2 h-2 bg-red-600 rounded-full ring-2 ring-red-600/20"></div>
+                        <span className="text-sm font-semibold">{t('teamInvites.status.expired')}</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 text-yellow-600">
-                        <ClockIcon className="h-4 w-4" />
-                        <span className="text-sm font-medium">{t('teamInvites.status.pending')}</span>
+                      <div className="flex items-center gap-2 text-yellow-600">
+                        <div className="w-2 h-2 bg-yellow-600 rounded-full ring-2 ring-yellow-600/20 animate-pulse"></div>
+                        <span className="text-sm font-semibold">{t('teamInvites.status.pending')}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Admin Actions */}
                   {userRoles.isTeamAdmin && (
-                    <div className="flex flex-wrap gap-2 pl-[52px]">
+                    <div className="flex flex-wrap gap-2.5 pl-[64px]">
                       <button
                         onClick={() => handleResendInvite(invite.id)}
                         disabled={resending === invite.id}
-                        className="text-xs px-3 py-1.5 rounded-md text-brand-primary border border-brand-primary hover:bg-brand-primary/10 disabled:opacity-50 min-h-[44px]"
+                        className="text-xs px-3.5 py-2 rounded-lg text-brand-primary border border-brand-primary/30 hover:bg-brand-primary/10 hover:border-brand-primary/50 disabled:opacity-50 min-h-[44px] font-medium transition-all duration-200"
                       >
                         {resending === invite.id ? t('teamInvites.actions.resending') : t('teamInvites.actions.resend')}
                       </button>
@@ -1407,7 +1409,7 @@ export default function TeamPage() {
                         <button
                           onClick={() => handleRevokeInvite(invite.id)}
                           disabled={revoking === invite.id}
-                          className="text-xs px-3 py-1.5 rounded-md text-red-600 border border-red-600 hover:bg-red-50 disabled:opacity-50 min-h-[44px]"
+                          className="text-xs px-3.5 py-2 rounded-lg text-red-600 border border-red-600/30 hover:bg-red-50 hover:border-red-600/50 disabled:opacity-50 min-h-[44px] font-medium transition-all duration-200"
                         >
                           {revoking === invite.id ? t('teamInvites.actions.revoking') : t('teamInvites.actions.revoke')}
                         </button>
@@ -1423,16 +1425,16 @@ export default function TeamPage() {
 
       {/* Invite Form Modal */}
       {showInviteForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-          <div className="bg-white rounded-xl max-w-md w-full my-4 max-h-[calc(100vh-2rem)] overflow-y-auto shadow-2xl animate-scale-in">
-            <div className="p-6 sm:p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full my-4 max-h-[calc(100vh-2rem)] overflow-y-auto shadow-2xl animate-scale-in border border-gray-200">
+            <div className="p-7 sm:p-9">
+              <h2 className="text-3xl font-bold text-gray-900 mb-8 tracking-tight">
                 {t('inviteForm.title')}
               </h2>
 
-              <form onSubmit={handleInviteTeamMember} className="space-y-5" noValidate>
+              <form onSubmit={handleInviteTeamMember} className="space-y-6" noValidate>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2.5">
                     {t('inviteForm.email.label')} *
                   </label>
                   <input
@@ -1441,13 +1443,13 @@ export default function TeamPage() {
                     required
                     value={emailValue}
                     onChange={(e) => setEmailValue(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
+                    className="w-full px-5 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm hover:border-gray-300"
                     placeholder={t('inviteForm.email.placeholder')}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2.5">
                     {t('inviteForm.firstName.label')} *
                   </label>
                   <input
@@ -1456,10 +1458,10 @@ export default function TeamPage() {
                     required
                     value={firstNameValue}
                     onChange={(e) => setFirstNameValue(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors"
+                    className="w-full px-5 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm hover:border-gray-300"
                     placeholder={t('inviteForm.firstName.placeholder')}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-2 font-medium">
                     Personalizes the invite email
                   </p>
                 </div>
@@ -1517,14 +1519,14 @@ export default function TeamPage() {
                     onFocus={(e) => {
                       e.target.select()
                     }}
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary transition-colors ${
-                      inviteError ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-brand-primary'
+                    className={`w-full px-5 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all shadow-sm hover:border-gray-300 ${
+                      inviteError ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-brand-primary focus:ring-brand-primary/20'
                     }`}
                   />
                   {inviteError ? (
-                    <p className="text-red-600 text-sm mt-1 font-medium">{inviteError}</p>
+                    <p className="text-red-600 text-sm mt-2 font-semibold">{inviteError}</p>
                   ) : (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-2 font-medium">
                       {t('inviteForm.photos.hint', {
                         count: PRICING_CONFIG.regenerations.invited,
                         default: `Each photo can be retried up to ${PRICING_CONFIG.regenerations.invited} times for free`
@@ -1532,20 +1534,24 @@ export default function TeamPage() {
                     </p>
                   )}
                   {allocatedPhotos <= 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
-                      <div className="flex items-start gap-2">
-                        <XCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-red-800 text-sm font-medium">
+                    <div className="bg-gradient-to-r from-red-50 to-red-50/50 border-2 border-red-200 rounded-xl p-4 mt-3 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-5 h-5 bg-red-100 rounded-lg flex items-center justify-center">
+                          <XCircle className="h-3.5 w-3.5 text-red-600" />
+                        </div>
+                        <p className="text-red-800 text-sm font-semibold leading-relaxed">
                           {t('inviteForm.photos.required')}
                         </p>
                       </div>
                     </div>
                   )}
                   {allocatedPhotos > 0 && allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
-                      <div className="flex items-start gap-2">
-                        <XCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-red-800 text-sm font-medium">
+                    <div className="bg-gradient-to-r from-red-50 to-red-50/50 border-2 border-red-200 rounded-xl p-4 mt-3 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-5 h-5 bg-red-100 rounded-lg flex items-center justify-center">
+                          <XCircle className="h-3.5 w-3.5 text-red-600" />
+                        </div>
+                        <p className="text-red-800 text-sm font-semibold leading-relaxed">
                           {t('inviteForm.insufficientCreditsModal', { 
                             required: allocatedPhotos,
                             available: calculatePhotosFromCredits(credits.team) 
@@ -1557,19 +1563,19 @@ export default function TeamPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <label className="block text-sm font-semibold text-gray-700 mb-4">
                     {t('inviteForm.photoStyle.label', { default: 'Photo Style' })}
                   </label>
                   {isFreePlan ? (
                     // Free plan: Show static message about free package style (no choice)
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                      <div className="text-sm font-medium text-gray-900 mb-1">
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-50/50 border-2 border-gray-200 rounded-xl p-4 shadow-sm">
+                      <div className="text-sm font-semibold text-gray-900 mb-2">
                         {t('inviteForm.photoStyle.useFreePackageStyle', { 
                           default: 'Free Package Style',
                           name: 'Free Package Style'
                         })}
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-gray-600 font-medium leading-relaxed">
                         {t('inviteForm.photoStyle.useFreePackageStyleDesc', { 
                           default: 'Team member will use the free package photo style. This cannot be changed for free plan accounts.'
                         })}
@@ -1579,20 +1585,20 @@ export default function TeamPage() {
                     </div>
                   ) : (
                     // Paid plan: Show radio button choices
-                    <div className="space-y-3">
-                      <label className="flex items-center">
+                    <div className="space-y-4">
+                      <label className="flex items-start p-4 border-2 border-gray-200 rounded-xl hover:border-brand-primary/30 hover:bg-brand-primary/5 transition-all cursor-pointer group">
                         <input
                           type="radio"
                           name="photoStyleType"
                           value="context"
                           defaultChecked
-                          className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300"
+                          className="h-5 w-5 text-brand-primary focus:ring-brand-primary border-gray-300 mt-0.5"
                         />
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="ml-4">
+                          <div className="text-sm font-semibold text-gray-900 mb-1">
                             {t('inviteForm.photoStyle.useActiveStyle', { default: 'Use Active Photo Style' })}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-600 font-medium">
                             {(() => {
                               const styleName = teamData?.activeContext?.name || 'Active Style'
                               const baseText = t('inviteForm.photoStyle.useActiveStyleDesc', { 
@@ -1612,18 +1618,18 @@ export default function TeamPage() {
                           </div>
                         </div>
                       </label>
-                      <label className="flex items-center">
+                      <label className="flex items-start p-4 border-2 border-gray-200 rounded-xl hover:border-brand-primary/30 hover:bg-brand-primary/5 transition-all cursor-pointer group">
                         <input
                           type="radio"
                           name="photoStyleType"
                           value="freestyle"
-                          className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300"
+                          className="h-5 w-5 text-brand-primary focus:ring-brand-primary border-gray-300 mt-0.5"
                         />
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="ml-4">
+                          <div className="text-sm font-semibold text-gray-900 mb-1">
                             {t('inviteForm.photoStyle.allowFreestyle', { default: 'Allow Freestyle' })}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-600 font-medium">
                             {t('inviteForm.photoStyle.allowFreestyleDesc', { 
                               default: 'Team member can customize their own photo style'
                             })}
@@ -1634,9 +1640,9 @@ export default function TeamPage() {
                   )}
                 </div>
 
-                <div className="bg-brand-primary-light border border-brand-primary/20 rounded-xl p-4">
-                  <h4 className="text-sm font-semibold text-brand-primary mb-2">{t('inviteForm.whatHappensNext.title')}</h4>
-                  <ul className="text-xs text-brand-primary space-y-1.5">
+                <div className="bg-gradient-to-br from-brand-primary-light to-brand-primary/5 border-2 border-brand-primary/20 rounded-2xl p-5 shadow-sm">
+                  <h4 className="text-sm font-bold text-brand-primary mb-3">{t('inviteForm.whatHappensNext.title')}</h4>
+                  <ul className="text-xs text-brand-primary space-y-2 font-medium">
                     <li className="flex gap-2">
                       <span className="text-brand-primary flex-shrink-0">•</span>
                       <span>{t('inviteForm.whatHappensNext.step1')}</span>
@@ -1660,14 +1666,14 @@ export default function TeamPage() {
                   </ul>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-6">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-8">
                   <button
                     type="submit"
                     disabled={inviting || allocatedPhotos <= 0 || allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team}
-                    className={`flex-1 px-6 py-3 rounded-lg font-medium min-h-[44px] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                    className={`flex-1 px-7 py-3.5 rounded-xl font-semibold text-base min-h-[48px] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
                       allocatedPhotos <= 0 || allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team
                         ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-sm hover:shadow-md disabled:opacity-50'
+                        : 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-md hover:shadow-lg disabled:opacity-50 transform hover:-translate-y-0.5'
                     }`}
                   >
                     {inviting ? t('inviteForm.buttons.sending') : t('inviteForm.buttons.send')}
@@ -1683,7 +1689,7 @@ export default function TeamPage() {
                       setAllocatedPhotos(defaultPhotos)
                       setShowInviteForm(false)
                     }}
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 min-h-[44px] sm:w-auto font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+                    className="px-7 py-3.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 min-h-[48px] sm:w-auto font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 shadow-sm hover:shadow"
                   >
                     {t('inviteForm.buttons.cancel')}
                   </button>

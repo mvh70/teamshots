@@ -176,7 +176,7 @@
       },
       "2": {
         "question": "How much does it cost?",
-        "answer": "When you sign up, you get a free test generation in a predefined style so you can see the quality. After that: Try Once package for $5 (2 generations), Individual plan at $24/month (6 generations/month), or Pro plan at $59/month (20 generations/month). Annual plans save you more. Credits never expire, so you can hoard them like digital gold. Each generation uses 10 credits and produces 4 variations."
+        "answer": "When you sign up, you get a free test generation with TeamShotsPro branding so you can see the quality. After that: Individual plan at $19.99 (5 photos), Pro Small at $19.99 (5 photos for teams up to 5), or Pro Large at $59.99 (20 photos for larger teams). Credits never expire, so you can hoard them like digital gold. Each generation uses 10 credits and produces 4 variations."
       },
       "3": {
         "question": "What types of photos work best?",
@@ -279,7 +279,7 @@
     "benefit1": "60 second results",
     "benefit2": "Save $200+ per person",
     "benefit3": "100% Secure",
-    "guarantee": "Try once almost for free, before you subscribe",
+    "guarantee": "Try it free, no credit card required. See the quality before you commit.",
     "secure": "SSL encrypted & secure",
     "noSpam": "No spam, ever",
     "joinedBadge": "Professional AI headshots in 60 seconds"
@@ -310,7 +310,7 @@
     "individualTopUp": "Individual top-up",
     "proSmallTopUp": "Pro Small top-up",
     "proLargeTopUp": "Pro Large top-up",
-    "tryOnceTopUp": "Try Once top-up",
+    "tryItForFreeTopUp": "Try It For Free top-up",
     "topUpSubtitle": "For occasional use",
     "topUpPackageLabel": "Top-up package",
     "confirmTopUp": "Refill my photos",
@@ -324,24 +324,26 @@
       "checkoutError": "Oops! Something went wrong. Please try again. (If it keeps happening, let us know-we're here to help)",
       "checkoutApiError": "Failed to create checkout session",
     "plans": {
-      "tryOnce": {
-        "name": "Try Once",
-        "period": "one-time",
-        "description": "Perfect for testing the service",
+      "tryItForFree": {
+        "name": "Try It For Free",
+        "period": "free",
+        "description": "See what all the fuss is about. No credit card, no commitment, just one free test to prove we're not messing around.",
         "features": [
-          "Retry up to 2 times to perfect each photo",
-          "Photos retained until account closure",
-          "Top-up credits available",
-          "Email support"
+          "1 free photo generation ({shots} shots)",
+          "Includes TeamShotsPro branding",
+          "Retry up to {regenerations} times to perfect your photo",
+          "Perfect for testing before you commit"
         ],
-        "cta": "Test drive a headshot"
+        "cta": "Sign up free"
       },
       "individual": {
         "name": "Individual",
         "period": "one-time",
-        "description": "For solo professionals who like to look good",
+        "description": "For solo professionals. One-time purchase, no monthly fees.",
         "features": [
-          "Retry up to 3 times to perfect each photo",
+          "One-time payment, no recurring charges",
+          "Credits never expire, use anytime",
+          "Retry up to {regenerations} times to perfect each photo",
           "Photos retained until account closure",
           "Top-up credits available"
         ],
@@ -350,9 +352,11 @@
       "proSmall": {
         "name": "Pro Small",
         "period": "one-time",
-        "description": "For small teams up to 5 members",
+        "description": "For small teams up to 5 members. Pay once, no subscription.",
         "features": [
-          "Retry up to 4 times to perfect each photo",
+          "One-time payment, no recurring charges",
+          "Credits never expire, use anytime",
+          "Retry up to {regenerations} times to perfect each photo",
           "Photos retained until account closure",
           "Team photo management",
           "Top-up credits available"
@@ -362,8 +366,10 @@
       "proLarge": {
         "name": "Pro Large",
         "period": "one-time",
-        "description": "For larger teams",
+        "description": "For larger teams. One-time payment, no recurring charges.",
         "features": [
+          "One-time payment, no recurring charges",
+          "Credits never expire, use anytime",
           "Retry up to 4 times to perfect each photo",
           "Photos retained until account closure",
           "Team photo management",
@@ -400,8 +406,8 @@
     "purchaseSuccess": {
       "title": "Welcome aboard!",
       "subtitle": "Your purchase was successful. Here's what you unlocked:",
-      "tryOnce": {
-        "title": "Try Once Package",
+      "tryItForFree": {
+        "title": "Welcome! Your free test is ready",
         "credits": "{uniquePhotos} photo",
         "photos": "{count} photos for photo generation",
         "retries": "{count} free retries to perfect your photos"
@@ -476,8 +482,8 @@
       "planPro": "Pro",
       "planIndividual": "Individual",
       "planGeneric": "your plan",
-      "planTryOnce": "Try Once",
-      "planSummaryTryOnce": "{credits} credits, {photos} photos",
+      "planTryItForFree": "Try It For Free",
+      "planSummaryTryItForFree": "{credits} credits, {photos} photos",
       "planSummaryPro": "{credits} credits, {photos} photos",
       "planSummaryIndividual": "{credits} credits, {photos} photos",
       "welcomeMessage": "Welcome",
@@ -591,6 +597,7 @@
         "insufficientPhotosMessage": "You need {required} photos to generate a photo. You currently have {current} photos. Time to top up!",
     "generatePhoto": "Generate photo",
     "customizeFirstTooltip": "Customize your photo with the editable sections below",
+    "customizeFirstTooltipMobile": "Customize your photo with the editable sections above",
         "buyMorePhotos": "Buy more photos",
         "insufficientCredits": "Insufficient photo credits",
         "insufficientCreditsMessage": "You need {required, plural, one {# photo credit} other {# photo credits}} to generate. You currently have {current, plural, one {# photo credit} other {# photo credits}}. Time to top up!",
@@ -676,12 +683,12 @@
         "manageTeam": "Manage team"
       },
       "successMessages": {
-        "tryOnce": "Try Once package purchased successfully! {photos} photos have been added to your account.",
+        "tryItForFree": "Your free test is ready! {photos} photos have been added to your account.",
         "individual": "Individual plan activated successfully! {photos} photos have been added to your account.",
         "pro": "Pro plan activated successfully! {photos} photos have been added to your account.",
         "topUp": "Photo top-up completed successfully! Your photos have been added to your account.",
         "default": "Purchase completed successfully! Your photos have been added to your account.",
-        "titleTryOnce": "All set! 🎉",
+        "titleTryItForFree": "Welcome! 🎉",
         "titleIndividual": "You're in! 🚀",
         "titlePro": "Pro unlocked! 🎯",
         "titleTopUp": "Photos loaded! ⚡"
@@ -833,6 +840,7 @@
       },
       "teamInfo": {
         "title": "Team information",
+        "subtitle": "Manage your team details and information",
         "name": {
           "label": "Team name",
           "placeholder": "Enter your team name"
@@ -888,8 +896,8 @@
         "paid": {
           "message": "🎉 Yay, we know that as a business you need these invoices. We'll give them to you as soon as possible (because organized finances are hot, and we support that energy)."
         },
-        "tryOnce": {
-          "message": "🎉 Yay, you bought some photos! Invoices will appear here soon (we're just adding the finishing touches to make them look professional, because that's how we roll)."
+        "tryItForFree": {
+          "message": "🎉 You're on the free plan! Upgrade to unlock invoices and more features (because organized finances are hot, and we support that energy)."
         },
         "individual": {
           "message": "🎉 Yay, you bought some photos! Invoices will appear here soon (we're just adding the finishing touches to make them look professional, because that's how we roll)."
@@ -1700,7 +1708,11 @@
         "customUpload": "Upload Background",
         "uploadPrompt": "Click to upload or drag and drop",
         "chooseFile": "Choose file",
-        "uploadedFile": "Uploaded:"
+        "uploadedFile": "Uploaded:",
+        "colorValue": "Color",
+        "colorHint": "Hex code or color name",
+        "variations": "Variations",
+        "presets": "Choose a color"
       },
       "branding": {
         "title": "Branding",
@@ -2054,7 +2066,7 @@
         "styleCreationNotAvailable": "Photo style creation isn't available on the free plan. Upgrade to unlock this feature and create custom styles!"
       },
       "stripe": {
-        "tryOnceAlreadyUsed": "You've already used the Try Once package. Ready to upgrade? We'd love to have you back!",
+        "tryItForFreeAlreadyUsed": "You've already used your free test. Ready to upgrade? We'd love to have you back!",
         "topUpNotAllowedOnFree": "Top-ups aren't available on the free plan. Upgrade to a paid plan to top up your credits.",
         "missingSubscriptionIdOrNewPriceId": "Missing subscription information. Please refresh and try again, or contact support if this persists.",
         "missingSubscriptionIdOrNewLowerPriceId": "Missing subscription information. Please refresh and try again.",

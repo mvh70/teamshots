@@ -80,13 +80,13 @@ export default function FAQ() {
   });
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-20 sm:py-24 lg:py-32 bg-bg-gray-50 relative grain-texture">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6 leading-tight">
             {t('title')}
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-lg sm:text-xl text-text-body max-w-2xl mx-auto leading-relaxed">
             {t('subtitle')}
           </p>
         </div>
@@ -128,13 +128,13 @@ export default function FAQ() {
           {filteredItems.map((item) => (
             <div
               key={item.id}
-              className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+              className="border-2 border-brand-primary-lighter/30 rounded-2xl overflow-hidden hover:shadow-depth-lg hover:border-brand-primary-lighter transition-all duration-300 bg-bg-white"
             >
               <button
                 onClick={() => toggleItem(item.id)}
-                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-brand-primary-light/30 transition-all duration-300 rounded-2xl"
               >
-                <h3 className="font-semibold text-gray-900 pr-4">
+                <h3 className="font-semibold text-text-dark pr-4 text-lg leading-snug">
                   {item.question}
                 </h3>
                 <svg
@@ -150,9 +150,9 @@ export default function FAQ() {
               </button>
               
               {openItems.includes(item.id) && (
-                <div className="px-6 pb-4">
-                  <div className="pt-2 border-t border-gray-100">
-                    <p className="text-gray-600 leading-relaxed">
+                <div className="px-6 pb-6">
+                  <div className="pt-4 border-t-2 border-brand-primary-lighter/30">
+                    <p className="text-text-body leading-relaxed text-base">
                       {item.answer}
                     </p>
                   </div>
@@ -175,10 +175,10 @@ export default function FAQ() {
           <p className="text-gray-600 mb-4">
             {t('stillHaveQuestions')}
           </p>
-          <a
-            href={`mailto:${getBrandContact().support}`}
-            className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition-colors"
-          >
+            <a
+              href={`mailto:${getBrandContact().support}`}
+              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white rounded-2xl hover:shadow-depth-lg transition-all duration-300 shadow-depth-md transform hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98]"
+            >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>

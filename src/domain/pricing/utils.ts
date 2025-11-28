@@ -30,6 +30,11 @@ export function getPricePerPhoto(tier: PricingTier): number {
   const tierConfig = PRICING_CONFIG[tier]
   const regenerations = PRICING_CONFIG.regenerations[tier]
 
+  // Try It For Free is free, so price per photo is 0
+  if (tier === 'tryItForFree') {
+    return 0
+  }
+
   return calculatePricePerPhoto(
     tierConfig.price,
     tierConfig.credits,
@@ -39,11 +44,11 @@ export function getPricePerPhoto(tier: PricingTier): number {
 
 export function getPricingDisplay() {
   return {
-    tryOnce: {
-      price: formatPrice(PRICING_CONFIG.tryOnce.price),
-      credits: PRICING_CONFIG.tryOnce.credits,
-      pricePerPhoto: formatPrice(getPricePerPhoto('tryOnce')),
-      regenerations: PRICING_CONFIG.regenerations.tryOnce,
+    tryItForFree: {
+      price: 'Free',
+      credits: PRICING_CONFIG.tryItForFree.credits,
+      pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
+      regenerations: PRICING_CONFIG.regenerations.tryItForFree,
     },
     individual: {
       price: formatPrice(PRICING_CONFIG.individual.price),

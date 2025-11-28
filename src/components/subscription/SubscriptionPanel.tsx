@@ -63,14 +63,17 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
   // const pricing = useMemo(() => getPricingDisplay(), []) // Disabled for transactional pricing
 
   // Build standardized plan objects (matching PricingPreview/PricingContent pattern)
-  const tryOncePlan = {
+  // Note: tryOnce was replaced with tryItForFree, so we conditionally build tryOncePlan
+  // only if tryOnce exists in PRICING_CONFIG (for backward compatibility)
+  const tryOnceConfig = (PRICING_CONFIG as Record<string, any>).tryOnce
+  const tryOncePlan = tryOnceConfig ? {
     id: 'tryOnce' as const,
-    price: `$${PRICING_CONFIG.tryOnce.price}`,
-    credits: PRICING_CONFIG.tryOnce.credits,
-    regenerations: PRICING_CONFIG.regenerations.tryOnce,
+    price: `$${tryOnceConfig.price}`,
+    credits: tryOnceConfig.credits,
+    regenerations: (PRICING_CONFIG.regenerations as Record<string, number>).tryOnce || PRICING_CONFIG.regenerations.tryItForFree,
     pricePerPhoto: formatPrice(getPricePerPhoto('tryOnce')),
     popular: false,
-  }
+  } : null
 
   const individualPlan = {
     id: 'individual' as const,
@@ -101,8 +104,8 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
 
   // Filter plans based on user mode
   const plansToShow = [
-    // Always show Try Once
-    tryOncePlan,
+    // Show Try Once only if it exists in config (for backward compatibility)
+    ...(tryOncePlan ? [tryOncePlan] : []),
     // Show Individual if user mode, Pro Small and Pro Large if team mode
     ...(userMode === 'team' ? [proSmallPlan, proLargePlan] : [individualPlan]),
   ]
@@ -148,7 +151,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
                 className="h-full"
               />
             </div>
-            <TopUpCard tier="try_once" onError={onCheckoutError} regenerationsOverride={PRICING_CONFIG.regenerations.tryOnce} />
+            <TopUpCard tier="try_once" onError={onCheckoutError} regenerationsOverride={(PRICING_CONFIG.regenerations as Record<string, number>).tryOnce || PRICING_CONFIG.regenerations.tryItForFree} />
           </div>
         </div>
       ) : hasActiveSubscription ? (
@@ -225,8 +228,9 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
           }`}>
             {plansToShow.map((plan) => {
               const checkoutType = plan.id === 'tryOnce' ? 'try_once' : 'plan'
+              const tryOnceConfig = (PRICING_CONFIG as Record<string, any>).tryOnce
               const stripePriceId = plan.id === 'tryOnce' 
-                ? PRICING_CONFIG.tryOnce.stripePriceId
+                ? (tryOnceConfig?.stripePriceId || '')
                 : plan.id === 'proSmall'
                   ? PRICING_CONFIG.proSmall.stripePriceId
                   : plan.id === 'proLarge'

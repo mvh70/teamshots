@@ -142,23 +142,23 @@ export default function SignInPage() {
   return (
     <AuthSplitLayout
       left={
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-primary-light via-bg-white to-brand-cta-light rounded-3xl shadow-depth-lg" />
-          <div className="relative p-10 lg:p-12">
-            <h1 className="text-4xl lg:text-5xl font-display font-bold text-text-dark mb-6">{t('welcomeBack')}</h1>
-            <p className="text-lg lg:text-xl text-text-body mb-10 leading-relaxed">{t('welcomeSubtitle')}</p>
-            <div className="space-y-5">
-              <div className="flex items-center gap-3">
-                <span className="w-2.5 h-2.5 bg-brand-cta rounded-full" />
-                <span className="text-base lg:text-lg text-text-body">{t('benefit1')}</span>
+        <div className="relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-pink-500/10 rounded-3xl shadow-xl border border-white/20 backdrop-blur-sm transition-all duration-500 group-hover:shadow-2xl group-hover:from-blue-500/15 group-hover:via-purple-500/8 group-hover:to-pink-500/15" />
+          <div className="relative p-12 lg:p-14">
+            <h1 className="text-5xl lg:text-6xl font-display font-bold text-slate-900 mb-6 tracking-tight leading-tight bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">{t('welcomeBack')}</h1>
+            <p className="text-xl lg:text-2xl text-slate-600 mb-12 leading-relaxed font-medium">{t('welcomeSubtitle')}</p>
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1">
+                <span className="w-3 h-3 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full shadow-sm animate-pulse" style={{ animationDuration: '2s' }} />
+                <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('benefit1')}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="w-2.5 h-2.5 bg-brand-cta rounded-full" />
-                <span className="text-base lg:text-lg text-text-body">{t('benefit2')}</span>
+              <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1" style={{ transitionDelay: '50ms' }}>
+                <span className="w-3 h-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full shadow-sm animate-pulse" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+                <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('benefit2')}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="w-2.5 h-2.5 bg-brand-cta rounded-full" />
-                <span className="text-base lg:text-lg text-text-body">{t('benefit3')}</span>
+              <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1" style={{ transitionDelay: '100ms' }}>
+                <span className="w-3 h-3 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full shadow-sm animate-pulse" style={{ animationDuration: '2s', animationDelay: '1s' }} />
+                <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('benefit3')}</span>
               </div>
             </div>
           </div>
@@ -167,7 +167,7 @@ export default function SignInPage() {
     >
       <AuthCard title={t('title')}>
         <FocusTrap>
-        <form className="space-y-6 lg:space-y-7" onSubmit={handleSubmit}>
+        <form className="space-y-7 lg:space-y-8" onSubmit={handleSubmit}>
           <AuthInput
             id="email"
             type="email"
@@ -191,26 +191,30 @@ export default function SignInPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           )}
-          <div className="flex items-center justify-between">
-            <label className="inline-flex items-center gap-2 text-sm text-text-body">
+          <div className="flex items-center justify-between pt-1">
+            <label className="inline-flex items-center gap-2.5 text-sm text-slate-600 cursor-pointer hover:text-slate-700 transition-colors">
               <input
                 id="magic-link"
                 name="magic-link"
                 type="checkbox"
-                className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-brand-primary-lighter rounded transition-colors duration-300"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 focus:ring-2 border-slate-200 rounded transition-all duration-200 cursor-pointer bg-white"
                 checked={useMagicLink}
                 onChange={(e) => setUseMagicLink(e.target.checked)}
               />
-              {t('useMagicLink')}
+              <span className="font-medium">{t('useMagicLink')}</span>
             </label>
-            <a href="#" className="text-sm text-brand-primary hover:text-brand-primary-hover transition-colors duration-300">{t('forgotPassword')}</a>
+            <a href="#" className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-all duration-200 hover:underline underline-offset-2 decoration-2">{t('forgotPassword')}</a>
           </div>
-          {error && <InlineError message={t(error)} className="text-center" />}
+          {error && (
+            <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+              <InlineError message={t(error)} className="text-center bg-red-50/50 py-3 px-4 rounded-lg border border-red-200" />
+            </div>
+          )}
           <AuthButton type="submit" loading={isLoading}>
             {isLoading ? t('signingIn') : t('submit')}
           </AuthButton>
-          <div className="text-center text-sm lg:text-base">
-            <Link href="/auth/signup" className="font-medium text-brand-primary hover:text-brand-primary-hover transition-colors duration-300">
+          <div className="text-center pt-3">
+            <Link href="/auth/signup" className="text-sm lg:text-base font-semibold text-blue-600 hover:text-blue-700 transition-all duration-200 hover:underline underline-offset-4 decoration-2">
               {t('noAccount')}
             </Link>
           </div>

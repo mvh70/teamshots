@@ -35,9 +35,9 @@ export default function StyleSettingsSection({
 }: StyleSettingsSectionProps) {
   const content = (
     <>
-      {title && <h2 className="text-lg font-semibold text-gray-900 mb-4">{title}</h2>}
+      {title && <h2 className="text-xl font-bold text-gray-900 mb-5 tracking-tight">{title}</h2>}
       {description && (
-        <div className="text-sm text-gray-600 mb-6">{description}</div>
+        <div className="text-sm text-gray-600 mb-7 leading-relaxed">{description}</div>
       )}
       <PhotoStyleSettings
         value={value}
@@ -58,7 +58,7 @@ export default function StyleSettingsSection({
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+    <div className={`bg-white rounded-xl shadow-md border border-gray-200/60 p-6 sm:p-8 ${className}`}>
       {content}
     </div>
   )

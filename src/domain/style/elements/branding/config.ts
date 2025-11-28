@@ -22,7 +22,8 @@ export const BRANDING_POSITIONS = [
 
 export const BACKGROUND_BRANDING_PROMPT: Record<string, unknown> = {
   logo_source: 'Use the attached image labeled "logo" as the branding element for the scene',
-  placement: 'Place the provided brand logo ONCE as a framed element on a background wall. Ensure that it is fully placed within the frame. Ideally place it off center, so that we can compose the person in the center later. If there are any elements, like plants, or cables, that would overlap the logo, that is ok, as it adds realism and depth.',
+  placement: 'Place the provided brand logo ONCE as a photorealistic 3D integration. Extract [logo/text] and ignore white/transparent background. Rnder as physical three-dimensional objects embedded into the background scene. Logo must have depth, volume, cast accurate shadows, reflect ambient lighting, and match scene perspective. Result should appear as if logo was photographed as tangible installation within the original environment, not overlaid or composited.',
+  material: 'Choose what fits best, depending on the size and scenery: in brushed metal / carved stone / illuminated acrylic',
   rules: [
     'Align with scene perspective and lighting.',
     'Ensure that elements like plants, or cables, that would overlap the logo, are not hidden by the logo, but place the logo behind thes, as it adds realism and depth.',

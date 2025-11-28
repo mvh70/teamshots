@@ -54,10 +54,13 @@ function SelfiesPageContent() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between relative z-10">
-        <h1 className="text-2xl font-semibold text-gray-900" data-testid="selfies-title">{t('title')}</h1>
+      <div className="flex items-start justify-between relative z-10 gap-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight" data-testid="selfies-title">{t('title')}</h1>
+          <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed">Upload and manage your selfies for photo generation</p>
+        </div>
       </div>
 
       <SelfieInfoBanner variant="detailed" />

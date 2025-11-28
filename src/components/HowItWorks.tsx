@@ -99,11 +99,11 @@ export default function HowItWorks() {
   /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   return (
-    <section id="how-it-works" className="py-24 lg:py-32 bg-bg-gray-50 relative grain-texture">
+    <section id="how-it-works" className="py-20 sm:py-24 lg:py-32 bg-bg-gray-50 relative grain-texture">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-20 lg:mb-24">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6 leading-tight">
+        <div className="text-center mb-24 lg:mb-32">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
             {t('title')}
           </h2>
           <p className="text-lg sm:text-xl md:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed">
@@ -129,8 +129,8 @@ export default function HowItWorks() {
                   relative h-full bg-bg-white rounded-3xl p-8 
                   transition-all duration-500 cursor-pointer
                   ${activeStep === step.id
-                    ? 'shadow-depth-2xl shadow-brand-primary/20 border-2 border-brand-primary transform scale-105'
-                    : 'shadow-depth-lg border-2 border-transparent hover:shadow-depth-xl hover:border-brand-primary-lighter hover:-translate-y-2'
+                    ? 'shadow-depth-2xl shadow-brand-primary/30 border-2 border-brand-primary transform scale-105 ring-4 ring-brand-primary/10'
+                    : 'shadow-depth-lg border-2 border-brand-primary-lighter/30 hover:shadow-depth-2xl hover:border-brand-primary-lighter hover:-translate-y-3 hover:ring-2 hover:ring-brand-primary/5'
                   }
                 `}>
                   {/* Icon Circle with Enhanced Styling */}
@@ -139,8 +139,8 @@ export default function HowItWorks() {
                       w-20 h-20 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center
                       transition-all duration-500
                       ${activeStep === step.id
-                        ? 'bg-brand-primary text-bg-white scale-110 shadow-depth-xl shadow-brand-primary/40'
-                        : 'bg-brand-primary-light text-brand-primary group-hover:scale-110 group-hover:bg-brand-primary group-hover:text-bg-white group-hover:shadow-depth-lg shadow-depth-sm'
+                        ? 'bg-gradient-to-br from-brand-primary to-brand-primary-hover text-bg-white scale-110 shadow-depth-xl shadow-brand-primary/40'
+                        : 'bg-brand-primary-light text-brand-primary group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-brand-primary group-hover:to-brand-primary-hover group-hover:text-bg-white group-hover:shadow-depth-xl group-hover:shadow-brand-primary/20 shadow-depth-md'
                       }
                     `}>
                       <div className="w-8 h-8 lg:w-10 lg:h-10">
@@ -151,7 +151,7 @@ export default function HowItWorks() {
 
                   {/* Content */}
                   <h3 className={`
-                    text-xl lg:text-2xl font-bold mb-4 text-center font-display
+                    text-xl lg:text-2xl xl:text-3xl font-bold mb-5 text-center font-display leading-tight
                     transition-colors duration-300
                     ${activeStep === step.id ? 'text-brand-primary' : 'text-text-dark'}
                   `}>
@@ -163,13 +163,13 @@ export default function HowItWorks() {
                   </p>
 
                   {/* Duration Badge - at bottom */}
-                  <div className="flex justify-center">
+                  <div className="flex justify-center mt-auto">
                     <span className={`
-                      inline-flex items-center text-sm font-semibold px-4 py-2 rounded-full
+                      inline-flex items-center text-sm font-bold px-5 py-2.5 rounded-full
                       transition-all duration-300
                       ${activeStep === step.id
-                        ? 'bg-brand-cta text-bg-white shadow-md'
-                        : 'bg-brand-secondary text-bg-white'
+                        ? 'bg-gradient-to-r from-brand-cta to-brand-cta-hover text-bg-white shadow-depth-lg shadow-brand-cta-shadow/50 scale-105'
+                        : 'bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-bg-white shadow-depth-md'
                       }
                     `}>
                       {step.duration}
@@ -197,8 +197,8 @@ export default function HowItWorks() {
                   relative h-full bg-bg-white rounded-3xl p-8 
                   transition-all duration-500 cursor-pointer
                   ${activeStep === step.id
-                    ? 'shadow-depth-2xl shadow-brand-primary/20 border-2 border-brand-primary transform scale-105'
-                    : 'shadow-depth-lg border-2 border-transparent hover:shadow-depth-xl hover:border-brand-primary-lighter hover:-translate-y-2'
+                    ? 'shadow-depth-2xl shadow-brand-primary/30 border-2 border-brand-primary transform scale-105 ring-4 ring-brand-primary/10'
+                    : 'shadow-depth-lg border-2 border-brand-primary-lighter/30 hover:shadow-depth-2xl hover:border-brand-primary-lighter hover:-translate-y-3 hover:ring-2 hover:ring-brand-primary/5'
                   }
                 `}>
                   {/* Icon Circle with Enhanced Styling */}
@@ -207,8 +207,8 @@ export default function HowItWorks() {
                       w-20 h-20 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center
                       transition-all duration-500
                       ${activeStep === step.id
-                        ? 'bg-brand-primary text-bg-white scale-110 shadow-depth-xl shadow-brand-primary/40'
-                        : 'bg-brand-primary-light text-brand-primary group-hover:scale-110 group-hover:bg-brand-primary group-hover:text-bg-white group-hover:shadow-depth-lg shadow-depth-sm'
+                        ? 'bg-gradient-to-br from-brand-primary to-brand-primary-hover text-bg-white scale-110 shadow-depth-xl shadow-brand-primary/40'
+                        : 'bg-brand-primary-light text-brand-primary group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-brand-primary group-hover:to-brand-primary-hover group-hover:text-bg-white group-hover:shadow-depth-xl group-hover:shadow-brand-primary/20 shadow-depth-md'
                       }
                     `}>
                       <div className="w-8 h-8 lg:w-10 lg:h-10">
@@ -219,7 +219,7 @@ export default function HowItWorks() {
 
                   {/* Content */}
                   <h3 className={`
-                    text-xl lg:text-2xl font-bold mb-4 text-center font-display
+                    text-xl lg:text-2xl xl:text-3xl font-bold mb-5 text-center font-display leading-tight
                     transition-colors duration-300
                     ${activeStep === step.id ? 'text-brand-primary' : 'text-text-dark'}
                   `}>
@@ -231,13 +231,13 @@ export default function HowItWorks() {
                   </p>
 
                   {/* Duration Badge - at bottom */}
-                  <div className="flex justify-center">
+                  <div className="flex justify-center mt-auto">
                     <span className={`
-                      inline-flex items-center text-sm font-semibold px-4 py-2 rounded-full
+                      inline-flex items-center text-sm font-bold px-5 py-2.5 rounded-full
                       transition-all duration-300
                       ${activeStep === step.id
-                        ? 'bg-brand-cta text-bg-white shadow-md'
-                        : 'bg-brand-secondary text-bg-white'
+                        ? 'bg-gradient-to-r from-brand-cta to-brand-cta-hover text-bg-white shadow-depth-lg shadow-brand-cta-shadow/50 scale-105'
+                        : 'bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-bg-white shadow-depth-md'
                       }
                     `}>
                       {step.duration}
@@ -252,7 +252,7 @@ export default function HowItWorks() {
         {/* CTA Section */}
         <div className="text-center mt-20">
           {/* Total Time Badge */}
-          <div className="inline-flex items-center bg-gradient-to-r from-brand-primary to-brand-primary-hover text-bg-white px-10 py-5 rounded-full shadow-depth-xl mb-10">
+          <div className="inline-flex items-center bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary text-bg-white px-10 py-5 rounded-full shadow-depth-2xl shadow-brand-primary/30 mb-10 ring-4 ring-brand-primary/10">
             <svg className="w-7 h-7 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -262,7 +262,7 @@ export default function HowItWorks() {
           </div>
           
           {/* CTA Button */}
-          <div className="space-y-5">
+          <div className="space-y-6">
             <Link
               href="/auth/signup"
               onClick={() =>
@@ -271,11 +271,11 @@ export default function HowItWorks() {
                   action: 'signup',
                 })
               }
-              className="inline-block bg-brand-cta text-bg-white px-14 py-6 rounded-xl font-bold text-xl hover:bg-brand-cta-hover transition-all duration-300 shadow-depth-xl hover:shadow-depth-2xl transform hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-block bg-gradient-to-r from-brand-cta to-brand-cta-hover text-bg-white px-16 py-7 rounded-2xl font-bold text-xl hover:shadow-depth-2xl hover:shadow-brand-cta-shadow/50 transition-all duration-300 shadow-depth-xl transform hover:-translate-y-2 hover:scale-[1.03] active:scale-[0.97] focus:outline-none focus:ring-4 focus:ring-brand-cta-ring focus:ring-offset-2 ring-offset-bg-gray-50"
             >
               {t('cta')}
             </Link>
-            <p className="text-base lg:text-lg text-text-muted max-w-2xl mx-auto">
+            <p className="text-base lg:text-lg text-text-muted max-w-2xl mx-auto font-medium">
               {t('guarantee')}
             </p>
           </div>

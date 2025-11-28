@@ -413,7 +413,7 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="space-y-6 md:space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 md:space-y-10 lg:space-y-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Onboarding Flow - Show first if applicable to prevent flickering */}
       {showOnboardingSection && (
         <div className="bg-white rounded-xl shadow-depth-sm border border-gray-200 p-8 animate-fade-in">
@@ -728,16 +728,27 @@ export default function DashboardPage() {
           {/* Welcome Section */}
           <div
             id="welcome-section"
-            className={`bg-gradient-to-r from-brand-primary to-brand-primary-hover rounded-xl p-6 md:p-8 text-white shadow-depth-lg transition-all duration-300 animate-fade-in`}
+            className={`relative bg-gradient-to-br from-brand-primary via-brand-primary-hover via-60% to-brand-primary rounded-xl p-6 md:p-8 lg:p-10 text-white shadow-[0_10px_25px_-5px_rgb(0_0_0_/0.2),0_4px_6px_-2px_rgb(0_0_0_/0.1)] transition-all duration-300 animate-fade-in overflow-hidden`}
             style={{ animationDelay: '0ms' }}
           >
-            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white leading-tight">
-              {userPermissions.isFirstVisit
-                ? t('welcome.titleFirstTime', {name: firstName})
-                : t('welcome.title', {name: firstName})
-              }
-            </h2>
-            <p className="text-base md:text-lg text-white/95 leading-relaxed">
+            {/* Animated gradient overlay */}
+            <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-white/0 via-white/10 to-white/0 animate-pulse" />
+            {/* Subtle pattern overlay */}
+            <div className="absolute inset-0 opacity-10" style={{
+              backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+              backgroundSize: '32px 32px',
+              backgroundPosition: '0 0, 16px 16px'
+            }} />
+            {/* Decorative glow */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="relative z-10">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-3 text-white leading-tight tracking-tight">
+                {userPermissions.isFirstVisit
+                  ? t('welcome.titleFirstTime', {name: firstName})
+                  : t('welcome.title', {name: firstName})
+                }
+              </h2>
+              <p className="text-base md:text-lg lg:text-xl text-white/90 leading-relaxed font-medium">
               {loading ? (
                 <span className="animate-pulse">Loading your stats...</span>
               ) : userPermissions.isTeamAdmin ? (
@@ -781,10 +792,11 @@ export default function DashboardPage() {
                 })
               )}
             </p>
+            </div>
           </div>
 
           {/* Stats Grid - Credit Status Card First, Then Other Stats */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${userPermissions.isTeamAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6 animate-fade-in`} style={{ animationDelay: '100ms' }}>
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${userPermissions.isTeamAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6 md:gap-8 animate-fade-in`} style={{ animationDelay: '100ms' }}>
             {/* Credit Status Card - Prominent First Card */}
             {loading || creditsLoading ? (
               <div className="bg-white rounded-xl p-6 shadow-depth-sm border border-gray-200 animate-pulse">
@@ -799,17 +811,19 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div 
-                className={`bg-white rounded-xl p-6 shadow-depth-sm border border-gray-200 hover:shadow-depth-md hover:scale-[1.02] transition-all duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}
+                className={`bg-gradient-to-br from-white to-gray-50/50 rounded-xl p-7 md:p-8 shadow-[0_2px_4px_0_rgb(0_0_0_/0.08),0_1px_2px_-1px_rgb(0_0_0_/0.04)] border border-gray-200/60 hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.1),0_4px_6px_-2px_rgb(0_0_0_/0.05)] hover:scale-[1.02] transition-all duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}
                 style={{ animationDelay: '100ms' }}
               >
-                <div className="flex items-center mb-4">
-                  <div className="w-10 h-10 bg-brand-primary-light rounded-lg flex items-center justify-center">
-                    <SparklesIcon className="h-6 w-6 text-brand-primary" />
+                <div className="flex items-start mb-5">
+                  <div className="w-12 h-12 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <SparklesIcon className="h-7 w-7 text-brand-primary" />
                   </div>
-                  <p className="ml-4 text-sm font-medium text-text-muted">{t('stats.photos')}</p>
+                  <div className="ml-4 flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-text-muted mb-3">{t('stats.photos')}</p>
+                    <p className="text-4xl md:text-5xl font-extrabold text-text-dark mb-2 leading-none tracking-tight">{totalPhotos}</p>
+                    <p className="text-sm font-medium text-text-muted mb-5">{t('stats.photosUnit')}</p>
+                  </div>
                 </div>
-                <p className="text-3xl font-bold text-text-dark mb-1 leading-tight">{totalPhotos}</p>
-                <p className="text-sm text-text-muted mb-4">{t('stats.photosUnit')}</p>
                 <button
                   onClick={() => router.push('/app/top-up')}
                   className="text-sm font-medium text-brand-cta hover:text-brand-cta-hover transition-colors flex items-center group"
@@ -844,17 +858,17 @@ export default function DashboardPage() {
                   return (
                     <div 
                       key={stat.name} 
-                      className={`bg-white rounded-xl p-6 shadow-depth-sm border border-gray-200 hover:shadow-depth-md hover:scale-[1.02] transition-all duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}
+                      className={`bg-gradient-to-br from-white to-gray-50/50 rounded-xl p-7 md:p-8 shadow-[0_2px_4px_0_rgb(0_0_0_/0.08),0_1px_2px_-1px_rgb(0_0_0_/0.04)] border border-gray-200/60 hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.1),0_4px_6px_-2px_rgb(0_0_0_/0.05)] hover:scale-[1.02] transition-all duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}
                       style={{ animationDelay: `${(index + 2) * 100}ms` }}
                     >
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-brand-primary-light rounded-lg flex items-center justify-center flex-shrink-0">
-                          <stat.icon className="h-6 w-6 text-brand-primary" />
+                      <div className="flex items-start">
+                        <div className="w-12 h-12 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <stat.icon className="h-7 w-7 text-brand-primary" />
                         </div>
                         <div className="ml-4 flex-1 min-w-0">
-                          <p className="text-sm font-medium text-text-muted mb-1">{stat.name}</p>
+                          <p className="text-sm font-semibold text-text-muted mb-3">{stat.name}</p>
                           <div className="flex items-baseline gap-2 mb-2">
-                            <p className="text-2xl font-bold text-text-dark leading-tight">Free Package</p>
+                            <p className="text-3xl md:text-4xl font-extrabold text-text-dark leading-none tracking-tight">Free Package</p>
                           </div>
                           <button
                             onClick={() => router.push('/app/upgrade')}
@@ -873,17 +887,25 @@ export default function DashboardPage() {
                 return (
                   <div 
                     key={stat.name} 
-                    className={`bg-white rounded-xl p-6 shadow-depth-sm border border-gray-200 hover:shadow-depth-md hover:scale-[1.02] transition-all duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`}
-                    style={{ animationDelay: `${(index + 2) * 100}ms` }}
+                    className={`relative bg-gradient-to-br from-white via-gray-50/30 to-white rounded-xl p-7 md:p-8 shadow-[0_2px_4px_0_rgb(0_0_0_/0.08),0_1px_2px_-1px_rgb(0_0_0_/0.04)] border border-gray-200/60 hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.1),0_4px_6px_-2px_rgb(0_0_0_/0.05)] hover:scale-[1.02] transition-all duration-300 ${mounted ? 'animate-fade-in' : 'opacity-0'} overflow-hidden`}
+                    style={{ animationDelay: `${(index + 2) * 100 + 50}ms` }}
                   >
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-brand-primary-light rounded-lg flex items-center justify-center flex-shrink-0">
-                        <stat.icon className="h-6 w-6 text-brand-primary" />
+                    {/* Subtle texture */}
+                    <div className="absolute inset-0 opacity-[0.02]" style={{
+                      backgroundImage: `linear-gradient(45deg, transparent 30%, rgba(0,0,0,0.05) 50%, transparent 70%)`,
+                      backgroundSize: '20px 20px'
+                    }} />
+                    <div className="relative z-10">
+                    <div className="flex items-start">
+                      <div className="relative w-12 h-12 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
+                        <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/20 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <stat.icon className="h-7 w-7 text-brand-primary relative z-10" />
                       </div>
                       <div className="ml-4 flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text-muted mb-1">{stat.name}</p>
-                        <p className="text-2xl font-bold text-text-dark leading-tight">{stat.value}</p>
+                        <p className="text-sm font-semibold text-text-muted mb-3">{stat.name}</p>
+                        <p className="text-3xl md:text-4xl font-extrabold text-text-dark leading-none tracking-tight">{stat.value}</p>
                       </div>
+                    </div>
                     </div>
                   </div>
                 )
@@ -892,19 +914,19 @@ export default function DashboardPage() {
           </div>
 
           {/* Main Content Area - Activity & Invites */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             {/* Recent Activity - Only for Team Admins */}
             {userPermissions.isTeamAdmin && (
-              <div className={`bg-white rounded-xl shadow-depth-sm border border-gray-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`} style={{ animationDelay: '400ms' }}>
-                <div className="p-6 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-text-dark">{t('recentActivity.title')}</h3>
+              <div className={`bg-white rounded-xl shadow-[0_1px_3px_0_rgb(0_0_0_/0.1),0_1px_2px_-1px_rgb(0_0_0_/0.1)] border border-gray-200/80 hover:shadow-[0_4px_6px_-1px_rgb(0_0_0_/0.1),0_2px_4px_-2px_rgb(0_0_0_/0.1)] transition-shadow duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`} style={{ animationDelay: '400ms' }}>
+                <div className="p-6 md:p-7 border-b border-gray-200">
+                  <h3 className="text-xl md:text-2xl font-bold text-text-dark tracking-tight">{t('recentActivity.title')}</h3>
                 </div>
-                <div className="p-6">
+                <div className="p-6 md:p-7">
                   {loading ? (
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       {Array.from({ length: 3 }).map((_, index) => (
-                        <div key={index} className="flex items-start gap-3 animate-pulse">
-                          <div className="w-5 h-5 bg-gray-200 rounded-full mt-0.5"></div>
+                        <div key={index} className="flex items-start gap-4 animate-pulse">
+                          <div className="w-6 h-6 bg-gray-200 rounded-full mt-0.5"></div>
                           <div className="flex-1">
                             <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
                             <div className="h-3 bg-gray-200 rounded w-1/2"></div>
@@ -915,38 +937,47 @@ export default function DashboardPage() {
                   ) : recentActivity.length > 0 ? (
                     <div className="space-y-4">
                       {recentActivity.map((activity) => (
-                        <div key={activity.id} className="flex items-start gap-3 py-2">
+                        <div key={activity.id} className="flex items-start gap-4 py-3 px-2 rounded-lg hover:bg-gray-50/50 transition-colors duration-150">
                           <div className="flex-shrink-0 mt-0.5">
                             {activity.status === 'completed' ? (
-                              <CheckCircleIcon className="h-5 w-5 text-brand-secondary" />
+                              <div className="w-8 h-8 rounded-full bg-brand-secondary/10 flex items-center justify-center">
+                                <CheckCircleIcon className="h-5 w-5 text-brand-secondary" />
+                              </div>
                             ) : activity.status === 'processing' ? (
-                              <ClockIcon className="h-5 w-5 text-brand-primary" />
+                              <div className="w-8 h-8 rounded-full bg-brand-primary/10 flex items-center justify-center">
+                                <ClockIcon className="h-5 w-5 text-brand-primary" />
+                              </div>
                             ) : (
-                              <ClockIcon className="h-5 w-5 text-brand-cta" />
+                              <div className="w-8 h-8 rounded-full bg-brand-cta/10 flex items-center justify-center">
+                                <ClockIcon className="h-5 w-5 text-brand-cta" />
+                              </div>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm text-text-dark">
-                              <span className="font-semibold">{activity.user}</span> {activity.action}
+                            <p className="text-sm md:text-base text-text-dark leading-relaxed">
+                              <span className="font-bold text-text-dark">{activity.user}</span> <span className="text-text-muted">{activity.action}</span>
                               {activity.generationType && (
-                                <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                <span className={`ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                                   activity.generationType === 'personal' 
-                                    ? 'bg-brand-primary-light text-brand-primary' 
-                                    : 'bg-brand-secondary-light text-brand-secondary-text'
+                                    ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20' 
+                                    : 'bg-brand-secondary/10 text-brand-secondary-text border border-brand-secondary/20'
                                 }`}>
                                   {activity.generationType === 'personal' ? t('recentActivity.generationType.personal') : t('recentActivity.generationType.team')}
                                 </span>
                               )}
                             </p>
-                            <p className="text-xs text-text-muted mt-1">{formatTimeAgo(activity.time)}</p>
+                            <p className="text-xs md:text-sm text-text-muted mt-2 font-medium">{formatTimeAgo(activity.time)}</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12">
-                      <ClockIcon className="h-12 w-12 text-text-muted mx-auto mb-3 opacity-50" />
-                      <p className="text-sm text-text-muted">{t('recentActivity.noActivity')}</p>
+                    <div className="text-center py-16">
+                      <div className="w-16 h-16 bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ClockIcon className="h-8 w-8 text-brand-primary" />
+                      </div>
+                      <p className="text-base font-semibold text-text-dark mb-2">{t('recentActivity.noActivity')}</p>
+                      <p className="text-sm text-text-muted">Activity will appear here once your team starts generating photos</p>
                     </div>
                   )}
                 </div>
@@ -955,13 +986,13 @@ export default function DashboardPage() {
 
             {/* Pending Invites - Only for Team Admins */}
             {userPermissions.isTeamAdmin && (
-              <div className={`bg-white rounded-xl shadow-depth-sm border border-gray-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`} style={{ animationDelay: '500ms' }}>
-                <div className="p-6 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-text-dark">{t('pendingInvites.title')}</h3>
+              <div className={`bg-white rounded-xl shadow-[0_1px_3px_0_rgb(0_0_0_/0.1),0_1px_2px_-1px_rgb(0_0_0_/0.1)] border border-gray-200/80 hover:shadow-[0_4px_6px_-1px_rgb(0_0_0_/0.1),0_2px_4px_-2px_rgb(0_0_0_/0.1)] transition-shadow duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`} style={{ animationDelay: '400ms', animation: 'fadeInUp 0.6s ease-out' }}>
+                <div className="p-6 md:p-7 border-b border-gray-200">
+                  <h3 className="text-xl md:text-2xl font-bold text-text-dark tracking-tight">{t('pendingInvites.title')}</h3>
                 </div>
-                <div className="p-6">
+                <div className="p-6 md:p-7">
                   {loading ? (
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       {Array.from({ length: 2 }).map((_, index) => (
                         <div key={index} className="flex items-center justify-between animate-pulse">
                           <div className="flex-1">
@@ -979,47 +1010,50 @@ export default function DashboardPage() {
                   ) : pendingInvites.length > 0 ? (
                     <div className="space-y-4">
                       {pendingInvites.map((invite) => (
-                        <div key={invite.id} className="pb-4 border-b border-gray-200 last:border-0 last:pb-0">
+                        <div key={invite.id} className="pb-5 border-b border-gray-200/60 last:border-0 last:pb-0 hover:bg-gray-50/30 rounded-lg px-3 py-2 -mx-3 transition-colors duration-150">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-text-dark">{invite.name}</p>
-                              <p className="text-xs text-text-muted mt-0.5">{invite.email}</p>
-                              <p className="text-xs text-text-muted mt-1">{t('pendingInvites.sent', { when: invite.sent })}</p>
+                              <div className="flex items-center gap-2 mb-2">
+                                <p className="text-sm md:text-base font-bold text-text-dark">{invite.name}</p>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
+                                  {t('pendingInvites.status.pending')}
+                                </span>
+                              </div>
+                              <p className="text-xs md:text-sm text-text-muted mt-1 font-medium">{invite.email}</p>
+                              <p className="text-xs md:text-sm text-text-muted mt-1.5 font-medium">{t('pendingInvites.sent', { when: invite.sent })}</p>
                             </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-primary-light text-brand-primary">
-                                {t('pendingInvites.status.pending')}
-                              </span>
-                              <button 
-                                onClick={() => handleResendInvite(invite.id)}
-                                disabled={resending === invite.id}
-                                className="text-sm font-medium text-brand-primary hover:text-brand-primary-hover transition-colors disabled:opacity-50"
-                              >
-                                {resending === invite.id ? t('pendingInvites.resending') : t('pendingInvites.resend')}
-                              </button>
-                            </div>
+                            <button 
+                              onClick={() => handleResendInvite(invite.id)}
+                              disabled={resending === invite.id}
+                              className="text-sm font-semibold text-brand-primary hover:text-brand-primary-hover transition-colors disabled:opacity-50 hover:underline flex-shrink-0"
+                            >
+                              {resending === invite.id ? t('pendingInvites.resending') : t('pendingInvites.resend')}
+                            </button>
                           </div>
                         </div>
                       ))}
-                      <div className="pt-4 border-t border-gray-200 mt-4">
+                      <div className="pt-5 border-t border-gray-200/60 mt-5">
                         <button 
                           onClick={() => router.push('/app/team')}
-                          className="w-full flex items-center justify-center px-4 py-3 border-2 border-gray-300 rounded-xl text-sm font-semibold text-text-dark bg-white hover:bg-gray-50 hover:border-brand-primary transition-all duration-200"
+                          className="w-full flex items-center justify-center px-5 py-3.5 border-2 border-brand-primary/30 rounded-xl text-sm font-bold text-brand-primary bg-brand-primary/5 hover:bg-brand-primary/10 hover:border-brand-primary transition-all duration-200"
                         >
-                          <PlusIcon className="h-4 w-4 mr-2" />
+                          <PlusIcon className="h-5 w-5 mr-2" />
                           {t('pendingInvites.invite')}
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-12">
-                      <UserGroupIcon className="h-12 w-12 text-text-muted mx-auto mb-3 opacity-50" />
-                      <p className="text-sm text-text-muted mb-4">{t('pendingInvites.noInvites')}</p>
+                    <div className="text-center py-16">
+                      <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <UserGroupIcon className="h-8 w-8 text-brand-primary" />
+                      </div>
+                      <p className="text-base font-semibold text-gray-900 mb-2">{t('pendingInvites.noInvites')}</p>
+                      <p className="text-sm text-gray-600 mb-6">Invite team members to get started</p>
                       <button 
                         onClick={() => router.push('/app/team')}
-                        className="inline-flex items-center px-4 py-2 border-2 border-gray-300 rounded-xl text-sm font-semibold text-text-dark bg-white hover:bg-gray-50 hover:border-brand-primary transition-all duration-200"
+                        className="inline-flex items-center px-5 py-3 border-2 border-brand-primary/30 rounded-xl text-sm font-bold text-brand-primary bg-brand-primary/5 hover:bg-brand-primary/10 hover:border-brand-primary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2"
                       >
-                        <PlusIcon className="h-4 w-4 mr-2" />
+                        <PlusIcon className="h-5 w-5 mr-2" />
                         {t('pendingInvites.invite')}
                       </button>
                     </div>
@@ -1030,43 +1064,43 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className={`bg-white rounded-xl shadow-depth-sm border border-gray-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`} style={{ animationDelay: '600ms' }}>
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-text-dark">{t('quickActions.title')}</h3>
+          <div className={`bg-white rounded-xl shadow-[0_1px_3px_0_rgb(0_0_0_/0.1),0_1px_2px_-1px_rgb(0_0_0_/0.1)] border border-gray-200/80 hover:shadow-[0_4px_6px_-1px_rgb(0_0_0_/0.1),0_2px_4px_-2px_rgb(0_0_0_/0.1)] transition-shadow duration-200 ${mounted ? 'animate-fade-in' : 'opacity-0'}`} style={{ animationDelay: '600ms' }}>
+            <div className="p-6 md:p-7 border-b border-gray-200">
+              <h3 className="text-xl md:text-2xl font-bold text-text-dark tracking-tight">{t('quickActions.title')}</h3>
             </div>
-            <div className="p-6">
-              <div className={`grid grid-cols-1 ${userPermissions.isTeamAdmin ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-4`}>
+            <div className="p-6 md:p-7">
+              <div className={`grid grid-cols-1 ${userPermissions.isTeamAdmin ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-5 md:gap-6`}>
                 {/* Primary Action - Generate Photos */}
                 <button 
                   onClick={() => router.push('/app/generate/start')}
-                  className="flex flex-col items-center justify-center px-6 py-8 border-2 border-gray-300 rounded-xl hover:border-brand-cta hover:shadow-depth-md hover:scale-[1.02] transition-all duration-200 bg-white group min-h-[140px]"
+                  className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-cta/30 rounded-xl hover:border-brand-cta hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] hover:scale-[1.03] transition-all duration-300 bg-gradient-to-br from-brand-cta/5 to-transparent group min-h-[160px]"
                 >
-                  <div className="w-12 h-12 bg-brand-cta rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200">
-                    <PhotoIcon className="h-6 w-6 text-white" />
+                  <div className="w-14 h-14 bg-brand-cta rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                    <PhotoIcon className="h-7 w-7 text-white" />
                   </div>
-                  <span className="text-base font-semibold text-text-dark">{t('quickActions.generate')}</span>
+                  <span className="text-lg md:text-xl font-extrabold text-text-dark group-hover:text-brand-cta transition-colors">{t('quickActions.generate')}</span>
                 </button>
                 
                 {/* Secondary Actions */}
                 <button 
                   onClick={() => router.push('/app/styles')}
-                  className="flex flex-col items-center justify-center px-6 py-8 border-2 border-gray-300 rounded-xl hover:border-brand-primary hover:shadow-depth-md hover:scale-[1.02] transition-all duration-200 bg-white group min-h-[120px]"
+                  className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-primary/30 rounded-xl hover:border-brand-primary hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] hover:scale-[1.03] transition-all duration-300 bg-gradient-to-br from-brand-primary/5 to-transparent group min-h-[160px]"
                 >
-                  <div className="w-12 h-12 bg-brand-primary-light rounded-xl flex items-center justify-center mb-3 group-hover:bg-brand-primary group-hover:scale-110 transition-all duration-200">
-                    <DocumentTextIcon className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
+                  <div className="w-14 h-14 bg-brand-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                    <DocumentTextIcon className="h-7 w-7 text-white" />
                   </div>
-                  <span className="text-base font-semibold text-text-dark">{t('quickActions.createTemplate')}</span>
+                  <span className="text-lg md:text-xl font-extrabold text-text-dark group-hover:text-brand-primary transition-colors">{t('quickActions.createTemplate')}</span>
                 </button>
                 
                 {userPermissions.isTeamAdmin && (
                   <button 
                     onClick={() => router.push('/app/team')}
-                    className="flex flex-col items-center justify-center px-6 py-8 border-2 border-gray-300 rounded-xl hover:border-brand-primary hover:shadow-depth-md hover:scale-[1.02] transition-all duration-200 bg-white group min-h-[120px]"
+                    className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-primary/30 rounded-xl hover:border-brand-primary hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] hover:scale-[1.03] transition-all duration-300 bg-gradient-to-br from-brand-primary/5 to-transparent group min-h-[160px]"
                   >
-                    <div className="w-12 h-12 bg-brand-primary-light rounded-xl flex items-center justify-center mb-3 group-hover:bg-brand-primary group-hover:scale-110 transition-all duration-200">
-                      <UsersIcon className="h-6 w-6 text-brand-primary group-hover:text-white transition-colors" />
+                    <div className="w-14 h-14 bg-brand-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                      <UsersIcon className="h-7 w-7 text-white" />
                     </div>
-                    <span className="text-base font-semibold text-text-dark">{t('quickActions.manageTeam')}</span>
+                    <span className="text-lg md:text-xl font-extrabold text-text-dark group-hover:text-brand-primary transition-colors">{t('quickActions.manageTeam')}</span>
                   </button>
                 )}
               </div>

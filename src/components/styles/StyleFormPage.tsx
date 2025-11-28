@@ -18,7 +18,7 @@ interface StyleFormPageProps {
 
 export default function StyleFormPage({ mode, contextType, scope, backUrl, title, subtitle }: StyleFormPageProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-8">
       <BackHeader backUrl={backUrl} title={title} subtitle={subtitle} />
       <StyleForm
         mode={mode}

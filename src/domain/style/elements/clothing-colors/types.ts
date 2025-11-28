@@ -1,3 +1,5 @@
+export type ClothingColorKey = 'topCover' | 'topBase' | 'bottom' | 'shoes'
+
 export interface ClothingColorSettings {
   type: 'predefined' | 'user-choice'
   colors?: {

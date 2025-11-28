@@ -131,7 +131,7 @@ function UserSearchImpersonation({ onStartImpersonation, disabled }: { onStartIm
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name or email..."
-            className="block w-full px-3 py-2 border border-purple-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+            className="block w-full px-3 py-2 border border-purple-300 rounded-md shadow-sm bg-white text-gray-900 placeholder:text-gray-500 transition-all duration-200 hover:border-purple-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
           />
           {isSearching && (
             <div className="absolute right-3 top-2.5">
@@ -176,14 +176,16 @@ function UserSearchImpersonation({ onStartImpersonation, disabled }: { onStartIm
           </div>
         )}
 
-        <p className="text-xs text-purple-600 mt-1">
-          ⚠️ You cannot impersonate other platform administrators.
-        </p>
+        <div className="mt-3 p-3 bg-purple-100 border border-purple-200 rounded-lg">
+          <p className="text-xs text-purple-800 font-medium">
+            ⚠️ You cannot impersonate other platform administrators.
+          </p>
+        </div>
       </div>
       <button
         onClick={() => selectedUser && onStartImpersonation(selectedUser.id)}
         disabled={!selectedUser || disabled}
-        className="px-4 py-2 text-sm font-medium rounded-md bg-white text-purple-700 hover:bg-purple-50 border border-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-4 py-2.5 text-sm font-semibold rounded-lg bg-white text-purple-700 hover:bg-purple-50 border-2 border-purple-300 transition-all duration-200 hover:border-purple-400 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {disabled ? '🔄 Starting...' : '🎭 Start Impersonation'}
       </button>
@@ -222,12 +224,86 @@ export default function SettingsPage() {
   const [userRoles, setUserRoles] = useState<{ isTeamAdmin: boolean; isPlatformAdmin: boolean }>({ isTeamAdmin: false, isPlatformAdmin: false })
   const [rolesLoaded, setRolesLoaded] = useState(false)
   const [initialTabSet, setInitialTabSet] = useState(false)
+  const tabsScrollRef = React.useRef<HTMLDivElement>(null)
+  const [showLeftFade, setShowLeftFade] = useState(false)
+  const [showRightFade, setShowRightFade] = useState(false)
   
   // Persist tab selection to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('settings-active-tab', activeTab)
       localStorage.setItem('settings-active-tab-timestamp', Date.now().toString())
+    }
+  }, [activeTab])
+
+  // Auto-scroll active tab into view and update fade indicators
+  useEffect(() => {
+    if (!tabsScrollRef.current) return
+
+    const scrollContainer = tabsScrollRef.current
+    
+    // Update fade indicators based on scroll position
+    const updateFadeIndicators = () => {
+      if (!scrollContainer) return
+      requestAnimationFrame(() => {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollContainer
+        const hasOverflow = scrollWidth > clientWidth + 2 // Add small buffer for rounding
+        const isAtStart = scrollLeft <= 2
+        const isAtEnd = scrollLeft >= scrollWidth - clientWidth - 2
+        setShowLeftFade(hasOverflow && !isAtStart)
+        setShowRightFade(hasOverflow && !isAtEnd)
+      })
+    }
+
+    // Initial check after layout is complete
+    const checkAndScroll = () => {
+      updateFadeIndicators()
+      
+      // Scroll active tab into view
+      const activeButton = scrollContainer.querySelector(`[data-tab="${activeTab}"]`) as HTMLElement
+      if (activeButton) {
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+          const containerRect = scrollContainer.getBoundingClientRect()
+          const buttonRect = activeButton.getBoundingClientRect()
+          const scrollLeft = scrollContainer.scrollLeft
+          const buttonLeft = buttonRect.left - containerRect.left + scrollLeft
+          const buttonWidth = buttonRect.width
+          const containerWidth = containerRect.width
+          const padding = 16 // 1rem padding
+          
+          // Center the button in the container, accounting for padding
+          const targetScroll = buttonLeft - (containerWidth / 2) + (buttonWidth / 2) - padding
+          
+          const maxScroll = scrollContainer.scrollWidth - containerWidth
+          const clampedScroll = Math.max(0, Math.min(targetScroll, maxScroll))
+          
+          scrollContainer.scrollTo({
+            left: clampedScroll,
+            behavior: 'smooth'
+          })
+          
+          // Update indicators after scroll animation
+          setTimeout(updateFadeIndicators, 500)
+        })
+      }
+    }
+
+    // Use multiple strategies to ensure we catch the layout
+    const timeoutId1 = setTimeout(checkAndScroll, 50)
+    const timeoutId2 = setTimeout(checkAndScroll, 200)
+    
+    // Also check on next frame
+    requestAnimationFrame(checkAndScroll)
+
+    scrollContainer.addEventListener('scroll', updateFadeIndicators, { passive: true })
+    window.addEventListener('resize', updateFadeIndicators)
+
+    return () => {
+      clearTimeout(timeoutId1)
+      clearTimeout(timeoutId2)
+      scrollContainer.removeEventListener('scroll', updateFadeIndicators)
+      window.removeEventListener('resize', updateFadeIndicators)
     }
   }, [activeTab])
   
@@ -429,11 +505,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto py-8 sm:py-10 px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
-        <p className="text-gray-600 mt-2">
+      <div className="mb-10">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 leading-tight">{t('title')}</h1>
+        <p className="text-base sm:text-lg text-gray-600 leading-relaxed max-w-2xl">
           {t('subtitle')}
         </p>
       </div>
@@ -442,74 +518,108 @@ export default function SettingsPage() {
       <StripeNotice className="mb-6" />
 
       {/* Tabs */}
-      <div className="mb-6 overflow-x-auto">
-        <div className="inline-flex rounded-lg border border-gray-200 bg-white">
-          {isTeamAdmin && (
+      <div className="mb-6 -mx-4 sm:mx-0">
+        <div className="relative bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          {/* Left fade indicator */}
+          {showLeftFade && (
+            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-white via-white/98 to-transparent pointer-events-none z-20 transition-opacity duration-300" />
+          )}
+          {/* Right fade indicator */}
+          {showRightFade && (
+            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white via-white/98 to-transparent pointer-events-none z-20 transition-opacity duration-300" />
+          )}
+          <div 
+            ref={tabsScrollRef}
+            className="overflow-x-auto scroll-smooth hide-scrollbar w-full" 
+            style={{ 
+              WebkitOverflowScrolling: 'touch',
+              scrollBehavior: 'smooth',
+              scrollPaddingLeft: '1rem',
+              scrollPaddingRight: '1rem',
+              overscrollBehaviorX: 'contain'
+            }}
+          >
+            <div className="inline-flex bg-white min-w-max sm:min-w-0 gap-0 px-4 sm:px-0">
+            {isTeamAdmin && (
+              <button
+                type="button"
+                data-tab="team"
+                onClick={() => setActiveTab('team')}
+                className={`px-3 sm:px-6 py-3 sm:py-2 text-xs sm:text-sm font-medium rounded-l-lg border-r border-gray-200 whitespace-nowrap flex-shrink-0 transition-all duration-200 touch-manipulation ${activeTab === 'team' ? 'bg-brand-primary text-white shadow-sm font-semibold' : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'}`}
+                style={{ minHeight: '44px' }}
+              >
+                {t('tabs.teamInformation')}
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setActiveTab('team')}
-              className={`px-4 py-2 text-sm font-medium rounded-l-lg border-r border-gray-200 ${activeTab === 'team' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+              data-tab="subscription"
+              onClick={() => setActiveTab('subscription')}
+              className={`px-3 sm:px-6 py-3 sm:py-2 text-xs sm:text-sm font-medium ${isTeamAdmin ? 'border-r border-gray-200' : 'rounded-l-lg border-r border-gray-200'} whitespace-nowrap flex-shrink-0 transition-all duration-200 touch-manipulation ${activeTab === 'subscription' ? 'bg-brand-primary text-white shadow-sm font-semibold' : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'}`}
+              style={{ minHeight: '44px' }}
             >
-              {t('tabs.teamInformation')}
+              {t('tabs.subscription')}
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setActiveTab('subscription')}
-            className={`px-4 py-2 text-sm font-medium ${isTeamAdmin ? 'border-r border-gray-200' : 'rounded-l-lg border-r border-gray-200'} ${activeTab === 'subscription' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-          >
-            {t('tabs.subscription')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('billing')}
-            className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'billing' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-          >
-            {t('tabs.billing')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('account')}
-            className={`px-4 py-2 text-sm font-medium ${isPlatformAdmin ? 'border-r border-gray-200' : 'rounded-r-lg'} ${activeTab === 'account' ? 'bg-brand-primary text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-          >
-            {t('tabs.accountInfo')}
-          </button>
-          {isPlatformAdmin && (
             <button
               type="button"
-              onClick={() => setActiveTab('admin')}
-              className={`px-4 py-2 text-sm font-medium border-r border-gray-200 ${activeTab === 'admin' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-50'}`}
+              data-tab="billing"
+              onClick={() => setActiveTab('billing')}
+              className={`px-3 sm:px-6 py-3 sm:py-2 text-xs sm:text-sm font-medium border-r border-gray-200 whitespace-nowrap flex-shrink-0 transition-all duration-200 touch-manipulation ${activeTab === 'billing' ? 'bg-brand-primary text-white shadow-sm font-semibold' : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'}`}
+              style={{ minHeight: '44px' }}
             >
-              {t('tabs.adminTools')}
+              {t('tabs.billing')}
             </button>
-          )}
-          {isPlatformAdmin && (
             <button
               type="button"
-              onClick={() => setActiveTab('freeStyle')}
-              className={`px-4 py-2 text-sm font-medium rounded-r-lg ${activeTab === 'freeStyle' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-50'}`}
+              data-tab="account"
+              onClick={() => setActiveTab('account')}
+              className={`px-3 sm:px-6 py-3 sm:py-2 text-xs sm:text-sm font-medium ${isPlatformAdmin ? 'border-r border-gray-200' : 'rounded-r-lg'} whitespace-nowrap flex-shrink-0 transition-all duration-200 touch-manipulation ${activeTab === 'account' ? 'bg-brand-primary text-white shadow-sm font-semibold' : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'}`}
+              style={{ minHeight: '44px' }}
             >
-              Free Plan Style
+              {t('tabs.accountInfo')}
             </button>
-          )}
+            {isPlatformAdmin && (
+              <button
+                type="button"
+                data-tab="admin"
+                onClick={() => setActiveTab('admin')}
+                className={`px-3 sm:px-6 py-3 sm:py-2 text-xs sm:text-sm font-medium border-r border-gray-200 whitespace-nowrap flex-shrink-0 transition-all duration-200 touch-manipulation ${activeTab === 'admin' ? 'bg-red-600 text-white shadow-sm font-semibold' : 'text-red-700 hover:bg-red-50 active:bg-red-100'}`}
+                style={{ minHeight: '44px' }}
+              >
+                {t('tabs.adminTools')}
+              </button>
+            )}
+            {isPlatformAdmin && (
+              <button
+                type="button"
+                data-tab="freeStyle"
+                onClick={() => setActiveTab('freeStyle')}
+                className={`px-3 sm:px-6 py-3 sm:py-2 text-xs sm:text-sm font-medium rounded-r-lg whitespace-nowrap flex-shrink-0 transition-all duration-200 touch-manipulation ${activeTab === 'freeStyle' ? 'bg-red-600 text-white shadow-sm font-semibold' : 'text-red-700 hover:bg-red-50 active:bg-red-100'}`}
+                style={{ minHeight: '44px' }}
+              >
+                Free Plan Style
+              </button>
+            )}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Success/Error Messages */}
       {success && (
-        <div className="mb-6 bg-brand-secondary-light border border-brand-secondary-lighter rounded-lg p-4">
-          <div className="flex">
-            <CheckIcon className="h-5 w-5 text-brand-secondary mr-2 mt-0.5" />
-            <p className="text-brand-secondary-text-light">{success}</p>
+        <div className="mb-6 bg-brand-secondary-light border border-brand-secondary-lighter rounded-lg p-4 shadow-sm">
+          <div className="flex items-start">
+            <CheckIcon className="h-5 w-5 text-brand-secondary mr-3 mt-0.5 flex-shrink-0" />
+            <p className="text-brand-secondary-text-light leading-relaxed">{success}</p>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex">
-            <ExclamationTriangleIcon className="h-5 w-5 text-red-400 mr-2 mt-0.5" />
-            <p className="text-red-800">{error}</p>
+        <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-lg p-4 shadow-sm">
+          <div className="flex items-start">
+            <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
+            <p className="text-red-800 leading-relaxed font-medium">{error}</p>
           </div>
         </div>
       )}
@@ -517,8 +627,9 @@ export default function SettingsPage() {
 
       {/* Team Information - visible only to team_admins */}
       {activeTab === 'team' && settings.mode === 'team' && isTeamAdmin && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('teamInfo.title')}</h2>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">{t('teamInfo.title')}</h2>
+          <p className="text-sm text-gray-500 mb-6">{t('teamInfo.subtitle', { default: 'Manage your team details and information' })}</p>
           
           <div className="space-y-4">
             <div>
@@ -531,7 +642,7 @@ export default function SettingsPage() {
                 value={settings.teamName || ''}
                 onChange={(e) => setSettings(prev => ({ ...prev, teamName: e.target.value }))}
                 onBlur={(e) => handleTeamInfoUpdate('teamName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 transition-all duration-200 hover:border-gray-400 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary focus:outline-none disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
                 placeholder={t('teamInfo.name.placeholder')}
                 disabled={saving}
               />
@@ -547,7 +658,7 @@ export default function SettingsPage() {
                 value={settings.teamWebsite || ''}
                 onChange={(e) => setSettings(prev => ({ ...prev, teamWebsite: e.target.value }))}
                 onBlur={(e) => handleTeamInfoUpdate('teamWebsite', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 transition-all duration-200 hover:border-gray-400 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary focus:outline-none disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
                 placeholder={t('teamInfo.website.placeholder')}
                 disabled={saving}
               />
@@ -555,10 +666,10 @@ export default function SettingsPage() {
           </div>
 
           {settings.isAdmin && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center">
-                <CheckIcon className="h-5 w-5 text-blue-400 mr-2" />
-                <span className="text-sm text-blue-800">
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
+              <div className="flex items-start">
+                <CheckIcon className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+                <span className="text-sm text-blue-900 leading-relaxed font-medium">
                   {t('teamInfo.adminNote')}
                 </span>
               </div>
@@ -585,12 +696,12 @@ export default function SettingsPage() {
 
       {/* ADMIN ROLE MANAGEMENT SECTION - ADMIN ONLY */}
       {activeTab === 'admin' && session?.user?.isAdmin === true && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6 mb-6">
+        <div className="bg-red-50 border-2 border-red-200 rounded-lg shadow-sm p-6 sm:p-8 mb-6">
           <div className="flex items-center mb-4">
             <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-bold mr-3">
               [ADMIN]
             </div>
-            <h2 className="text-lg font-semibold text-red-900">Admin Role Management</h2>
+            <h2 className="text-xl font-semibold text-red-900">Admin Role Management</h2>
           </div>
           <p className="text-sm text-red-700 mb-4">
             This section is only visible to platform administrators. Use with caution for testing purposes.
@@ -612,15 +723,15 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-red-800 mb-2">
+              <label className="block text-sm font-semibold text-red-900 mb-3">
                 Change Role (Testing Only)
               </label>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
                 {session?.user?.role === 'team_admin' ? (
                   <button
                     onClick={() => handleRoleChange('user')}
                     disabled={saving}
-                    className="px-3 py-2 text-sm font-medium rounded-md bg:white text-red-700 hover:bg-red-50 border border-red-300 disabled:opacity-50"
+                    className="px-4 py-2.5 text-sm font-semibold rounded-lg bg-white text-red-700 hover:bg-red-50 border-2 border-red-300 transition-all duration-200 hover:border-red-400 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Set as Individual User
                   </button>
@@ -628,31 +739,35 @@ export default function SettingsPage() {
                   <button
                     onClick={() => handleRoleChange('team_admin')}
                     disabled={saving}
-                    className="px-3 py-2 text-sm font-medium rounded-md bg:white text-red-700 hover:bg-red-50 border border-red-300 disabled:opacity-50"
+                    className="px-4 py-2.5 text-sm font-semibold rounded-lg bg-white text-red-700 hover:bg-red-50 border-2 border-red-300 transition-all duration-200 hover:border-red-400 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Set as Team Admin
                   </button>
                 )}
               </div>
-              <p className="text-xs text-red-600 mt-1">
-                ⚠️ This will change your role immediately. Use for testing only.
-              </p>
+              <div className="mt-3 p-3 bg-red-100 border border-red-200 rounded-lg">
+                <p className="text-xs text-red-800 font-medium">
+                  ⚠️ This will change your role immediately. Use for testing only.
+                </p>
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-red-800 mb-2">
+              <label className="block text-sm font-semibold text-red-900 mb-3">
                 Session Management
               </label>
               <button
                 onClick={refreshSession}
                 disabled={saving}
-                className="px-3 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2.5 text-sm font-semibold text-red-700 bg-white border-2 border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200 hover:border-red-400 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? '🔄 Refreshing...' : '🔄 Refresh Session Data'}
               </button>
-              <p className="text-xs text-red-600 mt-1">
-                💡 Refresh your session to see updated role information.
-              </p>
+              <div className="mt-3 p-3 bg-red-100 border border-red-200 rounded-lg">
+                <p className="text-xs text-red-800 font-medium">
+                  💡 Refresh your session to see updated role information.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -660,12 +775,12 @@ export default function SettingsPage() {
 
       {/* ADMIN USER IMPERSONATION SECTION - ADMIN ONLY */}
       {activeTab === 'admin' && session?.user?.isAdmin === true && (
-        <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6 mb-6">
+        <div className="bg-purple-50 border-2 border-purple-200 rounded-lg shadow-sm p-6 sm:p-8 mb-6">
           <div className="flex items-center mb-4">
             <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold mr-3">
               [IMPERSONATE]
             </div>
-            <h2 className="text-lg font-semibold text-purple-900">User Impersonation</h2>
+            <h2 className="text-xl font-semibold text-purple-900">User Impersonation</h2>
           </div>
           <p className="text-sm text-purple-700 mb-4">
             Impersonate a user to see the application from their perspective. All actions will be logged.
@@ -673,8 +788,8 @@ export default function SettingsPage() {
           
           {session?.user?.impersonating ? (
             <div className="space-y-4">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800">
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 shadow-sm">
+                <p className="text-sm text-yellow-900 font-semibold leading-relaxed">
                   ⚠️ <strong>You are currently impersonating a user.</strong> All actions will be logged and attributed to the impersonated user.
                 </p>
               </div>
@@ -701,7 +816,7 @@ export default function SettingsPage() {
                   }
                 }}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-medium rounded-md bg-white text-purple-700 hover:bg-purple-50 border border-purple-300 disabled:opacity-50"
+                className="px-4 py-2.5 text-sm font-semibold rounded-lg bg-white text-purple-700 hover:bg-purple-50 border-2 border-purple-300 transition-all duration-200 hover:border-purple-400 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? '🔄 Stopping...' : '🛑 Stop Impersonation'}
               </button>
@@ -740,56 +855,57 @@ export default function SettingsPage() {
 
       {/* Account Information */}
       {activeTab === 'account' && (
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('accountInfo.title')}</h2>
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">{t('accountInfo.title')}</h2>
+        <p className="text-sm text-gray-500 mb-6">{t('accountInfo.subtitle', { default: 'View your account details and role information' })}</p>
         
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-sm text-blue-900">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+          <p className="text-sm text-blue-900 leading-relaxed">
             {t('accountInfo.intro', { default: "🛟 You probably won't need this info unless something's gone sideways and support asks for it. But just in case, here it is!" })}
           </p>
         </div>
         
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">{t('accountInfo.email')}</label>
-            <p className="text-sm text-gray-900 mt-1">{session?.user?.email}</p>
+        <div className="space-y-6">
+          <div className="pb-4 border-b border-gray-100">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('accountInfo.email')}</label>
+            <p className="text-base text-gray-900 font-medium">{session?.user?.email}</p>
           </div>
           
-          <div>
-            <label className="block text.sm font-medium text-gray-700">{t('accountInfo.name')}</label>
-            <p className="text-sm text-gray-900 mt-1">{session?.user?.name || t('accountInfo.notProvided')}</p>
+          <div className="pb-4 border-b border-gray-100">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('accountInfo.name')}</label>
+            <p className="text-base text-gray-900 font-medium">{session?.user?.name || t('accountInfo.notProvided')}</p>
+          </div>
+
+          <div className="pb-4 border-b border-gray-100">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('accountInfo.userId')}</label>
+            <p className="text-sm text-gray-600 font-mono bg-gray-50 px-3 py-2 rounded-md inline-block">{session?.user?.id}</p>
           </div>
 
           <div>
-            <label className="block text.sm font-medium text-gray-700">{t('accountInfo.userId')}</label>
-            <p className="text-sm text-gray-500 font-mono mt-1">{session?.user?.id}</p>
-          </div>
-
-          <div>
-            <label className="block text.sm font-medium text-gray-700">{t('accountInfo.currentRoles')}</label>
-            <div className="flex flex-wrap gap-2 mt-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">{t('accountInfo.currentRoles')}</label>
+            <div className="flex flex-wrap gap-2.5">
               {session?.user?.isAdmin && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-red-100 text-red-800 border border-red-200 shadow-sm">
                   {t('roles.platformAdmin')}
                 </span>
               )}
               {session?.user?.person?.team?.adminId === session?.user?.id && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 border border-purple-200 shadow-sm">
                   {t('roles.teamAdmin')}
                 </span>
               )}
               {session?.user?.person?.teamId && session?.user?.person?.team?.adminId !== session?.user?.id && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-200 shadow-sm">
                   {t('roles.teamMember')}
                 </span>
               )}
               {session?.user?.role === 'user' && !session?.user?.person?.teamId && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gray-100 text-gray-800 border border-gray-200 shadow-sm">
                   {t('roles.individualUser')}
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-3 leading-relaxed">
               {t('accountInfo.rolesDescription')}
             </p>
           </div>

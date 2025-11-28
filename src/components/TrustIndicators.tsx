@@ -44,13 +44,13 @@ export default function TrustIndicators() {
   ];
 
   return (
-    <section className="py-20 lg:py-32 bg-bg-white">
+    <section className="py-20 sm:py-24 lg:py-32 bg-bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h3 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
+        <div className="text-center mb-20">
+          <h3 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
             {t('title')}
           </h3>
-          <p className="text-xl text-text-body max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl lg:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed">
             {t('subtitle')}
           </p>
         </div>
@@ -59,14 +59,14 @@ export default function TrustIndicators() {
           {TRUST_BADGES.map((badge, index) => (
             <div
               key={index}
-              className="group bg-bg-white rounded-3xl p-8 lg:p-10 text-center shadow-depth-md hover:shadow-depth-xl transition-all duration-500 border-2 border-transparent hover:border-brand-primary-lighter hover:-translate-y-2"
+              className="group bg-bg-white rounded-3xl p-8 lg:p-10 xl:p-12 text-center shadow-depth-lg hover:shadow-depth-2xl transition-all duration-500 border-2 border-brand-primary-lighter/30 hover:border-brand-primary-lighter hover:-translate-y-3 cursor-pointer"
             >
-              <div className="w-16 h-16 lg:w-20 lg:h-20 bg-brand-primary-light rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-primary group-hover:scale-110 transition-all duration-500 shadow-depth-sm group-hover:shadow-depth-md">
+              <div className="w-16 h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-brand-primary-light rounded-2xl flex items-center justify-center mb-8 group-hover:bg-brand-primary group-hover:scale-110 transition-all duration-500 shadow-depth-md group-hover:shadow-depth-xl group-hover:shadow-brand-primary/20">
                 <div className="text-brand-primary group-hover:text-white transition-colors duration-500">
                   {badge.icon}
                 </div>
               </div>
-              <h4 className="font-bold text-text-dark mb-4 text-xl lg:text-2xl font-display">
+              <h4 className="font-bold text-text-dark mb-5 text-xl lg:text-2xl xl:text-3xl font-display leading-tight">
                 {badge.title}
               </h4>
               <p className="text-base lg:text-lg text-text-body leading-relaxed">

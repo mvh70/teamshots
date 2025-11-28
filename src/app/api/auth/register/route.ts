@@ -307,11 +307,18 @@ export async function POST(request: NextRequest) {
       await prisma.$transaction(async (tx) => {
         const { PRICING_CONFIG } = await import('@/config/pricing')
         const { PACKAGES_CONFIG } = await import('@/config/packages')
-        const defaultPackageId = PACKAGES_CONFIG.defaultPlanPackage
+        // Use tryitforfree package if period is tryItForFree, otherwise use default
+        const requestedPeriod = body.period as string | undefined
+        const packageId = requestedPeriod === 'tryItForFree' 
+          ? 'tryitforfree' 
+          : PACKAGES_CONFIG.defaultPlanPackage
         const freePlanTier = userType === 'team' ? 'pro' : 'individual'
-        const freeCredits = userType === 'team'
-          ? PRICING_CONFIG.freeTrial.pro
-          : PRICING_CONFIG.freeTrial.individual
+        // Use tryItForFree credits if that's the requested period
+        const freeCredits = requestedPeriod === 'tryItForFree'
+          ? PRICING_CONFIG.tryItForFree.credits
+          : (userType === 'team'
+            ? PRICING_CONFIG.freeTrial.pro
+            : PRICING_CONFIG.freeTrial.individual)
 
         // Get person's team association for credit assignment
         const personWithTeam = await tx.person.findUnique({
@@ -325,7 +332,7 @@ export async function POST(request: NextRequest) {
             where: { userId: user.id, type: 'free_grant' }
           }),
           tx.userPackage.findFirst({
-            where: { userId: user.id, packageId: defaultPackageId }
+            where: { userId: user.id, packageId }
           })
         ])
 
@@ -362,16 +369,16 @@ export async function POST(request: NextRequest) {
           Logger.info('Free trial granted', { userId: user.id, credits: freeCredits, planTier: freePlanTier })
         }
 
-        // Default package grant (only if not already granted)
+        // Package grant (only if not already granted)
         if (!existingPackage) {
           await tx.userPackage.create({
             data: {
               userId: user.id,
-              packageId: defaultPackageId,
+              packageId,
               purchasedAt: new Date()
             }
           })
-          Logger.info('Default package granted', { userId: user.id, packageId: defaultPackageId })
+          Logger.info('Package granted', { userId: user.id, packageId, period: requestedPeriod })
         }
       })
     } catch (e) {

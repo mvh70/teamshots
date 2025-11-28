@@ -6,6 +6,7 @@ import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
 import { BackgroundSettings } from '@/types/photo-style'
 import { BACKGROUND_TYPES, NEUTRAL_COLORS, GRADIENT_COLORS } from './config'
+import ColorPicker from '@/components/ui/ColorPicker'
 
 interface BackgroundSelectorProps {
   value: BackgroundSettings
@@ -29,8 +30,6 @@ export default function BackgroundSelector({
   token
 }: BackgroundSelectorProps) {
   const t = useTranslations('customization.photoStyle.background')
-  const [showColorPicker, setShowColorPicker] = useState(false)
-  const [showGradientPicker, setShowGradientPicker] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [, setImageLoaded] = useState(false)
   const previewSetRef = useRef<string | null>(null)
@@ -242,97 +241,25 @@ export default function BackgroundSelector({
 
       {value.type === 'neutral' && (
         <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">
-            {t('neutralColor', { default: 'Background Color' })}
-          </label>
-          <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-lg border-2 border-gray-300 cursor-pointer"
-              style={{ backgroundColor: value.color || '#ffffff' }}
-              onClick={() => !(isPredefined || isDisabled) && setShowColorPicker(!showColorPicker)}
-            />
-            <input
-              type="color"
-              value={value.color || '#ffffff'}
-              onChange={(e) => !(isPredefined || isDisabled) && handleColorChange(e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="h-10 w-16 p-1 border border-gray-300 rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-            <input
-              type="text"
-              value={value.color || '#ffffff'}
-              onChange={(e) => !(isPredefined || isDisabled) && handleColorChange(e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-900"
-              placeholder="#ffffff"
-            />
-          </div>
-          
-          {showColorPicker && !(isPredefined || isDisabled) && (
-            <div className="grid grid-cols-10 gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-              {NEUTRAL_COLORS.map((color) => (
-                <button
-                  type="button"
-                  key={color}
-                  onClick={() => handleColorChange(color)}
-                  className="w-8 h-8 rounded border-2 border-gray-300 hover:border-gray-400 transition-colors"
-                  style={{ backgroundColor: color }}
-                  title={color}
-                />
-              ))}
-            </div>
-          )}
+          <ColorPicker
+            label={t('neutralColor', { default: 'Background Color' })}
+            value={value.color ?? '#ffffff'}
+            onChange={handleColorChange}
+            presets={NEUTRAL_COLORS}
+            disabled={isPredefined || isDisabled}
+          />
         </div>
       )}
 
       {value.type === 'gradient' && (
         <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">
-            {t('gradientColor', { default: 'Gradient Color' })}
-          </label>
-          <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-lg border-2 border-gray-300 cursor-pointer"
-              style={{
-                background: value.color 
-                  ? `linear-gradient(135deg, ${value.color}, ${value.color}40)`
-                  : '#ffffff'
-              }}
-              onClick={() => !(isPredefined || isDisabled) && setShowGradientPicker(!showGradientPicker)}
-            />
-            <input
-              type="color"
-              value={value.color || '#667eea'}
-              onChange={(e) => !(isPredefined || isDisabled) && handleGradientColorChange(e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="h-10 w-16 p-1 border border-gray-300 rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-            <input
-              type="text"
-              value={value.color || '#667eea'}
-              onChange={(e) => !(isPredefined || isDisabled) && handleGradientColorChange(e.target.value)}
-              disabled={isPredefined || isDisabled}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-900"
-              placeholder="#667eea"
-            />
-          </div>
-          
-          {showGradientPicker && !(isPredefined || isDisabled) && (
-            <div className="grid grid-cols-8 gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-              {GRADIENT_COLORS.map((color, index) => (
-                <button
-                  type="button"
-                  key={index}
-                  onClick={() => handleGradientColorChange(color)}
-                  className="h-12 rounded border-2 border-gray-300 hover:border-gray-400 transition-colors"
-                  style={{
-                    background: `linear-gradient(135deg, ${color}, ${color}40)`
-                  }}
-                  title={color}
-                />
-              ))}
-            </div>
-          )}
+          <ColorPicker
+            label={t('gradientColor', { default: 'Gradient Color' })}
+            value={value.color ?? '#667eea'}
+            onChange={handleGradientColorChange}
+            presets={GRADIENT_COLORS}
+            disabled={isPredefined || isDisabled}
+          />
         </div>
       )}
 

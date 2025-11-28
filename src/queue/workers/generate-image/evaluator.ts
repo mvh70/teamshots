@@ -209,15 +209,26 @@ export async function evaluateGeneratedImage({
       '   - The logo should appear clean and isolated, exactly as provided in the reference',
       '',
       '10. branding_positioned_correctly',
-      '   - Check the generation prompt for the EXACT placement instruction (e.g., "left chest", "center chest", "sleeve")',
-      '   - Is the logo placed in EXACTLY the location specified in the prompt?',
+      isClothingLogo
+        ? '   - Check the generation prompt for the EXACT placement instruction (e.g., "left chest", "center chest", "sleeve")'
+        : '   - Check the generation prompt for the placement instruction (e.g., "background", "wall", "scene element")',
+      isClothingLogo
+        ? '   - Is the logo placed in EXACTLY the location specified in the prompt?'
+        : '   - Is the logo placed in the background scene as a 3D physical element?',
       '   - Does it appear exactly ONCE (not duplicated, not missing)?',
-      '   - Is the positioning accurate (not shifted, not rotated incorrectly, not placed on wrong body part)?',
+      isClothingLogo
+        ? '   - Is the positioning accurate (not shifted, not rotated incorrectly, not placed on wrong body part)?'
+        : '   - Is the logo NOT placed on the subject, floors, windows, or floating in mid-air?',
       '',
       '11. branding_scene_aligned',
       '   - Is the logo integrated naturally into the scene without looking pasted or composited?',
       '   - Does lighting, perspective, and scale match the environment realistically?',
-      '   - Does the logo follow the contours of the clothing/surface it\'s placed on?'
+      isClothingLogo
+        ? '   - Does the logo follow the contours of the clothing/surface it\'s placed on?'
+        : '   - Does the logo appear as a 3D physical installation (e.g., brushed metal, carved stone, illuminated acrylic)?',
+      isClothingLogo
+        ? ''
+        : '   - Partial obscuring by foreground elements (plants, cables, objects) is ACCEPTABLE and adds realism'
     )
     
     // Only add clothing overflow check when logo is specifically for clothing

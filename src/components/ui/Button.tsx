@@ -59,7 +59,7 @@ export function Button({
       case 'danger':
         return 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed'
       case 'auth':
-        return 'w-full py-4 px-6 text-white bg-brand-cta hover:bg-brand-cta-hover focus:ring-brand-cta focus:ring-offset-2 disabled:opacity-50 shadow-depth-lg hover:shadow-depth-xl transform hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98] font-bold rounded-xl transition-all duration-300'
+        return 'w-full py-4 px-6 text-white bg-gradient-to-r from-blue-600 via-blue-600 to-blue-700 hover:from-blue-700 hover:via-blue-700 hover:to-blue-800 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 shadow-lg hover:shadow-xl hover:shadow-blue-500/25 transform hover:-translate-y-0.5 hover:scale-[1.01] active:scale-[0.99] font-bold rounded-xl transition-all duration-200 relative overflow-hidden group'
       case 'checkout':
         if (useBrandCtaColors) {
           return 'text-white disabled:opacity-60 disabled:cursor-not-allowed'
@@ -119,6 +119,10 @@ export function Button({
     return children
   }
 
+  const shimmerEffect = variant === 'auth' ? (
+    <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+  ) : null
+
   return (
     <button
       className={classes}
@@ -130,7 +134,8 @@ export function Button({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {getButtonContent()}
+      {shimmerEffect}
+      <span className="relative z-10">{getButtonContent()}</span>
     </button>
   )
 }

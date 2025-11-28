@@ -1,24 +1,20 @@
 // Define Stripe Price IDs per environment (test vs production)
 const TEST_STRIPE_PRICE_IDS = {
-  TRY_ONCE: "price_1SVDRqENr8odIuXa8iteYR8v",
   INDIVIDUAL: "price_1SVDRqENr8odIuXaUsejcC0Y",
   PRO_SMALL: "price_1SVDRrENr8odIuXam20q1Y0H",
   PRO_LARGE: "price_1SVDRsENr8odIuXaI58rONjp",
   INDIVIDUAL_TOP_UP: "price_1SVDRsENr8odIuXauWVusJRu",
   PRO_SMALL_TOP_UP: "price_1SVDRtENr8odIuXa51JORKHM",
   PRO_LARGE_TOP_UP: "price_1SVDRtENr8odIuXasuxkKPYU",
-  TRY_ONCE_TOP_UP: "price_1SVDRuENr8odIuXaZofhMLDy",
 } as const;
 
 const PROD_STRIPE_PRICE_IDS = {
-  TRY_ONCE: "price_1SVEzhENr8odIuXaB5GH9ols",
   INDIVIDUAL: "price_1SVEzhENr8odIuXaRD0LmWRv",
   PRO_SMALL: "price_1SVEziENr8odIuXagC8KXdWm",
   PRO_LARGE: "price_1SVEzjENr8odIuXasqgEm3hL",
   INDIVIDUAL_TOP_UP: "price_1SVEzjENr8odIuXasgnzDlZv",
   PRO_SMALL_TOP_UP: "price_1SVEzkENr8odIuXaSbNmfuHf",
   PRO_LARGE_TOP_UP: "price_1SVEzlENr8odIuXaIBqDLcGj",
-  TRY_ONCE_TOP_UP: "price_1SVEzlENr8odIuXazlEJJjXi",
 } as const;
 
 const IS_PRODUCTION =
@@ -26,14 +22,12 @@ const IS_PRODUCTION =
   process.env.NODE_ENV === 'production';
 
 type StripePriceIds = {
-  readonly TRY_ONCE: string;
   readonly INDIVIDUAL: string;
   readonly PRO_SMALL: string;
   readonly PRO_LARGE: string;
   readonly INDIVIDUAL_TOP_UP: string;
   readonly PRO_SMALL_TOP_UP: string;
   readonly PRO_LARGE_TOP_UP: string;
-  readonly TRY_ONCE_TOP_UP: string;
 };
 const STRIPE_PRICE_IDS: StripePriceIds = IS_PRODUCTION ? PROD_STRIPE_PRICE_IDS : TEST_STRIPE_PRICE_IDS;
 
@@ -47,23 +41,17 @@ export const PRICING_CONFIG = {
 
   // Regeneration system
   regenerations: {
-    tryOnce: 2,
+    tryItForFree: 2,
     individual: 3,
     proSmall: 4,
     proLarge: 4,
     invited: 4,
   },
 
-  // Try Once (one-time purchase)
-  tryOnce: {
-    price: 5.00,
-    credits: 10,
-    stripePriceId: STRIPE_PRICE_IDS.TRY_ONCE || '',
-    topUp: {
-      price: 24.99,
-      credits: 50,
-      stripePriceId: STRIPE_PRICE_IDS.TRY_ONCE_TOP_UP || '',
-    },
+  // Try It For Free (free tier - grants credits on signup)
+  tryItForFree: {
+    credits: 10, // Credits granted on signup
+    regenerations: 2,
   },
 
   // Individual tier (Personal - one-time purchase)
@@ -122,4 +110,4 @@ export const PRICING_CONFIG = {
 } as const;
 
 // Pricing tier type
-export type PricingTier = 'tryOnce' | 'individual' | 'proSmall' | 'proLarge';
+export type PricingTier = 'tryItForFree' | 'individual' | 'proSmall' | 'proLarge';

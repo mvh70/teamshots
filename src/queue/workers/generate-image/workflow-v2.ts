@@ -222,7 +222,7 @@ export async function executeV2Workflow({
           await job.updateProgress({
             progress: 10,
             message: formatProgressWithAttempt({
-              message: `Gemini is busy (rate limited). Trying again in ${waitSeconds} seconds...`,
+              message: `Our photo chef is plating someone else's order. We'll try again in ${waitSeconds}s...`,
               emoji: '⏳'
             }, 10)
           })
@@ -382,7 +382,7 @@ export async function executeV2Workflow({
           await job.updateProgress({
             progress: 55,
             message: formatProgressWithAttempt({
-              message: `Gemini is busy (rate limited). Trying again in ${waitSeconds} seconds...`,
+              message: `High demand! Your photos are worth the wait. Retrying in ${waitSeconds}s...`,
               emoji: '⏳'
             }, 55)
           })
@@ -501,7 +501,7 @@ export async function executeV2Workflow({
           await job.updateProgress({
             progress: 80,
             message: formatProgressWithAttempt({
-              message: `Gemini is busy (rate limited). Trying again in ${waitSeconds} seconds...`,
+              message: `The creativity hamsters need a quick water break. Back in ${waitSeconds}s...`,
               emoji: '⏳'
             }, 80)
           })

@@ -138,9 +138,12 @@ export async function executeV3Step2(
     '',
     '**CRITICAL Person Prominence Rules:**',
     '- The person must be the DOMINANT element in the frame - they should occupy 40-60% of the image height at minimum.',
-    '- The person should be LARGER than any background elements like banners, signs, or logos.',
-    '- Do NOT make the person small to fit background elements. Instead, let the person overlap or partially cover background elements.',
-    '- The viewer\'s eye should immediately go to the person, not the background.'
+    '- The person should be LARGER and more visually prominent than any background elements like banners, signs, or logos.',
+    '- Background elements (banners, text, signs) must be VISUALLY SUBORDINATE. They should be less sharp, have lower contrast, or be partially obscured by the subject.',
+    '- Do NOT make the person small to fit background elements. Instead, let the person overlap or partially cover background elements to establish depth and hierarchy.',
+    '- The viewer\'s eye should immediately go to the person, not the background.',
+    '- Avoid placing the person directly adjacent to large vertical banner-like structures that could compete as a second subject. If present, push them further into the background or blur them.',
+    '',
   ]
   
   // Add face refinement instructions if requested
@@ -274,4 +277,3 @@ export async function executeV3Step2(
     refinedBase64: base64
   }
 }
-

@@ -112,6 +112,24 @@ export async function updateJobProgress(
 }
 
 /**
+ * Friendly rate limit messages that don't reveal the AI provider
+ */
+const RATE_LIMIT_MESSAGES = [
+  "Our photo chef is plating someone else's order right now",
+  "High demand! Your photos are worth the wait",
+  "Taking a quick breather to make your photos extra crispy",
+  "The creativity hamsters need a water break",
+  "So many people want photos today (good taste, everyone)",
+]
+
+/**
+ * Get a consistent message based on attempt number
+ */
+function getRateLimitMessage(attempt: number): string {
+  return RATE_LIMIT_MESSAGES[(attempt - 1) % RATE_LIMIT_MESSAGES.length]
+}
+
+/**
  * Create a retry callback for progress updates during rate limit retries
  */
 export function createProgressRetryCallback(
@@ -119,10 +137,11 @@ export function createProgressRetryCallback(
   progress: number
 ): (attempt: number, waitSeconds: number) => Promise<void> {
   return async (attempt: number, waitSeconds: number) => {
+    const message = getRateLimitMessage(attempt)
     await updateJobProgress(
       job,
       progress,
-      `⏳ Gemini is busy. Trying again in ${waitSeconds} seconds... (attempt ${attempt})`
+      `⏳ ${message}. We'll try again in ${waitSeconds}s...`
     )
   }
 }

@@ -35,34 +35,43 @@ export default function GenerationSummaryTeam({
   const remainingPhotos = calculatePhotosFromCredits(remainingCredits)
   
   const summaryBlock = (
-    <div className="text-sm text-gray-600 space-y-1">
-      <p><strong>Type:</strong> {type === 'team' ? `${teamName || 'Team'} use` : 'Personal use'}</p>
-      <p><strong>Style:</strong> {styleLabel}</p>
-      <p>
-        <strong>Remaining photocredits:</strong>{' '}
-        <span className="text-gray-900">{remainingPhotos}</span>
-      </p>
+    <div className="text-sm text-gray-700 space-y-2.5">
+      <div className="flex items-center gap-2">
+        <span className="font-semibold text-gray-900 min-w-[100px]">Type:</span>
+        <span className="text-gray-700">{type === 'team' ? `${teamName || 'Team'} use` : 'Personal use'}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="font-semibold text-gray-900 min-w-[100px]">Style:</span>
+        <span className="text-gray-700">{styleLabel}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="font-semibold text-gray-900 min-w-[100px]">Remaining:</span>
+        <span className="text-lg font-bold text-gray-900">{remainingPhotos}</span>
+        <span className="text-gray-600 text-xs">photo credits</span>
+      </div>
     </div>
   )
 
   const hintBlock = showCustomizeHint ? (
     <div
       role="note"
-      className="w-full md:min-w-[280px] flex items-start gap-3 rounded-md border border-brand-cta/40 bg-brand-cta-light p-3"
+      className="w-full md:min-w-[280px] flex items-start gap-4 rounded-xl border border-brand-cta/50 bg-gradient-to-br from-brand-cta-light to-indigo-50/50 p-4 shadow-sm"
     >
-      <SparklesIcon className="h-5 w-5 text-brand-primary mt-0.5" aria-hidden="true" />
-      <p className="text-[13px] leading-snug text-text-body">
-        <span className="font-medium text-brand-primary">Heads up:</span> Customize your photo in the <span className="text-brand-primary font-medium inline-flex items-center gap-1"><SparklesIcon className="h-4 w-4" aria-hidden="true" />editable</span> sections below before generating.
+      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center">
+        <SparklesIcon className="h-5 w-5 text-brand-primary" aria-hidden="true" />
+      </div>
+      <p className="text-sm leading-relaxed text-gray-700">
+        <span className="font-semibold text-brand-primary">Heads up:</span> Customize your photo in the <span className="text-brand-primary font-semibold inline-flex items-center gap-1"><SparklesIcon className="h-4 w-4" aria-hidden="true" />editable</span> sections below before generating.
       </p>
     </div>
   ) : null
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {showTitle && (
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Generation Summary</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">Generation Summary</h3>
       )}
-      <div className={`${plain ? 'p-0' : 'bg-gray-50 rounded-xl md:rounded-lg p-5 md:p-4'}`}>
+      <div className={`${plain ? 'p-0' : 'bg-gradient-to-br from-gray-50 to-gray-100/30 rounded-xl p-6'}`}>
         {inlineHint && showCustomizeHint ? (
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
             <div className="w-full p-4 bg-white rounded-lg md:bg-transparent md:p-0 md:min-w-[260px] md:max-w-xs">

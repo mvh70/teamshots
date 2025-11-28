@@ -36,6 +36,7 @@ import { evaluateGeneratedImage } from './generate-image/evaluator'
 import type { ImageEvaluationResult } from './generate-image/evaluator'
 import { executeV2Workflow } from './generate-image/workflow-v2'
 import { executeV3Workflow } from './generate-image/workflow-v3'
+import { EvaluationFailedError } from './generate-image/errors'
 import {
   downloadAssetAsBase64,
   uploadGeneratedImagesToS3,
@@ -851,6 +852,26 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       // Check if this is a rate limit error (429) - filter out stack trace
       const isRateLimit = isRateLimitError(error)
       
+      // Handle EvaluationFailedError specifically to send notifications with attachments
+      if (error instanceof EvaluationFailedError) {
+        Logger.warn('Image generation failed evaluation checks', {
+          generationId,
+          reason: error.message
+        })
+        
+        await notifyEvaluationFailure({
+          generationId: error.generationId,
+          personId,
+          userId,
+          jobId: job.id,
+          attempt: error.attempt,
+          evaluations: [error.evaluation],
+          aspectRatioDescription: error.aspectRatio,
+          shotLabel: 'N/A',
+          imageBase64: [error.imageBase64]
+        })
+      }
+      
       if (isRateLimit) {
         // For rate limit errors, log without stack trace
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -871,12 +892,12 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       
       // Check if this is a V2 workflow failure (internal retries exhausted)
       // These errors indicate logical failure after multiple internal attempts, so we shouldn't retry the whole job
-      const isWorkflowFailure = error instanceof Error && (
+      const isWorkflowFailure = (error instanceof Error && (
         error.message.includes('Step 1 failed after') ||
         error.message.includes('Step 5 failed after') ||
         error.message.includes('Step 7 failed after') ||
         error.message.includes('Step 4 validation failed')
-      )
+      )) || error instanceof EvaluationFailedError
       
       const isFinalAttempt = job.attemptsMade >= maxAttempts - 1 || isWorkflowFailure
 
@@ -1121,11 +1142,6 @@ async function notifyEvaluationFailure({
       }px\n`
       if (evaluation.details.selfieDuplicate) {
         message += `Flagged duplicate of reference ${evaluation.details.matchingReferenceLabel ?? 'unknown'}.\n`
-      }
-      if (evaluation.status !== 'Approved' && imageBase64[index]) {
-        message += `<img src="data:image/png;base64,${
-          imageBase64[index]
-        }" alt="Variation ${variationNumber} QA snapshot" style="max-width:100%;height:auto;" />\n`
       }
       message += '\n'
     })

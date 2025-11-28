@@ -244,44 +244,62 @@ export default function PersonalGenerationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-4">{tg('title')}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{tg('title')}</h1>
+        <p className="text-gray-600">Manage and view your generated professional photos</p>
       </div>
 
       {/* Filters and Generate Button Row */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-        <select value={timeframe} onChange={(e) => setTimeframe(e.target.value as 'all'|'7d'|'30d')} className="border rounded-md px-2 py-1 text-sm">
-          <option value="all">All time</option>
-          <option value="7d">Last 7 days</option>
-          <option value="30d">Last 30 days</option>
-        </select>
-        <select value={context} onChange={(e) => setContext(e.target.value)} className="border rounded-md px-2 py-1 text-sm">
-          <option value="all">All photo styles</option>
-          {styleOptions.map((name) => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </select>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Filters - Enhanced Dropdowns */}
+        <div className="flex flex-wrap items-center gap-3 overflow-x-auto pb-2 -mb-2 sm:pb-0 sm:mb-0">
+          {/* Timeframe filter - Enhanced dropdown */}
+          <div className="relative">
+            <select 
+              value={timeframe} 
+              onChange={(e) => setTimeframe(e.target.value as 'all'|'7d'|'30d')} 
+              className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[140px]"
+            >
+              <option value="all">All time</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+          
+          {/* Style filter - Enhanced dropdown */}
+          {styleOptions.length > 0 && (
+            <div className="relative">
+              <select 
+                value={context} 
+                onChange={(e) => setContext(e.target.value)} 
+                className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[160px]"
+              >
+                <option value="all">All photo styles</option>
+                {styleOptions.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Prominent Generate Button with Cost Info */}
-        <div className="flex flex-col items-end md:items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-col items-stretch sm:items-end md:items-center gap-3 w-full sm:w-auto">
           <Link 
             href="/app/generate/selfie?type=personal" 
-            className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-lg font-semibold text-base md:text-lg lg:text-xl shadow-sm transition-all hover:shadow-md flex items-center gap-2 whitespace-nowrap"
-            style={{
-              backgroundColor: BRAND_CONFIG.colors.primary,
-              color: 'white'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primaryHover
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = BRAND_CONFIG.colors.primary
-            }}
+            className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-xl font-bold text-base md:text-lg lg:text-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-2.5 whitespace-nowrap bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white touch-manipulation"
           >
             <svg 
               className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" 
@@ -299,16 +317,18 @@ export default function PersonalGenerationsPage() {
             New generation
           </Link>
           
-          {/* Cost information */}
-          <div className="text-xs md:text-sm text-gray-600 text-right md:text-center space-y-0.5">
-            <div>
-              <span className="font-medium" style={{ color: BRAND_CONFIG.colors.primary }}>
-                {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)} {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration) === 1 ? t('photoCredit') : t('photoCredits')}
-              </span>
-              <span> {t('perPhoto')}</span>
-            </div>
-            <div className="text-gray-500">
-              {subscriptionTier ? getRegenerationCount(subscriptionTier) : 3} {t('retriesPerPhoto')}
+          {/* Cost information - Enhanced card style */}
+          <div className="bg-white rounded-lg border border-gray-200 px-4 py-2.5 shadow-sm text-xs md:text-sm text-gray-600 text-right md:text-center">
+            <div className="space-y-1">
+              <div>
+                <span className="font-semibold" style={{ color: BRAND_CONFIG.colors.primary }}>
+                  {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)} {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration) === 1 ? t('photoCredit') : t('photoCredits')}
+                </span>
+                <span className="text-gray-500"> {t('perPhoto')}</span>
+              </div>
+              <div className="text-gray-500">
+                {subscriptionTier ? getRegenerationCount(subscriptionTier) : 3} {t('retriesPerPhoto')}
+              </div>
             </div>
           </div>
         </div>
@@ -349,10 +369,53 @@ export default function PersonalGenerationsPage() {
             )}
           </>
         ) : (
-          <div className="text-center py-16 bg-white rounded-lg border">
-            <p className="text-gray-700 mb-2">{tg('empty.title')}</p>
-            <p className="text-gray-500 text-sm mb-4">{tg('empty.subtitle')}</p>
-                <Link href="/app/generate/selfie?type=personal" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
+          <div className="text-center py-20 px-6 bg-gradient-to-br from-white via-gray-50/50 to-white rounded-xl border-2 border-gray-200/50 shadow-sm">
+            {/* Illustration/Icon */}
+            <div className="mx-auto mb-6 w-24 h-24 rounded-full bg-gradient-to-br from-brand-primary/10 via-brand-primary/5 to-transparent flex items-center justify-center">
+              <svg 
+                className="w-12 h-12 text-brand-primary/60" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor" 
+                strokeWidth={1.5}
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" 
+                />
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zm0 0l1.5-1.5m-1.5 1.5l-1.5-1.5m1.5 1.5v-3.375" 
+                />
+              </svg>
+            </div>
+            
+            {/* Typography */}
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">{tg('empty.title')}</h2>
+            <p className="text-base text-gray-600 mb-8 max-w-md mx-auto leading-relaxed">{tg('empty.subtitle')}</p>
+            
+            {/* CTA Button */}
+            <Link 
+              href="/app/generate/selfie?type=personal" 
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-brand-primary text-white font-semibold text-base hover:bg-brand-primary-hover shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
+            >
+              <svg 
+                className="w-5 h-5" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                strokeWidth={2.5} 
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 4.5v15m7.5-7.5h-15"
+                />
+              </svg>
+              New generation
+            </Link>
           </div>
         )}
       {failureToast && (

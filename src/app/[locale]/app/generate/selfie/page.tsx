@@ -77,20 +77,20 @@ function SelfieSelectionPageContent() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{t('title')}</h1>
-          <p className="text-sm text-gray-600 mt-1">{t('subtitle')}</p>
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{t('title')}</h1>
+          <p className="text-base text-gray-600 leading-relaxed">{t('subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={handleContinue}
             disabled={!canContinue}
-            className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+            className={`px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
               canContinue
-                ? 'text-white bg-brand-primary hover:bg-brand-primary-hover'
-                : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+                ? 'text-white bg-gradient-to-r from-brand-primary to-indigo-600 hover:from-brand-primary-hover hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0'
+                : 'text-gray-400 bg-gray-100 cursor-not-allowed shadow-sm'
             }`}
           >
             Continue
@@ -102,7 +102,7 @@ function SelfieSelectionPageContent() {
       {loading ? (
         <LoadingGrid cols={4} rows={2} />
       ) : (
-        <div className={isMobile ? 'pb-40' : ''}>
+        <div className={isMobile ? 'pb-40' : 'mt-2'}>
           <SelfieGallery
             selfies={uploads.map(u => ({ id: u.id, key: u.uploadedKey, url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`, uploadedAt: u.createdAt, used: u.hasGenerations }))}
             allowDelete={false}
