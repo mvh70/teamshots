@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
-import { getServerBaseUrl } from '@/lib/url'
+import { headers } from 'next/headers'
+import { getBaseUrl } from '@/lib/url'
 
 /**
  * Generate sitemap.xml for SEO
@@ -11,14 +12,29 @@ import { getServerBaseUrl } from '@/lib/url'
  * to avoid Google "Deceptive Pages" warnings (link farming/impersonation).
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = await getServerBaseUrl()
+  // Use headers() directly here instead of getServerBaseUrl() to avoid build-time issues
+  let baseUrl: string
+  try {
+    const headersList = await headers()
+    baseUrl = getBaseUrl(headersList)
+  } catch {
+    // Fallback during build time when headers() is not available
+    // This happens during static generation
+    baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://teamshotspro.com'
+  }
   
   // Public routes that should be indexed
   const publicRoutes = [
     '',           // Landing page
     '/pricing',   // Pricing page
     '/blog',      // Blog index
-    '/blog/best-ai-headshot-generators', // Blog post
+    '/blog/ai-headshots-for-linkedin', // Blog: AI Headshots for LinkedIn
+    '/blog/free-vs-paid-ai-headshots', // Blog: Free vs Paid comparison
+    '/blog/corporate-ai-headshots',    // Blog: Corporate AI Headshots
+    '/blog/best-ai-headshot-generators', // Blog: Best generators comparison
+    '/blog/free-ai-headshot-generator', // Blog: Free AI Headshot Generator
+    '/blog/professional-headshots-ai', // Blog: Professional Headshots AI
+    '/blog/headshot-ai-generator',     // Blog: Headshot AI Generator
     '/legal/privacy', // Privacy Policy
     '/legal/terms',   // Terms of Service
   ]
