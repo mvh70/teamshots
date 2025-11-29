@@ -16,6 +16,8 @@ interface StyleSettingsSectionProps {
   teamContext?: boolean
   isFreePlan?: boolean
   token?: string // Optional token for invite-based access to custom assets
+  mobileExtraSteps?: Parameters<typeof PhotoStyleSettings>[0]['mobileExtraSteps']
+  onMobileStepChange?: Parameters<typeof PhotoStyleSettings>[0]['onMobileStepChange']
 }
 
 export default function StyleSettingsSection({
@@ -31,7 +33,9 @@ export default function StyleSettingsSection({
   noContainer = false,
   teamContext = false,
   isFreePlan = false,
-  token
+  token,
+  mobileExtraSteps,
+  onMobileStepChange
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -49,6 +53,8 @@ export default function StyleSettingsSection({
         teamContext={teamContext}
         isFreePlan={isFreePlan}
         token={token}
+        mobileExtraSteps={mobileExtraSteps}
+        onMobileStepChange={onMobileStepChange}
       />
     </>
   )

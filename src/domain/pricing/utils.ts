@@ -34,8 +34,12 @@ export function calculatePricePerPhoto(
   credits: number,
   regenerations: number
 ): number {
-  const creditsPerGeneration = PRICING_CONFIG.credits.perGeneration
-  return (price / credits) * (creditsPerGeneration / regenerations)
+  // Calculate total photos including retries: numberOfPhotos × (1 original + regenerations)
+  const numberOfPhotos = calculatePhotosFromCredits(credits)
+  const totalPhotos = numberOfPhotos * (1 + regenerations)
+  
+  // Price per photo = total price / total photos
+  return price / totalPhotos
 }
 
 export function getPricePerPhoto(tier: PricingTier): number {

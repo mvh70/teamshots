@@ -5,7 +5,8 @@
   },
   "common": {
     "processingImage": "Procesando imagen...",
-    "processingImages": "Procesando {count} imágenes..."
+    "processingImages": "Procesando {count} imágenes...",
+    "uploading": "Subiendo..."
   },
   "nav": {
     "home": "Inicio",
@@ -111,13 +112,13 @@
     "items": {
       "1": {
         "question": "¿Mis datos son seguros y privados?",
-        "answer": "Absolutamente. Usamos cifrado empresarial y nunca almacenamos fotos permanentemente. Se eliminan automáticamente 30 días después de que termine tu suscripción, o puedes solicitarlo cuando quieras. No compartimos datos con terceros, ni siquiera con tu jefe, lo prometemos."
+        "answer": "Absolutamente. Usamos cifrado empresarial y nunca almacenamos fotos permanentemente. Se eliminan automáticamente dentro de 30 días después del cierre de cuenta, o puedes solicitarlo cuando quieras. No compartimos datos con terceros, ni siquiera con tu jefe, lo prometemos."
       },
       "2": {
         "question": "¿Cuánto cuesta?",
-        "answer": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a $19.99 (5 fotos), Pro Pequeño a $19.99 (5 fotos para equipos hasta 5 miembros), o Pro Grande a $59.99 (20 fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce 4 variaciones.",
-        "answerTeam": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: Pro Pequeño a $19.99 (5 fotos para equipos hasta 5 miembros), o Pro Grande a $59.99 (20 fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce 4 variaciones.",
-        "answerIndividual": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a $19.99 (5 fotos). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce 4 variaciones."
+        "answer": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos), Pro Pequeño a {proSmallPrice} ({proSmallPhotos} fotos para equipos hasta 5 miembros), o Pro Grande a {proLargePrice} ({proLargePhotos} fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
+        "answerTeam": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: Pro Pequeño a {proSmallPrice} ({proSmallPhotos} fotos para equipos hasta 5 miembros), o Pro Grande a {proLargePrice} ({proLargePhotos} fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
+        "answerIndividual": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones."
       },
       "3": {
         "question": "¿Qué tipos de fotos funcionan mejor?",
@@ -162,11 +163,12 @@
     "terms": "Términos de Servicio"
   },
   "pricing": {
-    "perPhotoVariation": "por reintento de foto",
+    "title": "Precios simples basados en uso",
+    "subtitle": "Sin suscripciones ni tarifas ocultas. Paga solo por las fotos que generas.",
+    "perPhotoVariation": "por foto",
     "includesVariationsPerPhoto": "Incluye {count} reintentos por foto",
+    "customizablePhotos": "{count, plural, one {# foto personalizable} other {# fotos personalizables}}",
     "variationsBullet": "Regenera hasta {count} veces para perfeccionar cada foto",
-    "title": "Precios simples y transparentes",
-    "subtitle": "Estás a solo un clic de fotos profesionales de equipo que hacen brillar a todos. Elige un plan y comencemos – sin drama de sesiones!",
     "mostPopular": "Más popular",
     "credits": "créditos",
     "creditsPerMonth": "créditos mensuales",
@@ -189,9 +191,8 @@
         "period": "gratis",
         "description": "Ve de qué se trata todo el alboroto. Sin tarjeta de crédito, sin compromiso, solo una prueba gratis para demostrar que no estamos bromeando.",
         "features": [
-          "Incluye branding fijo de TeamShotsPro (nuestra forma de decir hola)",
           "Personalización limitada para darte un adelanto",
-          "Reintenta hasta {regenerations} veces para perfeccionar tu foto",
+          "{photosText} en {variations} variaciones con branding fijo de TeamShotsPro (nuestra forma de decir hola)",
           "Perfecto para probar antes de comprometerte"
         ],
         "cta": "Regístrate gratis"
@@ -202,9 +203,9 @@
         "description": "Para profesionales independientes. Pago único, sin cuotas mensuales.",
         "features": [
           "Personalización completa: tú controlas pose, fondo, branding, colores de ropa y expresiones faciales (sé el director de tu propia sesión de fotos)",
-          "Reintenta hasta {regenerations} veces para perfeccionar cada foto (porque la perfección toma práctica)",
+          "{photosText} en {variations} variaciones",
           "Créditos nunca expiran, úsalos cuando quieras (acumúlalos como tesoro digital)",
-          "Recarga de créditos disponible (para cuando no puedas dejar de lucir increíble)"
+          "Recarga de créditos disponible a {topUpPricePerPhoto} por foto (para cuando no puedas dejar de lucir increíble)"
         ],
         "cta": "Obtén mis fotos"
       },
@@ -214,10 +215,10 @@
         "description": "Para equipos pequeños hasta 5 miembros. Paga una vez, sin suscripción.",
         "features": [
           "Personalización completa: controla pose, fondo, branding, colores de ropa y expresiones",
-          "Reintenta hasta {regenerations} veces para perfeccionar cada foto",
+          "{photosText} en {variations} variaciones",
           "Créditos nunca expiran, úsalos cuando quieras",
           "Gestión de fotos de equipo",
-          "Recarga de créditos disponible"
+          "Recarga de créditos disponible a {topUpPricePerPhoto} por foto"
         ],
         "cta": "Obtén fotos del equipo"
       },
@@ -227,11 +228,11 @@
         "description": "Para equipos más grandes. Pago único, sin cargos recurrentes.",
         "features": [
           "Personalización completa: controla pose, fondo, branding, colores de ropa y expresiones",
-          "Reintenta hasta {regenerations} veces para perfeccionar cada foto",
+          "{photosText} en {variations} variaciones",
           "Créditos nunca expiran, úsalos cuando quieras",
           "Gestión de fotos de equipo",
           "Plantillas de estilo de empresa",
-          "Recarga de créditos disponible"
+          "Recarga de créditos disponible a {topUpPricePerPhoto} por foto"
         ],
         "cta": "Escala al equipo"
       }
@@ -245,7 +246,7 @@
         },
         "howCreditsWork": {
           "question": "¿Cómo funcionan los créditos de foto?",
-          "answer": "Cada generación de foto usa 1 crédito de foto y permite hasta 4 reintentos de alta calidad dependiendo de tu plan. Tus créditos de foto nunca expiran. ¡Sin prisa, son tuyos para siempre!"
+          "answer": "Cada generación de foto usa 1 crédito de foto y permite hasta 4 variaciones de alta calidad dependiendo de tu plan. Tus créditos de foto nunca expiran. ¡Sin prisa, son tuyos para siempre!"
         },
         "topUp": {
           "question": "¿Puedo recargar créditos de foto?",
@@ -253,9 +254,9 @@
         },
         "satisfaction": {
           "question": "¿Qué si no estoy satisfecho?",
-          "answer": "Cada foto incluye 2-4 reintentos según tu plan (plan gratuito: 2 reintentos, Individual y Pro Pequeño: 3 reintentos, Pro Grande: 4 reintentos), para refinar hasta que quede perfecta. Por eso ofrecemos generación de prueba gratis al registrarte. Prueba primero, sin obligaciones.",
-          "answerTeam": "Cada foto incluye 2-4 reintentos según tu plan (plan gratuito: 2 reintentos, Pro Pequeño: 3 reintentos, Pro Grande: 4 reintentos), para refinar hasta que quede perfecta. Por eso ofrecemos generación de prueba gratis al registrarte. Prueba primero, sin obligaciones.",
-          "answerIndividual": "Cada foto incluye 2-3 reintentos según tu plan (plan gratuito: 2 reintentos, Individual: 3 reintentos), para refinar hasta que quede perfecta. Por eso ofrecemos generación de prueba gratis al registrarte. Prueba primero, sin obligaciones."
+          "answer": "Cada foto se puede generar 2-4 veces con pequeñas variaciones, según tu plan (plan gratuito: 1 reintento, Individual y Pro Pequeño: 2 reintentos, Pro Grande: 3 reintentos). Ofrecemos una generación de prueba gratis en un estilo predefinido al registrarte. Prueba primero, sin obligaciones.",
+          "answerTeam": "Cada foto se puede generar 2-4 veces con pequeñas variaciones, según tu plan (plan gratuito: 1 reintento, Pro Pequeño: 2 reintentos, Pro Grande: 3 reintentos). Ofrecemos una generación de prueba gratis en un estilo predefinido al registrarte. Prueba primero, sin obligaciones.",
+          "answerIndividual": "Cada foto se puede generar 2-3 veces con pequeñas variaciones, según tu plan (plan gratuito: 1 reintento, Individual: 2 reintentos). Ofrecemos una generación de prueba gratis en un estilo predefinido al registrarte. Prueba primero, sin obligaciones."
         }
       }
     },
@@ -301,7 +302,13 @@
       "forgotPassword": "¿Olvidaste contraseña?",
       "signingIn": "Iniciando...",
       "submit": "Iniciar sesión",
-      "noAccount": "¿No tienes cuenta? Regístrate"
+      "noAccount": "¿No tienes cuenta? Regístrate",
+      "errors": {
+        "invalidCredentials": "Correo o contraseña incorrectos. Por favor intenta de nuevo.",
+        "magicLinkFailed": "No se pudo enviar el enlace mágico. Por favor intenta de nuevo.",
+        "errorOccurred": "Ocurrió un error. Por favor intenta de nuevo.",
+        "tooManyAttempts": "Demasiados intentos de inicio de sesión. Por favor intenta más tarde."
+      }
     },
     "signup": {
       "freeBadge": "Incluye 1 generación de prueba gratis en estilo predefinido",
@@ -1141,7 +1148,8 @@
       "title": "Selecciona al menos 2 selfies",
       "noneSelected": "Toma una selfie nueva o elige una de tu galería. Tú decide.",
       "oneSelected": "Tienes 1 seleccionada. Añade una más para continuar.",
-      "enoughSelected": "Has seleccionado {count} selfie{count, plural, =1 {} other {s}}. Puedes continuar o seleccionar más."
+      "enoughSelected": "Has seleccionado {count} selfie{count, plural, =1 {} other {s}}. Puedes continuar o seleccionar más.",
+      "swipeHint": "Desliza a la derecha cuando estés listo para personalizar."
     },
     "gallery": {
       "deleteTooltip": "Eliminar selfie",
@@ -1303,6 +1311,52 @@
       "progress": {
         "editable": "{count} de {total} editables",
         "editableTeam": "{count} de {total} editables por los miembros del equipo"
+      },
+      "mobile": {
+        "banner": {
+          "customize": "Personaliza {label}",
+          "preset": "Configuración del equipo: {label}",
+          "introHeading": "Conoce tus controles de estilo",
+          "selfieTipsHeading": "Consejos para selfies",
+          "introBadge": "Atención",
+          "step": "Paso {current} de {total}",
+          "progress": "{completed} de {total} pasos completos"
+        },
+        "controls": {
+          "previous": "Anterior",
+          "next": "Siguiente",
+          "step": "Ir al paso {index}"
+        },
+        "swipeHint": "Desliza o toca Siguiente para continuar",
+        "intro": {
+          "kicker": "Antes de empezar",
+          "title": "Una parada rápida antes del glamour",
+          "body": "Estás a punto de personalizar cómo se verán tus fotos. Cada tarjeta ajusta una parte del set, así que desliza y deja tu sello personal.",
+          "swipe": "Desliza a la derecha para avanzar, a la izquierda para revisar. ¿Prefieres botones? Los pequeños chevrones abajo responden al toque.",
+          "editable": "La insignia con destellos significa que mandas tú. Ajusta hasta que el estilo cuente tu historia.",
+          "locked": "La insignia con candado indica que tu equipo ya lo definió. Puedes mirar, pero no tocar: necesitamos consistencia."
+        },
+        "selfieTips": {
+          "kicker": "Obtén los mejores resultados",
+          "title": "Consejos para selfies increíbles",
+          "body": "Las fotos de equipo geniales empiezan con buenas selfies. Así es como lograrlas.",
+          "angles": {
+            "title": "Varía los ángulos",
+            "desc": "— diferentes posiciones ayudan a nuestra IA a entender mejor tu rostro."
+          },
+          "lighting": {
+            "title": "Busca buena iluminación",
+            "desc": "— la luz natural funciona mejor. Evita sombras fuertes en tu cara."
+          },
+          "distance": {
+            "title": "Incluye una de más lejos",
+            "desc": "— mostrar tus hombros nos ayuda a ajustar las proporciones del cuerpo."
+          },
+          "minimum": {
+            "title": "Sube al menos 2",
+            "desc": "— más variedad = mejores resultados. Lo ideal son 3-5 selfies."
+          }
+        }
       },
       "tooltips": {
         "predefinedToggle": "Predefinido bloquea esta configuración para todos los miembros del equipo. Elección del Usuario permite que cada persona la personalice.",
@@ -1870,7 +1924,8 @@
     "common": {
       "continue": "Continuar",
       "photoCredit": "crédito de foto",
-      "photoCredits": "créditos de foto"
+      "photoCredits": "créditos de foto",
+      "dismiss": "Cerrar"
     },
     "getStarted": {
       "title": "Empezar",
@@ -1885,7 +1940,19 @@
       "empty": "Aún no hay fotos. Genera una y aparecerán aquí."
     },
     "selfieSelection": {
-      "title": "Elige selfies para usar"
+      "title": "Elige selfies para usar",
+      "mobile": {
+        "bannerTitle": "Selecciona tus selfies",
+        "bannerMessage": "Elige al menos 2 selfies y desliza a la derecha cuando estés listo para personalizar.",
+        "cta": "Desliza a la derecha al terminar",
+        "badgeSelecting": "Faltan {remaining}",
+        "badgeReady": "Listo para personalizar",
+        "hint": "¿Necesitas ajustar tus selfies? Hazlo aquí y luego desliza a la derecha para continuar.",
+        "actions": {
+          "camera": "Usar cámara",
+          "upload": "Subir foto"
+        }
+      }
     },
     "styleSelection": {
       "readyToGenerate": "Listo para Generar",
@@ -1895,6 +1962,24 @@
       },
       "costPerGeneration": "Costo por generación",
       "generateButton": "Generar foto"
+    },
+    "mobile": {
+      "intro": {
+        "swipeHint": "Desliza a la izquierda para empezar a personalizar"
+      },
+      "selfieTips": {
+        "swipeHint": "Desliza a la izquierda para seleccionar tus selfies"
+      }
+    },
+    "camera": {
+      "permissionNeeded": {
+        "title": "Se necesita acceso a la cámara",
+        "description": "Para tomar una selfie, permite el acceso a la cámara en tu navegador.",
+        "howTo": "Cómo habilitarlo:",
+        "step1": "Toca el icono de cámara/candado en la barra de direcciones",
+        "step2": "Selecciona \"Permitir\" para el acceso a la cámara",
+        "step3": "Luego toca \"Usar cámara\" de nuevo"
+      }
     },
     "generationFlow": {
       "title": "Generar Fotos de Equipo",

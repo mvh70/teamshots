@@ -11,7 +11,10 @@ import {
   CameraIcon,
   SparklesIcon,
   LockClosedIcon,
-  HandRaisedIcon
+  HandRaisedIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ArrowsRightLeftIcon
 } from '@heroicons/react/24/outline'
 import {
   PhotoStyleSettings as PhotoStyleSettingsType,
@@ -48,6 +51,8 @@ interface PhotoStyleSettingsProps {
   teamContext?: boolean
   isFreePlan?: boolean
   token?: string // Optional token for invite-based access to custom assets
+  mobileExtraSteps?: MobileCustomStep[]
+  onMobileStepChange?: (step: MobileStep | null, index: number) => void
 }
 
 type CategoryConfig = {
@@ -55,6 +60,23 @@ type CategoryConfig = {
   label: string
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   description: string
+}
+
+export type MobileStep = {
+  type: 'intro' | 'selfie-tips' | 'custom' | 'editable' | 'locked'
+  category?: CategoryConfig
+  custom?: MobileCustomStep
+}
+
+type MobileCustomStep = {
+  id: string
+  title: string
+  description?: string
+  badgeLabel?: string
+  badgeVariant?: 'info' | 'success' | 'warning'
+  content: React.ReactNode
+  isComplete?: boolean
+  noBorder?: boolean
 }
 
 const PHOTO_STYLE_CATEGORIES: CategoryConfig[] = [
@@ -117,7 +139,9 @@ export default function PhotoStyleSettings({
   teamContext: _teamContext = false,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isFreePlan = false,
-  token
+  token,
+  mobileExtraSteps,
+  onMobileStepChange
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   const pkg = getPackageConfig(packageId)
@@ -144,6 +168,8 @@ export default function PhotoStyleSettings({
 
   // State for tracking customization progress (for locked sections reveal)
   const [hasCustomizedEditable, setHasCustomizedEditable] = React.useState(false)
+  const [activeMobileStep, setActiveMobileStep] = React.useState(0)
+  const touchStartXRef = React.useRef<number | null>(null)
 
   const resolvedClothingColors = React.useMemo<ClothingColorSettings>(() => {
     const defaults = packageDefaults.clothingColors
@@ -670,6 +696,111 @@ export default function PhotoStyleSettings({
     )
   }
 
+  const renderIntroStep = () => (
+    <div className="p-5 space-y-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
+          {t('mobile.intro.kicker', { default: 'Before you dive in' })}
+        </p>
+        <h3 className="text-xl font-bold text-gray-900 mt-1">
+          {t('mobile.intro.title', { default: 'A quick pit stop before the glow-up' })}
+        </h3>
+        <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+          {t('mobile.intro.body', { default: 'You\'re about to customize how your photos look. Each card tweaks one part of the shoot, so swipe through and make it yours.' })}
+        </p>
+      </div>
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
+            <ArrowsRightLeftIcon className="h-5 w-5" />
+          </div>
+          <p className="text-sm text-gray-700">
+            {t('mobile.intro.swipe', { default: 'Swipe right to move forward, left to review. Prefer buttons? The little chevrons below have your back.' })}
+          </p>
+        </div>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
+            <SparklesIcon className="h-5 w-5" />
+          </div>
+          <p className="text-sm text-gray-700">
+            {t('mobile.intro.editable', { default: 'Sparkles badge means you\'re in charge. Adjust until the vibe matches your story.' })}
+          </p>
+        </div>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
+            <LockClosedIcon className="h-5 w-5" />
+          </div>
+          <p className="text-sm text-gray-700">
+            {t('mobile.intro.locked', { default: 'Lock badge means your team already set it. Peek, but no touching—consistency matters.' })}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderSelfieTipsStep = () => (
+    <div className="p-5 space-y-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
+          {t('mobile.selfieTips.kicker', { default: 'Get the best results' })}
+        </p>
+        <h3 className="text-xl font-bold text-gray-900 mt-1">
+          {t('mobile.selfieTips.title', { default: 'Selfie tips for amazing photos' })}
+        </h3>
+        <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+          {t('mobile.selfieTips.body', { default: 'Great team photos start with great selfies. Here\'s how to nail them.' })}
+        </p>
+      </div>
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <p className="text-sm text-gray-700">
+            <strong className="text-gray-900">{t('mobile.selfieTips.angles.title', { default: 'Mix up your angles' })}</strong>{' '}
+            {t('mobile.selfieTips.angles.desc', { default: '— different positions help our AI understand your face better.' })}
+          </p>
+        </div>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-yellow-100 text-yellow-700">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+          <p className="text-sm text-gray-700">
+            <strong className="text-gray-900">{t('mobile.selfieTips.lighting.title', { default: 'Find good lighting' })}</strong>{' '}
+            {t('mobile.selfieTips.lighting.desc', { default: '— natural light works best. Avoid harsh shadows on your face.' })}
+          </p>
+        </div>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          </div>
+          <p className="text-sm text-gray-700">
+            <strong className="text-gray-900">{t('mobile.selfieTips.distance.title', { default: 'Include one further away' })}</strong>{' '}
+            {t('mobile.selfieTips.distance.desc', { default: '— showing your shoulders helps us match body proportions.' })}
+          </p>
+        </div>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-sm text-gray-700">
+            <strong className="text-gray-900">{t('mobile.selfieTips.minimum.title', { default: 'Upload at least 2' })}</strong>{' '}
+            {t('mobile.selfieTips.minimum.desc', { default: '— more variety = better results. 3-5 selfies is ideal.' })}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+
   // Capture initial value on mount to preserve ordering
   const initialValueRef = React.useRef<PhotoStyleSettingsType | undefined>(undefined)
   if (initialValueRef.current === undefined) {
@@ -706,11 +837,161 @@ export default function PhotoStyleSettings({
   // For Context B: determine editable and locked sections
   // Use initial editable state to preserve categorization - editable sections stay editable
   // even after user customizes them (they don't move to preset section)
-  const currentEditableCategories = !showToggles ? allCategories.filter(cat => {
-    return wasInitiallyEditable.has(cat.key)
-  }) : []
+  const currentEditableCategories = React.useMemo(() => {
+    if (showToggles) return []
+    return allCategories.filter(cat => wasInitiallyEditable.has(cat.key))
+  }, [showToggles, allCategories, wasInitiallyEditable])
   
-  const currentLockedCategories = !showToggles ? allCategories.filter(cat => !wasInitiallyEditable.has(cat.key)) : []
+  const currentLockedCategories = React.useMemo(() => {
+    if (showToggles) return []
+    return allCategories.filter(cat => !wasInitiallyEditable.has(cat.key))
+  }, [showToggles, allCategories, wasInitiallyEditable])
+  
+  const lockedSectionsVisible = currentEditableCategories.length === 0 || hasCustomizedEditable
+
+  const mobileSteps = React.useMemo<MobileStep[]>(() => {
+    if (showToggles) return []
+    const steps: MobileStep[] = []
+
+    // Step 1: Selfie tips intro
+    steps.push({ type: 'selfie-tips' })
+
+    // Step 2: Custom steps (e.g., selfie selection)
+    if (mobileExtraSteps?.length) {
+      mobileExtraSteps.forEach(step => {
+        steps.push({ type: 'custom', custom: step })
+      })
+    }
+
+    // Step 3: Customization intro (moved after selfie selection)
+    steps.push({ type: 'intro' })
+
+    // Remaining steps: style customization categories
+    currentEditableCategories.forEach(cat => {
+      steps.push({
+        category: cat,
+        type: 'editable'
+      })
+    })
+
+    if (lockedSectionsVisible && currentLockedCategories.length > 0) {
+      currentLockedCategories.forEach(cat => {
+        steps.push({
+          category: cat,
+          type: 'locked'
+        })
+      })
+    }
+
+    return steps
+  }, [showToggles, currentEditableCategories, currentLockedCategories, lockedSectionsVisible, mobileExtraSteps])
+
+  const totalMobileSteps = mobileSteps.length
+  const currentMobileStep = mobileSteps[activeMobileStep]
+  
+  // Steps that count toward "Step X of Y" (exclude intro-type steps)
+  const numberedSteps = React.useMemo(() => {
+    return mobileSteps.filter(step => step.type !== 'intro' && step.type !== 'selfie-tips')
+  }, [mobileSteps])
+  
+  const totalNumberedSteps = numberedSteps.length
+  
+  // Get the current step's position in numbered steps (1-indexed), or 0 if not a numbered step
+  const currentNumberedStepIndex = React.useMemo(() => {
+    if (!currentMobileStep || currentMobileStep.type === 'intro' || currentMobileStep.type === 'selfie-tips') {
+      return 0 // Not a numbered step
+    }
+    const index = numberedSteps.findIndex(step => {
+      if (step.type === 'custom' && currentMobileStep.type === 'custom') {
+        return step.custom?.id === currentMobileStep.custom?.id
+      }
+      if (step.category && currentMobileStep.category) {
+        return step.category.key === currentMobileStep.category.key
+      }
+      return false
+    })
+    return index >= 0 ? index + 1 : 0
+  }, [currentMobileStep, numberedSteps])
+  
+  // Whether the current step should show step numbers
+  const isNumberedStep = currentNumberedStepIndex > 0
+  
+  // Removed unused completedMobileSteps - can be re-added if progress tracking is needed
+
+  React.useEffect(() => {
+    setActiveMobileStep(prev => {
+      if (mobileSteps.length === 0) {
+        return 0
+      }
+      if (prev >= mobileSteps.length) {
+        return Math.max(mobileSteps.length - 1, 0)
+      }
+      return prev
+    })
+  }, [mobileSteps.length])
+  
+  // Track previous step identity to prevent infinite update loops
+  // (currentMobileStep contains JSX which creates new objects on every render)
+  const prevStepIdentity = React.useRef<{ type: string | null, id: string | null, index: number }>({ type: null, id: null, index: -1 })
+  React.useEffect(() => {
+    if (onMobileStepChange) {
+      const currentType = currentMobileStep?.type ?? null
+      const currentId = currentMobileStep?.custom?.id ?? currentMobileStep?.category?.key ?? null
+      const prev = prevStepIdentity.current
+      
+      // Only call callback if the step identity actually changed
+      if (prev.type !== currentType || prev.id !== currentId || prev.index !== activeMobileStep) {
+        prevStepIdentity.current = { type: currentType, id: currentId, index: activeMobileStep }
+        onMobileStepChange(currentMobileStep ?? null, activeMobileStep)
+      }
+    }
+  }, [currentMobileStep, activeMobileStep, onMobileStepChange])
+
+  const handleNextStep = React.useCallback(() => {
+    setActiveMobileStep(prev => {
+      if (mobileSteps.length === 0) return 0
+      return Math.min(prev + 1, mobileSteps.length - 1)
+    })
+  }, [mobileSteps.length])
+
+  const handlePrevStep = React.useCallback(() => {
+    setActiveMobileStep(prev => Math.max(prev - 1, 0))
+  }, [])
+
+  const handleDirectStepChange = React.useCallback((index: number) => {
+    setActiveMobileStep(prev => {
+      if (index < 0 || index >= mobileSteps.length) {
+        return prev
+      }
+      return index
+    })
+  }, [mobileSteps.length])
+
+  const handleTouchStart = React.useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    touchStartXRef.current = event.touches[0]?.clientX ?? null
+  }, [])
+
+  const handleTouchEnd = React.useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartXRef.current === null) return
+    const endX = event.changedTouches[0]?.clientX
+    if (typeof endX !== 'number') {
+      touchStartXRef.current = null
+      return
+    }
+
+    const delta = endX - touchStartXRef.current
+    touchStartXRef.current = null
+
+    if (Math.abs(delta) < 40) {
+      return
+    }
+
+    if (delta < 0) {
+      handleNextStep()
+    } else {
+      handlePrevStep()
+    }
+  }, [handleNextStep, handlePrevStep])
 
   // Locked sections teaser component (Context B only)
   const LockedSectionsTeaser = () => {
@@ -747,69 +1028,188 @@ export default function PhotoStyleSettings({
       {/* Context B: Show editable sections, then teaser or revealed locked sections */}
       {!showToggles && (
         <>
-          {/* Editable sections with header - only show if there are editable categories */}
-          {currentEditableCategories.length > 0 && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-r from-purple-50 via-blue-50 to-purple-50 border-l-4 border-purple-500 rounded-xl p-5 shadow-md">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                    <SparklesIcon className="h-7 w-7 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
-                      {t('sections.customizable', { default: 'Customize Your Style' })}
-                    </h2>
-                    <p className="text-sm md:text-base text-gray-600 leading-relaxed">
-                      {t('sections.customizableDesc', { default: 'Personalize these settings to match your preferences' })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <CardGrid gap="lg">
-              {currentEditableCategories.map(renderCategoryCard)}
-              </CardGrid>
-            </div>
-          )}
-          
-          {/* Locked/predefined sections */}
-          {currentLockedCategories.length > 0 && (
-            <>
-              {/* Show teaser only if there are editable sections and user hasn't customized yet */}
-              {currentEditableCategories.length > 0 && <LockedSectionsTeaser />}
-              
-              {/* Show locked sections if: no editable sections OR user has customized editable sections */}
-              {(currentEditableCategories.length === 0 || hasCustomizedEditable) && (
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200 rounded-xl p-6 shadow-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                        <LockClosedIcon className="h-7 w-7 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
-                          {t('sections.preset', { default: 'Team Preset Settings' })}
-                        </h2>
-                        <p className="text-sm md:text-base text-gray-700 leading-relaxed">
-                          {t('sections.presetDesc', { default: 'These settings are configured by your team admin' })}
+          {/* Mobile swipe experience */}
+          <div className="md:hidden space-y-6">
+            {mobileSteps.length > 0 ? (
+              <div className="space-y-4">
+                <div
+                  className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-100 px-4 sm:px-6 py-4 shadow-sm -mx-4 sm:-mx-6"
+                  style={{ top: 'calc(env(safe-area-inset-top, 0px))' }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {currentMobileStep
+                          ? currentMobileStep.type === 'locked'
+                            ? t('mobile.banner.preset', { default: 'Team preset: {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
+                            : currentMobileStep.type === 'selfie-tips'
+                              ? t('mobile.banner.selfieTipsHeading', { default: 'Selfie tips' })
+                              : currentMobileStep.type === 'intro'
+                              ? t('mobile.banner.introHeading', { default: 'Meet your photo style controls' })
+                              : currentMobileStep.type === 'custom' && currentMobileStep.custom
+                                ? currentMobileStep.custom.title
+                                : t('mobile.banner.customize', { default: 'Customize {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
+                          : t('sections.customizable', { default: 'Customize Your Style' })
+                        }
+                      </h3>
+                    </div>
+                    {isNumberedStep && (
+                      <div className="text-right flex flex-col items-end gap-1">
+                        <p className="text-xs font-semibold text-gray-500">
+                          {t('mobile.banner.step', { default: 'Step {current} of {total}', current: currentNumberedStepIndex, total: totalNumberedSteps })}
                         </p>
                       </div>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className="overflow-hidden"
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
+                  style={{ touchAction: 'pan-y' }}
+                >
+                  <div
+                    className="flex transition-transform duration-300 ease-in-out"
+                    style={{ transform: `translateX(-${activeMobileStep * 100}%)` }}
+                  >
+                    {mobileSteps.map((step, idx) => {
+                      const hasNoBorder = step.type === 'custom' && step.custom?.noBorder
+                      return (
+                        <div key={step.category ? step.category.key : step.custom ? step.custom.id : step.type === 'selfie-tips' ? 'selfie-tips' : `intro-${idx}`} className="w-full flex-shrink-0 px-1 pb-4">
+                          <div className={hasNoBorder ? '' : 'rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 shadow-sm'}>
+                            {step.type === 'selfie-tips' && renderSelfieTipsStep()}
+                            {step.type === 'intro' && renderIntroStep()}
+                            {step.type === 'custom' && step.custom ? (
+                              <div className={hasNoBorder ? 'space-y-4 py-2' : 'space-y-4 p-4'}>
+                                {step.custom.description && (
+                                  <p className="text-sm text-gray-600 leading-snug">{step.custom.description}</p>
+                                )}
+                                {step.custom.content}
+                              </div>
+                            ) : step.category ? (
+                              renderCategoryCard(step.category)
+                            ) : null}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={handlePrevStep}
+                    disabled={activeMobileStep === 0}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label={t('mobile.controls.previous', { default: 'Previous' })}
+                  >
+                    <ChevronLeftIcon className="h-4 w-4" />
+                  </button>
+                  <div className="flex items-center gap-2">
+                    {mobileSteps.map((_, idx) => (
+                      <button
+                        key={`mobile-step-dot-${idx}`}
+                        type="button"
+                        aria-label={t('mobile.controls.step', { default: 'Go to step {index}', index: idx + 1 })}
+                        onClick={() => handleDirectStepChange(idx)}
+                        className={`h-2.5 w-2.5 rounded-full transition-colors ${
+                          idx === activeMobileStep ? 'bg-brand-primary' : 'bg-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleNextStep}
+                    disabled={activeMobileStep >= totalMobileSteps - 1}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-primary text-white shadow-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label={t('mobile.controls.next', { default: 'Next' })}
+                  >
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <p className="text-xs text-center text-gray-500">
+                  {t('mobile.swipeHint', { default: 'Swipe or tap Next to continue' })}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center">
+                <p className="text-sm text-gray-600">
+                  {t('sections.customizableDesc', { default: 'Personalize these settings to match your preferences' })}
+                </p>
+              </div>
+            )}
+
+            {!lockedSectionsVisible && currentLockedCategories.length > 0 && (
+              <LockedSectionsTeaser />
+            )}
+          </div>
+
+          {/* Desktop experience */}
+          <div className="hidden md:block space-y-8">
+            {currentEditableCategories.length > 0 && (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-purple-50 via-blue-50 to-purple-50 border-l-4 border-purple-500 rounded-xl p-5 shadow-md">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <SparklesIcon className="h-7 w-7 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                        {t('sections.customizable', { default: 'Customize Your Style' })}
+                      </h2>
+                      <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                        {t('sections.customizableDesc', { default: 'Personalize these settings to match your preferences' })}
+                      </p>
                     </div>
                   </div>
-                  <CardGrid gap="lg">
-                  {currentLockedCategories.map((cat, idx) => (
-                    <div 
-                      key={cat.key}
-                      className="animate-fade-in"
-                      style={{ animationDelay: `${idx * 100}ms` }}
-                    >
-                      {renderCategoryCard(cat)}
-                    </div>
-                  ))}
-                  </CardGrid>
                 </div>
-              )}
-            </>
-          )}
+                <CardGrid gap="lg">
+                  {currentEditableCategories.map(renderCategoryCard)}
+                </CardGrid>
+              </div>
+            )}
+            
+            {currentLockedCategories.length > 0 && (
+              <>
+                {currentEditableCategories.length > 0 && <LockedSectionsTeaser />}
+                
+                {lockedSectionsVisible && (
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200 rounded-xl p-6 shadow-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                          <LockClosedIcon className="h-7 w-7 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                            {t('sections.preset', { default: 'Team Preset Settings' })}
+                          </h2>
+                          <p className="text-sm md:text-base text-gray-700 leading-relaxed">
+                            {t('sections.presetDesc', { default: 'These settings are configured by your team admin' })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <CardGrid gap="lg">
+                      {currentLockedCategories.map((cat, idx) => (
+                        <div 
+                          key={cat.key}
+                          className="animate-fade-in"
+                          style={{ animationDelay: `${idx * 100}ms` }}
+                        >
+                          {renderCategoryCard(cat)}
+                        </div>
+                      ))}
+                    </CardGrid>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </>
       )}
 

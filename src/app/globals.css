@@ -455,3 +455,9 @@ textarea {
   touch-action: manipulation;
 }
 
+/* Swipe hint animation for mobile flow */
+@keyframes slideRight {
+  0%, 100% { transform: translateX(-4px); opacity: 0.6; }
+  50% { transform: translateX(4px); opacity: 1; }
+}
+

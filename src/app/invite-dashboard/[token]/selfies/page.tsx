@@ -97,6 +97,19 @@ export default function SelfiesPage() {
         return
       }
 
+      // On mobile in generation flow, auto-navigate back to dashboard
+      // The dashboard swipe flow already has selfie selection, so no need to show it here
+      const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768
+      const inGenerationFlow = typeof window !== 'undefined' && 
+        (sessionStorage.getItem('fromGeneration') === 'true' || sessionStorage.getItem('openStartFlow') === 'true')
+      
+      if (isMobileDevice && inGenerationFlow) {
+        // Set flag to open swipe flow and navigate back
+        sessionStorage.setItem('openStartFlow', 'true')
+        router.push(`/invite-dashboard/${token}`)
+        return
+      }
+
       // Show success briefly, then handle mobile/desktop differences
       setIsApproved(true)
 
@@ -213,25 +226,13 @@ export default function SelfiesPage() {
       )}
 
       {/* Mobile: Selfies section breaks out of padding container */}
-      {!uploadOnly && (
+      {/* On mobile in generation flow, skip showing the selfie selection since the swipe flow already has it */}
+      {!uploadOnly && !isInGenerationFlow && (
         <>
           {/* Mobile: Direct content, no wrapper, with padding */}
           <div className={`md:hidden bg-white ${isMobile ? 'pb-40' : ''}`}>
             <div className="px-4 pt-4 flex items-center justify-between gap-3">
               <SelfieSelectionInfoBanner selectedCount={selectedCount} className="flex-1 mb-0" />
-              {isInGenerationFlow && (
-                <button
-                  onClick={handleContinue}
-                  disabled={!canContinue}
-                  className={`px-5 py-3 text-base font-semibold rounded-lg flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary shadow-md ${
-                    canContinue
-                      ? 'text-white bg-brand-primary hover:bg-brand-primary-hover'
-                      : 'text-gray-400 bg-gray-200 cursor-not-allowed'
-                  }`}
-                >
-                  Continue
-                </button>
-              )}
             </div>
             <div className="px-4 pt-2 pb-4">
                   <SelfieGallery

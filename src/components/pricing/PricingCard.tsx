@@ -1,7 +1,8 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { calculatePhotosFromCredits } from '@/domain/pricing'
+import { calculatePhotosFromCredits, calculatePricePerPhoto, formatPrice } from '@/domain/pricing'
+import { PRICING_CONFIG } from '@/config/pricing'
 import { comingSoonBadge } from '@/lib/ui/comingSoon'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { TrackedLink } from '@/components/TrackedLink'
@@ -53,15 +54,56 @@ export default function PricingCard({
   const numberOfPhotos = calculatePhotosFromCredits(credits)
   const displayPrice = price
   const displayPricePerPhoto = pricePerPhoto
+  
+  // Calculate total photos including retries: numberOfPhotos × (1 original + regenerations)
+  const regenerationCount = regenerations || 2
+  const totalPhotos = numberOfPhotos * (1 + regenerationCount)
+
+  // Calculate top-up price per photo
+  let topUpPricePerPhoto = ''
+  if (id !== 'tryItForFree') {
+    const topUpConfig = id === 'individual' 
+      ? PRICING_CONFIG.individual.topUp
+      : id === 'proSmall'
+        ? PRICING_CONFIG.proSmall.topUp
+        : PRICING_CONFIG.proLarge.topUp
+    
+    const topUpRegenerations = id === 'individual'
+      ? PRICING_CONFIG.regenerations.individual
+      : id === 'proSmall'
+        ? PRICING_CONFIG.regenerations.proSmall
+        : PRICING_CONFIG.regenerations.proLarge
+    
+    const topUpPricePerPhotoValue = calculatePricePerPhoto(
+      topUpConfig.price,
+      topUpConfig.credits,
+      topUpRegenerations
+    )
+    topUpPricePerPhoto = formatPrice(topUpPricePerPhotoValue)
+  }
 
   const rawFeatures = t.raw(`plans.${id}.features`) as string[]
-  const totalShots = (regenerations || 2) + 1 // Original + regenerations
-  const features = rawFeatures.map(feature =>
-    feature
-      .replace('{regenerations}', (regenerations || 2).toString())
-      .replace('{shots}', totalShots.toString())
-      .replace('{photos}', numberOfPhotos.toString())
-  )
+  const totalShots = regenerationCount + 1 // Original + regenerations
+  
+  // Get pluralized photos text from translations
+  const photosText = t('customizablePhotos', { count: numberOfPhotos })
+  
+  // Prepare variables for interpolation
+  const interpolationValues = {
+    photosText,
+    regenerations: regenerationCount,
+    shots: totalShots,
+    photos: numberOfPhotos,
+    totalPhotos,
+    variations: totalShots,
+    topUpPricePerPhoto,
+  }
+  
+  // Use translation interpolation - map each feature and use t() with proper variables
+  const features = rawFeatures.map((_, index) => {
+    // Use t() with the full key path and variables for proper interpolation
+    return t(`plans.${id}.features.${index}`, interpolationValues)
+  })
   const extras: string[] = []
   if (id !== 'tryItForFree') {
     extras.push(`High quality downloads ${comingSoonBadge()}`)
@@ -115,14 +157,9 @@ export default function PricingCard({
                 {displayPrice}
               </span>
               {!isFree && (
-                <>
-                  <span className="text-lg lg:text-xl font-bold text-brand-secondary mt-1">
-                    ONE-TIME PAYMENT
-                  </span>
-                  <span className="text-sm text-text-muted mt-0.5">
-                    No subscription required
-                  </span>
-                </>
+                <span className="text-lg lg:text-xl font-bold text-brand-secondary mt-1">
+                  ONE-TIME PAYMENT
+                </span>
               )}
             </div>
             {popular && (
@@ -134,13 +171,8 @@ export default function PricingCard({
         </div>
         <div className="flex items-center gap-3 flex-wrap mb-6">
           <div className={`inline-flex items-center px-5 py-2.5 rounded-xl font-bold text-sm lg:text-base ${isFree ? 'bg-brand-secondary-light text-brand-secondary' : 'bg-brand-primary-light text-brand-primary'}`}>
-          {calculatePhotosFromCredits(credits)} {calculatePhotosFromCredits(credits) === 1 ? t('photo') : t('photos')}
+          {totalPhotos} {totalPhotos === 1 ? t('photo') : t('photos')}
           </div>
-          {!isFree && regenerations !== undefined && (
-            <span className="text-xs lg:text-sm text-text-muted font-semibold">
-              ({t('includesVariationsPerPhoto', { count: regenerations || 0 })})
-            </span>
-          )}
         </div>
 
         {!isFree && displayPricePerPhoto && (

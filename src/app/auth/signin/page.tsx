@@ -13,6 +13,7 @@ import FocusTrap from '@/components/auth/FocusTrap'
 
 export default function SignInPage() {
   const t = useTranslations('auth.signin')
+  const tGlobal = useTranslations()
   const searchParams = useSearchParams()
   const track = (event: string, props?: Record<string, unknown>) => {
     try {
@@ -72,7 +73,13 @@ export default function SignInPage() {
         })
 
         if (result?.error) {
-          setError('Failed to send magic link')
+          // Check for rate limit error
+          const errorMessage = result.error.toLowerCase()
+          if (errorMessage.includes('too many') || errorMessage.includes('rate limit')) {
+            setError('errors.tooManyAttempts')
+          } else {
+            setError('errors.magicLinkFailed')
+          }
           track('signin_magiclink_error', { reason: result.error })
         } else {
           // Redirect to verification page
@@ -88,7 +95,13 @@ export default function SignInPage() {
         })
 
         if (result?.error) {
-          setError('Invalid credentials')
+          // Check for rate limit error
+          const errorMessage = result.error.toLowerCase()
+          if (errorMessage.includes('too many') || errorMessage.includes('rate limit')) {
+            setError('errors.tooManyAttempts')
+          } else {
+            setError('errors.invalidCredentials')
+          }
           track('signin_error', { reason: result.error })
         } else {
           // Fetch all initial data in one consolidated call
@@ -132,7 +145,7 @@ export default function SignInPage() {
         }
       }
     } catch {
-      setError('An error occurred')
+      setError('errors.errorOccurred')
       track('signin_exception')
     } finally {
       setIsLoading(false)
@@ -207,7 +220,7 @@ export default function SignInPage() {
           </div>
           {error && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-              <InlineError message={t(error)} className="text-center bg-red-50/50 py-3 px-4 rounded-lg border border-red-200" />
+              <InlineError message={error.startsWith('auth.') ? tGlobal(error) : t(error)} className="text-center bg-red-50/50 py-3 px-4 rounded-lg border border-red-200" />
             </div>
           )}
           <AuthButton type="submit" loading={isLoading}>

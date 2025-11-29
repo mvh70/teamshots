@@ -5,7 +5,8 @@
   },
   "common": {
     "processingImage": "Processing image...",
-    "processingImages": "Processing {count} images..."
+    "processingImages": "Processing {count} images...",
+    "uploading": "Uploading..."
   },
   "nav": {
     "home": "Home",
@@ -110,13 +111,13 @@
     "items": {
       "1": {
         "question": "Is my data secure and private?",
-        "answer": "Absolutely. We use enterprise-grade encryption and never store your photos permanently. Your photos are automatically deleted 30 days after your subscription ends, or you can request deletion anytime. We don't share your data with third parties-not even your boss, we promise."
+        "answer": "Absolutely. We use enterprise-grade encryption and never store your photos permanently. Your photos are automatically deleted within 30 days after account closure, or you can request deletion anytime. We don't share your data with third parties-not even your boss, we promise."
       },
       "2": {
         "question": "How much does it cost?",
-        "answer": "When you sign up, you get a free test generation with TeamShotsPro branding so you can see the quality. After that: Individual plan at $19.99 (5 photos), Pro Small at $19.99 (5 photos for teams up to 5), or Pro Large at $59.99 (20 photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces 4 variations.",
-        "answerTeam": "When you sign up, you get a free test generation with TeamShotsPro branding so you can see the quality. After that: Pro Small at $19.99 (5 photos for teams up to 5), or Pro Large at $59.99 (20 photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces 4 variations.",
-        "answerIndividual": "When you sign up, you get a free test generation with PhotoShotsPro branding so you can see the quality. After that: Individual plan at $19.99 (5 photos). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces 4 variations."
+        "answer": "When you sign up, you get a free test generation with TeamShotsPro branding so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos), Pro Small at {proSmallPrice} ({proSmallPhotos} photos for teams up to 5), or Pro Large at {proLargePrice} ({proLargePhotos} photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
+        "answerTeam": "When you sign up, you get a free test generation with TeamShotsPro branding so you can see the quality. After that: Pro Small at {proSmallPrice} ({proSmallPhotos} photos for teams up to 5), or Pro Large at {proLargePrice} ({proLargePhotos} photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
+        "answerIndividual": "When you sign up, you get a free test generation with PhotoShotsPro branding so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations."
       },
       "3": {
         "question": "What types of photos work best?",
@@ -161,8 +162,8 @@
     "terms": "Terms of Service"
   },
   "pricing": {
-    "title": "Simple, Transparent Pricing",
-    "subtitle": "You're one click from professional team photos that make everyone look great. Choose a plan and get going.",
+    "title": "Simple, use-based pricing",
+    "subtitle": "No subscriptions or hidden fees. Pay only for the photos you generate.",
     "mostPopular": "Most Popular",
     "photos": "photos",
     "photo": "photo",
@@ -182,9 +183,8 @@
         "period": "free",
         "description": "See what all the fuss is about. No credit card, no commitment, just one free test to prove we're not messing around.",
         "features": [
-          "Includes fixed TeamShotsPro branding (our way of saying hello)",
           "Limited customization to give you a taste",
-          "Retry up to {regenerations} times to perfect your photo",
+          "{photosText} in {variations} variations with fixed TeamShotsPro branding (our way of saying hello)",
           "Perfect for testing before you commit"
         ],
         "cta": "Sign up free"
@@ -195,9 +195,9 @@
         "description": "For solo professionals. One-time purchase, no monthly fees.",
         "features": [
           "Full customization: you control pose, background, branding, clothing colors, and facial expressions (be the director of your own photoshoot)",
-          "Retry up to {regenerations} times to perfect each photo (because perfection takes practice)",
+          "{photosText} in {variations} variations",
           "Credits never expire, use anytime (hoard them like digital treasure)",
-          "Top-up credits available (for when you can't stop looking amazing)"
+          "Top-up credits available at {topUpPricePerPhoto} per photo (for when you can't stop looking amazing)"
         ],
         "cta": "Get my photos"
       },
@@ -207,10 +207,10 @@
         "description": "For small teams up to 5 members. Pay once, no subscription.",
         "features": [
           "Full customization: control pose, background, branding, clothing colors, and expressions",
-          "Retry up to {regenerations} times to perfect each photo",
+          "{photosText} in {variations} variations",
           "Credits never expire, use anytime",
           "Team photo management",
-          "Top-up credits available"
+          "Top-up credits available at {topUpPricePerPhoto} per photo"
         ],
         "cta": "Get team photos"
       },
@@ -220,17 +220,18 @@
         "description": "For larger teams. One-time payment, no recurring charges.",
         "features": [
           "Full customization: control pose, background, branding, clothing colors, and expressions",
-          "Retry up to {regenerations} times to perfect each photo",
+          "{photosText} in {variations} variations",
           "Credits never expire, use anytime",
           "Team photo management",
           "Company style templates",
-          "Top-up credits available"
+          "Top-up credits available at {topUpPricePerPhoto} per photo"
         ],
         "cta": "Scale the team"
       }
     },
-    "perPhotoVariation": "per photo retry",
+    "perPhotoVariation": "per photo",
     "includesVariationsPerPhoto": "Includes {count} retries per photo",
+    "customizablePhotos": "{count, plural, one {# customizable photo} other {# customizable photos}}",
     "variationsBullet": "Retry up to {count} times to perfect each photo",
     "faq": {
       "title": "Frequently Asked Questions",
@@ -241,7 +242,7 @@
         },
         "howCreditsWork": {
           "question": "How do photo credits work?",
-          "answer": "Each photo generation uses 1 photo credit and allows up to 4 high-quality retries depending on your plan. Your photo credits never expire. No rush, they're yours to keep!"
+          "answer": "Each photo generation uses 1 photo credit and allows up to 4 high-quality variations depending on your plan. Your photo credits never expire. No rush, they're yours to keep!"
         },
         "topUp": {
           "question": "Can I top up photo credits?",
@@ -249,9 +250,9 @@
         },
         "satisfaction": {
           "question": "What if I'm not satisfied?",
-          "answer": "Every photo includes 2-4 retries depending on your plan (free plan: 2 retries, Individual and Pro Small: 3 retries, Pro Large: 4 retries), so you can refine the results until they're perfect. That's why we offer a free test generation in a predefined style when you sign up. Try it first, no obligations.",
-          "answerTeam": "Every photo includes 2-4 retries depending on your plan (free plan: 2 retries, Pro Small: 3 retries, Pro Large: 4 retries), so you can refine the results until they're perfect. That's why we offer a free test generation in a predefined style when you sign up. Try it first, no obligations.",
-          "answerIndividual": "Every photo includes 2-3 retries depending on your plan (free plan: 2 retries, Individual: 3 retries), so you can refine the results until they're perfect. That's why we offer a free test generation in a predefined style when you sign up. Try it first, no obligations."
+          "answer": "Every photo can be generated 2-4 times with small variations, depending on your plan (free plan: 1 retry, Individual and Pro Small: 2 retries, Pro Large: 3 retries). We offer a free test generation in a predefined style when you sign up. Try it first, no obligations.",
+          "answerTeam": "Every photo can be generated 2-4 times with small variations, depending on your plan (free plan: 1 retry, Pro Small: 2 retries, Pro Large: 3 retries). We offer a free test generation in a predefined style when you sign up. Try it first, no obligations.",
+          "answerIndividual": "Every photo can be generated 2-3 times with small variations, depending on your plan (free plan: 1 retry, Individual: 2 retries). We offer a free test generation in a predefined style when you sign up. Try it first, no obligations."
         }
       }
     },
@@ -296,7 +297,13 @@
       "forgotPassword": "Forgot password?",
       "signingIn": "Signing in...",
       "submit": "Sign in",
-      "noAccount": "Don't have an account? Sign up"
+      "noAccount": "Don't have an account? Sign up",
+      "errors": {
+        "invalidCredentials": "Invalid email or password. Please try again.",
+        "magicLinkFailed": "Failed to send magic link. Please try again.",
+        "errorOccurred": "An error occurred. Please try again.",
+        "tooManyAttempts": "Too many sign-in attempts. Please try again later."
+      }
     },
     "signup": {
       "freeBadge": "Includes 1 free test generation in a predefined style",
@@ -1134,7 +1141,8 @@
       "title": "Select at least 2 selfies",
       "noneSelected": "Take a fresh selfie or grab one from your gallery. Your call.",
       "oneSelected": "You've got 1 selected. Add one more to continue.",
-      "enoughSelected": "You've selected {count} selfie{count, plural, =1 {} other {s}}. You can continue or select more."
+      "enoughSelected": "You've selected {count} selfie{count, plural, =1 {} other {s}}. You can continue or select more.",
+      "swipeHint": "Swipe right when you're ready to customize."
     },
     "gallery": {
       "deleteTooltip": "Delete selfie",
@@ -1294,6 +1302,52 @@
       "progress": {
         "editable": "{count} of {total} editable",
         "editableTeam": "{count} of {total} editable by team members"
+      },
+      "mobile": {
+        "banner": {
+          "customize": "Customize {label}",
+          "preset": "Team preset: {label}",
+          "introHeading": "Meet your photo style controls",
+          "selfieTipsHeading": "Selfie tips",
+          "introBadge": "Heads up",
+          "step": "Step {current} of {total}",
+          "progress": "{completed} of {total} steps complete"
+        },
+        "controls": {
+          "previous": "Previous",
+          "next": "Next",
+          "step": "Go to step {index}"
+        },
+        "swipeHint": "Swipe or tap Next to continue",
+        "intro": {
+          "kicker": "Before you dive in",
+          "title": "A quick pit stop before the glow-up",
+          "body": "You're about to customize how your photos look. Each card tweaks one part of the shoot, so swipe through and make it yours.",
+          "swipe": "Swipe right to move forward, left to review. Prefer buttons? The little chevrons below have your back.",
+          "editable": "Sparkles badge means you're in charge. Adjust until the vibe matches your story.",
+          "locked": "Lock badge means your team already set it. Peek, but no touching—consistency matters."
+        },
+        "selfieTips": {
+          "kicker": "Get the best results",
+          "title": "Selfie tips for amazing photos",
+          "body": "Great team photos start with great selfies. Here's how to nail them.",
+          "angles": {
+            "title": "Mix up your angles",
+            "desc": "— different positions help our AI understand your face better."
+          },
+          "lighting": {
+            "title": "Find good lighting",
+            "desc": "— natural light works best. Avoid harsh shadows on your face."
+          },
+          "distance": {
+            "title": "Include one further away",
+            "desc": "— showing your shoulders helps us match body proportions."
+          },
+          "minimum": {
+            "title": "Upload at least 2",
+            "desc": "— more variety = better results. 3-5 selfies is ideal."
+          }
+        }
       },
       "tooltips": {
         "predefinedToggle": "Predefined locks this setting for all team members. User Choice lets each person customize it.",
@@ -1849,7 +1903,8 @@
     "common": {
       "continue": "Continue",
       "photoCredit": "photo credit",
-      "photoCredits": "photo credits"
+      "photoCredits": "photo credits",
+      "dismiss": "Dismiss"
     },
     "getStarted": {
       "title": "Get started",
@@ -1864,7 +1919,19 @@
       "empty": "No photos yet. Generate one and they'll show up here."
     },
     "selfieSelection": {
-      "title": "Choose selfies to use"
+      "title": "Choose selfies to use",
+      "mobile": {
+        "bannerTitle": "Select your selfies",
+        "bannerMessage": "Choose at least 2 selfies, then swipe right when you're ready to customize.",
+        "cta": "Swipe right when done",
+        "badgeSelecting": "Need {remaining} more",
+        "badgeReady": "Ready to customize",
+        "hint": "Need to tweak selfies again? Adjust them here, then swipe right to keep going.",
+        "actions": {
+          "camera": "Use camera",
+          "upload": "Upload photo"
+        }
+      }
     },
     "styleSelection": {
       "readyToGenerate": "Ready to Generate",
@@ -1874,6 +1941,24 @@
       },
       "costPerGeneration": "Cost per generation",
       "generateButton": "Generate photo"
+    },
+    "mobile": {
+      "intro": {
+        "swipeHint": "Swipe left to start customizing"
+      },
+      "selfieTips": {
+        "swipeHint": "Swipe left to select your selfies"
+      }
+    },
+    "camera": {
+      "permissionNeeded": {
+        "title": "Camera access needed",
+        "description": "To take a selfie, please allow camera access in your browser.",
+        "howTo": "How to enable:",
+        "step1": "Tap the camera/lock icon in your browser address bar",
+        "step2": "Select \"Allow\" for camera access",
+        "step3": "Then tap \"Use camera\" again"
+      }
     },
     "generationFlow": {
       "title": "Generate Team Photos",

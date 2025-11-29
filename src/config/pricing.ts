@@ -41,10 +41,10 @@ export const PRICING_CONFIG = {
 
   // Regeneration system
   regenerations: {
-    tryItForFree: 2,
-    individual: 3,
-    proSmall: 3,
-    proLarge: 4,
+    tryItForFree: 1,
+    individual: 2,
+    proSmall: 2,
+    proLarge: 3,
   },
 
   // Try It For Free (free tier - grants credits on signup)
@@ -55,11 +55,11 @@ export const PRICING_CONFIG = {
   // Individual tier (Personal - one-time purchase)
   individual: {
     price: 19.99,
-    credits: 50, // 5 photos at 10 credits each
+    credits: 40, // 5 photos at 10 credits each
     stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL || '',
     topUp: {
       price: 19.99,
-      credits: 50,
+      credits: 40,
       stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL_TOP_UP || '',
     },
   },
@@ -67,7 +67,7 @@ export const PRICING_CONFIG = {
   // Pro Small tier (Business - up to 5 team members - one-time purchase)
   proSmall: {
     price: 19.99,
-    credits: 50, // 5 photos at 10 credits each
+    credits: 40, // 5 photos at 10 credits each
     maxTeamMembers: 5,
     stripePriceId: STRIPE_PRICE_IDS.PRO_SMALL || '',
     topUp: {
@@ -80,11 +80,11 @@ export const PRICING_CONFIG = {
   // Pro Large tier (Business - more than 5 team members - one-time purchase)
   proLarge: {
     price: 59.99,
-    credits: 200, // 20 photos at 10 credits each
+    credits: 150, // 20 photos at 10 credits each
     maxTeamMembers: null, // unlimited
     stripePriceId: STRIPE_PRICE_IDS.PRO_LARGE || '',
     topUp: {
-      price: 29.99,
+      price: 34.99,
       credits: 100, // 10 photos at 10 credits each
       stripePriceId: STRIPE_PRICE_IDS.PRO_LARGE_TOP_UP || '',
     },

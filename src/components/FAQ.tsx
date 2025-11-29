@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { getBrandContact } from '@/config/brand';
 import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain';
+import { PRICING_CONFIG } from '@/config/pricing';
+import { calculatePhotosFromCredits, formatPrice } from '@/domain/pricing/utils';
 
 interface FAQItem {
   id: string;
@@ -26,13 +28,50 @@ export default function FAQ() {
     return forcedType || getSignupTypeFromDomain(domain);
   });
 
-  // Get domain-specific answer key suffix
-  const getAnswerKey = (baseKey: string) => {
+  // Calculate pricing values for FAQ interpolation
+  const individualPhotos = calculatePhotosFromCredits(PRICING_CONFIG.individual.credits);
+  const individualVariations = 1 + PRICING_CONFIG.regenerations.individual;
+  const individualTotalPhotos = individualPhotos * individualVariations;
+  
+  const proSmallPhotos = calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits);
+  const proSmallVariations = 1 + PRICING_CONFIG.regenerations.proSmall;
+  const proSmallTotalPhotos = proSmallPhotos * proSmallVariations;
+  
+  const proLargePhotos = calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits);
+  const proLargeVariations = 1 + PRICING_CONFIG.regenerations.proLarge;
+  const proLargeTotalPhotos = proLargePhotos * proLargeVariations;
+  
+  const maxVariations = Math.max(individualVariations, proSmallVariations, proLargeVariations);
+
+  // Prepare pricing values for interpolation
+  const pricingValues = {
+    individualPrice: formatPrice(PRICING_CONFIG.individual.price),
+    individualPhotos: individualTotalPhotos.toString(),
+    proSmallPrice: formatPrice(PRICING_CONFIG.proSmall.price),
+    proSmallPhotos: proSmallTotalPhotos.toString(),
+    proLargePrice: formatPrice(PRICING_CONFIG.proLarge.price),
+    proLargePhotos: proLargeTotalPhotos.toString(),
+    maxVariations: maxVariations.toString(),
+  };
+
+  // Get domain-specific answer key with fallback to base answer
+  const getAnswerKey = (itemId: string, baseKey: string) => {
+    const faqData = t.raw(`items.${itemId}`) as Record<string, string> | undefined;
+    
     if (domainSignupType === 'team') {
-      return `${baseKey}Team`;
+      const teamKey = `${baseKey}Team`;
+      // Check if the team-specific key exists in the raw data
+      if (faqData && teamKey in faqData) {
+        return teamKey;
+      }
     } else if (domainSignupType === 'individual') {
-      return `${baseKey}Individual`;
+      const individualKey = `${baseKey}Individual`;
+      // Check if the individual-specific key exists in the raw data
+      if (faqData && individualKey in faqData) {
+        return individualKey;
+      }
     }
+    // Fall back to base answer key
     return baseKey;
   };
 
@@ -46,7 +85,7 @@ export default function FAQ() {
     {
       id: '2',
       question: t('items.2.question'),
-      answer: t(`items.2.${getAnswerKey('answer')}`),
+      answer: t(`items.2.${getAnswerKey('2', 'answer')}`, pricingValues),
       category: 'technical'
     },
     {

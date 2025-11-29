@@ -6,9 +6,10 @@ import { useTranslations } from 'next-intl'
 interface SelfieSelectionInfoBannerProps {
   selectedCount: number
   className?: string
+  showSwipeHint?: boolean
 }
 
-export default function SelfieSelectionInfoBanner({ selectedCount, className = '' }: SelfieSelectionInfoBannerProps) {
+export default function SelfieSelectionInfoBanner({ selectedCount, className = '', showSwipeHint = false }: SelfieSelectionInfoBannerProps) {
   const t = useTranslations('selfies.selectionInfo')
   
   return (
@@ -28,6 +29,9 @@ export default function SelfieSelectionInfoBanner({ selectedCount, className = '
               ? t('oneSelected')
               : t('enoughSelected', { count: selectedCount })
             }
+            {showSwipeHint && selectedCount >= 2 && (
+              <span className="block mt-1 text-blue-700">{t('swipeHint', { default: 'Swipe right when you\'re ready to customize.' })}</span>
+            )}
           </p>
         </div>
       </div>

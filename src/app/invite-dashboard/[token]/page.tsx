@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef, useSyncExternalStore } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { BRAND_CONFIG } from '@/config/brand'
@@ -10,11 +10,11 @@ import {
   PhotoIcon, 
   CheckCircleIcon,
   CameraIcon,
-  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
+import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
 import SelectedSelfiePreview from '@/components/generation/SelectedSelfiePreview'
 import SelfieSelectionGrid from '@/components/generation/SelfieSelectionGrid'
 import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
@@ -22,11 +22,41 @@ import GenerateButton from '@/components/generation/GenerateButton'
 import Panel from '@/components/common/Panel'
 import { Grid } from '@/components/ui'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
-import { hasUserDefinedFields, areAllCustomizableSectionsCustomized } from '@/domain/style/userChoice'
+import { areAllCustomizableSectionsCustomized } from '@/domain/style/userChoice'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { getPackageConfig } from '@/domain/style/packages'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
+
+const MOBILE_BREAKPOINT_QUERY = '(max-width: 767px)'
+
+const getMobileViewportSnapshot = () => {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  return window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches
+}
+
+const subscribeToMobileViewport = (callback: () => void) => {
+  if (typeof window === 'undefined') {
+    return () => {}
+  }
+  const mediaQuery = window.matchMedia(MOBILE_BREAKPOINT_QUERY)
+  const handler = () => callback()
+
+  if (typeof mediaQuery.addEventListener === 'function') {
+    mediaQuery.addEventListener('change', handler)
+    return () => mediaQuery.removeEventListener('change', handler)
+  }
+
+  // Fallback for older browsers (Safari < 14)
+  mediaQuery.addListener(handler)
+  return () => mediaQuery.removeListener(handler)
+}
+
+const useIsMobileViewport = () => {
+  return useSyncExternalStore(subscribeToMobileViewport, getMobileViewportSnapshot, () => false)
+}
 
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
@@ -93,6 +123,35 @@ export default function InviteDashboardPage() {
   const [availableSelfies, setAvailableSelfies] = useState<Selfie[]>([])
   const [selectedSelfie, setSelectedSelfie] = useState<string>('')
   const [recentPhotoUrls, setRecentPhotoUrls] = useState<string[]>([])
+  const [activeMobileStepInfo, setActiveMobileStepInfo] = useState<{ type: MobileStep['type'] | null, id: string | null, index: number }>({
+    type: null,
+    id: null,
+    index: 0
+  })
+  const [visitedSteps, setVisitedSteps] = useState<Set<string>>(new Set())
+  const isMobileViewport = useIsMobileViewport()
+  
+  // Refs and state for inline selfie upload in swipe flow
+  const inlineFileInputRef = useRef<HTMLInputElement>(null)
+  const [isInlineUploading, setIsInlineUploading] = useState(false)
+  const [showCameraModal, setShowCameraModal] = useState(false)
+  const [cameraPermissionError, setCameraPermissionError] = useState(false)
+  
+  // Try to open camera - check permission first before showing modal
+  const handleUseCameraClick = async () => {
+    setCameraPermissionError(false)
+    try {
+      // Request camera permission
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      // Permission granted - stop the test stream and open the modal
+      stream.getTracks().forEach(track => track.stop())
+      setShowCameraModal(true)
+    } catch (error) {
+      // Permission denied or camera not available
+      console.error('Camera permission error:', error)
+      setCameraPermissionError(true)
+    }
+  }
   
   // Multi-select: load and manage selected selfies for invited flow
   const { selectedSet, selectedIds, loadSelected, toggleSelect } = useSelfieSelection({ token })
@@ -275,12 +334,25 @@ export default function InviteDashboardPage() {
     [selectedIds, availableSelfies]
   )
 
-  // Auto-advance to style selection if we have 2+ selfies selected when start flow opens
+  const shouldAutoShowStyleSelection = useMemo(() => {
+    if (showStyleSelection) return false
+    if (!showStartFlow) return false
+    if (availableSelfies.length === 0) return false
+    if (validSelectedIds.length >= 2) return true
+    return isMobileViewport
+  }, [
+    showStyleSelection,
+    showStartFlow,
+    availableSelfies.length,
+    validSelectedIds.length,
+    isMobileViewport
+  ])
+
   useEffect(() => {
-    if (showStartFlow && !showStyleSelection && validSelectedIds.length >= 2 && availableSelfies.length > 0) {
+    if (shouldAutoShowStyleSelection) {
       setShowStyleSelection(true)
     }
-  }, [showStartFlow, showStyleSelection, validSelectedIds.length, availableSelfies.length])
+  }, [shouldAutoShowStyleSelection])
 
   // Check if returning from selfie upload after starting generation
   useEffect(() => {
@@ -347,9 +419,117 @@ export default function InviteDashboardPage() {
     originalContextSettings as Record<string, unknown> | undefined
   )
 
+  // Check if clothing colors step has been visited (for mobile flow only)
+  // On mobile, user must scroll through all steps before generating
+  const hasVisitedClothingColors = !isMobileViewport || visitedSteps.has('clothingColors')
+  
   const canGenerate = validSelectedIds.length >= 2 && 
                       stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration &&
-                      allCustomizableSectionsCustomized
+                      allCustomizableSectionsCustomized &&
+                      hasVisitedClothingColors
+
+  const handleMobileStepChange = useCallback((step: MobileStep | null, stepIndex?: number) => {
+    const stepId = step?.custom?.id ?? step?.category?.key ?? null
+    setActiveMobileStepInfo({
+      type: step?.type ?? null,
+      id: stepId,
+      index: stepIndex ?? 0
+    })
+    // Track visited steps (by category key for customization steps)
+    if (stepId) {
+      setVisitedSteps(prev => {
+        const newSet = new Set(prev)
+        newSet.add(stepId)
+        return newSet
+      })
+    }
+  }, [])
+
+  const selfieMobileStep = useMemo(() => {
+    if (!showStyleSelection) return null
+    const selectedCount = validSelectedIds.length
+    const remaining = Math.max(0, 2 - selectedCount)
+    return {
+      id: 'selfie-step',
+      title: t('selfieSelection.mobile.bannerTitle', { default: 'Select your selfies' }),
+      badgeLabel: selectedCount >= 2
+        ? t('selfieSelection.mobile.badgeReady', { default: 'Ready to customize' })
+        : t('selfieSelection.mobile.badgeSelecting', { default: 'Need {remaining} more', remaining }),
+      badgeVariant: (selectedCount >= 2 ? 'success' : 'warning') as 'success' | 'warning',
+      isComplete: selectedCount >= 2,
+      content: (
+        <div className="space-y-4">
+          <SelfieSelectionInfoBanner selectedCount={selectedCount} showSwipeHint className="mb-2" />
+          <SelfieSelectionGrid
+            selfies={availableSelfies}
+            selectedSet={selectedSet}
+            onToggle={toggleSelect}
+          />
+        </div>
+      ),
+      noBorder: true // Don't show outer container border for selfie step
+    }
+  }, [showStyleSelection, validSelectedIds.length, availableSelfies, selectedSet, toggleSelect, t])
+
+  // Memoize the array to prevent infinite re-renders in PhotoStyleSettings
+  const mobileExtraSteps = useMemo(() => {
+    return selfieMobileStep ? [selfieMobileStep] : undefined
+  }, [selfieMobileStep])
+
+  // Handler for inline file upload (triggered by "Upload photo" button in swipe flow)
+  const handleInlineFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    
+    setIsInlineUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        // Upload the file
+        const ext = file.name.split('.')?.pop()?.toLowerCase() || ''
+        const uploadRes = await fetch(`/api/uploads/proxy?token=${encodeURIComponent(token)}`, {
+          method: 'POST',
+          headers: {
+            'x-file-content-type': file.type,
+            'x-file-extension': ext,
+            'x-file-type': 'selfie'
+          },
+          body: file,
+          credentials: 'include'
+        })
+        if (!uploadRes.ok) {
+          const errorData = await uploadRes.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Upload failed')
+        }
+        const { key } = await uploadRes.json() as { key: string }
+        
+        // Save the selfie
+        const saveRes = await fetch('/api/team/member/selfies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, selfieKey: key }),
+          credentials: 'include'
+        })
+        if (!saveRes.ok) throw new Error('Failed to save selfie')
+        const saveData = await saveRes.json() as { selfie?: { id: string } }
+        
+        // Auto-select the newly uploaded selfie
+        if (saveData.selfie?.id) {
+          await toggleSelect(saveData.selfie.id, true)
+        }
+      }
+      
+      // Refresh the selfies list
+      await fetchAvailableSelfies()
+      await loadSelected()
+    } catch (error) {
+      console.error('Inline file upload error:', error)
+      alert('Failed to upload photo. Please try again.')
+    } finally {
+      setIsInlineUploading(false)
+      // Reset the input so the same file can be selected again
+      e.target.value = ''
+    }
+  }
 
   const onProceed = async () => {
     // Require at least 2 selfies for generation
@@ -498,8 +678,6 @@ export default function InviteDashboardPage() {
 
   
 
-  // using shared hasUserDefinedFields from domain/style/userChoice
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -564,7 +742,6 @@ export default function InviteDashboardPage() {
 
   const photosAffordable = Math.floor(stats.creditsRemaining / PRICING_CONFIG.credits.perGeneration)
 
-  const showCustomizeHint = hasUserDefinedFields(photoStyleSettings)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -644,6 +821,14 @@ export default function InviteDashboardPage() {
                       if (typeof window !== 'undefined') {
                         sessionStorage.setItem('fromGeneration', 'true')
                         sessionStorage.setItem('openStartFlow', 'true')
+                        const isMobile = window.matchMedia('(max-width: 767px)').matches
+                        // On mobile, always show the swipe flow directly
+                        // Selfie selection is step 2 where users can add selfies if needed
+                        if (isMobile) {
+                          setShowStartFlow(true)
+                          setShowStyleSelection(true)
+                          return
+                        }
                       }
                       router.push(`/invite-dashboard/${token}/selfies`)
                     }}
@@ -717,7 +902,7 @@ export default function InviteDashboardPage() {
             <div className="space-y-6">
               {/* Inline selfie uploader */}
               {!showStyleSelection && !uploadKey && availableSelfies.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   {/* Desktop: Title and continue button */}
                   <div className="hidden md:flex items-center justify-between mb-3">
                     <h3 className="text-lg md:text-xl font-semibold text-gray-900">{t('selfieSelection.title')}</h3>
@@ -729,21 +914,6 @@ export default function InviteDashboardPage() {
                       }}
                       disabled={validSelectedIds.length < 2}
                       className="px-5 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-base font-semibold shadow-md"
-                    >
-                      {t('common.continue')}
-                    </button>
-                  </div>
-                  {/* Mobile: Info banner and continue button on same line */}
-                  <div className="md:hidden flex items-center justify-between gap-3 mb-4">
-                    <SelfieSelectionInfoBanner selectedCount={validSelectedIds.length} className="flex-1 mb-0" />
-                    <button
-                      onClick={() => {
-                        if (validSelectedIds.length >= 2) {
-                          setShowStyleSelection(true)
-                        }
-                      }}
-                      disabled={validSelectedIds.length < 2}
-                      className="px-5 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-base font-semibold shadow-md flex-shrink-0"
                     >
                       {t('common.continue')}
                     </button>
@@ -851,19 +1021,8 @@ export default function InviteDashboardPage() {
                 <div className="md:bg-white md:rounded-lg md:shadow-sm md:border md:border-gray-200 md:p-6 pb-24 md:pb-6">
                   <h1 className="hidden md:block text-2xl md:text-3xl font-bold text-gray-900 mb-4 font-display">{t('styleSelection.readyToGenerate')}</h1>
                   
-                  {/* Mobile: Orange heads-up banner first, then style settings, then cost and generate button */}
+                  {/* Mobile: Style settings, cost, and sticky controls */}
                   <div className="md:hidden space-y-6">
-                    {showCustomizeHint && (
-                      <div
-                        role="note"
-                        className="w-full flex items-start gap-3 rounded-md border border-brand-cta/40 bg-brand-cta-light p-3"
-                      >
-                        <SparklesIcon className="h-5 w-5 text-brand-primary mt-0.5 flex-shrink-0" aria-hidden="true" />
-                        <p className="text-[13px] leading-snug text-text-body">
-                          <span className="font-medium text-brand-primary">{t('styleSelection.customizeHint.headsUp')}:</span> {t('styleSelection.customizeHint.message')}
-                        </p>
-                      </div>
-                    )}
                     <StyleSettingsSection
                       value={photoStyleSettings}
                       onChange={setPhotoStyleSettings}
@@ -874,6 +1033,8 @@ export default function InviteDashboardPage() {
                       noContainer
                       teamContext
                       token={token}
+                      mobileExtraSteps={mobileExtraSteps}
+                      onMobileStepChange={handleMobileStepChange}
                     />
                     <div className="md:border-t md:border-gray-200 md:pt-5 pt-5">
                       <div className="hidden md:flex items-center justify-between mb-4">
@@ -887,17 +1048,121 @@ export default function InviteDashboardPage() {
                     </div>
                   </div>
                   
-                  {/* Fixed sticky button at bottom - Mobile */}
+                  {/* Fixed sticky controls at bottom - Mobile */}
                   <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-4 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-                    <GenerateButton
-                      onClick={onProceed}
-                      disabled={!canGenerate}
-                      isGenerating={isGenerating}
-                      size="md"
-                      disabledReason={!allCustomizableSectionsCustomized ? t('alerts.customizePhoto', { default: 'Please customize your photo settings before generating' }) : undefined}
-                    >
-                      {t('styleSelection.generateButton')}
-                    </GenerateButton>
+                    {activeMobileStepInfo.type === 'selfie-tips' ? (
+                      /* Selfie tips step: Show swipe hint to continue */
+                      <div className="flex items-center justify-center gap-3 py-3 px-4 bg-brand-primary/10 rounded-xl overflow-hidden">
+                        <span className="text-sm font-medium text-brand-primary">
+                          {t('mobile.selfieTips.swipeHint', { default: 'Swipe left to select your selfies' })}
+                        </span>
+                        <div 
+                          className="flex items-center"
+                          style={{
+                            animation: 'slideRight 1.2s ease-in-out infinite'
+                          }}
+                        >
+                          <svg className="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                          </svg>
+                          <svg className="w-5 h-5 -ml-3 text-brand-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    ) : activeMobileStepInfo.type === 'intro' ? (
+                      /* Intro step: Show swipe hint banner instead of generate button */
+                      <div className="flex items-center justify-center gap-3 py-3 px-4 bg-brand-primary/10 rounded-xl overflow-hidden">
+                        <span className="text-sm font-medium text-brand-primary">
+                          {t('mobile.intro.swipeHint', { default: 'Swipe left to start customizing' })}
+                        </span>
+                        <div 
+                          className="flex items-center"
+                          style={{
+                            animation: 'slideRight 1.2s ease-in-out infinite'
+                          }}
+                        >
+                          <svg className="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                          </svg>
+                          <svg className="w-5 h-5 -ml-3 text-brand-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    ) : activeMobileStepInfo.type === 'custom' && activeMobileStepInfo.id === 'selfie-step' ? (
+                      <div className="space-y-3">
+                        {/* Camera Permission Error */}
+                        {cameraPermissionError && (
+                          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-semibold text-amber-800 mb-1">
+                                  {t('camera.permissionNeeded.title', { default: 'Camera access needed' })}
+                                </h4>
+                                <p className="text-sm text-amber-700 mb-2">
+                                  {t('camera.permissionNeeded.description', { default: 'To take a selfie, please allow camera access in your browser.' })}
+                                </p>
+                                <div className="text-xs text-amber-600 space-y-1">
+                                  <p className="font-medium">{t('camera.permissionNeeded.howTo', { default: 'How to enable:' })}</p>
+                                  <ul className="list-disc list-inside space-y-0.5 ml-1">
+                                    <li>{t('camera.permissionNeeded.step1', { default: 'Tap the camera/lock icon in your browser address bar' })}</li>
+                                    <li>{t('camera.permissionNeeded.step2', { default: 'Select "Allow" for camera access' })}</li>
+                                    <li>{t('camera.permissionNeeded.step3', { default: 'Then tap "Use camera" again' })}</li>
+                                  </ul>
+                                </div>
+                                <button
+                                  onClick={() => setCameraPermissionError(false)}
+                                  className="mt-2 text-xs font-medium text-amber-700 hover:text-amber-800 underline underline-offset-2"
+                                >
+                                  {t('common.dismiss', { default: 'Dismiss' })}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Action Buttons */}
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={handleUseCameraClick}
+                            disabled={isInlineUploading}
+                            className="flex-1 inline-flex items-center justify-center px-4 py-3 text-sm font-semibold rounded-xl border border-gray-300 text-gray-800 bg-white shadow-sm disabled:opacity-50"
+                          >
+                            {isInlineUploading 
+                              ? t('common.uploading', { default: 'Uploading...' })
+                              : t('selfieSelection.mobile.actions.camera', { default: 'Use camera' })
+                            }
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => inlineFileInputRef.current?.click()}
+                            disabled={isInlineUploading}
+                            className="flex-1 inline-flex items-center justify-center px-4 py-3 text-sm font-semibold rounded-xl bg-brand-primary text-white shadow-md disabled:opacity-50"
+                          >
+                            {isInlineUploading 
+                              ? t('common.uploading', { default: 'Uploading...' })
+                              : t('selfieSelection.mobile.actions.upload', { default: 'Upload photo' })
+                            }
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <GenerateButton
+                        onClick={onProceed}
+                        disabled={!canGenerate}
+                        isGenerating={isGenerating}
+                        size="md"
+                      >
+                        {t('styleSelection.generateButton')}
+                      </GenerateButton>
+                    )}
                   </div>
 
                   {/* Desktop: Original layout with selfie summary and generation details */}
@@ -931,7 +1196,6 @@ export default function InviteDashboardPage() {
                           remainingCredits={stats.creditsRemaining}
                           perGenCredits={PRICING_CONFIG.credits.perGeneration}
                           showGenerateButton={false}
-                          showCustomizeHint={showCustomizeHint}
                           teamName={inviteData?.teamName}
                           showTitle={false}
                           plain
@@ -1013,7 +1277,6 @@ export default function InviteDashboardPage() {
                         remainingCredits={stats.creditsRemaining}
                         perGenCredits={PRICING_CONFIG.credits.perGeneration}
                         onGenerate={onProceed}
-                        showCustomizeHint={showCustomizeHint}
                         teamName={inviteData.teamName}
                       />
                     </Grid>
@@ -1030,6 +1293,7 @@ export default function InviteDashboardPage() {
                     noContainer
                     teamContext
                     token={token}
+                    mobileExtraSteps={mobileExtraSteps}
                   />
 
                 </div>
@@ -1145,6 +1409,111 @@ export default function InviteDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Hidden file inputs for direct upload/camera from swipe flow */}
+      <input
+        ref={inlineFileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleInlineFileUpload}
+        className="hidden"
+        aria-hidden="true"
+      />
+      {/* Camera Modal - shows camera interface with live preview */}
+      {showCameraModal && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center">
+          <div className="bg-white w-full max-w-lg rounded-lg m-4 max-h-[90vh] overflow-auto">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">
+                {t('selfieSelection.mobile.actions.camera', { default: 'Take a photo' })}
+              </h3>
+              <button
+                onClick={() => setShowCameraModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Close"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <SelfieUploadFlow
+                initialMode="camera"
+                onSelfiesApproved={async (results) => {
+                  if (results.length === 0) return
+                  const { key, selfieId } = results[0]
+                  
+                  // Automatically select the newly uploaded selfie
+                  if (selfieId) {
+                    try {
+                      await toggleSelect(selfieId, true)
+                      await new Promise(resolve => setTimeout(resolve, 200))
+                      await loadSelected()
+                      await fetchAvailableSelfies()
+                    } catch (error) {
+                      console.error('Error selecting newly uploaded selfie:', error)
+                    }
+                  } else {
+                    // Fallback: refresh selfies and try to find by key
+                    try {
+                      await fetchAvailableSelfies()
+                      await loadSelected()
+                      const updatedSelfies = await fetch(`/api/team/member/selfies?token=${token}`, {
+                        credentials: 'include'
+                      }).then(r => r.json()).then(d => d.selfies || [])
+                      const newSelfie = updatedSelfies.find((s: Selfie) => s.key === key)
+                      if (newSelfie) {
+                        await toggleSelect(newSelfie.id, true)
+                        await loadSelected()
+                      }
+                    } catch (error) {
+                      console.error('Error finding and selecting selfie:', error)
+                    }
+                  }
+                  
+                  // Close the modal
+                  setShowCameraModal(false)
+                }}
+                onCancel={() => setShowCameraModal(false)}
+                onError={(error) => console.error('Upload error:', error)}
+                uploadEndpoint={async (file: File) => {
+                  const ext = file.name.split('.')?.pop()?.toLowerCase() || ''
+                  const res = await fetch(`/api/uploads/proxy?token=${encodeURIComponent(token)}`, {
+                    method: 'POST',
+                    headers: {
+                      'x-file-content-type': file.type,
+                      'x-file-extension': ext,
+                      'x-file-type': 'selfie'
+                    },
+                    body: file,
+                    credentials: 'include'
+                  })
+                  if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({}))
+                    throw new Error(errorData.error || 'Upload failed')
+                  }
+                  const { key } = await res.json() as { key: string }
+                  const preview = URL.createObjectURL(file)
+                  return { key, url: preview }
+                }}
+                saveEndpoint={async (key: string) => {
+                  const response = await fetch('/api/team/member/selfies', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, selfieKey: key }),
+                    credentials: 'include'
+                  })
+                  if (!response.ok) throw new Error('Failed to save selfie')
+                  const data = await response.json() as { selfie?: { id: string } }
+                  return data.selfie?.id
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

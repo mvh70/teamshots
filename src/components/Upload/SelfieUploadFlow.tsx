@@ -19,6 +19,7 @@ interface SelfieUploadFlowProps {
   uploadEndpoint?: (file: File) => Promise<{ key: string; url?: string }> // Custom upload function for invite flows or other custom flows
   hideHeader?: boolean // Hide title and cancel button for compact/sticky views
   onProcessingCompleteRef?: React.MutableRefObject<(() => void) | null> // Ref to call when upload processing is complete
+  initialMode?: 'camera' | 'upload' // Auto-open camera or file picker on mount
 }
 
 export default function SelfieUploadFlow({
@@ -29,12 +30,9 @@ export default function SelfieUploadFlow({
   saveEndpoint,
   uploadEndpoint,
   hideHeader = false,
-  onProcessingCompleteRef
+  onProcessingCompleteRef,
+  initialMode
 }: SelfieUploadFlowProps) {
-  // Debug: always log hideHeader value to verify prop is received
-  if (typeof window !== 'undefined') {
-    console.log('[SelfieUploadFlow] hideHeader prop value:', hideHeader)
-  }
   const t = useTranslations('selfies')
   const {
     handlePhotoUpload
@@ -51,7 +49,40 @@ export default function SelfieUploadFlow({
   const [pendingApproval, setPendingApproval] = useState<{ key: string; previewUrl: string } | null>(null)
   const pendingApprovalRef = useRef<{ key: string; previewUrl: string } | null>(null)
   const [cameraKey, setCameraKey] = useState(0) // Key to force PhotoUpload remount for retake
-  const [shouldOpenCamera, setShouldOpenCamera] = useState(false) // Track if camera should open
+  const [shouldOpenCamera, setShouldOpenCamera] = useState(initialMode === 'camera') // Track if camera should open
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const hasTriggeredInitialMode = useRef(false)
+  
+  // Handle initial mode for file picker
+  useEffect(() => {
+    if (initialMode === 'upload' && !hasTriggeredInitialMode.current) {
+      hasTriggeredInitialMode.current = true
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        fileInputRef.current?.click()
+      }, 100)
+    }
+  }, [initialMode])
+  
+  // Handler for files selected via the hidden input (initialMode='upload')
+  const handleHiddenInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    
+    try {
+      const results: { key: string; url?: string }[] = []
+      for (const file of Array.from(files)) {
+        const result = await handlePhotoUploadWrapper(file)
+        results.push(result)
+      }
+      await handlePhotoUploadedWrapper(results)
+    } catch (error) {
+      console.error('File upload error:', error)
+      onError?.('Failed to upload file. Please try again.')
+    }
+    // Reset the input so the same file can be selected again
+    e.target.value = ''
+  }
   
   // Reset shouldOpenCamera after a short delay to allow camera to open
   // This is an intentional timer pattern for managing camera open state
@@ -252,6 +283,16 @@ export default function SelfieUploadFlow({
 
     return (
       <>
+        {/* Hidden file input for initialMode='upload' */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleHiddenInputChange}
+          className="hidden"
+          aria-hidden="true"
+        />
         {/* Mobile: Fixed at bottom of viewport using portal to ensure it's not affected by parent containers */}
         {typeof window !== 'undefined' && createPortal(mobileContent, document.body)}
         {/* Desktop: Static positioning */}
@@ -273,6 +314,16 @@ export default function SelfieUploadFlow({
 
   return (
     <div data-testid="upload-flow">
+      {/* Hidden file input for initialMode='upload' */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleHiddenInputChange}
+        className="hidden"
+        aria-hidden="true"
+      />
       <div data-testid="mobile-upload-interface" className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900" data-testid="desktop-upload-title">{t('upload.title')}</h2>
