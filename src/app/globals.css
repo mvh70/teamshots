@@ -461,3 +461,15 @@ textarea {
   50% { transform: translateX(4px); opacity: 1; }
 }
 
+/* Blog post fade-in animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

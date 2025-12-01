@@ -1142,9 +1142,16 @@
       "noneSelected": "Take a fresh selfie or grab one from your gallery. Your call.",
       "oneSelected": "You've got 1 selected. Add one more to continue.",
       "enoughSelected": "You've selected {count} selfie{count, plural, =1 {} other {s}}. You can continue or select more.",
-      "swipeHint": "Swipe right when you're ready to customize."
+      "swipeHint": "Swipe right when you're ready to customize.",
+      "status": {
+        "start": "Select selfies",
+        "oneMore": "Add one more",
+        "ready": "Ready to customize"
+      }
     },
     "gallery": {
+      "selectAria": "Select selfie",
+      "deselectAria": "Remove selfie selection",
       "deleteTooltip": "Delete selfie",
       "deleteAria": "Delete selfie",
       "deleteDisabledTooltip": "This selfie is used in a generation and can't be deleted.",
@@ -1159,6 +1166,13 @@
     }
   },
   "generation": {
+    "flow": {
+      "stepIndicator": "Step {current} of {total}",
+      "back": "Back",
+      "continue": "Continue",
+      "swipeToNext": "Swipe to continue",
+      "swipeHint": "Swipe left to continue"
+    },
     "typeSelection": {
       "title": "How would you like to use this photo?",
       "subtitle": "Choose how you want to generate your professional photo.",
@@ -1323,14 +1337,16 @@
           "kicker": "Before you dive in",
           "title": "A quick pit stop before the glow-up",
           "body": "You're about to customize how your photos look. Each card tweaks one part of the shoot, so swipe through and make it yours.",
+          "bodyDesktop": "You're about to customize how your photos look. Each section below controls a different aspect of your professional headshot.",
           "swipe": "Swipe right to move forward, left to review. Prefer buttons? The little chevrons below have your back.",
+          "scrollDesktop": "Scroll down to see all customization options. Adjust each setting to match your preferences.",
           "editable": "Sparkles badge means you're in charge. Adjust until the vibe matches your story.",
           "locked": "Lock badge means your team already set it. Peek, but no touching—consistency matters."
         },
         "selfieTips": {
           "kicker": "Get the best results",
           "title": "Selfie tips for amazing photos",
-          "body": "Great team photos start with great selfies. Here's how to nail them.",
+          "body": "Great photos start with great selfies. Here's how to nail them.",
           "angles": {
             "title": "Mix up your angles",
             "desc": "— different positions help our AI understand your face better."
@@ -1341,7 +1357,7 @@
           },
           "distance": {
             "title": "Include one further away",
-            "desc": "— showing your shoulders helps us match body proportions."
+            "desc": "— this shows the AI your body proportions so it does not have to guess."
           },
           "minimum": {
             "title": "Upload at least 2",
@@ -1939,6 +1955,7 @@
         "headsUp": "Heads up",
         "message": "Customize your photo in the editable sections below before generating."
       },
+      "mobileCustomizeTitle": "Customize {style}",
       "costPerGeneration": "Cost per generation",
       "generateButton": "Generate photo"
     },

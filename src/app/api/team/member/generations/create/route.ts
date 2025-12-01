@@ -18,6 +18,7 @@ import {
   determineWorkflowVersion,
   createGenerationRecord,
 } from '@/domain/generation/generation-helpers'
+import { extendInviteExpiry } from '@/lib/invite-utils'
 
 // Minimal validation schema aligned with /api/generations/create (now supports arrays)
 const createSchema = z.object({
@@ -59,6 +60,11 @@ export async function POST(request: NextRequest) {
     if (!invite || !invite.person || !invite.person.teamId) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
     }
+
+    // Extend invite expiry (sliding expiration) - don't await to avoid blocking
+    extendInviteExpiry(invite.id).catch(() => {
+      // Silently fail - expiry extension is best effort
+    })
 
     const body = await request.json()
     const { selfieKey, selfieKeys, selfieIds, contextId, styleSettings, prompt, workflowVersion, debugMode } = createSchema.parse(body)

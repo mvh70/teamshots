@@ -11,11 +11,14 @@ import {
   CameraIcon,
   SparklesIcon,
   LockClosedIcon,
-  HandRaisedIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ArrowsRightLeftIcon
+  HandRaisedIcon
 } from '@heroicons/react/24/outline'
+import { SwipeableContainer, FlowNavigation } from '@/components/generation/navigation'
+import { FlowHeader } from '@/components/generation/layout'
+import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
+import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
+import SelfieTipsContent from '@/components/generation/SelfieTipsContent'
+import CustomizationIntroContent from '@/components/generation/CustomizationIntroContent'
 import {
   PhotoStyleSettings as PhotoStyleSettingsType,
   CategoryType,
@@ -39,6 +42,7 @@ import { WARDROBE_DETAILS, FALLBACK_DETAIL_BY_STYLE, KnownClothingStyle } from '
 import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
 import { CardGrid, Tooltip } from '@/components/ui'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
+import { buildCustomizationStepIndicatorWithSelfie, CustomizationStepsMeta } from '@/lib/customizationSteps'
 
 interface PhotoStyleSettingsProps {
   value: PhotoStyleSettingsType
@@ -53,6 +57,8 @@ interface PhotoStyleSettingsProps {
   token?: string // Optional token for invite-based access to custom assets
   mobileExtraSteps?: MobileCustomStep[]
   onMobileStepChange?: (step: MobileStep | null, index: number) => void
+  onSwipeBack?: () => void // Called when user swipes back from the first step (mobile only)
+  onStepMetaChange?: (meta: CustomizationStepsMeta) => void
 }
 
 type CategoryConfig = {
@@ -141,9 +147,12 @@ export default function PhotoStyleSettings({
   isFreePlan = false,
   token,
   mobileExtraSteps,
-  onMobileStepChange
+  onMobileStepChange,
+  onSwipeBack,
+  onStepMetaChange
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
+  const isSwipeEnabled = useSwipeEnabled()
   const pkg = getPackageConfig(packageId)
   const packageDefaults = React.useMemo(
     () => pkg.defaultSettings || DEFAULT_PHOTO_STYLE_SETTINGS,
@@ -169,7 +178,13 @@ export default function PhotoStyleSettings({
   // State for tracking customization progress (for locked sections reveal)
   const [hasCustomizedEditable, setHasCustomizedEditable] = React.useState(false)
   const [activeMobileStep, setActiveMobileStep] = React.useState(0)
-  const touchStartXRef = React.useRef<number | null>(null)
+  
+  // Get persisted visited steps from flow state
+  const { visitedSteps: persistedVisitedSteps, setVisitedSteps: setPersistentVisitedSteps } = useGenerationFlowState()
+  
+  // Track which editable steps have been visited (by their index in allNumberedSteps)
+  // Initialize from persisted state
+  const [visitedEditableSteps, setVisitedEditableSteps] = React.useState<Set<number>>(() => new Set(persistedVisitedSteps))
 
   const resolvedClothingColors = React.useMemo<ClothingColorSettings>(() => {
     const defaults = packageDefaults.clothingColors
@@ -696,110 +711,7 @@ export default function PhotoStyleSettings({
     )
   }
 
-  const renderIntroStep = () => (
-    <div className="p-5 space-y-4">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
-          {t('mobile.intro.kicker', { default: 'Before you dive in' })}
-        </p>
-        <h3 className="text-xl font-bold text-gray-900 mt-1">
-          {t('mobile.intro.title', { default: 'A quick pit stop before the glow-up' })}
-        </h3>
-        <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-          {t('mobile.intro.body', { default: 'You\'re about to customize how your photos look. Each card tweaks one part of the shoot, so swipe through and make it yours.' })}
-        </p>
-      </div>
-      <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
-            <ArrowsRightLeftIcon className="h-5 w-5" />
-          </div>
-          <p className="text-sm text-gray-700">
-            {t('mobile.intro.swipe', { default: 'Swipe right to move forward, left to review. Prefer buttons? The little chevrons below have your back.' })}
-          </p>
-        </div>
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
-            <SparklesIcon className="h-5 w-5" />
-          </div>
-          <p className="text-sm text-gray-700">
-            {t('mobile.intro.editable', { default: 'Sparkles badge means you\'re in charge. Adjust until the vibe matches your story.' })}
-          </p>
-        </div>
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
-            <LockClosedIcon className="h-5 w-5" />
-          </div>
-          <p className="text-sm text-gray-700">
-            {t('mobile.intro.locked', { default: 'Lock badge means your team already set it. Peek, but no touching—consistency matters.' })}
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-
-  const renderSelfieTipsStep = () => (
-    <div className="p-5 space-y-4">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
-          {t('mobile.selfieTips.kicker', { default: 'Get the best results' })}
-        </p>
-        <h3 className="text-xl font-bold text-gray-900 mt-1">
-          {t('mobile.selfieTips.title', { default: 'Selfie tips for amazing photos' })}
-        </h3>
-        <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-          {t('mobile.selfieTips.body', { default: 'Great team photos start with great selfies. Here\'s how to nail them.' })}
-        </p>
-      </div>
-      <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </div>
-          <p className="text-sm text-gray-700">
-            <strong className="text-gray-900">{t('mobile.selfieTips.angles.title', { default: 'Mix up your angles' })}</strong>{' '}
-            {t('mobile.selfieTips.angles.desc', { default: '— different positions help our AI understand your face better.' })}
-          </p>
-        </div>
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-yellow-100 text-yellow-700">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          </div>
-          <p className="text-sm text-gray-700">
-            <strong className="text-gray-900">{t('mobile.selfieTips.lighting.title', { default: 'Find good lighting' })}</strong>{' '}
-            {t('mobile.selfieTips.lighting.desc', { default: '— natural light works best. Avoid harsh shadows on your face.' })}
-          </p>
-        </div>
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-            </svg>
-          </div>
-          <p className="text-sm text-gray-700">
-            <strong className="text-gray-900">{t('mobile.selfieTips.distance.title', { default: 'Include one further away' })}</strong>{' '}
-            {t('mobile.selfieTips.distance.desc', { default: '— showing your shoulders helps us match body proportions.' })}
-          </p>
-        </div>
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p className="text-sm text-gray-700">
-            <strong className="text-gray-900">{t('mobile.selfieTips.minimum.title', { default: 'Upload at least 2' })}</strong>{' '}
-            {t('mobile.selfieTips.minimum.desc', { default: '— more variety = better results. 3-5 selfies is ideal.' })}
-          </p>
-        </div>
-      </div>
-    </div>
-  )
+  // Use shared components for intro steps (mobile swipe variant)
 
   // Capture initial value on mount to preserve ordering
   const initialValueRef = React.useRef<PhotoStyleSettingsType | undefined>(undefined)
@@ -853,20 +765,14 @@ export default function PhotoStyleSettings({
     if (showToggles) return []
     const steps: MobileStep[] = []
 
-    // Step 1: Selfie tips intro
-    steps.push({ type: 'selfie-tips' })
-
-    // Step 2: Custom steps (e.g., selfie selection)
+    // Custom steps (e.g., selfie selection) - now handled by route-based pages
     if (mobileExtraSteps?.length) {
       mobileExtraSteps.forEach(step => {
         steps.push({ type: 'custom', custom: step })
       })
     }
 
-    // Step 3: Customization intro (moved after selfie selection)
-    steps.push({ type: 'intro' })
-
-    // Remaining steps: style customization categories
+    // Style customization categories
     currentEditableCategories.forEach(cat => {
       steps.push({
         category: cat,
@@ -889,19 +795,43 @@ export default function PhotoStyleSettings({
   const totalMobileSteps = mobileSteps.length
   const currentMobileStep = mobileSteps[activeMobileStep]
   
-  // Steps that count toward "Step X of Y" (exclude intro-type steps)
-  const numberedSteps = React.useMemo(() => {
+  // All steps that count toward dots (exclude intro-type steps)
+  const allNumberedSteps = React.useMemo(() => {
     return mobileSteps.filter(step => step.type !== 'intro' && step.type !== 'selfie-tips')
   }, [mobileSteps])
   
-  const totalNumberedSteps = numberedSteps.length
+  // Only editable steps count toward "Step X of Y"
+  const editableNumberedSteps = React.useMemo(() => {
+    return allNumberedSteps.filter(step => step.type === 'editable')
+  }, [allNumberedSteps])
   
-  // Get the current step's position in numbered steps (1-indexed), or 0 if not a numbered step
-  const currentNumberedStepIndex = React.useMemo(() => {
+  const totalEditableSteps = editableNumberedSteps.length
+  const totalAllSteps = allNumberedSteps.length
+  
+  // Calculate which indices in allNumberedSteps are locked (for showing grey dots)
+  const lockedStepIndices = React.useMemo(() => {
+    return allNumberedSteps
+      .map((step, idx) => step.type === 'locked' ? idx : -1)
+      .filter(idx => idx >= 0)
+  }, [allNumberedSteps])
+
+  const customizationStepMeta = React.useMemo<CustomizationStepsMeta>(() => ({
+    editableSteps: totalEditableSteps,
+    allSteps: totalAllSteps,
+    lockedSteps: lockedStepIndices
+  }), [totalEditableSteps, totalAllSteps, lockedStepIndices])
+
+  React.useEffect(() => {
+    onStepMetaChange?.(customizationStepMeta)
+  }, [onStepMetaChange, customizationStepMeta])
+
+  // Get the current step's position in all numbered steps (0-indexed, for dot highlighting)
+  const currentAllStepsIndex = React.useMemo(() => {
     if (!currentMobileStep || currentMobileStep.type === 'intro' || currentMobileStep.type === 'selfie-tips') {
-      return 0 // Not a numbered step
+      return -1 // Not a numbered step
     }
-    const index = numberedSteps.findIndex(step => {
+    
+    return allNumberedSteps.findIndex(step => {
       if (step.type === 'custom' && currentMobileStep.type === 'custom') {
         return step.custom?.id === currentMobileStep.custom?.id
       }
@@ -910,11 +840,145 @@ export default function PhotoStyleSettings({
       }
       return false
     })
-    return index >= 0 ? index + 1 : 0
-  }, [currentMobileStep, numberedSteps])
+  }, [currentMobileStep, allNumberedSteps])
+
+  // Track visited "clothingColors" step - only this step becomes "done" on visit
+  // Other steps become "done" when the user actually makes a selection
+  React.useEffect(() => {
+    if (currentAllStepsIndex >= 0 && 
+        currentMobileStep?.type === 'editable' && 
+        currentMobileStep?.category?.key === 'clothingColors') {
+      setVisitedEditableSteps(prev => {
+        if (prev.has(currentAllStepsIndex)) return prev
+        const next = new Set(prev)
+        next.add(currentAllStepsIndex)
+        return next
+      })
+    }
+  }, [currentAllStepsIndex, currentMobileStep?.type, currentMobileStep?.category?.key])
+
+  // Persist visited steps to session storage whenever they change
+  React.useEffect(() => {
+    setPersistentVisitedSteps(Array.from(visitedEditableSteps))
+  }, [visitedEditableSteps, setPersistentVisitedSteps])
+
+  // Track which editable steps have been customized (value differs from default)
+  // For steps other than clothingColors, this determines the "done" (green) state
+  const customizedEditableStepIndices = React.useMemo(() => {
+    const customized = new Set<number>()
+    editableNumberedSteps.forEach((step) => {
+      // Skip clothingColors - it uses visited logic instead
+      if (step.category?.key === 'clothingColors') return
+      
+      let isCustomized = false
+      
+      if (step.type === 'custom') {
+        // Custom steps are considered "set" if they exist
+        isCustomized = true
+      } else if (step.category) {
+        const categorySettings = (value as Record<string, unknown>)[step.category.key]
+        const defaultSetting = (packageDefaults as Record<string, unknown>)[step.category.key]
+        
+        // Compare against originalContextSettings if available (more accurate for team contexts)
+        const comparisonSetting = originalContextSettings 
+          ? (originalContextSettings as Record<string, unknown>)[step.category.key]
+          : defaultSetting
+        
+        if (categorySettings && comparisonSetting) {
+          isCustomized = JSON.stringify(categorySettings) !== JSON.stringify(comparisonSetting)
+        } else if (categorySettings && !comparisonSetting) {
+          // Has a setting but no comparison - check type
+          const settingType = (categorySettings as { type?: string; style?: string }).type || 
+                             (categorySettings as { type?: string; style?: string }).style
+          isCustomized = settingType !== 'user-choice' && settingType !== undefined
+        }
+      }
+      
+      if (isCustomized) {
+        const allStepsIdx = allNumberedSteps.findIndex(s => {
+          if (step.type === 'custom' && s.type === 'custom') {
+            return step.custom?.id === s.custom?.id
+          }
+          if (step.category && s.category) {
+            return step.category.key === s.category.key
+          }
+          return false
+        })
+        if (allStepsIdx >= 0) {
+          customized.add(allStepsIdx)
+        }
+      }
+    })
+    return customized
+  }, [editableNumberedSteps, allNumberedSteps, value, packageDefaults, originalContextSettings])
+
+  // Combine visited (for clothingColors) and customized (for other steps) to get all "done" steps
+  const doneEditableStepIndices = React.useMemo(() => {
+    const done = new Set<number>()
+    visitedEditableSteps.forEach(idx => done.add(idx))
+    customizedEditableStepIndices.forEach(idx => done.add(idx))
+    return done
+  }, [visitedEditableSteps, customizedEditableStepIndices])
+
+  // Get the current step's position in editable steps (1-indexed), or 0 if not a numbered step
+  // When on a locked step, show the last editable step number we completed
+  const currentNumberedStepIndex = React.useMemo(() => {
+    if (currentAllStepsIndex < 0) return 0
+    
+    // If we're on a locked step, find the last editable step before this position
+    // This shows the progress through editable steps even when viewing locked steps
+    if (currentMobileStep?.type === 'locked') {
+      // Find the last editable step before this position
+      let lastEditableIndex = -1
+      for (let i = currentAllStepsIndex - 1; i >= 0; i--) {
+        const numberedStep = allNumberedSteps[i]
+        if (!numberedStep) continue
+        if (numberedStep.type === 'editable') {
+          const editableIndex = editableNumberedSteps.findIndex(step => {
+            if (step.type === 'custom' && numberedStep.type === 'custom') {
+              return step.custom?.id === numberedStep.custom?.id
+            }
+            if (step.category && numberedStep.category) {
+              return step.category.key === numberedStep.category.key
+            }
+            return false
+          })
+          if (editableIndex >= 0) {
+            lastEditableIndex = editableIndex
+            break
+          }
+        }
+      }
+      // If no editable step found before, show 0 (means we haven't completed any editable steps yet)
+      return lastEditableIndex >= 0 ? lastEditableIndex + 1 : 0
+    }
+    
+    // For editable steps, find position in editable steps list
+    const editableIndex = editableNumberedSteps.findIndex(step => {
+      if (step.type === 'custom' && currentMobileStep?.type === 'custom') {
+        return step.custom?.id === currentMobileStep.custom?.id
+      }
+      if (step.category && currentMobileStep?.category) {
+        return step.category.key === currentMobileStep.category.key
+      }
+      return false
+    })
+    return editableIndex >= 0 ? editableIndex + 1 : 0
+  }, [currentMobileStep, editableNumberedSteps, allNumberedSteps, currentAllStepsIndex])
   
-  // Whether the current step should show step numbers
-  const isNumberedStep = currentNumberedStepIndex > 0
+  // Show step indicator on all numbered steps (editable and locked)
+  const isNumberedStep = currentMobileStep && 
+    currentMobileStep.type !== 'intro' && 
+    currentMobileStep.type !== 'selfie-tips' &&
+    allNumberedSteps.some(step => {
+      if (step.type === 'custom' && currentMobileStep.type === 'custom') {
+        return step.custom?.id === currentMobileStep.custom?.id
+      }
+      if (step.category && currentMobileStep.category) {
+        return step.category.key === currentMobileStep.category.key
+      }
+      return false
+    })
   
   // Removed unused completedMobileSteps - can be re-added if progress tracking is needed
 
@@ -947,6 +1011,56 @@ export default function PhotoStyleSettings({
     }
   }, [currentMobileStep, activeMobileStep, onMobileStepChange])
 
+  const stepIndicatorProps = React.useMemo(() => {
+    if (!isNumberedStep || totalEditableSteps === 0) {
+      return undefined
+    }
+    const currentEditableIndex = (currentNumberedStepIndex > 0 ? currentNumberedStepIndex : 1) - 1
+    return buildCustomizationStepIndicatorWithSelfie(customizationStepMeta, {
+      currentEditableIndex,
+      currentAllStepsIndex: currentAllStepsIndex >= 0 ? currentAllStepsIndex : undefined,
+      visitedEditableSteps: Array.from(doneEditableStepIndices)
+    })
+  }, [
+    isNumberedStep,
+    totalEditableSteps,
+    currentNumberedStepIndex,
+    customizationStepMeta,
+    currentAllStepsIndex,
+    doneEditableStepIndices
+  ])
+
+  // Map step indicator index (0=selfie, 1+=customization) to mobileSteps index
+  const mapStepIndicatorIndexToMobileStep = React.useCallback((indicatorIndex: number): number | null => {
+    if (indicatorIndex === 0) {
+      // Index 0 is selfie - find it in mobileSteps (could be in mobileExtraSteps)
+      const selfieIndex = mobileSteps.findIndex(step => 
+        step.type === 'custom' && (
+          step.custom?.id === 'selfie-selection' || 
+          step.custom?.id === 'selfie'
+        )
+      )
+      return selfieIndex >= 0 ? selfieIndex : null
+    }
+    // Index 1+ maps to customization steps (indicatorIndex - 1 in allNumberedSteps)
+    const numberedStepIndex = indicatorIndex - 1
+    if (numberedStepIndex < 0 || numberedStepIndex >= allNumberedSteps.length) {
+      return null
+    }
+    const targetStep = allNumberedSteps[numberedStepIndex]
+    // Find this step in mobileSteps
+    const mobileIndex = mobileSteps.findIndex(step => {
+      if (targetStep.type === 'custom' && step.type === 'custom') {
+        return step.custom?.id === targetStep.custom?.id
+      }
+      if (targetStep.category && step.category) {
+        return step.category.key === targetStep.category.key
+      }
+      return false
+    })
+    return mobileIndex >= 0 ? mobileIndex : null
+  }, [mobileSteps, allNumberedSteps])
+
   const handleNextStep = React.useCallback(() => {
     setActiveMobileStep(prev => {
       if (mobileSteps.length === 0) return 0
@@ -955,8 +1069,15 @@ export default function PhotoStyleSettings({
   }, [mobileSteps.length])
 
   const handlePrevStep = React.useCallback(() => {
-    setActiveMobileStep(prev => Math.max(prev - 1, 0))
-  }, [])
+    setActiveMobileStep(prev => {
+      if (prev === 0 && onSwipeBack) {
+        // At first step, trigger swipe back to previous page
+        onSwipeBack()
+        return prev
+      }
+      return Math.max(prev - 1, 0)
+    })
+  }, [onSwipeBack])
 
   const handleDirectStepChange = React.useCallback((index: number) => {
     setActiveMobileStep(prev => {
@@ -966,32 +1087,6 @@ export default function PhotoStyleSettings({
       return index
     })
   }, [mobileSteps.length])
-
-  const handleTouchStart = React.useCallback((event: React.TouchEvent<HTMLDivElement>) => {
-    touchStartXRef.current = event.touches[0]?.clientX ?? null
-  }, [])
-
-  const handleTouchEnd = React.useCallback((event: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartXRef.current === null) return
-    const endX = event.changedTouches[0]?.clientX
-    if (typeof endX !== 'number') {
-      touchStartXRef.current = null
-      return
-    }
-
-    const delta = endX - touchStartXRef.current
-    touchStartXRef.current = null
-
-    if (Math.abs(delta) < 40) {
-      return
-    }
-
-    if (delta < 0) {
-      handleNextStep()
-    } else {
-      handlePrevStep()
-    }
-  }, [handleNextStep, handlePrevStep])
 
   // Locked sections teaser component (Context B only)
   const LockedSectionsTeaser = () => {
@@ -1032,14 +1127,10 @@ export default function PhotoStyleSettings({
           <div className="md:hidden space-y-6">
             {mobileSteps.length > 0 ? (
               <div className="space-y-4">
-                <div
-                  className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-100 px-4 sm:px-6 py-4 shadow-sm -mx-4 sm:-mx-6"
-                  style={{ top: 'calc(env(safe-area-inset-top, 0px))' }}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {currentMobileStep
+                {/* Sticky header with step indicator */}
+                <FlowHeader
+                  title={
+                    currentMobileStep
                           ? currentMobileStep.type === 'locked'
                             ? t('mobile.banner.preset', { default: 'Team preset: {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
                             : currentMobileStep.type === 'selfie-tips'
@@ -1051,23 +1142,15 @@ export default function PhotoStyleSettings({
                                 : t('mobile.banner.customize', { default: 'Customize {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
                           : t('sections.customizable', { default: 'Customize Your Style' })
                         }
-                      </h3>
-                    </div>
-                    {isNumberedStep && (
-                      <div className="text-right flex flex-col items-end gap-1">
-                        <p className="text-xs font-semibold text-gray-500">
-                          {t('mobile.banner.step', { default: 'Step {current} of {total}', current: currentNumberedStepIndex, total: totalNumberedSteps })}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  step={stepIndicatorProps}
+                />
 
-                <div
+                {/* Swipeable carousel */}
+                <SwipeableContainer
+                  onSwipeLeft={handleNextStep}
+                  onSwipeRight={handlePrevStep}
+                  enabled={isSwipeEnabled}
                   className="overflow-hidden"
-                  onTouchStart={handleTouchStart}
-                  onTouchEnd={handleTouchEnd}
-                  style={{ touchAction: 'pan-y' }}
                 >
                   <div
                     className="flex transition-transform duration-300 ease-in-out"
@@ -1078,8 +1161,8 @@ export default function PhotoStyleSettings({
                       return (
                         <div key={step.category ? step.category.key : step.custom ? step.custom.id : step.type === 'selfie-tips' ? 'selfie-tips' : `intro-${idx}`} className="w-full flex-shrink-0 px-1 pb-4">
                           <div className={hasNoBorder ? '' : 'rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 shadow-sm'}>
-                            {step.type === 'selfie-tips' && renderSelfieTipsStep()}
-                            {step.type === 'intro' && renderIntroStep()}
+                            {step.type === 'selfie-tips' && <SelfieTipsContent variant="swipe" />}
+                            {step.type === 'intro' && <CustomizationIntroContent variant="swipe" />}
                             {step.type === 'custom' && step.custom ? (
                               <div className={hasNoBorder ? 'space-y-4 py-2' : 'space-y-4 p-4'}>
                                 {step.custom.description && (
@@ -1095,45 +1178,43 @@ export default function PhotoStyleSettings({
                       )
                     })}
                   </div>
-                </div>
+                </SwipeableContainer>
 
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={handlePrevStep}
-                    disabled={activeMobileStep === 0}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label={t('mobile.controls.previous', { default: 'Previous' })}
-                  >
-                    <ChevronLeftIcon className="h-4 w-4" />
-                  </button>
-                  <div className="flex items-center gap-2">
-                    {mobileSteps.map((_, idx) => (
-                      <button
-                        key={`mobile-step-dot-${idx}`}
-                        type="button"
-                        aria-label={t('mobile.controls.step', { default: 'Go to step {index}', index: idx + 1 })}
-                        onClick={() => handleDirectStepChange(idx)}
-                        className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                          idx === activeMobileStep ? 'bg-brand-primary' : 'bg-gray-300'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleNextStep}
-                    disabled={activeMobileStep >= totalMobileSteps - 1}
-                    className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-primary text-white shadow-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label={t('mobile.controls.next', { default: 'Next' })}
-                  >
-                    <ChevronRightIcon className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <p className="text-xs text-center text-gray-500">
-                  {t('mobile.swipeHint', { default: 'Swipe or tap Next to continue' })}
-                </p>
+                {/* Navigation controls */}
+                <FlowNavigation
+                  variant="both"
+                  current={
+                    stepIndicatorProps?.currentAllStepsIndex !== undefined
+                      ? stepIndicatorProps.currentAllStepsIndex
+                      : activeMobileStep
+                  }
+                  total={
+                    stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? totalMobileSteps
+                  }
+                  onPrev={handlePrevStep}
+                  onNext={handleNextStep}
+                  canGoPrev={true}
+                  canGoNext={activeMobileStep < totalMobileSteps - 1}
+                  onDotClick={(index) => {
+                    // Map from step indicator index back to mobileSteps index
+                    if (stepIndicatorProps) {
+                      const mobileIndex = mapStepIndicatorIndexToMobileStep(index)
+                      if (mobileIndex !== null) {
+                        handleDirectStepChange(mobileIndex)
+                      }
+                    } else {
+                      handleDirectStepChange(index)
+                    }
+                  }}
+                  stepColors={
+                    stepIndicatorProps
+                      ? {
+                          lockedSteps: stepIndicatorProps.lockedSteps,
+                          visitedEditableSteps: stepIndicatorProps.visitedEditableSteps
+                        }
+                      : undefined
+                  }
+                />
               </div>
             ) : (
               <div className="rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center">

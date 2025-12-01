@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { getUsedSelfiesForPerson } from '@/domain/selfie/usage'
+import { extendInviteExpiry } from '@/lib/invite-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,6 +27,11 @@ export async function GET(request: NextRequest) {
     if (!invite) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
     }
+
+    // Extend invite expiry (sliding expiration) - don't await to avoid blocking
+    extendInviteExpiry(invite.id).catch(() => {
+      // Silently fail - expiry extension is best effort
+    })
 
     if (!invite.person) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 })
@@ -99,6 +105,11 @@ export async function POST(request: NextRequest) {
     if (!invite) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
     }
+
+    // Extend invite expiry (sliding expiration) - don't await to avoid blocking
+    extendInviteExpiry(invite.id).catch(() => {
+      // Silently fail - expiry extension is best effort
+    })
 
     if (!invite.person) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 })

@@ -558,7 +558,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
           <div className="px-4 pb-4 pt-3 relative group">
             <Link
               id="primary-generate-btn"
-              href="/app/generate/selfie"
+              href="/app/generate/start"
               onClick={onMenuItemClick}
               className={`flex items-center justify-center space-x-2 bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary text-white rounded-lg px-4 py-3 md:py-3 font-semibold hover:from-brand-primary-hover hover:via-brand-primary hover:to-brand-primary-hover transition-all duration-300 min-h-[44px] md:min-h-0 shadow-lg shadow-brand-primary/20 hover:shadow-xl hover:shadow-brand-primary/30 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 ${
                 effectiveCollapsed ? 'px-2' : ''

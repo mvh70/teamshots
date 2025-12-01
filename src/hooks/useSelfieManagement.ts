@@ -35,6 +35,7 @@ interface UseSelfieManagementOptions {
 }
 
 interface BaseResult {
+  mode: 'individual' | 'invite'
   selectedIds: string[]
   selectedSet: Set<string>
   loading: boolean
@@ -56,7 +57,7 @@ interface InviteResult extends BaseResult {
   handleSelfiesApproved: (results: { key: string; selfieId?: string }[]) => void
 }
 
-type UseSelfieManagementResult = IndividualResult | InviteResult
+export type UseSelfieManagementResult = IndividualResult | InviteResult
 
 export function useSelfieManagement(options: UseSelfieManagementOptions = {}): UseSelfieManagementResult {
   const {
@@ -142,8 +143,6 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
           if (selfieId) {
             try {
               await selectionHook.toggleSelect(selfieId, true)
-              await new Promise(resolve => setTimeout(resolve, 200))
-              await selectionHook.loadSelected()
             } catch (error) {
               console.error('Error selecting newly uploaded selfie:', error)
             }
@@ -184,8 +183,6 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
         if (selfieId) {
           try {
             await selectionHook.toggleSelect(selfieId, true)
-            await new Promise(resolve => setTimeout(resolve, 200))
-            await selectionHook.loadSelected()
           } catch (error) {
             console.error('Error selecting newly uploaded selfie:', error)
           }
@@ -234,6 +231,7 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
 
   if (inviteMode) {
     return {
+      mode: 'invite',
       uploads: inviteUploads,
       selectedIds: selectionHook.selectedIds,
       selectedSet: selectionHook.selectedSet,
@@ -247,6 +245,7 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
     } as InviteResult
   } else {
     return {
+      mode: 'individual',
       uploads: uploadsHook?.uploads || [],
       selectedIds: selectionHook.selectedIds,
       selectedSet: selectionHook.selectedSet,

@@ -401,7 +401,7 @@ export default function TeamGenerationsPage() {
         {/* Prominent Generate Button with Cost Info */}
         <div className="flex flex-col items-stretch sm:items-end md:items-center gap-3 w-full sm:w-auto">
           <Link 
-            href="/app/generate/selfie?type=team" 
+            href="/app/generate/start?type=team" 
             className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-xl font-bold text-base md:text-lg lg:text-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-2.5 whitespace-nowrap bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white touch-manipulation"
           >
             <svg 
@@ -477,7 +477,7 @@ export default function TeamGenerationsPage() {
           <div className="text-center py-16 bg-white rounded-lg border">
             <p className="text-gray-700 mb-2">{tg('empty.title')}</p>
             <p className="text-gray-500 text-sm mb-4">{tg('empty.subtitle')}</p>
-                <Link href="/app/generate/selfie?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
+                <Link href="/app/generate/start?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
           </div>
         )}
       {failureToast && (

@@ -1,51 +1,38 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import SelfieGallery from '@/components/generation/SelfieGallery'
-import { useState, useEffect } from 'react'
+import { SelectableGrid } from '@/components/generation/selection'
+import { useState } from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
 import dynamic from 'next/dynamic'
+import { useMobileViewport } from '@/hooks/useMobileViewport'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
-
-interface UploadListItem {
-  id: string
-  uploadedKey: string
-  validated: boolean
-  createdAt: string
-  hasGenerations: boolean
-}
 
 
 function SelfiesPageContent() {
   const t = useTranslations('selfies')
   const [error, setError] = useState<string | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
+  const isMobile = useMobileViewport()
   
-  const { uploads, loading, loadUploads } = useSelfieManagement() as { uploads: UploadListItem[], loading: boolean, loadUploads: () => void }
+  const selfieManager = useSelfieManagement()
+
+  if (selfieManager.mode !== 'individual') {
+    throw new Error('Selfies page requires individual selfie management mode')
+  }
+
+  const { uploads, loading, loadUploads, handleSelfiesApproved } = selfieManager
+  
+  // Type assertion: in individual mode, uploads is always UploadListItem[]
+  type UploadListItem = { id: string; uploadedKey: string; createdAt: string; hasGenerations: boolean }
+  const uploadListItems = uploads as UploadListItem[]
 
   // Hook handles initialization internally
-  
-  // Detect mobile viewport
-  // Detect mobile screen size - intentional client-only pattern
-  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const checkMobile = () => {
-        setIsMobile(window.innerWidth < 768) // md breakpoint
-      }
-      checkMobile()
-      window.addEventListener('resize', checkMobile)
-      return () => window.removeEventListener('resize', checkMobile)
-    }
-  }, [])
-  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
-  const handleSelfiesApproved = async () => {
-    // Reload uploads after successful upload
-    await loadUploads()
+  const handleSelfiesApprovedWrapper = async (results: { key: string; selfieId?: string }[]) => {
+    await handleSelfiesApproved?.(results)
     setError(null)
   }
 
@@ -98,13 +85,22 @@ function SelfiesPageContent() {
         <LoadingGrid cols={4} rows={2} />
       ) : (
         <div className={isMobile ? 'pb-40' : ''}>
-          <SelfieGallery
-            selfies={uploads.map(u => ({ id: u.id, key: u.uploadedKey, url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`, uploadedAt: u.createdAt, used: u.hasGenerations }))}
+          <SelectableGrid
+            items={uploadListItems.map(u => ({ 
+              id: u.id, 
+              key: u.uploadedKey, 
+              url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`, 
+              uploadedAt: u.createdAt, 
+              used: u.hasGenerations 
+            }))}
+            selection={{ mode: 'managed' }}
             allowDelete
             showUploadTile={!isMobile}
-            onSelfiesApproved={handleSelfiesApproved}
-            onUploadError={handleUploadError}
             onDeleted={loadUploads}
+            upload={{
+              onSelfiesApproved: handleSelfiesApprovedWrapper,
+              onError: handleUploadError
+            }}
           />
         </div>
       )}
@@ -113,7 +109,7 @@ function SelfiesPageContent() {
       {isMobile && (
         <SelfieUploadFlow
           hideHeader={true}
-          onSelfiesApproved={handleSelfiesApproved}
+          onSelfiesApproved={handleSelfiesApprovedWrapper}
           onCancel={() => {}}
           onError={handleUploadError}
         />

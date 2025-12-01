@@ -90,6 +90,7 @@ export async function executeV3Step1b(
     '- Create depth and realism in the scene.',
     '- Ensure the background is suitable for compositing a person into it later. The logo element should be placed off center, so that we can compose the person in the center later. It is ok if the person overlaps the logo element.',
     '- Leave space in the composition for a person to be added (center or appropriate position).',
+    '- CRITICAL: Do NOT add any cables, wires, cords, or electrical connections to the logo or any scene elements. The logo should appear clean and standalone without any attached cables or wires.',
     
   ]
 

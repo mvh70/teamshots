@@ -127,8 +127,8 @@ export async function executeV3Step3(
     '3. body_framing',
     '   - Is the person\'s body shown at an appropriate length (NOT cut off awkwardly at the waist or mid-torso)?',
     '   - For professional photos, the person should show at minimum 3/4 body (head to mid-thigh) or full body.',
-    '   - Answer NO if the person is cut off at the waist, stomach, or mid-torso.',
-    '   - Answer YES if showing: full body, 3/4 body (to mid-thigh/knees), or intentional close-up (head/shoulders only).',
+    '   - Answer NO if the person is cut off mid picture at the waist, stomach, or mid-torso (awkward mid-body cropping). IMPORTANT: Bottom-border cutoffs (where the person\'s lower body extends to the bottom edge of the image) are acceptable and should be answered YES.',
+    '   - Answer YES if showing: full body, 3/4 body (to mid-thigh/knees), intentional close-up (head/shoulders only), OR if the person is cut off at the bottom border of the image (feet/legs at image edge).',
     '',
     '4. person_prominence',
     '   - Is the person the DOMINANT element in the frame?',
@@ -148,7 +148,11 @@ export async function executeV3Step3(
       '',
       '4. branding_placement',
       `   - Is the logo visible in the ${brandingInfo.position === 'background' ? 'background' : 'scene elements'}?`,
-      `   - Does it match the reference logo provided?`,
+      `   - IMPORTANT: Partial visibility is ACCEPTABLE and EXPECTED when the person is in the foreground.`,
+      `   - If the person naturally occludes part of the logo (e.g., standing in front of it), this is correct composition and should be answered YES.`,
+      `   - The visible portion of the logo should match the reference logo (same colors, font, design elements).`,
+      `   - Answer NO only if: the logo is completely missing, the visible portion doesn't match the reference, or the logo placement looks unnatural/pasted.`,
+      `   - Answer YES if: the logo is visible (even partially) and matches the reference in visible areas, and the person is appropriately in the foreground.`,
       `   - Is it placed according to specifications: ${brandingInfo.placement || 'as specified'}?`,
       `   - Does it look natural and properly integrated into the scene?`
     )

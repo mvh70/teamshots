@@ -1,64 +1,38 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback, useMemo, useRef, useSyncExternalStore } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { BRAND_CONFIG } from '@/config/brand'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { 
   PhotoIcon, 
-  CheckCircleIcon,
-  CameraIcon,
 } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
 import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
-import SelectedSelfiePreview from '@/components/generation/SelectedSelfiePreview'
-import SelfieSelectionGrid from '@/components/generation/SelfieSelectionGrid'
+import { SelectableGrid } from '@/components/generation/selection'
 import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
 import GenerateButton from '@/components/generation/GenerateButton'
-import Panel from '@/components/common/Panel'
 import { Grid } from '@/components/ui'
+import { useInviteSelfieEndpoints } from '@/hooks/useInviteSelfieEndpoints'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
-import { areAllCustomizableSectionsCustomized } from '@/domain/style/userChoice'
+import { hasUneditedEditableFields } from '@/domain/style/userChoice'
 import { DEFAULT_PHOTO_STYLE_SETTINGS, PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { getPackageConfig } from '@/domain/style/packages'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import { useSelfieSelection } from '@/hooks/useSelfieSelection'
+import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
+import { useMobileViewport } from '@/hooks/useMobileViewport'
+import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
+import { SwipeableContainer } from '@/components/generation/navigation'
+import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
 
-const MOBILE_BREAKPOINT_QUERY = '(max-width: 767px)'
+const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
 
-const getMobileViewportSnapshot = () => {
-  if (typeof window === 'undefined') {
-    return false
-  }
-  return window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches
-}
-
-const subscribeToMobileViewport = (callback: () => void) => {
-  if (typeof window === 'undefined') {
-    return () => {}
-  }
-  const mediaQuery = window.matchMedia(MOBILE_BREAKPOINT_QUERY)
-  const handler = () => callback()
-
-  if (typeof mediaQuery.addEventListener === 'function') {
-    mediaQuery.addEventListener('change', handler)
-    return () => mediaQuery.removeEventListener('change', handler)
-  }
-
-  // Fallback for older browsers (Safari < 14)
-  mediaQuery.addListener(handler)
-  return () => mediaQuery.removeListener(handler)
-}
-
-const useIsMobileViewport = () => {
-  return useSyncExternalStore(subscribeToMobileViewport, getMobileViewportSnapshot, () => false)
-}
-
-const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
 interface InviteData {
@@ -90,6 +64,13 @@ interface Selfie {
   used?: boolean
 }
 
+// Flow step state machine - simplified with route-based intros
+// Intro steps (selfie tips, customization intro) are now separate routes
+type InviteFlowStep = 
+  | 'dashboard'           // Initial state - show dashboard
+  | 'selfieSelection'     // Select/upload selfies
+  | 'customization'       // Style settings (one page desktop, swipe cards mobile)
+
 export default function InviteDashboardPage() {
   const SHOW_CONTEXT_SUMMARY = false;
   const params = useParams()
@@ -111,17 +92,13 @@ export default function InviteDashboardPage() {
   const [emailResent, setEmailResent] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   
-  // Upload flow state
-  const [uploadKey, setUploadKey] = useState<string>('')
-  const [isApproved, setIsApproved] = useState<boolean>(false)
+  // Generation type for team members (defaults to 'team' in onProceed)
   const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
   
-  // Generation flow state
-  const [showGenerationFlow, setShowGenerationFlow] = useState<boolean>(false)
-  const [showStartFlow, setShowStartFlow] = useState<boolean>(false)
-  const [showStyleSelection, setShowStyleSelection] = useState<boolean>(false)
+  // Flow step state machine - replaces showStartFlow/showStyleSelection
+  // Derived from flow flags and state, updated directly in navigation handlers
+  const [flowStepState, setFlowStepState] = useState<InviteFlowStep | null>(null)
   const [availableSelfies, setAvailableSelfies] = useState<Selfie[]>([])
-  const [selectedSelfie, setSelectedSelfie] = useState<string>('')
   const [recentPhotoUrls, setRecentPhotoUrls] = useState<string[]>([])
   const [activeMobileStepInfo, setActiveMobileStepInfo] = useState<{ type: MobileStep['type'] | null, id: string | null, index: number }>({
     type: null,
@@ -129,29 +106,31 @@ export default function InviteDashboardPage() {
     index: 0
   })
   const [visitedSteps, setVisitedSteps] = useState<Set<string>>(new Set())
-  const isMobileViewport = useIsMobileViewport()
+  const isMobileViewport = useMobileViewport()
+  const isSwipeEnabled = useSwipeEnabled()
   
-  // Refs and state for inline selfie upload in swipe flow
-  const inlineFileInputRef = useRef<HTMLInputElement>(null)
-  const [isInlineUploading, setIsInlineUploading] = useState(false)
-  const [showCameraModal, setShowCameraModal] = useState(false)
-  const [cameraPermissionError, setCameraPermissionError] = useState(false)
-  
-  // Try to open camera - check permission first before showing modal
-  const handleUseCameraClick = async () => {
-    setCameraPermissionError(false)
-    try {
-      // Request camera permission
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-      // Permission granted - stop the test stream and open the modal
-      stream.getTracks().forEach(track => track.stop())
-      setShowCameraModal(true)
-    } catch (error) {
-      // Permission denied or camera not available
-      console.error('Camera permission error:', error)
-      setCameraPermissionError(true)
-    }
-  }
+  const { uploadEndpoint: inviteUploadEndpoint, saveEndpoint: inviteSaveEndpoint } = useInviteSelfieEndpoints(token)
+  const {
+    flags: flowFlags,
+    markInFlow,
+    clearFlow,
+    setPendingGeneration,
+    setOpenStartFlow,
+    hasSeenSelfieTips,
+    hasSeenCustomizationIntro,
+    hydrated,
+    setCustomizationStepsMeta
+  } = useGenerationFlowState()
+  const markGenerationFlow = useCallback((options?: { pending?: boolean }) => {
+    markInFlow(options)
+  }, [markInFlow])
+  const clearGenerationFlow = useCallback(() => {
+    clearFlow()
+  }, [clearFlow])
+  const handleInlineUploadTileClick = useCallback(() => {
+    markGenerationFlow({ pending: true })
+    router.push(`/invite-dashboard/${token}/selfies`)
+  }, [markGenerationFlow, router, token])
   
   // Multi-select: load and manage selected selfies for invited flow
   const { selectedSet, selectedIds, loadSelected, toggleSelect } = useSelfieSelection({ token })
@@ -163,11 +142,13 @@ export default function InviteDashboardPage() {
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      // Fetch stats
       const statsResponse = await fetch(`/api/team/member/stats?token=${token}`)
       if (statsResponse.ok) {
         const statsData = await statsResponse.json()
-        setStats(statsData.stats)
+        if (!isNonNullObject(statsData) || !isNonNullObject(statsData.stats)) {
+          throw new Error('Invalid stats response')
+        }
+        setStats(statsData.stats as unknown as DashboardStats)
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -184,12 +165,12 @@ export default function InviteDashboardPage() {
         throw new Error('Failed to fetch context')
       }
 
-      const data = await response.json() as {
-        context?: {
-          id: string
-          settings?: Record<string, unknown>
-        }
-        packageId?: string
+      const data = await response.json()
+      if (
+        !isNonNullObject(data) ||
+        (data.context && !isNonNullObject(data.context))
+      ) {
+        throw new Error('Invalid context payload')
       }
 
       if (!data.context) {
@@ -197,14 +178,16 @@ export default function InviteDashboardPage() {
       }
 
       // Extract packageId from API response or context settings
+      const contextData = data.context as { id: string; settings?: Record<string, unknown> }
+
       const { extractPackageId } = await import('@/domain/style/settings-resolver')
-      const extractedPackageId = data.packageId || extractPackageId(data.context.settings as Record<string, unknown>) || 'headshot1'
+      const extractedPackageId = (data.packageId as string | undefined) || extractPackageId(contextData.settings ?? {}) || 'headshot1'
       
       // Get package config and deserialize settings using package deserializer
       // This properly handles all fields including clothingColors, shotType, background, and branding
       const pkg = getPackageConfig(extractedPackageId)
-      const deserializedSettings = data.context.settings 
-        ? pkg.persistenceAdapter.deserialize(data.context.settings as Record<string, unknown>)
+      const deserializedSettings = contextData.settings 
+        ? pkg.persistenceAdapter.deserialize(contextData.settings)
         : pkg.defaultSettings
       
       // Use deserialized settings directly - the package deserializer already handles everything correctly
@@ -230,24 +213,34 @@ export default function InviteDashboardPage() {
       })
 
       const data = await response.json()
+      if (!isNonNullObject(data)) {
+        throw new Error('Invalid invite response')
+      }
 
       if (response.ok) {
-        setInviteData(data.invite)
+        if (!isNonNullObject(data.invite)) {
+          throw new Error('Invalid invite payload')
+        }
+        setInviteData(data.invite as unknown as InviteData)
         
         // Load context settings (endpoint gets context from invite/team)
         await loadContextSettings()
         
         // Fetch dashboard data after validating invite
-        if (data.invite.personId) {
+        if ((data.invite as unknown as InviteData).personId) {
           await fetchDashboardData()
         }
       } else {
-        // Check if email was auto-resent
-        if (data.expired && data.emailResent) {
+        const expired = Boolean((data as { expired?: boolean }).expired)
+        const emailResent = Boolean((data as { emailResent?: boolean }).emailResent)
+        const message = (data as { message?: string }).message
+        const errorText = (data as { error?: string }).error
+
+        if (expired && emailResent) {
           setEmailResent(true)
-          setError(data.message || data.error)
+          setError(message || errorText || 'Invite expired')
         } else {
-          setError(data.error)
+          setError(errorText || 'Failed to validate invite')
         }
       }
     } catch {
@@ -262,8 +255,11 @@ export default function InviteDashboardPage() {
     try {
       const response = await fetch(`/api/team/member/generations?token=${token}`)
       if (!response.ok) return
-      const data = await response.json() as { generations?: Array<{ id: string; createdAt: string; status: 'pending' | 'processing' | 'completed' | 'failed'; generatedPhotos: Array<{ id: string; url: string }> }> }
-      const gens = (data.generations || [])
+      const data = await response.json()
+      const generations = isNonNullObject(data) && Array.isArray((data as { generations?: unknown }).generations)
+        ? (data as { generations: Array<{ id: string; createdAt: string; status: 'pending' | 'processing' | 'completed' | 'failed'; generatedPhotos: Array<{ id: string; url: string }> }> }).generations
+        : []
+      const gens = generations
         .filter(g => g.status === 'completed')
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
@@ -290,12 +286,48 @@ export default function InviteDashboardPage() {
       )
       if (response.ok) {
         const data = await response.json()
-        setAvailableSelfies(data.selfies)
+        const selfies = isNonNullObject(data) && Array.isArray((data as { selfies?: unknown }).selfies)
+          ? (data as { selfies: Selfie[] }).selfies
+          : []
+        setAvailableSelfies(selfies)
       }
     } catch (error) {
       console.error('Error fetching selfies:', error)
     }
   }, [token])
+
+  const selectUploadedSelfie = useCallback(async (key: string, selfieId?: string) => {
+    try {
+      if (selfieId) {
+        await toggleSelect(selfieId, true)
+      } else {
+        await fetchAvailableSelfies()
+        const updatedResponse = await fetch(`/api/team/member/selfies?token=${token}`, {
+          credentials: 'include'
+        })
+        if (!updatedResponse.ok) {
+          throw new Error('Failed to refresh selfies')
+        }
+        const updatedData = await updatedResponse.json()
+        const updatedSelfies = isNonNullObject(updatedData) && Array.isArray((updatedData as { selfies?: unknown }).selfies)
+          ? (updatedData as { selfies: Selfie[] }).selfies
+          : []
+        const newSelfie = updatedSelfies.find((s) => s.key === key)
+        if (newSelfie) {
+          await toggleSelect(newSelfie.id, true)
+        }
+      }
+      await loadSelected()
+      await fetchAvailableSelfies()
+    } catch (error) {
+      console.error('Error selecting newly uploaded selfie:', error)
+    }
+  }, [toggleSelect, fetchAvailableSelfies, loadSelected, token])
+  const handleMobileUploadApproved = useCallback(async (results: { key: string; selfieId?: string }[]) => {
+    for (const { key, selfieId } of results) {
+      await selectUploadedSelfie(key, selfieId)
+    }
+  }, [selectUploadedSelfie])
 
   useEffect(() => {
     if (token) {
@@ -304,28 +336,55 @@ export default function InviteDashboardPage() {
     }
   }, [token, validateInvite, fetchRecentPhotos])
 
-  // If returning from upload page, reopen the start flow - intentional client-only pattern
-  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const shouldOpen = sessionStorage.getItem('openStartFlow') === 'true'
-      if (shouldOpen) {
-        setShowStartFlow(true)
-        sessionStorage.removeItem('openStartFlow')
-      }
+  // Derive flow step from state - no useEffect needed
+  // Priority: explicit state > pendingGeneration > openStartFlow > inFlow with customization intro > dashboard
+  const flowStep = useMemo<InviteFlowStep>(() => {
+    // If we have explicit state, use it
+    if (flowStepState !== null) {
+      return flowStepState
     }
-  }, [])
-  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
+    
+    // If not hydrated yet, stay on dashboard
+    if (!hydrated) {
+      return 'dashboard'
+    }
+    
+    // If pendingGeneration is set, we're returning from selfie upload - go to selfie selection
+    if (flowFlags.pendingGeneration) {
+      return 'selfieSelection'
+    }
+    
+    // If openStartFlow is true, determine step based on customization intro
+    // This handles navigation from selfies page when continuing
+    if (flowFlags.openStartFlow) {
+      return hasSeenCustomizationIntro ? 'customization' : 'selfieSelection'
+    }
+    
+    // If in flow and customization intro has been seen, go to customization
+    // This handles navigation from customization-intro page back to dashboard
+    // BUT only if we're actually in the flow (not just a stale flag)
+    if (flowFlags.inFlow && hasSeenCustomizationIntro && hasSeenSelfieTips) {
+      return 'customization'
+    }
+    
+    // If in flow but haven't seen customization intro yet, go to selfie selection
+    if (flowFlags.inFlow && !hasSeenCustomizationIntro) {
+      return 'selfieSelection'
+    }
+    
+    // Default to dashboard
+    return 'dashboard'
+  }, [flowStepState, hydrated, flowFlags.inFlow, flowFlags.openStartFlow, flowFlags.pendingGeneration, hasSeenCustomizationIntro, hasSeenSelfieTips])
 
-  // Fetch selfies when showing generation flow - intentional data fetching
-  /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
+
+  // Fetch selfies when entering any flow step (not dashboard)
+  // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
   useEffect(() => {
-    if (showGenerationFlow || showStartFlow) {
+    if (flowStep !== 'dashboard') {
       fetchAvailableSelfies()
       loadSelected()
     }
-  }, [showGenerationFlow, showStartFlow, fetchAvailableSelfies, loadSelected])
-  /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
+  }, [flowStep, fetchAvailableSelfies, loadSelected])
 
   // Filter selectedIds to only include selfies that actually exist in the current list
   // This prevents stale selections from showing incorrect counts
@@ -333,91 +392,48 @@ export default function InviteDashboardPage() {
     selectedIds.filter(id => availableSelfies.some(s => s.id === id)),
     [selectedIds, availableSelfies]
   )
-
-  const shouldAutoShowStyleSelection = useMemo(() => {
-    if (showStyleSelection) return false
-    if (!showStartFlow) return false
-    if (availableSelfies.length === 0) return false
-    if (validSelectedIds.length >= 2) return true
-    return isMobileViewport
-  }, [
-    showStyleSelection,
-    showStartFlow,
-    availableSelfies.length,
-    validSelectedIds.length,
-    isMobileViewport
-  ])
-
-  useEffect(() => {
-    if (shouldAutoShowStyleSelection) {
-      setShowStyleSelection(true)
-    }
-  }, [shouldAutoShowStyleSelection])
+  
+  // Derived state for flow step conditions
+  const isInFlow = flowStep !== 'dashboard'
 
   // Check if returning from selfie upload after starting generation
   useEffect(() => {
-    const pendingGeneration = sessionStorage.getItem('pendingGeneration')
-    if (pendingGeneration === 'true') {
-      // Show the start flow UI immediately so user sees the flow, not just the banner
-      setShowStartFlow(true)
-      // Initial fetch
+    if (!flowFlags.pendingGeneration) return
+    setFlowStepState('selfieSelection')
+    fetchAvailableSelfies()
+    loadSelected()
+    const retry = setTimeout(() => {
       fetchAvailableSelfies()
       loadSelected()
-      // Quick one-shot retry to avoid race where DB write/replication lags
-      const retry = setTimeout(() => {
-        fetchAvailableSelfies()
-        loadSelected()
-      }, 800)
-      return () => clearTimeout(retry)
-    }
-  }, [fetchAvailableSelfies, loadSelected])
+    }, 800)
+    return () => clearTimeout(retry)
+  }, [flowFlags.pendingGeneration, fetchAvailableSelfies, loadSelected])
 
   // Set up generation flow once selfies are fetched
-  // Note: When returning from selfie approval, we show the start flow (with selfie selection)
-  // instead of the old upload flow, so we don't set uploadKey here anymore
   useEffect(() => {
-    const pendingGeneration = sessionStorage.getItem('pendingGeneration')
-    if (pendingGeneration === 'true' && availableSelfies.length > 0) {
-      // Clear the pending flag - the start flow is already showing and will handle the rest
-      sessionStorage.removeItem('pendingGeneration')
-    }
-  }, [availableSelfies])
-
-  const onApprove = () => {
-    setIsApproved(true)
-    // For team members, automatically set to team type
-    setGenerationType('team')
-  }
-
-  const onRetake = async () => {
-    await deleteSelfie()
-  }
-
-  const deleteSelfie = async () => {
-    if (!uploadKey) return
-    
-    try {
-      const response = await fetch(`/api/uploads/delete?key=${encodeURIComponent(uploadKey)}`, {
-        method: 'DELETE',
-      })
-      
-      if (response.ok) {
-        setUploadKey('')
-        setIsApproved(false)
-      } else {
-        console.error('Failed to delete selfie')
+    if (!flowFlags.pendingGeneration) return
+    let cancelled = false
+    const syncLatestSelfies = async () => {
+      await fetchAvailableSelfies()
+      await loadSelected()
+      if (!cancelled) {
+        setPendingGeneration(false)
       }
-    } catch (error) {
-      console.error('Error deleting selfie:', error)
     }
-  }
+    void syncLatestSelfies()
+    return () => {
+      cancelled = true
+    }
+  }, [flowFlags.pendingGeneration, fetchAvailableSelfies, loadSelected, setPendingGeneration])
 
   // Check if all customizable sections are customized (composable - works with any package)
-  const allCustomizableSectionsCustomized = areAllCustomizableSectionsCustomized(
-    photoStyleSettings as Record<string, unknown>,
-    packageId || 'headshot1',
-    originalContextSettings as Record<string, unknown> | undefined
-  )
+  const customizationStillRequired = originalContextSettings
+    ? hasUneditedEditableFields(
+        photoStyleSettings as Record<string, unknown>,
+        originalContextSettings as Record<string, unknown>,
+        packageId || 'headshot1'
+      )
+    : false
 
   // Check if clothing colors step has been visited (for mobile flow only)
   // On mobile, user must scroll through all steps before generating
@@ -425,7 +441,7 @@ export default function InviteDashboardPage() {
   
   const canGenerate = validSelectedIds.length >= 2 && 
                       stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration &&
-                      allCustomizableSectionsCustomized &&
+                      !customizationStillRequired &&
                       hasVisitedClothingColors
 
   const handleMobileStepChange = useCallback((step: MobileStep | null, stepIndex?: number) => {
@@ -445,91 +461,41 @@ export default function InviteDashboardPage() {
     }
   }, [])
 
-  const selfieMobileStep = useMemo(() => {
-    if (!showStyleSelection) return null
-    const selectedCount = validSelectedIds.length
-    const remaining = Math.max(0, 2 - selectedCount)
-    return {
-      id: 'selfie-step',
-      title: t('selfieSelection.mobile.bannerTitle', { default: 'Select your selfies' }),
-      badgeLabel: selectedCount >= 2
-        ? t('selfieSelection.mobile.badgeReady', { default: 'Ready to customize' })
-        : t('selfieSelection.mobile.badgeSelecting', { default: 'Need {remaining} more', remaining }),
-      badgeVariant: (selectedCount >= 2 ? 'success' : 'warning') as 'success' | 'warning',
-      isComplete: selectedCount >= 2,
-      content: (
-        <div className="space-y-4">
-          <SelfieSelectionInfoBanner selectedCount={selectedCount} showSwipeHint className="mb-2" />
-          <SelfieSelectionGrid
-            selfies={availableSelfies}
-            selectedSet={selectedSet}
-            onToggle={toggleSelect}
-          />
-        </div>
-      ),
-      noBorder: true // Don't show outer container border for selfie step
-    }
-  }, [showStyleSelection, validSelectedIds.length, availableSelfies, selectedSet, toggleSelect, t])
-
-  // Memoize the array to prevent infinite re-renders in PhotoStyleSettings
-  const mobileExtraSteps = useMemo(() => {
-    return selfieMobileStep ? [selfieMobileStep] : undefined
-  }, [selfieMobileStep])
-
-  // Handler for inline file upload (triggered by "Upload photo" button in swipe flow)
-  const handleInlineFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
+  // Navigation helper: determine initial step when starting the flow
+  const handleStartFlow = useCallback(() => {
+    // Clear any existing flow flags and explicit state
+    clearGenerationFlow()
+    setFlowStepState(null)
+    setOpenStartFlow(false)
     
-    setIsInlineUploading(true)
-    try {
-      for (const file of Array.from(files)) {
-        // Upload the file
-        const ext = file.name.split('.')?.pop()?.toLowerCase() || ''
-        const uploadRes = await fetch(`/api/uploads/proxy?token=${encodeURIComponent(token)}`, {
-          method: 'POST',
-          headers: {
-            'x-file-content-type': file.type,
-            'x-file-extension': ext,
-            'x-file-type': 'selfie'
-          },
-          body: file,
-          credentials: 'include'
-        })
-        if (!uploadRes.ok) {
-          const errorData = await uploadRes.json().catch(() => ({}))
-          throw new Error(errorData.error || 'Upload failed')
-        }
-        const { key } = await uploadRes.json() as { key: string }
-        
-        // Save the selfie
-        const saveRes = await fetch('/api/team/member/selfies', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, selfieKey: key }),
-          credentials: 'include'
-        })
-        if (!saveRes.ok) throw new Error('Failed to save selfie')
-        const saveData = await saveRes.json() as { selfie?: { id: string } }
-        
-        // Auto-select the newly uploaded selfie
-        if (saveData.selfie?.id) {
-          await toggleSelect(saveData.selfie.id, true)
-        }
-      }
-      
-      // Refresh the selfies list
-      await fetchAvailableSelfies()
-      await loadSelected()
-    } catch (error) {
-      console.error('Inline file upload error:', error)
-      alert('Failed to upload photo. Please try again.')
-    } finally {
-      setIsInlineUploading(false)
-      // Reset the input so the same file can be selected again
-      e.target.value = ''
+    // Redirect to selfie-tips intro page (will auto-skip if already seen)
+    router.push(`/invite-dashboard/${token}/selfie-tips`)
+  }, [clearGenerationFlow, setOpenStartFlow, router, token])
+
+  // Navigation helper: go to next step from current step
+  const goToNextStep = useCallback(() => {
+    switch (flowStep) {
+      case 'selfieSelection':
+        // Navigate to customization intro (route-based)
+        router.push(`/invite-dashboard/${token}/customization-intro`)
+        break
+      default:
+        break
     }
-  }
+  }, [flowStep, router, token])
+
+  // Navigation helper: go back to dashboard
+  const goBackToDashboard = useCallback(() => {
+    clearGenerationFlow()
+    setFlowStepState('dashboard')
+    setGenerationType(null)
+    router.replace(`/invite-dashboard/${token}`)
+  }, [clearGenerationFlow, router, token])
+
+  // Navigation helper: swipe back from customization to customization intro
+  const handleSwipeBackFromCustomization = useCallback(() => {
+    router.push(`/invite-dashboard/${token}/customization-intro`)
+  }, [router, token])
 
   const onProceed = async () => {
     // Require at least 2 selfies for generation
@@ -539,7 +505,7 @@ export default function InviteDashboardPage() {
     }
     
     // Validate all customizable sections are customized
-    if (!allCustomizableSectionsCustomized) {
+    if (customizationStillRequired) {
       alert(t('alerts.customizePhoto', { default: 'Please customize your photo settings before generating' }))
       return
     }
@@ -597,12 +563,7 @@ export default function InviteDashboardPage() {
         body: JSON.stringify(requestBody)
       })
 
-      console.log('Generation response status:', response.status, response.ok)
-
       if (response.ok) {
-        const responseData = await response.json().catch(() => ({}))
-        console.log('Generation created successfully:', responseData)
-        
         // Set generation-detail tour as pending in database for first generation
         // Only for users who have accepted invites (have personId)
         if (typeof window !== 'undefined') {
@@ -624,7 +585,7 @@ export default function InviteDashboardPage() {
         setIsGenerating(false)
         
         // Redirect to generations page to see the result
-        console.log('Redirecting to generations page:', `/invite-dashboard/${token}/generations`)
+        clearGenerationFlow()
         router.push(`/invite-dashboard/${token}/generations`)
       } else {
         const error = await response.json().catch(() => ({ error: 'Unknown error' }))
@@ -742,7 +703,6 @@ export default function InviteDashboardPage() {
 
   const photosAffordable = Math.floor(stats.creditsRemaining / PRICING_CONFIG.credits.perGeneration)
 
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -752,17 +712,8 @@ export default function InviteDashboardPage() {
         teamName={inviteData.teamName}
         creditsRemaining={stats.creditsRemaining}
         photosAffordable={photosAffordable}
-        showBackToDashboard={(showStartFlow || showGenerationFlow || !!uploadKey)}
-        onBackClick={() => {
-          // Reset all flow states when going back to dashboard
-          setShowStartFlow(false)
-          setShowGenerationFlow(false)
-          setShowStyleSelection(false)
-          setUploadKey('')
-          setIsApproved(false)
-          setGenerationType(null)
-          router.replace(`/invite-dashboard/${token}`)
-        }}
+        showBackToDashboard={isInFlow}
+        onBackClick={goBackToDashboard}
       />
       {/* Invite dashboard does not show selected selfies or a Generate button.
           Actions live in Selfies and Generations pages. */}
@@ -803,11 +754,11 @@ export default function InviteDashboardPage() {
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Invite for: {inviteData.email}</span>
               )}
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Credits: {stats.creditsRemaining}</span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Selfie: {availableSelfies.length > 0 || uploadKey ? 'Uploaded' : 'Not uploaded'}</span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Selfie: {availableSelfies.length > 0 ? 'Uploaded' : 'Not uploaded'}</span>
                     </div>
           )}
 
-                    {!showStartFlow && !uploadKey && (
+                    {flowStep === 'dashboard' && (
            <Grid cols={{ mobile: 1, desktop: 2 }} gap="lg">
                         {/* Primary CTA - Prominent Generate Button */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -817,21 +768,7 @@ export default function InviteDashboardPage() {
                 {/* Sticky wrapper for mobile */}
                 <div className="md:static sticky bottom-0 md:bottom-auto z-10 bg-white md:bg-transparent pt-4 md:pt-0 pb-4 md:pb-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:shadow-none -mx-6 md:mx-0 px-6 md:px-0">
                   <button 
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        sessionStorage.setItem('fromGeneration', 'true')
-                        sessionStorage.setItem('openStartFlow', 'true')
-                        const isMobile = window.matchMedia('(max-width: 767px)').matches
-                        // On mobile, always show the swipe flow directly
-                        // Selfie selection is step 2 where users can add selfies if needed
-                        if (isMobile) {
-                          setShowStartFlow(true)
-                          setShowStyleSelection(true)
-                          return
-                        }
-                      }
-                      router.push(`/invite-dashboard/${token}/selfies`)
-                    }}
+                    onClick={handleStartFlow}
                     disabled={stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
                     className="w-full flex items-center justify-center px-6 py-5 bg-brand-primary text-white rounded-2xl hover:bg-brand-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-primary shadow-md hover:shadow-lg font-semibold text-base md:text-lg"
                   >
@@ -852,10 +789,7 @@ export default function InviteDashboardPage() {
                   <button 
                       onClick={() => {
                         // Clear generation flow flags when managing selfies
-                        if (typeof window !== 'undefined') {
-                          sessionStorage.removeItem('fromGeneration')
-                          sessionStorage.removeItem('openStartFlow')
-                        }
+                        clearGenerationFlow()
                         router.push(`/invite-dashboard/${token}/selfies`)
                       }}
                       className="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-900"
@@ -897,127 +831,72 @@ export default function InviteDashboardPage() {
         </Grid>
           )}
 
-          {/* Guided start flow: inline selfie upload + proceed */}
-          {showStartFlow && (
+          {/* Selfie selection step */}
+          {flowStep === 'selfieSelection' && (
             <div className="space-y-6">
-              {/* Inline selfie uploader */}
-              {!showStyleSelection && !uploadKey && availableSelfies.length > 0 && (
-                <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              {/* Selfie selection content */}
+              {availableSelfies.length > 0 && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   {/* Desktop: Title and continue button */}
-                  <div className="hidden md:flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg md:text-xl font-semibold text-gray-900">{t('selfieSelection.title')}</h3>
                     <button
                       onClick={() => {
-                        if (validSelectedIds.length >= 2) {
-                          setShowStyleSelection(true)
+                        if (validSelectedIds.length >= MIN_SELFIES_REQUIRED) {
+                          goToNextStep()
                         }
                       }}
-                      disabled={validSelectedIds.length < 2}
+                      disabled={validSelectedIds.length < MIN_SELFIES_REQUIRED}
                       className="px-5 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-base font-semibold shadow-md"
                     >
                       {t('common.continue')}
                     </button>
                   </div>
-                  {/* Desktop: Info banner */}
-                  <SelfieSelectionInfoBanner selectedCount={validSelectedIds.length} className="hidden md:block mb-4" />
-                  <SelfieSelectionGrid
-                    selfies={availableSelfies}
-                    selectedSet={selectedSet}
-                    onToggle={toggleSelect}
+                  {/* Info banner */}
+                  <SelfieSelectionInfoBanner selectedCount={validSelectedIds.length} className="mb-4" />
+                  <SelectableGrid
+                    items={availableSelfies}
+                    selection={{ 
+                      mode: 'controlled', 
+                      selectedIds: selectedSet, 
+                      onToggle: toggleSelect 
+                    }}
                     showUploadTile
-                    onUploadClick={() => router.push(`/invite-dashboard/${token}/selfies`) }
+                    onUploadClick={() => {
+                      markGenerationFlow({ pending: true })
+                      router.push(`/invite-dashboard/${token}/selfies`)
+                    }}
+                    showLoadingState={false}
                   />
-                  {/* Bottom buttons removed; upload tile in grid handles uploads */}
                 </div>
-                )}
-              {!uploadKey && availableSelfies.length === 0 && (
-                <SelfieUploadFlow
-                  hideHeader={true}
-                  onSelfiesApproved={async (results) => {
-                    if (results.length === 0) return
-                    const { key, selfieId } = results[0]
-                    setUploadKey(key)
-                    setIsApproved(true)
-                    setGenerationType('team')
-                    
-                    // Automatically select the newly uploaded selfie
-                    if (selfieId) {
-                      try {
-                        await toggleSelect(selfieId, true)
-                        // Wait a moment for the selection to persist
-                        await new Promise(resolve => setTimeout(resolve, 200))
-                        // Reload selected list and available selfies to ensure they're up to date
-                        await loadSelected()
-                        await fetchAvailableSelfies()
-                      } catch (error) {
-                        console.error('Error selecting newly uploaded selfie:', error)
-                        // Don't throw - continue with the flow even if selection fails
-                      }
-                    } else {
-                      // If no selfieId provided, try to find it by fetching selfies
-                      // This is a fallback for cases where selfieId isn't available
-                      try {
-                        await fetchAvailableSelfies()
-                        await loadSelected()
-                        // The selfie should be in the list now, try to find and select it
-                        const updatedSelfies = await fetch(`/api/team/member/selfies?token=${token}`, {
-                          credentials: 'include'
-                        }).then(r => r.json()).then(d => d.selfies || [])
-                        const newSelfie = updatedSelfies.find((s: Selfie) => s.key === key)
-                        if (newSelfie) {
-                          await toggleSelect(newSelfie.id, true)
-                          await loadSelected()
-                        }
-                      } catch (error) {
-                        console.error('Error finding and selecting selfie:', error)
-                      }
-                    }
-                  }}
-                  onCancel={() => setShowStartFlow(false)}
-                  onError={() => {}}
-                  onRetake={() => {
-                    setUploadKey('')
-                    setIsApproved(false)
-                  }}
-                  uploadEndpoint={async (file: File) => {
-                    const ext = file.name.split('.')?.pop()?.toLowerCase() || ''
-                    const res = await fetch(`/api/uploads/proxy?token=${encodeURIComponent(token)}`, {
-                      method: 'POST',
-                      headers: {
-                        'x-file-content-type': file.type,
-                        'x-file-extension': ext,
-                        'x-file-type': 'selfie'
-                      },
-                      body: file,
-                      credentials: 'include'
-                    })
-                    if (!res.ok) {
-                      const errorData = await res.json().catch(() => ({}))
-                      throw new Error(errorData.error || 'Upload failed')
-                    }
-                    const { key } = await res.json() as { key: string }
-                    // Provide a local preview url for UX
-                    const preview = URL.createObjectURL(file)
-                    return { key, url: preview }
-                  }}
-                  saveEndpoint={async (key: string) => {
-                    const response = await fetch('/api/team/member/selfies', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ token, selfieKey: key })
-                    })
-                    if (!response.ok) {
-                      throw new Error('Failed to save selfie')
-                    }
-                    const data = await response.json() as { selfie?: { id: string } }
-                    // Return selfie ID so useSelfieUpload can pass it to onSuccess
-                    return data.selfie?.id
-                  }}
-                />
               )}
+              {/* Empty state - no selfies yet */}
+              {availableSelfies.length === 0 && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+                  <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('selfieSelection.noSelfies', { default: 'No selfies yet' })}</h3>
+                  <p className="text-sm text-gray-600 mb-4">{t('selfieSelection.uploadFirst', { default: 'Upload your first selfie to get started' })}</p>
+                  <button
+                    onClick={() => {
+                      markGenerationFlow({ pending: true })
+                      router.push(`/invite-dashboard/${token}/selfies`)
+                    }}
+                    className="px-5 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover text-base font-semibold shadow-md"
+                  >
+                    {t('selfieSelection.uploadButton', { default: 'Upload Selfies' })}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
-              {/* Style selection view (after Continue is clicked) */}
-              {showStyleSelection && (
+          {/* Customization step - style selection */}
+          {flowStep === 'customization' && (
+            <SwipeableContainer
+              onSwipeRight={isSwipeEnabled && activeMobileStepInfo.index === 0 ? handleSwipeBackFromCustomization : undefined}
+              onSwipeLeft={undefined}
+              enabled={isSwipeEnabled && activeMobileStepInfo.index === 0}
+            >
                 <div className="md:bg-white md:rounded-lg md:shadow-sm md:border md:border-gray-200 md:p-6 pb-24 md:pb-6">
                   <h1 className="hidden md:block text-2xl md:text-3xl font-bold text-gray-900 mb-4 font-display">{t('styleSelection.readyToGenerate')}</h1>
                   
@@ -1033,8 +912,9 @@ export default function InviteDashboardPage() {
                       noContainer
                       teamContext
                       token={token}
-                      mobileExtraSteps={mobileExtraSteps}
                       onMobileStepChange={handleMobileStepChange}
+                      onSwipeBack={handleSwipeBackFromCustomization}
+                      onStepMetaChange={setCustomizationStepsMeta}
                     />
                     <div className="md:border-t md:border-gray-200 md:pt-5 pt-5">
                       <div className="hidden md:flex items-center justify-between mb-4">
@@ -1091,67 +971,16 @@ export default function InviteDashboardPage() {
                         </div>
                       </div>
                     ) : activeMobileStepInfo.type === 'custom' && activeMobileStepInfo.id === 'selfie-step' ? (
-                      <div className="space-y-3">
-                        {/* Camera Permission Error */}
-                        {cameraPermissionError && (
-                          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                            <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-semibold text-amber-800 mb-1">
-                                  {t('camera.permissionNeeded.title', { default: 'Camera access needed' })}
-                                </h4>
-                                <p className="text-sm text-amber-700 mb-2">
-                                  {t('camera.permissionNeeded.description', { default: 'To take a selfie, please allow camera access in your browser.' })}
-                                </p>
-                                <div className="text-xs text-amber-600 space-y-1">
-                                  <p className="font-medium">{t('camera.permissionNeeded.howTo', { default: 'How to enable:' })}</p>
-                                  <ul className="list-disc list-inside space-y-0.5 ml-1">
-                                    <li>{t('camera.permissionNeeded.step1', { default: 'Tap the camera/lock icon in your browser address bar' })}</li>
-                                    <li>{t('camera.permissionNeeded.step2', { default: 'Select "Allow" for camera access' })}</li>
-                                    <li>{t('camera.permissionNeeded.step3', { default: 'Then tap "Use camera" again' })}</li>
-                                  </ul>
-                                </div>
-                                <button
-                                  onClick={() => setCameraPermissionError(false)}
-                                  className="mt-2 text-xs font-medium text-amber-700 hover:text-amber-800 underline underline-offset-2"
-                                >
-                                  {t('common.dismiss', { default: 'Dismiss' })}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Action Buttons */}
-                        <div className="flex gap-3">
-                          <button
-                            type="button"
-                            onClick={handleUseCameraClick}
-                            disabled={isInlineUploading}
-                            className="flex-1 inline-flex items-center justify-center px-4 py-3 text-sm font-semibold rounded-xl border border-gray-300 text-gray-800 bg-white shadow-sm disabled:opacity-50"
-                          >
-                            {isInlineUploading 
-                              ? t('common.uploading', { default: 'Uploading...' })
-                              : t('selfieSelection.mobile.actions.camera', { default: 'Use camera' })
-                            }
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => inlineFileInputRef.current?.click()}
-                            disabled={isInlineUploading}
-                            className="flex-1 inline-flex items-center justify-center px-4 py-3 text-sm font-semibold rounded-xl bg-brand-primary text-white shadow-md disabled:opacity-50"
-                          >
-                            {isInlineUploading 
-                              ? t('common.uploading', { default: 'Uploading...' })
-                              : t('selfieSelection.mobile.actions.upload', { default: 'Upload photo' })
-                            }
-                          </button>
-                        </div>
+                      <div className="pb-2">
+                        <SelfieUploadFlow
+                          hideHeader
+                          uploadEndpoint={inviteUploadEndpoint}
+                          saveEndpoint={inviteSaveEndpoint}
+                          onSelfiesApproved={handleMobileUploadApproved}
+                          onCancel={() => undefined}
+                          onRetake={() => undefined}
+                          onError={(message) => console.error('Upload error:', message)}
+                        />
                       </div>
                     ) : (
                       <GenerateButton
@@ -1226,7 +1055,7 @@ export default function InviteDashboardPage() {
                           disabled={!canGenerate}
                           isGenerating={isGenerating}
                           size="md"
-                          disabledReason={!allCustomizableSectionsCustomized ? t('alerts.customizePhoto', { default: 'Please customize your photo settings before generating' }) : undefined}
+                        disabledReason={customizationStillRequired ? t('alerts.customizePhoto', { default: 'Please customize your photo settings before generating' }) : undefined}
                         >
                           {t('styleSelection.generateButton')}
                         </GenerateButton>
@@ -1244,143 +1073,10 @@ export default function InviteDashboardPage() {
                     teamContext
                     className="hidden md:block mt-6 pt-6 border-t border-gray-200"
                     token={token}
+                    onStepMetaChange={setCustomizationStepsMeta}
                   />
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Upload Flow (hidden when start flow is active) */}
-          {uploadKey && !showStartFlow && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              {!isApproved ? (
-                <SelfieApproval
-                  uploadedPhotoKey={uploadKey}
-                  onApprove={onApprove}
-                  onRetake={onRetake}
-                  onCancel={() => {
-                    setUploadKey('')
-                    setIsApproved(false)
-                  }}
-                />
-              ) : (
-                <div className="space-y-6">
-                  {/* Selfie Preview + Summary/Action side by side */}
-                  {uploadKey && (
-                    <Grid cols={{ mobile: 1, desktop: 2 }} gap="lg" className="items-start">
-                      <SelectedSelfiePreview
-                        url={availableSelfies.find(selfie => selfie.key === uploadKey)?.url || ''}
-                      />
-                      <GenerationSummaryTeam
-                        type="team"
-                        styleLabel={photoStyleSettings?.style?.preset || packageId}
-                        remainingCredits={stats.creditsRemaining}
-                        perGenCredits={PRICING_CONFIG.credits.perGeneration}
-                        onGenerate={onProceed}
-                        teamName={inviteData.teamName}
-                      />
-                    </Grid>
-                  )}
-
-                  {/* Ensure style panel is visible in fallback flow */}
-                  <StyleSettingsSection
-                    value={photoStyleSettings}
-                    onChange={setPhotoStyleSettings}
-                    readonlyPredefined={true}
-                    originalContextSettings={originalContextSettings}
-                    showToggles={false}
-                    packageId={packageId || 'headshot1'}
-                    noContainer
-                    teamContext
-                    token={token}
-                    mobileExtraSteps={mobileExtraSteps}
-                  />
-
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Generation Flow */}
-          {showGenerationFlow && (
-            <Panel title={t('generationFlow.title')} onClose={() => setShowGenerationFlow(false)}>
-              {availableSelfies.length === 0 ? (
-                <div className="text-center py-8">
-                  <CameraIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h4 className="text-xl font-semibold text-gray-900 mb-2">{t('generationFlow.noSelfies.title')}</h4>
-                  <p className="text-sm text-gray-600 mb-4">{t('generationFlow.noSelfies.description')}</p>
-                  <button
-                    onClick={() => {
-                      setShowGenerationFlow(false)
-                      sessionStorage.setItem('fromGeneration', 'true')
-                      router.push(`/invite-dashboard/${token}/selfies`)
-                    }}
-                    className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 text-sm font-medium"
-                  >
-                    {t('generationFlow.noSelfies.uploadButton')}
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-3">{t('generationFlow.chooseSelfie')}</h4>
-                  <Grid cols={{ mobile: 2, tablet: 3 }} gap="md" className="mb-6">
-                    {availableSelfies.map((selfie) => (
-                      <div
-                        key={selfie.id}
-                        onClick={() => setSelectedSelfie(selfie.key)}
-                        className={`relative cursor-pointer rounded-lg overflow-hidden border-2 h-32 ${
-                          selectedSelfie === selfie.key 
-                            ? 'border-brand-primary' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <Image
-                          src={selfie.url}
-                          alt={t('generationFlow.selfieAlt')}
-                          fill
-                          className="object-cover"
-                        />
-                        {selectedSelfie === selfie.key && (
-                          <div className="absolute inset-0 bg-brand-primary/20 flex items-center justify-center">
-                            <CheckCircleIcon className="h-6 w-6 text-brand-primary" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </Grid>
-                  
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        setShowGenerationFlow(false)
-                        if (typeof window !== 'undefined') {
-                          sessionStorage.setItem('openStartFlow', 'true')
-                          sessionStorage.setItem('fromGeneration', 'true')
-                        }
-                        router.push(`/invite-dashboard/${token}/selfies`)
-                      }}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
-                    >
-                      {t('generationFlow.uploadNewSelfie')}
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (selectedSelfie) {
-                          setUploadKey(selectedSelfie)
-                          setIsApproved(true) // Skip validation since selfie is already approved
-                          setShowGenerationFlow(false)
-                          setShowStartFlow(true)
-                        }
-                      }}
-                      disabled={!selectedSelfie || stats.creditsRemaining < PRICING_CONFIG.credits.perGeneration}
-                      className="px-5 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-base font-semibold shadow-md"
-                    >
-                      {t('generationFlow.continueWithSelected')}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </Panel>
+            </SwipeableContainer>
           )}
 
           {/* Sign up CTA - Hidden on mobile */}
@@ -1410,110 +1106,6 @@ export default function InviteDashboardPage() {
         </div>
       </div>
 
-      {/* Hidden file inputs for direct upload/camera from swipe flow */}
-      <input
-        ref={inlineFileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleInlineFileUpload}
-        className="hidden"
-        aria-hidden="true"
-      />
-      {/* Camera Modal - shows camera interface with live preview */}
-      {showCameraModal && (
-        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center">
-          <div className="bg-white w-full max-w-lg rounded-lg m-4 max-h-[90vh] overflow-auto">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">
-                {t('selfieSelection.mobile.actions.camera', { default: 'Take a photo' })}
-              </h3>
-              <button
-                onClick={() => setShowCameraModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                aria-label="Close"
-              >
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-4">
-              <SelfieUploadFlow
-                initialMode="camera"
-                onSelfiesApproved={async (results) => {
-                  if (results.length === 0) return
-                  const { key, selfieId } = results[0]
-                  
-                  // Automatically select the newly uploaded selfie
-                  if (selfieId) {
-                    try {
-                      await toggleSelect(selfieId, true)
-                      await new Promise(resolve => setTimeout(resolve, 200))
-                      await loadSelected()
-                      await fetchAvailableSelfies()
-                    } catch (error) {
-                      console.error('Error selecting newly uploaded selfie:', error)
-                    }
-                  } else {
-                    // Fallback: refresh selfies and try to find by key
-                    try {
-                      await fetchAvailableSelfies()
-                      await loadSelected()
-                      const updatedSelfies = await fetch(`/api/team/member/selfies?token=${token}`, {
-                        credentials: 'include'
-                      }).then(r => r.json()).then(d => d.selfies || [])
-                      const newSelfie = updatedSelfies.find((s: Selfie) => s.key === key)
-                      if (newSelfie) {
-                        await toggleSelect(newSelfie.id, true)
-                        await loadSelected()
-                      }
-                    } catch (error) {
-                      console.error('Error finding and selecting selfie:', error)
-                    }
-                  }
-                  
-                  // Close the modal
-                  setShowCameraModal(false)
-                }}
-                onCancel={() => setShowCameraModal(false)}
-                onError={(error) => console.error('Upload error:', error)}
-                uploadEndpoint={async (file: File) => {
-                  const ext = file.name.split('.')?.pop()?.toLowerCase() || ''
-                  const res = await fetch(`/api/uploads/proxy?token=${encodeURIComponent(token)}`, {
-                    method: 'POST',
-                    headers: {
-                      'x-file-content-type': file.type,
-                      'x-file-extension': ext,
-                      'x-file-type': 'selfie'
-                    },
-                    body: file,
-                    credentials: 'include'
-                  })
-                  if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({}))
-                    throw new Error(errorData.error || 'Upload failed')
-                  }
-                  const { key } = await res.json() as { key: string }
-                  const preview = URL.createObjectURL(file)
-                  return { key, url: preview }
-                }}
-                saveEndpoint={async (key: string) => {
-                  const response = await fetch('/api/team/member/selfies', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token, selfieKey: key }),
-                    credentials: 'include'
-                  })
-                  if (!response.ok) throw new Error('Failed to save selfie')
-                  const data = await response.json() as { selfie?: { id: string } }
-                  return data.selfie?.id
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

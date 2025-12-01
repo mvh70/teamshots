@@ -298,7 +298,7 @@ export default function PersonalGenerationsPage() {
         {/* Prominent Generate Button with Cost Info */}
         <div className="flex flex-col items-stretch sm:items-end md:items-center gap-3 w-full sm:w-auto">
           <Link 
-            href="/app/generate/selfie?type=personal" 
+            href="/app/generate/start?type=personal" 
             className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-xl font-bold text-base md:text-lg lg:text-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-2.5 whitespace-nowrap bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white touch-manipulation"
           >
             <svg 
@@ -398,7 +398,7 @@ export default function PersonalGenerationsPage() {
             
             {/* CTA Button */}
             <Link 
-              href="/app/generate/selfie?type=personal" 
+              href="/app/generate/start?type=personal"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-brand-primary text-white font-semibold text-base hover:bg-brand-primary-hover shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
             >
               <svg 

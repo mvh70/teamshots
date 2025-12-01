@@ -26,6 +26,7 @@ import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
+import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -82,6 +83,7 @@ export default function DashboardPage() {
   const t = useTranslations('app.dashboard')
   const { credits, loading: creditsLoading } = useCredits()
   const { isFreePlan } = usePlanInfo()
+  const { resetFlow } = useGenerationFlowState()
   const firstName = (session?.user?.name?.split(' ')[0]) || (session?.user?.name || '') || (session?.user?.email?.split('@')[0]) || 'User'
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -240,6 +242,8 @@ export default function DashboardPage() {
         }
       } else {
         // Individual users go to generate
+        // Clear any stale flow flags to ensure a clean start
+        resetFlow()
         router.push('/app/generate/start');
       }
     } catch (error) {
@@ -1070,7 +1074,11 @@ export default function DashboardPage() {
               <div className={`grid grid-cols-1 ${userPermissions.isTeamAdmin ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-5 md:gap-6`}>
                 {/* Primary Action - Generate Photos */}
                 <button 
-                  onClick={() => router.push('/app/generate/start')}
+                  onClick={() => {
+                    // Clear any stale flow flags to ensure a clean start
+                    resetFlow()
+                    router.push('/app/generate/start')
+                  }}
                   className="flex flex-col items-center justify-center px-8 py-10 border-2 border-brand-cta/30 rounded-xl hover:border-brand-cta hover:shadow-[0_8px_16px_-4px_rgb(0_0_0_/0.15)] hover:scale-[1.03] transition-all duration-300 bg-gradient-to-br from-brand-cta/5 to-transparent group min-h-[160px]"
                 >
                   <div className="w-14 h-14 bg-brand-cta rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">

@@ -852,6 +852,9 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       // Check if this is a rate limit error (429) - filter out stack trace
       const isRateLimit = isRateLimitError(error)
       
+      // Track if we've already sent an evaluation failure email (with image attachments)
+      let evaluationFailureEmailSent = false
+      
       // Handle EvaluationFailedError specifically to send notifications with attachments
       if (error instanceof EvaluationFailedError) {
         Logger.warn('Image generation failed evaluation checks', {
@@ -870,6 +873,8 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           shotLabel: 'N/A',
           imageBase64: [error.imageBase64]
         })
+        
+        evaluationFailureEmailSent = true
       }
       
       if (isRateLimit) {
@@ -1008,25 +1013,27 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         }
         
         // Only send support notification email on final attempt to avoid spam
-        try {
-          // Get user email for context
-          const userEmail = userId ? await prisma.user.findUnique({
-            where: { id: userId },
-            select: { email: true }
-          }).then(u => u?.email) : undefined
+        // Skip if we already sent an evaluation failure email (which includes the image)
+        if (!evaluationFailureEmailSent) {
+          try {
+            // Get user email for context
+            const userEmail = userId ? await prisma.user.findUnique({
+              where: { id: userId },
+              select: { email: true }
+            }).then(u => u?.email) : undefined
 
-          // Extract packageId from generation record for error reporting
-          const errorGeneration = await prisma.generation.findUnique({
-            where: { id: generationId },
-            select: { styleSettings: true }
-          })
-          const errorPackageId = errorGeneration?.styleSettings && typeof errorGeneration.styleSettings === 'object' && !Array.isArray(errorGeneration.styleSettings)
-            ? extractPackageId(errorGeneration.styleSettings as Record<string, unknown>) || 'unknown'
-            : 'unknown'
+            // Extract packageId from generation record for error reporting
+            const errorGeneration = await prisma.generation.findUnique({
+              where: { id: generationId },
+              select: { styleSettings: true }
+            })
+            const errorPackageId = errorGeneration?.styleSettings && typeof errorGeneration.styleSettings === 'object' && !Array.isArray(errorGeneration.styleSettings)
+              ? extractPackageId(errorGeneration.styleSettings as Record<string, unknown>) || 'unknown'
+              : 'unknown'
 
-          await sendSupportNotificationEmail({
-            subject: `Image Generation Failed - Generation ${generationId}`,
-            message: `Image generation has failed after ${maxAttempts} attempts.
+            await sendSupportNotificationEmail({
+              subject: `Image Generation Failed - Generation ${generationId}`,
+              message: `Image generation has failed after ${maxAttempts} attempts.
 
 Generation ID: ${generationId}
 Person ID: ${personId}
@@ -1038,25 +1045,30 @@ Attempts: ${job.attemptsMade}/${maxAttempts}
 Error: ${finalErrorMessage}
 Error Stack: ${error instanceof Error ? error.stack : 'N/A'}
 Error Details: ${JSON.stringify(errorDetails, null, 2)}`,
-            metadata: {
-              generationId,
-              personId,
-              userId,
-              userEmail,
-              jobId: job.id,
-              attemptsMade: job.attemptsMade,
-              maxAttempts,
-              errorMessage: finalErrorMessage,
-              errorName: error instanceof Error ? error.name : 'Unknown',
-              errorDetails,
-              selfieS3Keys,
-              packageId: errorPackageId
-            }
-          })
-          Logger.info(`Support notification sent for failed generation ${generationId}`)
-        } catch (emailError) {
-          Logger.error(`Failed to send support notification for generation ${generationId}`, { 
-            error: emailError instanceof Error ? emailError.message : String(emailError) 
+              metadata: {
+                generationId,
+                personId,
+                userId,
+                userEmail,
+                jobId: job.id,
+                attemptsMade: job.attemptsMade,
+                maxAttempts,
+                errorMessage: finalErrorMessage,
+                errorName: error instanceof Error ? error.name : 'Unknown',
+                errorDetails,
+                selfieS3Keys,
+                packageId: errorPackageId
+              }
+            })
+            Logger.info(`Support notification sent for failed generation ${generationId}`)
+          } catch (emailError) {
+            Logger.error(`Failed to send support notification for generation ${generationId}`, { 
+              error: emailError instanceof Error ? emailError.message : String(emailError) 
+            })
+          }
+        } else {
+          Logger.info(`Skipping duplicate support notification for evaluation failure - already sent with image attachments`, {
+            generationId
           })
         }
       }

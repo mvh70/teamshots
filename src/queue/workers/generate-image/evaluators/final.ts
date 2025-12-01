@@ -105,7 +105,11 @@ export async function evaluateFinalImage(
       '',
       '4. branding_placement',
       `   - Is the logo visible in the ${brandingInfo.position === 'background' ? 'background' : 'scene elements'}?`,
-      `   - Does it match the reference logo provided?`,
+      `   - IMPORTANT: Partial visibility is ACCEPTABLE and EXPECTED when the person is in the foreground.`,
+      `   - If the person naturally occludes part of the logo (e.g., standing in front of it), this is correct composition and should be answered YES.`,
+      `   - The visible portion of the logo should match the reference logo (same colors, font, design elements).`,
+      `   - Answer NO only if: the logo is completely missing, the visible portion doesn't match the reference, or the logo placement looks unnatural/pasted.`,
+      `   - Answer YES if: the logo is visible (even partially) and matches the reference in visible areas, and the person is appropriately in the foreground.`,
       `   - Is it placed according to specifications: ${brandingInfo.placement || 'as specified'}?`,
       `   - Does it look natural and properly integrated into the scene?`
     )

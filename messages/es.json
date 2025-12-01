@@ -1149,9 +1149,16 @@
       "noneSelected": "Toma una selfie nueva o elige una de tu galería. Tú decide.",
       "oneSelected": "Tienes 1 seleccionada. Añade una más para continuar.",
       "enoughSelected": "Has seleccionado {count} selfie{count, plural, =1 {} other {s}}. Puedes continuar o seleccionar más.",
-      "swipeHint": "Desliza a la derecha cuando estés listo para personalizar."
+      "swipeHint": "Desliza a la derecha cuando estés listo para personalizar.",
+      "status": {
+        "start": "Selecciona selfies",
+        "oneMore": "Añade una más",
+        "ready": "Listo para personalizar"
+      }
     },
     "gallery": {
+      "selectAria": "Seleccionar selfie",
+      "deselectAria": "Quitar selección de selfie",
       "deleteTooltip": "Eliminar selfie",
       "deleteAria": "Eliminar selfie",
       "deleteDisabledTooltip": "Esta selfie se usa en una generación y no se puede eliminar.",
@@ -1166,6 +1173,13 @@
     }
   },
   "generation": {
+    "flow": {
+      "stepIndicator": "Paso {current} de {total}",
+      "back": "Atrás",
+      "continue": "Continuar",
+      "swipeToNext": "Desliza para continuar",
+      "swipeHint": "Desliza a la izquierda para continuar"
+    },
     "typeSelection": {
       "title": "¿Cómo te gustaría usar esta foto?",
       "subtitle": "Elige cómo quieres generar tu foto profesional.",
@@ -1332,14 +1346,16 @@
           "kicker": "Antes de empezar",
           "title": "Una parada rápida antes del glamour",
           "body": "Estás a punto de personalizar cómo se verán tus fotos. Cada tarjeta ajusta una parte del set, así que desliza y deja tu sello personal.",
+          "bodyDesktop": "Estás a punto de personalizar cómo se verán tus fotos. Cada sección a continuación controla un aspecto diferente de tu foto profesional.",
           "swipe": "Desliza a la derecha para avanzar, a la izquierda para revisar. ¿Prefieres botones? Los pequeños chevrones abajo responden al toque.",
+          "scrollDesktop": "Desplázate hacia abajo para ver todas las opciones de personalización. Ajusta cada configuración según tus preferencias.",
           "editable": "La insignia con destellos significa que mandas tú. Ajusta hasta que el estilo cuente tu historia.",
           "locked": "La insignia con candado indica que tu equipo ya lo definió. Puedes mirar, pero no tocar: necesitamos consistencia."
         },
         "selfieTips": {
           "kicker": "Obtén los mejores resultados",
           "title": "Consejos para selfies increíbles",
-          "body": "Las fotos de equipo geniales empiezan con buenas selfies. Así es como lograrlas.",
+          "body": "Las fotos geniales empiezan con buenas selfies. Así es como lograrlas.",
           "angles": {
             "title": "Varía los ángulos",
             "desc": "— diferentes posiciones ayudan a nuestra IA a entender mejor tu rostro."
@@ -1350,7 +1366,7 @@
           },
           "distance": {
             "title": "Incluye una de más lejos",
-            "desc": "— mostrar tus hombros nos ayuda a ajustar las proporciones del cuerpo."
+            "desc": "— esto muestra a la IA tus proporciones corporales para que no tenga que adivinar."
           },
           "minimum": {
             "title": "Sube al menos 2",
@@ -1960,6 +1976,7 @@
         "headsUp": "Atención",
         "message": "Personaliza tu foto en las secciones editables a continuación antes de generar."
       },
+      "mobileCustomizeTitle": "Personaliza {style}",
       "costPerGeneration": "Costo por generación",
       "generateButton": "Generar foto"
     },

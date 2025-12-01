@@ -95,14 +95,9 @@ export default function InviteDashboardHeader({
   return (
     <div className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Mobile: Reduced header with team name and back arrow or credits */}
-        <div className="md:hidden flex items-center justify-between py-3">
-          <div className="flex-1 min-w-0 pr-4">
-            <h1 className="text-lg font-semibold text-gray-900 truncate">
-              {teamName || 'Team'}
-            </h1>
-          </div>
-          {showBackToDashboard ? (
+        {/* Mobile: Reduced header with back arrow, team name, and credits */}
+        <div className="md:hidden flex items-center gap-3 py-3">
+          {showBackToDashboard && (
             <button
               onClick={handleBackClick}
               className="flex-shrink-0 p-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -112,12 +107,18 @@ export default function InviteDashboardHeader({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-          ) : creditsRemaining !== undefined ? (
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-semibold text-gray-900 truncate">
+              {teamName || 'Team'}
+            </h1>
+          </div>
+          {!showBackToDashboard && creditsRemaining !== undefined && (
             <div className="flex-shrink-0 text-right">
               <p className="text-xs text-gray-500">Photos</p>
               <p className="text-xl font-bold text-brand-primary">{calculatePhotosFromCredits(creditsRemaining)}</p>
             </div>
-          ) : null}
+          )}
         </div>
 
         {/* Desktop: Full header */}

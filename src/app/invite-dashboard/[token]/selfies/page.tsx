@@ -1,86 +1,64 @@
 'use client'
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
-import SelfieGallery from '@/components/generation/SelfieGallery'
+import { useState, useCallback } from 'react'
+import { SelectableGrid } from '@/components/generation/selection'
+import { FlowNavigation, SwipeableContainer } from '@/components/generation/navigation'
+import { StickyFlowPage } from '@/components/generation/layout'
+import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
 import dynamic from 'next/dynamic'
 import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { ErrorBanner } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
+import { useInviteSelfieEndpoints } from '@/hooks/useInviteSelfieEndpoints'
 import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
+import SharedMobileSelfieFlow from '@/components/generation/selfie/SharedMobileSelfieFlow'
 import SelfieUploadSuccess from '@/components/Upload/SelfieUploadSuccess'
+import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
+import { useMobileViewport } from '@/hooks/useMobileViewport'
+import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
+import { hasEnoughSelfies } from '@/constants/generation'
+import { useTranslations } from 'next-intl'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
-interface Selfie {
-  id: string
-  key: string
-  url: string
-  uploadedAt: string
-  status: 'pending' | 'approved' | 'rejected'
-  used?: boolean
-}
-
+/**
+ * Selfie management page for invited users.
+ * 
+ * Flow: /invite-dashboard/[token]/selfie-tips → /invite-dashboard/[token]/selfies → /invite-dashboard/[token]/customization-intro
+ * 
+ * Users can select existing selfies or upload new ones.
+ */
 export default function SelfiesPage() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = params.token as string
   const uploadOnly = (searchParams?.get('mode') || '') === 'upload'
+  const t = useTranslations('inviteDashboard.selfieSelection.mobile')
+  const tSelectionHint = useTranslations('selfies.selectionHint')
 
   const [error, setError] = useState<string | null>(null)
   const [isApproved, setIsApproved] = useState<boolean>(false)
   // Header resolves invite info internally; no local invite state needed
 
-  // Custom uploader that passes the invite token to the proxy so uploads work without a session
-  const onUploadWithToken = async (file: File): Promise<{ key: string; url?: string }> => {
-    const ext = file.name.split('.')?.pop()?.toLowerCase() || ''
-    const res = await fetch(`/api/uploads/proxy?token=${encodeURIComponent(token)}`, {
-      method: 'POST',
-      headers: {
-        'x-file-content-type': file.type,
-        'x-file-extension': ext,
-        'x-file-type': 'selfie'
-      },
-      body: file,
-      credentials: 'include'
-    })
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}))
-      throw new Error(errorData.error || 'Upload failed')
-    }
-    const { key } = await res.json() as { key: string }
-    // Provide a local preview url for UX
-    const preview = URL.createObjectURL(file)
-    return { key, url: preview }
-  }
-
-  // Custom save endpoint that creates DB record for invite flow
-  const saveSelfieEndpoint = async (key: string): Promise<string | undefined> => {
-    const response = await fetch('/api/team/member/selfies', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token,
-        selfieKey: key
-      }),
-      credentials: 'include'
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to save selfie')
-    }
-
-    const data = await response.json() as { selfie?: { id: string } }
-    return data.selfie?.id
-  }
+  const { uploadEndpoint: inviteUploadEndpoint, saveEndpoint: inviteSaveEndpoint } = useInviteSelfieEndpoints(token)
+  const {
+    inFlow,
+    clearFlow,
+    setOpenStartFlow,
+    setPendingGeneration,
+    hydrated,
+    customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META
+  } = useGenerationFlowState()
+  
+  // Note: Redirect logic removed - flow is now controlled by main dashboard handleStartFlow
 
   // Multi-select: load and manage selected selfies
-  const { uploads: hookSelfies, selectedIds, loading, loadSelected, loadUploads, handlePhotoUpload, handleSelfiesApproved } = useSelfieManagement({
+  const selfieManager = useSelfieManagement({
     token,
     inviteMode: true,
-    customUploadEndpoint: onUploadWithToken,
-    customSaveEndpoint: saveSelfieEndpoint,
+    customUploadEndpoint: inviteUploadEndpoint,
     autoSelectNewUploads: true,
     onSelfiesApproved: async () => {
       // Reload selected state to ensure UI updates with newly selected selfies
@@ -98,14 +76,8 @@ export default function SelfiesPage() {
       }
 
       // On mobile in generation flow, auto-navigate back to dashboard
-      // The dashboard swipe flow already has selfie selection, so no need to show it here
-      const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768
-      const inGenerationFlow = typeof window !== 'undefined' && 
-        (sessionStorage.getItem('fromGeneration') === 'true' || sessionStorage.getItem('openStartFlow') === 'true')
-      
-      if (isMobileDevice && inGenerationFlow) {
-        // Set flag to open swipe flow and navigate back
-        sessionStorage.setItem('openStartFlow', 'true')
+      if (isMobile && inFlow) {
+        setOpenStartFlow(true)
         router.push(`/invite-dashboard/${token}`)
         return
       }
@@ -121,18 +93,32 @@ export default function SelfiesPage() {
     onUploadError: (error) => {
       setError(error)
     }
-  }) as {
-    uploads: Selfie[],
-    selectedIds: string[],
-    loading: boolean,
-    loadSelected: () => Promise<void>,
-    loadUploads: () => void,
-    handlePhotoUpload: (file: File) => Promise<{ key: string; url?: string }>,
-    handleSelfiesApproved: (results: { key: string; selfieId?: string }[]) => void
+  })
+
+  if (selfieManager.mode !== 'invite') {
+    throw new Error('Invite selfie page requires invite mode selfie management')
   }
 
+  const {
+    uploads: hookSelfies,
+    selectedIds,
+    loading,
+    loadSelected,
+    loadUploads,
+    handlePhotoUpload,
+    handleSelfiesApproved
+  } = selfieManager
+  
+  const isMobile = useMobileViewport()
+  const isSwipeEnabled = useSwipeEnabled()
+  
+  
+  // Type assertion: in invite mode, uploads is always Selfie[]
+  type Selfie = { id: string; key: string; url: string; uploadedAt: string; used?: boolean }
+  const selfies = hookSelfies as Selfie[]
 
-  // Handle selection changes from SelfieGallery
+
+  // Handle selection changes from SelectableGrid
   const handleSelectionChange = useCallback(() => {
     // Reload selection state when gallery changes selections
     loadSelected()
@@ -141,41 +127,20 @@ export default function SelfiesPage() {
   // Count all selected selfies, including newly uploaded ones that may not be in hookSelfies yet
   // The filtering was causing newly uploaded selfies to not count toward the continue button
   const selectedCount = selectedIds.length
-  const canContinue = selectedCount >= 2
-
-  // Only show continue button when coming from generation flow (not when just managing selfies)
-  const [isInGenerationFlow, setIsInGenerationFlow] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-  
-  // Initialize state from sessionStorage and detect mobile - intentional client-only pattern
-  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const fromGeneration = sessionStorage.getItem('fromGeneration') === 'true'
-      const openStartFlow = sessionStorage.getItem('openStartFlow') === 'true'
-      // Only show continue button if explicitly in generation flow, not just when managing selfies
-      setIsInGenerationFlow(fromGeneration || openStartFlow)
-      
-      // Detect mobile viewport
-      const checkMobile = () => {
-        setIsMobile(window.innerWidth < 768) // md breakpoint
-      }
-      checkMobile()
-      window.addEventListener('resize', checkMobile)
-      return () => window.removeEventListener('resize', checkMobile)
-    }
-  }, [])
-  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
-  
-
+  const canContinue = hasEnoughSelfies(selectedCount)
+  const remainingSelfies = Math.max(0, 2 - selectedCount)
   const handleContinue = () => {
     if (canContinue) {
-      // Navigate back to dashboard and open start flow
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('openStartFlow', 'true')
-      }
-      router.push(`/invite-dashboard/${token}`)
+      setOpenStartFlow(true)
+      setPendingGeneration(true)
+      // Navigate to customization intro (which then goes to dashboard)
+      router.push(`/invite-dashboard/${token}/customization-intro`)
     }
+  }
+  
+  // Don't render while hydrating
+  if (!hydrated) {
+    return null
   }
 
   const handleCancelUpload = () => {
@@ -197,102 +162,172 @@ export default function SelfiesPage() {
     )
   }
 
+  const handleBack = () => {
+    router.push(`/invite-dashboard/${token}/selfie-tips`)
+  }
+
+  const selfieStepIndicator = buildSelfieStepIndicator(customizationStepsMeta, {
+    selfieComplete: canContinue,
+    isDesktop: !isMobile
+  })
+
+  const stepperTotalDots = selfieStepIndicator.totalWithLocked ?? selfieStepIndicator.total
+  const navCurrentIndex = selfieStepIndicator.currentAllStepsIndex ?? Math.max(0, selfieStepIndicator.current - 1)
+  const navigationStepColors = selfieStepIndicator.lockedSteps || selfieStepIndicator.visitedEditableSteps
+    ? {
+        lockedSteps: selfieStepIndicator.lockedSteps,
+        visitedEditableSteps: selfieStepIndicator.visitedEditableSteps
+      }
+    : undefined
+
+  const flowHeaderConfig = {
+    kicker: t('bannerTitle', { default: 'Select your selfies' }),
+    title: tSelectionHint('text', { default: 'Select at least 2 selfies' }),
+    step: selfieStepIndicator,
+    showBack: true,
+    onBack: () => {
+      clearFlow()
+      router.replace(`/invite-dashboard/${token}`)
+    },
+    fullBleed: true
+  }
+
+  const topHeader = (
+    <InviteDashboardHeader
+      showBackToDashboard
+      token={token}
+      title=""
+      onBackClick={() => {
+        clearFlow()
+        router.replace(`/invite-dashboard/${token}`)
+      }}
+    />
+  )
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <InviteDashboardHeader
-        // Self-contained header renders the consolidated invite copy
-        showBackToDashboard
-        token={token}
-        title=""
-        onBackClick={() => {
-          // Clear sessionStorage flags to prevent auto-continuing to generation
-          if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('openStartFlow')
-            sessionStorage.removeItem('fromGeneration')
-            sessionStorage.removeItem('pendingGeneration')
-          }
-          router.replace(`/invite-dashboard/${token}`)
-        }}
-      />
-
-      
-
-      {/* Success Message - Show above selfies on mobile */}
-      {isApproved && (
-        <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4">
-          <SelfieUploadSuccess className="border-0 shadow-none p-0" />
-        </div>
-      )}
-
-      {/* Mobile: Selfies section breaks out of padding container */}
-      {/* On mobile in generation flow, skip showing the selfie selection since the swipe flow already has it */}
-      {!uploadOnly && !isInGenerationFlow && (
-        <>
-          {/* Mobile: Direct content, no wrapper, with padding */}
-          <div className={`md:hidden bg-white ${isMobile ? 'pb-40' : ''}`}>
-            <div className="px-4 pt-4 flex items-center justify-between gap-3">
+    <SwipeableContainer
+      onSwipeLeft={isSwipeEnabled && canContinue ? handleContinue : undefined}
+      onSwipeRight={isSwipeEnabled ? handleBack : undefined}
+      enabled={isSwipeEnabled}
+    >
+      <StickyFlowPage
+        topHeader={topHeader}
+        flowHeader={flowHeaderConfig}
+        showTopOnDesktop
+        maxWidth="full"
+        contentClassName="px-0 py-0"
+        bottomPadding="none"
+        mobileHeaderSpacerHeight={0}
+      >
+        {/* Mobile: unified selfie selection experience */}
+        {!uploadOnly && (
+          <SharedMobileSelfieFlow
+            canContinue={canContinue}
+            infoBanner={
               <SelfieSelectionInfoBanner selectedCount={selectedCount} className="flex-1 mb-0" />
-            </div>
-            <div className="px-4 pt-2 pb-4">
-                  <SelfieGallery
-                    selfies={hookSelfies.map(s => ({
-                      id: s.id,
-                      key: s.key,
-                      url: s.url,
-                      uploadedAt: s.uploadedAt,
-                      used: s.used
-                    }))}
+            }
+            grid={
+              <SelectableGrid
+                items={selfies.map(s => ({
+                  id: s.id,
+                  key: s.key,
+                  url: s.url,
+                  uploadedAt: s.uploadedAt,
+                  used: s.used
+                }))}
+                selection={{
+                  mode: 'managed',
+                  token,
+                  onAfterChange: handleSelectionChange
+                }}
                 token={token}
                 allowDelete
                 showUploadTile={!isMobile}
-                onSelfiesApproved={handleSelfiesApproved}
-                onAfterChange={handleSelectionChange}
                 onDeleted={async () => {
-                  // Reload selfies list after deletion
                   await loadUploads()
-                  // Also reload selected state to ensure consistency
                   await loadSelected()
                 }}
-                uploadEndpoint={handlePhotoUpload}
-                saveEndpoint={saveSelfieEndpoint}
+                upload={{
+                  onSelfiesApproved: handleSelfiesApproved!,
+                  onError: (error) => setError(error),
+                  uploadEndpoint: handlePhotoUpload,
+                  saveEndpoint: inviteSaveEndpoint
+                }}
               />
-            </div>
-          </div>
-        </>
-      )}
+            }
+            navigation={
+              <FlowNavigation
+                variant="both"
+                size="sm"
+                current={navCurrentIndex}
+                total={Math.max(1, stepperTotalDots)}
+                onPrev={handleBack}
+                onNext={handleContinue}
+                canGoPrev={true}
+                canGoNext={canContinue}
+                stepColors={navigationStepColors}
+              />
+            }
+            statusBadge={
+              !isApproved
+                ? {
+                    readyContent: (
+                      <>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        {t('badgeReady', { default: 'Ready! Swipe left →' })}
+                      </>
+                    ),
+                    selectingContent: (
+                      <>
+                        <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        {t('badgeSelecting', { default: 'Need {remaining} more', remaining: remainingSelfies })}
+                      </>
+                    )
+                  }
+                : undefined
+            }
+            uploadSection={
+              !isApproved ? (
+                <SelfieUploadFlow
+                  hideHeader={true}
+                  buttonLayout="horizontal"
+                  uploadEndpoint={handlePhotoUpload}
+                  saveEndpoint={inviteSaveEndpoint}
+                  onSelfiesApproved={handleSelfiesApproved!}
+                  onCancel={handleCancelUpload}
+                  onRetake={handleRetake}
+                />
+              ) : null
+            }
+            successBanner={
+              isApproved ? <SelfieUploadSuccess className="border-0 shadow-none p-0" /> : undefined
+            }
+          />
+        )}
 
-      {/* Upload Flow - Fixed at bottom on mobile (always) */}
-      {isMobile && !isApproved && (
-        <SelfieUploadFlow
-          hideHeader={true}
-          uploadEndpoint={handlePhotoUpload}
-          saveEndpoint={saveSelfieEndpoint}
-          onSelfiesApproved={handleSelfiesApproved!}
-          onCancel={handleCancelUpload}
-          onRetake={handleRetake}
-        />
-      )}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {error && <ErrorBanner message={error} className="mb-6" />}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && <ErrorBanner message={error} className="mb-6" />}
+          <div className="space-y-6">
+            {isApproved && (
+              <div className="hidden md:block">
+                <SelfieUploadSuccess />
+              </div>
+            )}
 
-        <div className="space-y-6">
-
-          {/* Success Message - Desktop only (mobile version is above selfies section) */}
-          {isApproved && (
-            <div className="hidden md:block">
-              <SelfieUploadSuccess />
-            </div>
-          )}
-
-          {/* Selfies Grid (hidden in upload-only mode) - Desktop only */}
-          {!uploadOnly && (
+            {!uploadOnly && (
               <div className="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200">
-                {/* Desktop: Title and continue button (only in generation flow) */}
                 <div className="flex p-6 items-center justify-between">
                   <h2 className="text-lg md:text-2xl font-semibold text-gray-900">Your Selfies</h2>
-                  {isInGenerationFlow && (
+                  {inFlow && (
                     <button
                       onClick={handleContinue}
                       disabled={!canContinue}
@@ -306,38 +341,56 @@ export default function SelfiesPage() {
                     </button>
                   )}
                 </div>
-                {/* Desktop: Info banner */}
                 <div className="px-6 pb-4">
                   <SelfieSelectionInfoBanner selectedCount={selectedCount} />
                 </div>
                 <div className="px-6 pt-2 pb-6">
-                  <SelfieGallery
-                    selfies={hookSelfies.map(s => ({
+                  <SelectableGrid
+                    items={selfies.map(s => ({
                       id: s.id,
                       key: s.key,
                       url: s.url,
                       uploadedAt: s.uploadedAt,
                       used: s.used
                     }))}
+                    selection={{
+                      mode: 'managed',
+                      token,
+                      onAfterChange: handleSelectionChange
+                    }}
                     token={token}
                     allowDelete
                     showUploadTile={!isMobile}
-                    onSelfiesApproved={handleSelfiesApproved}
-                    onAfterChange={handleSelectionChange}
-                onDeleted={async () => {
-                  // Reload selfies list after deletion
-                  await loadUploads()
-                  // Also reload selected state to ensure consistency
-                  await loadSelected()
-                }}
-                    uploadEndpoint={handlePhotoUpload}
-                    saveEndpoint={saveSelfieEndpoint}
+                    onDeleted={async () => {
+                      await loadUploads()
+                      await loadSelected()
+                    }}
+                    upload={{
+                      onSelfiesApproved: handleSelfiesApproved!,
+                      onError: (error) => setError(error),
+                      uploadEndpoint: handlePhotoUpload,
+                      saveEndpoint: inviteSaveEndpoint
+                    }}
+                  />
+                </div>
+                <div className="px-6 pb-6">
+                  <FlowNavigation
+                    variant="both"
+                    size="sm"
+                    current={navCurrentIndex}
+                    total={Math.max(1, stepperTotalDots)}
+                    onPrev={handleBack}
+                    onNext={handleContinue}
+                    canGoPrev={true}
+                    canGoNext={canContinue}
+                    stepColors={navigationStepColors}
                   />
                 </div>
               </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+      </StickyFlowPage>
+    </SwipeableContainer>
   )
 }

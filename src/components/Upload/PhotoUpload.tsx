@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { InlineError, LoadingSpinner } from "@/components/ui";
+import { useDeviceCapabilities } from "@/hooks/useDeviceCapabilities";
+import CameraPermissionError from "@/components/Upload/CameraPermissionError";
+import type { UploadMetadata, UploadResult } from "@/hooks/useUploadFlow";
 
 type PhotoUploadProps = {
   disabled?: boolean;
@@ -12,13 +15,18 @@ type PhotoUploadProps = {
   accept?: string;
   multiple?: boolean;
   onSelect?: (file: File | File[]) => void;
-  onUpload?: (file: File) => Promise<{ url?: string; key?: string } | void>;
-  onUploaded?: (result: { key: string; url?: string } | { key: string; url?: string }[]) => void;
+  onUpload?: (file: File, metadata?: UploadMetadata) => Promise<UploadResult | void>;
+  onUploaded?: (result: UploadResult | UploadResult[], metadata?: UploadMetadata | UploadMetadata[]) => void;
   onProcessingCompleteRef?: React.MutableRefObject<(() => void) | null>;
   testId?: string;
   autoOpenCamera?: boolean;
   isProcessing?: boolean;
   processingText?: string;
+  onCameraError?: (message: string) => void;
+  /** Layout for camera/upload buttons: 'vertical' (default) or 'horizontal' (side-by-side) */
+  buttonLayout?: 'vertical' | 'horizontal';
+  /** Hide the plus icon (useful for compact/sticky layouts) */
+  hidePlusIcon?: boolean;
 };
 
 export default function PhotoUpload({
@@ -32,7 +40,10 @@ export default function PhotoUpload({
   testId = "file-input",
   autoOpenCamera = false,
   isProcessing = false,
-  processingText
+  processingText,
+  onCameraError,
+  buttonLayout = 'vertical',
+  hidePlusIcon = false
 }: PhotoUploadProps) {
   const t = useTranslations("common");
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -41,6 +52,8 @@ export default function PhotoUpload({
   const videoRefDesktop = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  const device = useDeviceCapabilities();
+  const { isIOSDevice, preferNativeCamera, isMobile } = device;
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<string | null>(null);
@@ -52,12 +65,11 @@ export default function PhotoUpload({
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const hasAutoOpenedRef = useRef(false);
-
-  // Detect if device is iPad or iOS (treat as mobile for camera purposes)
-  const isIOSDevice = typeof window !== 'undefined' && (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) // iPad on iOS 13+
-  );
+  const awaitingIOSCameraCaptureRef = useRef(false);
+  const resetUploadState = () => {
+    setIsUploading(false);
+    setUploadingFileCount(0);
+  };
 
   useEffect(() => {
     return () => {
@@ -144,7 +156,34 @@ export default function PhotoUpload({
     });
   };
 
-  const handleFile = async (file: File) => {
+  const reportCameraError = useCallback(
+    (message: string, type?: string) => {
+      setError(message)
+      setErrorType(type ?? 'camera-error')
+      onCameraError?.(message)
+    },
+    [onCameraError]
+  )
+
+  const buildMetadata = useCallback(
+    (file: File, overrides?: Partial<UploadMetadata>): UploadMetadata => {
+      const source =
+        overrides?.source ||
+        (awaitingIOSCameraCaptureRef.current
+          ? 'ios-camera'
+          : file.name.startsWith('capture-')
+          ? 'camera'
+          : 'file')
+
+      return {
+        source,
+        objectUrl: overrides?.objectUrl
+      }
+    },
+    []
+  )
+
+  const handleFile = async (file: File, overrides?: Partial<UploadMetadata>) => {
     setError(null);
     setErrorType(null);
     const err = validateFile(file);
@@ -175,6 +214,8 @@ export default function PhotoUpload({
     }
     
     const preview = URL.createObjectURL(file);
+    const metadata = buildMetadata(file, { ...overrides, objectUrl: preview })
+
     if (multiple) {
       setPreviewUrls((prev) => {
         prev.forEach(url => URL.revokeObjectURL(url));
@@ -193,21 +234,26 @@ export default function PhotoUpload({
       setUploadingFileCount(1);
       try {
         // Add timeout handling for upload
-        const uploadPromise = onUpload(file);
+        const uploadPromise = onUpload(file, metadata);
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error("Upload timeout. Please try again.")), 10000)
         );
         
-        const result = await Promise.race([uploadPromise, timeoutPromise]) as { key: string; url?: string } | void;
+        const result = await Promise.race([uploadPromise, timeoutPromise]) as UploadResult | void;
         if (result && result.key) {
           // Call onUploaded - parent will set isProcessing=true and keep spinner visible
           // Keep isUploading true until parent hides component
-          onUploaded?.({ key: result.key, url: result.url || preview });
+          const finalResult: UploadResult = {
+            key: result.key,
+            url: result.url || preview,
+            source: metadata.source
+          }
+          onUploaded?.(finalResult, metadata);
+          resetUploadState();
           return;
         } else {
           // No result - reset state
-          setIsUploading(false);
-          setUploadingFileCount(0);
+          resetUploadState();
         }
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Upload failed";
@@ -227,11 +273,12 @@ export default function PhotoUpload({
         if (result && result.key) {
           // Call onUploaded - parent will set isProcessing=true and keep spinner visible
           // Keep isUploading true until parent hides component
-          onUploaded?.({ key: result.key, url: preview });
+          const finalResult: UploadResult = { key: result.key, url: preview, source: metadata.source }
+          onUploaded?.(finalResult, metadata);
+          resetUploadState();
         } else {
           // No result - reset state
-          setIsUploading(false);
-          setUploadingFileCount(0);
+          resetUploadState();
         }
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Upload failed";
@@ -254,7 +301,8 @@ export default function PhotoUpload({
     const validFiles: File[] = [];
     const errors: string[] = [];
     const previews: string[] = [];
-    const uploadResults: { key: string; url?: string }[] = [];
+    const uploadResults: UploadResult[] = [];
+    const metadataList: UploadMetadata[] = [];
     
     // Track the number of files being uploaded
     setUploadingFileCount(files.length);
@@ -282,6 +330,7 @@ export default function PhotoUpload({
       validFiles.push(file);
       const preview = URL.createObjectURL(file);
       previews.push(preview);
+      metadataList.push(buildMetadata(file, { objectUrl: preview }));
     }
 
     // Show errors if any
@@ -311,25 +360,30 @@ export default function PhotoUpload({
       try {
         for (let i = 0; i < validFiles.length; i++) {
           const file = validFiles[i];
+          const metadata = metadataList[i];
           
-          const uploadPromise = onUpload(file);
+          const uploadPromise = onUpload(file, metadata);
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error("Upload timeout. Please try again.")), 10000)
           );
           
-          const result = await Promise.race([uploadPromise, timeoutPromise]) as { key: string; url?: string } | void;
+          const result = await Promise.race([uploadPromise, timeoutPromise]) as UploadResult | void;
           if (result && result.key) {
-            uploadResults.push({ key: result.key, url: result.url || previews[i] });
+            uploadResults.push({
+              key: result.key,
+              url: result.url || previews[i],
+              source: metadata.source
+            });
           }
         }
         if (uploadResults.length > 0) {
           // Call onUploaded - parent will set isProcessing=true and keep spinner visible
           // Keep isUploading true until parent hides component
-          onUploaded?.(multiple ? uploadResults : uploadResults[0]);
+          onUploaded?.(multiple ? uploadResults : uploadResults[0], multiple ? metadataList : metadataList[0]);
+          resetUploadState();
         } else {
           // No successful uploads - reset state
-          setIsUploading(false);
-          setUploadingFileCount(0);
+          resetUploadState();
         }
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Upload failed";
@@ -345,20 +399,25 @@ export default function PhotoUpload({
       try {
         for (let i = 0; i < validFiles.length; i++) {
           const file = validFiles[i];
+          const metadata = metadataList[i];
           
           const result = await defaultUpload(file);
           if (result && result.key) {
-            uploadResults.push({ key: result.key, url: previews[i] });
+            uploadResults.push({
+              key: result.key,
+              url: previews[i],
+              source: metadata.source
+            });
           }
         }
         if (uploadResults.length > 0) {
           // Call onUploaded - parent will set isProcessing=true and keep spinner visible
           // Keep isUploading true until parent hides component
-          onUploaded?.(multiple ? uploadResults : uploadResults[0]);
+          onUploaded?.(multiple ? uploadResults : uploadResults[0], multiple ? metadataList : metadataList[0]);
+          resetUploadState();
         } else {
           // No successful uploads - reset state
-          setIsUploading(false);
-          setUploadingFileCount(0);
+          resetUploadState();
         }
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Upload failed";
@@ -373,7 +432,7 @@ export default function PhotoUpload({
     }
   };
 
-  const defaultUpload = async (file: File) => {
+  const defaultUpload = async (file: File): Promise<UploadResult> => {
     // Server-side proxy upload to avoid CORS issues
     const ext = file.name.split('.')?.pop()?.toLowerCase();
     setIsUploading(true);
@@ -393,7 +452,7 @@ export default function PhotoUpload({
     }
     const { key } = await res.json();
     setIsUploading(false);
-    return { key } as { key: string };
+    return { key };
   };
 
   const onInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -405,6 +464,7 @@ export default function PhotoUpload({
     } else {
       await handleFile(files[0]);
     }
+    awaitingIOSCameraCaptureRef.current = false;
     
     // Reset input so same file can be selected again
     if (inputRef.current) {
@@ -444,27 +504,24 @@ export default function PhotoUpload({
 
   const openCamera = useCallback(async () => {
     setError(null);
-    
-    // On iOS/iPad, use native file input with capture attribute instead of getUserMedia
-    // This provides better compatibility and native camera integration
-    if (isIOSDevice) {
-      // Trigger the file input which has capture="user" attribute
+    setErrorType(null);
+
+    if (preferNativeCamera) {
+      awaitingIOSCameraCaptureRef.current = isIOSDevice
       inputRef.current?.click();
       return;
     }
     
     try {
-      // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setError("Camera not supported in this browser");
+        reportCameraError("Camera not supported in this browser", 'camera-not-supported');
         return;
       }
       
-      // Try to get camera permissions first
       try {
         await navigator.permissions.query({ name: 'camera' as PermissionName });
       } catch {
-        // Permission query failed, continue with direct camera access
+        // Permission query failed, continue with direct access
       }
       
       const s = await navigator.mediaDevices.getUserMedia({ 
@@ -479,26 +536,22 @@ export default function PhotoUpload({
       setStream(s);
       setCameraOpen(true);
       setCameraReady(false);
+      awaitingIOSCameraCaptureRef.current = false;
 
-      // Scroll to top on mobile/tablet when camera opens
-      if (typeof window !== 'undefined' && (window.innerWidth < 768 || isIOSDevice)) {
+      if (typeof window !== 'undefined' && (isMobile || isIOSDevice)) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (error) {
       console.error("Camera access error:", error);
       if (error instanceof Error) {
         if (error.name === 'NotAllowedError') {
-          setErrorType('camera-permission-denied');
-          setError("Camera access denied");
+          reportCameraError("Camera access denied", 'camera-permission-denied');
         } else if (error.name === 'NotFoundError') {
-          setErrorType('camera-not-found');
-          setError("No camera found on this device.");
+          reportCameraError("No camera found on this device.", 'camera-not-found');
         } else if (error.name === 'NotSupportedError') {
-          setErrorType('camera-not-supported');
-          setError("Camera not supported in this browser.");
+          reportCameraError("Camera not supported in this browser.", 'camera-not-supported');
         } else if (error.name === 'OverconstrainedError') {
-          setError("Camera constraints not supported. Trying with basic settings...");
-          // Try again with basic constraints
+          reportCameraError("Camera constraints not supported. Trying with basic settings...", 'camera-error');
           try {
             const s = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
             setStream(s);
@@ -506,23 +559,24 @@ export default function PhotoUpload({
             setCameraReady(false);
             return;
           } catch {
-            setError("Camera access failed even with basic settings.");
+            reportCameraError("Camera access failed even with basic settings.", 'camera-error');
           }
         } else {
-          setError(`Camera error: ${error.message}`);
+          reportCameraError(`Camera error: ${error.message}`);
         }
       } else {
-        setError("Unable to access camera");
+        reportCameraError("Unable to access camera");
       }
     }
-  }, [isIOSDevice]);
+  }, [preferNativeCamera, isIOSDevice, isMobile, reportCameraError]);
 
   const closeCamera = () => {
     setCameraOpen(false);
+    setError(null);
+    setErrorType(null);
     if (stream) stream.getTracks().forEach((t) => t.stop());
     setStream(null);
-    // Reset auto-open ref when camera closes so it can reopen on retake
-    hasAutoOpenedRef.current = false;
+    awaitingIOSCameraCaptureRef.current = false;
   };
 
   // Auto-open camera if requested - use useEffect to handle prop changes properly
@@ -548,8 +602,8 @@ export default function PhotoUpload({
     const timeoutId = setTimeout(() => {
       // Determine which video element to use based on screen size and device type
       // Treat iPad as mobile for camera UI
-      const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || isIOSDevice);
-      const v = (isMobile ? videoRefMobile.current : videoRefDesktop.current) as (HTMLVideoElement & { srcObject?: MediaStream }) | null;
+      const useMobileVideo = isMobile || isIOSDevice;
+      const v = (useMobileVideo ? videoRefMobile.current : videoRefDesktop.current) as (HTMLVideoElement & { srcObject?: MediaStream }) | null;
       
       // Fallback to the other ref if primary one is not available
       const videoElement = v || videoRefMobile.current || videoRefDesktop.current;
@@ -609,7 +663,7 @@ export default function PhotoUpload({
         desktopVideo.onloadedmetadata = null;
       }
     };
-  }, [cameraOpen, stream, isIOSDevice]);
+  }, [cameraOpen, stream, isIOSDevice, isMobile]);
 
   const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -624,13 +678,13 @@ export default function PhotoUpload({
     canvas.toBlob(async (blob) => {
       if (!blob) return;
       const file = new File([blob], `capture-${Date.now()}.jpg`, { type: "image/jpeg" });
-      await handleFile(file);
+      await handleFile(file, { source: 'camera' });
       closeCamera();
     }, "image/jpeg", 0.92);
   };
 
   return (
-    <div className="w-full h-full min-h-[200px]">
+    <div className={`w-full h-full ${hidePlusIcon ? '' : 'min-h-[200px]'}`}>
       {showSpinner ? (
         <div
           className="rounded-2xl p-4 md:p-8 h-full flex items-center justify-center text-center bg-gradient-to-br from-white via-gray-50 to-gray-100 border border-gray-200"
@@ -658,46 +712,51 @@ export default function PhotoUpload({
           onDragLeave={onDragLeave}
           aria-disabled={disabled}
           aria-label="Upload photo by clicking or dragging and dropping"
-          className={`rounded-2xl p-3 md:p-6 lg:p-8 h-full flex flex-col items-center justify-center text-center cursor-pointer focus:outline-none transition-all duration-200 ${
+          className={hidePlusIcon
+            ? "w-full"
+            : `rounded-2xl p-3 md:p-6 lg:p-8 h-full flex flex-col items-center justify-center text-center cursor-pointer focus:outline-none transition-all duration-200 ${
             dragOver 
               ? "border-2 border-brand-primary bg-brand-primary/5 shadow-lg scale-[1.01]" 
               : "border border-gray-200 bg-gradient-to-br from-white via-gray-50 to-gray-100 hover:shadow-lg"
           } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
           data-testid="dropzone"
         >
-          <div className="w-full flex flex-col items-center">
-            {/* Plus icon */}
-            <div className="mb-2 flex items-center justify-center">
-              <PlusIcon className="w-12 h-12 md:w-16 md:h-16 text-gray-400" />
-            </div>
-            {/* Buttons - vertically stacked */}
-            <div className="flex flex-col gap-2 w-full">
+          <div className={`w-full flex flex-col ${hidePlusIcon ? '' : 'items-center'}`}>
+            {/* Plus icon - hidden when hidePlusIcon is true */}
+            {!hidePlusIcon && (
+              <div className="mb-2 flex items-center justify-center">
+                <PlusIcon className="w-12 h-12 md:w-16 md:h-16 text-gray-400" />
+              </div>
+            )}
+            {/* Buttons - layout controlled by buttonLayout prop */}
+            <div className={`flex w-full ${buttonLayout === 'horizontal' ? 'flex-row gap-2' : 'flex-col gap-2'}`}>
               <button
                 type="button"
-                className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-brand-primary text-white hover:bg-brand-primary-hover transition-colors duration-200 flex items-center justify-center gap-2"
+                className={`${buttonLayout === 'horizontal' ? 'flex-1' : 'w-full'} ${hidePlusIcon ? 'px-3 py-3' : 'px-4 py-3'} text-sm font-bold rounded-xl bg-brand-primary text-white hover:bg-brand-primary-hover transition-all duration-200 flex items-center justify-center gap-2 ${hidePlusIcon ? 'shadow-lg shadow-brand-primary/20 hover:shadow-xl hover:shadow-brand-primary/30' : 'shadow-sm hover:shadow-md'} active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed`}
                 onClick={(e) => { e.stopPropagation(); openCamera(); }}
                 disabled={disabled}
                 aria-label="Open camera to take a photo"
                 data-testid="camera-button"
               >
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <span>Use Camera</span>
               </button>
               <button
                 type="button"
-                className="w-full px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center gap-2"
+                className={`${buttonLayout === 'horizontal' ? 'flex-1' : 'w-full'} ${hidePlusIcon ? 'px-3 py-3' : 'px-4 py-3'} text-sm font-bold rounded-xl border-2 ${hidePlusIcon ? 'border-gray-200' : 'border-gray-200'} bg-white text-gray-900 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 flex items-center justify-center gap-2 ${hidePlusIcon ? 'shadow-sm hover:shadow-md' : 'shadow-sm hover:shadow-md'} active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed`}
                 onClick={(e) => { e.stopPropagation(); openFilePicker(); }}
                 disabled={disabled}
                 aria-label="Choose a file from your device"
                 data-testid="file-picker-button"
               >
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <svg className="w-5 h-5 flex-shrink-0 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span>Choose from Gallery</span>
+                <span>Upload Photo</span>
               </button>
             </div>
           </div>
@@ -716,39 +775,13 @@ export default function PhotoUpload({
       )}
 
       {error && errorType === 'camera-permission-denied' ? (
-        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl" data-testid="camera-permission-error">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold text-amber-800 mb-1">Camera access needed</h4>
-              <p className="text-sm text-amber-700 mb-3">
-                To take a selfie, please allow camera access in your browser settings.
-              </p>
-              <div className="text-xs text-amber-600 space-y-1.5">
-                <p className="font-medium">How to enable:</p>
-                <ul className="list-disc list-inside space-y-1 ml-1">
-                  <li>Look for the camera icon in your browser&apos;s address bar</li>
-                  <li>Click it and select &quot;Allow&quot;</li>
-                  <li>Then refresh this page or try again</li>
-                </ul>
-              </div>
-              <button
-                onClick={() => {
-                  setError(null);
-                  setErrorType(null);
-                  openCamera();
-                }}
-                className="mt-3 text-sm font-medium text-amber-700 hover:text-amber-800 underline underline-offset-2"
-              >
-                Try again
-              </button>
-            </div>
-          </div>
-        </div>
+        <CameraPermissionError 
+          onRetry={() => {
+            setError(null);
+            setErrorType(null);
+            openCamera();
+          }}
+        />
       ) : error && (
         <InlineError message={error} className="mt-3" data-testid={errorType || "error-message"} />
       )}

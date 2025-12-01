@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { extractPackageId } from '@/domain/style/settings-resolver'
+import { extendInviteExpiry } from '@/lib/invite-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,6 +32,11 @@ export async function GET(request: NextRequest) {
     if (!invite) {
       return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
     }
+
+    // Extend invite expiry (sliding expiration) - don't await to avoid blocking
+    extendInviteExpiry(invite.id).catch(() => {
+      // Silently fail - expiry extension is best effort
+    })
 
     // Get the context - prefer invite.context (the context saved when invite was created)
     // This ensures the invite uses the context it was created with, even if team admin changes active context later

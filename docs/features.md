@@ -30,8 +30,9 @@ All features below
 ### 1. Photo Upload
 - Single person per photo
 - Face clearly visible (validation)
+- Minimum 2 selfies required (`MIN_SELFIES_REQUIRED`)
 - JPG/PNG support
-- Drag-drop or file picker
+- Drag-drop, file picker, or camera capture
 
 ### 2. Style Selection
 **6 Customizable Categories:**

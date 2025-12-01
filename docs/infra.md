@@ -150,6 +150,30 @@ Notes
 - src/domain: business logic (pricing, credits, subscriptions, access/roles/permissions, auth/otp, image access, generation). `PRICING_CONFIG` is only imported here.
 - Logging/Metrics: use `Logger` and `Telemetry` wrappers. Telemetry can forward to PostHog; prefer server-side events for domain actions.
 
+## Key Hooks
+
+| Hook | Purpose |
+|------|---------|
+| `useMobileViewport()` | Viewport detection (<768px) |
+| `useGenerationFlowState()` | Flow state via sessionStorage |
+| `useSelfieManagement(opts)` | Selfie operations (individual/invite) |
+| `useSelfieSelection(endpoint)` | Selected selfies state + API sync |
+| `useUploadFlow(opts)` | Upload state machine with temp storage |
+| `useInviteSelfieEndpoints(token)` | Upload/save endpoints for invites |
+
+## Key Components
+
+| Component | Purpose |
+|-----------|---------|
+| `IntroScreenContent` | Generic intro screen (swipe/button variants) |
+| `SelfieTipsContent` | Selfie best practices intro |
+| `CustomizationIntroContent` | Customization intro |
+| `CameraPermissionError` | Camera access denied UI |
+
+## Constants
+
+- `MIN_SELFIES_REQUIRED = 2` (`src/constants/generation.ts`)
+
 ## Architecture
 
 ```

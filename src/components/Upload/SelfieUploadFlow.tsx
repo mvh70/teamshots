@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
-import { useSelfieUpload } from '@/hooks/useSelfieUpload'
-import { promoteUploads } from '@/lib/uploadHelpers'
+import { useUploadFlow } from '@/hooks/useUploadFlow'
+import type { UploadResult } from '@/hooks/useUploadFlow'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
@@ -20,6 +20,7 @@ interface SelfieUploadFlowProps {
   hideHeader?: boolean // Hide title and cancel button for compact/sticky views
   onProcessingCompleteRef?: React.MutableRefObject<(() => void) | null> // Ref to call when upload processing is complete
   initialMode?: 'camera' | 'upload' // Auto-open camera or file picker on mount
+  buttonLayout?: 'vertical' | 'horizontal' // Layout for camera/upload buttons
 }
 
 export default function SelfieUploadFlow({
@@ -31,222 +32,109 @@ export default function SelfieUploadFlow({
   uploadEndpoint,
   hideHeader = false,
   onProcessingCompleteRef,
-  initialMode
+  initialMode,
+  buttonLayout = 'vertical'
 }: SelfieUploadFlowProps) {
   const t = useTranslations('selfies')
-  const {
-    handlePhotoUpload
-  } = useSelfieUpload({
-    onSuccess: (key, id) => {
-      onSelfiesApproved([{ key, selfieId: id }])
-    },
-    onError: onError,
-    saveEndpoint,
-    uploadEndpoint
-  })
-
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [pendingApproval, setPendingApproval] = useState<{ key: string; previewUrl: string } | null>(null)
-  const pendingApprovalRef = useRef<{ key: string; previewUrl: string } | null>(null)
-  const [cameraKey, setCameraKey] = useState(0) // Key to force PhotoUpload remount for retake
-  const [shouldOpenCamera, setShouldOpenCamera] = useState(initialMode === 'camera') // Track if camera should open
+  const [cameraKey, setCameraKey] = useState(0)
+  const [shouldOpenCamera, setShouldOpenCamera] = useState(initialMode === 'camera')
+  const [shouldShowManualUploadPrompt, setShouldShowManualUploadPrompt] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const hasTriggeredInitialMode = useRef(false)
-  
-  // Handle initial mode for file picker
+  const autoUploadTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const {
+    state: uploadState,
+    pendingApproval,
+    isProcessing,
+    uploadFile,
+    handleUploadResult,
+    approvePending,
+    cancelPending,
+    retakePending
+  } = useUploadFlow({
+    uploadEndpoint,
+    saveEndpoint,
+    onApproved: onSelfiesApproved,
+    onError
+  })
+
   useEffect(() => {
     if (initialMode === 'upload' && !hasTriggeredInitialMode.current) {
       hasTriggeredInitialMode.current = true
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        fileInputRef.current?.click()
-      }, 100)
+      const canAutoTrigger =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(pointer: fine)').matches &&
+        !('ontouchstart' in window || navigator.maxTouchPoints > 0)
+
+      if (canAutoTrigger) {
+        autoUploadTimerRef.current = setTimeout(() => {
+          fileInputRef.current?.click()
+        }, 150)
+      } else {
+        setShouldShowManualUploadPrompt(true)
+      }
+    }
+
+    return () => {
+      if (autoUploadTimerRef.current) {
+        clearTimeout(autoUploadTimerRef.current)
+        autoUploadTimerRef.current = null
+      }
     }
   }, [initialMode])
-  
-  // Handler for files selected via the hidden input (initialMode='upload')
+
   const handleHiddenInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
-    
     try {
-      const results: { key: string; url?: string }[] = []
+      const uploads: UploadResult[] = []
       for (const file of Array.from(files)) {
-        const result = await handlePhotoUploadWrapper(file)
-        results.push(result)
+        const result = await uploadFile(file)
+        if (result) {
+          uploads.push(result)
+        }
       }
-      await handlePhotoUploadedWrapper(results)
+      if (uploads.length > 0) {
+        await handleUploadResult(uploads)
+      }
     } catch (error) {
       console.error('File upload error:', error)
       onError?.('Failed to upload file. Please try again.')
+    } finally {
+      e.target.value = ''
     }
-    // Reset the input so the same file can be selected again
-    e.target.value = ''
   }
-  
-  // Reset shouldOpenCamera after a short delay to allow camera to open
-  // This is an intentional timer pattern for managing camera open state
-  /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
+
   useEffect(() => {
     if (shouldOpenCamera) {
       const timer = setTimeout(() => {
         setShouldOpenCamera(false)
-      }, 1000) // Reset after 1 second to allow camera to open
+      }, 1000)
       return () => clearTimeout(timer)
     }
   }, [shouldOpenCamera])
-  /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
 
-  // Wrapper for handlePhotoUpload - detect camera captures and show approval
-  const handlePhotoUploadWrapper = async (file: File): Promise<{ key: string; url?: string }> => {
-    const isFromCamera = file.name.startsWith('capture-')
-    const result = await handlePhotoUpload(file)
-    
-    // Reset camera open flag after capture
-    setShouldOpenCamera(false)
-    
-    // Store file and preview URL for camera captures
-    if (isFromCamera && result.url) {
-      const approvalData = { key: result.key, previewUrl: result.url }
-      setPendingApproval(approvalData)
-      pendingApprovalRef.current = approvalData
-    }
-    
-    return result
-  }
+  const triggerHiddenFilePicker = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
 
-  // Wrapper for handlePhotoUploaded - both single and multiple uploads process directly
-  const handlePhotoUploadedWrapper = async (result: { key: string; url?: string } | { key: string; url?: string }[]) => {
-    // If this is a camera capture, don't process yet - wait for approval
-    const uploads = Array.isArray(result) ? result : [result]
-    const hasCameraCapture = uploads.some(upload => {
-      // Check if we have pending approval for this key
-      return pendingApprovalRef.current?.key === upload.key
-    })
-    
-    if (hasCameraCapture) {
-      // Don't process yet - approval screen will handle it
-      return
-    }
+  const handleApprove = useCallback(async () => {
+    await approvePending()
+  }, [approvePending])
 
-    // Set processing state IMMEDIATELY and SYNCHRONOUSLY before any async operations
-    // This ensures spinner stays visible without any gaps
-    setIsProcessing(true)
-    
-    try {
-      let successfulResults: { key: string; selfieId?: string }[]
-
-      // Check if saveEndpoint is provided (indicates invite flow with direct uploads)
-      if (saveEndpoint) {
-        // Invite flow: Handle direct uploads (non-temp keys) separately
-        const directUploads = uploads.filter(upload => !upload.key.startsWith('temp:'))
-        const tempUploads = uploads.filter(upload => upload.key.startsWith('temp:'))
-
-        // Process direct uploads by calling saveEndpoint directly
-        const directResults = await Promise.all(
-          directUploads.map(async (upload) => {
-            try {
-              const selfieId = await saveEndpoint(upload.key)
-              return { key: upload.key, selfieId }
-            } catch (error) {
-              console.error('Failed to save direct upload:', error)
-              return { key: upload.key, selfieId: undefined }
-            }
-          })
-        )
-
-        // Process temp uploads through promoteUploads (for authenticated users)
-        const tempResults = tempUploads.length > 0 ? await promoteUploads(tempUploads) : []
-
-        // Combine results
-        successfulResults = [...directResults, ...tempResults]
-      } else {
-        // Standard flow: Use promoteUploads for all uploads (authenticated users)
-        successfulResults = await promoteUploads(uploads)
-      }
-
-      // Small delay to ensure database is ready
-      await new Promise(resolve => setTimeout(resolve, 200))
-
-      // Call parent callback
-      onSelfiesApproved(successfulResults)
-      
-      // Reset processing state after a brief delay to show success
-      // This is important for mobile where component stays mounted
-      setTimeout(() => {
-        setIsProcessing(false)
-      }, 1500)
-    } catch (error) {
-      console.error('Failed to handle upload:', error)
-      onError?.('Selfie upload failed. Please try again.')
-      setIsProcessing(false)
-    }
-  }
-
-  // Handle approval for camera captures
-  const handleApprove = async () => {
-    const approvalData = pendingApprovalRef.current
-    if (!approvalData) {
-      console.error('Approval data not found')
-      setPendingApproval(null)
-      return
-    }
-
-    setIsProcessing(true)
-    
-    try {
-      let successfulResults: { key: string; selfieId?: string }[]
-
-      // Check if saveEndpoint is provided (indicates invite flow with direct uploads)
-      if (saveEndpoint) {
-        // Invite flow: Direct upload - call saveEndpoint
-        try {
-          const selfieId = await saveEndpoint(approvalData.key)
-          successfulResults = [{ key: approvalData.key, selfieId }]
-        } catch (error) {
-          console.error('Failed to save direct upload:', error)
-          throw error
-        }
-      } else {
-        // Standard flow: Promote temp file
-        const results = await promoteUploads([approvalData])
-        successfulResults = results
-      }
-
-      // Small delay to ensure database is ready
-      await new Promise(resolve => setTimeout(resolve, 200))
-
-      // Clear approval state
-      setPendingApproval(null)
-      pendingApprovalRef.current = null
-
-      // Call parent callback
-      onSelfiesApproved(successfulResults)
-      
-      // Reset processing state after a brief delay
-      // This is important for mobile where component stays mounted
-      setTimeout(() => {
-        setIsProcessing(false)
-      }, 1500)
-    } catch (error) {
-      console.error('Failed to approve camera capture:', error)
-      onError?.('Failed to approve selfie. Please try again.')
-      setIsProcessing(false)
-    }
-  }
-
-  const handleRetake = () => {
-    setPendingApproval(null)
-    pendingApprovalRef.current = null
-    // Force PhotoUpload remount and trigger camera to reopen
+  const handleRetake = useCallback(() => {
+    retakePending()
     setCameraKey(prev => prev + 1)
     setShouldOpenCamera(true)
-    if (onRetake) {
-      onRetake()
-    }
-  }
+    onRetake?.()
+  }, [retakePending, onRetake])
 
-  // Show approval screen for camera captures
+  const handleCancelApproval = useCallback(() => {
+    cancelPending()
+    onCancel()
+  }, [cancelPending, onCancel])
+
   if (pendingApproval) {
     return (
       <div data-testid="approval-flow" className="md:static fixed inset-x-0 bottom-0 z-50 md:z-auto bg-white md:bg-transparent" style={{ transform: 'translateZ(0)' }}>
@@ -255,35 +143,53 @@ export default function SelfieUploadFlow({
           previewUrl={pendingApproval.previewUrl}
           onApprove={handleApprove}
           onRetake={handleRetake}
-          onCancel={onCancel}
+          onCancel={handleCancelApproval}
         />
       </div>
     )
   }
 
-  // When hideHeader is true, render a minimal wrapper for mobile (no padding/border)
-  // PhotoUpload component handles all its own styling
+  const commonPhotoUploadProps = {
+    multiple: true,
+    onUpload: uploadFile,
+    onUploaded: (result: UploadResult | UploadResult[]) => handleUploadResult(result),
+    onProcessingCompleteRef,
+    testId: 'desktop-file-input',
+    autoOpenCamera: shouldOpenCamera,
+    isProcessing,
+    onCameraError: onError,
+    buttonLayout: hideHeader ? 'horizontal' : buttonLayout,
+    hidePlusIcon: hideHeader
+  }
+
   if (hideHeader) {
+    const manualPrompt = shouldShowManualUploadPrompt ? (
+      <div className="mb-3 rounded-xl border border-dashed border-gray-300 bg-white/80 px-4 py-3 text-sm text-gray-700">
+        <p className="mb-2">Tap below to open your photo library.</p>
+        <button
+          type="button"
+          className="w-full rounded-lg bg-brand-primary px-4 py-2 text-white font-semibold hover:bg-brand-primary-hover transition-colors"
+          onClick={() => {
+            triggerHiddenFilePicker()
+            setShouldShowManualUploadPrompt(false)
+          }}
+        >
+          Choose from Library
+        </button>
+      </div>
+    ) : null
+
     const mobileContent = (
-      <div data-testid="upload-flow" className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white pt-4 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]" style={{ transform: 'translateZ(0)' }}>
+      <div data-testid="upload-flow" className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] px-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] border-t border-gray-100/50 backdrop-blur-xl bg-white/95" style={{ transform: 'translateZ(0)' }}>
         <div data-testid="mobile-upload-interface" className="[&>div]:!p-0">
-          <PhotoUpload
-            key={cameraKey}
-            multiple
-            onUpload={handlePhotoUploadWrapper}
-            onUploaded={handlePhotoUploadedWrapper}
-            onProcessingCompleteRef={onProcessingCompleteRef}
-            testId="desktop-file-input"
-            autoOpenCamera={shouldOpenCamera}
-            isProcessing={isProcessing}
-          />
+          {manualPrompt}
+          <PhotoUpload {...commonPhotoUploadProps} />
         </div>
       </div>
     )
 
     return (
       <>
-        {/* Hidden file input for initialMode='upload' */}
         <input
           ref={fileInputRef}
           type="file"
@@ -293,28 +199,18 @@ export default function SelfieUploadFlow({
           className="hidden"
           aria-hidden="true"
         />
-        {/* Mobile: Fixed at bottom of viewport using portal to ensure it's not affected by parent containers */}
         {typeof window !== 'undefined' && createPortal(mobileContent, document.body)}
-        {/* Desktop: Static positioning */}
         <div data-testid="upload-flow-desktop" className="hidden md:block">
-          <PhotoUpload
-            key={cameraKey}
-            multiple
-            onUpload={handlePhotoUploadWrapper}
-            onUploaded={handlePhotoUploadedWrapper}
-            onProcessingCompleteRef={onProcessingCompleteRef}
-            testId="desktop-file-input"
-            autoOpenCamera={shouldOpenCamera}
-            isProcessing={isProcessing}
-          />
+          <PhotoUpload key={cameraKey} {...commonPhotoUploadProps} />
         </div>
       </>
     )
   }
 
+  const showManualPrompt = shouldShowManualUploadPrompt
+
   return (
     <div data-testid="upload-flow">
-      {/* Hidden file input for initialMode='upload' */}
       <input
         ref={fileInputRef}
         type="file"
@@ -324,6 +220,23 @@ export default function SelfieUploadFlow({
         className="hidden"
         aria-hidden="true"
       />
+      {showManualPrompt && (
+        <div className="mb-4 rounded-2xl border border-dashed border-gray-300 bg-white/80 p-4 text-gray-700">
+          <p className="text-sm mb-2">
+            Having trouble opening your photo library automatically? Tap below to select photos manually.
+          </p>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-primary-hover transition-colors"
+            onClick={() => {
+              triggerHiddenFilePicker()
+              setShouldShowManualUploadPrompt(false)
+            }}
+          >
+            Choose photos
+          </button>
+        </div>
+      )}
       <div data-testid="mobile-upload-interface" className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900" data-testid="desktop-upload-title">{t('upload.title')}</h2>
@@ -336,16 +249,7 @@ export default function SelfieUploadFlow({
           </button>
         </div>
         <p className="text-sm text-gray-600" data-testid="upload-description">{t('upload.description')}</p>
-        <PhotoUpload
-          key={cameraKey}
-          multiple
-          onUpload={handlePhotoUploadWrapper}
-          onUploaded={handlePhotoUploadedWrapper}
-          onProcessingCompleteRef={onProcessingCompleteRef}
-          testId="desktop-file-input"
-          autoOpenCamera={shouldOpenCamera}
-          isProcessing={isProcessing}
-        />
+        <PhotoUpload key={cameraKey} {...commonPhotoUploadProps} />
       </div>
     </div>
   )

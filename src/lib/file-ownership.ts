@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { getUserEffectiveRoles, getUserWithRoles } from '@/domain/access/roles'
+import { extendInviteExpiry } from '@/lib/invite-utils'
 
 /**
  * File ownership record type
@@ -107,6 +108,7 @@ export async function findFileOwnership(key: string): Promise<OwnershipRecord | 
 
 /**
  * Validate invite token and return person ID, team ID, and context ID if valid
+ * Also extends invite expiry (sliding expiration) when token is valid
  */
 export async function validateInviteToken(token: string | null): Promise<{ personId: string; teamId: string | null; contextId: string | null } | null> {
   if (!token) {
@@ -130,7 +132,12 @@ export async function validateInviteToken(token: string | null): Promise<{ perso
 
   if (!invite?.person) {
     return null
-  }
+ }
+
+  // Extend invite expiry (sliding expiration) - don't await to avoid blocking
+  extendInviteExpiry(invite.id).catch(() => {
+    // Silently fail - expiry extension is best effort
+  })
 
   return {
     personId: invite.person.id,

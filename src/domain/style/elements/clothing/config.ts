@@ -92,7 +92,7 @@ export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, Wardrob
       details: 'Casual startup hoodie outfit with relaxed confidence',
       baseLayer: 'premium hoodie layered over a minimal base tee',
       notes: 'Hood down, sleeves neat; keep presentation polished despite casual tone.',
-      excludeClothingColors: ['topCover']
+      excludeClothingColors: ['topBase']
     },
     polo: {
       details: 'Smart casual polo ensemble',
@@ -118,7 +118,7 @@ export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, Wardrob
       baseLayer: 'minimal knit dress or tee beneath the cardigan',
       outerLayer: 'open-front cardigan draped naturally to frame the logo',
       notes: 'Ensure cardigan edges do not obscure the logo placement.',
-      excludeClothingColors: ['topCover']
+      excludeClothingColors: []
     },
     dress: {
       details: 'Casual startup dress with a streamlined silhouette',

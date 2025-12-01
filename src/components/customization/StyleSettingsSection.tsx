@@ -18,6 +18,8 @@ interface StyleSettingsSectionProps {
   token?: string // Optional token for invite-based access to custom assets
   mobileExtraSteps?: Parameters<typeof PhotoStyleSettings>[0]['mobileExtraSteps']
   onMobileStepChange?: Parameters<typeof PhotoStyleSettings>[0]['onMobileStepChange']
+  onSwipeBack?: () => void // Called when user swipes back from first step (mobile)
+  onStepMetaChange?: Parameters<typeof PhotoStyleSettings>[0]['onStepMetaChange']
 }
 
 export default function StyleSettingsSection({
@@ -35,7 +37,9 @@ export default function StyleSettingsSection({
   isFreePlan = false,
   token,
   mobileExtraSteps,
-  onMobileStepChange
+  onMobileStepChange,
+  onSwipeBack,
+  onStepMetaChange
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -55,6 +59,8 @@ export default function StyleSettingsSection({
         token={token}
         mobileExtraSteps={mobileExtraSteps}
         onMobileStepChange={onMobileStepChange}
+        onSwipeBack={onSwipeBack}
+        onStepMetaChange={onStepMetaChange}
       />
     </>
   )

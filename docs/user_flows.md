@@ -96,42 +96,55 @@ Choose plan or buy credits
 Redirect to dashboard
 ```
 
-## 2. Core Generation Flow
+## 2. Selfie Selection Flow
+
+**Requirements:** Minimum 2 selfies (`MIN_SELFIES_REQUIRED`). Sources: camera, file upload, existing selfies.
+
+**Flow:** Start → Selfie Tips (first time) → Select Selfies (min 2) → Customization Intro (first time) → Style Settings → Generate
+
+| Feature | Mobile | Desktop |
+|---------|--------|---------|
+| Navigation | Swipe | Buttons |
+| Upload | Sticky bottom | Inline placeholder |
+| Customization | One at a time | All visible |
+
+**Camera denied:** Shows `CameraPermissionError` with browser instructions.
+
+---
+
+## 3. Core Generation Flow
 
 ### Happy Path
 ```
 Dashboard
-â†"
+↓
 "Generate New Photo" button
-â†"
-Upload photo
-- Drag-drop or file picker
-- Show preview
-- Validate (face detection)
-â†"
+↓
+Selfie selection (Section 2)
+↓
 GENERATION CONTEXT (auto-selected from account type)
 - Individual accounts: personal credits, full control, private
 - Team accounts: team credits, preset styles, admin visible
-â†"
+↓
 Customize (based on selection)
 - Personal: Select style preset, background, logo options
 - Team: Use team context (background, logo, style preset)
 - Show cost: "Uses 10 credits (1 generation)"
-â†"
+↓
 Click "Generate"
-â†"
+↓
 Processing screen (up to 60s)
 - Progress bar
 - "Generating your professional photos..."
-â†"
+↓
 Review variations (3-4 images)
 - Side-by-side view
 - Click for large preview
-â†"
+↓
 Actions:
-- "Download" â†' Get high-res file
-- "Regenerate" â†' Adjust settings, uses 4 more credits
-- "Cancel" â†' Return to dashboard
+- "Download" → Get high-res file
+- "Regenerate" → Adjust settings, uses 4 more credits
+- "Cancel" → Return to dashboard
 ```
 
 ### Error States
@@ -161,29 +174,29 @@ Upload validation failed
 Return to upload
 ```
 
-## 3. Login Flow
+## 4. Login Flow
 
 ```
 Email + password OR magic link option
-â†"
-If magic link: Send link â†' click â†' auto-login
-â†"
+↓
+If magic link: Send link → click → auto-login
+↓
 Redirect to dashboard
 ```
 
-## 4a. Team Member Invite & Upload Flow (Token-Based)
+## 5a. Team Member Invite & Upload Flow (Token-Based)
 
 ```
 Admin sends invite link with 24hr token + credit allocation
-â†'
+→
 Team member clicks link (no signup required)
-â†'
+→
 Token validation (if expired: send new token to email)
-â†'
-Upload selfie
-- Face validation
-- Image quality check
-â†'
+→
+Selfie selection (see Section 2)
+- Min 2 selfies required
+- Mobile: swipe flow | Desktop: button flow
+→
 GENERATION CONTEXT (auto-selected from account type)
 - Individual accounts: personal credits, full control, private
 - Team accounts: team credits, preset styles, admin visible
@@ -206,7 +219,7 @@ Actions:
 If rejected: Original selfie kept, generated photo deleted
 ```
 
-## 4b. Team Admin Setup & Management Flow
+## 5b. Team Admin Setup & Management Flow
 
 ```
 Admin logs in â†' Dashboard
@@ -233,9 +246,9 @@ ADMIN DASHBOARD
 - Create additional contexts for different styles
 ```
 
-## 4. Team Photo Workflow
+## 5. Team Photo Workflow
 
-See ## 4a and ## 4b for detailed team workflows.
+See ## 5a and ## 5b for detailed team workflows.
 
 ### Token-Based Team Invites
 - 24hr expiration with automatic renewal

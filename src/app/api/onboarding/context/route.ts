@@ -5,6 +5,7 @@ import { OnboardingContext } from '@/lib/onborda/config'
 import { UserService } from '@/domain/services/UserService'
 import { isFreePlan, type PlanPeriod } from '@/domain/subscription/utils'
 import type { Prisma } from '@prisma/client'
+import { extendInviteExpiry } from '@/lib/invite-utils'
 
 const isJsonObject = (value: unknown): value is Prisma.JsonObject =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -43,6 +44,11 @@ export async function GET(request: NextRequest) {
       if (!inviteData || !('person' in inviteData) || !inviteData.person) {
         return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 401 })
       }
+
+      // Extend invite expiry (sliding expiration) - don't await to avoid blocking
+      extendInviteExpiry(inviteData.id).catch(() => {
+        // Silently fail - expiry extension is best effort
+      })
 
       // TypeScript type narrowing: after the check above, we know inviteData.person exists and has an id
       const person = inviteData.person as { id: string }

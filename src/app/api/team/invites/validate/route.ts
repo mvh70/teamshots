@@ -5,6 +5,7 @@ import { enforceInviteRateLimitWithBlocking } from '@/lib/rate-limit'
 import { sendTeamInviteEmail } from '@/lib/email'
 import { randomBytes } from 'crypto'
 import { getBaseUrl } from '@/lib/url'
+import { extendInviteExpiry } from '@/lib/invite-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -140,9 +141,17 @@ export async function POST(request: NextRequest) {
           }, { status: 410 })
         }
       } else {
-        // Accepted and not expired: redirect to invite-dashboard
+        // Accepted and not expired: extend expiry (sliding expiration) and redirect to invite-dashboard
+        await extendInviteExpiry(invite.id)
+        
         const adminPlanPeriod = (invite.team.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
         const isAdminOnFreePlan = adminPlanPeriod === 'free'
+
+        // Fetch updated invite to get new expiry
+        const updatedInvite = await prisma.teamInvite.findUnique({
+          where: { id: invite.id },
+          select: { expiresAt: true }
+        })
 
         return NextResponse.json({
           valid: true,
@@ -150,7 +159,7 @@ export async function POST(request: NextRequest) {
             email: invite.email,
             teamName: invite.team.name,
             creditsAllocated: invite.creditsAllocated,
-            expiresAt: invite.expiresAt,
+            expiresAt: updatedInvite?.expiresAt || invite.expiresAt,
             hasActiveContext: Boolean(invite.context),
             personId: invite.person.id,
             firstName: invite.person.firstName,
@@ -207,9 +216,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Valid invite (not expired, not yet accepted): extend expiry (sliding expiration)
+    await extendInviteExpiry(invite.id)
+    
     // Check if team admin is on free plan
     const adminPlanPeriod = (invite.team.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
     const isAdminOnFreePlan = adminPlanPeriod === 'free'
+
+    // Fetch updated invite to get new expiry
+    const updatedInvite = await prisma.teamInvite.findUnique({
+      where: { id: invite.id },
+      select: { expiresAt: true }
+    })
 
     return NextResponse.json({
       valid: true,
@@ -217,7 +235,7 @@ export async function POST(request: NextRequest) {
         email: invite.email,
         teamName: invite.team.name,
         creditsAllocated: invite.creditsAllocated,
-        expiresAt: invite.expiresAt,
+        expiresAt: updatedInvite?.expiresAt || invite.expiresAt,
         hasActiveContext: Boolean(invite.context),
         contextId: invite.context?.id,
         firstName: invite.firstName,
