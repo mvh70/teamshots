@@ -65,23 +65,23 @@ export default function IntroScreenContent({
 }: IntroScreenContentProps) {
 
   return (
-    <div className={`p-5 md:p-8 space-y-5 md:space-y-6 ${className}`}>
+    <div className={`p-6 md:p-10 lg:p-12 space-y-8 md:space-y-12 lg:space-y-14 ${className}`}>
       {/* Header */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
+      <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <p className="text-xs md:text-sm font-semibold uppercase tracking-[0.2em] text-brand-primary opacity-95">
           {kicker}
         </p>
-        <h3 className="text-xl md:text-2xl font-bold text-gray-900 mt-1">
+        <h3 className="text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-[1.1] font-serif tracking-tight">
           {title}
         </h3>
-        <p className="text-sm md:text-base text-gray-600 mt-2 leading-relaxed">
+        <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl">
           {body}
         </p>
       </div>
 
       {/* Optional Image */}
       {image && (
-        <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+        <div className="rounded-2xl overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 hover:shadow-3xl transition-shadow duration-300">
           <Image
             src={image.src}
             alt={image.alt}
@@ -94,33 +94,45 @@ export default function IntroScreenContent({
       )}
 
       {/* Tips List */}
-      <div className="space-y-3 md:space-y-4">
-        {tips.map((tip) => (
-          <div key={tip.key} className="flex items-start gap-3 md:gap-4">
-            <div className={`flex h-10 w-10 md:h-12 md:w-12 flex-shrink-0 items-center justify-center rounded-full ${tip.bgColor} ${tip.textColor}`}>
-              {tip.icon}
+      <div className="space-y-4 md:space-y-6">
+        {tips.map((tip, index) => (
+          <div 
+            key={tip.key} 
+            className="group relative animate-in fade-in slide-in-from-bottom-4 duration-700"
+            style={{ animationDelay: `${(index + 1) * 100}ms` }}
+          >
+            <div className="flex items-start gap-5 md:gap-6 p-5 md:p-6 rounded-2xl bg-gradient-to-br from-white via-white to-gray-50/50 border border-gray-200/80 shadow-sm hover:shadow-2xl hover:border-gray-300/90 transition-all duration-300 hover:-translate-y-1.5 hover:scale-[1.01] backdrop-blur-sm">
+              <div className={`flex h-14 w-14 md:h-16 md:w-16 flex-shrink-0 items-center justify-center rounded-xl border-2 border-white/90 shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-2xl group-hover:rotate-3 group-hover:border-white ${tip.bgColor} ${tip.textColor}`}>
+                {tip.icon}
+              </div>
+              <div className="flex-1 pt-1 md:pt-2.5">
+                {tip.content.type === 'titled' ? (
+                  <div className="space-y-2.5">
+                    <h4 className="text-lg md:text-xl font-bold text-gray-900 leading-tight tracking-tight">
+                      {tip.content.title}
+                    </h4>
+                    <p className="text-base md:text-lg text-gray-600 leading-relaxed">
+                      {tip.content.description}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-base md:text-lg text-gray-700 leading-relaxed font-medium">
+                    {tip.content.text}
+                  </p>
+                )}
+              </div>
             </div>
-            <p className="text-sm md:text-base text-gray-700 pt-2">
-              {tip.content.type === 'titled' ? (
-                <>
-                  <strong className="text-gray-900">{tip.content.title}</strong>{' '}
-                  {tip.content.description}
-                </>
-              ) : (
-                tip.content.text
-              )}
-            </p>
           </div>
         ))}
       </div>
 
       {/* Continue button for desktop variant */}
       {variant === 'button' && (
-        <div className="pt-4">
+        <div className="pt-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
           <button
             type="button"
             onClick={onContinue}
-            className="w-full px-6 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-brand-primary to-indigo-600 rounded-xl shadow-lg hover:shadow-xl hover:from-brand-primary-hover hover:to-indigo-700 transform hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+            className="w-full px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-brand-primary via-brand-primary to-indigo-600 rounded-xl shadow-lg hover:shadow-2xl hover:from-brand-primary-hover hover:via-brand-primary-hover hover:to-indigo-700 transform hover:-translate-y-1 active:translate-y-0 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
           >
             {continueButtonText}
           </button>

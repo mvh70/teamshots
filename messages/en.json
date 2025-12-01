@@ -1334,34 +1334,34 @@
         },
         "swipeHint": "Swipe or tap Next to continue",
         "intro": {
-          "kicker": "Before you dive in",
-          "title": "A quick pit stop before the glow-up",
-          "body": "You're about to customize how your photos look. Each card tweaks one part of the shoot, so swipe through and make it yours.",
+          "kicker": "Before you generate",
+          "title": "Customize your professional headshots",
+          "body": "You're about to customize how your photos look. Each card controls one part of the shoot. Swipe through and adjust to match your preferences.",
           "bodyDesktop": "You're about to customize how your photos look. Each section below controls a different aspect of your professional headshot.",
-          "swipe": "Swipe right to move forward, left to review. Prefer buttons? The little chevrons below have your back.",
+          "swipe": "Swipe right to move forward, left to go back. You can also use the navigation buttons below.",
           "scrollDesktop": "Scroll down to see all customization options. Adjust each setting to match your preferences.",
-          "editable": "Sparkles badge means you're in charge. Adjust until the vibe matches your story.",
-          "locked": "Lock badge means your team already set it. Peek, but no touching—consistency matters."
+          "editable": "Sparkles badge means you can edit this setting. Adjust until it matches your preferences.",
+          "locked": "Lock badge means your team admin set this. You can view it but not change it to maintain consistency."
         },
         "selfieTips": {
           "kicker": "Get the best results",
           "title": "Selfie tips for amazing photos",
-          "body": "Great photos start with great selfies. Here's how to nail them.",
+          "body": "Great photos start with great selfies. Follow these tips to get the best results.",
           "angles": {
             "title": "Mix up your angles",
-            "desc": "— different positions help our AI understand your face better."
+            "desc": "Different positions help our AI understand your face better."
           },
           "lighting": {
             "title": "Find good lighting",
-            "desc": "— natural light works best. Avoid harsh shadows on your face."
+            "desc": "Natural light works best. Avoid harsh shadows on your face."
           },
           "distance": {
             "title": "Include one further away",
-            "desc": "— this shows the AI your body proportions so it does not have to guess."
+            "desc": "This shows the AI your body proportions so it doesn't have to guess."
           },
           "minimum": {
             "title": "Upload at least 2",
-            "desc": "— more variety = better results. 3-5 selfies is ideal."
+            "desc": "More variety means better results. 3-5 selfies is ideal."
           }
         }
       },

@@ -1343,34 +1343,34 @@
         },
         "swipeHint": "Desliza o toca Siguiente para continuar",
         "intro": {
-          "kicker": "Antes de empezar",
-          "title": "Una parada rápida antes del glamour",
-          "body": "Estás a punto de personalizar cómo se verán tus fotos. Cada tarjeta ajusta una parte del set, así que desliza y deja tu sello personal.",
+          "kicker": "Antes de generar",
+          "title": "Personaliza tus fotos profesionales",
+          "body": "Estás a punto de personalizar cómo se verán tus fotos. Cada tarjeta controla una parte de la sesión. Desliza y ajusta según tus preferencias.",
           "bodyDesktop": "Estás a punto de personalizar cómo se verán tus fotos. Cada sección a continuación controla un aspecto diferente de tu foto profesional.",
-          "swipe": "Desliza a la derecha para avanzar, a la izquierda para revisar. ¿Prefieres botones? Los pequeños chevrones abajo responden al toque.",
+          "swipe": "Desliza a la derecha para avanzar, a la izquierda para volver. También puedes usar los botones de navegación a continuación.",
           "scrollDesktop": "Desplázate hacia abajo para ver todas las opciones de personalización. Ajusta cada configuración según tus preferencias.",
-          "editable": "La insignia con destellos significa que mandas tú. Ajusta hasta que el estilo cuente tu historia.",
-          "locked": "La insignia con candado indica que tu equipo ya lo definió. Puedes mirar, pero no tocar: necesitamos consistencia."
+          "editable": "La insignia con destellos significa que puedes editar esta configuración. Ajusta hasta que coincida con tus preferencias.",
+          "locked": "La insignia con candado significa que el administrador de tu equipo estableció esto. Puedes verla pero no cambiarla para mantener la consistencia."
         },
         "selfieTips": {
           "kicker": "Obtén los mejores resultados",
           "title": "Consejos para selfies increíbles",
-          "body": "Las fotos geniales empiezan con buenas selfies. Así es como lograrlas.",
+          "body": "Las fotos geniales empiezan con buenas selfies. Sigue estos consejos para obtener los mejores resultados.",
           "angles": {
             "title": "Varía los ángulos",
-            "desc": "— diferentes posiciones ayudan a nuestra IA a entender mejor tu rostro."
+            "desc": "Diferentes posiciones ayudan a nuestra IA a entender mejor tu rostro."
           },
           "lighting": {
             "title": "Busca buena iluminación",
-            "desc": "— la luz natural funciona mejor. Evita sombras fuertes en tu cara."
+            "desc": "La luz natural funciona mejor. Evita sombras fuertes en tu cara."
           },
           "distance": {
             "title": "Incluye una de más lejos",
-            "desc": "— esto muestra a la IA tus proporciones corporales para que no tenga que adivinar."
+            "desc": "Esto muestra a la IA tus proporciones corporales para que no tenga que adivinar."
           },
           "minimum": {
             "title": "Sube al menos 2",
-            "desc": "— más variedad = mejores resultados. Lo ideal son 3-5 selfies."
+            "desc": "Más variedad significa mejores resultados. Lo ideal son 3-5 selfies."
           }
         }
       },
