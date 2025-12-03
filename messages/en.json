@@ -165,6 +165,7 @@
     "title": "Simple, use-based pricing",
     "subtitle": "No subscriptions or hidden fees. Pay only for the photos you generate.",
     "mostPopular": "Most Popular",
+    "oneTimePayment": "One time payment",
     "photos": "photos",
     "photo": "photo",
     "photoCount": "{count, plural, one {# photo} other {# photos}}",
@@ -178,61 +179,86 @@
     "checkoutCanceled": "Checkout canceled. No charges were made. (Changed your mind? We get it, happens to the best of us)",
     "checkoutError": "Oops! Something went wrong. Please try again. (If it keeps happening, let us know-we're here to help)",
     "plans": {
-      "tryItForFree": {
-        "name": "Try It For Free",
-        "period": "free",
-        "description": "See what all the fuss is about. No credit card, no commitment, just one free test to prove we're not messing around.",
-        "features": [
-          "Limited customization to give you a taste",
-          "{photosText} in {variations} variations with fixed TeamShotsPro branding (our way of saying hello)",
-          "Perfect for testing before you commit"
-        ],
-        "cta": "Sign up free"
-      },
-      "individual": {
-        "name": "Individual",
+      "vip": {
+        "name": "VIP",
         "period": "one-time",
-        "description": "For solo professionals. One-time purchase, no monthly fees.",
+        "description": "For individuals who need unlimited scale. Priority support and dedicated account management included.",
         "features": [
-          "Full customization: you control pose, background, branding, clothing colors, and facial expressions (be the director of your own photoshoot)",
-          "{photosText} in {variations} variations",
-          "Credits never expire, use anytime (hoard them like digital treasure)",
-          "Top-up credits available at {topUpPricePerPhoto} per photo (for when you can't stop looking amazing)"
+          "{photos} customizable photos, each generated {variations}× so you can pick the best",
+          "Priority processing queue",
+          "High resolution download (4K) included",
+          "Speak with the founder to get your custom style package just for you"
         ],
-        "cta": "Get my photos"
+        "cta": "I want VIP"
       },
-      "proSmall": {
-        "name": "Pro Small",
+      "enterprise": {
+        "name": "Enterprise",
         "period": "one-time",
-        "description": "For small teams up to 5 members. Pay once, no subscription.",
+        "description": "For agencies and enterprises that need unlimited scale. Priority support and dedicated account management included.",
         "features": [
-          "Full customization: control pose, background, branding, clothing colors, and expressions",
-          "{photosText} in {variations} variations",
-          "Credits never expire, use anytime",
-          "Team photo management",
-          "Top-up credits available at {topUpPricePerPhoto} per photo"
+          "{photos} customizable photos, each generated {variations}× so you can pick the best",
+          "Priority processing queue",
+          "High resolution download (4K) included",
+          "Speak with the founder to get your custom style package just for you"
         ],
-        "cta": "Get team photos"
+        "cta": "I want Enterprise"
       },
       "proLarge": {
-        "name": "Pro Large",
+        "name": "Business",
         "period": "one-time",
-        "description": "For larger teams. One-time payment, no recurring charges.",
+        "description": "Team photos looking inconsistent? It undermines your brand. Fix it in minutes with professional photos.",
         "features": [
-          "Full customization: control pose, background, branding, clothing colors, and expressions",
-          "{photosText} in {variations} variations",
-          "Credits never expire, use anytime",
-          "Team photo management",
-          "Company style templates",
-          "Top-up credits available at {topUpPricePerPhoto} per photo"
+          "{photos} customizable photos, each generated {variations}× so you can pick the best",
+          "Full customization: pose, background, branding, colors",
+          "Team photo management dashboard",
+          "Low resolution download (1K) for websites, linkedin, social, etc included. High resolution downloads (4K) at a cost",
+          "Top-up available at {topUpPricePerPhoto} per photo"
         ],
-        "cta": "Scale the team"
+        "cta": "Get my {totalPhotos} photos"
+      },
+      "proSmall": {
+        "name": "Starter",
+        "period": "one-time",
+        "description": "Mismatched headshots hurting your team? Fix it with professional photos in minutes. Get consistent results.",
+        "features": [
+          "{photos} customizable photos, each generated {variations}× so you can pick the best",
+          "Full customization: pose, background, branding, colors",
+          "Team photo management dashboard",
+          "Low resolution download (1K) for websites, linkedin, social, etc included. High resolution downloads (4K) at a cost",
+          "Top-up available at {topUpPricePerPhoto} per photo"
+        ],
+        "cta": "Get my {totalPhotos} photos"
+      },
+      "individual": {
+        "name": "Personal",
+        "period": "one-time",
+        "description": "Blurry selfies hurting your credibility? Get professional headshots to stand out and make an impact.",
+        "features": [
+          "{photos} customizable photos, each generated {variations}× so you can pick the best",
+          "Full customization: pose, background, branding, colors, expressions",
+          "Credits never expire",
+          "Top-up available at {topUpPricePerPhoto} per photo"
+        ],
+        "cta": "Get my {totalPhotos} photos"
+      },
+      "tryItForFree": {
+        "name": "Free Trial",
+        "period": "free",
+        "description": "See the quality before you commit. No credit card required. Try it free and see the results.",
+        "features": [
+          "{photos} customizable photo, generated {variations}× so you can pick the best",
+          "Fixed TeamShotsPro branding",
+          "Perfect for testing the quality"
+        ],
+        "cta": "Try it free"
       }
     },
     "perPhotoVariation": "per photo",
     "includesVariationsPerPhoto": "Includes {count} retries per photo",
     "customizablePhotos": "{count, plural, one {# customizable photo} other {# customizable photos}}",
     "variationsBullet": "Retry up to {count} times to perfect each photo",
+    "photoBreakdownTooltip": "{photos} customizable styles × {variations} AI variations each = {totalPhotos} unique photos",
+    "professionalHeadshots": "professional headshots",
     "faq": {
       "title": "Frequently Asked Questions",
       "questions": {

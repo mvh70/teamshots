@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
+import { useScrollThreshold } from '@/hooks/useScrollThreshold'
 import FlowHeader, { FlowHeaderProps } from './FlowHeader'
 
 interface ScrollAwareHeaderProps {
@@ -15,6 +16,8 @@ interface ScrollAwareHeaderProps {
   className?: string
   /** Show the top header on desktop as well (default: mobile only) */
   showTopOnDesktop?: boolean
+  /** Force header to be fixed on mobile (overrides sticky behaviour) */
+  fixedOnMobile?: boolean
 }
 
 /**
@@ -28,27 +31,16 @@ export default function ScrollAwareHeader({
   flowHeader,
   threshold = 60,
   className = '',
-  showTopOnDesktop = false
+  showTopOnDesktop = false,
+  fixedOnMobile = false
 }: ScrollAwareHeaderProps) {
   const isMobile = useMobileViewport()
   const showTopHeader = Boolean(top) && (isMobile || showTopOnDesktop)
-  const [isScrolled, setIsScrolled] = React.useState(false)
-
-  React.useEffect(() => {
-    if (!showTopHeader) {
-      setIsScrolled(true)
-      return
-    }
-
-    const handleScroll = () => {
-      if (typeof window === 'undefined') return
-      setIsScrolled(window.scrollY > threshold)
-    }
-
-    handleScroll()
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [showTopHeader, threshold])
+  const isFixed = fixedOnMobile && isMobile
+  
+  // Use shared hook for scroll state
+  // Only track scroll if we need to toggle headers (showTopHeader is true)
+  const isScrolled = useScrollThreshold(threshold, showTopHeader)
 
   const topClasses = showTopHeader
     ? `transition-all duration-300 ${isScrolled ? 'opacity-0 pointer-events-none absolute inset-x-0 -translate-y-full' : 'opacity-100 relative translate-y-0'}`
@@ -60,7 +52,7 @@ export default function ScrollAwareHeader({
 
   return (
     <div
-      className={`sticky top-0 z-50 ${className}`.trim()}
+      className={`${isFixed ? 'fixed top-0 left-0 right-0' : 'sticky top-0'} z-50 ${className}`.trim()}
       style={{ top: 'calc(env(safe-area-inset-top, 0px))' }}
     >
       <div className="relative">

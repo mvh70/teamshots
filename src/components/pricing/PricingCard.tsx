@@ -7,7 +7,7 @@ import { comingSoonBadge } from '@/lib/ui/comingSoon'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { TrackedLink } from '@/components/TrackedLink'
 
-type PlanId = 'pro' | 'proSmall' | 'proLarge' | 'individual' | 'tryItForFree'
+type PlanId = 'pro' | 'proSmall' | 'proLarge' | 'individual' | 'tryItForFree' | 'vip' | 'enterprise'
 
 interface PricingCardProps {
   id: PlanId
@@ -26,6 +26,7 @@ interface PricingCardProps {
   className?: string
   titleOverride?: string
   descriptionOverride?: string
+  isVip?: boolean
 }
 
 export default function PricingCard({
@@ -45,6 +46,7 @@ export default function PricingCard({
   className,
   titleOverride,
   descriptionOverride,
+  isVip,
 }: PricingCardProps) {
   const t = useTranslations('pricing')
   const tAll = useTranslations()
@@ -58,6 +60,7 @@ export default function PricingCard({
   // Calculate total photos including retries: numberOfPhotos × (1 original + regenerations)
   const regenerationCount = regenerations || 2
   const totalPhotos = numberOfPhotos * (1 + regenerationCount)
+  const variationsPerPhoto = 1 + regenerationCount
 
   // Calculate top-up price per photo
   let topUpPricePerPhoto = ''
@@ -88,6 +91,13 @@ export default function PricingCard({
   // Get pluralized photos text from translations
   const photosText = t('customizablePhotos', { count: numberOfPhotos })
   
+  // Tooltip text for photo breakdown (shows math: X styles × Y variations = Z total)
+  const photoBreakdownTooltip = t('photoBreakdownTooltip', {
+    photos: numberOfPhotos,
+    variations: variationsPerPhoto,
+    totalPhotos,
+  })
+  
   // Prepare variables for interpolation
   const interpolationValues = {
     photosText,
@@ -95,7 +105,7 @@ export default function PricingCard({
     shots: totalShots,
     photos: numberOfPhotos,
     totalPhotos,
-    variations: totalShots,
+    variations: variationsPerPhoto,
     topUpPricePerPhoto,
   }
   
@@ -105,151 +115,172 @@ export default function PricingCard({
     return t(`plans.${id}.features.${index}`, interpolationValues)
   })
   const extras: string[] = []
-  if (id !== 'tryItForFree') {
-    extras.push(`High quality downloads ${comingSoonBadge()}`)
-    extras.push(`Style packages ${comingSoonBadge()}`)
-  }
+  // Removed: High quality downloads and Style packages (no longer needed)
   const featuresWithPhotos = [...features, ...extras]
   const adjustedFeatures = id === 'tryItForFree'
     ? featuresWithPhotos.map(f => f.toLowerCase().includes('support') ? 'No support' : f)
     : featuresWithPhotos
 
   const isFree = id === 'tryItForFree'
-  const borderColor = popular
-    ? 'ring-4 ring-brand-cta-ring/40 border-[3px] border-brand-cta-ring scale-105 shadow-depth-2xl shadow-brand-cta-shadow/60'
-    : isFree
-      ? 'ring-2 ring-brand-secondary/30 border-2 border-brand-secondary/40'
-      : (id === 'proLarge'
-          ? 'ring-2 ring-brand-premium-ring/40 border-2 border-brand-premium-ring'
-          : 'border-2 border-brand-primary-lighter/60')
+  const isVipTier = isVip || id === 'vip' || id === 'enterprise'
+  const borderColor = isVipTier
+    ? 'ring-4 ring-amber-400/50 border-[3px] border-amber-500 shadow-depth-2xl shadow-amber-500/30'
+    : popular
+      ? 'ring-4 ring-brand-cta-ring/40 border-[3px] border-brand-cta-ring scale-105 shadow-depth-2xl shadow-brand-cta-shadow/60'
+      : isFree
+        ? 'ring-2 ring-brand-secondary/30 border-2 border-brand-secondary/40'
+        : (id === 'proLarge'
+            ? 'ring-2 ring-brand-premium-ring/40 border-2 border-brand-premium-ring'
+            : 'border-2 border-brand-primary-lighter/60')
 
   return (
-    <div className={`relative bg-bg-white rounded-3xl shadow-depth-xl p-6 sm:p-8 lg:p-10 xl:p-12 ${borderColor} transition-all duration-500 hover:shadow-depth-2xl hover:-translate-y-2 flex flex-col min-h-[650px] overflow-visible ${className || ''} ${isFree ? 'bg-gradient-to-br from-bg-white via-bg-white to-brand-secondary-light/40' : ''} ${popular ? 'lg:mt-[-24px] lg:mb-[24px] z-10' : ''}`}>
-      {isFree && (
-        <div className="absolute -top-4 right-4 z-10">
-          <span className="inline-flex items-center px-5 py-2 rounded-full text-xs font-bold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-depth-lg ring-2 ring-white">
+    <div className={`relative bg-bg-white rounded-2xl lg:rounded-3xl shadow-depth-xl p-4 sm:p-6 lg:p-6 xl:p-8 ${borderColor} transition-all duration-500 hover:shadow-depth-2xl hover:-translate-y-2 flex flex-col min-h-[550px] lg:min-h-[600px] overflow-visible ${className || ''} ${isFree ? 'bg-gradient-to-br from-bg-white via-bg-white to-brand-secondary-light/40' : ''} ${isVipTier ? 'bg-gradient-to-br from-amber-50 via-bg-white to-amber-100/50' : ''} ${popular ? 'lg:mt-[-16px] lg:mb-[16px] z-10' : ''}`}>
+      {/* Most Popular badge - shown in top right for popular plans */}
+      {popular && (
+        <div className="absolute -top-3 right-3 lg:-top-4 lg:right-4 z-10">
+          <span className="inline-flex items-center px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-[10px] lg:text-xs font-bold bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white shadow-depth-lg ring-2 ring-white whitespace-nowrap">
+            {popularLabel || (popularLabelKey ? (popularLabelKey.includes('.') ? tAll(popularLabelKey) : t(popularLabelKey)) : t('mostPopular'))}
+          </span>
+        </div>
+      )}
+      {/* FREE badge - shown in top right for free tier */}
+      {isFree && !popular && (
+        <div className="absolute -top-3 right-3 lg:-top-4 lg:right-4 z-10">
+          <span className="inline-flex items-center px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-[10px] lg:text-xs font-bold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-depth-lg ring-2 ring-white">
             FREE
           </span>
         </div>
       )}
-      {!isFree && (
-        <div className="absolute -top-4 right-4 z-10">
-          <span className="inline-flex items-center px-5 py-2 rounded-full text-xs font-bold bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-depth-lg ring-2 ring-white">
-            NO SUBSCRIPTION
-          </span>
-        </div>
-      )}
 
-      <div className="mb-8">
-        <h3 className={`text-2xl lg:text-3xl xl:text-4xl font-bold mb-5 font-display leading-tight ${isFree ? 'text-brand-secondary' : 'text-text-dark'}`}>
+      <div className="mb-4 lg:mb-6">
+        <h3 className={`text-xl lg:text-2xl font-bold mb-2 lg:mb-3 font-display leading-tight ${isFree ? 'text-brand-secondary' : isVipTier ? 'text-amber-600' : 'text-text-dark'}`}>
           {titleOverride || t(`plans.${id}.name`)}
         </h3>
-        <p className="text-base lg:text-lg text-text-body mb-8 leading-relaxed">{descriptionOverride || t(`plans.${id}.description`)}</p>
-        <div className="mb-5">
+        <p className="text-sm lg:text-base text-text-body mb-4 lg:mb-6 leading-relaxed">{descriptionOverride || t(`plans.${id}.description`, interpolationValues)}</p>
+        
+        {/* Price */}
+        <div className="mb-4">
           {previousPrice && (
-            <span className="text-2xl lg:text-3xl font-semibold text-text-muted line-through mb-2 block">
+            <span className="text-lg lg:text-xl font-semibold text-text-muted line-through mb-1 block">
               {previousPrice}
             </span>
           )}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col">
-              <span className={`text-5xl lg:text-6xl xl:text-7xl font-black leading-none ${isFree ? 'bg-gradient-to-r from-brand-secondary to-brand-secondary-hover bg-clip-text text-transparent' : 'text-text-dark'}`}>
-                {displayPrice}
-              </span>
-              {!isFree && (
-                <span className="text-lg lg:text-xl font-bold text-brand-secondary mt-1">
-                  ONE-TIME PAYMENT
-                </span>
-              )}
-            </div>
-            {popular && (
-              <span className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white shadow-depth-md shrink-0 mt-2">
-                {popularLabel || (popularLabelKey ? (popularLabelKey.includes('.') ? tAll(popularLabelKey) : t(popularLabelKey)) : t('mostPopular'))}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-3xl lg:text-4xl xl:text-5xl font-black leading-none ${isFree ? 'bg-gradient-to-r from-brand-secondary to-brand-secondary-hover bg-clip-text text-transparent' : isVipTier ? 'bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent' : 'text-text-dark'}`}>
+              {displayPrice}
+            </span>
+            {!isFree && (
+              <span className="text-xs lg:text-sm font-medium text-text-muted">
+                {t('oneTimePayment')}
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3 flex-wrap mb-6">
-          <div className={`inline-flex items-center px-5 py-2.5 rounded-xl font-bold text-sm lg:text-base ${isFree ? 'bg-brand-secondary-light text-brand-secondary' : 'bg-brand-primary-light text-brand-primary'}`}>
-          {totalPhotos} {totalPhotos === 1 ? t('photo') : t('photos')}
-          </div>
-        </div>
 
+        {/* Per photo pricing - the key value prop */}
         {!isFree && displayPricePerPhoto && (
-          <div className="relative group mb-2">
-            <div className="relative overflow-hidden bg-gradient-to-br from-brand-secondary via-brand-secondary-hover to-brand-secondary rounded-2xl p-2.5 shadow-depth-xl">
-              <div className="bg-bg-white rounded-xl px-6 py-5">
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="text-3xl lg:text-4xl xl:text-5xl font-black text-text-dark">{displayPricePerPhoto}</span>
-                  <span className="text-sm lg:text-base font-bold text-text-body">{t('perPhotoVariation')}</span>
+          <div className="relative group mb-4">
+            <div className={`relative overflow-hidden rounded-xl p-0.5 shadow-depth-md ${isVipTier ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-brand-secondary via-brand-secondary-hover to-brand-secondary'}`}>
+              <div className="bg-bg-white rounded-[10px] px-3 py-3 lg:px-4 lg:py-4">
+                <div className="flex items-baseline gap-1.5 flex-wrap">
+                  <span className={`text-xl lg:text-2xl xl:text-3xl font-black ${isVipTier ? 'text-amber-600' : 'text-text-dark'}`}>{displayPricePerPhoto}</span>
+                  <span className="text-xs lg:text-sm font-semibold text-text-body">per photo</span>
                 </div>
+                <div className={`text-[10px] lg:text-xs font-medium mt-1.5 ${isVipTier ? 'text-amber-600/80' : 'text-text-muted'}`}>
+                  {numberOfPhotos} customizable {numberOfPhotos === 1 ? 'photo' : 'photos'}, generated {variationsPerPhoto} {variationsPerPhoto === 1 ? 'time' : 'times'}.
+                </div>
+                <div className={`text-[10px] lg:text-xs font-semibold ${isVipTier ? 'text-amber-600' : 'text-brand-secondary'}`}>
+                  Choose the best.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Free tier - show what you get */}
+        {isFree && (
+          <div className="relative group mb-4">
+            <div className="bg-brand-secondary-light/50 rounded-xl px-3 py-3 lg:px-4 lg:py-4">
+              <div className="text-xs lg:text-sm font-medium text-brand-secondary">
+                {numberOfPhotos} customizable {numberOfPhotos === 1 ? 'photo' : 'photos'}, generated {variationsPerPhoto} {variationsPerPhoto === 1 ? 'time' : 'times'}.
+              </div>
+              <div className="text-xs lg:text-sm font-semibold text-brand-secondary">
+                Choose the best.
               </div>
             </div>
           </div>
         )}
       </div>
 
-      <ul className="space-y-4 lg:space-y-5 mb-10 flex-grow">
+      <ul className="space-y-2 lg:space-y-3 mb-6 lg:mb-8 flex-grow">
         {adjustedFeatures.map((feature) => (
-          <li key={feature} className="flex items-start gap-4 group/item">
-            <div className={`flex-shrink-0 mt-1 w-7 h-7 lg:w-8 lg:h-8 rounded-full flex items-center justify-center shadow-sm ${isFree ? 'bg-brand-secondary-light' : 'bg-brand-secondary-light'} group-hover/item:scale-110 group-hover/item:shadow-md transition-all duration-200`}>
-              <svg className={`w-4 h-4 lg:w-5 lg:h-5 ${isFree ? 'text-brand-secondary' : 'text-brand-secondary'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+          <li key={feature} className="flex items-start gap-2 lg:gap-3 group/item">
+            <div className={`flex-shrink-0 mt-0.5 w-5 h-5 lg:w-6 lg:h-6 rounded-full flex items-center justify-center ${isVipTier ? 'bg-amber-100' : 'bg-brand-secondary-light'} group-hover/item:scale-110 transition-all duration-200`}>
+              <svg className={`w-3 h-3 lg:w-3.5 lg:h-3.5 ${isVipTier ? 'text-amber-600' : 'text-brand-secondary'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <span className="text-base lg:text-lg text-text-body leading-relaxed font-medium pt-1" dangerouslySetInnerHTML={{ __html: feature }} />
+            <span className="text-xs lg:text-sm text-text-body leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: feature }} />
           </li>
         ))}
       </ul>
 
-      {ctaSlot ? (
-        <div className="mt-auto">{ctaSlot}</div>
-      ) : (
-        ctaMode === 'link' &&
-        href && (
-          <TrackedLink
-            href={href}
-            event="cta_clicked"
-            eventProperties={{
-              placement: 'pricing_card',
-              plan: id,
-              mode: 'link',
-            }}
-            className={`block w-full text-center px-8 py-5 lg:py-6 rounded-2xl font-bold text-base lg:text-lg transition-all duration-300 mt-auto ${
-              isFree
-                ? 'bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-depth-xl hover:shadow-depth-2xl hover:shadow-brand-secondary/30 transform hover:-translate-y-1.5 hover:scale-[1.03] active:scale-[0.97] focus:outline-none focus:ring-4 focus:ring-brand-secondary focus:ring-offset-2 ring-offset-bg-white'
-                : popular
-                  ? 'bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white shadow-depth-xl hover:shadow-depth-2xl hover:shadow-brand-cta-shadow/50 transform hover:-translate-y-1.5 hover:scale-[1.03] active:scale-[0.97] focus:outline-none focus:ring-4 focus:ring-brand-cta-ring focus:ring-offset-2 ring-offset-bg-white'
-                  : 'bg-bg-gray-50 text-text-dark hover:bg-gradient-to-r hover:from-brand-primary-light hover:to-brand-primary-lighter hover:text-brand-primary hover:shadow-depth-lg border-2 border-transparent hover:border-brand-primary-lighter/50'
-            }`}
-          >
-            {t(`plans.${id}.cta`)}
-          </TrackedLink>
-        )
-      )}
+      {/* Unified button styling for all CTA types */}
+      {(() => {
+        // Unified base classes for all button types
+        const baseButtonClasses = 'w-full text-center px-4 py-3 lg:px-6 lg:py-4 min-h-[3.5rem] lg:min-h-[4rem] rounded-xl lg:rounded-2xl font-bold text-sm lg:text-base transition-all duration-300 mt-auto flex items-center justify-center'
+        
+        // Variant-specific classes
+        const variantClasses = isVipTier
+          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-depth-xl hover:shadow-depth-2xl hover:shadow-amber-500/30 transform hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98]'
+          : isFree
+            ? 'bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-depth-xl hover:shadow-depth-2xl hover:shadow-brand-secondary/30 transform hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98]'
+            : popular
+              ? 'bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white shadow-depth-xl hover:shadow-depth-2xl hover:shadow-brand-cta-shadow/50 transform hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98]'
+              : 'bg-bg-gray-50 text-text-dark hover:bg-gradient-to-r hover:from-brand-primary-light hover:to-brand-primary-lighter hover:text-brand-primary hover:shadow-depth-lg border-2 border-transparent hover:border-brand-primary-lighter/50'
 
-      {!ctaSlot && ctaMode === 'button' && onCta && (
-        <button
-          type="button"
-          onClick={() => {
-            track('cta_clicked', {
-              placement: 'pricing_card',
-              plan: id,
-              mode: 'button',
-            })
-            onCta()
-          }}
-          className={`w-full px-8 py-5 lg:py-6 rounded-2xl font-bold text-base lg:text-lg transition-all duration-300 mt-auto ${
-            isFree
-              ? 'bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-white shadow-depth-xl hover:shadow-depth-2xl hover:shadow-brand-secondary/30 transform hover:-translate-y-1.5 hover:scale-[1.03] active:scale-[0.97] focus:outline-none focus:ring-4 focus:ring-brand-secondary focus:ring-offset-2 ring-offset-bg-white'
-              : popular
-                ? 'bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white shadow-depth-xl hover:shadow-depth-2xl hover:shadow-brand-cta-shadow/50 transform hover:-translate-y-1.5 hover:scale-[1.03] active:scale-[0.97] focus:outline-none focus:ring-4 focus:ring-brand-cta-ring focus:ring-offset-2 ring-offset-bg-white'
-                : 'bg-bg-gray-50 text-text-dark hover:bg-gradient-to-r hover:from-brand-primary-light hover:to-brand-primary-lighter hover:text-brand-primary hover:shadow-depth-lg border-2 border-transparent hover:border-brand-primary-lighter/50'
-          }`}
-        >
-          {t(`plans.${id}.cta`)}
-        </button>
-      )}
+        if (ctaSlot) {
+          return <div className="mt-auto">{ctaSlot}</div>
+        }
+
+        if (ctaMode === 'link' && href) {
+          return (
+            <TrackedLink
+              href={href}
+              event="cta_clicked"
+              eventProperties={{
+                placement: 'pricing_card',
+                plan: id,
+                mode: 'link',
+              }}
+              className={`${baseButtonClasses} ${variantClasses}`}
+            >
+              {t(`plans.${id}.cta`)}
+            </TrackedLink>
+          )
+        }
+
+        if (ctaMode === 'button' && onCta) {
+          return (
+            <button
+              type="button"
+              onClick={() => {
+                track('cta_clicked', {
+                  placement: 'pricing_card',
+                  plan: id,
+                  mode: 'button',
+                })
+                onCta()
+              }}
+              className={`${baseButtonClasses} ${variantClasses}`}
+            >
+              {t(`plans.${id}.cta`)}
+            </button>
+          )
+        }
+
+        return null
+      })()}
     </div>
   )
 }

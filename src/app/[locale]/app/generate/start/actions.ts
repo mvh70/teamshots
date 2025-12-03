@@ -8,6 +8,22 @@ import { getUserSubscription } from '@/domain/subscription/subscription'
 import { PACKAGES_CONFIG } from '@/config/packages'
 import { extractPackageId } from '@/domain/style/settings-resolver'
 
+/**
+ * Convert all category fields to user-choice (editable) for freestyle mode.
+ * Used when a paid user has no active context - they get headshot1 with all fields editable.
+ */
+function makeAllFieldsEditable(settings: PhotoStyleSettings): PhotoStyleSettings {
+  return {
+    ...settings,
+    background: { type: 'user-choice' },
+    branding: { type: 'user-choice' },
+    clothing: { style: 'user-choice' },
+    clothingColors: { type: 'user-choice', colors: {} },
+    pose: { type: 'user-choice' },
+    expression: { type: 'user-choice' },
+  }
+}
+
 export type ContextOption = {
   id: string
   name: string
@@ -297,9 +313,12 @@ async function fetchStyleData(params: {
       }
     }
 
+    // No active context - use headshot1 with all fields editable (freestyle mode)
+    const defaultPkg = getPackageConfig(PACKAGES_CONFIG.defaultPlanPackage)
+    const editableDefaults = makeAllFieldsEditable(defaultPkg.defaultSettings)
     return {
-      photoStyleSettings: DEFAULT_PHOTO_STYLE_SETTINGS,
-      originalContextSettings: undefined,
+      photoStyleSettings: editableDefaults,
+      originalContextSettings: editableDefaults,
       selectedPackageId: PACKAGES_CONFIG.defaultPlanPackage,
       activeContext: null,
       availableContexts: contexts
@@ -410,9 +429,12 @@ async function fetchStyleData(params: {
     }
   }
 
+  // No active context - use headshot1 with all fields editable (freestyle mode)
+  const defaultPkg = getPackageConfig(PACKAGES_CONFIG.defaultPlanPackage)
+  const editableDefaults = makeAllFieldsEditable(defaultPkg.defaultSettings)
   return {
-    photoStyleSettings: DEFAULT_PHOTO_STYLE_SETTINGS,
-    originalContextSettings: undefined,
+    photoStyleSettings: editableDefaults,
+    originalContextSettings: editableDefaults,
     selectedPackageId: PACKAGES_CONFIG.defaultPlanPackage,
     activeContext: null,
     availableContexts: contexts

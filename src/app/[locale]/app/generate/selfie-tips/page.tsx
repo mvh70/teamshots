@@ -21,7 +21,7 @@ import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/li
  */
 export default function SelfieTipsPage() {
   const router = useRouter()
-  const t = useTranslations('generation.flow')
+  const tSelfieHeader = useTranslations('customization.photoStyle.mobile.selfieTips')
   const isMobile = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()
   const { markSeenSelfieTips, hydrated, customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META } = useGenerationFlowState()
@@ -52,7 +52,9 @@ export default function SelfieTipsPage() {
   }
 
   const handleBack = () => {
-    router.back()
+    // Navigate to dashboard instead of using router.back()
+    // This ensures consistent behavior regardless of navigation history
+    router.push('/app/dashboard')
   }
 
   return (
@@ -62,6 +64,14 @@ export default function SelfieTipsPage() {
       enabled={isSwipeEnabled}
     >
       <FlowLayout
+        header={{
+          kicker: tSelfieHeader('kicker', { default: 'Get the best results' }),
+          title: tSelfieHeader('title', { default: 'Selfie tips for amazing photos' }),
+          subtitle: tSelfieHeader('body', { default: 'Great photos start with great selfies.' }),
+          showBack: true,
+          onBack: handleBack
+        }}
+        scrollAware={true}
         maxWidth="2xl"
         background="white"
         bottomPadding={isMobile ? 'lg' : 'none'}

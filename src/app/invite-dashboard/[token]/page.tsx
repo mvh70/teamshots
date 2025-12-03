@@ -12,7 +12,7 @@ import {
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
-import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
+import type { MobileStep } from '@/hooks/useCustomizationWizard'
 import { SelectableGrid } from '@/components/generation/selection'
 import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
 import GenerateButton from '@/components/generation/GenerateButton'
@@ -105,7 +105,7 @@ export default function InviteDashboardPage() {
     id: null,
     index: 0
   })
-  const [visitedSteps, setVisitedSteps] = useState<Set<string>>(new Set())
+  const [canGenerateFromWizard, setCanGenerateFromWizard] = useState(false)
   const isMobileViewport = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()
   
@@ -437,12 +437,13 @@ export default function InviteDashboardPage() {
 
   // Check if clothing colors step has been visited (for mobile flow only)
   // On mobile, user must scroll through all steps before generating
-  const hasVisitedClothingColors = !isMobileViewport || visitedSteps.has('clothingColors')
+  // Updated: use canGenerateFromWizard from PhotoStyleSettings hook which checks all editable steps
+  const hasVisitedRequiredSteps = !isMobileViewport || canGenerateFromWizard
   
   const canGenerate = validSelectedIds.length >= 2 && 
                       stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration &&
                       !customizationStillRequired &&
-                      hasVisitedClothingColors
+                      hasVisitedRequiredSteps
 
   const handleMobileStepChange = useCallback((step: MobileStep | null, stepIndex?: number) => {
     const stepId = step?.custom?.id ?? step?.category?.key ?? null
@@ -451,14 +452,6 @@ export default function InviteDashboardPage() {
       id: stepId,
       index: stepIndex ?? 0
     })
-    // Track visited steps (by category key for customization steps)
-    if (stepId) {
-      setVisitedSteps(prev => {
-        const newSet = new Set(prev)
-        newSet.add(stepId)
-        return newSet
-      })
-    }
   }, [])
 
   // Navigation helper: determine initial step when starting the flow
@@ -915,6 +908,7 @@ export default function InviteDashboardPage() {
                       onMobileStepChange={handleMobileStepChange}
                       onSwipeBack={handleSwipeBackFromCustomization}
                       onStepMetaChange={setCustomizationStepsMeta}
+                      onCanGenerateChange={setCanGenerateFromWizard}
                     />
                     <div className="md:border-t md:border-gray-200 md:pt-5 pt-5">
                       <div className="hidden md:flex items-center justify-between mb-4">
@@ -1074,6 +1068,7 @@ export default function InviteDashboardPage() {
                     className="hidden md:block mt-6 pt-6 border-t border-gray-200"
                     token={token}
                     onStepMetaChange={setCustomizationStepsMeta}
+                    onCanGenerateChange={setCanGenerateFromWizard}
                   />
                 </div>
             </SwipeableContainer>

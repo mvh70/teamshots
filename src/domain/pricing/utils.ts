@@ -48,6 +48,19 @@ export function getPricePerPhoto(tier: PricingTier): number {
     return 0
   }
 
+  // VIP and Enterprise are contact sales, calculate for display purposes
+  if (tier === 'vip') {
+    const vipConfig = PRICING_CONFIG.vip
+    const regenerations = PRICING_CONFIG.regenerations.vip
+    return calculatePricePerPhoto(vipConfig.price, vipConfig.credits, regenerations)
+  }
+
+  if (tier === 'enterprise') {
+    const enterpriseConfig = PRICING_CONFIG.enterprise
+    const regenerations = PRICING_CONFIG.regenerations.enterprise
+    return calculatePricePerPhoto(enterpriseConfig.price, enterpriseConfig.credits, regenerations)
+  }
+
   const tierConfig = PRICING_CONFIG[tier] as Extract<typeof PRICING_CONFIG[PricingTier], { price: number }>
   const regenerations = PRICING_CONFIG.regenerations[tier]
 
@@ -77,12 +90,26 @@ export function getPricingDisplay() {
       credits: PRICING_CONFIG.proSmall.credits,
       pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
       regenerations: PRICING_CONFIG.regenerations.proSmall,
-      },
+    },
     proLarge: {
       price: formatPrice(PRICING_CONFIG.proLarge.price),
       credits: PRICING_CONFIG.proLarge.credits,
       pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
       regenerations: PRICING_CONFIG.regenerations.proLarge,
+    },
+    vip: {
+      price: formatPrice(PRICING_CONFIG.vip.price),
+      credits: PRICING_CONFIG.vip.credits,
+      pricePerPhoto: formatPrice(getPricePerPhoto('vip')),
+      regenerations: PRICING_CONFIG.regenerations.vip,
+      isContactSales: true,
+    },
+    enterprise: {
+      price: formatPrice(PRICING_CONFIG.enterprise.price),
+      credits: PRICING_CONFIG.enterprise.credits,
+      pricePerPhoto: formatPrice(getPricePerPhoto('enterprise')),
+      regenerations: PRICING_CONFIG.regenerations.enterprise,
+      isContactSales: true,
     },
   }
 }

@@ -22,7 +22,7 @@ import { useEffect } from 'react'
  */
 export default function CustomizationIntroPage() {
   const router = useRouter()
-  const t = useTranslations('generation.flow')
+  const tIntro = useTranslations('customization.photoStyle.mobile.intro')
   const isMobile = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()
   const {
@@ -79,6 +79,16 @@ export default function CustomizationIntroPage() {
       enabled={isSwipeEnabled}
     >
       <FlowLayout
+        header={{
+          kicker: tIntro('kicker', { default: 'Before you generate' }),
+          title: tIntro('title', { default: 'Customize your professional headshots' }),
+          subtitle: isMobile
+            ? tIntro('body', { default: "You're about to customize how your photos look." })
+            : tIntro('bodyDesktop', { default: "You're about to customize how your photos look." }),
+          showBack: true,
+          onBack: handleBack
+        }}
+        scrollAware={true}
         maxWidth="2xl"
         background="white"
         bottomPadding={isMobile ? 'lg' : 'none'}

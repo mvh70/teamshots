@@ -165,10 +165,13 @@
   "pricing": {
     "title": "Precios simples basados en uso",
     "subtitle": "Sin suscripciones ni tarifas ocultas. Paga solo por las fotos que generas.",
+    "oneTimePayment": "Pago único",
     "perPhotoVariation": "por foto",
     "includesVariationsPerPhoto": "Incluye {count} reintentos por foto",
     "customizablePhotos": "{count, plural, one {# foto personalizable} other {# fotos personalizables}}",
     "variationsBullet": "Regenera hasta {count} veces para perfeccionar cada foto",
+    "photoBreakdownTooltip": "{photos} estilos personalizables × {variations} variaciones IA cada uno = {totalPhotos} fotos únicas",
+    "professionalHeadshots": "fotos profesionales",
     "mostPopular": "Más popular",
     "credits": "créditos",
     "creditsPerMonth": "créditos mensuales",
@@ -186,55 +189,78 @@
     "checkoutCanceled": "Pago cancelado. No se realizaron cargos. (¿Cambiaste de idea? Te entendemos, pasa a los mejores)",
     "checkoutError": "¡Ups! Algo salió mal. Vuelve a intentar. (Si persiste, avísanos—estamos para ayudar)",
     "plans": {
-      "tryItForFree": {
-        "name": "Pruébalo Gratis",
-        "period": "gratis",
-        "description": "Ve de qué se trata todo el alboroto. Sin tarjeta de crédito, sin compromiso, solo una prueba gratis para demostrar que no estamos bromeando.",
-        "features": [
-          "Personalización limitada para darte un adelanto",
-          "{photosText} en {variations} variaciones con branding fijo de TeamShotsPro (nuestra forma de decir hola)",
-          "Perfecto para probar antes de comprometerte"
-        ],
-        "cta": "Regístrate gratis"
-      },
-      "individual": {
-        "name": "Individual",
+      "vip": {
+        "name": "VIP",
         "period": "pago único",
-        "description": "Para profesionales independientes. Pago único, sin cuotas mensuales.",
+        "description": "Para individuos que necesitan escala ilimitada. Soporte prioritario y gestión de cuenta dedicada incluidos.",
         "features": [
-          "Personalización completa: tú controlas pose, fondo, branding, colores de ropa y expresiones faciales (sé el director de tu propia sesión de fotos)",
-          "{photosText} en {variations} variaciones",
-          "Créditos nunca expiran, úsalos cuando quieras (acumúlalos como tesoro digital)",
-          "Recarga de créditos disponible a {topUpPricePerPhoto} por foto (para cuando no puedas dejar de lucir increíble)"
+          "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
+          "Cola de procesamiento prioritario",
+          "Descarga en alta resolución (4K) incluida",
+          "Habla con el fundador para obtener tu estilo personalizado dolo para tí"
         ],
-        "cta": "Obtén mis fotos"
+        "cta": "Quiero VIP"
       },
-      "proSmall": {
-        "name": "Pro Pequeño",
+      "enterprise": {
+        "name": "Empresa",
         "period": "pago único",
-        "description": "Para equipos pequeños hasta 5 miembros. Paga una vez, sin suscripción.",
+        "description": "Para agencias y empresas que necesitan escala ilimitada. Soporte prioritario y gestión de cuenta dedicada incluidos.",
         "features": [
-          "Personalización completa: controla pose, fondo, branding, colores de ropa y expresiones",
-          "{photosText} en {variations} variaciones",
-          "Créditos nunca expiran, úsalos cuando quieras",
-          "Gestión de fotos de equipo",
-          "Recarga de créditos disponible a {topUpPricePerPhoto} por foto"
+          "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
+          "Cola de procesamiento prioritario",
+          "Descarga en alta resolución (4K) incluida",
+          "Habla con el fundador para obtener tu estilo personalizado dolo para tí"
         ],
-        "cta": "Obtén fotos del equipo"
+        "cta": "Quiero Empresa"
       },
       "proLarge": {
-        "name": "Pro Grande",
+        "name": "Negocio",
         "period": "pago único",
-        "description": "Para equipos más grandes. Pago único, sin cargos recurrentes.",
+        "description": "¿Fotos de equipo inconsistentes? Arruinan tu marca. Arréglalo en minutos con fotos profesionales.",
         "features": [
-          "Personalización completa: controla pose, fondo, branding, colores de ropa y expresiones",
-          "{photosText} en {variations} variaciones",
-          "Créditos nunca expiran, úsalos cuando quieras",
-          "Gestión de fotos de equipo",
-          "Plantillas de estilo de empresa",
-          "Recarga de créditos disponible a {topUpPricePerPhoto} por foto"
+          "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
+          "Personalización completa: pose, fondo, branding, colores",
+          "Panel de gestión de fotos de equipo",
+          "Descarga en baja resolución (1K) para sitios web, linkedin, redes sociales, etc incluida. Descargas en alta resolución (4K) con costo adicional",
+          "Recarga disponible a {topUpPricePerPhoto} por foto"
         ],
-        "cta": "Escala al equipo"
+        "cta": "Obtén mis {totalPhotos} fotos"
+      },
+      "proSmall": {
+        "name": "Inicial",
+        "period": "pago único",
+        "description": "¿Fotos desiguales perjudicando a tu equipo? Arréglalo con fotos profesionales en minutos. Obtén resultados consistentes.",
+        "features": [
+          "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
+          "Personalización completa: pose, fondo, branding, colores",
+          "Panel de gestión de fotos de equipo",
+          "Descarga en baja resolución (1K) para sitios web, linkedin, redes sociales, etc incluida. Descargas en alta resolución (4K) con costo adicional",
+          "Recarga disponible a {topUpPricePerPhoto} por foto"
+        ],
+        "cta": "Obtén mis {totalPhotos} fotos"
+      },
+      "individual": {
+        "name": "Personal",
+        "period": "pago único",
+        "description": "¿Selfies borrosas dañando tu credibilidad? Obtén fotos profesionales para destacar y causar impacto.",
+        "features": [
+          "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
+          "Personalización completa: pose, fondo, branding, colores, expresiones",
+          "Créditos nunca expiran",
+          "Recarga disponible a {topUpPricePerPhoto} por foto"
+        ],
+        "cta": "Obtén mis {totalPhotos} fotos"
+      },
+      "tryItForFree": {
+        "name": "Prueba Gratis",
+        "period": "gratis",
+        "description": "Ve la calidad antes de comprometerte. Sin tarjeta de crédito. Pruébalo gratis y ve los resultados.",
+        "features": [
+          "{photos} foto personalizable, generada {variations}× para elegir la mejor",
+          "Branding fijo de TeamShotsPro",
+          "Perfecto para probar la calidad"
+        ],
+        "cta": "Pruébalo gratis"
       }
     },
     "faq": {

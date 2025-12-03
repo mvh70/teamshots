@@ -18,6 +18,14 @@ interface FlowLayoutProps {
     onBack?: () => void
     rightContent?: React.ReactNode
   }
+
+  /** 
+   * Whether the header should fade in on scroll (mobile only).
+   * If true, the header will be invisible at the top of the page and fade in
+   * once the user scrolls past 60px.
+   * Default: false
+   */
+  scrollAware?: boolean
   
   /** Footer configuration (omit to hide footer) */
   footer?: {
@@ -91,9 +99,14 @@ export default function FlowLayout({
   maxWidth = '7xl',
   background = 'gray',
   className = '',
-  contentClassName = ''
+  contentClassName = '',
+  scrollAware = false
 }: FlowLayoutProps) {
   const isMobile = useMobileViewport()
+  
+  // Track scroll state if scrollAware is enabled (mobile only)
+  // We use the shared hook to keep threshold consistent (60px)
+  const isScrolled = useScrollThreshold(60, scrollAware && isMobile)
   
   // Auto-calculate bottom padding based on footer presence on mobile
   const effectiveBottomPadding = bottomPadding === 'auto'
@@ -107,12 +120,22 @@ export default function FlowLayout({
       : <SwipeHint text={footer.text} direction={footer.direction} />
   )
 
+  // Header visibility classes based on scrollAware
+  // If scrollAware is active (mobile + prop):
+  // - Top: opacity-0 pointer-events-none
+  // - Scrolled: opacity-100
+  // If not active:
+  // - Always visible (opacity-100)
+  const headerOpacityClass = (scrollAware && isMobile)
+    ? (isScrolled ? 'opacity-100' : 'opacity-0 pointer-events-none')
+    : 'opacity-100'
+
   return (
     <div className={`min-h-screen ${background === 'gray' ? 'bg-gray-50' : 'bg-white'} ${className}`}>
       {/* Header - use fixed on mobile (works with AppShell), sticky on desktop */}
       {header && (
         <div 
-          className={`${isMobile ? 'fixed' : 'sticky'} top-0 left-0 right-0 z-50`}
+          className={`${isMobile ? 'fixed' : 'sticky'} top-0 left-0 right-0 z-50 transition-opacity duration-300 ${headerOpacityClass}`}
           style={isMobile ? { position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50 } : { position: 'sticky', top: 0, zIndex: 50 }}
         >
           <FlowHeader
@@ -129,7 +152,8 @@ export default function FlowLayout({
       )}
       
       {/* Spacer for fixed header on mobile - accounts for header height */}
-      {header && isMobile && <div className="h-16" />}
+      {/* Don't show spacer if scrollAware is enabled (content has its own header) */}
+      {header && isMobile && !scrollAware && <div className="h-16" />}
 
       {/* Main content area */}
       <div className={`${maxWidthClasses[maxWidth]} mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 ${bottomPaddingClasses[effectiveBottomPadding]} ${contentClassName}`}>

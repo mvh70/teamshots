@@ -3,6 +3,8 @@ const TEST_STRIPE_PRICE_IDS = {
   INDIVIDUAL: "price_1SVDRqENr8odIuXaUsejcC0Y",
   PRO_SMALL: "price_1SVDRrENr8odIuXam20q1Y0H",
   PRO_LARGE: "price_1SVDRsENr8odIuXaI58rONjp",
+  VIP: "", // VIP anchor tier for individual domain - contact sales (no Stripe checkout)
+  ENTERPRISE: "", // Enterprise anchor tier for team domain - contact sales (no Stripe checkout)
   INDIVIDUAL_TOP_UP: "price_1SVDRsENr8odIuXauWVusJRu",
   PRO_SMALL_TOP_UP: "price_1SVDRtENr8odIuXa51JORKHM",
   PRO_LARGE_TOP_UP: "price_1SVDRtENr8odIuXasuxkKPYU",
@@ -12,6 +14,8 @@ const PROD_STRIPE_PRICE_IDS = {
   INDIVIDUAL: "price_1SVEzhENr8odIuXaRD0LmWRv",
   PRO_SMALL: "price_1SVEziENr8odIuXagC8KXdWm",
   PRO_LARGE: "price_1SVEzjENr8odIuXasqgEm3hL",
+  VIP: "", // VIP anchor tier for individual domain - contact sales (no Stripe checkout)
+  ENTERPRISE: "", // Enterprise anchor tier for team domain - contact sales (no Stripe checkout)
   INDIVIDUAL_TOP_UP: "price_1SVEzjENr8odIuXasgnzDlZv",
   PRO_SMALL_TOP_UP: "price_1SVEzkENr8odIuXaSbNmfuHf",
   PRO_LARGE_TOP_UP: "price_1SVEzlENr8odIuXaIBqDLcGj",
@@ -25,6 +29,8 @@ type StripePriceIds = {
   readonly INDIVIDUAL: string;
   readonly PRO_SMALL: string;
   readonly PRO_LARGE: string;
+  readonly VIP: string;
+  readonly ENTERPRISE: string;
   readonly INDIVIDUAL_TOP_UP: string;
   readonly PRO_SMALL_TOP_UP: string;
   readonly PRO_LARGE_TOP_UP: string;
@@ -42,9 +48,11 @@ export const PRICING_CONFIG = {
   // Regeneration system
   regenerations: {
     tryItForFree: 1,
-    individual: 2,
-    proSmall: 2,
-    proLarge: 3,
+    individual: 1,
+    proSmall: 1,
+    proLarge: 2,
+    vip: 3, // VIP gets most retries
+    enterprise: 3, // Enterprise gets most retries
   },
 
   // Try It For Free (free tier - grants credits on signup)
@@ -59,9 +67,18 @@ export const PRICING_CONFIG = {
     stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL || '',
     topUp: {
       price: 19.99,
-      credits: 40,
+      credits: 30,
       stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL_TOP_UP || '',
     },
+  },
+
+  // VIP tier (Individual domain anchor - contact sales, high price for anchoring effect)
+  vip: {
+    price: 199.99,
+    credits: 300, // 60 photos at 10 credits each
+    maxTeamMembers: null, // unlimited
+    stripePriceId: STRIPE_PRICE_IDS.VIP || '', // Contact sales - no direct checkout
+    isContactSales: true, // Flag to show "Contact Sales" instead of checkout
   },
 
   // Pro Small tier (Business - up to 5 team members - one-time purchase)
@@ -71,7 +88,7 @@ export const PRICING_CONFIG = {
     maxTeamMembers: 5,
     stripePriceId: STRIPE_PRICE_IDS.PRO_SMALL || '',
     topUp: {
-      price: 19.99,
+      price: 22.49,
       credits: 50,
       stripePriceId: STRIPE_PRICE_IDS.PRO_SMALL_TOP_UP || '',
     },
@@ -80,14 +97,25 @@ export const PRICING_CONFIG = {
   // Pro Large tier (Business - more than 5 team members - one-time purchase)
   proLarge: {
     price: 59.99,
-    credits: 150, // 20 photos at 10 credits each
+    credits: 100, // 20 photos at 10 credits each
     maxTeamMembers: null, // unlimited
     stripePriceId: STRIPE_PRICE_IDS.PRO_LARGE || '',
     topUp: {
-      price: 34.99,
-      credits: 100, // 10 photos at 10 credits each
+      price: 36.99,
+      credits: 70, // 10 photos at 10 credits each
       stripePriceId: STRIPE_PRICE_IDS.PRO_LARGE_TOP_UP || '',
     },
+  },
+
+
+
+  // Enterprise tier (Team domain anchor - contact sales, high price for anchoring effect)
+  enterprise: {
+    price: 399.99,
+    credits: 600, // 60 photos at 10 credits each
+    maxTeamMembers: null, // unlimited
+    stripePriceId: STRIPE_PRICE_IDS.ENTERPRISE || '', // Contact sales - no direct checkout
+    isContactSales: true, // Flag to show "Contact Sales" instead of checkout
   },
 
   // Cost tracking
@@ -108,7 +136,7 @@ export const PRICING_CONFIG = {
 } as const;
 
 // Pricing tier type (maps to pricing config keys)
-export type PricingTier = 'tryItForFree' | 'individual' | 'proSmall' | 'proLarge';
+export type PricingTier = 'tryItForFree' | 'individual' | 'proSmall' | 'proLarge' | 'vip' | 'enterprise';
 
 // Import types from subscription utils
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'

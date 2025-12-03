@@ -10,7 +10,6 @@ import { PlusIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
-import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import PackageSelector from '@/components/packages/PackageSelector'
 import { PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
@@ -95,7 +94,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(initialData.styleData.originalContextSettings)
   const [selectedPackageId, setSelectedPackageId] = useState<string>(initialData.styleData.selectedPackageId)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [visitedMobileSteps, setVisitedMobileSteps] = useState<Set<string>>(() => new Set())
+  const [canGenerateFromWizard, setCanGenerateFromWizard] = useState(false)
   const [customizationStepsMeta, setCustomizationStepsMetaState] = useState<{ editableSteps: number; allSteps: number; lockedSteps: number[] } | null>(null)
   
   // Plan info from server data
@@ -176,18 +175,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     setGenerationType(type)
   }
 
-  const handleMobileStepChange = useCallback((step: MobileStep | null, _index?: number) => {
-    void _index
-    const stepId = step?.custom?.id ?? step?.category?.key ?? null
-    if (!stepId) return
-    setVisitedMobileSteps(prev => {
-      if (prev.has(stepId)) return prev
-      const next = new Set(prev)
-      next.add(stepId)
-      return next
-    })
-  }, [])
-
   const handleStepMetaChange = useCallback((meta: { editableSteps: number; allSteps: number; lockedSteps: number[] }) => {
     setCustomizationStepsMetaState(meta)
     setCustomizationStepsMeta(meta)
@@ -259,10 +246,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   const teamName = session?.user?.person ? 'Team' : undefined
   
-  useEffect(() => {
-    setVisitedMobileSteps(new Set())
-  }, [skipUpload])
-  
   const hasEnoughCredits = (effectiveGenerationType === 'team' && userCredits.team >= PRICING_CONFIG.credits.perGeneration) ||
                           (effectiveGenerationType === 'personal' && userCredits.individual >= PRICING_CONFIG.credits.perGeneration)
   const hasRequiredSelfies = hasEnoughSelfies(selectedSelfies.length)
@@ -273,23 +256,11 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     ? hasUneditedEditableFields(photoStyleSettings as Record<string, unknown>, originalContextSettings as Record<string, unknown>, effectivePackageId)
     : false
 
-  // On mobile, require visiting clothingColors step if it's editable (matching invited user logic)
-  const hasVisitedClothingColorsIfEditable = React.useMemo(() => {
-    if (!isMobile) return true // Desktop always allows
-
-    // Check if clothingColors is an editable category
-    const categorySettings = (originalContextSettings || photoStyleSettings) as Record<string, unknown>
-    const clothingColorsSettings = categorySettings['clothingColors']
-
-    // If clothingColors is not set or is user-choice, it's editable and must be visited
-    const isClothingColorsEditable = !clothingColorsSettings ||
-      (clothingColorsSettings as { type?: string }).type === 'user-choice'
-
-    // If clothingColors is editable, require it to be visited
-    return !isClothingColorsEditable || visitedMobileSteps.has('clothingColors')
-  }, [isMobile, visitedMobileSteps, originalContextSettings, photoStyleSettings])
+  // On mobile, require visiting ALL editable steps before enabling generate button
+  // This matches the invited user flow where users must scroll through all customization steps
+  const hasVisitedAllEditableSteps = !isMobile || canGenerateFromWizard
   
-  const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && !hasUneditedFields && hasVisitedClothingColorsIfEditable
+  const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && !hasUneditedFields && hasVisitedAllEditableSteps
   
   const hasAnyCredits = userCredits.team > 0 || userCredits.individual > 0
   const selectedPackage = getPackageConfig(effectivePackageId)
@@ -413,11 +384,11 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           enabled={isSwipeEnabled}
         >
         <>
-          <div className="bg-white rounded-xl shadow-md border border-gray-200/60 p-6 sm:p-8">
+          <div className="md:bg-white md:rounded-xl md:shadow-md md:border md:border-gray-200/60 md:p-6 lg:p-8 pb-24 md:pb-6">
             <h1 className="hidden md:block text-2xl font-bold text-gray-900 mb-6 tracking-tight">{t('readyToGenerate')}</h1>
             
-            {/* Alternative Layout: More balanced card-based approach */}
-            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+            {/* Alternative Layout: More balanced card-based approach - hidden on mobile */}
+            <div className="hidden md:flex flex-col lg:flex-row gap-6 lg:gap-8">
               {/* Left Section: Thumbnails and Summary */}
               <div className="flex gap-5 lg:flex-1 min-w-0">
                 {/* Selected Selfie Thumbnails */}
@@ -612,23 +583,31 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             />
           )}
 
-          {/* Photo Style Settings - Mobile */}
-          <div className="md:hidden">
-            <div className="px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto w-full py-8">
-              <StyleSettingsSection
-                value={photoStyleSettings}
-                onChange={setPhotoStyleSettings}
-                readonlyPredefined={!!activeContext}
-                originalContextSettings={originalContextSettings}
-                showToggles={false}
-                packageId={effectivePackageId}
-                isFreePlan={isFreePlan}
-                teamContext={effectiveGenerationType === 'team'}
-                noContainer
-                onMobileStepChange={handleMobileStepChange}
-                onSwipeBack={() => router.push('/app/generate/customization-intro')}
-                onStepMetaChange={handleStepMetaChange}
-              />
+          {/* Mobile: Style settings, cost, and sticky controls */}
+          <div className="md:hidden space-y-6">
+            <StyleSettingsSection
+              value={photoStyleSettings}
+              onChange={setPhotoStyleSettings}
+              readonlyPredefined={!!activeContext}
+              originalContextSettings={originalContextSettings}
+              showToggles={false}
+              packageId={effectivePackageId}
+              isFreePlan={isFreePlan}
+              teamContext={effectiveGenerationType === 'team'}
+              noContainer
+              onSwipeBack={() => router.push('/app/generate/customization-intro')}
+              onStepMetaChange={handleStepMetaChange}
+              onCanGenerateChange={setCanGenerateFromWizard}
+            />
+            <div className="md:border-t md:border-gray-200 md:pt-5 pt-5">
+              <div className="hidden md:flex items-center justify-between mb-4">
+                <div>
+                  <div className="text-sm text-gray-600">{t('costPerGeneration', { default: 'Cost per generation' })}</div>
+                  <div className="text-3xl font-bold text-gray-900">
+                    {photoCreditsPerGeneration} {photoCreditsPerGeneration === 1 ? t('photoCredit', { default: 'photo credit' }) : t('photoCredits', { default: 'photo credits' })}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -679,7 +658,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
               </Link>
         ) : (
           <>
-            {!hasVisitedClothingColorsIfEditable && (
+            {!hasVisitedAllEditableSteps && (
               <p className="text-xs text-gray-500 text-center mb-2">
                 {t('customizeFirstTooltipMobile')}
               </p>
@@ -690,13 +669,13 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                 isGenerating={isGenerating || isPending}
                 size="md"
                 disabledReason={
-                  !hasVisitedClothingColorsIfEditable
+                  !hasVisitedAllEditableSteps
                     ? t('customizeFirstTooltipMobile')
                     : hasUneditedFields
                       ? t('customizeFirstTooltipMobile')
                       : undefined
                 }
-                integrateInPopover={hasUneditedFields && hasVisitedClothingColorsIfEditable}
+                integrateInPopover={hasUneditedFields && hasVisitedAllEditableSteps}
               >
                 Generate
               </GenerateButton>

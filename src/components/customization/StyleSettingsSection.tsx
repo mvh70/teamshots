@@ -20,6 +20,7 @@ interface StyleSettingsSectionProps {
   onMobileStepChange?: Parameters<typeof PhotoStyleSettings>[0]['onMobileStepChange']
   onSwipeBack?: () => void // Called when user swipes back from first step (mobile)
   onStepMetaChange?: Parameters<typeof PhotoStyleSettings>[0]['onStepMetaChange']
+  onCanGenerateChange?: (canGenerate: boolean) => void
 }
 
 export default function StyleSettingsSection({
@@ -39,7 +40,8 @@ export default function StyleSettingsSection({
   mobileExtraSteps,
   onMobileStepChange,
   onSwipeBack,
-  onStepMetaChange
+  onStepMetaChange,
+  onCanGenerateChange
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -61,6 +63,7 @@ export default function StyleSettingsSection({
         onMobileStepChange={onMobileStepChange}
         onSwipeBack={onSwipeBack}
         onStepMetaChange={onStepMetaChange}
+        onCanGenerateChange={onCanGenerateChange}
       />
     </>
   )

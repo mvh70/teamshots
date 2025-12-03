@@ -51,6 +51,8 @@ interface StickyFlowPageProps {
   showTopOnDesktop?: boolean
   /** Height of spacer inserted on mobile below the sticky header (default: 5rem) */
   mobileHeaderSpacerHeight?: number
+  /** Fix header to viewport on mobile (overrides sticky behavior) */
+  fixedHeaderOnMobile?: boolean
   children: React.ReactNode
 }
 
@@ -65,6 +67,7 @@ export default function StickyFlowPage({
   contentClassName = '',
   showTopOnDesktop = false,
   mobileHeaderSpacerHeight = 80,
+  fixedHeaderOnMobile = false,
   children
 }: StickyFlowPageProps) {
   const isMobile = useMobileViewport()
@@ -83,6 +86,7 @@ export default function StickyFlowPage({
         top={topHeader}
         flowHeader={flowHeader}
         showTopOnDesktop={showTopOnDesktop}
+        fixedOnMobile={fixedHeaderOnMobile}
       />
       {isMobile && (
         <div style={{ height: `${mobileHeaderSpacerHeight}px` }} />

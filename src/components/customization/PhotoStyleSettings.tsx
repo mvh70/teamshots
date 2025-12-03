@@ -3,20 +3,14 @@
 import React from 'react'
 import { useTranslations } from 'next-intl'
 import { 
-  PhotoIcon, 
-  SwatchIcon, 
-  UserIcon, 
-  FaceSmileIcon, 
-  LightBulbIcon,
   CameraIcon,
   SparklesIcon,
   LockClosedIcon,
-  HandRaisedIcon
+  UserIcon
 } from '@heroicons/react/24/outline'
 import { SwipeableContainer, FlowNavigation } from '@/components/generation/navigation'
 import { FlowHeader } from '@/components/generation/layout'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
-import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import SelfieTipsContent from '@/components/generation/SelfieTipsContent'
 import CustomizationIntroContent from '@/components/generation/CustomizationIntroContent'
 import {
@@ -42,7 +36,14 @@ import { WARDROBE_DETAILS, FALLBACK_DETAIL_BY_STYLE, KnownClothingStyle } from '
 import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
 import { CardGrid, Tooltip } from '@/components/ui'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
-import { buildCustomizationStepIndicatorWithSelfie, CustomizationStepsMeta } from '@/lib/customizationSteps'
+import { CustomizationStepsMeta } from '@/lib/customizationSteps'
+import { useCustomizationWizard, MobileStep, MobileCustomStep } from '@/hooks/useCustomizationWizard'
+import { 
+  PHOTO_STYLE_CATEGORIES, 
+  USER_STYLE_CATEGORIES, 
+  CategoryConfig 
+} from '@/components/customization/categories'
+import { ensureVisibleCategories } from '@/domain/style/utils'
 
 interface PhotoStyleSettingsProps {
   value: PhotoStyleSettingsType
@@ -59,79 +60,8 @@ interface PhotoStyleSettingsProps {
   onMobileStepChange?: (step: MobileStep | null, index: number) => void
   onSwipeBack?: () => void // Called when user swipes back from the first step (mobile only)
   onStepMetaChange?: (meta: CustomizationStepsMeta) => void
+  onCanGenerateChange?: (canGenerate: boolean) => void
 }
-
-type CategoryConfig = {
-  key: CategoryType
-  label: string
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-  description: string
-}
-
-export type MobileStep = {
-  type: 'intro' | 'selfie-tips' | 'custom' | 'editable' | 'locked'
-  category?: CategoryConfig
-  custom?: MobileCustomStep
-}
-
-type MobileCustomStep = {
-  id: string
-  title: string
-  description?: string
-  badgeLabel?: string
-  badgeVariant?: 'info' | 'success' | 'warning'
-  content: React.ReactNode
-  isComplete?: boolean
-  noBorder?: boolean
-}
-
-const PHOTO_STYLE_CATEGORIES: CategoryConfig[] = [
-  {
-    key: 'background',
-    label: 'Background',
-    icon: PhotoIcon,
-    description: 'Choose background style'
-  },
-  {
-    key: 'branding',
-    label: 'Branding',
-    icon: SwatchIcon,
-    description: 'Logo and branding options'
-  },
-  {
-    key: 'pose',
-    label: 'Pose',
-    icon: HandRaisedIcon,
-    description: 'Body pose and positioning'
-  }
-]
-
-const USER_STYLE_CATEGORIES: CategoryConfig[] = [
-  {
-    key: 'clothing',
-    label: 'Clothing',
-    icon: UserIcon,
-    description: 'Clothing style and accessories'
-  },
-  {
-    key: 'clothingColors',
-    label: 'Clothing Colors',
-    icon: SwatchIcon,
-    description: 'Colors for clothing items'
-  },
-  {
-    key: 'expression',
-    label: 'Expression',
-    icon: FaceSmileIcon,
-    description: 'Facial expression and mood'
-  },
-  {
-    key: 'lighting',
-    label: 'Lighting',
-    icon: LightBulbIcon,
-    description: 'Lighting style and mood'
-  }
-]
 
 export default function PhotoStyleSettings({
   value,
@@ -149,7 +79,8 @@ export default function PhotoStyleSettings({
   mobileExtraSteps,
   onMobileStepChange,
   onSwipeBack,
-  onStepMetaChange
+  onStepMetaChange,
+  onCanGenerateChange
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   const isSwipeEnabled = useSwipeEnabled()
@@ -164,28 +95,51 @@ export default function PhotoStyleSettings({
     const compositionCategoryKeys = pkg.compositionCategories ?? ['background', 'branding', 'pose']
     const userStyleCategoryKeys = pkg.userStyleCategories ?? ['clothing', 'clothingColors', 'expression', 'lighting']
     
+    // Ensure visible categories exist
+    const visibleCategories = ensureVisibleCategories(pkg)
+
     // Filter categories based on package's visibleCategories and groupings
     const visiblePhoto = PHOTO_STYLE_CATEGORIES.filter(c => 
-      pkg.visibleCategories.includes(c.key) && compositionCategoryKeys.includes(c.key)
+      visibleCategories.includes(c.key) && compositionCategoryKeys.includes(c.key)
     )
     const visibleUser = USER_STYLE_CATEGORIES.filter(c => 
-      pkg.visibleCategories.includes(c.key) && userStyleCategoryKeys.includes(c.key)
+      visibleCategories.includes(c.key) && userStyleCategoryKeys.includes(c.key)
     )
     const all = [...visiblePhoto, ...visibleUser]
     return { visiblePhotoCategories: visiblePhoto, visibleUserCategories: visibleUser, allCategories: all }
   }, [pkg])
 
-  // State for tracking customization progress (for locked sections reveal)
-  const [hasCustomizedEditable, setHasCustomizedEditable] = React.useState(false)
-  const [activeMobileStep, setActiveMobileStep] = React.useState(0)
-  
-  // Get persisted visited steps from flow state
-  const { visitedSteps: persistedVisitedSteps, setVisitedSteps: setPersistentVisitedSteps } = useGenerationFlowState()
-  
-  // Track which editable steps have been visited (by their index in allNumberedSteps)
-  // Initialize from persisted state
-  const [visitedEditableSteps, setVisitedEditableSteps] = React.useState<Set<number>>(() => new Set(persistedVisitedSteps))
+  // Mobile Wizard Hook
+  const {
+    mobileSteps,
+    activeMobileStep,
+    stepIndicatorProps,
+    nextStep,
+    prevStep,
+    directStep,
+    isCategoryPredefined,
+    currentEditableCategories,
+    currentLockedCategories,
+    canGenerate
+  } = useCustomizationWizard({
+    packageId,
+    initialSettings: value,
+    originalSettings: originalContextSettings,
+    mobileExtraSteps,
+    onStepMetaChange,
+    onStepChange: onMobileStepChange,
+    onSwipeBack
+  })
 
+  React.useEffect(() => {
+    onCanGenerateChange?.(canGenerate)
+  }, [canGenerate, onCanGenerateChange])
+
+  // State for tracking customization progress (for locked sections reveal) - Desktop only logic now?
+  // Actually, we removed lockedSectionsVisible logic from mobile, but desktop might still use it?
+  // The plan said "Remove lockedSectionsVisible check and related code."
+  // So I'll remove it entirely. Locked sections are always visible if present.
+  
   const resolvedClothingColors = React.useMemo<ClothingColorSettings>(() => {
     const defaults = packageDefaults.clothingColors
     const current = value.clothingColors
@@ -249,33 +203,6 @@ export default function PhotoStyleSettings({
     
     return Array.from(exclusions)
   }, [value.shotType?.type, value.clothing?.style, value.clothing?.details, packageDefaults.shotType?.type, packageDefaults.clothing?.style, packageDefaults.clothing?.details])
-
-  // Auto-reveal locked sections after user customizes editable sections (Context B only)
-  React.useEffect(() => {
-    if (showToggles || hasCustomizedEditable) return // Skip for admin context or already revealed
-
-    const editable = allCategories.filter(cat => {
-      const categorySettings = (value as Record<string, unknown>)[cat.key]
-      if (!categorySettings) return true
-      if (cat.key === 'clothing') {
-        return (categorySettings as { style?: string }).style === 'user-choice'
-      }
-      return (categorySettings as { type?: string }).type === 'user-choice'
-    })
-
-    if (editable.length === 0) return // No editable sections
-
-    // Check if user has made changes to editable sections
-    const hasChanges = editable.some(cat => {
-      const setting = (value as Record<string, unknown>)[cat.key]
-      const defaultSetting = (packageDefaults as Record<string, unknown>)[cat.key]
-      return setting && JSON.stringify(setting) !== JSON.stringify(defaultSetting)
-    })
-
-    if (hasChanges) {
-      setHasCustomizedEditable(true)
-    }
-  }, [value, allCategories, packageDefaults, hasCustomizedEditable, showToggles])
 
   const syncAspectRatioWithShotType = React.useCallback(
     (target: PhotoStyleSettingsType, shotTypeSettings?: ShotTypeSettings | null) => {
@@ -428,56 +355,6 @@ export default function PhotoStyleSettings({
     onChange(newSettings)
   }
 
-  const isCategoryPredefined = (category: CategoryType) => {
-    // When showToggles is true (admin setting style), always check current value
-    // to reflect the admin's active changes, not the original context
-    if (showToggles) {
-      const categorySettings = (value as Record<string, unknown>)[category]
-      if (category === 'clothing') {
-        return !!(
-          categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
-        )
-      }
-      return !!(
-        categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
-      )
-    }
-
-    // If we have original context settings, check if this category was predefined in the original context
-    if (originalContextSettings) {
-      const originalSettings = (originalContextSettings as Record<string, unknown>)[category]
-      if (category === 'clothing') {
-        return !!(
-          originalSettings && (originalSettings as { style?: string }).style !== 'user-choice'
-        )
-      }
-      if (category === 'pose') {
-        return !!(
-          originalSettings && (originalSettings as { type?: string }).type !== 'user-choice'
-        )
-      }
-      return !!(
-        originalSettings && (originalSettings as { type?: string }).type !== 'user-choice'
-      )
-    }
-
-    // Fallback to current value logic
-    const categorySettings = (value as Record<string, unknown>)[category]
-    if (category === 'clothing') {
-      return !!(
-        categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
-      )
-    }
-    if (category === 'pose') {
-      return !!(
-        categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
-      )
-    }
-    return !!(
-      categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
-    )
-  }
-
   const getCategoryStatus = (category: CategoryType) => {
     const categorySettings = (value as Record<string, unknown>)[category]
     if (!categorySettings) return 'not-set'
@@ -490,7 +367,6 @@ export default function PhotoStyleSettings({
     }
     return 'predefined'
   }
-
 
   const renderCategoryCard = (category: CategoryConfig) => {
     const Icon = category.icon
@@ -711,412 +587,7 @@ export default function PhotoStyleSettings({
     )
   }
 
-  // Use shared components for intro steps (mobile swipe variant)
-
-  // Capture initial value on mount to preserve ordering
-  const initialValueRef = React.useRef<PhotoStyleSettingsType | undefined>(undefined)
-  if (initialValueRef.current === undefined) {
-    initialValueRef.current = value
-  }
-
-  // Determine initial editable state based on originalContextSettings or initial value
-  // This preserves the ordering even when users make changes
-  const wasInitiallyEditable = React.useMemo(() => {
-    // Use initialValueRef.current instead of value to avoid dependency on changing value
-    const initialSettings = originalContextSettings || initialValueRef.current
-    const currentPkg = getPackageConfig(packageId)
-    const visiblePhoto = PHOTO_STYLE_CATEGORIES.filter(c => currentPkg.visibleCategories.includes(c.key))
-    const visibleUser = USER_STYLE_CATEGORIES.filter(c => currentPkg.visibleCategories.includes(c.key))
-    const allCats = [...visiblePhoto, ...visibleUser]
-    return new Set(
-      allCats
-        .filter(cat => {
-          const categorySettings = initialSettings ? (initialSettings as Record<string, unknown>)[cat.key] : undefined
-          if (!categorySettings) return false
-          if (cat.key === 'clothing') {
-            return (categorySettings as { style?: string }).style === 'user-choice'
-          }
-          return (categorySettings as { type?: string }).type === 'user-choice'
-        })
-        .map(cat => cat.key)
-    )
-  }, [originalContextSettings, packageId])
-
-  // Separate categories into editable and predefined for mobile reordering
-  // Use initial editable state to preserve ordering, not current state
-  // Variables removed as they were unused: editableCategories, predefinedCategories
-
-  // For Context B: determine editable and locked sections
-  // Use initial editable state to preserve categorization - editable sections stay editable
-  // even after user customizes them (they don't move to preset section)
-  const currentEditableCategories = React.useMemo(() => {
-    if (showToggles) return []
-    return allCategories.filter(cat => wasInitiallyEditable.has(cat.key))
-  }, [showToggles, allCategories, wasInitiallyEditable])
-  
-  const currentLockedCategories = React.useMemo(() => {
-    if (showToggles) return []
-    return allCategories.filter(cat => !wasInitiallyEditable.has(cat.key))
-  }, [showToggles, allCategories, wasInitiallyEditable])
-  
-  const lockedSectionsVisible = currentEditableCategories.length === 0 || hasCustomizedEditable
-
-  const mobileSteps = React.useMemo<MobileStep[]>(() => {
-    if (showToggles) return []
-    const steps: MobileStep[] = []
-
-    // Custom steps (e.g., selfie selection) - now handled by route-based pages
-    if (mobileExtraSteps?.length) {
-      mobileExtraSteps.forEach(step => {
-        steps.push({ type: 'custom', custom: step })
-      })
-    }
-
-    // Style customization categories
-    currentEditableCategories.forEach(cat => {
-      steps.push({
-        category: cat,
-        type: 'editable'
-      })
-    })
-
-    if (lockedSectionsVisible && currentLockedCategories.length > 0) {
-      currentLockedCategories.forEach(cat => {
-        steps.push({
-          category: cat,
-          type: 'locked'
-        })
-      })
-    }
-
-    return steps
-  }, [showToggles, currentEditableCategories, currentLockedCategories, lockedSectionsVisible, mobileExtraSteps])
-
-  const totalMobileSteps = mobileSteps.length
   const currentMobileStep = mobileSteps[activeMobileStep]
-  
-  // All steps that count toward dots (exclude intro-type steps)
-  const allNumberedSteps = React.useMemo(() => {
-    return mobileSteps.filter(step => step.type !== 'intro' && step.type !== 'selfie-tips')
-  }, [mobileSteps])
-  
-  // Only editable steps count toward "Step X of Y"
-  const editableNumberedSteps = React.useMemo(() => {
-    return allNumberedSteps.filter(step => step.type === 'editable')
-  }, [allNumberedSteps])
-  
-  const totalEditableSteps = editableNumberedSteps.length
-  const totalAllSteps = allNumberedSteps.length
-  
-  // Calculate which indices in allNumberedSteps are locked (for showing grey dots)
-  const lockedStepIndices = React.useMemo(() => {
-    return allNumberedSteps
-      .map((step, idx) => step.type === 'locked' ? idx : -1)
-      .filter(idx => idx >= 0)
-  }, [allNumberedSteps])
-
-  const customizationStepMeta = React.useMemo<CustomizationStepsMeta>(() => ({
-    editableSteps: totalEditableSteps,
-    allSteps: totalAllSteps,
-    lockedSteps: lockedStepIndices
-  }), [totalEditableSteps, totalAllSteps, lockedStepIndices])
-
-  React.useEffect(() => {
-    onStepMetaChange?.(customizationStepMeta)
-  }, [onStepMetaChange, customizationStepMeta])
-
-  // Get the current step's position in all numbered steps (0-indexed, for dot highlighting)
-  const currentAllStepsIndex = React.useMemo(() => {
-    if (!currentMobileStep || currentMobileStep.type === 'intro' || currentMobileStep.type === 'selfie-tips') {
-      return -1 // Not a numbered step
-    }
-    
-    return allNumberedSteps.findIndex(step => {
-      if (step.type === 'custom' && currentMobileStep.type === 'custom') {
-        return step.custom?.id === currentMobileStep.custom?.id
-      }
-      if (step.category && currentMobileStep.category) {
-        return step.category.key === currentMobileStep.category.key
-      }
-      return false
-    })
-  }, [currentMobileStep, allNumberedSteps])
-
-  // Track visited "clothingColors" step - only this step becomes "done" on visit
-  // Other steps become "done" when the user actually makes a selection
-  React.useEffect(() => {
-    if (currentAllStepsIndex >= 0 && 
-        currentMobileStep?.type === 'editable' && 
-        currentMobileStep?.category?.key === 'clothingColors') {
-      setVisitedEditableSteps(prev => {
-        if (prev.has(currentAllStepsIndex)) return prev
-        const next = new Set(prev)
-        next.add(currentAllStepsIndex)
-        return next
-      })
-    }
-  }, [currentAllStepsIndex, currentMobileStep?.type, currentMobileStep?.category?.key])
-
-  // Persist visited steps to session storage whenever they change
-  React.useEffect(() => {
-    setPersistentVisitedSteps(Array.from(visitedEditableSteps))
-  }, [visitedEditableSteps, setPersistentVisitedSteps])
-
-  // Track which editable steps have been customized (value differs from default)
-  // For steps other than clothingColors, this determines the "done" (green) state
-  const customizedEditableStepIndices = React.useMemo(() => {
-    const customized = new Set<number>()
-    editableNumberedSteps.forEach((step) => {
-      // Skip clothingColors - it uses visited logic instead
-      if (step.category?.key === 'clothingColors') return
-      
-      let isCustomized = false
-      
-      if (step.type === 'custom') {
-        // Custom steps are considered "set" if they exist
-        isCustomized = true
-      } else if (step.category) {
-        const categorySettings = (value as Record<string, unknown>)[step.category.key]
-        const defaultSetting = (packageDefaults as Record<string, unknown>)[step.category.key]
-        
-        // Compare against originalContextSettings if available (more accurate for team contexts)
-        const comparisonSetting = originalContextSettings 
-          ? (originalContextSettings as Record<string, unknown>)[step.category.key]
-          : defaultSetting
-        
-        if (categorySettings && comparisonSetting) {
-          isCustomized = JSON.stringify(categorySettings) !== JSON.stringify(comparisonSetting)
-        } else if (categorySettings && !comparisonSetting) {
-          // Has a setting but no comparison - check type
-          const settingType = (categorySettings as { type?: string; style?: string }).type || 
-                             (categorySettings as { type?: string; style?: string }).style
-          isCustomized = settingType !== 'user-choice' && settingType !== undefined
-        }
-      }
-      
-      if (isCustomized) {
-        const allStepsIdx = allNumberedSteps.findIndex(s => {
-          if (step.type === 'custom' && s.type === 'custom') {
-            return step.custom?.id === s.custom?.id
-          }
-          if (step.category && s.category) {
-            return step.category.key === s.category.key
-          }
-          return false
-        })
-        if (allStepsIdx >= 0) {
-          customized.add(allStepsIdx)
-        }
-      }
-    })
-    return customized
-  }, [editableNumberedSteps, allNumberedSteps, value, packageDefaults, originalContextSettings])
-
-  // Combine visited (for clothingColors) and customized (for other steps) to get all "done" steps
-  const doneEditableStepIndices = React.useMemo(() => {
-    const done = new Set<number>()
-    visitedEditableSteps.forEach(idx => done.add(idx))
-    customizedEditableStepIndices.forEach(idx => done.add(idx))
-    return done
-  }, [visitedEditableSteps, customizedEditableStepIndices])
-
-  // Get the current step's position in editable steps (1-indexed), or 0 if not a numbered step
-  // When on a locked step, show the last editable step number we completed
-  const currentNumberedStepIndex = React.useMemo(() => {
-    if (currentAllStepsIndex < 0) return 0
-    
-    // If we're on a locked step, find the last editable step before this position
-    // This shows the progress through editable steps even when viewing locked steps
-    if (currentMobileStep?.type === 'locked') {
-      // Find the last editable step before this position
-      let lastEditableIndex = -1
-      for (let i = currentAllStepsIndex - 1; i >= 0; i--) {
-        const numberedStep = allNumberedSteps[i]
-        if (!numberedStep) continue
-        if (numberedStep.type === 'editable') {
-          const editableIndex = editableNumberedSteps.findIndex(step => {
-            if (step.type === 'custom' && numberedStep.type === 'custom') {
-              return step.custom?.id === numberedStep.custom?.id
-            }
-            if (step.category && numberedStep.category) {
-              return step.category.key === numberedStep.category.key
-            }
-            return false
-          })
-          if (editableIndex >= 0) {
-            lastEditableIndex = editableIndex
-            break
-          }
-        }
-      }
-      // If no editable step found before, show 0 (means we haven't completed any editable steps yet)
-      return lastEditableIndex >= 0 ? lastEditableIndex + 1 : 0
-    }
-    
-    // For editable steps, find position in editable steps list
-    const editableIndex = editableNumberedSteps.findIndex(step => {
-      if (step.type === 'custom' && currentMobileStep?.type === 'custom') {
-        return step.custom?.id === currentMobileStep.custom?.id
-      }
-      if (step.category && currentMobileStep?.category) {
-        return step.category.key === currentMobileStep.category.key
-      }
-      return false
-    })
-    return editableIndex >= 0 ? editableIndex + 1 : 0
-  }, [currentMobileStep, editableNumberedSteps, allNumberedSteps, currentAllStepsIndex])
-  
-  // Show step indicator on all numbered steps (editable and locked)
-  const isNumberedStep = currentMobileStep && 
-    currentMobileStep.type !== 'intro' && 
-    currentMobileStep.type !== 'selfie-tips' &&
-    allNumberedSteps.some(step => {
-      if (step.type === 'custom' && currentMobileStep.type === 'custom') {
-        return step.custom?.id === currentMobileStep.custom?.id
-      }
-      if (step.category && currentMobileStep.category) {
-        return step.category.key === currentMobileStep.category.key
-      }
-      return false
-    })
-  
-  // Removed unused completedMobileSteps - can be re-added if progress tracking is needed
-
-  React.useEffect(() => {
-    setActiveMobileStep(prev => {
-      if (mobileSteps.length === 0) {
-        return 0
-      }
-      if (prev >= mobileSteps.length) {
-        return Math.max(mobileSteps.length - 1, 0)
-      }
-      return prev
-    })
-  }, [mobileSteps.length])
-  
-  // Track previous step identity to prevent infinite update loops
-  // (currentMobileStep contains JSX which creates new objects on every render)
-  const prevStepIdentity = React.useRef<{ type: string | null, id: string | null, index: number }>({ type: null, id: null, index: -1 })
-  React.useEffect(() => {
-    if (onMobileStepChange) {
-      const currentType = currentMobileStep?.type ?? null
-      const currentId = currentMobileStep?.custom?.id ?? currentMobileStep?.category?.key ?? null
-      const prev = prevStepIdentity.current
-      
-      // Only call callback if the step identity actually changed
-      if (prev.type !== currentType || prev.id !== currentId || prev.index !== activeMobileStep) {
-        prevStepIdentity.current = { type: currentType, id: currentId, index: activeMobileStep }
-        onMobileStepChange(currentMobileStep ?? null, activeMobileStep)
-      }
-    }
-  }, [currentMobileStep, activeMobileStep, onMobileStepChange])
-
-  const stepIndicatorProps = React.useMemo(() => {
-    if (!isNumberedStep || totalEditableSteps === 0) {
-      return undefined
-    }
-    const currentEditableIndex = (currentNumberedStepIndex > 0 ? currentNumberedStepIndex : 1) - 1
-    return buildCustomizationStepIndicatorWithSelfie(customizationStepMeta, {
-      currentEditableIndex,
-      currentAllStepsIndex: currentAllStepsIndex >= 0 ? currentAllStepsIndex : undefined,
-      visitedEditableSteps: Array.from(doneEditableStepIndices)
-    })
-  }, [
-    isNumberedStep,
-    totalEditableSteps,
-    currentNumberedStepIndex,
-    customizationStepMeta,
-    currentAllStepsIndex,
-    doneEditableStepIndices
-  ])
-
-  // Map step indicator index (0=selfie, 1+=customization) to mobileSteps index
-  const mapStepIndicatorIndexToMobileStep = React.useCallback((indicatorIndex: number): number | null => {
-    if (indicatorIndex === 0) {
-      // Index 0 is selfie - find it in mobileSteps (could be in mobileExtraSteps)
-      const selfieIndex = mobileSteps.findIndex(step => 
-        step.type === 'custom' && (
-          step.custom?.id === 'selfie-selection' || 
-          step.custom?.id === 'selfie'
-        )
-      )
-      return selfieIndex >= 0 ? selfieIndex : null
-    }
-    // Index 1+ maps to customization steps (indicatorIndex - 1 in allNumberedSteps)
-    const numberedStepIndex = indicatorIndex - 1
-    if (numberedStepIndex < 0 || numberedStepIndex >= allNumberedSteps.length) {
-      return null
-    }
-    const targetStep = allNumberedSteps[numberedStepIndex]
-    // Find this step in mobileSteps
-    const mobileIndex = mobileSteps.findIndex(step => {
-      if (targetStep.type === 'custom' && step.type === 'custom') {
-        return step.custom?.id === targetStep.custom?.id
-      }
-      if (targetStep.category && step.category) {
-        return step.category.key === targetStep.category.key
-      }
-      return false
-    })
-    return mobileIndex >= 0 ? mobileIndex : null
-  }, [mobileSteps, allNumberedSteps])
-
-  const handleNextStep = React.useCallback(() => {
-    setActiveMobileStep(prev => {
-      if (mobileSteps.length === 0) return 0
-      return Math.min(prev + 1, mobileSteps.length - 1)
-    })
-  }, [mobileSteps.length])
-
-  const handlePrevStep = React.useCallback(() => {
-    setActiveMobileStep(prev => {
-      if (prev === 0 && onSwipeBack) {
-        // At first step, trigger swipe back to previous page
-        onSwipeBack()
-        return prev
-      }
-      return Math.max(prev - 1, 0)
-    })
-  }, [onSwipeBack])
-
-  const handleDirectStepChange = React.useCallback((index: number) => {
-    setActiveMobileStep(prev => {
-      if (index < 0 || index >= mobileSteps.length) {
-        return prev
-      }
-      return index
-    })
-  }, [mobileSteps.length])
-
-  // Locked sections teaser component (Context B only)
-  const LockedSectionsTeaser = () => {
-    if (showToggles || currentLockedCategories.length === 0 || hasCustomizedEditable) return null
-
-    return (
-      <div className="bg-gradient-to-r from-gray-50 via-blue-50 to-purple-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center shadow-sm">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 bg-gradient-to-br from-gray-400 via-blue-400 to-purple-400 rounded-full flex items-center justify-center shadow-md">
-            <LockClosedIcon className="h-7 w-7 text-white" />
-          </div>
-          <div>
-            <p className="text-base font-bold text-gray-900 mb-2">
-              {t('lockedSections.teaser.title', { 
-                default: `${currentLockedCategories.length} more settings configured`,
-                count: currentLockedCategories.length 
-              })}
-            </p>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              {t('lockedSections.teaser.subtitle', { 
-                default: 'Customize the sections above to see what else has been set' 
-              })}
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-
 
   return (
     <div className={`space-y-8 ${className}`}>
@@ -1127,28 +598,33 @@ export default function PhotoStyleSettings({
           <div className="md:hidden space-y-6">
             {mobileSteps.length > 0 ? (
               <div className="space-y-4">
-                {/* Sticky header with step indicator */}
-                <FlowHeader
-                  title={
-                    currentMobileStep
-                          ? currentMobileStep.type === 'locked'
-                            ? t('mobile.banner.preset', { default: 'Team preset: {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
-                            : currentMobileStep.type === 'selfie-tips'
-                              ? t('mobile.banner.selfieTipsHeading', { default: 'Selfie tips' })
-                              : currentMobileStep.type === 'intro'
-                              ? t('mobile.banner.introHeading', { default: 'Meet your photo style controls' })
-                              : currentMobileStep.type === 'custom' && currentMobileStep.custom
-                                ? currentMobileStep.custom.title
-                                : t('mobile.banner.customize', { default: 'Customize {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
-                          : t('sections.customizable', { default: 'Customize Your Style' })
-                        }
-                  step={stepIndicatorProps}
-                />
+                {/* Fixed header with step indicator - positioned at top of viewport */}
+                <div className="fixed top-0 left-0 right-0 z-50 bg-white" style={{ top: 'calc(env(safe-area-inset-top, 0px))' }}>
+                  <FlowHeader
+                    title={
+                      currentMobileStep
+                            ? currentMobileStep.type === 'locked'
+                              ? t('mobile.banner.preset', { default: 'Team preset: {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
+                              : currentMobileStep.type === 'selfie-tips'
+                                ? t('mobile.banner.selfieTipsHeading', { default: 'Selfie tips' })
+                                : currentMobileStep.type === 'intro'
+                                ? t('mobile.banner.introHeading', { default: 'Meet your photo style controls' })
+                                : currentMobileStep.type === 'custom' && currentMobileStep.custom
+                                  ? currentMobileStep.custom.title
+                                  : t('mobile.banner.customize', { default: 'Customize {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
+                            : t('sections.customizable', { default: 'Customize Your Style' })
+                          }
+                    step={stepIndicatorProps}
+                    sticky={false}
+                  />
+                </div>
+                {/* Spacer for fixed header */}
+                <div className="h-16" />
 
                 {/* Swipeable carousel */}
                 <SwipeableContainer
-                  onSwipeLeft={handleNextStep}
-                  onSwipeRight={handlePrevStep}
+                  onSwipeLeft={nextStep}
+                  onSwipeRight={prevStep}
                   enabled={isSwipeEnabled}
                   className="overflow-hidden"
                 >
@@ -1189,22 +665,14 @@ export default function PhotoStyleSettings({
                       : activeMobileStep
                   }
                   total={
-                    stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? totalMobileSteps
+                    stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? mobileSteps.length
                   }
-                  onPrev={handlePrevStep}
-                  onNext={handleNextStep}
+                  onPrev={prevStep}
+                  onNext={nextStep}
                   canGoPrev={true}
-                  canGoNext={activeMobileStep < totalMobileSteps - 1}
+                  canGoNext={activeMobileStep < mobileSteps.length - 1}
                   onDotClick={(index) => {
-                    // Map from step indicator index back to mobileSteps index
-                    if (stepIndicatorProps) {
-                      const mobileIndex = mapStepIndicatorIndexToMobileStep(index)
-                      if (mobileIndex !== null) {
-                        handleDirectStepChange(mobileIndex)
-                      }
-                    } else {
-                      handleDirectStepChange(index)
-                    }
+                    directStep(index)
                   }}
                   stepColors={
                     stepIndicatorProps
@@ -1222,10 +690,6 @@ export default function PhotoStyleSettings({
                   {t('sections.customizableDesc', { default: 'Personalize these settings to match your preferences' })}
                 </p>
               </div>
-            )}
-
-            {!lockedSectionsVisible && currentLockedCategories.length > 0 && (
-              <LockedSectionsTeaser />
             )}
           </div>
 
@@ -1256,10 +720,7 @@ export default function PhotoStyleSettings({
             
             {currentLockedCategories.length > 0 && (
               <>
-                {currentEditableCategories.length > 0 && <LockedSectionsTeaser />}
-                
-                {lockedSectionsVisible && (
-                  <div className="space-y-6">
+                <div className="space-y-6">
                     <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200 rounded-xl p-6 shadow-lg">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
@@ -1287,7 +748,6 @@ export default function PhotoStyleSettings({
                       ))}
                     </CardGrid>
                   </div>
-                )}
               </>
             )}
           </div>

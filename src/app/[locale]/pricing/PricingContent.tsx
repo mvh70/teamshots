@@ -8,6 +8,13 @@ import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
 
+// Helper to calculate total photos (styles × variations)
+function getTotalPhotos(credits: number, regenerations: number): number {
+  const styles = calculatePhotosFromCredits(credits)
+  const variations = 1 + regenerations
+  return styles * variations
+}
+
 export default function PricingContent() {
   const t = useTranslations('pricing');
 
@@ -35,20 +42,35 @@ export default function PricingContent() {
   
   const maxVariations = Math.max(individualVariations, proSmallVariations, proLargeVariations)
 
-  const tryItForFreePlan = {
-    id: 'tryItForFree' as const,
-    price: 'Free',
-    credits: PRICING_CONFIG.tryItForFree.credits,
-    regenerations: PRICING_CONFIG.regenerations.tryItForFree,
-    pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
+  // VIP plan - high price anchor for individual domain
+  const vipPlan = {
+    id: 'vip' as const,
+    price: `$${PRICING_CONFIG.vip.price}`,
+    credits: PRICING_CONFIG.vip.credits,
+    regenerations: PRICING_CONFIG.regenerations.vip,
+    pricePerPhoto: formatPrice(getPricePerPhoto('vip')),
+    isVip: true,
+    totalPhotos: getTotalPhotos(PRICING_CONFIG.vip.credits, PRICING_CONFIG.regenerations.vip),
   }
 
-  const individualPlan = {
-    id: 'individual' as const,
-    price: `$${PRICING_CONFIG.individual.price}`,
-    credits: PRICING_CONFIG.individual.credits,
-    regenerations: PRICING_CONFIG.regenerations.individual,
-    pricePerPhoto: formatPrice(getPricePerPhoto('individual')),
+  // Enterprise plan - high price anchor for team domain
+  const enterprisePlan = {
+    id: 'enterprise' as const,
+    price: `$${PRICING_CONFIG.enterprise.price}`,
+    credits: PRICING_CONFIG.enterprise.credits,
+    regenerations: PRICING_CONFIG.regenerations.enterprise,
+    pricePerPhoto: formatPrice(getPricePerPhoto('enterprise')),
+    isVip: true, // Use VIP styling
+    totalPhotos: getTotalPhotos(PRICING_CONFIG.enterprise.credits, PRICING_CONFIG.regenerations.enterprise),
+  }
+
+  const proLargePlan = {
+    id: 'proLarge' as const,
+    price: `$${PRICING_CONFIG.proLarge.price}`,
+    credits: PRICING_CONFIG.proLarge.credits,
+    regenerations: PRICING_CONFIG.regenerations.proLarge,
+    pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
+    totalPhotos: getTotalPhotos(PRICING_CONFIG.proLarge.credits, PRICING_CONFIG.regenerations.proLarge),
   }
 
   const proSmallPlan = {
@@ -58,24 +80,41 @@ export default function PricingContent() {
     regenerations: PRICING_CONFIG.regenerations.proSmall,
     popular: domainSignupType === 'team' || domainSignupType === null, // Popular only when team-restricted or no restriction
     pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
+    totalPhotos: getTotalPhotos(PRICING_CONFIG.proSmall.credits, PRICING_CONFIG.regenerations.proSmall),
   }
 
-  const proLargePlan = {
-    id: 'proLarge' as const,
-    price: `$${PRICING_CONFIG.proLarge.price}`,
-    credits: PRICING_CONFIG.proLarge.credits,
-    regenerations: PRICING_CONFIG.regenerations.proLarge,
-    pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
+  const individualPlan = {
+    id: 'individual' as const,
+    price: `$${PRICING_CONFIG.individual.price}`,
+    credits: PRICING_CONFIG.individual.credits,
+    regenerations: PRICING_CONFIG.regenerations.individual,
+    pricePerPhoto: formatPrice(getPricePerPhoto('individual')),
+    totalPhotos: getTotalPhotos(PRICING_CONFIG.individual.credits, PRICING_CONFIG.regenerations.individual),
+  }
+
+  const tryItForFreePlan = {
+    id: 'tryItForFree' as const,
+    price: 'Free',
+    credits: PRICING_CONFIG.tryItForFree.credits,
+    regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+    pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
+    totalPhotos: getTotalPhotos(PRICING_CONFIG.tryItForFree.credits, PRICING_CONFIG.regenerations.tryItForFree),
   }
 
   // Filter plans based on domain restrictions
+  // Order: VIP/Enterprise (anchor) → Pro Large → Pro Small (popular) → Individual → Free
+  // This creates price anchoring effect: $399.99 makes $29.99 feel like a steal
+  const anchorPlan = domainSignupType === 'individual' ? vipPlan : enterprisePlan
+  
   const plansToShow = [
-    // Always show Try It For Free first
-    tryItForFreePlan,
+    // Show VIP for individual domain, Enterprise for team domain
+    anchorPlan,
+    // Show Pro Large and Pro Small if team domain or no domain restriction
+    ...(domainSignupType === 'team' || domainSignupType === null ? [proLargePlan, proSmallPlan] : []),
     // Show Individual if individual domain or no domain restriction
     ...(domainSignupType === 'individual' || domainSignupType === null ? [individualPlan] : []),
-    // Show Pro Small and Pro Large if team domain or no domain restriction
-    ...(domainSignupType === 'team' || domainSignupType === null ? [proSmallPlan, proLargePlan] : []),
+    // Always show Try It For Free last
+    tryItForFreePlan,
   ]
 
   return (
@@ -122,12 +161,28 @@ export default function PricingContent() {
         </div>
 
         {/* Pricing Cards (using shared component) */}
-        <div className={`grid gap-8 lg:gap-10 mb-16 overflow-visible ${
+        {/* Grid adapts: 5 cards = scrollable on mobile, 2-3 visible on desktop */}
+        <div className={`grid gap-8 lg:gap-6 mb-16 overflow-visible ${
+          plansToShow.length >= 5 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5' :
+          plansToShow.length === 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
           plansToShow.length === 3 ? 'md:grid-cols-3' :
           plansToShow.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' :
           'md:grid-cols-1 max-w-md mx-auto'
         }`}>
           {plansToShow.map((plan) => {
+            // VIP and Enterprise plans use contact sales link
+            if (plan.id === 'vip' || plan.id === 'enterprise') {
+              return (
+                <PricingCard
+                  key={plan.id}
+                  {...plan}
+                  ctaMode="link"
+                  href="mailto:sales@teamshots.vip?subject=VIP%20Plan%20Inquiry"
+                  className="h-full"
+                />
+              )
+            }
+            
             // Free plan still uses signup flow
             if (plan.id === 'tryItForFree') {
               return (
@@ -151,6 +206,13 @@ export default function PricingContent() {
             const planTier = plan.id === 'individual' ? 'individual' : 'pro'
             const planPeriod = plan.id === 'proLarge' ? 'large' : 'small'
             
+            // Unified button styling for CheckoutButton - matches PricingCard button styling
+            const baseButtonClasses = '!rounded-xl lg:!rounded-2xl w-full text-center !px-4 !py-3 lg:!px-6 lg:!py-4 min-h-[3.5rem] lg:min-h-[4rem] !font-bold !text-sm lg:!text-base transition-all duration-300 flex items-center justify-center'
+            const isPopular = 'popular' in plan && plan.popular
+            const buttonVariantClasses = isPopular
+              ? ''
+              : 'bg-bg-gray-50 text-text-dark hover:bg-gradient-to-r hover:from-brand-primary-light hover:to-brand-primary-lighter hover:text-brand-primary border-2 border-transparent hover:border-brand-primary-lighter/50'
+            
             return (
               <PricingCard
                 key={plan.id}
@@ -164,13 +226,10 @@ export default function PricingContent() {
                       planTier,
                       planPeriod,
                     }}
-                    useBrandCtaColors={'popular' in plan && plan.popular}
-                    className={'popular' in plan && plan.popular 
-                      ? '' 
-                      : 'bg-bg-gray-50 text-text-dark hover:bg-gradient-to-r hover:from-brand-primary-light hover:to-brand-primary-lighter hover:text-brand-primary border-2 border-transparent hover:border-brand-primary-lighter/50'
-                    }
+                    useBrandCtaColors={isPopular}
+                    className={`${baseButtonClasses} ${buttonVariantClasses}`.trim()}
                   >
-                    {t(`plans.${plan.id}.cta`)}
+                    {t(`plans.${plan.id}.cta`, { totalPhotos: plan.totalPhotos })}
                   </CheckoutButton>
                 }
                 className="h-full"
