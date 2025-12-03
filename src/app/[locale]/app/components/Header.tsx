@@ -3,7 +3,7 @@
 import { Bars3Icon, ChevronLeftIcon } from '@heroicons/react/24/outline'
 import {useTranslations} from 'next-intl'
 import { usePathname } from 'next/navigation'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/i18n/routing'
 import { useSession } from 'next-auth/react'
 
 interface HeaderProps {
@@ -22,9 +22,9 @@ export default function Header({ onMenuClick, standalone = false, showBackToDash
   const { data: session } = useSession()
   
   // Only show the dashboard header on the actual dashboard page
-  const isDashboard = pathname === '/app/dashboard' || pathname.endsWith('/dashboard')
+  const isDashboard = pathname === '/app/dashboard' || pathname?.endsWith('/dashboard') ?? false
   
-  const isGenerationFlow = pathname.startsWith('/app/generate')
+  const isGenerationFlow = pathname?.startsWith('/app/generate')
   
   const handleMenuClick = () => {
     if (standalone) {
