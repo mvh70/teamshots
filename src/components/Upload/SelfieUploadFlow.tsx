@@ -1,11 +1,30 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import { useUploadFlow } from '@/hooks/useUploadFlow'
 import type { UploadResult } from '@/hooks/useUploadFlow'
+
+// Detect if we can auto-trigger file picker (desktop with pointer device)
+function getCanAutoTrigger(): boolean {
+  if (typeof window === 'undefined') return false
+  return (
+    window.matchMedia?.('(pointer: fine)').matches &&
+    !('ontouchstart' in window || navigator.maxTouchPoints > 0)
+  )
+}
+
+function subscribeToMediaQuery(callback: () => void): () => void {
+  const mediaQuery = window.matchMedia?.('(pointer: fine)')
+  mediaQuery?.addEventListener?.('change', callback)
+  return () => mediaQuery?.removeEventListener?.('change', callback)
+}
+
+function getServerSnapshot(): boolean {
+  return false
+}
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
@@ -38,13 +57,20 @@ export default function SelfieUploadFlow({
   const t = useTranslations('selfies')
   const [cameraKey, setCameraKey] = useState(0)
   const [shouldOpenCamera, setShouldOpenCamera] = useState(initialMode === 'camera')
-  const [shouldShowManualUploadPrompt, setShouldShowManualUploadPrompt] = useState(false)
+  // Track if user dismissed the manual upload prompt
+  const [promptDismissed, setPromptDismissed] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const hasTriggeredInitialMode = useRef(false)
   const autoUploadTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const initialModeRef = useRef(initialMode)
+  
+  // Use useSyncExternalStore for SSR-safe auto-trigger detection
+  const canAutoTrigger = useSyncExternalStore(subscribeToMediaQuery, getCanAutoTrigger, getServerSnapshot)
+  
+  // Derive whether to show manual upload prompt
+  const shouldShowManualUploadPrompt = initialMode === 'upload' && !canAutoTrigger && !promptDismissed
 
   const {
-    state: uploadState,
     pendingApproval,
     isProcessing,
     uploadFile,
@@ -59,21 +85,17 @@ export default function SelfieUploadFlow({
     onError
   })
 
+  // Update ref when initialMode changes
   useEffect(() => {
-    if (initialMode === 'upload' && !hasTriggeredInitialMode.current) {
-      hasTriggeredInitialMode.current = true
-      const canAutoTrigger =
-        typeof window !== 'undefined' &&
-        window.matchMedia?.('(pointer: fine)').matches &&
-        !('ontouchstart' in window || navigator.maxTouchPoints > 0)
+    initialModeRef.current = initialMode
+  }, [initialMode])
 
-      if (canAutoTrigger) {
-        autoUploadTimerRef.current = setTimeout(() => {
-          fileInputRef.current?.click()
-        }, 150)
-      } else {
-        setShouldShowManualUploadPrompt(true)
-      }
+  useEffect(() => {
+    if (initialModeRef.current === 'upload' && !hasTriggeredInitialMode.current && canAutoTrigger) {
+      hasTriggeredInitialMode.current = true
+      autoUploadTimerRef.current = setTimeout(() => {
+        fileInputRef.current?.click()
+      }, 150)
     }
 
     return () => {
@@ -82,7 +104,7 @@ export default function SelfieUploadFlow({
         autoUploadTimerRef.current = null
       }
     }
-  }, [initialMode])
+  }, [canAutoTrigger])
 
   const handleHiddenInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -107,12 +129,11 @@ export default function SelfieUploadFlow({
   }
 
   useEffect(() => {
-    if (shouldOpenCamera) {
-      const timer = setTimeout(() => {
-        setShouldOpenCamera(false)
-      }, 1000)
-      return () => clearTimeout(timer)
-    }
+    if (!shouldOpenCamera) return
+    const timer = setTimeout(() => {
+      setShouldOpenCamera(false)
+    }, 1000)
+    return () => clearTimeout(timer)
   }, [shouldOpenCamera])
 
   const triggerHiddenFilePicker = useCallback(() => {
@@ -171,7 +192,7 @@ export default function SelfieUploadFlow({
           className="w-full rounded-lg bg-brand-primary px-4 py-2 text-white font-semibold hover:bg-brand-primary-hover transition-colors"
           onClick={() => {
             triggerHiddenFilePicker()
-            setShouldShowManualUploadPrompt(false)
+            setPromptDismissed(true)
           }}
         >
           Choose from Library
@@ -230,7 +251,7 @@ export default function SelfieUploadFlow({
             className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-primary-hover transition-colors"
             onClick={() => {
               triggerHiddenFilePicker()
-              setShouldShowManualUploadPrompt(false)
+              setPromptDismissed(true)
             }}
           >
             Choose photos

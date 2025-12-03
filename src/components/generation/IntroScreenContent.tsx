@@ -58,7 +58,6 @@ export default function IntroScreenContent({
   body,
   tips,
   image,
-  swipeHintText = 'Swipe or tap Next to continue',
   continueButtonText = 'Continue',
   onContinue,
   className = ''
@@ -81,7 +80,7 @@ export default function IntroScreenContent({
 
       {/* Optional Image */}
       {image && (
-        <div className="rounded-2xl overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 hover:shadow-3xl transition-shadow duration-300">
+        <div className="rounded-2xl overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 hover:shadow-3xl transition-shadow">
           <Image
             src={image.src}
             alt={image.alt}

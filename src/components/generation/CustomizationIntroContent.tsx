@@ -39,7 +39,7 @@ export default function CustomizationIntroContent({
       icon: <ArrowsRightLeftIcon className="h-6 w-6 md:h-7 md:w-7" />,
       bgColor: 'bg-brand-primary/10',
       textColor: 'text-brand-primary',
-      content: { type: 'simple', text: navigationText }
+      content: { type: 'simple' as const, text: navigationText }
     }] : []),
     {
       key: 'editable',

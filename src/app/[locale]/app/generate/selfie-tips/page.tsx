@@ -3,12 +3,13 @@
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import SelfieTipsContent from '@/components/generation/SelfieTipsContent'
-import { FlowLayout } from '@/components/generation/layout'
+import { StickyFlowPage } from '@/components/generation/layout'
 import { SwipeableContainer, FlowNavigation } from '@/components/generation/navigation'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
+import Header from '@/app/[locale]/app/components/Header'
 
 /**
  * Selfie tips intro page for logged-in users.
@@ -52,9 +53,7 @@ export default function SelfieTipsPage() {
   }
 
   const handleBack = () => {
-    // Navigate to dashboard instead of using router.back()
-    // This ensures consistent behavior regardless of navigation history
-    router.push('/app/dashboard')
+    router.back()
   }
 
   return (
@@ -63,18 +62,20 @@ export default function SelfieTipsPage() {
       onSwipeRight={isSwipeEnabled ? handleBack : undefined}
       enabled={isSwipeEnabled}
     >
-      <FlowLayout
-        header={{
+      <StickyFlowPage
+        topHeader={<Header standalone showBackToDashboard />}
+        flowHeader={{
           kicker: tSelfieHeader('kicker', { default: 'Get the best results' }),
           title: tSelfieHeader('title', { default: 'Selfie tips for amazing photos' }),
           subtitle: tSelfieHeader('body', { default: 'Great photos start with great selfies.' }),
           showBack: true,
           onBack: handleBack
         }}
-        scrollAware={true}
         maxWidth="2xl"
         background="white"
         bottomPadding={isMobile ? 'lg' : 'none'}
+        fixedHeaderOnMobile
+        mobileHeaderSpacerHeight={120}
       >
         <div className="py-8 md:py-12">
           <SelfieTipsContent 
@@ -95,7 +96,7 @@ export default function SelfieTipsPage() {
             stepColors={navigationStepColors}
           />
         </div>
-      </FlowLayout>
+      </StickyFlowPage>
     </SwipeableContainer>
   )
 }

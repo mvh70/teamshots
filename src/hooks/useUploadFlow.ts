@@ -99,21 +99,11 @@ export function useUploadFlow({
     objectUrlsRef.current.add(url)
   }, [])
 
-  const revokeObjectUrl = useCallback((url?: string) => {
-    if (!url) return
-    URL.revokeObjectURL(url)
-    objectUrlsRef.current.delete(url)
-  }, [])
-
-  const revokeAllUrls = useCallback(() => {
-    objectUrlsRef.current.forEach(url => URL.revokeObjectURL(url))
-    objectUrlsRef.current.clear()
-  }, [])
-
   useEffect(() => {
+    const urls = objectUrlsRef.current
     return () => {
-      objectUrlsRef.current.forEach(url => URL.revokeObjectURL(url))
-      objectUrlsRef.current.clear()
+      urls.forEach(url => URL.revokeObjectURL(url))
+      urls.clear()
     }
   }, [])
 

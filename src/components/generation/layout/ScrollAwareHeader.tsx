@@ -6,11 +6,11 @@ import { useScrollThreshold } from '@/hooks/useScrollThreshold'
 import FlowHeader, { FlowHeaderProps } from './FlowHeader'
 
 interface ScrollAwareHeaderProps {
-  /** Optional dashboard/header content shown before the flow header */
+  /** Optional dashboard/header content shown above the flow header */
   top?: React.ReactNode
   /** Props forwarded to FlowHeader (step indicator etc.) */
   flowHeader: FlowHeaderProps
-  /** Scroll distance before we swap headers */
+  /** Scroll distance before top header collapses */
   threshold?: number
   /** Additional classes for the sticky wrapper */
   className?: string
@@ -21,10 +21,12 @@ interface ScrollAwareHeaderProps {
 }
 
 /**
- * Handles sticky dual-header behaviour: a top header that fades out once the
- * user scrolls past `threshold`, and a FlowHeader that fades in (with step
- * indicator support). Used for selfie-selection pages to mirror the
- * customization flow experience.
+ * Handles sticky dual-header behaviour:
+ * - When top is provided: Both headers visible initially, top collapses on scroll, flow remains sticky
+ * - When top is NOT provided: Flow header scrolls with content (not sticky) to avoid overlaying page headers
+ * 
+ * Used for generation flow pages to show app header (hamburger + back) above
+ * the page-specific flow header (title + step indicator).
  */
 export default function ScrollAwareHeader({
   top,
@@ -39,32 +41,33 @@ export default function ScrollAwareHeader({
   const isFixed = fixedOnMobile && isMobile
   
   // Use shared hook for scroll state
-  // Only track scroll if we need to toggle headers (showTopHeader is true)
+  // Only track scroll if we have a top header to collapse
   const isScrolled = useScrollThreshold(threshold, showTopHeader)
 
+  // Top header: visible initially, collapses on scroll
   const topClasses = showTopHeader
-    ? `transition-all duration-300 ${isScrolled ? 'opacity-0 pointer-events-none absolute inset-x-0 -translate-y-full' : 'opacity-100 relative translate-y-0'}`
+    ? `transition-all duration-300 overflow-hidden ${isScrolled ? 'max-h-0 opacity-0' : 'max-h-20 opacity-100'}`
     : ''
 
-  const flowClasses = showTopHeader
-    ? `transition-opacity duration-300 ${isScrolled ? 'opacity-100 relative' : 'opacity-0 pointer-events-none absolute inset-x-0'}`
+  // When no top header is provided, don't make the header sticky/fixed
+  // This prevents overlaying page-level headers (like InviteDashboardHeader)
+  const positionClasses = showTopHeader
+    ? (isFixed ? 'fixed top-0 left-0 right-0' : 'sticky top-0')
     : 'relative'
 
   return (
     <div
-      className={`${isFixed ? 'fixed top-0 left-0 right-0' : 'sticky top-0'} z-50 ${className}`.trim()}
-      style={{ top: 'calc(env(safe-area-inset-top, 0px))' }}
+      className={`${positionClasses} z-50 ${className}`.trim()}
+      style={showTopHeader ? { top: 'calc(env(safe-area-inset-top, 0px))' } : undefined}
     >
-      <div className="relative">
-        {showTopHeader && (
-          <div className={topClasses}>
-            {top}
-          </div>
-        )}
-        <div className={flowClasses}>
-          <FlowHeader {...flowHeader} sticky={false} />
+      {/* Top header (dashboard/app header) - collapses on scroll */}
+      {showTopHeader && (
+        <div className={topClasses}>
+          {top}
         </div>
-      </div>
+      )}
+      {/* Flow header (page title + step indicator) - always visible */}
+      <FlowHeader {...flowHeader} sticky={false} />
     </div>
   )
 }

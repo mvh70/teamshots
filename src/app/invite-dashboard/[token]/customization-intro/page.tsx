@@ -25,7 +25,6 @@ export default function InviteCustomizationIntroPage() {
   const router = useRouter()
   const params = useParams()
   const token = params.token as string
-  const t = useTranslations('customization.photoStyle.mobile')
   const tIntro = useTranslations('customization.photoStyle.mobile.intro')
   const isMobile = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()

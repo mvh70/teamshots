@@ -16,6 +16,7 @@ import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
 import SharedMobileSelfieFlow from '@/components/generation/selfie/SharedMobileSelfieFlow'
+import Header from '@/app/[locale]/app/components/Header'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -192,6 +193,7 @@ function SelfieSelectionPageContent() {
       enabled={isSwipeEnabled}
     >
       <StickyFlowPage
+        topHeader={<Header standalone showBackToDashboard />}
         flowHeader={{
           kicker: tSelection('bannerTitle', { default: 'Select your selfies' }),
           title: t('title', { default: 'Choose your selfie' }),
@@ -204,7 +206,7 @@ function SelfieSelectionPageContent() {
         maxWidth="full"
         contentClassName="px-0 py-0"
         bottomPadding="none"
-        mobileHeaderSpacerHeight={96}
+        mobileHeaderSpacerHeight={120}
         fixedHeaderOnMobile
       >
         {loading ? (

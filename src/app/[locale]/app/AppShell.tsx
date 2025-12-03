@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from '@/i18n/routing'
+import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
@@ -43,8 +44,11 @@ export default function AppShell({
 }) {
   const { status } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  
+  const isGenerationFlow = pathname?.startsWith('/app/generate')
 
   // Hydration indicator for Playwright tests - intentional SSR pattern.
   // This allows tests to wait for React hydration to complete before interacting.
@@ -128,6 +132,23 @@ export default function AppShell({
     }
   }, [sidebarCollapsed, showSidebar])
 
+  // Open sidebar on mobile when standalone Header dispatches event
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleOpenSidebar = () => {
+      // Only open if we're on mobile and sidebar is available
+      if (window.innerWidth < 1024 && showSidebar) {
+        setSidebarCollapsed(false)
+      }
+    }
+
+    window.addEventListener('open-sidebar', handleOpenSidebar)
+    return () => {
+      window.removeEventListener('open-sidebar', handleOpenSidebar)
+    }
+  }, [showSidebar])
+
   useEffect(() => {
     if (status === 'loading') return
     if (status === 'unauthenticated') {
@@ -145,7 +166,7 @@ export default function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+    <div className={`min-h-screen bg-gray-50 ${isGenerationFlow ? '' : 'overflow-x-hidden'}`}>
       <div className="flex relative">
         {showSidebar && (
           <>
@@ -191,13 +212,23 @@ export default function AppShell({
             />
           </>
         )}
-        <div className={`flex-1 flex flex-col transition-all duration-300 ${
-          showSidebar ? (sidebarCollapsed ? 'ml-0 lg:ml-16' : 'ml-0 lg:ml-64') : 'ml-0'
-        }`}>
+        <div
+          className={`flex-1 flex flex-col transition-all duration-300 ${
+            showSidebar ? (sidebarCollapsed ? 'ml-0 lg:ml-16' : 'ml-0 lg:ml-64') : 'ml-0'
+          }`}
+        >
           <Header onMenuClick={() => {
             setSidebarCollapsed(!sidebarCollapsed)
           }} />
-          <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">{children}</main>
+          <main
+            className={`
+              flex-1 w-full min-w-0
+              ${isGenerationFlow ? 'p-0 md:p-6 lg:p-8' : 'p-4 sm:p-6'}
+              overflow-x-hidden
+            `}
+          >
+            {children}
+          </main>
         </div>
       </div>
       <OnboardingLauncher />

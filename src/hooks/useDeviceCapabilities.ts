@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 const IOS_REGEX = /iPad|iPhone|iPod/
 
@@ -20,50 +20,43 @@ const initialState: DeviceCapabilities = {
   isClientReady: false
 }
 
+function getDeviceCapabilities(): DeviceCapabilities {
+  if (typeof window === 'undefined') return initialState
+
+  const isIOS =
+    IOS_REGEX.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+  const hasTouch =
+    'ontouchstart' in window ||
+    navigator.maxTouchPoints > 0
+
+  const isMobileViewport = window.innerWidth < 768
+  const hasCameraApi = Boolean(navigator.mediaDevices?.getUserMedia)
+  const prefersNativeCamera = isIOS || !hasCameraApi
+
+  return {
+    isMobile: isMobileViewport,
+    isIOSDevice: isIOS,
+    hasTouchScreen: hasTouch,
+    hasCameraApi,
+    preferNativeCamera: prefersNativeCamera,
+    isClientReady: true
+  }
+}
+
+function subscribe(callback: () => void): () => void {
+  window.addEventListener('resize', callback)
+  return () => window.removeEventListener('resize', callback)
+}
+
+function getServerSnapshot(): DeviceCapabilities {
+  return initialState
+}
+
 export function useDeviceCapabilities(): DeviceCapabilities {
-  const [state, setState] = useState<DeviceCapabilities>(initialState)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const detect = () => {
-      const isIOS =
-        IOS_REGEX.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-
-      const hasTouch =
-        'ontouchstart' in window ||
-        navigator.maxTouchPoints > 0 ||
-        navigator.maxTouchPoints > 0
-
-      const isMobileViewport = window.innerWidth < 768
-      const hasCameraApi = Boolean(navigator.mediaDevices?.getUserMedia)
-      const prefersNativeCamera = isIOS || !hasCameraApi
-
-      setState({
-        isMobile: isMobileViewport,
-        isIOSDevice: isIOS,
-        hasTouchScreen: hasTouch,
-        hasCameraApi,
-        preferNativeCamera: prefersNativeCamera,
-        isClientReady: true
-      })
-    }
-
-    detect()
-
-    const handleResize = () => {
-      setState(prev => ({
-        ...prev,
-        isMobile: window.innerWidth < 768
-      }))
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  return useMemo(() => state, [state])
+  const getSnapshot = useCallback(() => getDeviceCapabilities(), [])
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }
 
 export type UseDeviceCapabilitiesReturn = ReturnType<typeof useDeviceCapabilities>

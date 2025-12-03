@@ -3,7 +3,7 @@
 import React from 'react'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useScrollThreshold } from '@/hooks/useScrollThreshold'
-import FlowHeader, { FlowHeaderProps } from './FlowHeader'
+import FlowHeader from './FlowHeader'
 import FlowFooter, { SwipeHint } from './FlowFooter'
 
 interface FlowLayoutProps {

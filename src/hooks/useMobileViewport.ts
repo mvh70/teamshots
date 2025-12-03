@@ -1,10 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 
 /**
  * Tailwind's md breakpoint (768px)
  * Used consistently across the app for mobile/desktop detection
  */
 export const MOBILE_BREAKPOINT = 768
+
+function getSnapshot(): boolean {
+  return typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT
+}
+
+function getServerSnapshot(): boolean {
+  return false
+}
+
+function subscribe(callback: () => void): () => void {
+  window.addEventListener('resize', callback)
+  return () => window.removeEventListener('resize', callback)
+}
 
 /**
  * Hook for detecting mobile viewport based on screen width.
@@ -13,21 +26,7 @@ export const MOBILE_BREAKPOINT = 768
  * @returns boolean - true if viewport width is less than 768px
  */
 export function useMobileViewport(): boolean {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-
-  return isMobile
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }
 
 export default useMobileViewport

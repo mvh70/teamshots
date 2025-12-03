@@ -54,26 +54,27 @@ export default function FlowHeader({
   backLabel = 'Back',
   sticky = true,
   className = '',
-  rightContent,
-  fullBleed = false
+  rightContent
 }: FlowHeaderProps) {
   const positionClasses = sticky ? 'md:static sticky top-0 z-40' : ''
-  const offsetClasses = (sticky || fullBleed) ? '-mx-4 sm:-mx-6' : ''
 
   return (
     <div
       className={`
         ${positionClasses}
-        bg-white border-b border-gray-200
-        px-4 sm:px-6 py-3.5 shadow-md shadow-gray-200/50
-        ${offsetClasses}
+        bg-white/95 backdrop-blur-md border-b border-gray-200
+        px-4 sm:px-6 py-3.5 shadow-sm
         transition-shadow duration-300
         ${className}
       `}
-      style={sticky ? { 
-        top: 'calc(env(safe-area-inset-top, 0px))',
-        willChange: 'transform'
-      } : undefined}
+      style={{
+        ...(sticky ? {
+          top: 'calc(env(safe-area-inset-top, 0px))',
+          willChange: 'transform'
+        } : {}),
+        width: '100%',
+        maxWidth: '100vw'
+      }}
       role="banner"
     >
       <div className="flex items-center justify-between gap-4">

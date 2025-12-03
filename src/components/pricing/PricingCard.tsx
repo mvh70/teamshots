@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl'
 import { calculatePhotosFromCredits, calculatePricePerPhoto, formatPrice } from '@/domain/pricing'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { comingSoonBadge } from '@/lib/ui/comingSoon'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { TrackedLink } from '@/components/TrackedLink'
 
@@ -90,13 +89,6 @@ export default function PricingCard({
   
   // Get pluralized photos text from translations
   const photosText = t('customizablePhotos', { count: numberOfPhotos })
-  
-  // Tooltip text for photo breakdown (shows math: X styles × Y variations = Z total)
-  const photoBreakdownTooltip = t('photoBreakdownTooltip', {
-    photos: numberOfPhotos,
-    variations: variationsPerPhoto,
-    totalPhotos,
-  })
   
   // Prepare variables for interpolation
   const interpolationValues = {

@@ -3,13 +3,14 @@
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import CustomizationIntroContent from '@/components/generation/CustomizationIntroContent'
-import { FlowLayout } from '@/components/generation/layout'
+import { StickyFlowPage } from '@/components/generation/layout'
 import { SwipeableContainer, FlowNavigation } from '@/components/generation/navigation'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
 import { useEffect } from 'react'
+import Header from '@/app/[locale]/app/components/Header'
 
 /**
  * Customization intro page for logged-in users.
@@ -30,8 +31,7 @@ export default function CustomizationIntroPage() {
     hasSeenCustomizationIntro,
     hydrated,
     flags,
-    customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META,
-    setPendingGeneration
+    customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META
   } = useGenerationFlowState()
 
   // Build step indicator for customization intro (after selfie selection, so selfie is complete)
@@ -78,8 +78,9 @@ export default function CustomizationIntroPage() {
       onSwipeRight={isSwipeEnabled ? handleBack : undefined}
       enabled={isSwipeEnabled}
     >
-      <FlowLayout
-        header={{
+      <StickyFlowPage
+        topHeader={<Header standalone showBackToDashboard />}
+        flowHeader={{
           kicker: tIntro('kicker', { default: 'Before you generate' }),
           title: tIntro('title', { default: 'Customize your professional headshots' }),
           subtitle: isMobile
@@ -88,10 +89,11 @@ export default function CustomizationIntroPage() {
           showBack: true,
           onBack: handleBack
         }}
-        scrollAware={true}
         maxWidth="2xl"
         background="white"
         bottomPadding={isMobile ? 'lg' : 'none'}
+        fixedHeaderOnMobile
+        mobileHeaderSpacerHeight={120}
       >
         <div className="py-8 md:py-12">
           <CustomizationIntroContent 
@@ -112,7 +114,7 @@ export default function CustomizationIntroPage() {
             stepColors={navigationStepColors}
           />
         </div>
-      </FlowLayout>
+      </StickyFlowPage>
     </SwipeableContainer>
   )
 }

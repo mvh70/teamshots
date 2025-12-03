@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { BRAND_CONFIG } from '@/config/brand'
@@ -12,7 +12,7 @@ import {
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
-import type { MobileStep } from '@/hooks/useCustomizationWizard'
+import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
 import { SelectableGrid } from '@/components/generation/selection'
 import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
 import GenerateButton from '@/components/generation/GenerateButton'
@@ -105,13 +105,14 @@ export default function InviteDashboardPage() {
     id: null,
     index: 0
   })
-  const [canGenerateFromWizard, setCanGenerateFromWizard] = useState(false)
+  const [visitedSteps, setVisitedSteps] = useState<Set<string>>(new Set())
   const isMobileViewport = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()
   
   const { uploadEndpoint: inviteUploadEndpoint, saveEndpoint: inviteSaveEndpoint } = useInviteSelfieEndpoints(token)
   const {
     flags: flowFlags,
+    inFlow,
     markInFlow,
     clearFlow,
     setPendingGeneration,
@@ -127,10 +128,6 @@ export default function InviteDashboardPage() {
   const clearGenerationFlow = useCallback(() => {
     clearFlow()
   }, [clearFlow])
-  const handleInlineUploadTileClick = useCallback(() => {
-    markGenerationFlow({ pending: true })
-    router.push(`/invite-dashboard/${token}/selfies`)
-  }, [markGenerationFlow, router, token])
   
   // Multi-select: load and manage selected selfies for invited flow
   const { selectedSet, selectedIds, loadSelected, toggleSelect } = useSelfieSelection({ token })
@@ -363,22 +360,20 @@ export default function InviteDashboardPage() {
     // If in flow and customization intro has been seen, go to customization
     // This handles navigation from customization-intro page back to dashboard
     // BUT only if we're actually in the flow (not just a stale flag)
-    if (flowFlags.inFlow && hasSeenCustomizationIntro && hasSeenSelfieTips) {
+    if (inFlow && hasSeenCustomizationIntro && hasSeenSelfieTips) {
       return 'customization'
     }
     
     // If in flow but haven't seen customization intro yet, go to selfie selection
-    if (flowFlags.inFlow && !hasSeenCustomizationIntro) {
+    if (inFlow && !hasSeenCustomizationIntro) {
       return 'selfieSelection'
     }
     
     // Default to dashboard
     return 'dashboard'
-  }, [flowStepState, hydrated, flowFlags.inFlow, flowFlags.openStartFlow, flowFlags.pendingGeneration, hasSeenCustomizationIntro, hasSeenSelfieTips])
-
+  }, [flowStepState, hydrated, inFlow, flowFlags.openStartFlow, flowFlags.pendingGeneration, hasSeenCustomizationIntro, hasSeenSelfieTips])
 
   // Fetch selfies when entering any flow step (not dashboard)
-  // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
   useEffect(() => {
     if (flowStep !== 'dashboard') {
       fetchAvailableSelfies()
@@ -437,13 +432,12 @@ export default function InviteDashboardPage() {
 
   // Check if clothing colors step has been visited (for mobile flow only)
   // On mobile, user must scroll through all steps before generating
-  // Updated: use canGenerateFromWizard from PhotoStyleSettings hook which checks all editable steps
-  const hasVisitedRequiredSteps = !isMobileViewport || canGenerateFromWizard
+  const hasVisitedClothingColors = !isMobileViewport || visitedSteps.has('clothingColors')
   
   const canGenerate = validSelectedIds.length >= 2 && 
                       stats.creditsRemaining >= PRICING_CONFIG.credits.perGeneration &&
                       !customizationStillRequired &&
-                      hasVisitedRequiredSteps
+                      hasVisitedClothingColors
 
   const handleMobileStepChange = useCallback((step: MobileStep | null, stepIndex?: number) => {
     const stepId = step?.custom?.id ?? step?.category?.key ?? null
@@ -452,6 +446,14 @@ export default function InviteDashboardPage() {
       id: stepId,
       index: stepIndex ?? 0
     })
+    // Track visited steps (by category key for customization steps)
+    if (stepId) {
+      setVisitedSteps(prev => {
+        const newSet = new Set(prev)
+        newSet.add(stepId)
+        return newSet
+      })
+    }
   }, [])
 
   // Navigation helper: determine initial step when starting the flow
@@ -696,18 +698,25 @@ export default function InviteDashboardPage() {
 
   const photosAffordable = Math.floor(stats.creditsRemaining / PRICING_CONFIG.credits.perGeneration)
 
+  // Create the header component for reuse
+  const inviteHeader = (
+    <InviteDashboardHeader
+      token={token}
+      title=""
+      teamName={inviteData.teamName}
+      creditsRemaining={stats.creditsRemaining}
+      photosAffordable={photosAffordable}
+      showBackToDashboard={isInFlow}
+      onBackClick={goBackToDashboard}
+    />
+  )
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <InviteDashboardHeader
-        token={token}
-        title=""
-        teamName={inviteData.teamName}
-        creditsRemaining={stats.creditsRemaining}
-        photosAffordable={photosAffordable}
-        showBackToDashboard={isInFlow}
-        onBackClick={goBackToDashboard}
-      />
+      {/* Header - hidden on mobile during customization step (handled by StyleSettingsSection) */}
+      <div className={flowStep === 'customization' ? 'hidden md:block' : ''}>
+        {inviteHeader}
+      </div>
       {/* Invite dashboard does not show selected selfies or a Generate button.
           Actions live in Selfies and Generations pages. */}
 
@@ -908,7 +917,7 @@ export default function InviteDashboardPage() {
                       onMobileStepChange={handleMobileStepChange}
                       onSwipeBack={handleSwipeBackFromCustomization}
                       onStepMetaChange={setCustomizationStepsMeta}
-                      onCanGenerateChange={setCanGenerateFromWizard}
+                      topHeader={inviteHeader}
                     />
                     <div className="md:border-t md:border-gray-200 md:pt-5 pt-5">
                       <div className="hidden md:flex items-center justify-between mb-4">
@@ -1068,7 +1077,6 @@ export default function InviteDashboardPage() {
                     className="hidden md:block mt-6 pt-6 border-t border-gray-200"
                     token={token}
                     onStepMetaChange={setCustomizationStepsMeta}
-                    onCanGenerateChange={setCanGenerateFromWizard}
                   />
                 </div>
             </SwipeableContainer>

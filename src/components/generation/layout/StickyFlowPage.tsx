@@ -49,7 +49,7 @@ interface StickyFlowPageProps {
   contentClassName?: string
   /** Whether to render the top header on desktop viewports */
   showTopOnDesktop?: boolean
-  /** Height of spacer inserted on mobile below the sticky header (default: 5rem) */
+  /** Height of spacer inserted on mobile below the fixed header (default: 120px for dual headers) */
   mobileHeaderSpacerHeight?: number
   /** Fix header to viewport on mobile (overrides sticky behavior) */
   fixedHeaderOnMobile?: boolean
@@ -66,7 +66,7 @@ export default function StickyFlowPage({
   className = '',
   contentClassName = '',
   showTopOnDesktop = false,
-  mobileHeaderSpacerHeight = 80,
+  mobileHeaderSpacerHeight = 120,
   fixedHeaderOnMobile = false,
   children
 }: StickyFlowPageProps) {

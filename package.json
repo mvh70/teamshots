@@ -35,7 +35,6 @@
     "test:setup": "npx playwright install --with-deps",
     "test:report": "npx playwright show-report",
     "type-check": "tsc --noEmit",
-    "validate-packages": "tsx scripts/validate-packages.ts",
     "db:reset": "node scripts/reset-dev-db.js",
     "db:test:reset": "node tests/cleanup-test-db.js",
     "db:test:setup": "node tests/setup-test-db.js",

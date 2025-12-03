@@ -25,7 +25,6 @@ export default function InviteSelfieTipsPage() {
   const router = useRouter()
   const params = useParams()
   const token = params.token as string
-  const t = useTranslations('inviteDashboard.mobile.selfieTips')
   const tContent = useTranslations('customization.photoStyle.mobile.selfieTips')
   const isMobile = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()

@@ -10,6 +10,7 @@ import { PlusIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
+import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import PackageSelector from '@/components/packages/PackageSelector'
 import { PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
@@ -29,8 +30,7 @@ import type { GenerationPageData, ContextOption } from './actions'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
-import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
-import { SwipeableContainer } from '@/components/generation/navigation'
+import Header from '@/app/[locale]/app/components/Header'
 
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
 
@@ -74,7 +74,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     setCustomizationStepsMeta
   } = useGenerationFlowState()
   const isMobile = useMobileViewport()
-  const isSwipeEnabled = useSwipeEnabled()
 
   const markGenerationFlow = useCallback(() => {
     markInFlow({ pending: true })
@@ -94,8 +93,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const [originalContextSettings, setOriginalContextSettings] = useState<PhotoStyleSettingsType | undefined>(initialData.styleData.originalContextSettings)
   const [selectedPackageId, setSelectedPackageId] = useState<string>(initialData.styleData.selectedPackageId)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [canGenerateFromWizard, setCanGenerateFromWizard] = useState(false)
-  const [customizationStepsMeta, setCustomizationStepsMetaState] = useState<{ editableSteps: number; allSteps: number; lockedSteps: number[] } | null>(null)
+  const [visitedMobileSteps, setVisitedMobileSteps] = useState<Set<string>>(() => new Set())
   
   // Plan info from server data
   const { isFreePlan, isProUser, isTeamAdmin, isTeamMember } = initialData.planInfo
@@ -139,7 +137,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     }
     
     if (!flowFlags.pendingGeneration) return
+    
     clearGenerationFlow()
+    
     if (!skipUpload && hasEnoughSelfies(selectedSelfies.length)) {
       const params = new URLSearchParams(searchParamsString)
       params.set('skipUpload', '1')
@@ -174,9 +174,19 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const onTypeSelected = (type: 'personal' | 'team') => {
     setGenerationType(type)
   }
+  
+  const handleMobileStepChange = useCallback((step: MobileStep | null) => {
+    const stepId = step?.custom?.id ?? step?.category?.key ?? null
+    if (!stepId) return
+    setVisitedMobileSteps(prev => {
+      if (prev.has(stepId)) return prev
+      const next = new Set(prev)
+      next.add(stepId)
+      return next
+    })
+  }, [])
 
   const handleStepMetaChange = useCallback((meta: { editableSteps: number; allSteps: number; lockedSteps: number[] }) => {
-    setCustomizationStepsMetaState(meta)
     setCustomizationStepsMeta(meta)
   }, [setCustomizationStepsMeta])
 
@@ -246,6 +256,10 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   const teamName = session?.user?.person ? 'Team' : undefined
   
+  useEffect(() => {
+    setVisitedMobileSteps(new Set())
+  }, [skipUpload])
+  
   const hasEnoughCredits = (effectiveGenerationType === 'team' && userCredits.team >= PRICING_CONFIG.credits.perGeneration) ||
                           (effectiveGenerationType === 'personal' && userCredits.individual >= PRICING_CONFIG.credits.perGeneration)
   const hasRequiredSelfies = hasEnoughSelfies(selectedSelfies.length)
@@ -256,11 +270,18 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     ? hasUneditedEditableFields(photoStyleSettings as Record<string, unknown>, originalContextSettings as Record<string, unknown>, effectivePackageId)
     : false
 
-  // On mobile, require visiting ALL editable steps before enabling generate button
-  // This matches the invited user flow where users must scroll through all customization steps
-  const hasVisitedAllEditableSteps = !isMobile || canGenerateFromWizard
+  const hasVisitedClothingColorsIfEditable = React.useMemo(() => {
+    if (!isMobile) return true
+
+    const categorySettings = (originalContextSettings || photoStyleSettings) as Record<string, unknown>
+    const clothingColorsSettings = categorySettings['clothingColors']
+    const isClothingColorsEditable = !clothingColorsSettings ||
+      (clothingColorsSettings as { type?: string }).type === 'user-choice'
+
+    return !isClothingColorsEditable || visitedMobileSteps.has('clothingColors')
+  }, [isMobile, visitedMobileSteps, originalContextSettings, photoStyleSettings])
   
-  const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && !hasUneditedFields && hasVisitedAllEditableSteps
+  const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && !hasUneditedFields && hasVisitedClothingColorsIfEditable
   
   const hasAnyCredits = userCredits.team > 0 || userCredits.individual > 0
   const selectedPackage = getPackageConfig(effectivePackageId)
@@ -269,6 +290,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const photoCreditsPerGeneration = calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)
   
   const shouldShowGenerationTypeSelector = false
+  const pagePaddingClasses = skipUpload ? 'px-0 md:px-6 lg:px-8' : 'px-4 sm:px-6 lg:px-8'
 
   // Redirect to intro page if not seen yet (route-based intros)
   useEffect(() => {
@@ -283,7 +305,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   if (!creditsLoading && !hasAnyCredits) {
     return (
-      <div className="space-y-6">
+      <div className={`${pagePaddingClasses} space-y-6`}>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
@@ -322,7 +344,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   if (!skipUpload && !hasEnoughSelfies(selectedSelfies.length) && !keyFromQuery && session && !isSuccess) {
     return (
-      <div className="space-y-6">
+      <div className={`${pagePaddingClasses} space-y-6`}>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
@@ -336,7 +358,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   // Don't render while redirecting to intro
   if (!hydrated || (skipUpload && !hasSeenCustomizationIntro)) {
     return (
-      <div className="space-y-6">
+      <div className={`${pagePaddingClasses} space-y-6`}>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
@@ -348,7 +370,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   }
 
   return (
-    <div className="space-y-8 pb-24 md:pb-0">
+    <div className={`${pagePaddingClasses} space-y-8 pb-24 md:pb-0 w-full max-w-full overflow-x-hidden`}>
       {!skipUpload && (creditsLoading || !session) ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
@@ -378,17 +400,13 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           teamName={teamName}
         />
       ) : skipUpload ? (
-        <SwipeableContainer
-          onSwipeRight={isSwipeEnabled ? () => router.push('/app/generate/selfie') : undefined}
-          onSwipeLeft={undefined}
-          enabled={isSwipeEnabled}
-        >
         <>
-          <div className="md:bg-white md:rounded-xl md:shadow-md md:border md:border-gray-200/60 md:p-6 lg:p-8 pb-24 md:pb-6">
-            <h1 className="hidden md:block text-2xl font-bold text-gray-900 mb-6 tracking-tight">{t('readyToGenerate')}</h1>
+          {/* Header card with selfie thumbnails and summary - hidden on mobile to match invited user flow */}
+          <div className="hidden md:block bg-white rounded-xl shadow-md border border-gray-200/60 p-6 sm:p-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-6 tracking-tight">{t('readyToGenerate')}</h1>
             
-            {/* Alternative Layout: More balanced card-based approach - hidden on mobile */}
-            <div className="hidden md:flex flex-col lg:flex-row gap-6 lg:gap-8">
+            {/* Alternative Layout: More balanced card-based approach */}
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
               {/* Left Section: Thumbnails and Summary */}
               <div className="flex gap-5 lg:flex-1 min-w-0">
                 {/* Selected Selfie Thumbnails */}
@@ -498,7 +516,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
           {/* Context Selection for Personal and Team Generations - Hide for free plan users */}
           {!isFreePlan && (generationType === 'personal' || generationType === 'team') && (
-            <div className="bg-white rounded-xl shadow-md border border-gray-200/60 p-6 sm:p-8">
+            <div className="hidden md:block bg-white rounded-xl shadow-md border border-gray-200/60 p-6 sm:p-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">
                 {generationType === 'personal' ? t('selectPhotoStyle') : 'Select Team Photo Style'}
               </h2>
@@ -565,49 +583,44 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           
           {/* Free plan banner + Free package info */}
           {(isFreePlan || selectedPackageId === 'freepackage') && (
-            <>
+            <div className="hidden md:block">
               <FreePlanBanner variant="personal" className="mb-6" />
-            </>
+            </div>
           )}
 
           {/* Package Selector - Hide for free package contexts or predefined styles */}
           {!activeContext && selectedPackageId !== 'freepackage' && (
-            <PackageSelector
-              value={selectedPackageId}
-              onChange={(packageId) => {
-                setSelectedPackageId(packageId)
-                const pkg = getPackageConfig(packageId)
-                setPhotoStyleSettings(pkg.defaultSettings)
-                setOriginalContextSettings(pkg.defaultSettings)
-              }}
-            />
+            <div className="hidden md:block">
+              <PackageSelector
+                value={selectedPackageId}
+                onChange={(packageId) => {
+                  setSelectedPackageId(packageId)
+                  const pkg = getPackageConfig(packageId)
+                  setPhotoStyleSettings(pkg.defaultSettings)
+                  setOriginalContextSettings(pkg.defaultSettings)
+                }}
+              />
+            </div>
           )}
 
-          {/* Mobile: Style settings, cost, and sticky controls */}
-          <div className="md:hidden space-y-6">
-            <StyleSettingsSection
-              value={photoStyleSettings}
-              onChange={setPhotoStyleSettings}
-              readonlyPredefined={!!activeContext}
-              originalContextSettings={originalContextSettings}
-              showToggles={false}
-              packageId={effectivePackageId}
-              isFreePlan={isFreePlan}
-              teamContext={effectiveGenerationType === 'team'}
-              noContainer
-              onSwipeBack={() => router.push('/app/generate/customization-intro')}
-              onStepMetaChange={handleStepMetaChange}
-              onCanGenerateChange={setCanGenerateFromWizard}
-            />
-            <div className="md:border-t md:border-gray-200 md:pt-5 pt-5">
-              <div className="hidden md:flex items-center justify-between mb-4">
-                <div>
-                  <div className="text-sm text-gray-600">{t('costPerGeneration', { default: 'Cost per generation' })}</div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {photoCreditsPerGeneration} {photoCreditsPerGeneration === 1 ? t('photoCredit', { default: 'photo credit' }) : t('photoCredits', { default: 'photo credits' })}
-                  </div>
-                </div>
-              </div>
+          {/* Photo Style Settings - Mobile */}
+          <div className="md:hidden pb-24 w-full max-w-full overflow-x-hidden">
+            <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+              <StyleSettingsSection
+                value={photoStyleSettings}
+                onChange={setPhotoStyleSettings}
+                readonlyPredefined={!!activeContext}
+                originalContextSettings={originalContextSettings}
+                showToggles={false}
+                packageId={effectivePackageId}
+                isFreePlan={isFreePlan}
+                teamContext={effectiveGenerationType === 'team'}
+                noContainer
+                onMobileStepChange={handleMobileStepChange}
+                onSwipeBack={() => router.push('/app/generate/customization-intro')}
+                onStepMetaChange={handleStepMetaChange}
+                topHeader={<Header standalone showBackToDashboard />}
+              />
             </div>
           </div>
 
@@ -658,7 +671,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
               </Link>
         ) : (
           <>
-            {!hasVisitedAllEditableSteps && (
+            {!hasVisitedClothingColorsIfEditable && (
               <p className="text-xs text-gray-500 text-center mb-2">
                 {t('customizeFirstTooltipMobile')}
               </p>
@@ -669,13 +682,13 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                 isGenerating={isGenerating || isPending}
                 size="md"
                 disabledReason={
-                  !hasVisitedAllEditableSteps
+                  !hasVisitedClothingColorsIfEditable
                     ? t('customizeFirstTooltipMobile')
                     : hasUneditedFields
                       ? t('customizeFirstTooltipMobile')
                       : undefined
                 }
-                integrateInPopover={hasUneditedFields && hasVisitedAllEditableSteps}
+                integrateInPopover={hasUneditedFields && hasVisitedClothingColorsIfEditable}
               >
                 Generate
               </GenerateButton>
@@ -683,7 +696,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             )}
           </div>
         </>
-        </SwipeableContainer>
       ) : null}
     </div>
   )

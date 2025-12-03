@@ -50,18 +50,7 @@ export default function StepIndicator({
   // If we have locked steps info, show all dots (editable + locked)
   // Otherwise, just show the editable steps
   const dotsToShow = totalWithLocked ?? total
-  const lockedSet = new Set(lockedSteps)
-
-  // Pre-calculate editable step indices for efficient lookup
-  const editableStepIndices = React.useMemo(() => {
-    const indices: number[] = []
-    for (let i = 0; i < dotsToShow; i++) {
-      if (!lockedSet.has(i)) {
-        indices.push(i)
-      }
-    }
-    return indices
-  }, [dotsToShow, lockedSet])
+  const lockedSet = React.useMemo(() => new Set(lockedSteps), [lockedSteps])
 
   const visitedSet = new Set(visitedEditableSteps)
 
