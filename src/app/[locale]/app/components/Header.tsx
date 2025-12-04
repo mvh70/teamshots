@@ -22,9 +22,11 @@ export default function Header({ onMenuClick, standalone = false, showBackToDash
   const { data: session } = useSession()
   
   // Only show the dashboard header on the actual dashboard page
-  const isDashboard = pathname === '/app/dashboard' || pathname?.endsWith('/dashboard') ?? false
+  // pathname includes locale prefix (e.g., /en/app/dashboard or /es/app/dashboard)
+  const isDashboard = pathname?.endsWith('/app/dashboard') ?? false
   
-  const isGenerationFlow = pathname?.startsWith('/app/generate')
+  // pathname includes locale prefix, so check if it contains the route pattern
+  const isGenerationFlow = pathname?.includes('/app/generate') ?? false
   
   const handleMenuClick = () => {
     if (standalone) {

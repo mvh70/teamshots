@@ -48,7 +48,8 @@ export default function AppShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [hydrated, setHydrated] = useState(false)
   
-  const isGenerationFlow = pathname?.startsWith('/app/generate')
+  // pathname includes locale prefix, so check if it contains the route pattern
+  const isGenerationFlow = pathname?.includes('/app/generate') ?? false
 
   // Hydration indicator for Playwright tests - intentional SSR pattern.
   // This allows tests to wait for React hydration to complete before interacting.
