@@ -183,21 +183,16 @@ export class CreditService {
     const { roles, subscription, teamId } = userContext
 
     // Pro users are team admins by definition and always use team credits
-    // EXCEPTION: If they haven't created a team yet (deferred setup), they act as individuals
+    // Even without a team yet, their subscription credits are "team credits"
+    // The credits are stored with userId + planTier: 'pro' and will be migrated when team is created
     if (subscription?.tier === 'pro') {
-      if (!teamId) {
-        return {
-          creditSource: 'individual',
-          generationType: 'personal',
-          reason: 'Pro user without team uses personal credits'
-        }
-      }
-
       return {
         creditSource: 'team',
         generationType: 'team',
         teamId: teamId || undefined,
-        reason: 'Pro users always use team credits'
+        reason: teamId 
+          ? 'Pro users always use team credits' 
+          : 'Pro user without team - using unmigrated pro credits as team credits'
       }
     }
 
