@@ -19,7 +19,8 @@
   "hero": {
     "titleMain": "Professional team photos",
     "titleHighlightTime": "in 60 seconds",
-    "subtitle": "You set the brand essentials (e.g. logo, clothing style, backgrounds). Your team picks the rest (e.g. colors and poses). Everyone looks unified yet personal. Professional headshots from any selfie in 60 seconds, no photographer or scheduling drama required.",
+    "subtitle": "You set the brand essentials (e.g. logo, clothing style, backgrounds). Your team picks the rest (e.g. colors and poses). Everyone looks unified yet personal. Professional headshots from any selfie in 60 seconds, ",
+    "subtitleBold": "no photographer or scheduling drama required.",
     "subtitleMain": "Turn any selfie into consistent, on-brand headshots. No photographer, no coordination.",
     "finalCtaTitle": "Ready to transform your team photos?",
     "finalCtaSubtitle": "Get your team's professional headshots and see the difference in 60 seconds.",

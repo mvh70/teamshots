@@ -52,9 +52,15 @@ export default function LandingPage() {
             <h1 
               className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold text-text-dark mb-8 leading-[1.1] tracking-tight"
             >
-              {t('titleMain')}{' '}
-              <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent drop-shadow-sm">
-                {t('titleHighlightTime')}
+              Professional{' '}
+              <span className="lg:whitespace-nowrap">
+                team photos{' '}
+                <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent drop-shadow-sm">in</span>
+              </span>{' '}
+              <span className="lg:whitespace-nowrap">
+                <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent drop-shadow-sm">60</span>{' '}
+                <span className="line-through opacity-60 text-text-body">days</span>{' '}
+                <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent drop-shadow-sm">seconds</span>
               </span>
             </h1>
 
@@ -80,6 +86,7 @@ export default function LandingPage() {
               }}
             >
               {t('subtitle')}
+              <strong>{t('subtitleBold')}</strong>
             </p>
 
             {/* Primary CTA - Large, Prominent */}

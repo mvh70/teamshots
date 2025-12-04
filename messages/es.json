@@ -19,7 +19,8 @@
   "hero": {
     "titleMain": "Fotos profesionales de equipo",
     "titleHighlightTime": "en 60 segundos",
-    "subtitle": "Tú defines lo esencial de la marca (ej. logo, estilo de ropa, fondos). Tu equipo elige el resto (ej. colores y poses). Todos lucen unificados pero personales. Retratos profesionales desde cualquier selfie en 60 segundos, sin drama de fotógrafos ni coordinación.",
+    "subtitle": "Tú defines lo esencial de la marca (ej. logo, estilo de ropa, fondos). Tu equipo elige el resto (ej. colores y poses). Todos lucen unificados pero personales. Retratos profesionales desde cualquier selfie en 60 segundos, ",
+    "subtitleBold": "sin drama de fotógrafos ni coordinación.",
     "subtitleMain": "Convierte cualquier selfie en retratos consistentes y acordes a tu marca. Sin fotógrafo, sin coordinación.",
     "finalCtaTitle": "¿Listo para transformar las fotos de tu equipo?",
     "finalCtaSubtitle": "Obtén retratos profesionales para tu equipo y ve la diferencia en 60 segundos.",
