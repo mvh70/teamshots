@@ -245,14 +245,15 @@ export async function generateWithGeminiRest(
       chunks.push(chunk)
     }
 
-    // Extract generated images from the final response
-    const response = chunks[chunks.length - 1]
+    // Extract generated images from all chunks
     const generatedImages: Buffer[] = []
 
-    if (response?.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData?.data) {
-          generatedImages.push(Buffer.from(part.inlineData.data, 'base64'))
+    for (const chunk of chunks) {
+      if (chunk?.candidates?.[0]?.content?.parts) {
+        for (const part of chunk.candidates[0].content.parts) {
+          if (part.inlineData?.data) {
+            generatedImages.push(Buffer.from(part.inlineData.data, 'base64'))
+          }
         }
       }
     }
