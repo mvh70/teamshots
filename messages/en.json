@@ -1420,7 +1420,10 @@
     "freePlan": {
       "title": "Free Plan Bonus",
       "stamp": "Test Drive",
-      "cta": "Upgrade"
+      "cta": "Upgrade",
+      "bodyPersonal": "Try before you buy. Generate a preview to see yourself in professional styles without spending a dime.",
+      "bodyTeam": "Standardize your team's look. Generate previews to see how consistent professional photos elevate your brand.",
+      "bodyGeneric": "Curious about the results? Generate a free preview to see the quality of our AI headshots firsthand."
     }
   },
   "emails": {

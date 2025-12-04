@@ -1429,7 +1429,10 @@
     "freePlan": {
       "title": "Bono del Plan Gratuito",
       "stamp": "Prueba de Manejo",
-      "cta": "Mejorar plan"
+      "cta": "Mejorar plan",
+      "bodyPersonal": "Prueba antes de comprar. Genera una vista previa para verte con estilos profesionales sin gastar un centavo.",
+      "bodyTeam": "Estandariza la imagen de tu equipo. Genera vistas previas para ver cómo las fotos profesionales consistentes elevan tu marca.",
+      "bodyGeneric": "¿Curioso por los resultados? Genera una vista previa gratuita para ver la calidad de nuestros retratos con IA de primera mano."
     }
   },
   "emails": {
