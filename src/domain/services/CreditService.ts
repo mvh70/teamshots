@@ -83,12 +83,15 @@ export class CreditService {
       }
 
       // Reserve credits using existing function
-      // For team credits: pass personId AND teamId (both required for team credit deduction)
+      // For team credits WITH teamId: pass personId AND teamId (team credit deduction)
+      // For team credits WITHOUT teamId (pro user without team): pass personId AND userId (unmigrated pro credits)
       // For individual credits: pass userId only (no personId, no teamId) to use getUserCreditBalance
       // Credits are tracked per person, not per invite
+      const isProUserWithoutTeam = creditSourceInfo.creditSource === 'team' && !creditSourceInfo.teamId && !context.teamId
       const transaction = await reserveCreditsForGeneration(
         creditSourceInfo.creditSource === 'team' ? personId : null,
-        creditSourceInfo.creditSource === 'team' ? null : userId,
+        // Pass userId for: individual credits OR pro user without team (so deduction is tracked on userId)
+        creditSourceInfo.creditSource === 'individual' || isProUserWithoutTeam ? userId : null,
         requiredCredits,
         `Generation reservation`,
         creditSourceInfo.creditSource === 'team' ? (creditSourceInfo.teamId || context.teamId || undefined) : undefined
