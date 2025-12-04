@@ -74,8 +74,8 @@ export default function RootLayout({
         <meta httpEquiv="Permissions-Policy" content="camera=(self)" />
         {/* Force protocol detection for Safari */}
         <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
-        {/* Preconnect to PostHog for faster analytics loading */}
-        <link rel="preconnect" href="https://pineapple.teamshotspro.com" />
+        {/* Preconnect to PostHog for faster analytics loading - crossorigin for CORS fetch */}
+        <link rel="preconnect" href="https://pineapple.teamshotspro.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://pineapple.teamshotspro.com" />
       </head>
       <body className="overflow-x-hidden bg-gray-50">
