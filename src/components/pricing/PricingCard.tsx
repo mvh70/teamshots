@@ -68,13 +68,21 @@ export default function PricingCard({
       ? PRICING_CONFIG.individual.topUp
       : id === 'proSmall'
         ? PRICING_CONFIG.proSmall.topUp
-        : PRICING_CONFIG.proLarge.topUp
+        : id === 'proLarge'
+          ? PRICING_CONFIG.proLarge.topUp
+          : id === 'vip'
+            ? PRICING_CONFIG.vip.topUp
+            : PRICING_CONFIG.enterprise.topUp
     
     const topUpRegenerations = id === 'individual'
       ? PRICING_CONFIG.regenerations.individual
       : id === 'proSmall'
         ? PRICING_CONFIG.regenerations.proSmall
-        : PRICING_CONFIG.regenerations.proLarge
+        : id === 'proLarge'
+          ? PRICING_CONFIG.regenerations.proLarge
+          : id === 'vip'
+            ? PRICING_CONFIG.regenerations.vip
+            : PRICING_CONFIG.regenerations.enterprise
     
     const topUpPricePerPhotoValue = calculatePricePerPhoto(
       topUpConfig.price,

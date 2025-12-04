@@ -153,7 +153,32 @@ export async function getPersonCreditBalance(personId: string): Promise<number> 
     where: { personId },
     _sum: { credits: true }
   })
-  return result._sum.credits || 0
+  
+  let balance = result._sum.credits || 0
+
+  // Check for unmigrated Pro credits on the linked user
+  // This is for Pro users who haven't created a team yet (deferred setup)
+  // We only do this if they are NOT in a team (otherwise they'd use team credits)
+  const person = await prisma.person.findUnique({
+    where: { id: personId },
+    select: { userId: true, teamId: true }
+  })
+
+  if (person?.userId && !person.teamId) {
+    const userProBalance = await prisma.creditTransaction.aggregate({
+      where: {
+        userId: person.userId,
+        planTier: 'pro',
+        teamId: null,
+        credits: { gt: 0 }
+      },
+      _sum: { credits: true }
+    })
+    
+    balance += (userProBalance._sum.credits || 0)
+  }
+
+  return balance
 }
 
 /**

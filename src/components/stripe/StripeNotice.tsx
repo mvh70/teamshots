@@ -67,14 +67,8 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
       let msg = tDashboard('successMessages.default', { default: 'Payment completed successfully.' })
       switch (params.type) {
         case 'individual_success':
-          msg = tDashboard('successMessages.individual', { 
-            default: 'Your purchase was successful! Credits added to your account.', 
-            photos: calculatePhotosFromCredits(PRICING_CONFIG.tryItForFree.credits)
-          })
-          break
-        case 'individual_success':
-          msg = tDashboard('successMessages.individual', { 
-            default: 'Subscription activated successfully.', 
+          msg = tDashboard('successMessages.individual', {
+            default: 'Your purchase was successful! Credits added to your account.',
             photos: calculatePhotosFromCredits(PRICING_CONFIG.individual.credits)
           })
           break

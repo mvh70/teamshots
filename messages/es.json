@@ -354,7 +354,8 @@
           "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
           "Cola de procesamiento prioritario",
           "Descarga en alta resolución (4K) incluida",
-          "Habla con el fundador para obtener tu estilo personalizado dolo para tí"
+          "Habla con el fundador para obtener tu estilo personalizado dolo para tí",
+          "Recarga disponible a {topUpPricePerPhoto} por foto"
         ],
         "cta": "Quiero VIP"
       },
@@ -366,7 +367,8 @@
           "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
           "Cola de procesamiento prioritario",
           "Descarga en alta resolución (4K) incluida",
-          "Habla con el fundador para obtener tu estilo personalizado dolo para tí"
+          "Habla con el fundador para obtener tu estilo personalizado dolo para tí",
+          "Recarga disponible a {topUpPricePerPhoto} por foto"
         ],
         "cta": "Quiero Empresa"
       },

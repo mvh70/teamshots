@@ -1,24 +1,28 @@
 // Define Stripe Price IDs per environment (test vs production)
 const TEST_STRIPE_PRICE_IDS = {
-  INDIVIDUAL: "price_1SVDRqENr8odIuXaUsejcC0Y",
-  PRO_SMALL: "price_1SVDRrENr8odIuXam20q1Y0H",
-  PRO_LARGE: "price_1SVDRsENr8odIuXaI58rONjp",
-  VIP: "", // VIP anchor tier for individual domain - contact sales (no Stripe checkout)
-  ENTERPRISE: "", // Enterprise anchor tier for team domain - contact sales (no Stripe checkout)
-  INDIVIDUAL_TOP_UP: "price_1SVDRsENr8odIuXauWVusJRu",
-  PRO_SMALL_TOP_UP: "price_1SVDRtENr8odIuXa51JORKHM",
-  PRO_LARGE_TOP_UP: "price_1SVDRtENr8odIuXasuxkKPYU",
+  INDIVIDUAL: "price_1SajfxENr8odIuXaJU1IuCr3",
+  PRO_SMALL: "price_1SajfyENr8odIuXarx9DdGVK",
+  PRO_LARGE: "price_1SajfyENr8odIuXaTfKDskg1",
+  VIP: "price_1SajfzENr8odIuXavTftq5Dy",
+  ENTERPRISE: "price_1Sajg0ENr8odIuXamVNsCXxf", 
+  INDIVIDUAL_TOP_UP: "price_1Sajg0ENr8odIuXa6kcQpNKs",
+  PRO_SMALL_TOP_UP: "price_1Sajg1ENr8odIuXaKsxvILky",
+  PRO_LARGE_TOP_UP: "price_1Sajg2ENr8odIuXavC8jcq9y",
+  VIP_TOP_UP: "price_1Sajg2ENr8odIuXaUYFabxOr",
+  ENTERPRISE_TOP_UP: "price_1Sajg3ENr8odIuXaWB52cjaw",
 } as const;
 
 const PROD_STRIPE_PRICE_IDS = {
-  INDIVIDUAL: "price_1SVEzhENr8odIuXaRD0LmWRv",
-  PRO_SMALL: "price_1SVEziENr8odIuXagC8KXdWm",
-  PRO_LARGE: "price_1SVEzjENr8odIuXasqgEm3hL",
-  VIP: "", // VIP anchor tier for individual domain - contact sales (no Stripe checkout)
-  ENTERPRISE: "", // Enterprise anchor tier for team domain - contact sales (no Stripe checkout)
-  INDIVIDUAL_TOP_UP: "price_1SVEzjENr8odIuXasgnzDlZv",
-  PRO_SMALL_TOP_UP: "price_1SVEzkENr8odIuXaSbNmfuHf",
-  PRO_LARGE_TOP_UP: "price_1SVEzlENr8odIuXaIBqDLcGj",
+  INDIVIDUAL: "price_1SajhGENr8odIuXaapskBoOc",
+  PRO_SMALL: "price_1SajhHENr8odIuXaN9NWCv32",
+  PRO_LARGE: "price_1SajhHENr8odIuXasPp4Fmcv",
+  VIP: "price_1SajhIENr8odIuXaeponRjAR",
+  ENTERPRISE: "price_1SajhJENr8odIuXa2q4TdXtf",
+  INDIVIDUAL_TOP_UP: "price_1SajhJENr8odIuXaVePSTFSd",
+  PRO_SMALL_TOP_UP: "price_1SajhKENr8odIuXaoMvaAYf3",
+  PRO_LARGE_TOP_UP: "price_1SajhLENr8odIuXanjNp9Ixs",
+  VIP_TOP_UP: "price_1SajhLENr8odIuXa8TUXvCxh",
+  ENTERPRISE_TOP_UP: "price_1SajhMENr8odIuXawSpvaPeB",
 } as const;
 
 const IS_PRODUCTION =
@@ -34,6 +38,8 @@ type StripePriceIds = {
   readonly INDIVIDUAL_TOP_UP: string;
   readonly PRO_SMALL_TOP_UP: string;
   readonly PRO_LARGE_TOP_UP: string;
+  readonly VIP_TOP_UP: string;
+  readonly ENTERPRISE_TOP_UP: string;
 };
 const STRIPE_PRICE_IDS: StripePriceIds = IS_PRODUCTION ? PROD_STRIPE_PRICE_IDS : TEST_STRIPE_PRICE_IDS;
 
@@ -55,10 +61,6 @@ export const PRICING_CONFIG = {
     enterprise: 3, // Enterprise gets most retries
   },
 
-  // Try It For Free (free tier - grants credits on signup)
-  tryItForFree: {
-    credits: 10, // Credits granted on signup
-  },
 
   // Individual tier (Personal - one-time purchase)
   individual: {
@@ -72,13 +74,17 @@ export const PRICING_CONFIG = {
     },
   },
 
-  // VIP tier (Individual domain anchor - contact sales, high price for anchoring effect)
+  // VIP tier (Individual domain anchor - one-time purchase)
   vip: {
     price: 199.99,
-    credits: 300, // 60 photos at 10 credits each
+    credits: 250, // 25 photos at 10 credits each
     maxTeamMembers: null, // unlimited
-    stripePriceId: STRIPE_PRICE_IDS.VIP || '', // Contact sales - no direct checkout
-    isContactSales: true, // Flag to show "Contact Sales" instead of checkout
+    stripePriceId: STRIPE_PRICE_IDS.VIP || '',
+    topUp: {
+      price: 69.99,
+      credits: 100, // 10 photos at 10 credits each
+      stripePriceId: STRIPE_PRICE_IDS.VIP_TOP_UP || '',
+    },
   },
 
   // Pro Small tier (Business - up to 5 team members - one-time purchase)
@@ -109,13 +115,17 @@ export const PRICING_CONFIG = {
 
 
 
-  // Enterprise tier (Team domain anchor - contact sales, high price for anchoring effect)
+  // Enterprise tier (Team domain anchor - one-time purchase)
   enterprise: {
     price: 399.99,
     credits: 600, // 60 photos at 10 credits each
     maxTeamMembers: null, // unlimited
-    stripePriceId: STRIPE_PRICE_IDS.ENTERPRISE || '', // Contact sales - no direct checkout
-    isContactSales: true, // Flag to show "Contact Sales" instead of checkout
+    stripePriceId: STRIPE_PRICE_IDS.ENTERPRISE || '',
+    topUp: {
+      price: 149.99,
+      credits: 250, // 25 photos at 10 credits each
+      stripePriceId: STRIPE_PRICE_IDS.ENTERPRISE_TOP_UP || '',
+    },
   },
 
   // Cost tracking

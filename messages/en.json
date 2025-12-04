@@ -344,7 +344,8 @@
           "{photos} customizable photos, each generated {variations}× so you can pick the best",
           "Priority processing queue",
           "High resolution download (4K) included",
-          "Speak with the founder to get your custom style package just for you"
+          "Speak with the founder to get your custom style package just for you",
+          "Top-up available at {topUpPricePerPhoto} per photo"
         ],
         "cta": "I want VIP"
       },
@@ -356,7 +357,8 @@
           "{photos} customizable photos, each generated {variations}× so you can pick the best",
           "Priority processing queue",
           "High resolution download (4K) included",
-          "Speak with the founder to get your custom style package just for you"
+          "Speak with the founder to get your custom style package just for you",
+          "Top-up available at {topUpPricePerPhoto} per photo"
         ],
         "cta": "I want Enterprise"
       },

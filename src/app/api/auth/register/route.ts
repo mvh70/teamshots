@@ -375,12 +375,10 @@ export async function POST(request: NextRequest) {
           ? 'tryitforfree'
           : getDefaultPackage(domain || undefined)
         const freePlanTier = userType === 'team' ? 'pro' : 'individual'
-        // Use tryItForFree credits if that's the requested period
-        const freeCredits = requestedPeriod === 'tryItForFree'
-          ? PRICING_CONFIG.tryItForFree.credits
-          : (userType === 'team'
-            ? PRICING_CONFIG.freeTrial.pro
-            : PRICING_CONFIG.freeTrial.individual)
+        // Use free trial credits based on user type (Team/Pro gets more)
+        const freeCredits = userType === 'team'
+          ? PRICING_CONFIG.freeTrial.pro
+          : PRICING_CONFIG.freeTrial.individual
 
         // Get person's team association for credit assignment
         const personWithTeam = await tx.person.findUnique({

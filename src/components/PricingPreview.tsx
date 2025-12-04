@@ -81,10 +81,18 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
   const tryItForFreePlan = {
     id: 'tryItForFree' as const,
     price: 'Free',
-    credits: PRICING_CONFIG.tryItForFree.credits,
+    // Show correct credits based on domain type (individual vs team)
+    credits: (domainSignupType === 'team' || domainSignupType === null)
+      ? PRICING_CONFIG.freeTrial.pro
+      : PRICING_CONFIG.freeTrial.individual,
     regenerations: PRICING_CONFIG.regenerations.tryItForFree,
     pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
-    totalPhotos: getTotalPhotos(PRICING_CONFIG.tryItForFree.credits, PRICING_CONFIG.regenerations.tryItForFree),
+    totalPhotos: getTotalPhotos(
+      (domainSignupType === 'team' || domainSignupType === null)
+        ? PRICING_CONFIG.freeTrial.pro
+        : PRICING_CONFIG.freeTrial.individual,
+      PRICING_CONFIG.regenerations.tryItForFree
+    ),
   }
 
   // Filter plans based on domain restrictions
@@ -155,19 +163,6 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
           'md:grid-cols-1 max-w-md mx-auto'
         }`}>
           {plansToShow.map((plan) => {
-            // VIP and Enterprise plans use contact sales link
-            if (plan.id === 'vip' || plan.id === 'enterprise') {
-              return (
-                <PricingCard
-                  key={plan.id}
-                  {...plan}
-                  ctaMode="link"
-                  href="mailto:sales@teamshots.vip?subject=VIP%20Plan%20Inquiry"
-                  className="h-full"
-                />
-              )
-            }
-            
             // Free plan still uses signup flow
             if (plan.id === 'tryItForFree') {
               return (
@@ -186,10 +181,14 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
               ? PRICING_CONFIG.individual.stripePriceId
               : plan.id === 'proSmall'
                 ? PRICING_CONFIG.proSmall.stripePriceId
-                : PRICING_CONFIG.proLarge.stripePriceId
+                : plan.id === 'proLarge'
+                  ? PRICING_CONFIG.proLarge.stripePriceId
+                  : plan.id === 'vip'
+                    ? PRICING_CONFIG.vip.stripePriceId
+                    : PRICING_CONFIG.enterprise.stripePriceId
             
-            const planTier = plan.id === 'individual' ? 'individual' : 'pro'
-            const planPeriod = plan.id === 'proLarge' ? 'large' : 'small'
+            const planTier = (plan.id === 'individual' || plan.id === 'vip') ? 'individual' : 'pro'
+            const planPeriod = plan.id === 'proLarge' || plan.id === 'vip' || plan.id === 'enterprise' ? 'large' : 'small'
             
             // Unified button styling for CheckoutButton - matches PricingCard button styling
             const baseButtonClasses = '!rounded-xl lg:!rounded-2xl w-full text-center !px-4 !py-3 lg:!px-6 lg:!py-4 min-h-[3.5rem] lg:min-h-[4rem] !font-bold !text-sm lg:!text-base transition-all duration-300 flex items-center justify-center'

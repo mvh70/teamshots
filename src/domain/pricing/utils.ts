@@ -1,4 +1,7 @@
 import { PRICING_CONFIG, type PricingTier, getRegenerationsForPlan } from '@/config/pricing'
+
+// Type for pricing tiers that have price configurations (excluding tryItForFree)
+type PricedTier = Exclude<PricingTier, 'tryItForFree'>
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
 
 // Removed: calculateAnnualSavings - no longer needed for transactional pricing
@@ -61,7 +64,7 @@ export function getPricePerPhoto(tier: PricingTier): number {
     return calculatePricePerPhoto(enterpriseConfig.price, enterpriseConfig.credits, regenerations)
   }
 
-  const tierConfig = PRICING_CONFIG[tier] as Extract<typeof PRICING_CONFIG[PricingTier], { price: number }>
+  const tierConfig = PRICING_CONFIG[tier as PricedTier]
   const regenerations = PRICING_CONFIG.regenerations[tier]
 
   return calculatePricePerPhoto(
@@ -73,9 +76,15 @@ export function getPricePerPhoto(tier: PricingTier): number {
 
 export function getPricingDisplay() {
   return {
-    tryItForFree: {
+    freeTrialIndividual: {
       price: 'Free',
-      credits: PRICING_CONFIG.tryItForFree.credits,
+      credits: PRICING_CONFIG.freeTrial.individual,
+      pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
+      regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+    },
+    freeTrialTeam: {
+      price: 'Free',
+      credits: PRICING_CONFIG.freeTrial.pro,
       pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
       regenerations: PRICING_CONFIG.regenerations.tryItForFree,
     },
@@ -102,14 +111,12 @@ export function getPricingDisplay() {
       credits: PRICING_CONFIG.vip.credits,
       pricePerPhoto: formatPrice(getPricePerPhoto('vip')),
       regenerations: PRICING_CONFIG.regenerations.vip,
-      isContactSales: true,
     },
     enterprise: {
       price: formatPrice(PRICING_CONFIG.enterprise.price),
       credits: PRICING_CONFIG.enterprise.credits,
       pricePerPhoto: formatPrice(getPricePerPhoto('enterprise')),
       regenerations: PRICING_CONFIG.regenerations.enterprise,
-      isContactSales: true,
     },
   }
 }

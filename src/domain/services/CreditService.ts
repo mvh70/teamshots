@@ -183,7 +183,16 @@ export class CreditService {
     const { roles, subscription, teamId } = userContext
 
     // Pro users are team admins by definition and always use team credits
+    // EXCEPTION: If they haven't created a team yet (deferred setup), they act as individuals
     if (subscription?.tier === 'pro') {
+      if (!teamId) {
+        return {
+          creditSource: 'individual',
+          generationType: 'personal',
+          reason: 'Pro user without team uses personal credits'
+        }
+      }
+
       return {
         creditSource: 'team',
         generationType: 'team',
