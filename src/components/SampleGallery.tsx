@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { getBrandName } from '@/config/brand';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { Grid } from '@/components/ui';
+import type { LandingVariant } from '@/config/landing-content';
 
 interface SamplePhoto {
   id: string;
@@ -57,9 +58,17 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
   }
 ];
 
-export default function SampleGallery() {
+interface SampleGalleryProps {
+  /** Landing page variant for domain-specific content */
+  variant: LandingVariant;
+}
+
+export default function SampleGallery({ variant }: SampleGalleryProps) {
+  // Use domain-specific translations for title/subtitle
+  const tLanding = useTranslations(`landing.${variant}.gallery`);
+  // Use legacy translations for shared content
   const t = useTranslations('gallery');
-  const tHero = useTranslations('hero');
+  const tHero = useTranslations(`landing.${variant}.hero`);
   const { track } = useAnalytics();
   const [sliderPositions, setSliderPositions] = useState<Record<string, number>>({});
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -150,10 +159,10 @@ export default function SampleGallery() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
-              {t('title')}
+              {tLanding('title')}
             </h2>
             <p className="text-lg sm:text-xl lg:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed">
-              {t('subtitle')}
+              {tLanding('subtitle')}
             </p>
           </div>
 
@@ -255,6 +264,7 @@ export default function SampleGallery() {
                 track('cta_clicked', {
                   placement: 'sample_gallery',
                   action: 'signup',
+                  variant,
                 })
               }
               className="inline-flex items-center justify-center bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white px-12 py-6 rounded-2xl font-bold text-lg lg:text-xl hover:shadow-depth-2xl hover:shadow-brand-cta-shadow/50 transition-all duration-300 shadow-depth-xl transform hover:-translate-y-2 hover:scale-[1.03] active:scale-[0.97] focus:outline-none focus:ring-4 focus:ring-brand-cta-ring focus:ring-offset-2 ring-offset-bg-white"
@@ -264,7 +274,7 @@ export default function SampleGallery() {
             {/* Subtext reinforcing free offer below CTA */}
             <div className="mt-4">
               <p className="text-sm text-text-body">
-                {tHero('freeCtaSubtext')}
+                {tHero('ctaSubtext')}
               </p>
             </div>
           </div>

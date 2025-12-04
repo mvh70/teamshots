@@ -1,9 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import type { LandingVariant } from '@/config/landing-content';
 
 interface Step {
   id: number;
@@ -13,69 +14,89 @@ interface Step {
   duration: string;
 }
 
-export default function HowItWorks() {
-  const t = useTranslations('howItWorks');
+// Step icons - reusable across variants
+const STEP_ICONS = {
+  upload: (
+    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  ),
+  team: (
+    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+  ),
+  customize: (
+    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+    </svg>
+  ),
+  check: (
+    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  download: (
+    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+  ),
+  sparkle: (
+    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  ),
+};
+
+// Icon mapping per variant and step
+const VARIANT_ICONS: Record<LandingVariant, Record<number, React.ReactNode>> = {
+  teamshotspro: {
+    1: STEP_ICONS.upload,
+    2: STEP_ICONS.team,
+    3: STEP_ICONS.customize,
+    4: STEP_ICONS.check,
+    5: STEP_ICONS.download,
+  },
+  photoshotspro: {
+    1: STEP_ICONS.upload,
+    2: STEP_ICONS.customize,
+    3: STEP_ICONS.sparkle,
+  },
+  coupleshotspro: {
+    1: STEP_ICONS.upload,
+    2: STEP_ICONS.customize,
+    3: STEP_ICONS.sparkle,
+  },
+};
+
+interface HowItWorksProps {
+  /** Landing page variant for domain-specific content */
+  variant: LandingVariant;
+}
+
+export default function HowItWorks({ variant }: HowItWorksProps) {
+  // Use domain-specific translations
+  const t = useTranslations(`landing.${variant}.howItWorks`);
   const [activeStep, setActiveStep] = useState(1);
   const [isVisible, setIsVisible] = useState(false);
   const { track } = useAnalytics();
 
-  const STEPS: Step[] = [
-    {
-      id: 1,
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      ),
-      title: t('steps.1.title'),
-      description: t('steps.1.description'),
-      duration: t('steps.1.duration')
-    },
-    {
-      id: 2,
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      ),
-      title: t('steps.2.title'),
-      description: t('steps.2.description'),
-      duration: t('steps.2.duration')
-    },
-    {
-      id: 3,
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-        </svg>
-      ),
-      title: t('steps.3.title'),
-      description: t('steps.3.description'),
-      duration: t('steps.3.duration')
-    },
-    {
-      id: 4,
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      title: t('steps.4.title'),
-      description: t('steps.4.description'),
-      duration: t('steps.4.duration')
-    },
-    {
-      id: 5,
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-        </svg>
-      ),
-      title: t('steps.5.title'),
-      description: t('steps.5.description'),
-      duration: t('steps.5.duration')
-    }
-  ];
+  // Build steps dynamically based on variant
+  const STEPS: Step[] = useMemo(() => {
+    const icons = VARIANT_ICONS[variant] || VARIANT_ICONS.teamshotspro;
+    const stepCount = variant === 'teamshotspro' ? 5 : 3;
+    
+    return Array.from({ length: stepCount }, (_, i) => {
+      const stepNum = i + 1;
+      return {
+        id: stepNum,
+        icon: icons[stepNum] || STEP_ICONS.check,
+        title: t(`steps.${stepNum}.title`),
+        description: t(`steps.${stepNum}.description`),
+        duration: t(`steps.${stepNum}.duration`),
+      };
+    });
+  }, [variant, t]);
 
   // Intersection observer for visibility animation - intentional client-only pattern
   /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
@@ -113,7 +134,8 @@ export default function HowItWorks() {
 
         {/* Steps Grid - 3 columns on desktop, wrapping naturally */}
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 mb-8">
+          {/* First row: up to 3 steps */}
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 ${STEPS.length > 3 ? 'mb-8' : ''}`}>
             {STEPS.slice(0, 3).map((step, index) => (
               <div
                 key={step.id}
@@ -180,7 +202,8 @@ export default function HowItWorks() {
             ))}
           </div>
 
-          {/* Second row - centered 2 columns */}
+          {/* Second row - centered 2 columns (only for 5-step flows) */}
+          {STEPS.length > 3 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10 max-w-4xl mx-auto">
             {STEPS.slice(3, 5).map((step, index) => (
               <div
@@ -247,6 +270,7 @@ export default function HowItWorks() {
               </div>
             ))}
           </div>
+          )}
         </div>
 
         {/* CTA Section */}

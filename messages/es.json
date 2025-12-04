@@ -16,6 +16,162 @@
     "dashboard": "Panel",
     "getStarted": "Empezar"
   },
+  "landing": {
+    "teamshotspro": {
+      "hero": {
+        "titleMain": "Fotos profesionales de equipo",
+        "titleHighlightTime": "en 60 segundos",
+        "subtitle": "Tú defines lo esencial de la marca (ej. logo, estilo de ropa, fondos). Tu equipo elige el resto (ej. colores y poses). Todos lucen unificados pero personales. Retratos profesionales desde cualquier selfie en 60 segundos, ",
+        "subtitleBold": "sin drama de fotógrafos ni coordinación.",
+        "subtitleMain": "Convierte cualquier selfie en retratos consistentes y acordes a tu marca. Sin fotógrafo, sin coordinación.",
+        "finalCtaTitle": "¿Listo para transformar las fotos de tu equipo?",
+        "finalCtaSubtitle": "Obtén retratos profesionales para tu equipo y ve la diferencia en 60 segundos.",
+        "getStarted": "Empezar",
+        "cta": "Obtén retratos profesionales para tu equipo",
+        "ctaSubtext": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
+        "ctaAria": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso.",
+        "noCreditCard": "No se requiere tarjeta de crédito",
+        "badge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos"
+      },
+      "gallery": {
+        "title": "De selfies normales a retratos profesionales",
+        "subtitle": "Mira cómo transformamos fotos ordinarias en retratos profesionales que realmente impresionan a clientes y reclutadores. Sin cámara profesional ni fotógrafo."
+      },
+      "trust": {
+        "title": "¿Por qué equipos eligen TeamShotsPro sobre todos los demás?",
+        "subtitle": "Diseñado para equipos B2B serios que necesitan gestión de fotos de nivel empresarial, no trucos para consumidores",
+        "badges": {
+          "teamCommandCenter": {
+            "title": "Centro de Comando del Equipo - Diseñado para managers que odian el caos",
+            "description": "Panel central donde controlas todo: aprueba fotos, invita miembros del equipo con un clic, rastrea progreso, y gestiona consistencia de marca en toda tu organización. A diferencia de herramientas para consumidores, esto fue diseñado específicamente para equipos."
+          },
+          "industryTemplates": {
+            "title": "Plantillas profesionales diseñadas para tu industria",
+            "description": "Plantillas de estilo preconstruidas para startups de tecnología, firmas consultoras, agencias creativas, salud, finanzas, y más. Cada plantilla entiende los estándares profesionales de tu industria - desde estilos bancarios conservadores hasta el ambiente de agencia creativa. No filtros genéricos."
+          },
+          "qualityControl": {
+            "title": "Calidad garantizada con correcciones automáticas",
+            "description": "Las fotos que fallan nuestros estándares de calidad se regeneran automáticamente. Además obtienes reintentos gratuitos basados en el plan para perfeccionar tus resultados. A diferencia de otros servicios donde pagas por cada intento, manejamos problemas de calidad automáticamente y te damos iteraciones gratuitas para obtener exactamente lo que quieres."
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "De caos de fotos de equipo a 'listo' en 5 minutos",
+        "subtitle": "Sin dolores de cabeza de coordinación. Sin proveedores externos. Solo cinco pasos simples y listo.",
+        "totalTime": "Tiempo total:",
+        "totalTimeValue": "5 minutos",
+        "cta": "¡Obtén retratos profesionales para tu equipo!",
+        "guarantee": "Sin riesgo: Obtén retratos profesionales para tu equipo para probarlo. Sin tarjeta de crédito, sin compromiso, sin tonterías.",
+        "steps": {
+          "1": {
+            "title": "Configura tu estilo de marca",
+            "description": "Elige el fondo y sube tu logo en 30 segundos.",
+            "duration": "30s"
+          },
+          "2": {
+            "title": "Invita a tu equipo",
+            "description": "Envía enlaces personalizados. Cada persona sube su selfie desde cualquier dispositivo.",
+            "duration": "1 min"
+          },
+          "3": {
+            "title": "Fotos profesionales en 60 segundos",
+            "description": "Resultados profesionales en 60 segundos por persona. Sin edición necesaria.",
+            "duration": "60s/persona"
+          },
+          "4": {
+            "title": "Revisa y aprueba",
+            "description": "Ve todos los resultados en un panel. Regenera lo que quieras mejorar.",
+            "duration": "2 min"
+          },
+          "5": {
+            "title": "Descarga los retratos",
+            "description": "Archivos de alta resolución listos para tu sitio web, LinkedIn y tarjetas de visita.",
+            "duration": "30s"
+          }
+        }
+      },
+      "faq": {
+        "title": "Preguntas Frecuentes",
+        "subtitle": "Todo lo que necesitas saber sobre TeamShotsPro"
+      },
+      "footer": {
+        "tagline": "Fotos profesionales de equipo en 60 segundos",
+        "copyright": "© 2025 TeamShotsPro. Todos los derechos reservados.",
+        "privacy": "Política de Privacidad",
+        "terms": "Términos de Servicio"
+      }
+    },
+    "photoshotspro": {
+      "hero": {
+        "titleMain": "Retratos profesionales",
+        "titleHighlightTime": "en 60 segundos",
+        "subtitle": "Sube cualquier selfie y obtén retratos profesionales impresionantes al instante. Perfecto para LinkedIn, perfiles de citas, o cualquier lugar donde necesites lucir increíble. ",
+        "subtitleBold": "sin fotógrafo ni estudio costoso.",
+        "subtitleMain": "Convierte cualquier selfie en retratos profesionales impresionantes. Sin fotógrafo, sin esperas.",
+        "finalCtaTitle": "¿Listo para lucir increíble?",
+        "finalCtaSubtitle": "Obtén tus retratos profesionales y ve la diferencia en 60 segundos.",
+        "getStarted": "Empezar",
+        "cta": "Obtén tus retratos profesionales",
+        "ctaSubtext": "Obtén tus retratos profesionales en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
+        "ctaAria": "Obtén tus retratos profesionales en un estilo predefinido al registrarte. Sin compromiso.",
+        "noCreditCard": "No se requiere tarjeta de crédito",
+        "badge": "Retratos profesionales sin la molestia del estudio"
+      },
+      "gallery": {
+        "title": "De selfies casuales a retratos profesionales",
+        "subtitle": "Mira cómo transformamos fotos cotidianas en retratos impresionantes perfectos para LinkedIn, apps de citas y perfiles profesionales."
+      },
+      "trust": {
+        "title": "¿Por qué la gente elige PhotoShotsPro?",
+        "subtitle": "Retratos profesionales simplificados - sin estudio, sin esperas, solo fotos increíbles",
+        "badges": {
+          "industryTemplates": {
+            "title": "Estilos para cada ocasión",
+            "description": "Retratos optimizados para LinkedIn, fotos para perfiles de citas, looks profesionales casuales, y más. Cada estilo está diseñado para ayudarte a lucir lo mejor posible para tus necesidades específicas."
+          },
+          "qualityControl": {
+            "title": "Calidad garantizada con correcciones automáticas",
+            "description": "Las fotos que fallan nuestros estándares de calidad se regeneran automáticamente. Además obtienes reintentos gratuitos basados en el plan para perfeccionar tus resultados. A diferencia de otros servicios donde pagas por cada intento, manejamos problemas de calidad automáticamente y te damos iteraciones gratuitas para obtener exactamente lo que quieres."
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "Retratos profesionales en 3 simples pasos",
+        "subtitle": "Olvídate del fotógrafo costoso y las poses incómodas. Así de fácil es obtener retratos increíbles.",
+        "totalTime": "Tiempo total:",
+        "totalTimeValue": "2 minutos",
+        "cta": "¡Obtén tus retratos profesionales ahora!",
+        "guarantee": "Sin riesgo: Pruébalo gratis para ver la calidad. Sin tarjeta de crédito, sin compromiso.",
+        "steps": {
+          "1": {
+            "title": "Sube tu selfie",
+            "description": "Cualquier foto clara de tu rostro funciona. Selfies, fotos casuales - trabajamos con lo que tengas.",
+            "duration": "30s"
+          },
+          "2": {
+            "title": "Elige tu estilo",
+            "description": "Selecciona entre profesional para LinkedIn, perfil de citas, negocio casual, y más.",
+            "duration": "30s"
+          },
+          "3": {
+            "title": "Obtén 4 fotos profesionales",
+            "description": "Recibe 4 variaciones impresionantes en 60 segundos. Descarga tus favoritas al instante.",
+            "duration": "60s"
+          }
+        }
+      },
+      "faq": {
+        "title": "Preguntas Frecuentes",
+        "subtitle": "Todo lo que necesitas saber sobre PhotoShotsPro"
+      },
+      "footer": {
+        "tagline": "Retratos profesionales en 60 segundos",
+        "copyright": "© 2025 PhotoShotsPro. Todos los derechos reservados.",
+        "privacy": "Política de Privacidad",
+        "terms": "Términos de Servicio"
+      }
+    }
+  },
   "hero": {
     "titleMain": "Fotos profesionales de equipo",
     "titleHighlightTime": "en 60 segundos",
@@ -258,7 +414,7 @@
         "description": "Ve la calidad antes de comprometerte. Sin tarjeta de crédito. Pruébalo gratis y ve los resultados.",
         "features": [
           "{photos} foto personalizable, generada {variations}× para elegir la mejor",
-          "Branding fijo de TeamShotsPro",
+          "Marca de agua fija",
           "Perfecto para probar la calidad"
         ],
         "cta": "Pruébalo gratis"

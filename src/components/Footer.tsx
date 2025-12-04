@@ -4,12 +4,19 @@ import { usePathname } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
-import { BRAND_CONFIG, getBrandLogo } from '@/config/brand';
+import { getBrand, getBrandLogo } from '@/config/brand';
+import { useLandingContent } from '@/hooks/useLandingContent';
 
 export default function Footer() {
   const pathname = usePathname();
   const t = useTranslations('nav');
-  const tFooter = useTranslations('footer');
+  const { variant } = useLandingContent();
+  
+  // Get domain-specific footer translations
+  const tFooter = useTranslations(`landing.${variant}.footer`);
+  
+  // Get dynamic brand info
+  const brand = getBrand();
   
   // Don't show footer on app routes
   const isAppRoute = pathname?.includes('/app/') || pathname?.includes('/auth/');
@@ -26,7 +33,7 @@ export default function Footer() {
             {/* Dark background footer uses the dark logo variant */}
             <Image
               src={getBrandLogo('dark')}
-              alt={BRAND_CONFIG.name}
+              alt={brand.name}
               width={150}
               height={40}
               className="opacity-90"

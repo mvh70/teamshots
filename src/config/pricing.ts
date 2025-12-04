@@ -67,7 +67,7 @@ export const PRICING_CONFIG = {
     stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL || '',
     topUp: {
       price: 19.99,
-      credits: 30,
+      credits: 40,
       stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL_TOP_UP || '',
     },
   },

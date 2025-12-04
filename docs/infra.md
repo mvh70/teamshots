@@ -18,6 +18,35 @@
 - Multi-user collaboration
 - Admin controls
 
+## Multi-Domain Landing Page Architecture
+
+Each domain serves a domain-specific landing page with unique design, content, and available packages:
+
+| Domain | Landing Component | Focus |
+|--------|------------------|-------|
+| teamshotspro.com | `TeamShotsLanding.tsx` | B2B, team management, 5-step workflow |
+| photoshotspro.com | `PhotoShotsLanding.tsx` | Individual, personal branding, 3-step workflow |
+
+### Key Files
+- `src/app/[locale]/page.tsx` - Server-side domain detection, loads correct landing
+- `src/app/[locale]/landings/*.tsx` - Domain-specific landing pages
+- `src/config/brand.ts` - Typography and style tokens per domain
+- `src/config/landing-content.ts` - Package availability per domain
+
+### Brand Configuration
+Each domain has its own:
+- **Typography**: `displayFont`, `bodyFont`
+- **Style tokens**: `borderRadius` (sharp/rounded/pill), `shadowIntensity` (subtle/medium/dramatic), `tone` (corporate/friendly/playful)
+- **Packages**: Available photo style packages and default selection
+
+### Adding a New Domain
+1. Add domain constant to `src/config/domain.ts`
+2. Add brand config to `src/config/brand.ts` (colors, typography, style tokens)
+3. Add package config to `src/config/landing-content.ts`
+4. Create landing component in `src/app/[locale]/landings/`
+5. Register in `LANDING_COMPONENTS` map in `page.tsx`
+6. Add translations under `landing.<domainname>` in `messages/en.json` and `messages/es.json`
+
 ## Internationalization Architecture
 
 ### Locale Support

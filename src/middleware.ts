@@ -3,6 +3,7 @@ import { routing } from './i18n/routing';
 import { NextResponse, NextRequest } from 'next/server'
 import { getRequestHeader } from '@/lib/server-headers'
 import { auth } from '@/auth'
+import { ALLOWED_DOMAINS } from '@/lib/url'
 
 export const runtime = 'nodejs'
 
@@ -159,6 +160,28 @@ export default async function middleware(request: NextRequest) {
       // Admin route protection - redirect non-admins to dashboard
       if (isAdminPath(request.nextUrl.pathname) && !session?.user?.isAdmin) {
         return addSecurityHeaders(NextResponse.redirect(new URL('/app/dashboard', request.url)))
+      }
+      
+      // Cross-domain redirect: Ensure users stay on their signup domain
+      // This maintains brand consistency - users who signed up on photoshotspro.com
+      // should be redirected there if they try to access via teamshotspro.com
+      const signupDomain = session.user.signupDomain
+      if (signupDomain && process.env.NODE_ENV === 'production') {
+        const currentHost = request.headers.get('host') || request.nextUrl.hostname
+        const currentDomain = currentHost.split(':')[0].replace(/^www\./, '').toLowerCase()
+        const normalizedSignupDomain = signupDomain.replace(/^www\./, '').toLowerCase()
+        
+        // Only redirect if domains differ and signup domain is valid
+        if (currentDomain !== normalizedSignupDomain && 
+            (ALLOWED_DOMAINS as readonly string[]).includes(normalizedSignupDomain)) {
+          const redirectUrl = new URL(request.url)
+          redirectUrl.hostname = normalizedSignupDomain
+          // Ensure we use https in production
+          redirectUrl.protocol = 'https:'
+          // Remove port for clean URL
+          redirectUrl.port = ''
+          return addSecurityHeaders(NextResponse.redirect(redirectUrl, 302))
+        }
       }
     }
 

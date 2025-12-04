@@ -368,12 +368,12 @@ export async function POST(request: NextRequest) {
     try {
       await prisma.$transaction(async (tx) => {
         const { PRICING_CONFIG } = await import('@/config/pricing')
-        const { PACKAGES_CONFIG } = await import('@/config/packages')
-        // Use tryitforfree package if period is tryItForFree, otherwise use default
+        const { getDefaultPackage } = await import('@/config/landing-content')
+        // Use tryitforfree package if period is tryItForFree, otherwise use domain-specific default
         const requestedPeriod = body.period as string | undefined
         const packageId = requestedPeriod === 'tryItForFree' 
           ? 'tryitforfree' 
-          : PACKAGES_CONFIG.defaultPlanPackage
+          : getDefaultPackage(domain)
         const freePlanTier = userType === 'team' ? 'pro' : 'individual'
         // Use tryItForFree credits if that's the requested period
         const freeCredits = requestedPeriod === 'tryItForFree'

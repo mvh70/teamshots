@@ -7,6 +7,7 @@ import { CheckoutButton } from '@/components/ui'
 import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
+import type { LandingVariant } from '@/config/landing-content'
 
 // Helper to calculate total photos (styles × variations)
 function getTotalPhotos(credits: number, regenerations: number): number {
@@ -15,15 +16,26 @@ function getTotalPhotos(credits: number, regenerations: number): number {
   return styles * variations
 }
 
-export default function PricingPreview() {
+interface PricingPreviewProps {
+  /** Optional variant from server-side to prevent hydration flash */
+  variant?: LandingVariant;
+}
+
+export default function PricingPreview({ variant }: PricingPreviewProps) {
   const t = useTranslations('pricing');
 
-  // Domain-based pricing restriction - set to null initially for SSR
-  // Will be computed on client after hydration
-  const [domainSignupType, setDomainSignupType] = useState<'individual' | 'team' | null>(null);
+  // Map variant to signup type for initial render (prevents flash)
+  const getInitialSignupType = (): 'individual' | 'team' | null => {
+    if (variant === 'photoshotspro') return 'individual';
+    if (variant === 'teamshotspro') return 'team';
+    return null;
+  };
+
+  // Domain-based pricing restriction - use variant for initial SSR render
+  const [domainSignupType, setDomainSignupType] = useState<'individual' | 'team' | null>(getInitialSignupType);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Calculate domain type after hydration (client-side only)
+  // Verify domain type after hydration (client-side)
   useEffect(() => {
     const domain = getClientDomain();
     const forcedType = getForcedSignupType();

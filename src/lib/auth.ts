@@ -260,17 +260,19 @@ export const authOptions = {
         token.jti = generateJti()
         
         // SECURITY: Store token version to invalidate all tokens when role/permissions change
-        // Fetch current token version from database
+        // Also fetch signupDomain for cross-domain redirect
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: user.id },
-            select: { tokenVersion: true }
+            select: { tokenVersion: true, signupDomain: true }
           })
           token.tokenVersion = dbUser?.tokenVersion ?? 0
+          token.signupDomain = dbUser?.signupDomain ?? null
         } catch (error) {
           // If database query fails, default to 0 and log the error
           console.error('Error fetching token version during initial auth:', error)
           token.tokenVersion = 0
+          token.signupDomain = null
         }
         
         // Set token expiration time when user first authenticates
@@ -343,6 +345,7 @@ export const authOptions = {
         session.user.role = token.role as string
         session.user.isAdmin = token.isAdmin as boolean
         session.user.locale = token.locale as string
+        session.user.signupDomain = (token.signupDomain as string | null) ?? null
         session.user.person = token.person as {
           id: string
           firstName: string

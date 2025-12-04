@@ -6,6 +6,7 @@ import { getBrandContact } from '@/config/brand';
 import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain';
 import { PRICING_CONFIG } from '@/config/pricing';
 import { calculatePhotosFromCredits, formatPrice } from '@/domain/pricing/utils';
+import type { LandingVariant } from '@/config/landing-content';
 
 interface FAQItem {
   id: string;
@@ -14,7 +15,15 @@ interface FAQItem {
   category: string;
 }
 
-export default function FAQ() {
+interface FAQProps {
+  /** Landing page variant for domain-specific content */
+  variant: LandingVariant;
+}
+
+export default function FAQ({ variant }: FAQProps) {
+  // Use domain-specific translations for title/subtitle
+  const tLanding = useTranslations(`landing.${variant}.faq`);
+  // Use legacy translations for FAQ items (complex structure)
   const t = useTranslations('faq');
   const [openItems, setOpenItems] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -142,10 +151,10 @@ export default function FAQ() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6 leading-tight">
-            {t('title')}
+            {tLanding('title')}
           </h2>
           <p className="text-lg sm:text-xl text-text-body max-w-2xl mx-auto leading-relaxed">
-            {t('subtitle')}
+            {tLanding('subtitle')}
           </p>
         </div>
 

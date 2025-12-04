@@ -16,6 +16,162 @@
     "dashboard": "Dashboard",
     "getStarted": "Get Started"
   },
+  "landing": {
+    "teamshotspro": {
+      "hero": {
+        "titleMain": "Professional team photos",
+        "titleHighlightTime": "in 60 seconds",
+        "subtitle": "You set the brand essentials (e.g. logo, clothing style, backgrounds). Your team picks the rest (e.g. colors and poses). Everyone looks unified yet personal. Professional headshots from any selfie in 60 seconds, ",
+        "subtitleBold": "no photographer or scheduling drama required.",
+        "subtitleMain": "Turn any selfie into consistent, on-brand headshots. No photographer, no coordination.",
+        "finalCtaTitle": "Ready to transform your team photos?",
+        "finalCtaSubtitle": "Get your team's professional headshots and see the difference in 60 seconds.",
+        "getStarted": "Get Started",
+        "cta": "Get your team's professional headshots",
+        "ctaSubtext": "Get your team's professional headshots in a predefined style when you sign up. No commitment, no credit card.",
+        "ctaAria": "Get your team's professional headshots in a predefined style when you sign up. No commitment.",
+        "noCreditCard": "No credit card required",
+        "badge": "Professional team photos without the photoshoot hassle"
+      },
+      "gallery": {
+        "title": "From 'meh' selfies to LinkedIn-worthy headshots",
+        "subtitle": "See how we transform ordinary photos into professional headshots that actually impress clients and recruiters. No fancy camera or photographer required."
+      },
+      "trust": {
+        "title": "Why teams choose TeamShotsPro over everyone else",
+        "subtitle": "Built for serious B2B teams that need enterprise-grade photo management, not consumer gimmicks",
+        "badges": {
+          "teamCommandCenter": {
+            "title": "Team Command Center - Built for managers who hate chaos",
+            "description": "Central dashboard where you control everything: approve photos, invite team members with one click, track progress, and manage brand consistency across your entire organization. Unlike consumer tools, this was built specifically for teams."
+          },
+          "industryTemplates": {
+            "title": "Professional templates designed for your industry",
+            "description": "Pre-built style templates for tech startups, consulting firms, creative agencies, healthcare, finance, and more. Each template understands the professional standards for your industry - from conservative banking styles to creative agency vibes. Not generic filters."
+          },
+          "qualityControl": {
+            "title": "Quality guaranteed with automatic fixes",
+            "description": "Photos that fail our quality standards get regenerated automatically. Plus you get plan-based free retries to perfect your results. Unlike other services where you pay for every attempt, we handle quality issues automatically and give you free iterations to get exactly what you want."
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "From team photo chaos to 'done' in 5 minutes",
+        "subtitle": "Stop wasting weeks coordinating photoshoots. Here's exactly how modern teams get professional headshots instantly.",
+        "totalTime": "Total time:",
+        "totalTimeValue": "5 minutes",
+        "cta": "Get your team's professional headshots now",
+        "guarantee": "Risk-free: Get your team's professional headshots to prove it works. No credit card, no commitment, no BS.",
+        "steps": {
+          "1": {
+            "title": "Set your brand style",
+            "description": "Choose background and upload logo in 30 seconds.",
+            "duration": "30s"
+          },
+          "2": {
+            "title": "Invite your team",
+            "description": "Send personalized links. Each person uploads their selfie from any device.",
+            "duration": "1 min"
+          },
+          "3": {
+            "title": "Professional photos in 60 seconds",
+            "description": "Get polished headshots instantly. No editing required.",
+            "duration": "60s/person"
+          },
+          "4": {
+            "title": "Review & approve",
+            "description": "See all results in one dashboard. Retry anything you want to improve.",
+            "duration": "2 min"
+          },
+          "5": {
+            "title": "Download headshots",
+            "description": "High-resolution files ready for your website, LinkedIn, and business cards.",
+            "duration": "30s"
+          }
+        }
+      },
+      "faq": {
+        "title": "Frequently Asked Questions",
+        "subtitle": "Everything you need to know about TeamShotsPro"
+      },
+      "footer": {
+        "tagline": "Professional team photos in 60 seconds",
+        "copyright": "© 2025 TeamShotsPro. All rights reserved.",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service"
+      }
+    },
+    "photoshotspro": {
+      "hero": {
+        "titleMain": "Professional headshots",
+        "titleHighlightTime": "in 60 seconds",
+        "subtitle": "Upload any selfie and get stunning, professional-quality headshots instantly. Perfect for LinkedIn, dating profiles, or anywhere you need to look your best. ",
+        "subtitleBold": "no photographer or expensive studio required.",
+        "subtitleMain": "Turn any selfie into stunning professional headshots. No photographer, no waiting.",
+        "finalCtaTitle": "Ready to look your best?",
+        "finalCtaSubtitle": "Get your professional headshots and see the difference in 60 seconds.",
+        "getStarted": "Get Started",
+        "cta": "Get your professional headshots",
+        "ctaSubtext": "Get your professional headshots in a predefined style when you sign up. No commitment, no credit card.",
+        "ctaAria": "Get your professional headshots in a predefined style when you sign up. No commitment.",
+        "noCreditCard": "No credit card required",
+        "badge": "Professional headshots without the studio hassle"
+      },
+      "gallery": {
+        "title": "From casual selfies to professional headshots",
+        "subtitle": "See how we transform everyday photos into stunning headshots perfect for LinkedIn, dating apps, and professional profiles."
+      },
+      "trust": {
+        "title": "Why people choose PhotoShotsPro",
+        "subtitle": "Professional headshots made simple - no studio, no waiting, just great photos",
+        "badges": {
+          "industryTemplates": {
+            "title": "Styles for every occasion",
+            "description": "LinkedIn-optimized headshots, dating profile photos, casual professional looks, and more. Each style is designed to help you look your best for your specific needs."
+          },
+          "qualityControl": {
+            "title": "Quality guaranteed with automatic fixes",
+            "description": "Photos that fail our quality standards get regenerated automatically. Plus you get plan-based free retries to perfect your results. Unlike other services where you pay for every attempt, we handle quality issues automatically and give you free iterations to get exactly what you want."
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "Professional headshots in 3 simple steps",
+        "subtitle": "Skip the expensive photographer and awkward poses. Here's how easy it is to get amazing headshots.",
+        "totalTime": "Total time:",
+        "totalTimeValue": "2 minutes",
+        "cta": "Get your professional headshots now",
+        "guarantee": "Risk-free: Try it free to see the quality. No credit card, no commitment.",
+        "steps": {
+          "1": {
+            "title": "Upload your selfie",
+            "description": "Any clear photo of your face works. Selfies, casual photos - we work with what you have.",
+            "duration": "30s"
+          },
+          "2": {
+            "title": "Choose your style",
+            "description": "Select from LinkedIn professional, dating profile, casual business, and more.",
+            "duration": "30s"
+          },
+          "3": {
+            "title": "Get 4 professional photos",
+            "description": "Receive 4 stunning variations in 60 seconds. Download your favorites instantly.",
+            "duration": "60s"
+          }
+        }
+      },
+      "faq": {
+        "title": "Frequently Asked Questions",
+        "subtitle": "Everything you need to know about PhotoShotsPro"
+      },
+      "footer": {
+        "tagline": "Professional headshots in 60 seconds",
+        "copyright": "© 2025 PhotoShotsPro. All rights reserved.",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service"
+      }
+    }
+  },
   "hero": {
     "titleMain": "Professional team photos",
     "titleHighlightTime": "in 60 seconds",
@@ -248,7 +404,7 @@
         "description": "See the quality before you commit. No credit card required. Try it free and see the results.",
         "features": [
           "{photos} customizable photo, generated {variations}× so you can pick the best",
-          "Fixed TeamShotsPro branding",
+          "Fixed branding watermark",
           "Perfect for testing the quality"
         ],
         "cta": "Try it free"

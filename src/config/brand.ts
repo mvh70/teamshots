@@ -30,6 +30,28 @@ export interface BrandLegal {
   foundedYear: number;
 }
 
+/**
+ * Typography configuration for domain-specific fonts
+ */
+export interface BrandTypography {
+  /** Font class for display/heading text (e.g., 'font-display', 'font-sans') */
+  displayFont: string;
+  /** Font class for body text */
+  bodyFont: string;
+}
+
+/**
+ * Style tokens for domain-specific visual treatments
+ */
+export interface BrandStyle {
+  /** Border radius style: affects buttons, cards, inputs */
+  borderRadius: 'sharp' | 'rounded' | 'pill';
+  /** Shadow intensity: affects depth perception */
+  shadowIntensity: 'subtle' | 'medium' | 'dramatic';
+  /** Overall visual tone */
+  tone: 'corporate' | 'friendly' | 'playful';
+}
+
 export interface BrandConfig {
   name: string;
   domain: string;
@@ -38,6 +60,8 @@ export interface BrandConfig {
   ogImage: string;
   legal: BrandLegal;
   colors: BrandColors;
+  typography: BrandTypography;
+  style: BrandStyle;
 }
 
 // Shared configuration (same across all brands)
@@ -55,6 +79,32 @@ const SHARED_CONFIG = {
     foundedYear: 2025,
   },
 } as const satisfies { colors: BrandColors; legal: Omit<BrandLegal, 'teamName'> };
+
+// Domain-specific typography configurations
+const TYPOGRAPHY_CONFIGS: Record<string, BrandTypography> = {
+  [TEAM_DOMAIN]: {
+    displayFont: 'font-display',  // Corporate/professional display font
+    bodyFont: 'font-sans',        // Clean sans-serif for readability
+  },
+  [INDIVIDUAL_DOMAIN]: {
+    displayFont: 'font-display',  // Can be customized to a friendlier font
+    bodyFont: 'font-sans',        // Consistent body font
+  },
+};
+
+// Domain-specific style configurations
+const STYLE_CONFIGS: Record<string, BrandStyle> = {
+  [TEAM_DOMAIN]: {
+    borderRadius: 'rounded',      // Professional, modern rounded corners
+    shadowIntensity: 'medium',    // Balanced depth
+    tone: 'corporate',            // B2B professional tone
+  },
+  [INDIVIDUAL_DOMAIN]: {
+    borderRadius: 'pill',         // Friendlier, softer appearance
+    shadowIntensity: 'dramatic',  // More visual impact for individuals
+    tone: 'friendly',             // Approachable, personal tone
+  },
+};
 
 // Complete brand configurations per domain
 const BRAND_CONFIGS: Record<string, BrandConfig> = {
@@ -79,6 +129,8 @@ const BRAND_CONFIGS: Record<string, BrandConfig> = {
       teamName: 'TeamShotsPro',
     },
     colors: SHARED_CONFIG.colors,
+    typography: TYPOGRAPHY_CONFIGS[TEAM_DOMAIN],
+    style: STYLE_CONFIGS[TEAM_DOMAIN],
   },
   [INDIVIDUAL_DOMAIN]: {
     name: 'PhotoShotsPro',
@@ -101,6 +153,8 @@ const BRAND_CONFIGS: Record<string, BrandConfig> = {
       teamName: 'PhotoShotsPro',
     },
     colors: SHARED_CONFIG.colors,
+    typography: TYPOGRAPHY_CONFIGS[INDIVIDUAL_DOMAIN],
+    style: STYLE_CONFIGS[INDIVIDUAL_DOMAIN],
   },
 };
 
@@ -111,14 +165,23 @@ export const BRAND_CONFIG = BRAND_CONFIGS[TEAM_DOMAIN];
  * Get the current domain from the request context.
  * Works in both server and client components.
  * 
+ * On localhost, respects NEXT_PUBLIC_FORCE_DOMAIN env var for testing different brands.
+ * 
  * @param requestHeaders - Optional headers for server-side detection
  * @returns The normalized domain (without www) or null if unable to determine
  */
 function getCurrentDomain(requestHeaders?: Headers): string | null {
+  // Check for forced domain override (localhost development only)
+  const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
+  
   // Client-side detection
   if (typeof window !== 'undefined') {
     try {
       const hostname = window.location.hostname.toLowerCase()
+      // On localhost, use forced domain if set
+      if (hostname === 'localhost' && forcedDomain) {
+        return forcedDomain.replace(/^www\./, '').toLowerCase()
+      }
       return hostname.replace(/^www\./, '')
     } catch {
       return null
@@ -130,6 +193,10 @@ function getCurrentDomain(requestHeaders?: Headers): string | null {
     const host = requestHeaders.get('host') || requestHeaders.get('x-forwarded-host')
     if (host) {
       const normalizedHost = host.split(':')[0].replace(/^www\./, '').toLowerCase()
+      // On localhost, use forced domain if set
+      if (normalizedHost === 'localhost' && forcedDomain) {
+        return forcedDomain.replace(/^www\./, '').toLowerCase()
+      }
       return normalizedHost
     }
   }
@@ -200,6 +267,20 @@ export function getBrandColor(type: 'primary' | 'secondary' | 'cta', hover = fal
     return colors[`${type}Hover` as keyof BrandColors];
   }
   return colors[type];
+}
+
+/**
+ * Get brand typography configuration
+ */
+export function getBrandTypography(requestHeaders?: Headers): BrandTypography {
+  return getBrand(requestHeaders).typography;
+}
+
+/**
+ * Get brand style tokens
+ */
+export function getBrandStyle(requestHeaders?: Headers): BrandStyle {
+  return getBrand(requestHeaders).style;
 }
 
 // Note: Tagline should be retrieved using useTranslations('footer.tagline') in components
