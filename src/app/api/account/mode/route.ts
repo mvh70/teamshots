@@ -19,6 +19,7 @@ export async function GET() {
         isIndividual: true,
         isTeamMember: false,
         subscriptionTier: null,
+        subscriptionPeriod: null,
         hasProTier: false,
       })
     }
@@ -33,6 +34,7 @@ export async function GET() {
       isIndividual: true,
       isTeamMember: false,
       subscriptionTier: null,
+      subscriptionPeriod: null,
       hasProTier: false,
     })
   }

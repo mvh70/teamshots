@@ -18,6 +18,7 @@ export interface AccountModeResult {
   isIndividual: boolean
   isTeamMember: boolean
   subscriptionTier: string | null
+  subscriptionPeriod?: string | null
   hasProTier: boolean
 }
 
@@ -39,6 +40,7 @@ export async function getAccountMode(
       isIndividual: true,
       isTeamMember: false,
       subscriptionTier: null,
+      subscriptionPeriod: null,
       hasProTier: false,
     }
   }
@@ -51,6 +53,7 @@ export async function getAccountMode(
   ])
 
   const subscriptionTier = subscriptionData?.tier ?? null
+  const subscriptionPeriod = subscriptionData?.period ?? null
   const hasProTier = subscriptionTier === 'pro'
 
   // Check user roles (pro users are team admins by definition)
@@ -73,6 +76,7 @@ export async function getAccountMode(
     isIndividual: mode === 'individual',
     isTeamMember: false, // Team members are determined via token, not here
     subscriptionTier,
+    subscriptionPeriod,
     hasProTier,
   }
 }
@@ -90,6 +94,7 @@ export async function fetchAccountMode(): Promise<AccountModeResult> {
       isIndividual: true,
       isTeamMember: false,
       subscriptionTier: null,
+      subscriptionPeriod: null,
       hasProTier: false,
     }
   }

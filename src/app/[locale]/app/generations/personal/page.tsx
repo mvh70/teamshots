@@ -11,6 +11,7 @@ import { BRAND_CONFIG } from '@/config/brand'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
 import { calculatePhotosFromCredits, getRegenerationCount } from '@/domain/pricing'
+import { type PlanPeriod } from '@/domain/subscription/utils'
 import { Toast, GenerationGrid } from '@/components/ui'
 import { fetchAccountMode } from '@/domain/account/accountMode'
 import { UpgradePrompt } from '@/components/generations/UpgradePrompt'
@@ -29,6 +30,7 @@ export default function PersonalGenerationsPage() {
   const currentUserName = session?.user?.name || ''
   const [failureToast, setFailureToast] = useState<string | null>(null)
   const [subscriptionTier, setSubscriptionTier] = useState<PricingTier | null>(null)
+  const [subscriptionPeriod, setSubscriptionPeriod] = useState<PlanPeriod | null>(null)
   const { timeframe, context, setTimeframe, setContext, filterGenerated } = useGenerationFilters()
   const { context: onboardingContext } = useOnboardingState()
   const { startTour } = useOnbordaTours()
@@ -47,6 +49,7 @@ export default function PersonalGenerationsPage() {
         try {
           const accountMode = await fetchAccountMode()
           setSubscriptionTier(accountMode.subscriptionTier as PricingTier | null)
+          setSubscriptionPeriod(accountMode.subscriptionPeriod as PlanPeriod | null)
         } catch (error) {
           console.warn('Failed to fetch account mode', error)
         }
@@ -72,6 +75,7 @@ export default function PersonalGenerationsPage() {
 
         // Store subscription tier for regeneration count
         setSubscriptionTier(accountMode.subscriptionTier as PricingTier | null)
+        setSubscriptionPeriod(accountMode.subscriptionPeriod as PlanPeriod | null)
 
         if (accountMode.mode === 'pro') {
           window.location.href = '/app/generations/team'
@@ -347,7 +351,7 @@ export default function PersonalGenerationsPage() {
                 <span className="text-gray-500"> {t('perPhoto')}</span>
               </div>
               <div className="text-gray-500">
-                {subscriptionTier ? getRegenerationCount(subscriptionTier) : 3} {t('retriesPerPhoto')}
+                {subscriptionTier ? getRegenerationCount(subscriptionTier, subscriptionPeriod) : 3} {t('retriesPerPhoto')}
               </div>
             </div>
           </div>

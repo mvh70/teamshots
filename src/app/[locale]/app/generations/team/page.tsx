@@ -11,6 +11,7 @@ import { BRAND_CONFIG } from '@/config/brand'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import { PRICING_CONFIG, type PricingTier } from '@/config/pricing'
 import { calculatePhotosFromCredits, getRegenerationCount } from '@/domain/pricing'
+import { type PlanPeriod } from '@/domain/subscription/utils'
 import { Toast, GenerationGrid } from '@/components/ui'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
@@ -25,6 +26,7 @@ export default function TeamGenerationsPage() {
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
   const [rolesLoaded, setRolesLoaded] = useState(false)
   const [subscriptionTier, setSubscriptionTier] = useState<PricingTier | null>(null)
+  const [subscriptionPeriod, setSubscriptionPeriod] = useState<PlanPeriod | null>(null)
   const currentUserId = session?.user?.id
   const currentPersonId = session?.user?.person?.id
   const currentUserName = session?.user?.name || ''
@@ -103,6 +105,7 @@ export default function TeamGenerationsPage() {
           const accountMode = await response.json()
           // Store subscription tier for regeneration count
           setSubscriptionTier(accountMode.subscriptionTier)
+          setSubscriptionPeriod(accountMode.subscriptionPeriod)
           // Only redirect if user is NOT pro (individual mode only)
           if (accountMode.mode === 'individual' && !redirecting) {
             setShouldRedirect(true)
@@ -440,7 +443,7 @@ export default function TeamGenerationsPage() {
                 <span className="text-gray-500"> {t('perPhoto')}</span>
               </div>
               <div className="text-gray-500">
-                {subscriptionTier ? getRegenerationCount(subscriptionTier) : 4} {t('retriesPerPhoto')}
+                {subscriptionTier ? getRegenerationCount(subscriptionTier, subscriptionPeriod) : 4} {t('retriesPerPhoto')}
               </div>
             </div>
           </div>
