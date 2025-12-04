@@ -7,7 +7,8 @@ const nextConfig = {
   transpilePackages: ['next-intl'],
   output: 'standalone', // Enable for Docker deployment
   images: {
-    unoptimized: true,
+    // Enable Next.js image optimization for static images in /public
+    // Dynamic S3 images still use unoptimized via component props
     remotePatterns: [
       { protocol: 'https', hostname: 'ui-avatars.com' },
       { protocol: 'https', hostname: 'avatars.githubusercontent.com' }
@@ -17,7 +18,9 @@ const nextConfig = {
         pathname: '/api/files/get',
         search: 'key=*'
       }
-    ]
+    ],
+    // Allow WebP and AVIF formats for better compression
+    formats: ['image/avif', 'image/webp'],
   },
   async headers() {
     return [
@@ -40,6 +43,39 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin'
+          },
+          // Add Cross-Origin-Opener-Policy for security (fixes PageSpeed warning)
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin'
+          }
+        ]
+      },
+      // Long cache headers for static assets (Cloudflare will respect these)
+      {
+        source: '/samples/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          }
+        ]
+      },
+      {
+        source: '/branding/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          }
+        ]
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
           }
         ]
       }

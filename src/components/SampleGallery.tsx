@@ -20,12 +20,12 @@ interface SamplePhoto {
   };
 }
 
-// Sample data - using local transformation images
+// Sample data - using local transformation images (WebP for performance)
 const SAMPLE_PHOTOS: SamplePhoto[] = [
   {
     id: '1', 
-    before: '/samples/before-2.png',
-    after: '/samples/after-2.png',
+    before: '/samples/before-2.webp',
+    after: '/samples/after-2.webp',
     alt: 'Professional headshot transformation example 2',
     attribution: {
       name: 'Sarah Johnson',
@@ -35,8 +35,8 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
   },
   {
     id: '2',
-    before: '/samples/before-1.jpg',
-    after: '/samples/after-1.png',
+    before: '/samples/before-1.webp',
+    after: '/samples/after-1.webp',
     alt: 'Professional headshot transformation example 1',
     attribution: {
       name: 'Matthieu van Haperen',
@@ -46,13 +46,13 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
   },
   {
     id: '3',
-    before: '/samples/before-3.jpg',
-    after: '/samples/after-3.png',
+    before: '/samples/before-3.webp',
+    after: '/samples/after-3.webp',
     alt: 'Professional headshot transformation example 3',
     attribution: {
       name: 'Matthieu van Haperen',
       role: 'Founder',
-                      team: getBrandName()
+      team: getBrandName()
     }
   }
 ];
@@ -182,7 +182,8 @@ export default function SampleGallery() {
                       alt={`${photo.alt} - After`}
                       fill
                       className="object-cover"
-                      unoptimized
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      loading="lazy"
                     />
                     
                     {/* Foreground: Before image clipped to slider position */}
@@ -192,7 +193,8 @@ export default function SampleGallery() {
                         alt={`${photo.alt} - Before`}
                         fill
                         className="object-cover"
-                        unoptimized
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        loading="lazy"
                         style={{ clipPath: `inset(0 ${100 - (sliderPositions[photo.id] || 50)}% 0 0)` }}
                       />
                     </div>

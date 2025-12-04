@@ -28,6 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '',           // Landing page
     '/pricing',   // Pricing page
     '/blog',      // Blog index
+    '/blog/professional-headshot-photography-cost', // Blog: Professional Headshot Cost Guide
     '/blog/ai-headshots-for-linkedin', // Blog: AI Headshots for LinkedIn
     '/blog/free-vs-paid-ai-headshots', // Blog: Free vs Paid comparison
     '/blog/corporate-ai-headshots',    // Blog: Corporate AI Headshots
@@ -35,6 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/blog/free-ai-headshot-generator', // Blog: Free AI Headshot Generator
     '/blog/professional-headshots-ai', // Blog: Professional Headshots AI
     '/blog/headshot-ai-generator',     // Blog: Headshot AI Generator
+    '/blog/remote-onboarding-broken',
     '/legal/privacy', // Privacy Policy
     '/legal/terms',   // Terms of Service
   ]

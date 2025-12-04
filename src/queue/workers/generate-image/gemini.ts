@@ -101,6 +101,64 @@ export interface GenerationOptions {
   safetySettings?: SafetySetting[]
 }
 
+/**
+ * Provider types for Gemini image generation
+ */
+type GeminiProvider = 'vertex' | 'rest' | 'replicate'
+
+/**
+ * Convert Vertex AI safety settings to REST API format
+ */
+function convertToRestOptions(options?: GenerationOptions) {
+  if (!options) return undefined
+  return {
+    ...options,
+    safetySettings: options.safetySettings?.map(setting => ({
+      category: setting.category,
+      threshold: (setting.threshold === HarmBlockThreshold.BLOCK_ONLY_HIGH ? 'BLOCK_ONLY_HIGH' :
+                 setting.threshold === HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE ? 'BLOCK_MEDIUM_AND_ABOVE' :
+                 setting.threshold === HarmBlockThreshold.BLOCK_LOW_AND_ABOVE ? 'BLOCK_LOW_AND_ABOVE' :
+                 'BLOCK_NONE') as 'BLOCK_ONLY_HIGH' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_LOW_AND_ABOVE' | 'BLOCK_NONE'
+    }))
+  }
+}
+
+/**
+ * Build the ordered list of providers to try based on configuration and available credentials
+ */
+function buildProviderOrder(): GeminiProvider[] {
+  const hasApiKey = !!Env.string('GOOGLE_CLOUD_API_KEY', '')
+  // GOOGLE_APPLICATION_CREDENTIALS JSON file contains project_id, so we only need to check for that
+  const hasServiceAccount = !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', '')
+  const hasReplicate = !!Env.string('REPLICATE_API_TOKEN', '')
+  
+  // Determine primary provider (configurable via env var)
+  const primaryProvider = Env.string('GEMINI_PRIMARY_PROVIDER', 'vertex') as GeminiProvider
+  const providers: GeminiProvider[] = []
+  
+  // Add primary provider first if available
+  if (primaryProvider === 'vertex' && hasServiceAccount) {
+    providers.push('vertex')
+  } else if (primaryProvider === 'rest' && hasApiKey) {
+    providers.push('rest')
+  } else if (primaryProvider === 'replicate' && hasReplicate) {
+    providers.push('replicate')
+  }
+  
+  // Add remaining providers as fallbacks (in order of preference)
+  if (!providers.includes('vertex') && hasServiceAccount) {
+    providers.push('vertex')
+  }
+  if (!providers.includes('rest') && hasApiKey) {
+    providers.push('rest')
+  }
+  if (!providers.includes('replicate') && hasReplicate) {
+    providers.push('replicate')
+  }
+  
+  return providers
+}
+
 export async function generateWithGemini(
   prompt: string,
   images: GeminiReferenceImage[],
@@ -108,34 +166,63 @@ export async function generateWithGemini(
   resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
 ): Promise<Buffer[]> {
-  // Determine which client to use based on available credentials
-  const hasApiKey = !!Env.string('GOOGLE_CLOUD_API_KEY', '')
-  const hasServiceAccount = !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', '') ||
-                           !!Env.string('GOOGLE_PROJECT_ID', '')
-
-  // Prefer REST API client if API key is available, otherwise use Vertex AI
-  const useRestApi = hasApiKey
-
-  if (useRestApi) {
-    Logger.debug('Using Gemini REST API client for image generation')
-    // Convert safety settings to REST API format
-    const restOptions = options ? {
-      ...options,
-      safetySettings: options.safetySettings?.map(setting => ({
-        category: setting.category,
-        threshold: (setting.threshold === HarmBlockThreshold.BLOCK_ONLY_HIGH ? 'BLOCK_ONLY_HIGH' :
-                   setting.threshold === HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE ? 'BLOCK_MEDIUM_AND_ABOVE' :
-                   setting.threshold === HarmBlockThreshold.BLOCK_LOW_AND_ABOVE ? 'BLOCK_LOW_AND_ABOVE' :
-                   'BLOCK_NONE') as 'BLOCK_ONLY_HIGH' | 'BLOCK_MEDIUM_AND_ABOVE' | 'BLOCK_LOW_AND_ABOVE' | 'BLOCK_NONE'
-      }))
-    } : undefined
-    return generateWithGeminiRest(prompt, images, aspectRatio, resolution, restOptions)
-  } else if (hasServiceAccount) {
-    Logger.debug('Using Vertex AI client for image generation')
-    return generateWithGeminiVertex(prompt, images, aspectRatio, resolution, options)
-  } else {
-    throw new Error('Neither GOOGLE_CLOUD_API_KEY nor GOOGLE_APPLICATION_CREDENTIALS/GOOGLE_PROJECT_ID are configured for Gemini API access')
+  const providers = buildProviderOrder()
+  
+  if (providers.length === 0) {
+    throw new Error(
+      'No Gemini API credentials configured. Need one of: ' +
+      'GOOGLE_CLOUD_API_KEY (for AI Studio REST), ' +
+      'GOOGLE_APPLICATION_CREDENTIALS (for Vertex AI - project_id is in the JSON), ' +
+      'or REPLICATE_API_TOKEN (for Replicate)'
+    )
   }
+  
+  Logger.debug('Gemini providers configured', {
+    providers,
+    primaryProvider: providers[0],
+    fallbackCount: providers.length - 1
+  })
+  
+  // Try each provider in order, fallback on rate limit errors
+  let lastError: unknown
+  for (let i = 0; i < providers.length; i++) {
+    const provider = providers[i]
+    const isLastProvider = i === providers.length - 1
+    
+    try {
+      if (provider === 'vertex') {
+        Logger.debug(`Using Vertex AI client (provider ${i + 1}/${providers.length})`)
+        return await generateWithGeminiVertex(prompt, images, aspectRatio, resolution, options)
+      } else if (provider === 'rest') {
+        Logger.debug(`Using Gemini REST API client (provider ${i + 1}/${providers.length})`)
+        return await generateWithGeminiRest(prompt, images, aspectRatio, resolution, convertToRestOptions(options))
+      } else if (provider === 'replicate') {
+        Logger.debug(`Using Replicate API client (provider ${i + 1}/${providers.length})`)
+        // Replicate integration will be added in Phase 2
+        const { generateWithGeminiReplicate } = await import('./gemini-replicate')
+        return await generateWithGeminiReplicate(prompt, images, aspectRatio, resolution)
+      }
+    } catch (error) {
+      lastError = error
+      const rateLimited = isRateLimitError(error)
+      
+      if (rateLimited && !isLastProvider) {
+        Logger.warn('Provider rate limited, falling back to next provider', {
+          provider,
+          attempt: i + 1,
+          totalProviders: providers.length,
+          nextProvider: providers[i + 1]
+        })
+        continue // Try next provider
+      }
+      
+      // If not rate limit, or this is the last provider, throw immediately
+      throw error
+    }
+  }
+  
+  // Should never reach here, but TypeScript needs it
+  throw lastError || new Error('All providers failed')
 }
 
 async function generateWithGeminiVertex(

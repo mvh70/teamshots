@@ -81,6 +81,7 @@
     "react-compare-image": "^3.5.10",
     "react-dom": "^19.2.0",
     "react-email": "^4.3.0",
+    "replicate": "^1.4.0",
     "resend": "^6.1.2",
     "sharp": "^0.34.4",
     "stripe": "^19.1.0",

@@ -11,11 +11,11 @@ interface SamplePhoto {
   alt: string;
 }
 
-// Featured hero example - using local transformation images
+// Featured hero example - using local transformation images (WebP for performance)
 const HERO_PHOTO: SamplePhoto = {
   id: 'hero-1',
-  before: '/samples/before-hero.png',
-  after: '/samples/after-hero.png',
+  before: '/samples/before-hero.webp',
+  after: '/samples/after-hero.webp',
   alt: 'Professional headshot transformation - AI powered'
 };
 
@@ -96,6 +96,7 @@ export default function HeroGallery() {
             fill
             className="object-cover"
             priority
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 40vw"
           />
           
           {/* Foreground: Before image clipped to slider position */}
@@ -106,6 +107,7 @@ export default function HeroGallery() {
               fill
               className="object-cover"
               priority
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 40vw"
               style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
             />
           </div>

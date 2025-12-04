@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from 'react'
+import { useCallback, useRef, useSyncExternalStore } from 'react'
 
 const IOS_REGEX = /iPad|iPhone|iPod/
 
@@ -55,7 +55,31 @@ function getServerSnapshot(): DeviceCapabilities {
 }
 
 export function useDeviceCapabilities(): DeviceCapabilities {
-  const getSnapshot = useCallback(() => getDeviceCapabilities(), [])
+  const cachedRef = useRef<DeviceCapabilities | null>(null)
+
+  const getSnapshot = useCallback(() => {
+    const current = getDeviceCapabilities()
+
+    // Return cached result if capabilities haven't changed
+    if (cachedRef.current) {
+      const cached = cachedRef.current
+      if (
+        cached.isMobile === current.isMobile &&
+        cached.isIOSDevice === current.isIOSDevice &&
+        cached.hasTouchScreen === current.hasTouchScreen &&
+        cached.hasCameraApi === current.hasCameraApi &&
+        cached.preferNativeCamera === current.preferNativeCamera &&
+        cached.isClientReady === current.isClientReady
+      ) {
+        return cached
+      }
+    }
+
+    // Update cache and return new result
+    cachedRef.current = current
+    return current
+  }, [])
+
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }
 

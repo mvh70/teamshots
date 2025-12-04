@@ -13,6 +13,14 @@ type Post = {
 
 const enPosts: Post[] = [
   {
+    slug: 'professional-headshot-photography-cost',
+    title: 'How Much Do Professional Headshots Cost in 2025? (Pricing Guide)',
+    description: 'Complete professional headshot photography pricing guide for 2025. From individual sessions ($100-500) to corporate groups ($30-75/person). Compare with AI alternatives.',
+    date: '2025-12-04',
+    readTime: '12 min read',
+    category: 'Guides',
+  },
+  {
     slug: 'ai-headshots-for-linkedin',
     title: 'AI Headshots for LinkedIn: Do They Work in 2025? (Recruiter Tested)',
     description: 'Explore AI headshots for LinkedIn in 2025. Research shows recruiters can\'t tell the difference (87% couldn\'t identify them). Tips for professional ai headshots.',
@@ -68,9 +76,25 @@ const enPosts: Post[] = [
     readTime: '8 min read',
     category: 'Guides',
   },
+  {
+    slug: 'remote-onboarding-broken',
+    title: 'Remote Onboarding is Broken: How to Fix the "New Hire" Photo Problem',
+    description: 'Guide to solving new employee photo problems in remote teams. Improve your onboarding process with efficient, scalable solutions.',
+    category: 'HR Tips',
+    date: '2025-12-04',
+    readTime: '8 min read'
+  },
 ];
 
 const esPosts: Post[] = [
+  {
+    slug: 'professional-headshot-photography-cost',
+    title: '¿Cuánto Cuestan los Headshots Profesionales en 2025? (Guía de Precios)',
+    description: 'Guía completa de precios de fotografía de headshots profesionales para 2025. Desde sesiones individuales ($100-500) hasta grupos corporativos ($30-75/persona).',
+    date: '2025-12-04',
+    readTime: '12 min de lectura',
+    category: 'Guías',
+  },
   {
     slug: 'ai-headshots-for-linkedin',
     title: 'Headshots AI para LinkedIn: ¿Funcionan en 2025? (Probados por Reclutadores)',
@@ -127,6 +151,14 @@ const esPosts: Post[] = [
     readTime: '8 min de lectura',
     category: 'Guías',
   },
+  {
+    slug: 'remote-onboarding-broken',
+    title: 'La Integración Remota Está Rota: Cómo Arreglar el Problema de la Foto del "Nuevo Contratado"',
+    description: 'Guía para solucionar el problema de las fotos de nuevos empleados en equipos remotos. Mejora tu proceso de onboarding con soluciones eficientes y escalables.',
+    category: 'Consejos de RRHH',
+    date: '2025-12-04',
+    readTime: '8 min de lectura'
+  },
 ];
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -162,6 +194,8 @@ const getCategoryColor = (category: string) => {
     'Comparaciones': { bg: 'bg-gradient-to-br from-brand-premium/10 to-brand-premium/5', text: 'text-brand-premium', border: 'border-brand-premium/20', glow: 'shadow-brand-premium/20' },
     'Equipos': { bg: 'bg-gradient-to-br from-brand-secondary-light to-brand-secondary-lighter/50', text: 'text-brand-secondary-text', border: 'border-brand-secondary-border', glow: 'shadow-brand-secondary/20' },
     'Guías': { bg: 'bg-gradient-to-br from-brand-cta-light to-brand-cta-lighter/50', text: 'text-brand-cta-text', border: 'border-brand-cta-border', glow: 'shadow-brand-cta/20' },
+    'HR Tips': { bg: 'bg-gradient-to-br from-brand-info-light to-brand-info-lighter/50', text: 'text-brand-info', border: 'border-brand-info-light', glow: 'shadow-brand-info/20' },
+    'Consejos de RRHH': { bg: 'bg-gradient-to-br from-brand-info-light to-brand-info-lighter/50', text: 'text-brand-info', border: 'border-brand-info-light', glow: 'shadow-brand-info/20' },
   };
   return categoryMap[category] || { bg: 'bg-gradient-to-br from-bg-gray-50 to-bg-gray-50/50', text: 'text-text-body', border: 'border-bg-gray-50', glow: 'shadow-text-muted/10' };
 };

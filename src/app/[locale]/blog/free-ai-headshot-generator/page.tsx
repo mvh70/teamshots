@@ -96,8 +96,8 @@ const getContent = (locale: string, brandName: string) => {
       faqTitle: 'Preguntas Frecuentes',
       cta: {
         title: '¿Listo para resultados profesionales?',
-        description: `Actualiza de herramientas gratuitas a ${brandName} para headshots AI de calidad de estudio en 60 segundos.`,
-        button: `Prueba ${brandName} →`
+        description: `Comienza con una prueba de bajo costo en ${brandName} para ver headshots AI de calidad de estudio en 60 segundos antes de comprometerte con un paquete completo.`,
+        button: `Ver Opciones de Prueba →`
       },
       author: {
         title: `Fundador, ${brandName}`,
@@ -183,11 +183,11 @@ const getContent = (locale: string, brandName: string) => {
       }
     },
     faqTitle: 'Frequently Asked Questions',
-    cta: {
-      title: 'Ready for professional results?',
-      description: `Upgrade from free tools to ${brandName} for studio-quality AI headshots in 60 seconds.`,
-      button: `Try ${brandName} →`
-    },
+      cta: {
+        title: 'Ready for professional results?',
+        description: `Start with a low-cost trial at ${brandName} to see studio-quality AI headshots in 60 seconds before committing to a full package.`,
+        button: `View Trial Options →`
+      },
     author: {
       title: `Founder, ${brandName}`,
       bio: `Matthieu van Haperen is the founder of ${brandName} and a former venture builder with 6+ years of experience in startups. He writes about AI tools, productivity, and building in public.`

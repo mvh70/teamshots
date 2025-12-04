@@ -75,7 +75,7 @@ certificates
 
 #admin docs
 .cursor-generated-docs
-.docs
+docs/**
 .testing
 
 .claude

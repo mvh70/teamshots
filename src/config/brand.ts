@@ -68,8 +68,8 @@ const BRAND_CONFIGS: Record<string, BrandConfig> = {
       legal: 'legal@teamshotspro.com',
     },
     logo: {
-      light: '/branding/teamshotspro_trans.png',
-      dark: '/branding/teamshotspro_trans.png',
+      light: '/branding/teamshotspro_trans.webp',
+      dark: '/branding/teamshotspro_trans.webp',
       icon: '/branding/icon.png',
       favicon: '/branding/favicon.ico',
     },
@@ -90,8 +90,8 @@ const BRAND_CONFIGS: Record<string, BrandConfig> = {
       legal: 'legal@photoshotspro.com',
     },
     logo: {
-      light: '/branding/PhotoShotsPro_trans.png',
-      dark: '/branding/PhotoShotsPro_trans.png',
+      light: '/branding/PhotoShotsPro_trans.webp',
+      dark: '/branding/PhotoShotsPro_trans.webp',
       icon: '/branding/icon.png',
       favicon: '/branding/favicon.ico',
     },

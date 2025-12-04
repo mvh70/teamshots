@@ -218,9 +218,11 @@ export default function AppShell({
             showSidebar ? (sidebarCollapsed ? 'ml-0 lg:ml-16' : 'ml-0 lg:ml-64') : 'ml-0'
           }`}
         >
-          <Header onMenuClick={() => {
-            setSidebarCollapsed(!sidebarCollapsed)
-          }} />
+          {!isGenerationFlow && (
+            <Header onMenuClick={() => {
+              setSidebarCollapsed(!sidebarCollapsed)
+            }} />
+          )}
           <main
             className={`
               flex-1 w-full min-w-0

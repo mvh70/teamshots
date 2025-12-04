@@ -16,20 +16,19 @@ export default function LandingPage() {
   const t = useTranslations('hero');
   
   const [heroVisible, setHeroVisible] = useState(false);
-  const [reducedMotion] = useState(() => {
-    // Safely check for reduced motion preference
-    try {
-      return prefersReducedMotion();
-    } catch (error) {
-      console.error('Error checking reduced motion preference:', error);
-      return false;
-    }
-  });
+  // Start with false to match server render, then check after hydration
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   // Trigger hero animations after hydration - intentional SSR pattern for staggered animations
   /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
     setHeroVisible(true);
+    // Check reduced motion preference after hydration to avoid mismatch
+    try {
+      setReducedMotion(prefersReducedMotion());
+    } catch (error) {
+      console.error('Error checking reduced motion preference:', error);
+    }
   }, []);
   /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 

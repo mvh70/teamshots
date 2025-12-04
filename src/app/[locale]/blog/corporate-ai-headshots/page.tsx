@@ -157,13 +157,18 @@ const getContent = (locale: string, brandName: string) => {
             '• <strong>Equipos de 3-5 en la misma ubicación</strong> donde la logística no es un problema'
           ],
           p2: 'El enfoque híbrido funciona bien: fotografía tradicional para ejecutivos y materiales de marketing, headshots AI para el equipo general. Lo mejor de ambos mundos.'
+        },
+        nearMe: {
+          title: '¿Buscas "Headshots Corporativos Cerca de Mí"?',
+          p1: 'Si estás buscando fotógrafos corporativos locales, probablemente te estés encontrando con tarifas de viaje, mínimos de reserva y disponibilidad limitada. La realidad para los equipos modernos es que "cerca de mí" ya no es relevante.',
+          p2: 'Con soluciones de headshots AI corporativos, tu ubicación no importa. Ya sea que tu equipo esté en Nueva York, Londres o trabajando desde casa en áreas rurales, todos obtienen la misma calidad consistente sin que nadie tenga que viajar a un estudio.'
         }
       },
       faqTitle: 'Preguntas Frecuentes',
       cta: {
         title: '¿Listo para mejorar la imagen profesional de tu equipo?',
-        description: 'Obtén headshots consistentes y profesionales para todo tu equipo en un día. Sin fotógrafos, sin drama de programación.',
-        button: `Prueba ${brandName} para Equipos →`
+        description: 'Obtén headshots consistentes y profesionales para todo tu equipo en un día. Descuentos por volumen disponibles para equipos grandes.',
+        button: `Ver Precios para Equipos →`
       },
       author: {
         title: `Fundador, ${brandName}`,
@@ -312,14 +317,19 @@ const getContent = (locale: string, brandName: string) => {
           '• <strong>Teams of 3-5 in the same location</strong> where logistics aren\'t an issue'
         ],
         p2: 'The hybrid approach works well: traditional photography for executives and marketing materials, AI headshots for the broader team. Best of both worlds.'
+      },
+      nearMe: {
+        title: 'Searching for "Corporate Headshots Near Me"?',
+        p1: 'If you\'re looking for local corporate photographers, you\'re probably running into travel fees, booking minimums, and limited availability. The reality for modern teams is that "near me" isn\'t relevant anymore.',
+        p2: 'With AI corporate headshot solutions, your location doesn\'t matter. Whether your team is in New York, London, or working from home in rural areas, everyone gets the same consistent quality without anyone having to travel to a studio.'
       }
     },
     faqTitle: 'Frequently Asked Questions',
-    cta: {
-      title: 'Ready to upgrade your team\'s professional image?',
-      description: 'Get consistent, professional headshots for your entire team in one day. No photographers, no scheduling drama.',
-      button: `Try ${brandName} for Teams →`
-    },
+      cta: {
+        title: 'Ready to upgrade your team\'s professional image?',
+        description: 'Get consistent, professional headshots for your entire team in one day. Volume discounts available for large teams.',
+        button: `View Team Pricing →`
+      },
     author: {
       title: `Founder, ${brandName}`,
       bio: `Matthieu van Haperen is the founder of ${brandName} and a former venture builder with 6+ years of experience in startups. He writes about AI tools, productivity, and building in public.`
@@ -681,6 +691,17 @@ export default async function CorporateAIHeadshotsPage({ params }: Props) {
 
         <p className="mb-4 text-gray-700 leading-relaxed">
           {content.sections.traditionalSense.p2}
+        </p>
+
+        {/* Near Me Section */}
+        <h2 id="near-me" className="text-2xl font-bold mt-12 mb-4 text-gray-900">
+          {content.sections.nearMe.title}
+        </h2>
+        <p className="mb-4 text-gray-700 leading-relaxed">
+          {content.sections.nearMe.p1}
+        </p>
+        <p className="mb-4 text-gray-700 leading-relaxed">
+          {content.sections.nearMe.p2}
         </p>
 
         {/* FAQ Section */}
