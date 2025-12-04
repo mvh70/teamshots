@@ -35,15 +35,15 @@ export default function ConditionalHeader() {
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center" aria-label={BRAND_CONFIG.name}>
             {/* Light background header uses the light logo variant */}
+            {/* Using optimized image with proper sizing (913x141 source, displayed at ~120-150px width) */}
             <Image
               src={getBrandLogo('light')}
               alt={BRAND_CONFIG.name}
-              width={120}
-              height={32}
-              className="h-8 lg:h-10"
-              style={{ width: 'auto' }}
+              width={150}
+              height={23}
+              className="h-8 lg:h-10 w-auto"
               priority
-              unoptimized
+              quality={85}
             />
           </Link>
         </div>

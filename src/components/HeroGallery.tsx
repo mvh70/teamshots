@@ -96,7 +96,7 @@ export default function HeroGallery() {
             fill
             className="object-cover"
             priority
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 40vw"
+            sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 400px"
           />
           
           {/* Foreground: Before image clipped to slider position */}
@@ -107,7 +107,7 @@ export default function HeroGallery() {
               fill
               className="object-cover"
               priority
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 40vw"
+              sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 400px"
               style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
             />
           </div>

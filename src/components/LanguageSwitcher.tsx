@@ -25,9 +25,9 @@ export default function LanguageSwitcher() {
       <button
         onClick={() => onSelectChange('en')}
         disabled={isPending}
-        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+        className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
           locale === 'en'
-            ? 'bg-brand-primary text-white'
+            ? 'bg-brand-primary-hover text-white'
             : 'text-gray-700 hover:bg-gray-100'
         }`}
       >
@@ -36,9 +36,9 @@ export default function LanguageSwitcher() {
       <button
         onClick={() => onSelectChange('es')}
         disabled={isPending}
-        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+        className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
           locale === 'es'
-            ? 'bg-brand-primary text-white'
+            ? 'bg-brand-primary-hover text-white'
             : 'text-gray-700 hover:bg-gray-100'
         }`}
       >

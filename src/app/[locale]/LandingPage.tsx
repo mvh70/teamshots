@@ -15,20 +15,23 @@ import { FeedbackButton } from '@/components/feedback/FeedbackButton';
 export default function LandingPage() {
   const t = useTranslations('hero');
   
-  const [heroVisible, setHeroVisible] = useState(false);
-  // Start with false to match server render, then check after hydration
+  // Start visible for LCP optimization - content is immediately visible on first paint
+  // Animations are applied via CSS animation classes instead of JS-controlled opacity
+  const [heroMounted, setHeroMounted] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
 
-  // Trigger hero animations after hydration - intentional SSR pattern for staggered animations
+  // Enable animations after hydration - hero is always visible, but entrance animations play once
   /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
   useEffect(() => {
-    setHeroVisible(true);
+    // Tiny delay to ensure first paint happens before animation starts
+    const timer = requestAnimationFrame(() => setHeroMounted(true));
     // Check reduced motion preference after hydration to avoid mismatch
     try {
       setReducedMotion(prefersReducedMotion());
     } catch (error) {
       console.error('Error checking reduced motion preference:', error);
     }
+    return () => cancelAnimationFrame(timer);
   }, []);
   /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
@@ -45,13 +48,9 @@ export default function LandingPage() {
           {/* Left Content - 60% (3 columns on desktop) */}
           <div className="lg:col-span-3 text-left relative z-10">
             {/* Hero Title - Large, Bold, Left-aligned */}
+            {/* LCP element: No animation - visible immediately for optimal LCP score */}
             <h1 
-              className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold text-text-dark mb-8 leading-[1.1] tracking-tight ${
-                heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-              } transition-all duration-700 ease-out`}
-              style={{ 
-                transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.title}ms` 
-              }}
+              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold text-text-dark mb-8 leading-[1.1] tracking-tight"
             >
               {t('titleMain')}{' '}
               <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent drop-shadow-sm">
@@ -62,7 +61,7 @@ export default function LandingPage() {
             {/* Subtitle - Medium, Left-aligned */}
             <p 
               className={`text-xl sm:text-2xl md:text-2xl lg:text-3xl text-text-body mb-10 max-w-2xl leading-[1.4] font-medium ${
-                heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                heroMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
               } transition-all duration-700 ease-out`}
               style={{ 
                 transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.subtitle}ms` 
@@ -74,7 +73,7 @@ export default function LandingPage() {
             {/* Supporting Description */}
             <p 
               className={`text-base sm:text-lg lg:text-xl text-text-body mb-12 max-w-xl leading-[1.7] ${
-                heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                heroMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
               } transition-all duration-700 ease-out`}
               style={{ 
                 transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.subtitle + 100}ms` 
@@ -86,7 +85,7 @@ export default function LandingPage() {
             {/* Primary CTA - Large, Prominent */}
             <div 
               className={`flex flex-col sm:flex-row items-start sm:items-center gap-5 ${
-                heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                heroMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
               } transition-all duration-700 ease-out`}
               style={{ 
                 transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.cta}ms` 
@@ -113,7 +112,7 @@ export default function LandingPage() {
           {/* Right Gallery - 40% (2 columns on desktop), Overlaps */}
           <div 
             className={`lg:col-span-2 relative ${
-              heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+              heroMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             } transition-all duration-1000 ease-out`}
             style={{ 
               transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.gallery}ms` 

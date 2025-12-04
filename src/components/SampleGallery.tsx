@@ -182,7 +182,7 @@ export default function SampleGallery() {
                       alt={`${photo.alt} - After`}
                       fill
                       className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 350px"
                       loading="lazy"
                     />
                     
@@ -193,7 +193,7 @@ export default function SampleGallery() {
                         alt={`${photo.alt} - Before`}
                         fill
                         className="object-cover"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 350px"
                         loading="lazy"
                         style={{ clipPath: `inset(0 ${100 - (sliderPositions[photo.id] || 50)}% 0 0)` }}
                       />

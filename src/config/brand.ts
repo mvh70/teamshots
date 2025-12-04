@@ -47,8 +47,8 @@ const SHARED_CONFIG = {
     primaryHover: '#4F46E5',   // Indigo-600
     secondary: '#10B981',      // Green-500 - Success states
     secondaryHover: '#059669', // Green-600
-    cta: '#EA580C',            // Orange-600 - Call-to-action (high contrast, urgency)
-    ctaHover: '#C2410C',       // Orange-700
+    cta: '#C2410C',            // Orange-700 - Call-to-action (WCAG AA compliant with white text)
+    ctaHover: '#9A3412',       // Orange-800
   },
   legal: {
     address: 'Creek Harbour, Dubai, UAE',

@@ -24,8 +24,8 @@ module.exports = {
         "brand-secondary-border": "#A7F3D0",
         "brand-secondary-text-light": "#065F46",
         "brand-secondary-text": "#047857",
-        "brand-cta": "#EA580C",
-        "brand-cta-hover": "#C2410C",
+        "brand-cta": "#C2410C",           // Orange-700 (was -600, improved for WCAG AA contrast)
+        "brand-cta-hover": "#9A3412",      // Orange-800 (darker hover for better UX)
         "brand-cta-light": "#FFF7ED",
         "brand-cta-lighter": "#FFEDD5",
         "brand-cta-border": "#FDBA74",

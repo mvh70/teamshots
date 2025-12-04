@@ -89,6 +89,14 @@
     "validator": "^13.15.15",
     "zod": "^4.1.12"
   },
+  "browserslist": [
+    "Chrome >= 90",
+    "Firefox >= 91",
+    "Safari >= 14",
+    "Edge >= 91",
+    "not dead",
+    "not op_mini all"
+  ],
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.56.1",
