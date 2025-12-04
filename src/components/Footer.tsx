@@ -24,13 +24,13 @@ export default function Footer() {
         <div className="text-center">
           <div className="mb-6 flex justify-center">
             {/* Dark background footer uses the dark logo variant */}
-            <Image 
-              src={getBrandLogo('dark')} 
-              alt={BRAND_CONFIG.name} 
-              width={150} 
-              height={40} 
-              className="h-10 w-auto opacity-90"
-              style={{ width: 'auto' }} 
+            <Image
+              src={getBrandLogo('dark')}
+              alt={BRAND_CONFIG.name}
+              width={150}
+              height={40}
+              className="opacity-90"
+              unoptimized
             />
           </div>
           <p className="text-gray-300 mb-8 text-lg">

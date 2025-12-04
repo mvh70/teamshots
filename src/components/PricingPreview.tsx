@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PricingCard from '@/components/pricing/PricingCard'
 import { CheckoutButton } from '@/components/ui'
 import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
@@ -18,13 +18,19 @@ function getTotalPhotos(credits: number, regenerations: number): number {
 export default function PricingPreview() {
   const t = useTranslations('pricing');
 
-  // Domain-based pricing restriction - computed once on mount (client-side only)
-  const [domainSignupType] = useState<'individual' | 'team' | null>(() => {
-    // These functions check typeof window internally, safe to call in useState initializer
+  // Domain-based pricing restriction - set to null initially for SSR
+  // Will be computed on client after hydration
+  const [domainSignupType, setDomainSignupType] = useState<'individual' | 'team' | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Calculate domain type after hydration (client-side only)
+  useEffect(() => {
     const domain = getClientDomain();
     const forcedType = getForcedSignupType();
-    return forcedType || getSignupTypeFromDomain(domain);
-  });
+    const signupType = forcedType || getSignupTypeFromDomain(domain);
+    setDomainSignupType(signupType);
+    setIsHydrated(true);
+  }, []);
 
   // VIP plan - high price anchor for individual domain
   const vipPlan = {

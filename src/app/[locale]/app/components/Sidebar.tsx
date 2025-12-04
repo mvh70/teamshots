@@ -515,7 +515,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
           <div className={`flex p-5 md:p-6 border-b border-gray-200/60 bg-gradient-to-r from-white via-brand-primary-light/5 to-white backdrop-blur-sm ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
             {!effectiveCollapsed && (
               <Link href="/" className="flex items-center space-x-2 group/logo">
-                <Image src={getBrandLogo('light')} alt={BRAND_CONFIG.name} width={112} height={28} className="h-7 w-auto transition-transform duration-200 group-hover/logo:scale-105" style={{ width: 'auto' }} priority />
+                <Image src={getBrandLogo('light')} alt={BRAND_CONFIG.name} width={112} height={28} className="h-7 transition-transform duration-200 group-hover/logo:scale-105" style={{ width: 'auto' }} priority />
               </Link>
             )}
             {effectiveCollapsed && (

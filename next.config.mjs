@@ -7,20 +7,19 @@ const nextConfig = {
   transpilePackages: ['next-intl'],
   output: 'standalone', // Enable for Docker deployment
   images: {
-    // Enable Next.js image optimization for static images in /public
-    // Dynamic S3 images still use unoptimized via component props
+    // Enable Next.js image optimization
     remotePatterns: [
       { protocol: 'https', hostname: 'ui-avatars.com' },
       { protocol: 'https', hostname: 'avatars.githubusercontent.com' }
     ],
     localPatterns: [
       {
-        pathname: '/api/files/get',
-        search: 'key=*'
-      }
+        pathname: '/branding/**',
+      },
+      {
+        pathname: '/samples/**',
+      },
     ],
-    // Allow WebP and AVIF formats for better compression
-    formats: ['image/avif', 'image/webp'],
   },
   async headers() {
     return [
