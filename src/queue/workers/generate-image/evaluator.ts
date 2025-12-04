@@ -201,12 +201,24 @@ export async function evaluateGeneratedImage({
     baseInstructions.push(
       '',
       '9. branding_logo_matches',
-      '   - Does the logo in the generated image EXACTLY match the provided brand asset?',
-      '   - Are colors, proportions, and design elements preserved with NO distortion or modifications?',
-      '   - Is the logo the SAME SIZE (dimensions/aspect ratio) as the reference, not enlarged or shrunk?',
-      '   - Are there NO additional elements added to the logo (no boxes, borders, labels, text overlays, backgrounds)?',
-      '   - Look specifically for: reference label artifacts (e.g., "LOGO", "BRAND"), white/colored boxes around the logo, or any UI elements',
-      '   - The logo should appear clean and isolated, exactly as provided in the reference',
+      isClothingLogo
+        ? '   - Does the logo on the clothing EXACTLY match the provided brand asset?'
+        : '   - Does the VISIBLE portion of the logo match the provided brand asset?',
+      isClothingLogo
+        ? '   - Are colors, proportions, and design elements preserved with NO distortion or modifications?'
+        : '   - CRITICAL: Occlusion by the foreground person is DESIRABLE and creates professional depth.',
+      isClothingLogo
+        ? '   - Is the logo the SAME SIZE (dimensions/aspect ratio) as the reference, not enlarged or shrunk?'
+        : '   - If the person covers part of the logo (hiding text like "Pro" or portions), this is EXCELLENT composition.',
+      isClothingLogo
+        ? '   - Are there NO additional elements added to the logo (no boxes, borders, labels, text overlays, backgrounds)?'
+        : '   - Focus ONLY on visible portions: are colors, proportions, and design elements correct where visible?',
+      isClothingLogo
+        ? '   - Look specifically for: reference label artifacts (e.g., "LOGO", "BRAND"), white/colored boxes around the logo, or any UI elements'
+        : '   - Answer YES if visible portions match the reference, even if person occludes large parts.',
+      isClothingLogo
+        ? '   - The logo should appear clean and isolated, exactly as provided in the reference'
+        : '   - Answer NO only if visible portions are distorted, wrong color, or have added artifacts.',
       '',
       '10. branding_positioned_correctly',
       isClothingLogo
@@ -215,10 +227,12 @@ export async function evaluateGeneratedImage({
       isClothingLogo
         ? '   - Is the logo placed in EXACTLY the location specified in the prompt?'
         : '   - Is the logo placed in the background scene as a 3D physical element?',
-      '   - Does it appear exactly ONCE (not duplicated, not missing)?',
+      isClothingLogo
+        ? '   - Does it appear exactly ONCE (not duplicated, not missing)?'
+        : '   - CRITICAL: Logo being partially hidden behind the person still counts as correctly positioned.',
       isClothingLogo
         ? '   - Is the positioning accurate (not shifted, not rotated incorrectly, not placed on wrong body part)?'
-        : '   - Is the logo NOT placed on the subject, floors, windows, or floating in mid-air?',
+        : '   - Answer YES if the logo is in the right general area, even if person covers most of it.',
       '',
       '11. branding_scene_aligned',
       '   - Is the logo integrated naturally into the scene without looking pasted or composited?',
@@ -228,7 +242,7 @@ export async function evaluateGeneratedImage({
         : '   - Does the logo appear as a 3D physical installation (e.g., brushed metal, carved stone, illuminated acrylic)?',
       isClothingLogo
         ? ''
-        : '   - Partial obscuring by foreground elements (plants, cables, objects) is ACCEPTABLE and adds realism'
+        : '   - Partial obscuring by the person or foreground elements adds depth and should be answered YES.'
     )
     
     // Only add clothing overflow check when logo is specifically for clothing

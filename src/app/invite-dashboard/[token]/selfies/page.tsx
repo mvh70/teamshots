@@ -184,7 +184,7 @@ export default function SelfiesPage() {
     kicker: t('bannerTitle', { default: 'Select your selfies' }),
     title: tSelectionHint('text', { default: 'Select at least 2 selfies' }),
     step: selfieStepIndicator,
-    showBack: true,
+    showBack: !isMobile,
     onBack: () => {
       clearFlow()
       router.replace(`/invite-dashboard/${token}`)

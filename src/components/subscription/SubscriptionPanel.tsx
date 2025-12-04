@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl"
 import { getPricePerPhoto, formatPrice } from "@/domain/pricing/utils"
 import SubscriptionStatusBanner from "@/components/subscription/SubscriptionStatusBanner"
 import { isFreePlan, PlanPeriod, PlanTier } from "@/domain/subscription/utils"
-import { getBrandContact } from "@/config/brand"
+import { BRAND_CONFIG } from "@/config/brand"
 
 // Using imported PlanPeriod and PlanTier from domain utils
 
@@ -160,7 +160,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
                 <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ 
                   __html: t('cancelling.changedMind', { 
                     default: "Changed your mind? {supportLink} keep your photos looking perfect!",
-                    supportLink: `<a href="mailto:${getBrandContact().support}" class="text-brand-primary hover:text-brand-primary-hover font-semibold underline transition-colors">${t('cancelling.supportLinkText', { default: "We're here to help" })}</a>`
+                    supportLink: `<a href="mailto:${BRAND_CONFIG.contact.support}" class="text-brand-primary hover:text-brand-primary-hover font-semibold underline transition-colors">${t('cancelling.supportLinkText', { default: "We're here to help" })}</a>`
                   })
                 }} />
               </div>
@@ -177,7 +177,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
                   {t('downgrading.noSavings', { default: "We won't judge (but we did try to warn you about missing out on those sweet savings 🍯)." })}
                 </p>
                 <p className="text-sm text-gray-600">
-                  {t('downgrading.supportLinkText', { default: "Still wanna switch?" })} <a href={`mailto:${getBrandContact().support}`} className="text-brand-primary hover:text-brand-primary-hover font-semibold underline transition-colors">{t('cancelling.supportLinkText', { default: "We're here to help" })}</a>
+                  {t('downgrading.supportLinkText', { default: "Still wanna switch?" })} <a href={`mailto:${BRAND_CONFIG.contact.support}`} className="text-brand-primary hover:text-brand-primary-hover font-semibold underline transition-colors">{t('cancelling.supportLinkText', { default: "We're here to help" })}</a>
                 </p>
               </div>
             </div>

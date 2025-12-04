@@ -5,17 +5,29 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import LanguageSwitcher from './LanguageSwitcher'
-import { BRAND_CONFIG, getBrandLogo } from '@/config/brand'
+import { BRAND_CONFIGS } from '@/config/brand'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
 import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
 import { useAnalytics } from '@/hooks/useAnalytics'
+import type { LandingVariant } from '@/config/landing-content'
 
-export default function ConditionalHeader() {
+interface ConditionalHeaderProps {
+  /** Variant from server-side to avoid hydration mismatch */
+  variant?: LandingVariant;
+}
+
+export default function ConditionalHeader({ variant = 'teamshotspro' }: ConditionalHeaderProps) {
   const pathname = usePathname()
   const t = useTranslations('nav')
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { track } = useAnalytics()
+  
+  // Get brand config based on server-provided variant (no client-side detection)
+  const brand = variant === 'photoshotspro' 
+    ? BRAND_CONFIGS[INDIVIDUAL_DOMAIN] 
+    : BRAND_CONFIGS[TEAM_DOMAIN]
   
   // Don't show header on app routes
   const isAppRoute = pathname.includes('/app/')
@@ -33,12 +45,12 @@ export default function ConditionalHeader() {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 lg:h-20 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center" aria-label={BRAND_CONFIG.name}>
+          <Link href="/" className="flex items-center" aria-label={brand.name}>
             {/* Light background header uses the light logo variant */}
             {/* Using optimized image with proper sizing (913x141 source, displayed at ~120-150px width) */}
             <Image
-              src={getBrandLogo('light')}
-              alt={BRAND_CONFIG.name}
+              src={brand.logo.light}
+              alt={brand.name}
               width={150}
               height={23}
               className="h-8 lg:h-10 w-auto"

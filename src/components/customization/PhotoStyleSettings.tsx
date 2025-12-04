@@ -1098,7 +1098,7 @@ export default function PhotoStyleSettings({
                   className="overflow-hidden w-full max-w-full"
                 >
                   <div
-                    className="flex transition-transform duration-300 ease-in-out"
+                    className="flex items-start transition-transform duration-300 ease-in-out"
                     style={{
                       transform: `translateX(-${activeMobileStep * 100}%)`,
                       width: '100%',
@@ -1107,8 +1107,12 @@ export default function PhotoStyleSettings({
                   >
                     {mobileSteps.map((step, idx) => {
                       const hasNoBorder = step.type === 'custom' && step.custom?.noBorder
+                      const isActiveStep = idx === activeMobileStep
                       return (
-                        <div key={step.category ? step.category.key : step.custom ? step.custom.id : step.type === 'selfie-tips' ? 'selfie-tips' : `intro-${idx}`} className="w-full flex-shrink-0 pb-4 px-4 max-w-full">
+                        <div 
+                          key={step.category ? step.category.key : step.custom ? step.custom.id : step.type === 'selfie-tips' ? 'selfie-tips' : `intro-${idx}`} 
+                          className={`w-full flex-shrink-0 pb-4 px-4 max-w-full transition-opacity duration-300 ${isActiveStep ? 'opacity-100' : 'opacity-0'}`}
+                        >
                           <div className={`${hasNoBorder ? '' : 'rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 shadow-sm'} w-full max-w-full overflow-hidden`}>
                             {step.type === 'selfie-tips' && <SelfieTipsContent variant="swipe" />}
                             {step.type === 'intro' && <CustomizationIntroContent variant="swipe" />}
@@ -1123,48 +1127,50 @@ export default function PhotoStyleSettings({
                               renderCategoryCard(step.category)
                             ) : null}
                           </div>
+                          {/* Navigation controls - positioned directly below each card */}
+                          {isActiveStep && (
+                            <FlowNavigation
+                              className="mt-4"
+                              variant="both"
+                              current={
+                                stepIndicatorProps?.currentAllStepsIndex !== undefined
+                                  ? stepIndicatorProps.currentAllStepsIndex
+                                  : activeMobileStep
+                              }
+                              total={
+                                stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? totalMobileSteps
+                              }
+                              onPrev={handlePrevStep}
+                              onNext={handleNextStep}
+                              canGoPrev={true}
+                              canGoNext={activeMobileStep < totalMobileSteps - 1}
+                              onDotClick={(index) => {
+                                // Map from step indicator index back to mobileSteps index
+                                if (stepIndicatorProps) {
+                                  const mobileIndex = mapStepIndicatorIndexToMobileStep(index)
+                                  if (mobileIndex !== null) {
+                                    handleDirectStepChange(mobileIndex)
+                                  }
+                                } else {
+                                  handleDirectStepChange(index)
+                                }
+                              }}
+                              stepColors={
+                                stepIndicatorProps
+                                  ? {
+                                      lockedSteps: stepIndicatorProps.lockedSteps,
+                                      visitedEditableSteps: stepIndicatorProps.visitedEditableSteps
+                                    }
+                                  : undefined
+                              }
+                            />
+                          )}
                         </div>
                       )
                     })}
                   </div>
                 </SwipeableContainer>
 
-                {/* Navigation controls - positioned right after content */}
-                <FlowNavigation
-                  className="mt-2 px-4"
-                  variant="both"
-                  current={
-                    stepIndicatorProps?.currentAllStepsIndex !== undefined
-                      ? stepIndicatorProps.currentAllStepsIndex
-                      : activeMobileStep
-                  }
-                  total={
-                    stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? totalMobileSteps
-                  }
-                  onPrev={handlePrevStep}
-                  onNext={handleNextStep}
-                  canGoPrev={true}
-                  canGoNext={activeMobileStep < totalMobileSteps - 1}
-                  onDotClick={(index) => {
-                    // Map from step indicator index back to mobileSteps index
-                    if (stepIndicatorProps) {
-                      const mobileIndex = mapStepIndicatorIndexToMobileStep(index)
-                      if (mobileIndex !== null) {
-                        handleDirectStepChange(mobileIndex)
-                      }
-                    } else {
-                      handleDirectStepChange(index)
-                    }
-                  }}
-                  stepColors={
-                    stepIndicatorProps
-                      ? {
-                          lockedSteps: stepIndicatorProps.lockedSteps,
-                          visitedEditableSteps: stepIndicatorProps.visitedEditableSteps
-                        }
-                      : undefined
-                  }
-                />
               </div>
             ) : (
               <div className="rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center">

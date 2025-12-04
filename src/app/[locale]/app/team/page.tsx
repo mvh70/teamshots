@@ -9,7 +9,7 @@ import { PlusIcon, EnvelopeIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { calculatePhotosFromCredits, getRegenerationCount } from '@/domain/pricing'
 import { getPricingTier } from '@/config/pricing'
-import { getBrandColor } from '@/config/brand'
+import { BRAND_CONFIG } from '@/config/brand'
 import { useCredits } from '@/contexts/CreditsContext'
 import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
@@ -984,7 +984,7 @@ export default function TeamPage() {
         <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
           <div className="flex items-center gap-5">
             <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-primary/10 group-hover:ring-brand-primary/30 transition-all">
-              <Users className="h-8 w-8" style={{ color: getBrandColor('primary') }} />
+              <Users className="h-8 w-8" style={{ color: BRAND_CONFIG.colors.primary }} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Team members</p>
@@ -998,7 +998,7 @@ export default function TeamPage() {
         <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
           <div className="flex items-center gap-5">
             <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-primary/10 group-hover:ring-brand-primary/30 transition-all">
-              <Camera className="h-8 w-8" style={{ color: getBrandColor('primary') }} />
+              <Camera className="h-8 w-8" style={{ color: BRAND_CONFIG.colors.primary }} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Available photos</p>
@@ -1011,7 +1011,7 @@ export default function TeamPage() {
           <div className="flex items-center gap-5">
             <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-secondary-light to-brand-secondary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-secondary/10 group-hover:ring-brand-secondary/30 transition-all">
               {/* eslint-disable-next-line jsx-a11y/alt-text */}
-              <Image className="h-8 w-8" style={{ color: getBrandColor('secondary') }} aria-hidden="true" />
+              <Image className="h-8 w-8" style={{ color: BRAND_CONFIG.colors.secondary }} aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Photos generated</p>

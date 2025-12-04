@@ -31,15 +31,10 @@ export default function TeamShotsLanding() {
   
   // Animation state
   const [heroMounted, setHeroMounted] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const reducedMotion = prefersReducedMotion();
 
   useEffect(() => {
     const timer = requestAnimationFrame(() => setHeroMounted(true));
-    try {
-      setReducedMotion(prefersReducedMotion());
-    } catch (error) {
-      console.error('Error checking reduced motion preference:', error);
-    }
     return () => cancelAnimationFrame(timer);
   }, []);
 

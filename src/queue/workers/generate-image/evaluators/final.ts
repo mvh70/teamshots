@@ -104,13 +104,15 @@ export async function evaluateFinalImage(
     instructions.push(
       '',
       '4. branding_placement',
-      `   - Is the logo visible in the ${brandingInfo.position === 'background' ? 'background' : 'scene elements'}?`,
-      `   - IMPORTANT: Partial visibility is ACCEPTABLE and EXPECTED when the person is in the foreground.`,
-      `   - If the person naturally occludes part of the logo (e.g., standing in front of it), this is correct composition and should be answered YES.`,
-      `   - The visible portion of the logo should match the reference logo (same colors, font, design elements).`,
-      `   - Answer NO only if: the logo is completely missing, the visible portion doesn't match the reference, or the logo placement looks unnatural/pasted.`,
-      `   - Answer YES if: the logo is visible (even partially) and matches the reference in visible areas, and the person is appropriately in the foreground.`,
-      `   - Is it placed according to specifications: ${brandingInfo.placement || 'as specified'}?`,
+      `   - Is the logo placed in the ${brandingInfo.position === 'background' ? 'background' : 'scene elements'}?`,
+      `   - CRITICAL: Occlusion by the foreground subject (person) is DESIRABLE and creates professional depth.`,
+      `   - If the person naturally occludes part of the logo (hiding text, covering portions), this is EXCELLENT composition.`,
+      `   - Example: If logo is "TeamShots Pro" and the person covers "Pro", leaving only "TeamShot" visible - this is CORRECT and should be YES.`,
+      `   - The VISIBLE portions of the logo should match the reference (colors, font, design where visible).`,
+      `   - Answer YES if: any recognizable part of the logo is visible AND matches the reference in visible areas.`,
+      `   - Answer YES even if: large portions of the logo are hidden behind the person (this adds depth).`,
+      `   - Answer NO only if: the logo is COMPLETELY invisible (0% visible), OR the visible parts don't match the reference, OR placement looks unnaturally pasted.`,
+      `   - Placement specification: ${brandingInfo.placement || 'as specified'} (partial occlusion still counts as correctly placed).`,
       `   - Does it look natural and properly integrated into the scene?`
     )
   }

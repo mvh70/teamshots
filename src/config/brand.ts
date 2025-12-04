@@ -107,7 +107,7 @@ const STYLE_CONFIGS: Record<string, BrandStyle> = {
 };
 
 // Complete brand configurations per domain
-const BRAND_CONFIGS: Record<string, BrandConfig> = {
+export const BRAND_CONFIGS: Record<string, BrandConfig> = {
   [TEAM_DOMAIN]: {
     name: 'TeamShotsPro',
     domain: TEAM_DOMAIN,
@@ -162,33 +162,21 @@ const BRAND_CONFIGS: Record<string, BrandConfig> = {
 export const BRAND_CONFIG = BRAND_CONFIGS[TEAM_DOMAIN];
 
 /**
- * Get the current domain from the request context.
- * Works in both server and client components.
+ * Get the current domain from request headers.
+ * 
+ * IMPORTANT: This function is SERVER-SIDE ONLY. Do not call from client components.
+ * All brand decisions must be made on the server to prevent hydration mismatches and abuse.
  * 
  * On localhost, respects NEXT_PUBLIC_FORCE_DOMAIN env var for testing different brands.
  * 
- * @param requestHeaders - Optional headers for server-side detection
+ * @param requestHeaders - Required headers for server-side detection
  * @returns The normalized domain (without www) or null if unable to determine
  */
 function getCurrentDomain(requestHeaders?: Headers): string | null {
   // Check for forced domain override (localhost development only)
   const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
   
-  // Client-side detection
-  if (typeof window !== 'undefined') {
-    try {
-      const hostname = window.location.hostname.toLowerCase()
-      // On localhost, use forced domain if set
-      if (hostname === 'localhost' && forcedDomain) {
-        return forcedDomain.replace(/^www\./, '').toLowerCase()
-      }
-      return hostname.replace(/^www\./, '')
-    } catch {
-      return null
-    }
-  }
-  
-  // Server-side detection from provided headers
+  // Server-side detection from provided headers (REQUIRED)
   if (requestHeaders) {
     const host = requestHeaders.get('host') || requestHeaders.get('x-forwarded-host')
     if (host) {
@@ -208,11 +196,10 @@ function getCurrentDomain(requestHeaders?: Headers): string | null {
  * Get the complete brand configuration based on the current domain.
  * Returns PhotoShotsPro config for photoshotspro.com, TeamShotsPro config otherwise.
  * 
- * Works in both client and server components.
- * - Client components: Automatically detects domain from window.location
- * - Server components: Pass headers explicitly for accurate detection
+ * IMPORTANT: This function is SERVER-SIDE ONLY. Always pass headers.
+ * All brand decisions must be made on the server to prevent hydration mismatches and abuse.
  * 
- * @param requestHeaders - Optional headers for server-side detection (useful in API routes)
+ * @param requestHeaders - Headers for server-side domain detection
  * @returns Complete brand configuration object
  */
 export function getBrand(requestHeaders?: Headers): BrandConfig {

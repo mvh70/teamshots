@@ -195,11 +195,12 @@ function SelfieSelectionPageContent() {
       <StickyFlowPage
         topHeader={<Header standalone showBackToDashboard />}
         flowHeader={{
-          kicker: tSelection('bannerTitle', { default: 'Select your selfies' }),
-          title: t('title', { default: 'Choose your selfie' }),
-          subtitle: !isMobile ? t('subtitle', { default: 'Select a selfie to use for generation, or upload a new one.' }) : undefined,
-          step: selfieStepIndicator,
-          showBack: true,
+          // Only show flow header content on mobile - desktop has step navigation at the bottom
+          kicker: isMobile ? tSelection('bannerTitle', { default: 'Select your selfies' }) : undefined,
+          title: isMobile ? t('title', { default: 'Choose your selfie' }) : '',
+          subtitle: undefined, // Subtitle not needed - info banner provides context
+          step: isMobile ? selfieStepIndicator : undefined,
+          showBack: isMobile,
           onBack: handleBack,
           fullBleed: true
         }}

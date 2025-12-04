@@ -92,7 +92,11 @@ const LANDING_CONFIGS: Record<string, LandingConfig> = {
 const DEFAULT_LANDING_CONFIG = LANDING_CONFIGS[TEAM_DOMAIN]
 
 /**
- * Get the current domain from browser or normalize a provided domain.
+ * Normalize a domain string.
+ * 
+ * IMPORTANT: Domain must be provided from server-side (request headers).
+ * Do not call without a domain - client-side detection is not supported.
+ * 
  * On localhost, respects NEXT_PUBLIC_FORCE_DOMAIN env var for testing different domains.
  */
 function normalizeDomain(domain?: string): string | null {
@@ -108,28 +112,16 @@ function normalizeDomain(domain?: string): string | null {
     return normalized
   }
   
-  // Client-side detection
-  if (typeof window !== 'undefined') {
-    try {
-      const hostname = window.location.hostname.replace(/^www\./, '').toLowerCase()
-      // On localhost, use forced domain if set
-      if (hostname === 'localhost' && forcedDomain) {
-        return forcedDomain.replace(/^www\./, '').toLowerCase()
-      }
-      return hostname
-    } catch {
-      return null
-    }
-  }
-  
   return null
 }
 
 /**
  * Get landing page configuration for a domain.
  * 
- * @param domain - Optional domain to get config for. If not provided,
- *                 attempts to detect from window.location (client-side only)
+ * IMPORTANT: This function is SERVER-SIDE ONLY. Always provide domain from request headers.
+ * All landing page decisions must be made on the server to prevent hydration mismatches and abuse.
+ * 
+ * @param domain - Domain from server-side headers (required for proper detection)
  * @returns Landing configuration for the domain, or default (teamshotspro) if not found
  */
 export function getLandingConfig(domain?: string): LandingConfig {

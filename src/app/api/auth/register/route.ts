@@ -371,9 +371,9 @@ export async function POST(request: NextRequest) {
         const { getDefaultPackage } = await import('@/config/landing-content')
         // Use tryitforfree package if period is tryItForFree, otherwise use domain-specific default
         const requestedPeriod = body.period as string | undefined
-        const packageId = requestedPeriod === 'tryItForFree' 
-          ? 'tryitforfree' 
-          : getDefaultPackage(domain)
+        const packageId = requestedPeriod === 'tryItForFree'
+          ? 'tryitforfree'
+          : getDefaultPackage(domain || undefined)
         const freePlanTier = userType === 'team' ? 'pro' : 'individual'
         // Use tryItForFree credits if that's the requested period
         const freeCredits = requestedPeriod === 'tryItForFree'

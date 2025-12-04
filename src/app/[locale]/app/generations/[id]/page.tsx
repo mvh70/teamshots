@@ -63,7 +63,7 @@ export default function GenerationDetailPage({ params }: { params: Promise<{ id:
       <div className="bg-white border rounded-lg p-4">
         <Grid cols={{ mobile: 1, desktop: 2 }} gap="lg" className="items-start">
           <div className="bg-gray-50 rounded overflow-hidden">
-            <Image src={`/api/files/get?key=${encodeURIComponent(imageKey)}`} alt="generated" width={500} height={500} className="w-full h-auto" />
+            <Image src={`/api/files/get?key=${encodeURIComponent(imageKey)}`} alt="generated" width={500} height={500} className="w-full h-auto" unoptimized />
           </div>
           <div className="space-y-3">
             <div className="text-sm text-gray-600">{t('detail.status')} <span className="font-medium text-gray-900">{data.status}</span></div>

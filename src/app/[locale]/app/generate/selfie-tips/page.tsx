@@ -65,13 +65,14 @@ export default function SelfieTipsPage() {
       <StickyFlowPage
         topHeader={<Header standalone showBackToDashboard />}
         flowHeader={{
-          kicker: tSelfieHeader('kicker', { default: 'Get the best results' }),
-          title: tSelfieHeader('title', { default: 'Selfie tips for amazing photos' }),
-          subtitle: tSelfieHeader('body', { default: 'Great photos start with great selfies.' }),
-          showBack: true,
+          // Only show flow header content on mobile - desktop shows it in the main content area
+          kicker: isMobile ? tSelfieHeader('kicker', { default: 'Get the best results' }) : undefined,
+          title: isMobile ? tSelfieHeader('title', { default: 'Selfie tips for amazing photos' }) : '',
+          subtitle: isMobile ? tSelfieHeader('body', { default: 'Great photos start with great selfies.' }) : undefined,
+          showBack: isMobile,
           onBack: handleBack
         }}
-        maxWidth="2xl"
+        maxWidth="5xl"
         background="white"
         bottomPadding={isMobile ? 'lg' : 'none'}
         fixedHeaderOnMobile

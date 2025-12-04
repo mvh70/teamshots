@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { useTranslations } from 'next-intl'
+import { useMobileViewport } from '@/hooks/useMobileViewport'
 
 interface SelfieSelectionInfoBannerProps {
   selectedCount: number
@@ -12,9 +13,15 @@ interface SelfieSelectionInfoBannerProps {
 export default function SelfieSelectionInfoBanner({ selectedCount, className = '', showSwipeHint = false }: SelfieSelectionInfoBannerProps) {
   const t = useTranslations('selfies.selectionInfo')
   const hint = useTranslations('selfies.selectionHint')
+  const isMobile = useMobileViewport()
 
   const remaining = Math.max(0, 2 - selectedCount)
   const showSwipe = showSwipeHint && selectedCount >= 2
+  
+  // Different hint text for mobile (swipe) vs desktop (click)
+  const readyHintText = isMobile 
+    ? t('swipeHint', { default: 'Swipe right when you\'re ready to customize.' })
+    : t('clickHint', { default: 'Click Continue when you\'re ready to customize.' })
 
   return (
     <div
@@ -47,7 +54,7 @@ export default function SelfieSelectionInfoBanner({ selectedCount, className = '
             <p className="mt-1 text-sm text-blue-900/80">
               {remaining > 0
                 ? hint('text', { default: 'Select at least 2 selfies for best results.' })
-                : t('swipeHint', { default: 'Swipe right when you\'re ready to customize.' })}
+                : readyHintText}
             </p>
           </div>
           {showSwipe && (
@@ -55,7 +62,7 @@ export default function SelfieSelectionInfoBanner({ selectedCount, className = '
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-              {t('swipeHint', { default: 'Swipe right when you\'re ready to customize.' })}
+              {readyHintText}
             </div>
           )}
         </div>

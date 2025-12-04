@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { LockClosedIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 
 interface StepIndicatorProps {
@@ -65,15 +66,20 @@ export default function StepIndicator({
           const isCurrentStep = currentAllStepsIndex !== undefined && idx === currentAllStepsIndex
           const isVisited = visitedSet.has(idx)
           
-          // For locked/pre-set steps
+          // For locked/pre-set steps - show lock icon (darker when current)
           if (isLocked) {
             return (
-              <div
+              <span
                 key={idx}
-                className={`rounded-full bg-gray-300 transition-all duration-300 ${
-                  isCurrentStep ? 'w-2 h-2' : 'w-1.5 h-1.5'
-                }`}
-              />
+                className="flex items-center justify-center"
+                aria-label={`Preset step ${idx + 1}`}
+              >
+                <LockClosedIcon className={`transition-all duration-300 ${
+                  isCurrentStep 
+                    ? 'h-2.5 w-2.5 text-gray-600' 
+                    : 'h-2 w-2 text-gray-400'
+                }`} />
+              </span>
             )
           }
           

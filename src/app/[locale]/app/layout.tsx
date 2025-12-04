@@ -1,14 +1,21 @@
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
+import { headers } from 'next/headers'
 import { auth } from '@/auth'
 import AppShell from './AppShell'
 import { UserService } from '@/domain/services/UserService'
 import { CreditsProvider } from '@/contexts/CreditsContext'
+import { DomainProvider } from '@/contexts/DomainContext'
 import { getAccountMode } from '@/domain/account/accountMode'
 import { CreditService } from '@/domain/services/CreditService'
 import { getTeamOnboardingState } from '@/domain/team/onboarding'
 import { OnboardingProvider } from '@/contexts/OnboardingContext'
 import { OnbordaProvider } from '@/components/onboarding/OnbordaProvider'
+import { getBrand } from '@/config/brand'
+import { getLandingVariant } from '@/config/landing-content'
+
+// Force dynamic rendering to ensure brand detection is fresh on each request
+export const dynamic = 'force-dynamic'
 
 export default async function AppLayout({
   children,
@@ -49,6 +56,16 @@ export default async function AppLayout({
     nextTeamOnboardingStep: teamOnboarding.nextStep
   }
 
+  // Get brand config from server-side headers to avoid hydration mismatch
+  const headersList = await headers()
+  const brand = getBrand(headersList)
+  
+  // Determine if this is an individual-only domain (no team features)
+  const host = headersList.get('host') || headersList.get('x-forwarded-host')
+  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
+  const variant = getLandingVariant(domain)
+  const isIndividualDomain = variant === 'photoshotspro'
+
   // OPTIMIZATION: Serialize subscription for client-side (convert Date objects to ISO strings)
   // Pass subscription to Sidebar to avoid redundant API calls
   const initialSubscription = userContext?.subscription ? {
@@ -62,19 +79,25 @@ export default async function AppLayout({
 
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
-      <CreditsProvider initialCredits={creditBalances ? { individual: creditBalances.individual, team: creditBalances.team } : undefined}>
-        <OnboardingProvider>
-          <OnbordaProvider>
-            <AppShell
-              initialAccountMode={accountModeResult.mode}
-              initialRole={initialRole}
-              initialSubscription={initialSubscription}
-            >
-              {children}
-            </AppShell>
-          </OnbordaProvider>
-        </OnboardingProvider>
-      </CreditsProvider>
+      <DomainProvider isIndividualDomain={isIndividualDomain}>
+        <CreditsProvider initialCredits={creditBalances ? { individual: creditBalances.individual, team: creditBalances.team } : undefined}>
+          <OnboardingProvider>
+            <OnbordaProvider>
+              <AppShell
+                initialAccountMode={accountModeResult.mode}
+                initialRole={initialRole}
+                initialSubscription={initialSubscription}
+                initialBrandName={brand.name}
+                initialBrandLogoLight={brand.logo.light}
+                initialBrandLogoIcon={brand.logo.icon}
+                isIndividualDomain={isIndividualDomain}
+              >
+                {children}
+              </AppShell>
+            </OnbordaProvider>
+          </OnboardingProvider>
+        </CreditsProvider>
+      </DomainProvider>
     </NextIntlClientProvider>
   )
 }

@@ -47,6 +47,31 @@ Each domain has its own:
 5. Register in `LANDING_COMPONENTS` map in `page.tsx`
 6. Add translations under `landing.<domainname>` in `messages/en.json` and `messages/es.json`
 
+### Domain Detection Policy
+
+**All domain decisions are server-side only.** No client-side detection allowed.
+
+This prevents:
+- Hydration mismatches (flicker between brands)
+- Client manipulation/abuse
+- Inconsistent user experience
+
+**Architecture:**
+1. **Marketing pages**: `layout.tsx` detects domain via `headers()`, passes `variant` prop to Header/Footer/Landing
+2. **App routes**: `app/layout.tsx` detects domain, provides `isIndividualDomain` via `DomainContext`
+3. **Components**: Receive brand info via props, never detect domain themselves
+
+**Key files:**
+- `src/contexts/DomainContext.tsx` - React context for app routes
+- `src/config/brand.ts` - `getBrand(headers)` (server-side only)
+- `src/config/landing-content.ts` - `getLandingVariant(domain)` (server-side only)
+
+**Local Development:**
+```env
+NEXT_PUBLIC_FORCE_DOMAIN=photoshotspro.com
+```
+Restart dev server after changing: `rm -rf .next && npm run dev`
+
 ## Internationalization Architecture
 
 ### Locale Support

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, ChevronRightIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 
 type NavigationVariant = 'dots' | 'chevrons' | 'both' | 'dots-only'
@@ -138,6 +138,30 @@ export default function FlowNavigation({
           <div className={`flex items-center ${dotGap}`}>
             {Array.from({ length: total }).map((_, idx) => {
               const { color, size: dotSize } = getDotStyles(idx)
+              const isLocked = lockedSet.has(idx)
+              
+              // For locked steps, show a lock icon instead of a dot (darker when current)
+              if (isLocked) {
+                const isCurrent = idx === current
+                const lockSize = size === 'sm' 
+                  ? (isCurrent ? 'h-3.5 w-3.5' : 'h-3 w-3')
+                  : (isCurrent ? 'h-4 w-4' : 'h-3.5 w-3.5')
+                const lockColor = isCurrent ? 'text-gray-600' : 'text-gray-400'
+                return (
+                  <span
+                    key={`nav-lock-${idx}`}
+                    className="flex items-center justify-center"
+                    aria-label={t('stepIndicator', { 
+                      current: idx + 1, 
+                      total,
+                      default: `Preset step ${idx + 1}` 
+                    })}
+                  >
+                    <LockClosedIcon className={`${lockSize} ${lockColor} transition-all duration-300`} />
+                  </span>
+                )
+              }
+              
               return (
                 <button
                   key={`nav-dot-${idx}`}

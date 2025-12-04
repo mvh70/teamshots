@@ -81,15 +81,14 @@ export default function CustomizationIntroPage() {
       <StickyFlowPage
         topHeader={<Header standalone showBackToDashboard />}
         flowHeader={{
-          kicker: tIntro('kicker', { default: 'Before you generate' }),
-          title: tIntro('title', { default: 'Customize your professional headshots' }),
-          subtitle: isMobile
-            ? tIntro('body', { default: "You're about to customize how your photos look." })
-            : tIntro('bodyDesktop', { default: "You're about to customize how your photos look." }),
-          showBack: true,
+          // Only show flow header content on mobile - desktop shows it in the main content area
+          kicker: isMobile ? tIntro('kicker', { default: 'Before you generate' }) : undefined,
+          title: isMobile ? tIntro('title', { default: 'Customize your professional headshots' }) : '',
+          subtitle: isMobile ? tIntro('body', { default: "You're about to customize how your photos look." }) : undefined,
+          showBack: isMobile,
           onBack: handleBack
         }}
-        maxWidth="2xl"
+        maxWidth="5xl"
         background="white"
         bottomPadding={isMobile ? 'lg' : 'none'}
         fixedHeaderOnMobile

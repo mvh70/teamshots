@@ -1,12 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
 import PricingCard from '@/components/pricing/PricingCard'
 import { CheckoutButton } from '@/components/ui'
-import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
+import type { LandingVariant } from '@/config/landing-content'
 
 // Helper to calculate total photos (styles × variations)
 function getTotalPhotos(credits: number, regenerations: number): number {
@@ -15,17 +14,19 @@ function getTotalPhotos(credits: number, regenerations: number): number {
   return styles * variations
 }
 
-export default function PricingContent() {
+interface PricingContentProps {
+  /** Variant from server-side for domain-specific pricing (no client-side detection) */
+  variant?: LandingVariant;
+}
+
+export default function PricingContent({ variant }: PricingContentProps) {
   const t = useTranslations('pricing');
 
-  // Domain-based pricing restriction - compute from domain detection functions.
-  // These functions access browser APIs (window.location) so must run client-side.
-  const [domainSignupType] = useState<'individual' | 'team' | null>(() => {
-    if (typeof window === 'undefined') return null
-    const domain = getClientDomain()
-    const forcedType = getForcedSignupType()
-    return forcedType || getSignupTypeFromDomain(domain)
-  })
+  // Derive signup type from server-provided variant (no client-side detection)
+  const domainSignupType: 'individual' | 'team' | null = 
+    variant === 'photoshotspro' ? 'individual' : 
+    variant === 'teamshotspro' ? 'team' : 
+    null;
 
   // Calculate pricing values for FAQ interpolation
   const individualPhotos = calculatePhotosFromCredits(PRICING_CONFIG.individual.credits)

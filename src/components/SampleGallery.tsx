@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getBrandName } from '@/config/brand';
+import { BRAND_CONFIG } from '@/config/brand';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { Grid } from '@/components/ui';
 import type { LandingVariant } from '@/config/landing-content';
@@ -53,7 +53,7 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
     attribution: {
       name: 'Matthieu van Haperen',
       role: 'Founder',
-      team: getBrandName()
+      team: BRAND_CONFIG.name
     }
   }
 ];

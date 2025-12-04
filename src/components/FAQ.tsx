@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { getBrandContact } from '@/config/brand';
-import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain';
+import { BRAND_CONFIGS } from '@/config/brand';
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain';
 import { PRICING_CONFIG } from '@/config/pricing';
 import { calculatePhotosFromCredits, formatPrice } from '@/domain/pricing/utils';
 import type { LandingVariant } from '@/config/landing-content';
@@ -16,7 +16,7 @@ interface FAQItem {
 }
 
 interface FAQProps {
-  /** Landing page variant for domain-specific content */
+  /** Landing page variant for domain-specific content (from server) */
   variant: LandingVariant;
 }
 
@@ -29,13 +29,16 @@ export default function FAQ({ variant }: FAQProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Detect domain signup type for domain-specific FAQ answers
-  const [domainSignupType] = useState<'individual' | 'team' | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const domain = getClientDomain();
-    const forcedType = getForcedSignupType();
-    return forcedType || getSignupTypeFromDomain(domain);
-  });
+  // Get brand config based on server-provided variant (no client-side detection)
+  const brand = variant === 'photoshotspro' 
+    ? BRAND_CONFIGS[INDIVIDUAL_DOMAIN] 
+    : BRAND_CONFIGS[TEAM_DOMAIN];
+
+  // Derive signup type from server-provided variant (no client-side detection)
+  const domainSignupType: 'individual' | 'team' | null = 
+    variant === 'photoshotspro' ? 'individual' : 
+    variant === 'teamshotspro' ? 'team' : 
+    null;
 
   // Calculate pricing values for FAQ interpolation
   const individualPhotos = calculatePhotosFromCredits(PRICING_CONFIG.individual.credits);
@@ -243,7 +246,7 @@ export default function FAQ({ variant }: FAQProps) {
             {t('stillHaveQuestions')}
           </p>
             <a
-              href={`mailto:${getBrandContact().support}`}
+              href={`mailto:${brand.contact.support}`}
               className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white rounded-2xl hover:shadow-depth-lg transition-all duration-300 shadow-depth-md transform hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98]"
             >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

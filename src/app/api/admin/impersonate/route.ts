@@ -108,7 +108,7 @@ export async function DELETE() {
     }
 
     // Get the original admin user ID from session
-    const originalUserId = session.user.originalUserId || session.user.id
+    const originalUserId = ('originalUserId' in session.user && session.user.originalUserId) || session.user.id
 
     // Log the impersonation stop
     await SecurityLogger.logSuspiciousActivity(

@@ -1326,6 +1326,7 @@
       "oneSelected": "You've got 1 selected. Add one more to continue.",
       "enoughSelected": "You've selected {count} selfie{count, plural, =1 {} other {s}}. You can continue or select more.",
       "swipeHint": "Swipe right when you're ready to customize.",
+      "clickHint": "Click Continue when you're ready to customize.",
       "status": {
         "start": "Select selfies",
         "oneMore": "Add one more",

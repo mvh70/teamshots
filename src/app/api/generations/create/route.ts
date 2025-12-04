@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { type Session } from 'next-auth'
 
 export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
@@ -63,7 +64,7 @@ const createGenerationSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Get user session
-    const session = await auth()
+    const session = await auth() as Session | null
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -334,8 +335,9 @@ export async function POST(request: NextRequest) {
 
         // Return account mode info to avoid redundant API call on client
         const isPro = userContext.roles.isTeamAdmin ?? false
-        const redirectUrl = isPro ? '/app/generations/team' : 
-          (session.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
+        const hasTeamId = session?.user?.person?.teamId
+        const redirectUrl = isPro ? '/app/generations/team' :
+          (hasTeamId ? '/app/generations/team' : '/app/generations/personal')
 
         return NextResponse.json({
           success: true,
@@ -344,7 +346,7 @@ export async function POST(request: NextRequest) {
           redirectUrl,
           accountMode: {
             isPro,
-            isTeamMember: !!session.user?.person?.teamId,
+            isTeamMember: !!hasTeamId,
             redirectUrl
           }
         })
@@ -649,7 +651,7 @@ export async function POST(request: NextRequest) {
     // Return account mode info to avoid redundant API call on client
     const isPro = userContext.roles.isTeamAdmin ?? false
     const redirectUrl = isPro ? '/app/generations/team' : 
-      (session.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
+      (session?.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
     
     return NextResponse.json({
       success: true,

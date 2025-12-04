@@ -78,21 +78,26 @@ export async function evaluateComposition(
     instructions.push(
       '',
       '5. branding_logo_matches',
-      '   - Does the logo in the composed image EXACTLY match the provided brand asset?',
-      '   - Are colors, proportions, and design elements preserved with NO distortion or modifications?',
-      '   - Is the logo the SAME SIZE (dimensions/aspect ratio) as the reference, not enlarged or shrunk?',
-      '   - Are there NO additional elements added to the logo (no boxes, borders, labels, text overlays, backgrounds)?',
+      '   - Does the VISIBLE portion of the logo match the provided brand asset?',
+      '   - CRITICAL: Occlusion by the foreground person is DESIRABLE and creates professional depth.',
+      '   - If the person covers part of the logo (hiding text or portions), this is EXCELLENT composition.',
+      '   - Focus ONLY on visible portions: are colors, proportions, and design elements correct where visible?',
+      '   - Answer YES if visible portions match the reference, even if person occludes large parts.',
+      '   - Answer NO only if visible portions are distorted, wrong color, or have added artifacts.',
       '',
       '6. branding_positioned_correctly',
-      '   - Check the generation prompt for the EXACT placement instruction',
-      '   - Is the logo placed in EXACTLY the location specified in the prompt?',
-      '   - Does it appear exactly ONCE (not duplicated, not missing)?',
-      '   - Is the positioning accurate (not shifted, not rotated incorrectly)?',
+      '   - Check the generation prompt for the placement instruction',
+      '   - Is the logo placed in the general location specified (accounting for person occlusion)?',
+      '   - Does it appear ONCE (partial visibility due to person is fine)?',
+      '   - CRITICAL: Logo being partially hidden behind the person still counts as correctly positioned.',
+      '   - Answer YES if the logo is in the right area, even if person covers most of it.',
+      '   - Answer NO only if the logo is in a completely wrong location or duplicated.',
       '',
       '7. branding_scene_aligned',
-      '   - Is the logo integrated naturally into the scene without looking pasted or composited?',
-      '   - Does lighting, perspective, and scale match the environment realistically?',
-      '   - Does the logo follow the contours of the surface it\'s placed on?'
+      '   - Is the VISIBLE portion of the logo integrated naturally into the scene?',
+      '   - Does lighting, perspective, and scale match the environment where the logo is visible?',
+      '   - Partial visibility due to person occlusion adds depth and should be answered YES.',
+      '   - Answer NO only if visible portions look unnaturally pasted or composited.'
     )
   } else {
     instructions.push(

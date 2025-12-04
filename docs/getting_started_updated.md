@@ -138,6 +138,9 @@ DATABASE_URL="postgresql://user:password@localhost:5432/teamphoto"
 NEXT_PUBLIC_MARKETING_URL="http://localhost:3000" # prod: https://www.teamshots.vip
 NEXT_PUBLIC_APP_URL="http://localhost:3000" # prod: https://app.teamshots.vip
 
+# Local Development - Force Domain (optional)
+# NEXT_PUBLIC_FORCE_DOMAIN="photoshotspro.com"  # Force brand for local testing
+
 # Auth.js (Email/Password only for MVP)
 NEXTAUTH_URL="http://localhost:3000" # prod: https://app.teamshots.vip
 NEXTAUTH_SECRET="your-secret-here" # Generate: openssl rand -base64 32

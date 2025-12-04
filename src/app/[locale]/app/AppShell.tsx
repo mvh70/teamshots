@@ -35,12 +35,20 @@ export default function AppShell({
   children, 
   initialRole, 
   initialAccountMode,
-  initialSubscription 
+  initialSubscription,
+  initialBrandName,
+  initialBrandLogoLight,
+  initialBrandLogoIcon,
+  isIndividualDomain = false
 }: { 
   children: React.ReactNode
   initialRole?: InitialRole
   initialAccountMode?: AccountMode
   initialSubscription?: SerializedSubscription | null
+  initialBrandName?: string
+  initialBrandLogoLight?: string
+  initialBrandLogoIcon?: string
+  isIndividualDomain?: boolean
 }) {
   const { status } = useSession()
   const router = useRouter()
@@ -201,6 +209,10 @@ export default function AppShell({
               initialRole={initialRole}
               initialAccountMode={initialAccountMode}
               initialSubscription={initialSubscription}
+              initialBrandName={initialBrandName}
+              initialBrandLogoLight={initialBrandLogoLight}
+              initialBrandLogoIcon={initialBrandLogoIcon}
+              isIndividualDomain={isIndividualDomain}
               onToggle={() => {
                 setSidebarCollapsed(!sidebarCollapsed)
               }}

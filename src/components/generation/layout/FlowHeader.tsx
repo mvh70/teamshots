@@ -56,6 +56,13 @@ export default function FlowHeader({
   className = '',
   rightContent
 }: FlowHeaderProps) {
+  // If there's no meaningful content, don't render the header at all
+  // This prevents rendering an empty header bar on desktop when content is shown elsewhere
+  const hasContent = title || kicker || subtitle || step || showBack || rightContent
+  if (!hasContent) {
+    return null
+  }
+
   const positionClasses = sticky ? 'md:static sticky top-0 z-40' : ''
 
   return (

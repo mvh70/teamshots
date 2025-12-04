@@ -16,6 +16,7 @@ import { fetchAccountMode } from '@/domain/account/accountMode'
 import { UpgradePrompt } from '@/components/generations/UpgradePrompt'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
+import { useDomain } from '@/contexts/DomainContext'
 
 export default function PersonalGenerationsPage() {
   const tg = useTranslations('generations.personal')
@@ -23,6 +24,7 @@ export default function PersonalGenerationsPage() {
   const toastMessages = useTranslations('generations.toasts')
   const { data: session } = useSession()
   const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
+  const { isIndividualDomain } = useDomain()
   const currentUserId = session?.user?.id
   const currentUserName = session?.user?.name || ''
   const [failureToast, setFailureToast] = useState<string | null>(null)
@@ -33,8 +35,26 @@ export default function PersonalGenerationsPage() {
   const processedCompletedGenIdsRef = useRef<Set<string>>(new Set())
   const tourTriggerAttemptedRef = useRef(false)
   const { href: buyCreditsHref } = useBuyCreditsLink()
+  
   // Team functionality lives on the team page. Pro accounts and invited team members should not access personal generations.
+  // Exception: On individual-only domains (photoshotspro.com), never redirect to team - team features don't exist.
   useEffect(() => {
+    // On individual domains, never redirect to team generations
+    if (isIndividualDomain) {
+      // Just fetch subscription tier for regeneration count
+      const fetchTier = async () => {
+        if (!session?.user?.id) return
+        try {
+          const accountMode = await fetchAccountMode()
+          setSubscriptionTier(accountMode.subscriptionTier as PricingTier | null)
+        } catch (error) {
+          console.warn('Failed to fetch account mode', error)
+        }
+      }
+      void fetchTier()
+      return
+    }
+
     let cancelled = false
 
     const enforcePersonalAccess = async () => {
@@ -84,7 +104,7 @@ export default function PersonalGenerationsPage() {
     return () => {
       cancelled = true
     }
-  }, [session?.user?.id, session?.user?.role, session?.user?.person?.teamId])
+  }, [session?.user?.id, session?.user?.role, session?.user?.person?.teamId, isIndividualDomain])
   const handleGenerationFailed = useCallback(
     ({ errorMessage }: { id: string; errorMessage?: string }) => {
       if (errorMessage) {

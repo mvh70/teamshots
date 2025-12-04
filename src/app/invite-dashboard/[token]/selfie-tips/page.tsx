@@ -117,14 +117,14 @@ export default function InviteSelfieTipsPage() {
         </div>
 
         {/* Content */}
-        <div ref={contentRef} className="flex-1 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto w-full">
+        <div ref={contentRef} className="px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto w-full">
           <div className="py-8 md:py-12">
             <SelfieTipsContent 
               variant="swipe"
             />
           </div>
           
-          {/* Step navigation */}
+          {/* Step navigation - positioned directly below content */}
           <div className="pb-8 md:pb-12">
             <FlowNavigation
               variant="both"

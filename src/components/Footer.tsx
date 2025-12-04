@@ -4,19 +4,26 @@ import { usePathname } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
-import { getBrand, getBrandLogo } from '@/config/brand';
-import { useLandingContent } from '@/hooks/useLandingContent';
+import { BRAND_CONFIGS } from '@/config/brand';
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain';
+import type { LandingVariant } from '@/config/landing-content';
 
-export default function Footer() {
+interface FooterProps {
+  /** Variant from server-side to avoid hydration mismatch */
+  variant?: LandingVariant;
+}
+
+export default function Footer({ variant = 'teamshotspro' }: FooterProps) {
   const pathname = usePathname();
   const t = useTranslations('nav');
-  const { variant } = useLandingContent();
   
-  // Get domain-specific footer translations
+  // Get domain-specific footer translations using server-provided variant
   const tFooter = useTranslations(`landing.${variant}.footer`);
   
-  // Get dynamic brand info
-  const brand = getBrand();
+  // Get brand config based on server-provided variant (no client-side detection)
+  const brand = variant === 'photoshotspro' 
+    ? BRAND_CONFIGS[INDIVIDUAL_DOMAIN] 
+    : BRAND_CONFIGS[TEAM_DOMAIN];
   
   // Don't show footer on app routes
   const isAppRoute = pathname?.includes('/app/') || pathname?.includes('/auth/');
@@ -32,7 +39,7 @@ export default function Footer() {
           <div className="mb-6 flex justify-center">
             {/* Dark background footer uses the dark logo variant */}
             <Image
-              src={getBrandLogo('dark')}
+              src={brand.logo.dark}
               alt={brand.name}
               width={150}
               height={40}

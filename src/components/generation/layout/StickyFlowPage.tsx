@@ -11,7 +11,7 @@ type FooterConfig =
   | { variant: 'swipe-hint'; text: string; direction?: 'left' | 'right' }
 
 type BottomPadding = 'none' | 'sm' | 'md' | 'lg' | 'auto'
-type MaxWidth = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '7xl' | 'full'
+type MaxWidth = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | '5xl' | '7xl' | 'full'
 type Background = 'white' | 'gray'
 
 const maxWidthClasses: Record<MaxWidth, string> = {
@@ -20,6 +20,8 @@ const maxWidthClasses: Record<MaxWidth, string> = {
   lg: 'max-w-lg',
   xl: 'max-w-xl',
   '2xl': 'max-w-2xl',
+  '4xl': 'max-w-4xl',
+  '5xl': 'max-w-5xl',
   '7xl': 'max-w-7xl',
   full: 'max-w-full'
 }

@@ -1,10 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState, useEffect } from 'react';
 import PricingCard from '@/components/pricing/PricingCard'
 import { CheckoutButton } from '@/components/ui'
-import { getClientDomain, getSignupTypeFromDomain, getForcedSignupType } from '@/lib/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
 import type { LandingVariant } from '@/config/landing-content'
@@ -17,32 +15,18 @@ function getTotalPhotos(credits: number, regenerations: number): number {
 }
 
 interface PricingPreviewProps {
-  /** Optional variant from server-side to prevent hydration flash */
+  /** Variant from server-side for domain-specific pricing (no client-side detection) */
   variant?: LandingVariant;
 }
 
 export default function PricingPreview({ variant }: PricingPreviewProps) {
   const t = useTranslations('pricing');
 
-  // Map variant to signup type for initial render (prevents flash)
-  const getInitialSignupType = (): 'individual' | 'team' | null => {
-    if (variant === 'photoshotspro') return 'individual';
-    if (variant === 'teamshotspro') return 'team';
-    return null;
-  };
-
-  // Domain-based pricing restriction - use variant for initial SSR render
-  const [domainSignupType, setDomainSignupType] = useState<'individual' | 'team' | null>(getInitialSignupType);
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // Verify domain type after hydration (client-side)
-  useEffect(() => {
-    const domain = getClientDomain();
-    const forcedType = getForcedSignupType();
-    const signupType = forcedType || getSignupTypeFromDomain(domain);
-    setDomainSignupType(signupType);
-    setIsHydrated(true);
-  }, []);
+  // Derive signup type from server-provided variant (no client-side detection)
+  const domainSignupType: 'individual' | 'team' | null = 
+    variant === 'photoshotspro' ? 'individual' : 
+    variant === 'teamshotspro' ? 'team' : 
+    null;
 
   // VIP plan - high price anchor for individual domain
   const vipPlan = {

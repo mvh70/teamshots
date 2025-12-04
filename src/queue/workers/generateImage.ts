@@ -855,26 +855,15 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       // Track if we've already sent an evaluation failure email (with image attachments)
       let evaluationFailureEmailSent = false
       
-      // Handle EvaluationFailedError specifically to send notifications with attachments
+      // Log EvaluationFailedError but don't send notification yet - wait for final attempt
       if (error instanceof EvaluationFailedError) {
         Logger.warn('Image generation failed evaluation checks', {
           generationId,
-          reason: error.message
+          reason: error.message,
+          attempt: job.attemptsMade + 1,
+          maxAttempts: job.opts?.attempts || 3
         })
-        
-        await notifyEvaluationFailure({
-          generationId: error.generationId,
-          personId,
-          userId,
-          jobId: job.id,
-          attempt: error.attempt,
-          evaluations: [error.evaluation],
-          aspectRatioDescription: error.aspectRatio,
-          shotLabel: 'N/A',
-          imageBase64: [error.imageBase64]
-        })
-        
-        evaluationFailureEmailSent = true
+        // Notification with image attachments will be sent on final attempt (see below)
       }
       
       if (isRateLimit) {
@@ -897,12 +886,13 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       
       // Check if this is a V2 workflow failure (internal retries exhausted)
       // These errors indicate logical failure after multiple internal attempts, so we shouldn't retry the whole job
-      const isWorkflowFailure = (error instanceof Error && (
+      // NOTE: EvaluationFailedError is NOT a workflow failure - it should trigger retries
+      const isWorkflowFailure = error instanceof Error && (
         error.message.includes('Step 1 failed after') ||
         error.message.includes('Step 5 failed after') ||
         error.message.includes('Step 7 failed after') ||
         error.message.includes('Step 4 validation failed')
-      )) || error instanceof EvaluationFailedError
+      )
       
       const isFinalAttempt = job.attemptsMade >= maxAttempts - 1 || isWorkflowFailure
 
@@ -914,6 +904,29 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             generationId,
             error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
           })
+        }
+        
+        // Send evaluation failure notification with image attachments ONLY on final attempt
+        if (error instanceof EvaluationFailedError) {
+          try {
+            await notifyEvaluationFailure({
+              generationId: error.generationId,
+              personId,
+              userId,
+              jobId: job.id,
+              attempt: error.attempt,
+              evaluations: [error.evaluation],
+              aspectRatioDescription: error.aspectRatio,
+              shotLabel: 'N/A',
+              imageBase64: [error.imageBase64]
+            })
+            evaluationFailureEmailSent = true
+          } catch (notifyError) {
+            Logger.error('Failed to send evaluation failure notification', {
+              generationId,
+              error: notifyError instanceof Error ? notifyError.message : String(notifyError)
+            })
+          }
         }
       }
       

@@ -14,12 +14,14 @@ import { calculatePhotosFromCredits, getRegenerationCount } from '@/domain/prici
 import { Toast, GenerationGrid } from '@/components/ui'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
+import { useDomain } from '@/contexts/DomainContext'
 
 export default function TeamGenerationsPage() {
   const tg = useTranslations('generations.team')
   const t = useTranslations('app.sidebar.generate')
   const { data: session } = useSession()
   const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
+  const { isIndividualDomain } = useDomain()
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
   const [rolesLoaded, setRolesLoaded] = useState(false)
   const [subscriptionTier, setSubscriptionTier] = useState<PricingTier | null>(null)
@@ -31,6 +33,14 @@ export default function TeamGenerationsPage() {
   const { startTour } = useOnbordaTours()
   const processedCompletedGenIdsRef = useRef<Set<string>>(new Set())
   const tourTriggerAttemptedRef = useRef(false)
+
+  // On individual-only domains (photoshotspro.com), redirect to personal generations
+  // Team features don't exist on individual domains
+  useEffect(() => {
+    if (isIndividualDomain) {
+      window.location.href = '/app/generations/personal'
+    }
+  }, [isIndividualDomain])
 
   // Fetch effective roles from API (respects pro subscription = team admin)
   useEffect(() => {

@@ -24,7 +24,7 @@ import {
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import {useTranslations} from 'next-intl'
-import { BRAND_CONFIG, getBrandLogo } from '@/config/brand'
+import { BRAND_CONFIG } from '@/config/brand'
 import { normalizePlanTierForUI, isFreePlan, type PlanPeriod, type UIPlanTier } from '@/domain/subscription/utils'
 import { AccountMode, fetchAccountMode } from '@/domain/account/accountMode'
 import { SubscriptionInfo } from '@/domain/subscription/subscription'
@@ -92,15 +92,25 @@ interface SidebarProps {
   initialRole?: SidebarRoleState
   initialAccountMode?: AccountMode
   initialSubscription?: SerializedSubscription | null
+  initialBrandName?: string
+  initialBrandLogoLight?: string
+  initialBrandLogoIcon?: string
+  /** If true, hide team-related menu items (for individual-only domains like photoshotspro.com) */
+  isIndividualDomain?: boolean
 }
 
-export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialRole, initialAccountMode, initialSubscription }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialRole, initialAccountMode, initialSubscription, initialBrandName, initialBrandLogoLight, initialBrandLogoIcon, isIndividualDomain = false }: SidebarProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const t = useTranslations('app.sidebar')
   const [menuOpen, setMenuOpen] = useState(false)
   const [isTeamMember, setIsTeamMember] = useState(initialRole?.isTeamMember ?? false)
   const [isTeamAdmin, setIsTeamAdmin] = useState(initialRole?.isTeamAdmin ?? false)
+  
+  // Use server-provided brand values to avoid hydration mismatch
+  const brandName = initialBrandName ?? BRAND_CONFIG.name
+  const brandLogoLight = initialBrandLogoLight ?? BRAND_CONFIG.logo.light
+  const brandLogoIcon = initialBrandLogoIcon ?? BRAND_CONFIG.logo.icon
   const [needsTeamSetup, setNeedsTeamSetup] = useState(initialRole?.needsTeamSetup ?? false)
   const [, setNeedsPhotoStyleSetup] = useState(initialRole?.needsPhotoStyleSetup ?? false)
   const [, setNeedsTeamInvites] = useState(initialRole?.needsTeamInvites ?? false)
@@ -468,14 +478,24 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
   ])
 
   // Filter navigation based on account mode
-  // Pro mode: show pro/team features
+  // Pro mode: show pro/team features (unless on individual-only domain)
   // Individual mode: show personal features
   // Team members (invited) don't have sidebar (handled separately)
-  const navigation = accountMode === 'pro'
-    ? roleFiltered.filter(item => proHrefs.has(item.href))
-    : accountMode === 'individual'
-    ? roleFiltered.filter(item => individualHrefs.has(item.href))
-    : [] // team_member mode - no sidebar navigation
+  // On individual-only domains (photoshotspro.com), always show personal navigation, never team
+  let navigation: NavigationItem[]
+  if (isIndividualDomain) {
+    // Individual domain: always show personal navigation, regardless of account mode
+    navigation = roleFiltered.filter(item => individualHrefs.has(item.href))
+  } else if (accountMode === 'pro') {
+    // Pro mode on team domain: show pro/team features
+    navigation = roleFiltered.filter(item => proHrefs.has(item.href))
+  } else if (accountMode === 'individual') {
+    // Individual mode: show personal features
+    navigation = roleFiltered.filter(item => individualHrefs.has(item.href))
+  } else {
+    // team_member mode - no sidebar navigation
+    navigation = []
+  }
 
   const handleSignOut = async () => {
     try {
@@ -515,12 +535,12 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
           <div className={`flex p-5 md:p-6 border-b border-gray-200/60 bg-gradient-to-r from-white via-brand-primary-light/5 to-white backdrop-blur-sm ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
             {!effectiveCollapsed && (
               <Link href="/" className="flex items-center space-x-2 group/logo">
-                <Image src={getBrandLogo('light')} alt={BRAND_CONFIG.name} width={112} height={28} className="h-7 transition-transform duration-200 group-hover/logo:scale-105" style={{ width: 'auto' }} priority />
+                <Image src={brandLogoLight} alt={brandName} width={112} height={28} className="h-7 transition-transform duration-200 group-hover/logo:scale-105" style={{ width: 'auto' }} priority />
               </Link>
             )}
             {effectiveCollapsed && (
               <Link href="/" className="w-12 h-12 rounded-lg flex items-center justify-center">
-                <Image src={BRAND_CONFIG.logo.icon} alt={BRAND_CONFIG.name} width={48} height={48} className="h-12 w-12" priority />
+                <Image src={brandLogoIcon} alt={brandName} width={48} height={48} className="h-12 w-12" priority />
               </Link>
             )}
             <div className="relative group">
@@ -676,7 +696,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                   </div>
                 )}
 
-                {accountMode === 'pro' && (
+                {/* Team credits - hidden on individual-only domains (photoshotspro.com) */}
+                {accountMode === 'pro' && !isIndividualDomain && (
                   <>
                     <div className={`relative group flex items-center justify-between bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200 ${effectiveCollapsed ? 'flex-col space-y-0.5' : ''}`}>
                       <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center' : ''}`}>
@@ -759,6 +780,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                   width={40}
                   height={40}
                   style={{ width: 'auto', height: 'auto' }}
+                  unoptimized
                 />
                 <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-brand-primary to-brand-primary-hover text-white text-xs rounded-full px-1.5 py-0.5 font-bold shadow-md ring-2 ring-white">
                   {t('profile.pro')}
