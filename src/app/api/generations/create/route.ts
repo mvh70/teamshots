@@ -211,10 +211,7 @@ export async function POST(request: NextRequest) {
 
     // Validate that the determined credit source matches the derived one from person data
     // This ensures consistency: if person is in a team, they must use team credits
-    // EXCEPTION: Pro users without a team yet use team credits (unmigrated pro credits)
-    // so we allow enforcedCreditSource='team' when derivedCreditSource='individual' for pro users
-    const isProUserWithoutTeam = userContext.subscription?.tier === 'pro' && !ownerPerson.teamId
-    if (derivedCreditSource !== enforcedCreditSource && !isProUserWithoutTeam) {
+    if (derivedCreditSource !== enforcedCreditSource) {
       Logger.error('Credit source mismatch', {
         userId: session.user.id,
         personTeamId: ownerPerson.teamId,

@@ -352,16 +352,34 @@ export async function POST(request: NextRequest) {
       Logger.info('21. Person created', { personId: person.id })
     }
 
-    // Handle team registration (only if not from invite)
-    if (userType === 'team' && teamWebsite && !teamId) {
-      // For team signups, just set the user role to team_admin
-      // Team creation will happen later when they complete the team setup form
+    // Handle team registration (only if not from invite - invites already have teamId)
+    if (userType === 'team' && !teamId) {
+      // Create team for pro user immediately
+      const team = await prisma.team.create({
+        data: {
+          name: 'My Team',
+          adminId: user.id,
+          teamMembers: {
+            connect: { id: person.id }
+          }
+        }
+      })
+      
+      // Link person to team
+      await prisma.person.update({
+        where: { id: person.id },
+        data: { teamId: team.id }
+      })
+      
+      teamId = team.id
+      
+      // Set user role to team_admin
       await prisma.user.update({
         where: { id: user.id },
         data: { role: 'team_admin' }
       })
 
-      Logger.info('22. User marked as team_admin, team creation deferred')
+      Logger.info('22. Team auto-created for pro user', { userId: user.id, teamId: team.id })
     }
 
     // Consolidated signup grants (free trial + default package) in single transaction

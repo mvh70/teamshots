@@ -77,41 +77,23 @@ export async function getEffectiveTeamCreditBalance(userId: string, teamId?: str
   // If user has pro tier, also check for unmigrated pro credits on userId
   // This handles the case where credits were assigned before team was created
   if (hasProTier) {
-    // Query for unmigrated pro credits: purchases (planTier='pro') AND usage (type='generation')
-    // Both types have userId set and teamId=null when the user has no team
-    const [proPurchases, proUsage] = await Promise.all([
-      // Pro subscription purchase credits (positive)
-      prisma.creditTransaction.aggregate({
-        where: {
-          userId: userId,
-          planTier: 'pro',
-          teamId: null, // Only count credits not yet migrated
-        },
-        _sum: { credits: true }
-      }),
-      // Usage deductions for pro credits (negative, type='generation', no planTier)
-      prisma.creditTransaction.aggregate({
-        where: {
-          userId: userId,
-          teamId: null,
-          type: 'generation',
-          planTier: null, // Deductions don't have planTier set
-        },
-        _sum: { credits: true }
-      })
-    ])
+    const userProBalance = await prisma.creditTransaction.aggregate({
+      where: {
+        userId: userId,
+        planTier: 'pro',
+        teamId: null, // Only count credits not yet migrated
+        credits: { gt: 0 }
+      },
+      _sum: { credits: true }
+    })
     
-    const purchaseCredits = proPurchases._sum.credits || 0
-    const usageCredits = proUsage._sum.credits || 0 // This will be negative
-    const unmigratedCredits = purchaseCredits + usageCredits
+    const unmigratedCredits = userProBalance._sum.credits || 0
     const totalBalance = teamBalance + unmigratedCredits
     
     Logger.debug('getEffectiveTeamCreditBalance', { 
       userId, 
       teamId, 
       teamBalance, 
-      purchaseCredits,
-      usageCredits,
       unmigratedCredits, 
       totalBalance,
       hasProTier 

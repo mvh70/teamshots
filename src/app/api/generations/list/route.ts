@@ -90,16 +90,11 @@ export async function GET(request: NextRequest) {
     let where: Record<string, unknown> = {}
 
     if (roles.isTeamAdmin || roles.isTeamMember) {
+      // Team context - filter by person.teamId (derives generationType from person data)
       if (!userTeamId) {
-        // Team admin without a team yet - show their own generations (same as individual mode)
-        // This allows pro users to see their generations before creating a team
-        where = {
-          person: {
-            userId: sessionUserId
-          }
-        }
-      } else if (roles.isTeamAdmin) {
-        // Team admin WITH a team - show all team generations
+        return NextResponse.json({ error: 'Not part of a team' }, { status: 403 })
+      }
+      if (roles.isTeamAdmin) {
         where = {
           person: {
             teamId: userTeamId // Team generations have person.teamId set

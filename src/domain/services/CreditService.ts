@@ -83,15 +83,12 @@ export class CreditService {
       }
 
       // Reserve credits using existing function
-      // For team credits WITH teamId: pass personId AND teamId (team credit deduction)
-      // For team credits WITHOUT teamId (pro user without team): pass personId AND userId (unmigrated pro credits)
+      // For team credits: pass personId AND teamId (both required for team credit deduction)
       // For individual credits: pass userId only (no personId, no teamId) to use getUserCreditBalance
       // Credits are tracked per person, not per invite
-      const isProUserWithoutTeam = creditSourceInfo.creditSource === 'team' && !creditSourceInfo.teamId && !context.teamId
       const transaction = await reserveCreditsForGeneration(
         creditSourceInfo.creditSource === 'team' ? personId : null,
-        // Pass userId for: individual credits OR pro user without team (so deduction is tracked on userId)
-        creditSourceInfo.creditSource === 'individual' || isProUserWithoutTeam ? userId : null,
+        creditSourceInfo.creditSource === 'team' ? null : userId,
         requiredCredits,
         `Generation reservation`,
         creditSourceInfo.creditSource === 'team' ? (creditSourceInfo.teamId || context.teamId || undefined) : undefined
@@ -186,16 +183,21 @@ export class CreditService {
     const { roles, subscription, teamId } = userContext
 
     // Pro users are team admins by definition and always use team credits
-    // Even without a team yet, their subscription credits are "team credits"
-    // The credits are stored with userId + planTier: 'pro' and will be migrated when team is created
+    // EXCEPTION: If they haven't created a team yet (deferred setup), they act as individuals
     if (subscription?.tier === 'pro') {
+      if (!teamId) {
+        return {
+          creditSource: 'individual',
+          generationType: 'personal',
+          reason: 'Pro user without team uses personal credits'
+        }
+      }
+
       return {
         creditSource: 'team',
         generationType: 'team',
         teamId: teamId || undefined,
-        reason: teamId 
-          ? 'Pro users always use team credits' 
-          : 'Pro user without team - using unmigrated pro credits as team credits'
+        reason: 'Pro users always use team credits'
       }
     }
 
