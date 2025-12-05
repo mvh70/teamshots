@@ -216,7 +216,7 @@ export function generateBrandingPrompt({
       branding: {
         enabled: true,
         position: 'elements',
-        placement: typeof placement === 'string' ? placement : 'on standing banner flag',
+        placement: typeof placement === 'string' ? placement : 'on falcon banner flag',
         allowed_elements,
         rules // Store rules in the branding object for Step 3
       },
