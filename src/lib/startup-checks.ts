@@ -42,7 +42,7 @@ export function validateEnvironment() {
     const requiredSecrets = [
       'NEXTAUTH_SECRET',
       'DATABASE_URL',
-      'GEMINI_API_KEY',
+      'GOOGLE_CLOUD_API_KEY',
       'STRIPE_SECRET_KEY',
       'RESEND_API_KEY'
     ]
