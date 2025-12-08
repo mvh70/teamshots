@@ -260,7 +260,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         throw new Error(`Invalid tier/period combination: ${finalTier}/${finalPeriod}`);
       }
       
-      const credits = PRICING_CONFIG[configKey as keyof typeof PRICING_CONFIG].credits
+      // Type-safe access to pricing tiers (not other config keys)
+      type PricingTierKey = 'individual' | 'proSmall' | 'proLarge' | 'vip' | 'enterprise'
+      const credits = PRICING_CONFIG[configKey as PricingTierKey].credits
       
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
         // Update user plan info

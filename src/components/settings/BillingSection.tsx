@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { DocumentTextIcon } from '@heroicons/react/24/outline'
 import { jsonFetcher } from '@/lib/fetcher'
 import { useRouter } from '@/i18n/routing'
 import { BRAND_CONFIG } from '@/config/brand'

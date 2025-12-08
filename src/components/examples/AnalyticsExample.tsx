@@ -52,7 +52,7 @@ export default function AnalyticsExample() {
     <div className="max-w-2xl mx-auto p-8 bg-white rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-4">Google Analytics Examples</h1>
       <p className="text-gray-600 mb-6">
-        Click the buttons below to trigger analytics events. Open your browser's
+        Click the buttons below to trigger analytics events. Open your browser&apos;s
         DevTools console to see the events being sent.
       </p>
 

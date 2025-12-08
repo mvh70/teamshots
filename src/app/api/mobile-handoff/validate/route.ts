@@ -3,6 +3,7 @@ import { validateMobileHandoffToken, cleanupExpiredHandoffTokens } from '@/lib/m
 import { Logger } from '@/lib/logger'
 import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
+import { createHmac } from 'crypto'
 
 export const runtime = 'nodejs'
 
@@ -95,8 +96,6 @@ export async function GET(request: NextRequest) {
  * 3. Cannot easily reverse engineer or predict device IDs
  */
 function generateDeviceId(userAgent: string, ip?: string): string {
-  const { createHmac } = require('crypto')
-
   // Use environment variable or fallback secret (should be set in production)
   const secret = process.env.DEVICE_ID_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-device-secret'
 

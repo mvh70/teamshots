@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { formatTierName, PlanPeriod, PlanTier } from '@/domain/subscription/utils'
-import { CreditCardIcon } from '@heroicons/react/24/outline'
 import { jsonFetcher } from '@/lib/fetcher'
 import SubscriptionPanel from '@/components/subscription/SubscriptionPanel'
 

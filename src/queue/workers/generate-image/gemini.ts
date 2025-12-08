@@ -264,7 +264,7 @@ export async function generateWithGemini(
     } catch (error) {
       // Attach the attempted provider so failure tracking can log it correctly
       if (error && typeof error === 'object') {
-        ;(error as { providerUsed?: 'vertex' | 'gemini-rest' | 'replicate' }).providerUsed = providerUsed
+        ;(error as { providerUsed?: 'vertex' | 'gemini-rest' | 'replicate' | 'openrouter' }).providerUsed = providerUsed
       }
 
       lastError = error

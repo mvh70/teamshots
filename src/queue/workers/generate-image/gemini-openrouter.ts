@@ -145,8 +145,11 @@ export async function generateWithGeminiOpenRouter(
       if (typeof message?.content === 'string') {
         textContent = message.content
       } else if (Array.isArray(message?.content)) {
-        const textParts = message.content.filter((c: { type: string; text?: string }) => c.type === 'text')
-        textContent = textParts.map((c: { text?: string }) => c.text).join(' ')
+        type TextPart = { type: string; text?: string }
+        const textParts = message.content.filter((c): c is TextPart => 
+          typeof c === 'object' && c !== null && 'type' in c && c.type === 'text'
+        )
+        textContent = textParts.map((c) => c.text).filter(Boolean).join(' ')
       }
 
       Logger.error('OpenRouter returned no images', {

@@ -1,13 +1,16 @@
 // Google Analytics & Tag Manager event tracking helpers
 
+type GtagCommand = 'event' | 'config' | 'set' | 'js'
+type GtagConfig = Record<string, string | number | boolean | undefined>
+
 declare global {
   interface Window {
     gtag?: (
-      command: 'event' | 'config' | 'set' | 'js',
+      command: GtagCommand,
       targetId: string | Date,
-      config?: Record<string, any>
+      config?: GtagConfig
     ) => void
-    dataLayer?: any[]
+    dataLayer?: Array<Record<string, unknown>>
   }
 }
 
@@ -16,7 +19,7 @@ declare global {
  * @param action - The action being performed (e.g., 'sign_up', 'purchase')
  * @param params - Additional event parameters
  */
-export const trackEvent = (action: string, params?: Record<string, any>) => {
+export const trackEvent = (action: string, params?: Record<string, string | number | boolean | undefined>) => {
   if (typeof window !== 'undefined' && window.gtag) {
     window.gtag('event', action, params)
   }
@@ -74,7 +77,7 @@ export const trackLogin = (method: string) => {
  * Push custom data to GTM dataLayer
  * @param data - Data object to push
  */
-export const pushToDataLayer = (data: Record<string, any>) => {
+export const pushToDataLayer = (data: Record<string, unknown>) => {
   if (typeof window !== 'undefined' && window.dataLayer) {
     window.dataLayer.push(data)
   }

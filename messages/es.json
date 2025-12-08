@@ -974,6 +974,7 @@
           "button": "Proceder de todos modos (¡lo intentamos!) 😅"
         },
         "title": "Plan de precios",
+        "subtitle": "Administra tu suscripción y plan de precios",
         "noSubscription": "Elige un plan para comenzar y comenzar a lucir increíble.",
         "upgradeOptions": "Opciones de Actualización",
         "plan": {
@@ -995,6 +996,7 @@
       },
       "billing": {
         "title": "Facturación e Invoices",
+        "subtitle": "Ver y descargar tus facturas",
         "free": {
           "message": "🎉 ¡Hola! Aún no has comprado nada, así que esta pantalla está vacía. Sin facturas, sin cuentas, sin sorpresas (excepto las buenas cuando veas nuestras fotos).",
           "button": "¡Llena esta pantalla con grandeza! 🚀"

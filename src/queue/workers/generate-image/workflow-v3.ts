@@ -1027,7 +1027,7 @@ export async function executeV3Workflow({
   if (step1aResult.status === 'rejected') {
     Logger.error('V3 Step 1a failed - Step 1b state saved for reuse on retry', {
       error: step1aResult.reason,
-      step1bCached: !!step1bResult.value?.statePatch,
+      step1bCached: step1bResult.status === 'fulfilled' ? !!step1bResult.value?.statePatch : false,
       generationId
     })
     throw step1aResult.reason

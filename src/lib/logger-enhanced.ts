@@ -91,22 +91,10 @@ function log(level: Level, message: string, context?: LogContext): void {
   console[level](formatted)
 
   // Send to external services in production
+  // Note: To enable Sentry error tracking, configure sentry.ts following sentry.config.example.ts
   if (isProduction && level === 'error') {
-    // Try to send to Sentry if available
-    try {
-      // Dynamic import to avoid build-time issues
-      import('./sentry').then(({ captureError }) => {
-        if (context?.error instanceof Error) {
-          captureError(context.error, context)
-        } else if (typeof context?.error === 'string') {
-          captureError(new Error(context.error), context)
-        }
-      }).catch(() => {
-        // Sentry not configured - silently ignore
-      })
-    } catch {
-      // Ignore if Sentry not available
-    }
+    // Reserved for external error tracking integrations (Sentry, DataDog, etc.)
+    // Add integration here when configured
   }
 }
 
