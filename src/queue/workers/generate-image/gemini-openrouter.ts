@@ -152,14 +152,25 @@ export async function generateWithGeminiOpenRouter(
         textContent = textParts.map((c) => c.text).filter(Boolean).join(' ')
       }
 
-      Logger.error('OpenRouter returned no images', {
+      Logger.error('OpenRouter returned no images - DETAILED DEBUG', {
         model: modelFromEnv,
+        aspectRatio,
+        referenceImageCount: images.length,
+        referenceImageSizes: images.map(img => ({
+          mimeType: img.mimeType,
+          base64Length: img.base64?.length || 0,
+          description: img.description?.substring(0, 80)
+        })),
+        promptLength: prompt.length,
         hasChoices: !!data.choices,
+        choicesCount: data.choices?.length,
         hasMessage: !!message,
         messageKeys: message ? Object.keys(message) : [],
         contentType: Array.isArray(message?.content) ? 'array' : typeof message?.content,
-        textContent: textContent?.substring(0, 500), // Log any text response that might explain the issue
-        fullResponse: JSON.stringify(data).substring(0, 1000) // Log full response for debugging (truncated)
+        contentLength: Array.isArray(message?.content) ? message.content.length : 0,
+        textContent: textContent?.substring(0, 500),
+        usage: data.usage,
+        fullResponse: JSON.stringify(data).substring(0, 2000) // Increased from 1000 to 2000
       })
       throw new Error(`OpenRouter returned no images${textContent ? `: ${textContent.substring(0, 200)}` : ''}`)
     }

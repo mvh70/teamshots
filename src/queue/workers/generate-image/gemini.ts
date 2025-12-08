@@ -173,6 +173,14 @@ function buildProviderOrder(preferredProvider?: GeminiProvider): GeminiProvider[
   const hasReplicate = !!Env.string('REPLICATE_API_TOKEN', '')
   const hasOpenRouter = !!Env.string('OPENROUTER_API_KEY', '')
 
+  Logger.debug('Building provider order - checking credentials', {
+    hasApiKey,
+    hasServiceAccount,
+    hasReplicate,
+    hasOpenRouter,
+    preferredProvider
+  })
+
   // Use preferred provider if specified, otherwise use env var default
   const primaryProvider = preferredProvider ?? (Env.string('GEMINI_PRIMARY_PROVIDER', 'openrouter') as GeminiProvider)
   const providers: GeminiProvider[] = []
@@ -180,27 +188,42 @@ function buildProviderOrder(preferredProvider?: GeminiProvider): GeminiProvider[
   // Add primary provider first if available
   if (primaryProvider === 'openrouter' && hasOpenRouter) {
     providers.push('openrouter')
+    Logger.debug('Added openrouter as primary provider')
   } else if (primaryProvider === 'vertex' && hasServiceAccount) {
     providers.push('vertex')
+    Logger.debug('Added vertex as primary provider')
   } else if (primaryProvider === 'rest' && hasApiKey) {
     providers.push('rest')
+    Logger.debug('Added rest as primary provider')
   } else if (primaryProvider === 'replicate' && hasReplicate) {
     providers.push('replicate')
+    Logger.debug('Added replicate as primary provider')
   }
 
   // Add remaining providers as fallbacks (in order of preference)
   if (!providers.includes('openrouter') && hasOpenRouter) {
     providers.push('openrouter')
+    Logger.debug('Added openrouter as fallback')
   }
   if (!providers.includes('vertex') && hasServiceAccount) {
     providers.push('vertex')
+    Logger.debug('Added vertex as fallback')
   }
   if (!providers.includes('rest') && hasApiKey) {
     providers.push('rest')
+    Logger.debug('Added rest as fallback')
   }
   if (!providers.includes('replicate') && hasReplicate) {
     providers.push('replicate')
+    Logger.debug('Added replicate as fallback')
   }
+
+  Logger.info('Provider order built', {
+    providers,
+    providerCount: providers.length,
+    primaryProvider,
+    preferredProvider
+  })
 
   return providers
 }
@@ -227,11 +250,15 @@ export async function generateWithGemini(
     )
   }
 
-  Logger.debug('Gemini providers configured', {
+  Logger.info('Gemini providers configured', {
     providers,
     primaryProvider: providers[0],
     preferredProvider: options?.preferredProvider,
-    fallbackCount: providers.length - 1
+    fallbackCount: providers.length - 1,
+    hasOpenRouter: !!Env.string('OPENROUTER_API_KEY', ''),
+    hasServiceAccount: !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', ''),
+    hasApiKey: !!Env.string('GOOGLE_CLOUD_API_KEY', ''),
+    hasReplicate: !!Env.string('REPLICATE_API_TOKEN', '')
   })
   
   // Try each provider in order, fallback on rate limit errors
@@ -240,6 +267,12 @@ export async function generateWithGemini(
     const provider = providers[i]
     const isLastProvider = i === providers.length - 1
     const providerUsed = normalizeProvider(provider)
+    
+    Logger.info(`Attempting provider ${i + 1}/${providers.length}`, {
+      provider,
+      providerUsed,
+      isLastProvider
+    })
     
     try {
       if (provider === 'vertex') {
@@ -269,18 +302,50 @@ export async function generateWithGemini(
 
       lastError = error
       const rateLimited = isRateLimitError(error)
-      
-      if (rateLimited && !isLastProvider) {
-        Logger.warn('Provider rate limited, falling back to next provider', {
+
+      // Check if this is a transient IMAGE_OTHER error from OpenRouter
+      // Be more defensive - check for "returned no images" OR "IMAGE_OTHER" in the message
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const isImageOtherError = (
+        (errorMessage.includes('OpenRouter returned no images') ||
+         errorMessage.includes('returned no images') ||
+         errorMessage.includes('IMAGE_OTHER')) &&
+        provider === 'openrouter'
+      )
+
+      Logger.info('Provider failed - checking fallback eligibility', {
+        provider,
+        providerUsed,
+        rateLimited,
+        isImageOtherError,
+        isLastProvider,
+        errorMessage: error instanceof Error ? error.message.substring(0, 200) : String(error).substring(0, 200),
+        willFallback: (rateLimited || isImageOtherError) && !isLastProvider
+      })
+
+      // Fall back to next provider if rate limited OR transient image generation failure
+      if ((rateLimited || isImageOtherError) && !isLastProvider) {
+        const reason = rateLimited ? 'rate limited' : 'returned no images (IMAGE_OTHER)'
+        Logger.warn(`Provider ${reason}, falling back to next provider`, {
           provider,
+          providerUsed,
+          reason,
           attempt: i + 1,
           totalProviders: providers.length,
-          nextProvider: providers[i + 1]
+          nextProvider: providers[i + 1],
+          errorMessage: error instanceof Error ? error.message : String(error)
         })
         continue // Try next provider
       }
-      
-      // If not rate limit, or this is the last provider, throw immediately
+
+      // If not a fallback-eligible error, or this is the last provider, throw immediately
+      Logger.error('No fallback available - throwing error', {
+        provider,
+        providerUsed,
+        isLastProvider,
+        rateLimited,
+        isImageOtherError
+      })
       throw error
     }
   }

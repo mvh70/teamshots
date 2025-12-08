@@ -68,7 +68,6 @@ function addSecurityHeaders(response: NextResponse) {
   // TODO: Re-enable strict CSP when codebase stabilizes
   // For now, allow unsafe-inline in both dev and production to avoid hash management
   const isDevelopment = process.env.NODE_ENV === 'development'
-  const isProduction = process.env.NODE_ENV === 'production'
 
   // SECURITY NOTE: CSP currently uses 'unsafe-inline' which creates XSS risk
   // TODO: Migrate to nonce-based CSP for production (Phase 2)

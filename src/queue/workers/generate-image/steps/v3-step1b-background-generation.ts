@@ -189,13 +189,19 @@ export async function executeV3Step1b(
     structuredPrompt.push(
       '',
       'CRITICAL Background Wall Requirements (Neutral/Gradient Backgrounds Only):',
-      '- The background wall must be COMPLETELY PLAIN and UNINTERRUPTED - a single, flat, uniform surface with no decorative elements.',
+      '- The background should be a clean, professional studio wall WITHOUT busy decorative elements.',
       '- ABSOLUTELY NO plants, potted plants, foliage, or any vegetation in the background.',
-      '- ABSOLUTELY NO architectural lines, corners, folds, seams, or visible wall-floor transitions.',
-      '- ABSOLUTELY NO patterns, textures, windows, furniture, objects, or any other interruptions.',
-      '- ABSOLUTELY NO shadows, gradients, or depth variations that create visible lines or divisions.',
-      '- The wall should appear as a perfectly flat, uniform, uninterrupted plane - like a seamless studio backdrop.',
-      '- Any subtle depth or lighting should be achieved through smooth gradients ONLY, never through visible lines, edges, or architectural features.',
+      '- ABSOLUTELY NO windows, furniture, or distracting objects.',
+      '- ABSOLUTELY NO visible wall-floor transitions, harsh corners, or seams that draw the eye.',
+      '',
+      '**Creating Depth in Studio Backgrounds:**',
+      '- The wall should have SUBTLE THREE-DIMENSIONAL QUALITY through natural lighting gradients and gentle shadows.',
+      '- Use SMOOTH LIGHTING FALLOFF from the light source (typically 45° from camera left) - the wall should be brighter near the light and gradually darker away from it.',
+      '- Add VERY SUBTLE texture variation in the wall surface (minimal paint texture, barely visible imperfections) - not completely uniform like a digital gradient.',
+      '- The wall should be positioned 6-8 feet behind where the subject will stand, creating NATURAL ATMOSPHERIC DEPTH through slight color desaturation and softness.',
+      '- Apply appropriate BACKGROUND SHADOWING - if there\'s a rim light or backlight on the subject, the wall should show very subtle, soft shadows that suggest the light setup.',
+      '- The gradient should feel ORGANIC and NATURAL, as if lit by studio lights, not artificial or digitally created.',
+      '- Think: "professional studio photography" where the background has dimension but doesn\'t compete with the subject.',
     )
   }
   
@@ -222,21 +228,26 @@ export async function executeV3Step1b(
     )
   }
 
-  // Add branding logo instruction
-  referenceInstructions.push(
-    '- **Branding Logo:** Use the labeled "BRANDING LOGO" in the composite image to place branding elements exactly as specified in the Branding Requirements.'
-  )
+  // Add branding logo instructions ONLY if logo is present
+  if (brandingLogoReference) {
+    referenceInstructions.push(
+      '- **Branding Logo:** Use the labeled "BRANDING LOGO" in the composite image to place branding elements exactly as specified in the Branding Requirements.'
+    )
 
-  // Add strict logo placement requirements ONLY for neutral and gradient backgrounds
-  if (isPlainBackground) {
-    referenceInstructions.push(
-      '- **CRITICAL Logo Placement (Neutral/Gradient Backgrounds Only):** The logo must appear FLUSH and FLAT against the plain background wall, as if it is directly affixed or stuck to the wall surface. The logo should have NO depth, NO shadows that create separation from the wall, and NO 3D effects that make it appear raised or floating. It must look like it is painted directly onto or seamlessly integrated into the flat, uninterrupted wall surface.',
-      '- The logo should be integrated naturally into the scene while maintaining the appearance of being directly attached to the plain wall.'
-    )
-  } else {
-    referenceInstructions.push(
-      '- Ensure the logo is integrated naturally into the scene.'
-    )
+    // Add strict logo placement requirements ONLY for neutral and gradient backgrounds
+    if (isPlainBackground) {
+      referenceInstructions.push(
+        '- **CRITICAL Logo Placement (Neutral/Gradient Backgrounds Only):** The logo should be mounted FLAT ON THE WALL SURFACE as physical signage (like vinyl lettering or printed acrylic). It should follow the natural contours and lighting of the wall behind it.',
+        '- The logo should receive the SAME LIGHTING as the wall - if the wall has gradient lighting (brighter on one side), the logo should reflect that same lighting pattern.',
+        '- Add VERY SUBTLE soft shadows around/beneath the logo to suggest it\'s a physical object on the wall, not painted or floating.',
+        '- The logo should appear SLIGHTLY OUT OF FOCUS compared to a sharp subject in the foreground (respecting the depth of field from a 70mm f/2.0 lens).',
+        '- The logo should be integrated naturally as professional wall-mounted branding, maintaining depth while staying flush with the wall surface.'
+      )
+    } else {
+      referenceInstructions.push(
+        '- Ensure the logo is integrated naturally into the scene with appropriate depth and lighting.'
+      )
+    }
   }
 
   structuredPrompt.push(...referenceInstructions)

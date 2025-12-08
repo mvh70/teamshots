@@ -35,12 +35,17 @@ export const BACKGROUND_BRANDING_PROMPT: Record<string, unknown> = {
 
 export const ELEMENT_BRANDING_PROMPT: Record<string, unknown> = {
   logo_source: 'Use the attached image labeled "logo" as the branding element for the scene',
-  placement: 'Place the provided brand logo once on a vertical falcon banner flag (a vertical pull-up/retractable banner stand with a curved top edge - NOT a horizontal banner). Adapt the flag color to the logo: if the logo has a distinct background color, use that same color for the flag background; if the logo has a white or transparent background, make the flag WHITE. The element must be grounded in the scene behind the subject, standing on the floor. The logo must be perfectly aligned with the banner flag vertical axis, centered horizontally on the flag, and look like it is professionally printed on the fabric. It must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.',
-  allowed_elements: ['falcon banner flag'],
+  placement: 'Place the provided brand logo once on a FALCON FEATHER FLAG/BANNER - a curved, swooping flag mounted on a pole that extends from the floor. The flag shape is distinctive: HORIZONTAL or SLIGHTLY DIAGONAL at the bottom edge (where it attaches to the pole), and SMOOTH, ROUNDED, and CURVED at the top edge (flowing outward like a feather or sail). The flag should have natural fabric physics: it curves outward from the pole, creating a THREE-DIMENSIONAL swooping shape with visible depth, natural folds, and subtle fabric texture. Adapt the flag color to the logo: if the logo has a distinct background color, use that same color for the flag background; if the logo has a white or transparent background, make the flag WHITE. The flag pole must be grounded on the floor BEHIND the subject (6-8 feet back), standing naturally in the scene. The logo must be professionally printed on the curved fabric surface, following the natural curve and perspective of the flag without warping. Due to the depth of field (f/2.0 aperture), the flag should be SLIGHTLY SOFTER in focus than the sharp subject in the foreground. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.',
+  allowed_elements: ['falcon feather flag', 'curved banner flag'],
   rules: [
-    'Ground the element in the scene with correct perspective.',
+    'CRITICAL FLAG SHAPE & DEPTH: The flag must curve outward from the pole in a swooping feather/sail shape with visible three-dimensional depth. Add natural fabric folds, shadows, and highlights that show the flag is a real physical object with volume, not flat.',
+    'CRITICAL PERSPECTIVE: Position the flag pole 6-8 feet BEHIND the subject. Apply proper depth of field - the flag should be slightly softer/gentler in focus than the tack-sharp subject.',
+    'CRITICAL GROUNDING: The flag pole must be clearly planted on the floor with a weighted base or stand visible at ground level. The flag should appear naturally grounded, not floating.',
+    'LIGHTING & SHADOWS: The flag should receive the same scene lighting as the background. Add natural shadows cast by the flag onto the background wall/floor to reinforce depth.',
+    'FABRIC PHYSICS: Show subtle wind movement or natural fabric draping. The flag should look like real fabric material, not a stiff board.',
+    'LOGO INTEGRATION: The logo follows the natural curve of the fabric surface, slightly distorted by the flag\'s perspective and curvature.',
     'Single placement only. No duplicates or floating marks.',
-    'Keep original aspect ratio and colors; The colors of each letter and icon should be the same as the original.'
+    'Keep original logo aspect ratio and colors; The colors of each letter and icon should be the same as the original.'
   ]
 }
 
