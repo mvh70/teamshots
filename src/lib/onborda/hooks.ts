@@ -86,6 +86,7 @@ export function useOnboardingState() {
         // This ensures we always fetch fresh tour data from API, not stale sessionStorage
         completedTours: [], // Force empty - API is source of truth for completed tours
         pendingTours: [], // Force empty - API is source of truth for pending tours
+        hiddenScreens: sessionStorageData?.hiddenScreens || [], // Preserve hidden screens if present
         _loaded: false, // Force false - must wait for API fetch to get fresh tour data
       }
     }
@@ -100,6 +101,7 @@ export function useOnboardingState() {
       language: 'en',
       isFreePlan: true,
       onboardingSegment: 'individual', // Default segment
+      hiddenScreens: [],
       completedTours: [], // Default to empty array
       pendingTours: [], // Default to empty array
       _loaded: false, // Internal flag to track if context has been loaded from server
@@ -148,6 +150,7 @@ export function useOnboardingState() {
           const responseHash = JSON.stringify({
             completedTours: serverContext.completedTours,
             pendingTours: serverContext.pendingTours,
+            hiddenScreens: serverContext.hiddenScreens,
             isTeamAdmin: serverContext.isTeamAdmin,
             isTeamMember: serverContext.isTeamMember,
             hasUploadedSelfie: serverContext.hasUploadedSelfie,
@@ -175,6 +178,7 @@ export function useOnboardingState() {
             onboardingSegment: determineSegment(serverContext),
             completedTours: serverContext.completedTours || [], // Include completed tours from database
             pendingTours: serverContext.pendingTours || [], // Include pending tours from database
+            hiddenScreens: serverContext.hiddenScreens || [],
             _loaded: true, // Mark as loaded after API fetch
           }
           
@@ -184,6 +188,7 @@ export function useOnboardingState() {
             const currentHash = JSON.stringify({
               completedTours: prev.completedTours,
               pendingTours: prev.pendingTours,
+              hiddenScreens: prev.hiddenScreens,
               isTeamAdmin: prev.isTeamAdmin,
               isTeamMember: prev.isTeamMember,
               hasUploadedSelfie: prev.hasUploadedSelfie,
@@ -197,6 +202,7 @@ export function useOnboardingState() {
             
             const completedToursChanged = JSON.stringify(prev.completedTours) !== JSON.stringify(newContext.completedTours)
             const pendingToursChanged = JSON.stringify(prev.pendingTours) !== JSON.stringify(newContext.pendingTours)
+            const hiddenScreensChanged = JSON.stringify(prev.hiddenScreens) !== JSON.stringify(newContext.hiddenScreens)
             const otherPropsChanged = 
               prev.isTeamAdmin !== newContext.isTeamAdmin ||
               prev.isTeamMember !== newContext.isTeamMember ||
@@ -208,7 +214,7 @@ export function useOnboardingState() {
               prev._loaded !== newContext._loaded
             
             // Only update if something actually changed
-            if (completedToursChanged || pendingToursChanged || otherPropsChanged || !prev._loaded) {
+            if (completedToursChanged || pendingToursChanged || hiddenScreensChanged || otherPropsChanged || !prev._loaded) {
               // Guard against React Strict Mode double-invocation
               if (!isSettingContextRef.current) {
                 isSettingContextRef.current = true

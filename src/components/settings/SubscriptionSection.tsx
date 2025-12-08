@@ -198,15 +198,13 @@ export default function SubscriptionSection({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <CreditCardIcon className="h-6 w-6 text-gray-400" />
-          <h2 className="text-lg font-semibold text-gray-900">
-            {t('title', { default: 'Pricing plan' })}
-          </h2>
-        </div>
-      </div>
+    <div className="bg-white rounded-lg border border-gray-200 p-6 sm:p-8">
+      <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        {t('title', { default: 'Pricing plan' })}
+      </h2>
+      <p className="text-sm text-gray-500 mb-6">
+        {t('subtitle', { default: 'Manage your subscription and pricing plan' })}
+      </p>
 
       <SubscriptionPanel
         subscription={{

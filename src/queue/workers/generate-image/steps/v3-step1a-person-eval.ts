@@ -6,6 +6,7 @@ import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import type { ImageEvaluationResult, StructuredEvaluation } from '../evaluator'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { ReferenceImage } from '../utils/reference-builder'
+import type { CostTrackingHandler } from '../workflow-v3'
 
 export interface V3Step1aEvalInput {
   imageBuffer: Buffer
@@ -18,6 +19,11 @@ export interface V3Step1aEvalInput {
   generationPrompt: string // JSON prompt - contains framing.shot_type
   clothingLogoReference?: BaseReferenceImage // Logo on clothing (if branding.position === 'clothing')
   // Note: No backgroundBuffer - Step 1a generates on white background, actual background comes in Step 2
+  generationId?: string // For cost tracking
+  personId?: string // For cost tracking
+  teamId?: string // For cost tracking
+  intermediateS3Key?: string // S3 key of the image being evaluated
+  onCostTracking?: CostTrackingHandler // For cost tracking
 }
 
 export interface V3Step1aEvalOutput {
@@ -31,7 +37,7 @@ const ASPECT_RATIO_TOLERANCE = 0.02
  * V3 Step 1a Eval: Evaluate person generation
  * Checks if the generated person (on white background) meets quality requirements
  * Focus: face accuracy, pose, clothing (including clothing branding if applicable), shot type
- * NOTE: Skips background validation - white background is guidance, not strict requirement
+ * NOTE: Skips background validation - grey background is guidance, not strict requirement
  */
 export async function executeV3Step1aEval(
   input: V3Step1aEvalInput
@@ -47,7 +53,7 @@ export async function executeV3Step1aEval(
     clothingLogoReference
   } = input
 
-  Logger.info('V3 Step 1a Eval: Evaluating person generation (white background)', {
+  Logger.debug('V3 Step 1a Eval: Evaluating person generation (grey background)', {
     hasClothingLogo: !!clothingLogoReference,
     hasSelfieComposite: !!selfieComposite
   })
@@ -144,11 +150,11 @@ export async function executeV3Step1aEval(
     '   - Answer NO if you see ANY bordered labels with our reference keywords'
   ]
 
-  // Skip background validation for Step 1a (white BG)
+  // Skip background validation for Step 1a (grey BG)
   baseInstructions.push(
     '',
     '8. custom_background_matches: N/A (no custom background required)',
-    '   - IMPORTANT: Step 1a generates ONLY the person on a white background.',
+    '   - IMPORTANT: Step 1a generates ONLY the person on a grey background.',
     '   - Custom backgrounds and background logos are handled in Step 1b/Step 3.',
     '   - If the generation prompt mentions backgrounds or background/element logos, IGNORE those instructions for this evaluation.',
     '   - This step only evaluates the person generation quality.'
@@ -229,11 +235,11 @@ export async function executeV3Step1aEval(
   // Add context about what to ignore from the prompt
   parts.push({
     text: `IMPORTANT CONTEXT FOR EVALUATION:
-- Step 1a generates ONLY the person on a white background.
+- Step 1a generates ONLY the person on a grey background.
 - The generation prompt below may mention custom backgrounds or background/element logos.
 - IGNORE any background-related instructions - those are handled in Step 1b/Step 3.
 - IGNORE any logo instructions for background/element placement - those are handled in Step 1b/Step 3.
-- Only evaluate: person quality, clothing logos (if present), and white background.
+- Only evaluate: person quality, clothing logos (if present), and grey background.
 - The generation prompt is provided for context about shot type and subject details only.
 
 Generation prompt used:\n${generationPrompt}`
@@ -275,7 +281,10 @@ Generation prompt used:\n${generationPrompt}`
 
   let rawResponse: unknown = null
   let structuredEvaluation: StructuredEvaluation | null = null
+  let evalDurationMs = 0
+  let usageMetadata: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined
 
+  const evalStartTime = Date.now()
   try {
     const response: GenerateContentResult = await model.generateContent({
       contents,
@@ -284,6 +293,8 @@ Generation prompt used:\n${generationPrompt}`
       }
     })
 
+    evalDurationMs = Date.now() - evalStartTime
+    usageMetadata = response.response.usageMetadata
     const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
     const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
     rawResponse = textPart
@@ -291,18 +302,65 @@ Generation prompt used:\n${generationPrompt}`
     if (textPart) {
       structuredEvaluation = parseStructuredEvaluation(textPart)
     }
+
+    // Note: Cost tracking moved to after evaluation status is determined
+    // (see below after finalStatus is computed)
   } catch (error) {
+    const evalDurationMs = Date.now() - evalStartTime
     Logger.error('Failed to run Gemini evaluation for V3 Step 1a', {
       error: error instanceof Error ? error.message : String(error)
     })
+
+    // Track failed evaluation cost
+    if (input.onCostTracking) {
+      try {
+        await input.onCostTracking({
+          stepName: 'step1a-eval',
+          reason: 'evaluation',
+          result: 'failure',
+          model: 'gemini-2.5-flash',
+          durationMs: evalDurationMs,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
+      } catch (costError) {
+        Logger.error('V3 Step 1a Eval: Failed to track failed evaluation cost', {
+          error: costError instanceof Error ? costError.message : String(costError),
+        })
+      }
+    }
+
     throw error
   }
 
   // Default to rejection if parsing failed
   if (!structuredEvaluation) {
+    const rejectionReason = 'Evaluation did not return a valid structured response.'
+    
+    // Track evaluation cost with rejection
+    if (input.onCostTracking && usageMetadata) {
+      try {
+        await input.onCostTracking({
+          stepName: 'step1a-eval',
+          reason: 'evaluation',
+          result: 'success',
+          model: 'gemini-2.5-flash',
+          inputTokens: usageMetadata.promptTokenCount,
+          outputTokens: usageMetadata.candidatesTokenCount,
+          durationMs: evalDurationMs,
+          evaluationStatus: 'rejected',
+          rejectionReason,
+          intermediateS3Key: input.intermediateS3Key,
+        })
+      } catch (costError) {
+        Logger.error('V3 Step 1a Eval: Failed to track evaluation cost for parsing failure', {
+          error: costError instanceof Error ? costError.message : String(costError),
+        })
+      }
+    }
+    
     const result: ImageEvaluationResult = {
       status: 'Not Approved',
-      reason: 'Evaluation did not return a valid structured response.',
+      reason: rejectionReason,
       rawResponse,
       details: {
         actualWidth,
@@ -322,9 +380,9 @@ Generation prompt used:\n${generationPrompt}`
   structuredEvaluation.dimensions_and_aspect_correct = 'YES'
   structuredEvaluation.explanations.dimensions_and_aspect_correct = 'N/A (not evaluated in Step 1a - dimensions checked programmatically)'
 
-  // Force custom_background_matches to N/A (Step 1a only has white background)
+  // Force custom_background_matches to N/A (Step 1a only has grey background)
   structuredEvaluation.custom_background_matches = 'N/A'
-  structuredEvaluation.explanations.custom_background_matches = 'Step 1a generates only the person on white background. Custom backgrounds are handled in Step 1b/Step 3.'
+  structuredEvaluation.explanations.custom_background_matches = 'Step 1a generates only the person on grey background. Custom backgrounds are handled in Step 1b/Step 3.'
 
   // Force branding fields to N/A if no clothing logo reference (background/element logos handled in Step 1b/Step 3)
   if (!clothingLogoReference) {
@@ -407,12 +465,40 @@ Generation prompt used:\n${generationPrompt}`
       ? failedCriteria.join(' | ')
       : 'All criteria met'
 
-  Logger.info('V3 Step 1a Eval: Evaluation completed', {
+  Logger.debug('V3 Step 1a Eval: Evaluation completed', {
     status: finalStatus,
     reason: finalReason.substring(0, 100),
     uncertainCount,
     autoReject
   })
+
+  // Track evaluation cost with outcome
+  if (input.onCostTracking && usageMetadata) {
+    try {
+      await input.onCostTracking({
+        stepName: 'step1a-eval',
+        reason: 'evaluation',
+        result: 'success',
+        model: 'gemini-2.5-flash',
+        inputTokens: usageMetadata.promptTokenCount,
+        outputTokens: usageMetadata.candidatesTokenCount,
+        durationMs: evalDurationMs,
+        evaluationStatus: finalStatus === 'Approved' ? 'approved' : 'rejected',
+        rejectionReason: finalStatus === 'Not Approved' ? finalReason : undefined,
+        intermediateS3Key: input.intermediateS3Key,
+      })
+      Logger.debug('V3 Step 1a Eval: Cost tracking with outcome recorded', {
+        generationId: input.generationId,
+        evaluationStatus: finalStatus,
+        s3Key: input.intermediateS3Key,
+      })
+    } catch (costError) {
+      Logger.error('V3 Step 1a Eval: Failed to track evaluation cost', {
+        error: costError instanceof Error ? costError.message : String(costError),
+        generationId: input.generationId,
+      })
+    }
+  }
 
   return {
     evaluation: {

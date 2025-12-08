@@ -234,6 +234,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         } else if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
           finalTier = 'pro'
           finalPeriod = 'large'
+        } else if (priceId === PRICING_CONFIG.enterprise.stripePriceId) {
+          finalTier = 'pro'
+          finalPeriod = 'large'
         }
       }
       
@@ -249,13 +252,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       }
       
       // Get pricing config key to determine credits
-      const configKey = getPricingConfigKey(finalTier, finalPeriod)
+      // Enterprise uses pro/large tier/period but enterprise credits
+      const isEnterprise = priceId === PRICING_CONFIG.enterprise.stripePriceId
+      const configKey = isEnterprise ? 'enterprise' as const : getPricingConfigKey(finalTier, finalPeriod)
       if (!configKey) {
         Logger.error('Invalid tier/period combination', { tier: finalTier, period: finalPeriod });
         throw new Error(`Invalid tier/period combination: ${finalTier}/${finalPeriod}`);
       }
       
-      const credits = PRICING_CONFIG[configKey].credits
+      const credits = PRICING_CONFIG[configKey as keyof typeof PRICING_CONFIG].credits
       
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
         // Update user plan info
@@ -411,11 +416,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         // Determine photos from purchase for the email (convert credits to photos)
         let purchasedCredits = 0;
         if (purchaseType === 'plan') {
-          const planTier = session.metadata?.planTier as PlanTier | undefined;
-          const planPeriod = session.metadata?.planPeriod as PlanPeriod | undefined;
-          const configKey = getPricingConfigKey(planTier || 'individual', planPeriod || 'small');
-          if (configKey) {
-            purchasedCredits = PRICING_CONFIG[configKey].credits;
+          const priceId = checkoutSession.line_items?.data[0]?.price?.id;
+          const isEnterprise = priceId === PRICING_CONFIG.enterprise.stripePriceId;
+          if (isEnterprise) {
+            purchasedCredits = PRICING_CONFIG.enterprise.credits;
+          } else {
+            const planTier = session.metadata?.planTier as PlanTier | undefined;
+            const planPeriod = session.metadata?.planPeriod as PlanPeriod | undefined;
+            const configKey = getPricingConfigKey(planTier || 'individual', planPeriod || 'small');
+            if (configKey) {
+              purchasedCredits = PRICING_CONFIG[configKey].credits;
+            }
           }
         } else if (purchaseType === 'top_up') {
           purchasedCredits = parseInt(session.metadata?.credits || '0');

@@ -1,10 +1,14 @@
 /**
  * Generation Status API Endpoint
- * 
+ *
  * Returns the current status and data for a specific generation
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+
+// Disable caching for this route - generation status changes frequently
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { requireAuth } from '@/lib/api/auth-middleware'
 import { badRequest, notFound, internalError, forbidden } from '@/lib/api/errors'
 import { prisma } from '@/lib/prisma'
@@ -36,47 +40,61 @@ export async function GET(
     }
     const { userId } = authResult
 
-    // OPTIMIZATION: Run independent queries in parallel
-    const [generation, userPerson] = await Promise.all([
-      // Get generation with related data
-      prisma.generation.findUnique({
-        where: { id: generationId },
-        include: {
-          person: {
-            include: {
-              user: true,
-              team: true
-            }
-          },
-          context: true,
-          selfie: true
-        }
-      }),
-      // SECURITY: Get user person for access verification
-      prisma.person.findUnique({
-        where: { userId },
-        select: { id: true, teamId: true }
-      })
-    ])
-
-    if (!generation) {
-      return notFound('Generation not found')
-    }
+    // SECURITY: Get user person first to build authorization filter
+    const userPerson = await prisma.person.findUnique({
+      where: { userId },
+      select: { id: true, teamId: true }
+    })
 
     if (!userPerson) {
       return notFound('User person not found')
     }
 
-    const isOwner = generation.personId === userPerson.id
-    const isSameTeam = userPerson.teamId && generation.person.teamId === userPerson.teamId
+    // SECURITY: Filter generation by authorization DURING query, not after
+    // This prevents fetching unauthorized data from the database
+    const generation = await prisma.generation.findFirst({
+      where: {
+        id: generationId,
+        // Authorization filter: must be either owner OR same team
+        OR: [
+          { personId: userPerson.id }, // Owner
+          {
+            // Same team (both user and generation person must have same teamId)
+            person: {
+              teamId: userPerson.teamId || undefined,
+              NOT: { teamId: null } // Ensure teamId is not null
+            }
+          }
+        ]
+      },
+      include: {
+        person: {
+          include: {
+            user: true,
+            team: true
+          }
+        },
+        context: true,
+        selfie: true
+      }
+    })
 
-    if (!isOwner && !isSameTeam) {
-      await SecurityLogger.logSuspiciousActivity(
-        userId,
-        'unauthorized_generation_access_attempt',
-        { generationId: generation.id, generationOwnerId: generation.personId }
-      )
-      return forbidden('Access denied')
+    if (!generation) {
+      // Log suspicious activity if generation exists but user lacks access
+      const generationExists = await prisma.generation.findUnique({
+        where: { id: generationId },
+        select: { id: true, personId: true }
+      })
+
+      if (generationExists) {
+        await SecurityLogger.logSuspiciousActivity(
+          userId,
+          'unauthorized_generation_access_attempt',
+          { generationId, attemptedPersonId: generationExists.personId }
+        )
+      }
+
+      return notFound('Generation not found')
     }
 
     // Get job status from queue if generation is still processing
@@ -123,20 +141,19 @@ export async function GET(
       }
     }
 
-    // Generate signed URLs for generated images if they exist
+    // SECURITY: Use /api/files/get for authorized access instead of signed URLs
+    // This maintains server-side authorization while still being efficient with caching
     let generatedImageUrls: string[] = []
     if (generation.generatedPhotoKeys.length > 0) {
-      // TODO: Generate signed URLs for S3 objects
-      // For now, return placeholder URLs
-      generatedImageUrls = generation.generatedPhotoKeys.map((key: string, index: number) => 
-        `/api/files/proxy?key=${encodeURIComponent(key)}&type=generated&index=${index}`
+      generatedImageUrls = generation.generatedPhotoKeys.map((key: string) =>
+        `/api/files/get?key=${encodeURIComponent(key)}`
       )
     }
 
-    // Generate signed URL for uploaded photo
+    // Generate authorized URL for uploaded photo
     let uploadedPhotoUrl: string | null = null
     if (generation.uploadedPhotoKey) {
-      uploadedPhotoUrl = `/api/files/proxy?key=${encodeURIComponent(generation.uploadedPhotoKey)}&type=uploaded`
+      uploadedPhotoUrl = `/api/files/get?key=${encodeURIComponent(generation.uploadedPhotoKey)}`
     }
 
     // Derive generationType from person.teamId (single source of truth)
@@ -149,8 +166,7 @@ export async function GET(
       creditSource: generation.creditSource,
       creditsUsed: generation.creditsUsed,
       provider: generation.provider,
-      actualCost: generation.actualCost,
-      
+
       // Images
       uploadedPhotoUrl,
       generatedImageUrls,

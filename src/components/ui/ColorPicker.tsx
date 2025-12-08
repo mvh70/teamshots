@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
@@ -13,6 +13,9 @@ interface ColorPickerProps {
   label?: string
   disabled?: boolean
   className?: string
+  buttonClassName?: string
+  children?: ReactNode
+  onTriggerClick?: () => void
 }
 
 /**
@@ -100,24 +103,37 @@ export default function ColorPicker({
   presets = [],
   label,
   disabled = false,
-  className = ''
+  className = '',
+  buttonClassName,
+  children,
+  onTriggerClick
 }: ColorPickerProps) {
   const t = useTranslations('customization.photoStyle.background')
   const [isOpen, setIsOpen] = useState(false)
   const [isMounted] = useState(true)
+  const [portalPosition, setPortalPosition] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 280 })
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Update dropdown position when open and on scroll/resize
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || !buttonRef.current) return
 
     const handleReposition = () => {
       if (!buttonRef.current) return
-      // Position is calculated synchronously in render, no need to store in state
+      const rect = buttonRef.current.getBoundingClientRect()
+      setPortalPosition({
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: Math.max(rect.width, 280)
+      })
     }
+    
+    // Initial position calculation
     handleReposition()
+    
+    // Listen to scroll events on window and all scrollable parents
     window.addEventListener('scroll', handleReposition, true)
     window.addEventListener('resize', handleReposition)
 
@@ -161,6 +177,12 @@ export default function ColorPicker({
 
   const toggleOpen = () => {
     if (disabled) return
+    
+    // Call external handler if provided (e.g. to set selection)
+    if (onTriggerClick) {
+      onTriggerClick()
+    }
+    
     if (isOpen) {
       setIsOpen(false)
       return
@@ -185,18 +207,6 @@ export default function ColorPicker({
     return generateColorVariations(normalizedValue)
   }, [normalizedValue, hasValidColor])
 
-  // Calculate portal position synchronously when rendering
-  const portalPosition = isOpen && buttonRef.current
-    ? (() => {
-        const rect = buttonRef.current!.getBoundingClientRect()
-        return {
-          top: rect.bottom + 8,
-          left: rect.left,
-          width: Math.max(rect.width, 280)
-        }
-      })()
-    : { top: 0, left: 0, width: 280 }
-
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {label && (
@@ -214,20 +224,24 @@ export default function ColorPicker({
           toggleOpen()
         }}
         disabled={disabled}
-        className={`flex items-center justify-between w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors ${
+        className={buttonClassName || `flex items-center justify-between w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors ${
           disabled ? 'opacity-60 cursor-not-allowed bg-gray-100' : 'cursor-pointer'
         }`}
       >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-6 h-6 rounded-full border border-gray-200 shadow-sm"
-            style={{ backgroundColor: normalizedValue }}
-          />
-          <span className="text-sm font-medium text-gray-900">
-            {value}
-          </span>
-        </div>
-        <ChevronDownIcon className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`} />
+        {children ? children : (
+          <>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-6 h-6 rounded-full border border-gray-200 shadow-sm"
+                style={{ backgroundColor: normalizedValue }}
+              />
+              <span className="text-sm font-medium text-gray-900">
+                {value}
+              </span>
+            </div>
+            <ChevronDownIcon className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`} />
+          </>
+        )}
       </button>
 
       {/* Dropdown Panel - rendered via portal to escape overflow constraints */}
@@ -320,4 +334,3 @@ export default function ColorPicker({
     </div>
   )
 }
-

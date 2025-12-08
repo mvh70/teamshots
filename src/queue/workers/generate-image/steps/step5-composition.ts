@@ -140,7 +140,7 @@ export async function executeStep5(
   })
   
   // Generate with Gemini
-  const generatedBuffers = await generateWithGemini(
+  const generatedResult = await generateWithGemini(
     compositionPrompt,
     referenceImages,
     aspectRatio,
@@ -150,12 +150,12 @@ export async function executeStep5(
     }
   )
   
-  if (!generatedBuffers.length) {
+  if (!generatedResult.images.length) {
     throw new Error('Step 5: Gemini returned no images')
   }
   
   // Convert to PNG
-  const pngBuffer = await sharp(generatedBuffers[0]).png().toBuffer()
+  const pngBuffer = await sharp(generatedResult.images[0]).png().toBuffer()
   const base64 = pngBuffer.toString('base64')
   
   Logger.info('V2 Step 5: Composition completed', {

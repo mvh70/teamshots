@@ -31,6 +31,23 @@ export interface GenerationOptions {
 }
 
 /**
+ * Usage metadata returned from Replicate API calls
+ */
+export interface ReplicateUsageMetadata {
+  imagesGenerated: number
+  durationMs: number
+}
+
+/**
+ * Result of a Replicate generation call (internal - without provider info)
+ * Note: This matches the shape of GeminiGenerationResult for compatibility
+ */
+export interface ReplicateGenerationResult {
+  images: Buffer[]
+  usage: ReplicateUsageMetadata
+}
+
+/**
  * Map aspect ratio from our format (e.g., "1:1") to Replicate's format
  * Replicate supports: match_input_image, 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9
  */
@@ -61,6 +78,8 @@ function toDataUrl(base64: string, mimeType: string): string {
 
 /**
  * Generate images using Replicate's Nano Banana (Gemini 2.5 Flash Image) API
+ * 
+ * Returns both the generated images and usage metadata for cost tracking.
  */
 export async function generateWithGeminiReplicate(
   prompt: string,
@@ -68,7 +87,8 @@ export async function generateWithGeminiReplicate(
   aspectRatio?: string,
   resolution?: '1K' | '2K' | '4K'
   // Note: GenerationOptions not supported by Replicate's nano-banana API
-): Promise<Buffer[]> {
+): Promise<ReplicateGenerationResult> {
+  const startTime = Date.now()
   const apiToken = Env.string('REPLICATE_API_TOKEN', '')
   if (!apiToken) {
     throw new Error('REPLICATE_API_TOKEN environment variable is required for Replicate API')
@@ -190,16 +210,26 @@ export async function generateWithGeminiReplicate(
       }
     }
 
+    const durationMs = Date.now() - startTime
+    const usage: ReplicateUsageMetadata = {
+      imagesGenerated: generatedImages.length,
+      durationMs,
+    }
+
     Logger.debug('Replicate Nano Banana generation completed', {
       outputUrlCount: outputUrls.length,
-      imagesGenerated: generatedImages.length
+      imagesGenerated: generatedImages.length,
+      durationMs,
     })
 
     if (generatedImages.length === 0) {
       throw new Error('Replicate API returned no valid images')
     }
 
-    return generatedImages
+    return {
+      images: generatedImages,
+      usage,
+    }
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)

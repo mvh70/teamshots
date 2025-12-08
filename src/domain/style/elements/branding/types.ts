@@ -1,6 +1,7 @@
 export interface BrandingSettings {
   type: 'include' | 'exclude' | 'user-choice'
-  logoKey?: string // S3 key for team logo (same as selfies)
+  logoKey?: string // Legacy: S3 key for team logo - prefer logoAssetId
+  logoAssetId?: string // Preferred: Asset ID for team logo
   position?: 'background' | 'clothing' | 'elements'
 }
 

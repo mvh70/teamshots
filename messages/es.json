@@ -6,7 +6,8 @@
   "common": {
     "processingImage": "Procesando imagen...",
     "processingImages": "Procesando {count} imágenes...",
-    "uploading": "Subiendo..."
+    "uploading": "Subiendo...",
+    "loading": "Cargando..."
   },
   "nav": {
     "home": "Inicio",
@@ -346,6 +347,10 @@
     "checkoutCanceled": "Pago cancelado. No se realizaron cargos. (¿Cambiaste de idea? Te entendemos, pasa a los mejores)",
     "checkoutError": "¡Ups! Algo salió mal. Vuelve a intentar. (Si persiste, avísanos—estamos para ayudar)",
     "plans": {
+      "free": {
+        "name": "Plan Gratuito",
+        "description": "Actualiza para desbloquear más funciones y opciones de personalización"
+      },
       "vip": {
         "name": "VIP",
         "period": "pago único",
@@ -422,6 +427,13 @@
         "cta": "Pruébalo gratis"
       }
     },
+    "perPhotoVariation": "por foto",
+    "perPhoto": "por foto",
+    "chooseTheBest": "Elige la mejor.",
+    "redirectingToCheckout": "Redirigiendo al checkout...",
+    "time": "vez",
+    "times": "veces",
+    "generated": "generado",
     "faq": {
       "title": "Preguntas Frecuentes",
       "questions": {
@@ -455,12 +467,26 @@
         "retriesAndVariations": "{retries} reintentos gratis por foto, así que {totalVariations} variaciones de fotos en total",
         "styles": "Fondos y estilos personalizados"
       },
-      "pro": {
-        "title": "Plan Pro",
+      "starter": {
+        "title": "Plan Inicial",
         "credits": "{uniquePhotos} fotos",
-        "retriesAndVariations": "{retries} reintentos gratis por generación, así que {totalVariations} variaciones de fotos en total",
+        "retriesAndVariations": "{retries} reintentos gratis por foto, así que {totalVariations} variaciones de fotos en total",
         "styles": "Fondos y estilos personalizados para equipos",
         "team": "Funciones de colaboración en equipo"
+      },
+      "business": {
+        "title": "Plan Negocio",
+        "credits": "{uniquePhotos} fotos",
+        "retriesAndVariations": "{retries} reintentos gratis por foto, así que {totalVariations} variaciones de fotos en total",
+        "styles": "Fondos y estilos personalizados para equipos",
+        "team": "Funciones de colaboración en equipo"
+      },
+      "enterprise": {
+        "title": "Plan Empresa",
+        "credits": "{uniquePhotos} fotos",
+        "retriesAndVariations": "{retries} reintentos gratis por foto, así que {totalVariations} variaciones de fotos en total",
+        "styles": "Opciones de personalización completas",
+        "team": "Panel de gestión de equipos"
       },
       "topUp": {
         "title": "Recarga de Créditos",
@@ -614,13 +640,13 @@
       "brand": "TeamShotsPro",
       "nav": {
         "dashboard": "Panel",
-        "team": "Equipo",
+        "team": "Invitaciones",
         "personalGenerations": "Generaciones Personales",
         "teamGenerations": "Fotos generadas",
-        "selfies": "Selfies",
+        "selfies": "Mis selfies",
         "contexts": "Estilos Fotos",
         "personalPhotoStyles": "Estilos Personales",
-        "teamPhotoStyles": "Estilos de foto predefinidos",
+        "teamPhotoStyles": "Configuración de tu estilo de foto",
         "analytics": "Analítica",
         "settings": "Ajustes",
         "admin": "Admin"
@@ -641,7 +667,8 @@
         "allocated": "de los cuales asignados a invitaciones",
         "monthlyReset": "Reinicio mensual",
         "progress": "{used}/{total}",
-        "buyMore": "Comprar más fotos"
+        "buyMore": "Comprar más fotos",
+        "upgradeToPaid": "Actualizar para desbloquear personalización completa"
       },
       "generate": {
         "photo": "foto",
@@ -752,8 +779,10 @@
       },
       "successMessages": {
         "tryItForFree": "¡Tu prueba gratis está lista! Se han agregado {photos} fotos a tu cuenta.",
-        "individual": "¡Plan Individual activado exitosamente! Se han agregado {credits} créditos a tu cuenta.",
-        "pro": "¡Plan Pro activado exitosamente! Se han agregado {credits} créditos a tu cuenta.",
+        "individual": "¡Plan Individual activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
+        "starter": "¡Plan Inicial activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
+        "business": "¡Plan Negocio activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
+        "enterprise": "¡Plan Empresa activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
         "topUp": "¡Recarga de créditos completada exitosamente! Se han agregado créditos a tu cuenta.",
         "default": "¡Compra completada exitosamente! Se han agregado créditos a tu cuenta.",
         "titleTryItForFree": "¡Bienvenido! 🎉",
@@ -778,64 +807,72 @@
           "individual": "Observe la transformación: Convertimos su selfie casual en un headshot profesional destacado. Ideal para LinkedIn, portafolios y networking profesional. Consejo profesional: Use iluminación natural y encuadre desde el pecho hacia arriba para resultados óptimos.",
           "invited": "Observe la transformación: Convertimos su selfie en un headshot profesional que se alinea con el estilo de su equipo. Esto asegura visuales consistentes mientras resalta su presencia profesional única."
         },
+        "nextSteps": "Siguiente paso",
         "howItWorks": {
           "title": "Cómo funciona",
           "organizer": {
             "step1": {
-              "title": "Defina el estilo de su equipo",
-              "description": "Seleccione fondos, outfits y branding para alinearse con sus necesidades."
+              "title": "Estás en un plan pagado",
+              "description": "Gracias por elegirnos. Puedes personalizar cada detalle para que coincida con el estilo de tu equipo. Sin marca fija, sin limitaciones. Crea fotos que encajen perfectamente con tu marca."
             },
             "step2": {
-              "title": "Invite a los miembros de su equipo",
-              "description": "Envíe invitaciones para que su equipo se una y comience a crear fotos."
+              "title": "Prueba con tu propia foto primero",
+              "description": "Sube 2-3 selfies o escanea el código QR para capturarlas en tu teléfono. Ajusta la pose, colores y ambiente general. Piénsalo como una vista previa del nuevo look profesional de tu equipo."
             },
-            "step4": {
-              "title": "Reciba los resultados",
-              "description": "Las fotos se generan en 60 segundos una vez subidas las selfies, asegurando resultados consistentes y profesionales."
+            "step3": {
+              "title": "Configura el estilo de foto e invita a tu equipo",
+              "description": "Fija tus ajustes preferidos y envía las invitaciones. Tu equipo escanea un código QR o hace clic en un enlace para subir desde sus dispositivos. Ya no tendrás que perseguir colegas por fotos."
             },
             "free": {
               "step1": {
-                "title": "Invite a los miembros de su equipo",
-                "description": "No se requieren registros. Los links les permiten empezar con nuestro preset de Estilo de Paquete Gratuito, que ofrece un look profesional fijo para pruebas sin customizaciones."
+                "title": "Estás en el plan gratuito",
+                "description": "Perfecto para probar. Usarás nuestro estilo de foto preestablecido con la marca {brandName}. Puedes ajustar poses y colores. Los planes pagados desbloquean personalización completa."
               },
               "step2": {
-                "title": "Reciba los resultados",
-                "description": "Las fotos aparecen en 60 segundos una vez subidas las selfies, coincidiendo con el preset de Estilo de Paquete Gratuito para evaluación rápida."
+                "title": "Genera tu foto de prueba",
+                "description": "Sube 2-3 selfies. Usa el código QR para captura móvil fácil. Personaliza las opciones disponibles y revisa tus resultados. Esto te da una idea de cómo funciona el proceso."
+              },
+              "step3": {
+                "title": "Configura el estilo de foto del equipo y envía invitaciones",
+                "description": "Después de tu prueba, elige el estilo de foto para todos y envía las invitaciones. Los miembros suben vía código QR o enlace. Sin registro ni inscripción. Así de simple."
               }
             }
           },
           "invited": {
             "step1": {
-              "title": "Suba su selfie",
-              "description": "Capture una foto. Cualquier dispositivo funciona."
+              "title": "Captura tu selfie",
+              "description": "Toma una foto rápida en cualquier dispositivo. Lo hemos hecho sencillo porque tu tiempo importa."
             },
             "step2": {
-              "title": "Customice su look",
-              "description": "Ajuste detalles como colores de ropa."
+              "title": "Personaliza tu look",
+              "description": "Ajusta colores de ropa y detalles para que se adapten a ti mientras mantienes consistencia con el equipo. Es tu imagen profesional, solo alineada con las pautas."
             },
             "step3": {
-              "title": "Reciba sus profesionales",
-              "description": "Listo en 60 segundos una vez subida su selfie, aprobado para consistencia del equipo."
+              "title": "Recibe tus fotos profesionales",
+              "description": "En unos 60 segundos, tendrás fotos pulidas listas para usar. Todas coincidiendo con el estilo de foto de tu equipo, porque la consistencia cuenta."
             }
           },
           "individual": {
             "step1": {
-              "title": "Suba su selfie",
-              "description": "Capture una foto. Simple y directo."
+              "title": "Sube tu selfie",
+              "description": "Toma una foto rápida en cualquier dispositivo. Manténlo simple. Luz natural ayuda, pero no es necesaria."
             },
             "step2": {
-              "title": "Defina su estilo",
-              "description": "Elija fondos, outfits y expresiones."
+              "title": "Elige tu estilo de foto",
+              "description": "Escoge fondos, atuendos y expresiones que funcionen para ti. Es como tener un estilista personal, solo que más rápido."
             },
             "step3": {
-              "title": "Reciba los resultados",
-              "descriptionFree": "Resultados profesionales listos en menos de 60 segundos una vez subida su selfie, con nuestro estilo free fijo.",
-              "descriptionPaid": "Resultados profesionales custom en menos de 60 segundos una vez subida su selfie, adaptados a sus preferencias."
+              "title": "Obtén tus resultados",
+              "descriptionFree": "En menos de 60 segundos, tendrás fotos profesionales con nuestro estilo gratuito. Rápido y fácil, perfecto para probarlo.",
+              "descriptionPaid": "Fotos profesionales personalizadas en menos de 60 segundos, exactamente como las quieres. Mereces ese nivel de control."
             },
-            "note": "No se requieren sesiones de fotos ni programación. Solo resultados efectivos."
+            "note": "Sin agendas, sin estrés. Solo grandes resultados cuando los necesitas."
           }
         },
         "firstAction": {
+          "shared": {
+            "button": "Comenzar mi generación"
+          },
           "organizer": {
             "free": {
               "title": "¿Listo para comenzar?",
@@ -921,6 +958,7 @@
       },
       "accountInfo": {
         "title": "Información de la Cuenta",
+        "subtitle": "Ve los detalles de tu cuenta e información de roles",
         "intro": "🛟 No necesitarás esta información a menos que algo salga mal y el soporte te la pida. Por si acaso, ¡aquí está!",
         "email": "Correo Electrónico",
         "name": "Nombre",
@@ -951,7 +989,7 @@
         "cancelling": {
           "sorryMessage": "😭 ¡Lamentamos verte partir! Tus beneficios seguirán activos hasta el final de tu período de facturación.",
           "photosRetained": "No te preocupes: ¡tus fotos no desaparecerán! Estarán disponibles durante 30 días después de la cancelación para que puedas descargar lo que necesites (porque somos sentimentales así 📸).",
-          "changedMind": "¿Cambiaste de opinión? {supportLink} mantener tus fotos perfectas!",
+          "changedMind": "{supportLink} mantener tus fotos perfectas!",
           "supportLinkText": "Estamos aquí para ayudarte"
         }
       },
@@ -989,6 +1027,7 @@
       }
     },
     "onboarding": {
+      "nextSteps": "Siguiente paso",
       "benefits": {
         "noScheduling": {
           "description": "Sin necesidad de programar"
@@ -1336,6 +1375,8 @@
       "enoughSelected": "Has seleccionado {count} selfie{count, plural, =1 {} other {s}}. Puedes continuar o seleccionar más.",
       "swipeHint": "Desliza a la derecha cuando estés listo para personalizar.",
       "clickHint": "Haz clic en Continuar cuando estés listo para personalizar.",
+      "qrTitle": "Sube desde tu móvil",
+      "qrDescription": "Escanea el código QR para capturar o subir selfies desde tu móvil.",
       "status": {
         "start": "Selecciona selfies",
         "oneMore": "Añade una más",
@@ -1355,7 +1396,54 @@
   "generate": {
     "selfie": {
       "title": "Elige Tu Selfie",
-      "subtitle": "Selecciona una selfie para usar en la generación, o sube una nueva."
+      "subtitle": "Selecciona una selfie para usar en la generación, o sube una nueva.",
+      "qrTip": {
+        "title": "Sube desde tu móvil",
+        "description": "Escanea este código QR con tu móvil para subir selfies directamente desde tu galería."
+      }
+    }
+  },
+  "mobileHandoff": {
+    "title": "Sube desde tu móvil",
+    "description": "Escanea este código QR para subir selfies desde tu dispositivo móvil.",
+    "scanToUpload": "Escanea para subir",
+    "scanForMobile": "Escanea para selfies móvil",
+    "scanForSelfies": "Cambiar a móvil",
+    "useHere": "Usar en computadora",
+    "phoneConnected": "Móvil conectado",
+    "expiresIn": "Expira en {time}",
+    "howToScan": "Abre la cámara de tu móvil y apunta al código QR",
+    "retry": "Reintentar",
+    "tapToRetry": "Toca para reintentar",
+    "errors": {
+      "createFailed": "No se pudo crear el código QR. Por favor, inténtalo de nuevo."
+    }
+  },
+  "uploadSelfie": {
+    "loading": "Cargando...",
+    "greeting": "¡Hola {name}!",
+    "subtitle": "Sube selfies desde tu móvil",
+    "addSelfie": "Añadir selfie",
+    "useCamera": "Usar cámara",
+    "uploadPhoto": "Subir foto",
+    "progress": "{count} selfie{count, plural, =1 {} other {s}} subida{count, plural, =1 {} other {s}}",
+    "uploadedCount": "+{count} nueva{count, plural, =1 {} other {s}}",
+    "statusReady": "Listo para generar",
+    "statusUploading": "Sube más selfies",
+    "readyMessage": "Tienes suficientes selfies. Vuelve al escritorio para generar tus fotos.",
+    "doneHint": "Cuando termines de subir, puedes cerrar esta página.",
+    "viewDashboard": "Ver panel",
+    "errors": {
+      "title": "Algo salió mal",
+      "invalidToken": "Este enlace no es válido o ha expirado.",
+      "tokenExpired": "Este enlace ha expirado. Por favor, escanea un nuevo código QR desde tu escritorio.",
+      "validationFailed": "No se pudo validar este enlace. Por favor, inténtalo de nuevo.",
+      "scanNewQR": "Por favor, escanea un nuevo código QR desde tu escritorio para continuar.",
+      "desktopAccess": {
+        "title": "Solo móvil",
+        "message": "Esta página está diseñada solo para dispositivos móviles. Por favor, abre este enlace en tu móvil.",
+        "hint": "Escanea el código QR desde tu escritorio usando la cámara de tu móvil."
+      }
     }
   },
   "generation": {
@@ -1452,7 +1540,7 @@
       "greeting": "¡Has sido invitado a unirte a {teamName}!",
       "greetingWithName": "¡Hola {firstName}! {inviterFirstName} te invitó a obtener retratos profesionales para {teamName}.",
       "photosDescription": "Puedes generar {photos} fotos personalizables. Y cada foto se puede rehacer hasta 4 veces cada una. Desde solo un selfie.\n\nTu selfie no tiene que ser perfecto. Nosotros nos encargamos del acabado profesional.",
-      "mobileAdvice": "Para la mejor experiencia, abre esto en tu dispositivo móvil. Ahí es donde tomarás tu selfie.",
+      "mobileAdvice": "Abre este enlace en cualquier dispositivo. Si empiezas en el escritorio, puedes escanear un código QR para subir selfies desde tu móvil.",
       "acceptButton": "Aceptar invitación",
       "expires": "Esta invitación expira en 24 horas. Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:",
       "questions": "¿Preguntas? Solo responde a este email. Somos personas reales y te responderemos."
@@ -1534,17 +1622,20 @@
         "intro": {
           "kicker": "Antes de generar",
           "title": "Personaliza tus fotos profesionales",
+          "subtitle": "Estás a punto de personalizar cómo se verán tus fotos.",
           "body": "Estás a punto de personalizar cómo se verán tus fotos. Cada tarjeta controla una parte de la sesión. Desliza y ajusta según tus preferencias.",
           "bodyDesktop": "Estás a punto de personalizar cómo se verán tus fotos. Cada sección a continuación controla un aspecto diferente de tu foto profesional.",
           "swipe": "Desliza a la derecha para avanzar, a la izquierda para volver. También puedes usar los botones de navegación a continuación.",
           "scrollDesktop": "Desplázate hacia abajo para ver todas las opciones de personalización. Ajusta cada configuración según tus preferencias.",
           "editable": "La insignia con destellos significa que puedes editar esta configuración. Ajusta hasta que coincida con tus preferencias.",
-          "locked": "La insignia con candado significa que el administrador de tu equipo estableció esto. Puedes verla pero no cambiarla para mantener la consistencia."
+          "locked": "La insignia con candado significa que el administrador de tu equipo estableció esto. Puedes verla pero no cambiarla para mantener la consistencia.",
+          "skip": "No volver a mostrar"
         },
         "selfieTips": {
           "kicker": "Obtén los mejores resultados",
           "title": "Consejos para selfies increíbles",
           "body": "Las fotos geniales empiezan con buenas selfies. Sigue estos consejos para obtener los mejores resultados.",
+          "skip": "No volver a mostrar",
           "angles": {
             "title": "Varía los ángulos",
             "desc": "Diferentes posiciones ayudan a nuestra IA a entender mejor tu rostro."
@@ -1898,6 +1989,8 @@
   },
   "selfieApproval": {
     "title": "Revisa tu selfie",
+    "subtitle": "Verifica la calidad de la foto antes de continuar",
+    "awaitingApproval": "Pendiente de aprobación",
     "guidelines": {
       "title": "Pautas de calidad de foto",
       "clearFace": "Rostro claro y bien iluminado",
@@ -2146,6 +2239,10 @@
     },
     "selfieSelection": {
       "title": "Elige selfies para usar",
+      "qrTip": {
+        "title": "Sube desde tu móvil",
+        "description": "Escanea este código QR con tu móvil para subir selfies directamente desde tu galería."
+      },
       "mobile": {
         "bannerTitle": "Selecciona tus selfies",
         "bannerMessage": "Elige al menos 2 selfies y desliza a la derecha cuando estés listo para personalizar.",

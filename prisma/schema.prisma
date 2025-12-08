@@ -38,6 +38,7 @@ model User {
   userPackages         UserPackage[]
   revokedTokens        RevokedToken[]
   contexts             Context[]
+  mobileHandoffTokens  MobileHandoffToken[]
 
   @@index([email])
 }
@@ -62,6 +63,8 @@ model Person {
   selfies            Selfie[]
   teamInvite         TeamInvite?
   feedback           Feedback[]
+  assets             Asset[]
+  mobileHandoffTokens MobileHandoffToken[]
 
   @@index([email])
   @@index([teamId])
@@ -88,6 +91,7 @@ model Team {
   teamMembers          Person[]
   teamInvites          TeamInvite[]
   subscriptionChanges  SubscriptionChange[]
+  assets               Asset[]
 
   @@index([adminId])
   @@index([domain])
@@ -116,7 +120,6 @@ model Context {
 model Generation {
   id                     String    @id @default(cuid())
   creditsUsed            Int       @default(4)
-  actualCost             Float?
   provider               String    @default("gemini")
   status                 String    @default("processing")
   errorMessage           String?
@@ -145,10 +148,19 @@ model Generation {
   groupIndex             Int?
   isOriginal             Boolean   @default(true)
   styleSettings          Json?
+  outputAssetId          String?   @unique
+
+  // Outfit transfer fields
+  generationType         String    @default("headshot") // 'headshot' | 'outfit_transfer'
+  outfitReferenceKey     String?   // S3 key for outfit image (deprecated - use outfitAssetId)
+  outfitAssetId          String?   // Asset ID for outfit image (preferred)
+
   context                Context?  @relation(fields: [contextId], references: [id])
   person                 Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
   selfie                 Selfie?   @relation(fields: [selfieId], references: [id])
   feedback               Feedback[]
+  outputAsset            Asset?    @relation("GenerationOutput", fields: [outputAssetId], references: [id])
+  outfitAsset            Asset?    @relation("GenerationOutfit", fields: [outfitAssetId], references: [id])
 
   @@index([personId])
   @@index([contextId])
@@ -157,12 +169,14 @@ model Generation {
   @@index([createdAt])
   @@index([isPublic])
   @@index([personId, createdAt])
+  @@index([generationType])
+  @@index([outfitAssetId])
 }
 
 model Selfie {
   id                 String       @id @default(cuid())
   personId           String
-  key                String
+  key                String       // Legacy S3 key - prefer assetId
   validated          Boolean      @default(false)
   usedInGenerationId String?
   selected           Boolean      @default(false)
@@ -176,8 +190,10 @@ model Selfie {
   processedKey       String?
   uploadedByUser     String?
   uploadedViaToken   String?
+  assetId            String?      @unique
   generations        Generation[]
   person             Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+  asset              Asset?       @relation("SelfieAsset", fields: [assetId], references: [id])
 
   @@index([personId])
   @@index([uploadedViaToken])
@@ -417,6 +433,27 @@ model RevokedToken {
   @@index([expiresAt])
 }
 
+// MobileHandoffToken: Temporary tokens for QR code mobile selfie upload flow
+model MobileHandoffToken {
+  id             String    @id @default(cuid())
+  token          String    @unique
+  userId         String
+  personId       String
+  expiresAt      DateTime  // 15-minute sliding expiration
+  absoluteExpiry DateTime  // 1-hour maximum lifetime
+  createdAt      DateTime  @default(now())
+  lastUsedAt     DateTime  @default(now())
+  deviceId       String?   // Device identifier after first use (for single-device binding)
+  userAgent      String?   // For security logging
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person         Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([personId])
+  @@index([expiresAt])
+}
+
 model Feedback {
   id           String      @id @default(cuid())
   personId     String?
@@ -441,4 +478,85 @@ model Feedback {
   @@index([resolved])
   @@index([createdAt])
   @@index([context])
+}
+
+// Asset: Single source of truth for all files (selfies, logos, backgrounds, intermediates, generated outputs, outfits)
+model Asset {
+  id               String           @id @default(cuid())
+  s3Key            String           @unique
+  type             String           // 'selfie' | 'logo' | 'background' | 'intermediate' | 'generated' | 'outfit'
+  subType          String?          // 'person_on_white' | 'background_with_logo' etc.
+  mimeType         String
+
+  // Ownership
+  ownerType        String           // 'team' | 'person'
+  teamId           String?
+  personId         String?
+
+  // For reuse (intermediates)
+  parentAssetIds   String[]
+  styleFingerprint String?
+  styleContext     Json?
+
+  // Metadata
+  width            Int?
+  height           Int?
+  sizeBytes        Int?
+  temporary        Boolean          @default(false)
+  expiresAt        DateTime?        // For cleanup job
+  metadata         Json?            // Additional metadata (e.g., outfit colors, description)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  // Relations
+  team             Team?            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  person           Person?          @relation(fields: [personId], references: [id], onDelete: Cascade)
+  selfie           Selfie?          @relation("SelfieAsset")
+  generationOutput Generation?      @relation("GenerationOutput")
+  generationOutfit Generation[]     @relation("GenerationOutfit") // Outfit used in generations
+  costs            GenerationCost[] // Costs associated with producing this asset
+
+  @@index([type, subType])
+  @@index([styleFingerprint])
+  @@index([ownerType, teamId])
+  @@index([ownerType, personId])
+  @@index([expiresAt])
+}
+
+// GenerationCost: Track every AI API call for cost analysis and optimization
+model GenerationCost {
+  id                String    @id @default(cuid())
+  generationId      String?
+  personId          String?
+  teamId            String?
+  provider          String    // 'vertex' | 'gemini-rest' | 'replicate'
+  model             String    // 'gemini-2.5-flash' | 'nano-banana'
+  inputTokens       Int?
+  outputTokens      Int?
+  estimatedCost     Float
+  reason            String    // 'generation' | 'evaluation' | 'refinement'
+  result            String    // 'success' | 'failure' (API call result)
+  errorMessage      String?
+  durationMs        Int?
+  workflowVersion   String?
+  stepName          String?
+  outputAssetId     String?
+  reusedAssetId     String?   // If we reused instead of generating
+  costSaved         Float?    // Amount saved by reusing
+  
+  // NEW: Evaluation outcome tracking
+  evaluationStatus  String?   // 'approved' | 'rejected' (null for non-evaluation steps)
+  rejectionReason   String?   // Detailed reason why evaluation rejected the image
+  intermediateS3Key String?   // S3 key of intermediate/rejected image for review
+  
+  createdAt         DateTime  @default(now())
+
+  // Relations
+  outputAsset       Asset?    @relation(fields: [outputAssetId], references: [id])
+
+  @@index([generationId])
+  @@index([personId])
+  @@index([teamId])
+  @@index([createdAt])
+  @@index([evaluationStatus])
 }

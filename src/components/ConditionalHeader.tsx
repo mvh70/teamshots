@@ -5,34 +5,29 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import LanguageSwitcher from './LanguageSwitcher'
-import { BRAND_CONFIGS } from '@/config/brand'
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
 import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
 import { useAnalytics } from '@/hooks/useAnalytics'
-import type { LandingVariant } from '@/config/landing-content'
 
 interface ConditionalHeaderProps {
-  /** Variant from server-side to avoid hydration mismatch */
-  variant?: LandingVariant;
+  /** Brand name from server */
+  brandName: string;
+  /** Brand logo URL from server */
+  brandLogo: string;
 }
 
-export default function ConditionalHeader({ variant = 'teamshotspro' }: ConditionalHeaderProps) {
+export default function ConditionalHeader({ brandName, brandLogo }: ConditionalHeaderProps) {
   const pathname = usePathname()
   const t = useTranslations('nav')
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { track } = useAnalytics()
   
-  // Get brand config based on server-provided variant (no client-side detection)
-  const brand = variant === 'photoshotspro' 
-    ? BRAND_CONFIGS[INDIVIDUAL_DOMAIN] 
-    : BRAND_CONFIGS[TEAM_DOMAIN]
-  
-  // Don't show header on app routes
+  // Don't show header on app routes or mobile upload-selfie page
   const isAppRoute = pathname.includes('/app/')
+  const isUploadSelfiePage = pathname.includes('/upload-selfie/')
   
-  if (isAppRoute) {
+  if (isAppRoute || isUploadSelfiePage) {
     return null
   }
 
@@ -45,12 +40,12 @@ export default function ConditionalHeader({ variant = 'teamshotspro' }: Conditio
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 lg:h-20 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center" aria-label={brand.name}>
+          <Link href="/" className="flex items-center" aria-label={brandName}>
             {/* Light background header uses the light logo variant */}
             {/* Using optimized image with proper sizing (913x141 source, displayed at ~120-150px width) */}
             <Image
-              src={brand.logo.light}
-              alt={brand.name}
+              src={brandLogo}
+              alt={brandName}
               width={150}
               height={23}
               className="h-8 lg:h-10 w-auto"

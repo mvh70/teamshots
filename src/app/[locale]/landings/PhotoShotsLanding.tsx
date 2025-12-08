@@ -12,6 +12,7 @@ import { TrackedLink } from '@/components/TrackedLink';
 import { prefersReducedMotion, ANIMATION_DELAYS } from '@/lib/animations';
 import { FeedbackButton } from '@/components/feedback/FeedbackButton';
 import type { LandingVariant, LandingSections } from '@/config/landing-content';
+import type { LandingProps } from '../page';
 
 /**
  * PhotoShotsPro Landing Page
@@ -23,7 +24,7 @@ import type { LandingVariant, LandingSections } from '@/config/landing-content';
  * - 3-step simple workflow
  * - Focus on LinkedIn, dating profiles, personal branding
  */
-export default function PhotoShotsLanding() {
+export default function PhotoShotsLanding({ supportEmail }: LandingProps) {
   const variant: LandingVariant = 'photoshotspro';
   
   // Use domain-specific translations
@@ -152,7 +153,7 @@ export default function PhotoShotsLanding() {
       <PricingPreview variant={variant} />
 
       {/* FAQ Section */}
-      <FAQ variant={variant} />
+      <FAQ variant={variant} supportEmail={supportEmail} />
 
       {/* Final CTA Section - Personal, Encouraging */}
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24 lg:py-32 text-center">

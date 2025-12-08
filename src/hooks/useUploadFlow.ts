@@ -15,10 +15,26 @@ export interface UploadResult {
   source?: UploadSource
 }
 
+/**
+ * Options for configuring the upload flow behavior.
+ */
 export interface UseUploadFlowOptions {
+  /** Custom upload endpoint. Defaults to /api/uploads/temp */
   uploadEndpoint?: (file: File) => Promise<{ key: string; url?: string }>
+  /** Custom save endpoint for persisting uploads. If not provided, uses promoteUploads */
   saveEndpoint?: (key: string) => Promise<string | undefined>
+  /** Callback invoked after uploads are approved and persisted */
   onApproved?: (results: { key: string; selfieId?: string }[]) => Promise<void> | void
+  /**
+   * Error callback invoked when upload or processing fails.
+   *
+   * NOTE: uploadFile() will NOT throw errors - it catches all errors internally,
+   * calls onError callback, and returns an empty result ({ key: '' }).
+   * This prevents double error handling and allows callers to safely await uploadFile()
+   * without try/catch blocks.
+   *
+   * Errors during approval/processing are also caught and reported via onError.
+   */
   onError?: (message: string) => void
 }
 
@@ -131,6 +147,17 @@ export function useUploadFlow({
     [saveEndpoint]
   )
 
+  /**
+   * Upload a file to the configured endpoint.
+   *
+   * NOTE: This function NEVER throws errors. All errors are caught internally,
+   * reported via the onError callback, and an empty result is returned.
+   * Callers can safely await this function without try/catch blocks.
+   *
+   * @param file - The file to upload
+   * @param meta - Optional metadata (source, objectUrl)
+   * @returns UploadResult with key and optional url. On error, returns { key: '' }
+   */
   const uploadFile = useCallback(
     async (file: File, meta?: UploadMetadata): Promise<UploadResult> => {
       try {

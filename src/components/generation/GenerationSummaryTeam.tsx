@@ -36,7 +36,7 @@ export default function GenerationSummaryTeam({
   
   const summaryBlock = (
     <div className="text-sm text-gray-700 space-y-2.5">
-      <div className="flex items-center gap-2">
+      <div className="hidden flex items-center gap-2">
         <span className="font-semibold text-gray-900 min-w-[100px]">Type:</span>
         <span className="text-gray-700">{type === 'team' ? `${teamName || 'Team'} use` : 'Personal use'}</span>
       </div>
@@ -44,7 +44,7 @@ export default function GenerationSummaryTeam({
         <span className="font-semibold text-gray-900 min-w-[100px]">Style:</span>
         <span className="text-gray-700">{styleLabel}</span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="hidden flex items-center gap-2">
         <span className="font-semibold text-gray-900 min-w-[100px]">Remaining:</span>
         <span className="text-lg font-bold text-gray-900">{remainingPhotos}</span>
         <span className="text-gray-600 text-xs">photo credits</span>

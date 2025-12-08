@@ -43,6 +43,10 @@ interface IntroScreenContentProps {
   continueButtonText?: string
   /** Callback when user clicks Continue (only used when variant='button') */
   onContinue?: () => void
+  /** Optional skip handler to hide future displays */
+  onSkip?: () => void
+  /** Text for skip action */
+  skipText?: string
   /** Optional additional class names */
   className?: string
 }
@@ -60,6 +64,8 @@ export default function IntroScreenContent({
   image,
   continueButtonText = 'Continue',
   onContinue,
+  onSkip,
+  skipText = 'Don’t show again',
   className = ''
 }: IntroScreenContentProps) {
 
@@ -127,13 +133,35 @@ export default function IntroScreenContent({
 
       {/* Continue button for desktop variant */}
       {variant === 'button' && (
-        <div className="pt-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+        <div className="pt-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 space-y-3">
           <button
             type="button"
             onClick={onContinue}
             className="w-full px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-brand-primary via-brand-primary to-indigo-600 rounded-xl shadow-lg hover:shadow-2xl hover:from-brand-primary-hover hover:via-brand-primary-hover hover:to-indigo-700 transform hover:-translate-y-1 active:translate-y-0 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
           >
             {continueButtonText}
+          </button>
+          {onSkip && (
+            <button
+              type="button"
+              onClick={onSkip}
+              className="block w-full text-center text-sm font-medium text-gray-500 hover:text-gray-700 underline underline-offset-4 transition-colors"
+            >
+              {skipText}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Skip link for swipe variant */}
+      {variant === 'swipe' && onSkip && (
+        <div className="pt-4 text-center animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+          <button
+            type="button"
+            onClick={onSkip}
+            className="text-sm font-medium text-gray-500 hover:text-gray-700 underline underline-offset-4 transition-colors"
+          >
+            {skipText}
           </button>
         </div>
       )}

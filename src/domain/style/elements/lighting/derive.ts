@@ -115,9 +115,9 @@ function getLightingSetup(input: LightingInput): string[] {
       ]
     }
     return [
-      'Softbox (3x4ft or larger) as key light',
-      'White reflector opposite for fill',
-      'Optional rim light for separation'
+      'Large Softbox Key Light (soft and wrapping)',
+      'White reflector fill',
+      "Cool Rim Light (Backlight) on subject's hair and shoulders to separate from background"
     ]
   }
 

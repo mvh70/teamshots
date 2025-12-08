@@ -61,19 +61,19 @@ export default function GenerateButton({
   if (integrateInPopover && showPopover) {
     return (
       <div className="w-full bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200/60 rounded-xl shadow-md animate-fade-in overflow-hidden">
-        <div className="px-5 pt-5 pb-4">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
-              <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <div className="px-4 pt-3 pb-3 lg:px-3 lg:pt-2.5 lg:pb-2.5">
+          <div className="flex items-start gap-2.5 lg:gap-2 mb-3 lg:mb-2.5">
+            <div className="flex-shrink-0 w-5 h-5 lg:w-4 lg:h-4 rounded-full bg-amber-100 flex items-center justify-center">
+              <svg className="w-3.5 h-3.5 lg:w-3 lg:h-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="flex-1 text-sm font-medium text-amber-900 leading-relaxed">
+            <p className="flex-1 text-xs lg:text-xs font-medium text-amber-900 leading-snug">
               {disabledReason}
             </p>
           </div>
         </div>
-        <div className="px-5 pb-5">
+        <div className="px-4 pb-4 lg:px-3 lg:pb-3">
           {buttonElement}
         </div>
       </div>

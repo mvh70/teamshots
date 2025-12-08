@@ -15,6 +15,7 @@ export interface TeamOnboardingState {
 interface TeamOnboardingInput {
   isTeamAdmin: boolean
   teamId?: string | null
+  teamName?: string | null
   prefetchedMemberCount?: number
   prefetchedPendingInviteCount?: number
 }
@@ -37,6 +38,7 @@ const DEFAULT_STATE: TeamOnboardingState = {
 export async function getTeamOnboardingState({
   isTeamAdmin,
   teamId,
+  teamName,
   prefetchedMemberCount,
   prefetchedPendingInviteCount
 }: TeamOnboardingInput): Promise<TeamOnboardingState> {
@@ -45,6 +47,16 @@ export async function getTeamOnboardingState({
   }
 
   if (!teamId) {
+    return {
+      ...DEFAULT_STATE,
+      needsTeamSetup: true,
+      nextStep: 'team_setup'
+    }
+  }
+
+  // Check if team name is the default "My Team" value - treat as needing setup
+  const hasDefaultTeamName = teamName === 'My Team' || teamName === 'My team'
+  if (hasDefaultTeamName) {
     return {
       ...DEFAULT_STATE,
       needsTeamSetup: true,

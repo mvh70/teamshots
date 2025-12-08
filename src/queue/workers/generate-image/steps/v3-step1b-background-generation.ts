@@ -1,8 +1,13 @@
 import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 import { generateWithGemini } from '../gemini'
 import sharp from 'sharp'
 import type { ReferenceImage } from '@/types/generation'
+import { logPrompt, logStepResult } from '../utils/logging'
 import { AI_CONFIG } from '../config'
+import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
+import type { CostTrackingHandler } from '../workflow-v3'
+import type { PhotoStyleSettings } from '@/types/photo-style'
 
 export interface V3Step1bInput {
   prompt: string // JSON string with scene and branding info
@@ -10,15 +15,23 @@ export interface V3Step1bInput {
   customBackgroundReference?: ReferenceImage
   aspectRatio: string
   generationId: string
+  personId: string
+  teamId?: string
   debugMode: boolean
   backgroundComposite?: ReferenceImage
+  styleSettings?: PhotoStyleSettings
+  backgroundAssetId?: string
+  logoAssetId?: string
+  onCostTracking?: CostTrackingHandler
 }
 
 export interface V3Step1bOutput {
   backgroundBuffer: Buffer
   backgroundBase64: string
+  assetId?: string // Asset ID for background-with-branding intermediate
   backgroundLogoReference: ReferenceImage
   compositeReference?: ReferenceImage
+  reused?: boolean // Whether this asset was reused from cache
 }
 
 /**
@@ -26,6 +39,7 @@ export interface V3Step1bOutput {
  * ONLY executed if branding.position is 'background' or 'elements'
  * Generates raw background focusing on scene and branding placement
  * No camera/lighting/perspective - those are applied in Step 2
+ * Now includes fingerprinting and reuse detection for cost optimization
  */
 export async function executeV3Step1b(
   input: V3Step1bInput
@@ -37,13 +51,84 @@ export async function executeV3Step1b(
     aspectRatio,
     generationId,
     debugMode,
-    backgroundComposite: cachedBackgroundComposite
+    backgroundComposite: cachedBackgroundComposite,
+    styleSettings,
+    backgroundAssetId,
+    logoAssetId,
+    onCostTracking
   } = input
 
-  Logger.info('V3 Step 1b: Generating background with branding', {
+  Logger.debug('V3 Step 1b: Generating background with branding', {
     generationId,
     aspectRatio
   })
+
+  // PHASE 1: Check for reusable asset via fingerprinting
+  if (backgroundAssetId || logoAssetId) {
+    try {
+      // Extract style parameters for fingerprinting
+      const styleParams = styleSettings
+        ? StyleFingerprintService.extractFromStyleSettings(styleSettings as Record<string, unknown>)
+        : {}
+
+      // Collect asset IDs for fingerprinting
+      const assetIds: string[] = []
+      if (backgroundAssetId) assetIds.push(backgroundAssetId)
+      if (logoAssetId) assetIds.push(logoAssetId)
+
+      // Create fingerprint for background-with-branding step
+      const fingerprint = StyleFingerprintService.createBackgroundFingerprint(
+        backgroundAssetId || null,
+        logoAssetId || null,
+        {
+          backgroundType: styleParams.backgroundType,
+          backgroundColor: styleParams.backgroundColor,
+          backgroundGradient: styleParams.backgroundGradient,
+          brandingPosition: styleParams.brandingPosition,
+          aspectRatio: aspectRatio,
+        }
+      )
+
+      Logger.debug('V3 Step 1b: Created fingerprint for background-with-branding', {
+        fingerprint,
+        backgroundAssetId,
+        logoAssetId,
+        generationId,
+      })
+
+      // DISABLED: Asset reuse is temporarily disabled
+      // We still create fingerprints for tracking/analytics, but don't reuse assets during generation
+      // TODO: Re-enable reuse when ready
+      // 
+      // Check for reusable asset (commented out)
+      // const reusedAsset = await AssetService.findReusableAsset(fingerprint, {
+      //   teamId: teamId,
+      //   personId: personId,
+      // })
+      //
+      // if (reusedAsset && downloadAsset) {
+      //   Logger.info('V3 Step 1b: Reusing existing background-with-branding asset', {
+      //     assetId: reusedAsset.id,
+      //     fingerprint,
+      //     generationId,
+      //   })
+      //   // ... reuse logic ...
+      //   return { ... }
+      // }
+
+      Logger.debug('V3 Step 1b: Skipping asset reuse (disabled), will generate new', {
+        fingerprint,
+        generationId,
+      })
+    } catch (error) {
+      Logger.warn('V3 Step 1b: Fingerprinting/reuse check failed, continuing with generation', {
+        error: error instanceof Error ? error.message : String(error),
+        generationId,
+      })
+    }
+  }
+
+  // PHASE 2: Generate new asset (original logic)
 
   // Parse prompt to extract scene and branding info
   const promptObj = JSON.parse(prompt)
@@ -55,7 +140,7 @@ export async function executeV3Step1b(
   if (sceneBranding && sceneBranding.enabled === true) {
     if (Array.isArray(sceneBranding.rules)) {
       brandingRules = sceneBranding.rules as string[]
-      Logger.info('V3 Step 1b: Scene branding detected', {
+      Logger.debug('V3 Step 1b: Scene branding detected', {
         generationId,
         position: sceneBranding.position,
         placement: sceneBranding.placement,
@@ -70,11 +155,15 @@ export async function executeV3Step1b(
 
   // Extract scene (exclude subject, camera, lighting, rendering)
   const backgroundPrompt = {
-    scene: promptObj.scene
+    scene: promptObj.scene,
+    lighting: promptObj.lighting // Keep lighting for consistency with person
   }
 
   // Compose prompt for background generation
   const jsonPrompt = JSON.stringify(backgroundPrompt, null, 2)
+  
+  // Check if this is a neutral or gradient background (plain wall requirements apply)
+  const isPlainBackground = styleSettings?.background?.type === 'neutral' || styleSettings?.background?.type === 'gradient'
   
   const structuredPrompt = [
     'You are a professional photographer creating a background scene for a professional photo.',
@@ -87,12 +176,30 @@ export async function executeV3Step1b(
     '- Generate ONLY the background/environment/scene - NO people, NO subjects, NO persons.',
     '- Do not add any format frames or aspect ratio constraints - preserve the natural format of the background, preferably in wider format, to make it easier to compose the person in the center later.',
     '- If no background image is provided, create a high-quality, professional background that matches the scene description.',
-    '- Create depth and realism in the scene.',
+    ...(isPlainBackground 
+      ? ['- Create subtle depth and realism through smooth lighting gradients ONLY - never through architectural features, lines, or interruptions.']
+      : ['- Create depth and realism in the scene appropriate to the background type.']),
     '- Ensure the background is suitable for compositing a person into it later. The logo element should be placed off center, so that we can compose the person in the center later. It is ok if the person overlaps the logo element.',
     '- Leave space in the composition for a person to be added (center or appropriate position).',
     '- CRITICAL: Do NOT add any cables, wires, cords, or electrical connections to the logo or any scene elements. The logo should appear clean and standalone without any attached cables or wires.',
-    
   ]
+
+  // Add strict plain wall requirements ONLY for neutral and gradient backgrounds
+  if (isPlainBackground) {
+    structuredPrompt.push(
+      '',
+      'CRITICAL Background Wall Requirements (Neutral/Gradient Backgrounds Only):',
+      '- The background wall must be COMPLETELY PLAIN and UNINTERRUPTED - a single, flat, uniform surface with no decorative elements.',
+      '- ABSOLUTELY NO plants, potted plants, foliage, or any vegetation in the background.',
+      '- ABSOLUTELY NO architectural lines, corners, folds, seams, or visible wall-floor transitions.',
+      '- ABSOLUTELY NO patterns, textures, windows, furniture, objects, or any other interruptions.',
+      '- ABSOLUTELY NO shadows, gradients, or depth variations that create visible lines or divisions.',
+      '- The wall should appear as a perfectly flat, uniform, uninterrupted plane - like a seamless studio backdrop.',
+      '- Any subtle depth or lighting should be achieved through smooth gradients ONLY, never through visible lines, edges, or architectural features.',
+    )
+  }
+  
+  structuredPrompt.push('')
 
   // Add branding rules
   if (brandingRules.length > 0) {
@@ -117,8 +224,20 @@ export async function executeV3Step1b(
 
   // Add branding logo instruction
   referenceInstructions.push(
-    '- **Branding Logo:** Use the labeled "BRANDING LOGO" in the composite image to place branding elements exactly as specified in the Branding Requirements. Ensure the logo is integrated naturally into the scene.'
+    '- **Branding Logo:** Use the labeled "BRANDING LOGO" in the composite image to place branding elements exactly as specified in the Branding Requirements.'
   )
+
+  // Add strict logo placement requirements ONLY for neutral and gradient backgrounds
+  if (isPlainBackground) {
+    referenceInstructions.push(
+      '- **CRITICAL Logo Placement (Neutral/Gradient Backgrounds Only):** The logo must appear FLUSH and FLAT against the plain background wall, as if it is directly affixed or stuck to the wall surface. The logo should have NO depth, NO shadows that create separation from the wall, and NO 3D effects that make it appear raised or floating. It must look like it is painted directly onto or seamlessly integrated into the flat, uninterrupted wall surface.',
+      '- The logo should be integrated naturally into the scene while maintaining the appearance of being directly attached to the plain wall.'
+    )
+  } else {
+    referenceInstructions.push(
+      '- Ensure the logo is integrated naturally into the scene.'
+    )
+  }
 
   structuredPrompt.push(...referenceInstructions)
 
@@ -159,30 +278,91 @@ export async function executeV3Step1b(
   // Generate with Gemini (fixed at 1K resolution, no aspect ratio constraint, no camera/lighting settings)
   // Note: We don't constrain aspect ratio here - custom backgrounds preserve their format,
   // and generated backgrounds will be composited in Step 2 which handles format constraints
-  const generatedBuffers = await generateWithGemini(
-    composedPrompt,
-    referenceImages,
-    undefined, // No aspect ratio constraint - preserve original format or let model decide
-    '1K', // Fixed resolution for raw asset
-    { temperature: AI_CONFIG.GENERATION_TEMPERATURE }
-  )
+  let generationResult: Awaited<ReturnType<typeof generateWithGemini>>
+  try {
+    logPrompt('V3 Step 1b', composedPrompt)
+    generationResult = await generateWithGemini(
+      composedPrompt,
+      referenceImages,
+      undefined, // No aspect ratio constraint - preserve original format or let model decide
+      '1K', // Fixed resolution for raw asset
+      {
+        temperature: AI_CONFIG.GENERATION_TEMPERATURE,
+        preferredProvider: 'openrouter' // Load balancing: Step 1b uses OpenRouter, Step 1a uses Vertex
+      }
+    )
+  } catch (error) {
+    const providerUsed = (error as { providerUsed?: 'vertex' | 'gemini-rest' | 'replicate' }).providerUsed
+    if (onCostTracking) {
+      try {
+        await onCostTracking({
+          stepName: 'step1b-background',
+          reason: 'generation',
+          result: 'failure',
+          model: 'gemini-2.5-flash-image',
+          provider: providerUsed,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
+      } catch (costError) {
+        Logger.error('V3 Step 1b: Failed to track generation cost (failure case)', {
+          error: costError instanceof Error ? costError.message : String(costError),
+          generationId,
+        })
+      }
+    }
+    throw error
+  }
 
-  if (!generatedBuffers.length) {
+  if (!generationResult.images.length) {
     throw new Error('V3 Step 1b: Gemini returned no images')
   }
 
-  const pngBuffer = await sharp(generatedBuffers[0]).png().toBuffer()
+  const pngBuffer = await sharp(generationResult.images[0]).png().toBuffer()
   
-  Logger.info('V3 Step 1b: Background generation completed', {
-    generationId,
-    bufferSize: pngBuffer.length
+  logStepResult('V3 Step 1b', {
+    success: true,
+    provider: generationResult.providerUsed,
+    model: Env.string('GEMINI_IMAGE_MODEL'),
+    imageSize: pngBuffer.length,
+    durationMs: generationResult.usage.durationMs
   })
+
+  // Track generation cost
+  if (onCostTracking) {
+    try {
+      await onCostTracking({
+        stepName: 'step1b-background',
+        reason: 'generation',
+        result: 'success',
+        model: 'gemini-2.5-flash-image',
+        provider: generationResult.providerUsed,  // Pass actual provider used
+        inputTokens: generationResult.usage.inputTokens,
+        outputTokens: generationResult.usage.outputTokens,
+        imagesGenerated: generationResult.usage.imagesGenerated,
+        durationMs: generationResult.usage.durationMs,
+      })
+      Logger.debug('V3 Step 1b: Cost tracking recorded', {
+        generationId,
+        provider: generationResult.providerUsed,
+        inputTokens: generationResult.usage.inputTokens,
+        outputTokens: generationResult.usage.outputTokens,
+        imagesGenerated: generationResult.usage.imagesGenerated,
+      })
+    } catch (error) {
+      Logger.error('V3 Step 1b: Failed to track generation cost', {
+        error: error instanceof Error ? error.message : String(error),
+        generationId,
+      })
+    }
+  }
 
   return {
     backgroundBuffer: pngBuffer,
     backgroundBase64: pngBuffer.toString('base64'),
+    assetId: undefined, // Will be set by workflow layer after S3 upload
     backgroundLogoReference: brandingLogoReference,
-    compositeReference: backgroundComposite
+    compositeReference: backgroundComposite,
+    reused: false,
   }
 }
 

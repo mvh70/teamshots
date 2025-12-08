@@ -19,7 +19,7 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { refetch: refetchCredits, loading: creditsLoading } = useCredits()
-  const [planType, setPlanType] = useState<'individual' | 'proSmall' | 'proLarge' | 'topUp' | null>(null)
+  const [planType, setPlanType] = useState<'individual' | 'proSmall' | 'proLarge' | 'enterprise' | 'topUp' | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
@@ -31,6 +31,8 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
       setPlanType('proSmall')
     } else if (successType === 'pro_large_success') {
       setPlanType('proLarge')
+    } else if (successType === 'enterprise_success') {
+      setPlanType('enterprise')
     } else if (successType === 'top_up_success') {
       setPlanType('topUp')
     }
@@ -89,12 +91,12 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
         const totalVariations = uniquePhotos * variationsPerPhoto // 20 × 5 = 100
 
         return {
-          title: t('pro.title'),
+          title: t('starter.title'),
           features: [
-            t('pro.credits', { uniquePhotos }),
-            t('pro.retriesAndVariations', { retries: regenerations, totalVariations }),
-            t('pro.styles'),
-            t('pro.team')
+            t('starter.credits', { uniquePhotos }),
+            t('starter.retriesAndVariations', { retries: regenerations, totalVariations }),
+            t('starter.styles'),
+            t('starter.team')
           ]
         }
       }
@@ -106,12 +108,29 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
         const totalVariations = uniquePhotos * variationsPerPhoto // 20 × 5 = 100
 
         return {
-          title: t('pro.title'),
+          title: t('business.title'),
           features: [
-            t('pro.credits', { uniquePhotos }),
-            t('pro.retriesAndVariations', { retries: regenerations, totalVariations }),
-            t('pro.styles'),
-            t('pro.team')
+            t('business.credits', { uniquePhotos }),
+            t('business.retriesAndVariations', { retries: regenerations, totalVariations }),
+            t('business.styles'),
+            t('business.team')
+          ]
+        }
+      }
+      case 'enterprise': {
+        const credits = PRICING_CONFIG.enterprise.credits
+        const regenerations = PRICING_CONFIG.regenerations.enterprise
+        const uniquePhotos = credits / creditsPerGeneration
+        const variationsPerPhoto = regenerations + 1
+        const totalVariations = uniquePhotos * variationsPerPhoto
+
+        return {
+          title: t('enterprise.title', { default: 'Enterprise' }),
+          features: [
+            t('enterprise.credits', { uniquePhotos, default: `${uniquePhotos} unique photos` }),
+            t('enterprise.retriesAndVariations', { retries: regenerations, totalVariations, default: `${regenerations} retries per photo, ${totalVariations} total variations` }),
+            t('enterprise.styles', { default: 'Full customization options' }),
+            t('enterprise.team', { default: 'Team management dashboard' })
           ]
         }
       }

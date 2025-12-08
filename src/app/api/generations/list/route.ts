@@ -1,6 +1,6 @@
 /**
  * Generations List API Endpoint
- * 
+ *
  * Returns a paginated list of generations for the current user
  */
 
@@ -8,6 +8,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api/auth-middleware'
 import { internalError } from '@/lib/api/errors'
 
+// Disable caching for this route - generation list changes frequently
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
@@ -23,7 +26,6 @@ type GenerationWithRelations = {
   creditSource: string;
   creditsUsed: number;
   provider: string;
-  actualCost: number | null;
   uploadedPhotoKey: string;
   generatedPhotoKeys: string[];
   acceptedPhotoKey: string | null;
@@ -239,7 +241,6 @@ export async function GET(request: NextRequest) {
       creditSource: generation.creditSource,
       creditsUsed: generation.creditsUsed,
       provider: generation.provider,
-      actualCost: generation.actualCost,
       // Provide keys used by client card components
       uploadedKey: generation.uploadedPhotoKey || undefined, // Original selfie key
       selfieKey: generation.uploadedPhotoKey || undefined, // Same as uploadedKey for consistency

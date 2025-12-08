@@ -462,10 +462,16 @@ export default function InviteDashboardPage() {
     clearGenerationFlow()
     setFlowStepState(null)
     setOpenStartFlow(false)
-    
-    // Redirect to selfie-tips intro page (will auto-skip if already seen)
-    router.push(`/invite-dashboard/${token}/selfie-tips`)
-  }, [clearGenerationFlow, setOpenStartFlow, router, token])
+
+    // Check if user has enough selfies to skip selfie upload flow
+    if (selectedIds.length >= MIN_SELFIES_REQUIRED) {
+      // User has enough selfies, skip directly to customization-intro
+      router.push(`/invite-dashboard/${token}/customization-intro`)
+    } else {
+      // Not enough selfies, redirect to selfie-tips intro page (will auto-skip if already seen)
+      router.push(`/invite-dashboard/${token}/selfie-tips`)
+    }
+  }, [clearGenerationFlow, setOpenStartFlow, router, token, selectedIds.length])
 
   // Navigation helper: go to next step from current step
   const goToNextStep = useCallback(() => {
@@ -981,7 +987,6 @@ export default function InviteDashboardPage() {
                           saveEndpoint={inviteSaveEndpoint}
                           onSelfiesApproved={handleMobileUploadApproved}
                           onCancel={() => undefined}
-                          onRetake={() => undefined}
                           onError={(message) => console.error('Upload error:', message)}
                         />
                       </div>

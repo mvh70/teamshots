@@ -317,6 +317,9 @@ export async function useCreditsForGeneration(
 
 /**
  * Reserve credits for a generation (deduct immediately)
+ * SECURITY: Wraps balance check and credit deduction in atomic transaction
+ * to prevent race condition where two concurrent requests could both check
+ * sufficient balance and both deduct, causing overdraft
  */
 export async function reserveCreditsForGeneration(
   personId: string | null,
@@ -330,17 +333,16 @@ export async function reserveCreditsForGeneration(
     throw new Error('Either personId or userId must be provided')
   }
 
-  // For team members (personId exists), deduct from team AND track person usage
-  if (personId && teamId) {
-    // OPTIMIZATION: Start team balance check in parallel with person lookup
-    // This reduces sequential query steps from 3 to 2
-    let userIdForBalance: string | null = userId
-    
-    // If userId is not provided, fetch person in parallel with team balance
-    if (!userIdForBalance) {
-      const [personResult, teamBalance] = await Promise.all([
-        // Fetch person with team to get userIdForBalance
-        prisma.person.findUnique({
+  // SECURITY: Use transaction with Serializable isolation to prevent race conditions
+  // This ensures balance check + deduction happens atomically
+  return await prisma.$transaction(async (tx) => {
+    // For team members (personId exists), deduct from team AND track person usage
+    if (personId && teamId) {
+      // Fetch user ID for balance check if not provided
+      let userIdForBalance: string | null = userId
+
+      if (!userIdForBalance) {
+        const personResult = await tx.person.findUnique({
           where: { id: personId },
           select: {
             userId: true,
@@ -350,23 +352,25 @@ export async function reserveCreditsForGeneration(
               }
             }
           }
-        }),
-        // Start team balance check in parallel (we'll use it regardless)
-        getTeamCreditBalance(teamId)
-      ])
-      
-      userIdForBalance = personResult?.userId || personResult?.team?.adminId || null
-      
-      // If we have userIdForBalance, we need to check for unmigrated pro credits
-      // Otherwise, we already have teamBalance from the parallel query
+        })
+
+        userIdForBalance = personResult?.userId || personResult?.team?.adminId || null
+      }
+
+      // Calculate team balance within transaction (use aggregate for atomic read)
+      const teamBalanceResult = await tx.creditTransaction.aggregate({
+        where: { teamId },
+        _sum: { credits: true }
+      })
+      let totalBalance = teamBalanceResult._sum.credits || 0
+
+      // Add unmigrated pro credits if applicable
       if (userIdForBalance) {
-        // Check subscription and unmigrated pro credits if needed
         const subscription = await getUserSubscription(userIdForBalance)
         const hasProTier = subscription?.tier === 'pro'
-        
-        let totalBalance = teamBalance
+
         if (hasProTier) {
-          const userProBalance = await prisma.creditTransaction.aggregate({
+          const userProBalance = await tx.creditTransaction.aggregate({
             where: {
               userId: userIdForBalance,
               planTier: 'pro',
@@ -376,57 +380,118 @@ export async function reserveCreditsForGeneration(
             _sum: { credits: true }
           })
           const unmigratedCredits = userProBalance._sum.credits || 0
-          totalBalance = teamBalance + unmigratedCredits
+          totalBalance += unmigratedCredits
         }
-        
-        Logger.debug('Credit validation', { teamId, userId: userIdForBalance, balance: totalBalance, required: amount })
-        if (totalBalance < amount) {
-          throw new Error(`Insufficient team credits. Available: ${totalBalance}, Required: ${amount}`)
+      }
+
+      Logger.debug('Credit validation (in transaction)', { teamId, userId: userIdForBalance, balance: totalBalance, required: amount })
+
+      if (totalBalance < amount) {
+        throw new Error(`Insufficient team credits. Available: ${totalBalance}, Required: ${amount}`)
+      }
+
+      // Create transaction that deducts from team AND tracks person usage
+      return await tx.creditTransaction.create({
+        data: {
+          credits: -amount,
+          type: 'generation',
+          description: description || `Reserved for photo generation`,
+          teamId: teamId,
+          personId: personId, // Track which person used it
+          teamInviteId: teamInviteId
         }
+      })
+    }
+
+    // For individual users, use personal credits
+    // Calculate balance within transaction for atomic read
+    let balance: number
+    if (personId) {
+      // Person balance calculation
+      const invite = await tx.teamInvite.findFirst({
+        where: { personId }
+      })
+
+      if (invite) {
+        // Calculate allocated credits
+        const allocatedResult = await tx.creditTransaction.aggregate({
+          where: {
+            teamInviteId: invite.id,
+            type: 'invite_allocated'
+          },
+          _sum: { credits: true }
+        })
+        const totalAllocated = allocatedResult._sum.credits || 0
+
+        // Calculate net usage
+        const usageTransactions = await tx.creditTransaction.findMany({
+          where: {
+            personId,
+            type: { in: ['generation', 'refund'] }
+          },
+          select: { credits: true }
+        })
+        const netCreditsUsed = usageTransactions.reduce((sum, t) => sum - t.credits, 0)
+
+        balance = Math.max(0, totalAllocated - netCreditsUsed)
       } else {
-        // No userIdForBalance, use team balance only
-        Logger.debug('Credit validation', { teamId, userId: null, balance: teamBalance, required: amount })
-        if (teamBalance < amount) {
-          throw new Error(`Insufficient team credits. Available: ${teamBalance}, Required: ${amount}`)
+        // Standard balance
+        const balanceResult = await tx.creditTransaction.aggregate({
+          where: { personId },
+          _sum: { credits: true }
+        })
+        balance = balanceResult._sum.credits || 0
+
+        // Check for unmigrated Pro credits
+        const person = await tx.person.findUnique({
+          where: { id: personId },
+          select: { userId: true, teamId: true }
+        })
+
+        if (person?.userId && !person.teamId) {
+          const userProBalance = await tx.creditTransaction.aggregate({
+            where: {
+              userId: person.userId,
+              planTier: 'pro',
+              teamId: null,
+              credits: { gt: 0 }
+            },
+            _sum: { credits: true }
+          })
+          balance += (userProBalance._sum.credits || 0)
         }
       }
     } else {
-      // userId is provided, use effective team balance (already optimized internally)
-      const teamBalance = await getEffectiveTeamCreditBalance(userIdForBalance, teamId)
-      Logger.debug('Credit validation', { teamId, userId: userIdForBalance, balance: teamBalance, required: amount })
-      if (teamBalance < amount) {
-        throw new Error(`Insufficient team credits. Available: ${teamBalance}, Required: ${amount}`)
-      }
+      // User balance
+      const balanceResult = await tx.creditTransaction.aggregate({
+        where: { userId: userId! },
+        _sum: { credits: true }
+      })
+      balance = balanceResult._sum.credits || 0
     }
 
-    // Create transaction that deducts from team AND tracks person usage
-    return await createCreditTransaction({
-      credits: -amount,
-      type: 'generation',
-      description: description || `Reserved for photo generation`,
-      teamId: teamId,
-      personId: personId, // Track which person used it
-      teamInviteId: teamInviteId
+    Logger.debug('Credit validation (in transaction)', { personId, userId, balance, required: amount })
+
+    if (balance < amount) {
+      throw new Error(`Insufficient credits. Available: ${balance}, Required: ${amount}`)
+    }
+
+    return await tx.creditTransaction.create({
+      data: {
+        credits: -amount,
+        type: 'generation',
+        description: description || `Reserved for photo generation`,
+        personId: personId || undefined,
+        userId: userId || undefined,
+        teamId: teamId || undefined,
+        teamInviteId: teamInviteId
+      }
     })
-  }
-
-  // For individual users, use personal credits
-  const balance = personId
-    ? await getPersonCreditBalance(personId)
-    : await getUserCreditBalance(userId!)
-
-  if (balance < amount) {
-    throw new Error(`Insufficient credits. Available: ${balance}, Required: ${amount}`)
-  }
-
-  return await createCreditTransaction({
-    credits: -amount,
-    type: 'generation',
-    description: description || `Reserved for photo generation`,
-    personId: personId || undefined,
-    userId: userId || undefined,
-    teamId: teamId || undefined,
-    teamInviteId: teamInviteId
+  }, {
+    // Serializable isolation prevents phantom reads and ensures atomicity
+    isolationLevel: 'Serializable',
+    // Increase timeout for complex credit calculations
+    timeout: 10000 // 10 seconds
   })
 }
 

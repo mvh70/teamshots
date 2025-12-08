@@ -22,6 +22,7 @@ export interface V3WorkflowState {
   }
   step1a?: {
     personImage: PersistedImageReference
+    personAssetId?: string // Asset ID for person-on-white intermediate
     backgroundImage?: PersistedImageReference
     clothingLogoReference?: BaseReferenceImage
     backgroundLogoReference?: BaseReferenceImage
@@ -29,6 +30,7 @@ export interface V3WorkflowState {
   }
   step1b?: {
     backgroundImage: PersistedImageReference
+    backgroundAssetId?: string // Asset ID for background-with-branding intermediate
     backgroundLogoReference?: BaseReferenceImage
     evaluatorComments?: string[]
   }
@@ -73,6 +75,9 @@ export interface WorkflowContext {
   /** Optional user ID */
   userId?: string
   
+  /** Optional team ID (for cost tracking and asset scoping) */
+  teamId?: string
+  
   /** Current attempt number (1-indexed) */
   currentAttempt: number
   
@@ -84,6 +89,15 @@ export interface WorkflowContext {
   
   /** Optional stop after step (for debugging) */
   stopAfterStep?: number
+  
+  /** Asset IDs for input selfies (for fingerprinting) */
+  selfieAssetIds?: string[]
+  
+  /** Asset ID for background (if custom) */
+  backgroundAssetId?: string
+  
+  /** Asset ID for logo (if branding enabled) */
+  logoAssetId?: string
 }
 
 // Generic Step Input/Output
@@ -160,8 +174,14 @@ export interface BaseWorkflowInput {
   /** Optional user ID */
   userId?: string
   
+  /** Optional team ID (for cost tracking and asset scoping) */
+  teamId?: string
+  
   /** Selfie references */
   selfieReferences: ReferenceImage[]
+  
+  /** Asset IDs for input selfies (for fingerprinting and cost tracking) */
+  selfieAssetIds?: string[]
   
   /** Style settings */
   styleSettings: PhotoStyleSettings

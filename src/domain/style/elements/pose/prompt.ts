@@ -1,6 +1,5 @@
 import { PhotoStyleSettings, PoseSettings } from '@/types/photo-style'
 import { resolveBodyAngle, resolveHeadPosition, resolveShoulderPosition, resolveWeightDistribution, resolveArmPosition, resolveSittingPose } from './config'
-import { getExpressionLabel } from '../expression/config'
 import { getPoseTemplate } from './config'
 import { Logger } from '@/lib/logger'
 
@@ -14,7 +13,7 @@ export interface PosePromptResult {
   sittingPosition?: string
   description?: string
   detailedInstructions?: string
-  expression: string
+  // NOTE: expression removed - it's set directly in createBasePayload, not by pose element
 }
 
 export const generatePosePrompt = (
@@ -39,8 +38,6 @@ export const generatePosePrompt = (
       templateArms: template?.pose?.arms
     })
     if (template) {
-      const expression = getExpressionLabel(settings.expression?.type)
-      
       return {
         bodyAngle: template.pose.body_angle,
         headPosition: template.pose.head_position,
@@ -49,8 +46,7 @@ export const generatePosePrompt = (
         weightDistribution: template.pose.weight_distribution,
         arms: template.pose.arms,
         description: template.pose.description,
-        detailedInstructions: template.prompt_instructions,
-        expression
+        detailedInstructions: template.prompt_instructions
       }
     }
   }
@@ -85,8 +81,6 @@ export const generatePosePrompt = (
     descriptionParts.push(headPosition.description)
   }
 
-  const expression = getExpressionLabel(settings.expression?.type)
-
   return {
     bodyAngle: bodyAngle.description,
     headPosition: headPosition.description,
@@ -95,8 +89,7 @@ export const generatePosePrompt = (
     weightDistribution: weightDistribution.description,
     arms: armPosition.description,
     sittingPosition: sittingPose?.description,
-    description: descriptionParts.join(' '),
-    expression
+    description: descriptionParts.join(' ')
   }
 }
 

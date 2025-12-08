@@ -1,4 +1,22 @@
 import { NextRequest } from 'next/server'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
+
+/**
+ * Get signup type from a domain string
+ * Used internally to derive signup type from forced domain
+ */
+function getSignupTypeForDomain(domain: string): 'individual' | 'team' | null {
+  const normalized = domain.replace(/^(www\.|app\.)/, '').toLowerCase()
+  
+  switch (normalized) {
+    case TEAM_DOMAIN:
+      return 'team'
+    case INDIVIDUAL_DOMAIN:
+      return 'individual'
+    default:
+      return null
+  }
+}
 
 /**
  * Get the domain from a Next.js request
@@ -38,17 +56,15 @@ export function getSignupTypeFromDomain(domain: string | null): 'individual' | '
   const normalizedDomain = domain.replace(/^(www\.|app\.)/, '')
 
   // Check known domains
-  switch (normalizedDomain) {
-    case 'teamshotspro.com':
-      return 'team'
-    case 'photoshotspro.com':
-      return 'individual'
-  }
+  const signupType = getSignupTypeForDomain(normalizedDomain)
+  if (signupType) return signupType
 
-  // Fallback to forced domain override from environment
-  const forcedType = process.env.FORCE_DOMAIN_SIGNUP_TYPE
-  if (forcedType === 'team' || forcedType === 'individual') {
-    return forcedType
+  // On localhost, derive from NEXT_PUBLIC_FORCE_DOMAIN
+  if (normalizedDomain === 'localhost') {
+    const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
+    if (forcedDomain) {
+      return getSignupTypeForDomain(forcedDomain)
+    }
   }
 
   return null // Allow selection UI if no override set
@@ -74,14 +90,14 @@ export function getClientDomain(): string | null {
 
 /**
  * Get the forced signup type from environment variables (client-side, localhost only)
- * Returns the forced type if set and on localhost, otherwise null
+ * Derives signup type from NEXT_PUBLIC_FORCE_DOMAIN
  */
 export function getForcedSignupType(): 'individual' | 'team' | null {
   // Only work on localhost for testing
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    const forcedType = process.env.NEXT_PUBLIC_FORCE_DOMAIN_SIGNUP_TYPE
-    if (forcedType === 'team' || forcedType === 'individual') {
-      return forcedType
+    const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
+    if (forcedDomain) {
+      return getSignupTypeForDomain(forcedDomain)
     }
   }
   return null

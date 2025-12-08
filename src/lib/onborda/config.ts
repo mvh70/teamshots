@@ -31,6 +31,7 @@ export interface OnboardingContext {
   onboardingSegment: 'organizer' | 'individual' | 'invited' // New: defines the user segment for onboarding
   completedTours?: string[] // Array of completed tour names from database
   pendingTours?: string[] // Array of pending tour names from database
+  hiddenScreens?: string[] // Screens the user has opted to skip (stored in Person.onboardingState)
   _loaded?: boolean // Internal flag to track if context has been loaded from server
 }
 
@@ -68,169 +69,8 @@ Cialdini Principles Mapping for Main Onboarding Flow:
 
 // Function to create tours with translations
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createTranslatedTours(t: (key: string, values?: Record<string, any>) => string, context?: OnboardingContext): Record<string, TourConfig> {
-  // Segment-specific content helpers
-  type ContentStep = 'welcome-content' | 'transformation-content' | 'how-it-works-content' | 'first-action-content'
-  type SegmentType = 'organizer' | 'individual' | 'invited'
-
-  const getSegmentSpecificContent = (step: ContentStep, segment: SegmentType | undefined = 'individual') => {
-    const segmentContent = {
-      'welcome-content': {
-        // Translations are used instead - see translation keys below
-        // organizer/individual/invited handled via translation keys
-      },
-      'transformation-content': {
-        // Translations are used instead - see translation keys below
-        // organizer/individual/invited handled via translation keys
-      },
-      'how-it-works-content': {
-        // Translations are used instead - see translation keys below
-        // organizer/individual/invited handled via translation keys
-      },
-      'first-action-content': {
-        // Translations are used instead - see translation keys below
-        // organizer/organizer-free/individual/individual-free/invited handled via translation keys
-      }
-    }
-
-    // Handle welcome-content with translations
-    if (step === 'welcome-content') {
-      if (segment === 'organizer') {
-        return t('dashboard.onboarding.welcomeContent.organizer')
-      }
-      if (segment === 'individual') {
-        return t('dashboard.onboarding.welcomeContent.individual')
-      }
-      if (segment === 'invited') {
-        return t('dashboard.onboarding.welcomeContent.invited')
-      }
-    }
-
-    // Handle transformation-content with translations
-    if (step === 'transformation-content') {
-      if (segment === 'organizer') {
-        return t('dashboard.onboarding.transformationContent.organizer')
-      }
-      if (segment === 'individual') {
-        return t('dashboard.onboarding.transformationContent.individual')
-      }
-      if (segment === 'invited') {
-        return t('dashboard.onboarding.transformationContent.invited')
-      }
-    }
-
-    // Handle organizer with free plan check - use translations
-    if (step === 'first-action-content' && segment === 'organizer' && context?.isFreePlan) {
-      return t('dashboard.onboarding.firstAction.organizer.free.description')
-    }
-
-    // Handle organizer paid plan - use translations
-    if (step === 'first-action-content' && segment === 'organizer') {
-      return t('dashboard.onboarding.firstAction.organizer.paid.description')
-    }
-
-    // Handle individual with free plan check - use translations
-    if (step === 'first-action-content' && segment === 'individual' && context?.isFreePlan) {
-      return t('dashboard.onboarding.firstAction.individual.free.description')
-    }
-
-    // Handle individual paid plan - use translations
-    if (step === 'first-action-content' && segment === 'individual') {
-      return t('dashboard.onboarding.firstAction.individual.paid.description')
-    }
-
-    // Handle invited first-action-content - use translations
-    if (step === 'first-action-content' && segment === 'invited') {
-      return t('dashboard.onboarding.firstAction.invited.description')
-    }
-
-    // Handle how-it-works-content with translations
-    if (step === 'how-it-works-content') {
-      if (segment === 'organizer') {
-        if (context?.isFreePlan) {
-          const step1 = t('dashboard.onboarding.howItWorks.organizer.free.step1.title')
-          const step1Desc = t('dashboard.onboarding.howItWorks.organizer.free.step1.description')
-          const step2 = t('dashboard.onboarding.howItWorks.organizer.free.step2.title')
-          const step2Desc = t('dashboard.onboarding.howItWorks.organizer.free.step2.description')
-          return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n${step1Desc}\n\n2. ${step2}\n${step2Desc}`
-        } else {
-          const step1 = t('dashboard.onboarding.howItWorks.organizer.step1.title')
-          const step2 = t('dashboard.onboarding.howItWorks.organizer.step2.title')
-          const step4 = t('dashboard.onboarding.howItWorks.organizer.step4.title')
-          const step4Desc = t('dashboard.onboarding.howItWorks.organizer.step4.description')
-          return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n2. ${step2}\n3. ${step4}\n\n${step4Desc}.`
-        }
-      }
-      if (segment === 'individual') {
-        const step1 = t('dashboard.onboarding.howItWorks.individual.step1.title')
-        const step3 = t('dashboard.onboarding.howItWorks.individual.step3.title')
-        const step3Desc = context?.isFreePlan 
-          ? t('dashboard.onboarding.howItWorks.individual.step3.descriptionFree')
-          : t('dashboard.onboarding.howItWorks.individual.step3.descriptionPaid')
-        return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n2. ${step3}\n\n${step3Desc}.`
-      }
-      if (segment === 'invited') {
-        const step1 = t('dashboard.onboarding.howItWorks.invited.step1.title')
-        const step2 = t('dashboard.onboarding.howItWorks.invited.step2.title')
-        const step3 = t('dashboard.onboarding.howItWorks.invited.step3.title')
-        const step3Desc = t('dashboard.onboarding.howItWorks.invited.step3.description')
-        return `${t('dashboard.onboarding.howItWorks.title')}:\n\n1. ${step1}\n2. ${step2}\n3. ${step3}\n\n${step3Desc}.`
-      }
-    }
-
-    // Fallback for other cases (e.g., invited segment)
-    const stepContent = segmentContent[step] as Record<string, string> | undefined
-    if (stepContent && segment && stepContent[segment]) {
-      return stepContent[segment]
-    }
-    // Final fallback
-    if (stepContent && 'individual' in stepContent) {
-      return stepContent.individual
-    }
-    return ''
-  }
-
-  // Helper to get first action title with translations
-  const getFirstActionTitle = (segment: SegmentType | undefined = 'individual') => {
-    if (segment === 'organizer' && context?.isFreePlan) {
-      return t('dashboard.onboarding.firstAction.organizer.free.title')
-    }
-    if (segment === 'organizer') {
-      return t('dashboard.onboarding.firstAction.organizer.paid.title')
-    }
-    if (segment === 'individual' && context?.isFreePlan) {
-      return t('dashboard.onboarding.firstAction.individual.free.title')
-    }
-    if (segment === 'individual') {
-      return t('dashboard.onboarding.firstAction.individual.paid.title')
-    }
-    return 'Ready to get started?'
-  }
-
+export function createTranslatedTours(t: (key: string, values?: Record<string, any>) => string): Record<string, TourConfig> {
   return {
-    'main-onboarding': {
-      name: 'main-onboarding',
-      description: 'Main onboarding tour for team admins after team creation or individual users on first dashboard visit',
-      triggerCondition: (context) => !context.hasGeneratedPhotos && (context._loaded ?? false),
-      steps: [
-        {
-          selector: '#how-it-works',
-          title: t('dashboard.onboarding.howItWorks.title'),
-          content: getSegmentSpecificContent('how-it-works-content', context?.onboardingSegment),
-          side: 'bottom',
-          pointerPadding: 40,
-        },
-        {
-          selector: '#first-action',
-          title: getFirstActionTitle(context?.onboardingSegment),
-          content: getSegmentSpecificContent('first-action-content', context?.onboardingSegment),
-          side: 'bottom',
-          pointerPadding: 40,
-          customActions: true,
-        },
-      ],
-      startingPath: '/app/dashboard'
-    },
     'generation-detail': {
       name: 'generation-detail',
       description: 'Tour after first photo generation explaining how to interact with generated photos',
@@ -352,7 +192,7 @@ export function createTranslatedTours(t: (key: string, values?: Record<string, a
 // Helper to get applicable tours for a context with translations
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getApplicableTours(context: OnboardingContext, t: (key: string, values?: Record<string, any>) => string): TourConfig[] {
-  const translatedTours = createTranslatedTours(t, context)
+  const translatedTours = createTranslatedTours(t)
   return Object.values(translatedTours).filter(
     (tour) => !tour.triggerCondition || tour.triggerCondition(context)
   )
@@ -361,6 +201,13 @@ export function getApplicableTours(context: OnboardingContext, t: (key: string, 
 // Helper to get tour by name with translations
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getTour(name: string, t: (key: string, values?: Record<string, any>) => string, context?: OnboardingContext): TourConfig | undefined {
-  const translatedTours = createTranslatedTours(t, context)
-  return translatedTours[name]
+  const translatedTours = createTranslatedTours(t)
+  const tour = translatedTours[name]
+
+  if (tour?.triggerCondition) {
+    if (!context) return undefined
+    return tour.triggerCondition(context) ? tour : undefined
+  }
+
+  return tour
 }

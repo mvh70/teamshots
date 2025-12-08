@@ -184,13 +184,13 @@ export default function PricingCard({
               <div className="bg-bg-white rounded-[10px] px-3 py-3 lg:px-4 lg:py-4">
                 <div className="flex items-baseline gap-1.5 flex-wrap">
                   <span className={`text-xl lg:text-2xl xl:text-3xl font-black ${isVipTier ? 'text-amber-600' : 'text-text-dark'}`}>{displayPricePerPhoto}</span>
-                  <span className="text-xs lg:text-sm font-semibold text-text-body">per photo</span>
+                  <span className="text-xs lg:text-sm font-semibold text-text-body">{t('perPhoto')}</span>
                 </div>
                 <div className={`text-[10px] lg:text-xs font-medium mt-1.5 ${isVipTier ? 'text-amber-600/80' : 'text-text-muted'}`}>
-                  {numberOfPhotos} customizable {numberOfPhotos === 1 ? 'photo' : 'photos'}, generated {variationsPerPhoto} {variationsPerPhoto === 1 ? 'time' : 'times'}.
+                  {t('customizablePhotos', { count: numberOfPhotos })}, {t('generated')} {variationsPerPhoto} {variationsPerPhoto === 1 ? t('time') : t('times')}.
                 </div>
                 <div className={`text-[10px] lg:text-xs font-semibold ${isVipTier ? 'text-amber-600' : 'text-brand-secondary'}`}>
-                  Choose the best.
+                  {t('chooseTheBest')}
                 </div>
               </div>
             </div>
@@ -202,10 +202,10 @@ export default function PricingCard({
           <div className="relative group mb-4">
             <div className="bg-brand-secondary-light/50 rounded-xl px-3 py-3 lg:px-4 lg:py-4">
               <div className="text-xs lg:text-sm font-medium text-brand-secondary">
-                {numberOfPhotos} customizable {numberOfPhotos === 1 ? 'photo' : 'photos'}, generated {variationsPerPhoto} {variationsPerPhoto === 1 ? 'time' : 'times'}.
+                {t('customizablePhotos', { count: numberOfPhotos })}, {t('generated')} {variationsPerPhoto} {variationsPerPhoto === 1 ? t('time') : t('times')}.
               </div>
               <div className="text-xs lg:text-sm font-semibold text-brand-secondary">
-                Choose the best.
+                {t('chooseTheBest')}
               </div>
             </div>
           </div>

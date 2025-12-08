@@ -11,6 +11,8 @@ interface CustomizationIntroContentProps {
   variant: 'swipe' | 'button'
   /** Callback when user clicks Continue (only used when variant='button') */
   onContinue?: () => void
+  /** Callback when user chooses to skip future displays */
+  onSkip?: () => void
   /** Optional additional class names */
   className?: string
 }
@@ -18,6 +20,7 @@ interface CustomizationIntroContentProps {
 export default function CustomizationIntroContent({ 
   variant, 
   onContinue,
+  onSkip,
   className = ''
 }: CustomizationIntroContentProps) {
   const t = useTranslations('customization.photoStyle.mobile.intro')
@@ -73,6 +76,8 @@ export default function CustomizationIntroContent({
       swipeHintText={tCommon('swipeHint', { default: 'Swipe or tap Next to continue' })}
       continueButtonText="Continue to customize"
       onContinue={onContinue}
+      onSkip={onSkip}
+      skipText={t('skip', { default: "Don't show again" })}
       className={className}
     />
   )

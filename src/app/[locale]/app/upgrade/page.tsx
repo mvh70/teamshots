@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/routing'
 import { PRICING_CONFIG } from '@/config/pricing'
-import { getPricePerPhoto, formatPrice } from '@/domain/pricing/utils'
+import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
 import { CheckoutButton } from '@/components/ui'
 import StripeNotice from '@/components/stripe/StripeNotice'
 import PricingCard from '@/components/pricing/PricingCard'
@@ -122,7 +122,7 @@ export default function UpgradePage() {
 
   // Clear success params from URL after display (prevents showing on refresh)
   useEffect(() => {
-    if (isSuccess && (successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
+    if (isSuccess && (successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success' || successType === 'enterprise_success')) {
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('success')
       newUrl.searchParams.delete('type')
@@ -143,6 +143,7 @@ export default function UpgradePage() {
       regenerations: PRICING_CONFIG.regenerations.individual,
       popular: true,
       pricePerPhoto: formatPrice(getPricePerPhoto('individual')),
+      totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.individual.credits) * (1 + PRICING_CONFIG.regenerations.individual),
     }
 
     const proSmallPlan = {
@@ -152,6 +153,7 @@ export default function UpgradePage() {
       regenerations: PRICING_CONFIG.regenerations.proSmall,
       popular: true,
       pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
+      totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits) * (1 + PRICING_CONFIG.regenerations.proSmall),
     }
 
     const proLargePlan = {
@@ -160,17 +162,28 @@ export default function UpgradePage() {
       credits: PRICING_CONFIG.proLarge.credits,
       regenerations: PRICING_CONFIG.regenerations.proLarge,
       pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
+      totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits) * (1 + PRICING_CONFIG.regenerations.proLarge),
+    }
+
+    const enterprisePlan = {
+      id: 'enterprise' as const,
+      price: `$${PRICING_CONFIG.enterprise.price}`,
+      credits: PRICING_CONFIG.enterprise.credits,
+      regenerations: PRICING_CONFIG.regenerations.enterprise,
+      pricePerPhoto: formatPrice(getPricePerPhoto('enterprise')),
+      isVip: true,
+      totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.enterprise.credits) * (1 + PRICING_CONFIG.regenerations.enterprise),
     }
 
     if (selectedTier === 'individual') {
       return [individualPlan]
     }
-    // For 'pro' tier, show both proSmall and proLarge
-    return [proSmallPlan, proLargePlan]
+    // For 'pro' tier, show proSmall, proLarge, and enterprise
+    return [proSmallPlan, proLargePlan, enterprisePlan]
   }, [selectedTier])
 
   // If success state, show purchase success screen (check this first to avoid redirects)
-  if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
+  if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success' || successType === 'enterprise_success')) {
     return <PurchaseSuccess />
   }
 
@@ -180,7 +193,7 @@ export default function UpgradePage() {
       <div className="max-w-2xl mx-auto px-4 py-10">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">{isAutoCheckingOut ? 'Redirecting to checkout...' : 'Loading...'}</p>
+          <p className="mt-4 text-gray-600">{isAutoCheckingOut ? t('redirectingToCheckout') : tAll('common.loading', { default: 'Loading...' })}</p>
         </div>
       </div>
     )
@@ -189,7 +202,7 @@ export default function UpgradePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <StripeNotice className="mb-6" />
-      <div className="text-center mb-10">
+      <div className="text-center mb-16">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">{t('title')}</h1>
         <p className="text-gray-600 mt-2">{t('subtitle')}</p>
         {/* Billing toggle hidden - now transactional pricing only */}
@@ -214,19 +227,21 @@ export default function UpgradePage() {
                     ? PRICING_CONFIG.individual.stripePriceId
                     : plan.id === 'proSmall'
                       ? PRICING_CONFIG.proSmall.stripePriceId
-                      : PRICING_CONFIG.proLarge.stripePriceId
+                      : plan.id === 'proLarge'
+                        ? PRICING_CONFIG.proLarge.stripePriceId
+                        : PRICING_CONFIG.enterprise.stripePriceId
                 }
                 metadata={{
                   planTier: plan.id === 'individual' ? 'individual' : 'pro',
-                  planPeriod: plan.id === 'proLarge' ? 'large' : 'small'
+                  planPeriod: plan.id === 'proLarge' || plan.id === 'enterprise' ? 'large' : 'small'
                 }}
                 returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined}
                 useBrandCtaColors
               >
-                {t('plans.' + plan.id + '.cta')}
+                {t('plans.' + plan.id + '.cta', { totalPhotos: plan.totalPhotos })}
               </CheckoutButton>
             }
-            popularLabelKey={(plan.id === 'individual' || plan.id === 'proSmall') ? "pricingPreview.recommended" : undefined}
+            popularLabelKey={(plan.id === 'individual' || plan.id === 'proSmall') ? "pricing.mostPopular" : undefined}
             className="h-full"
           />
         ))}

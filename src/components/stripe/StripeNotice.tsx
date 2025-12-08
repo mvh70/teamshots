@@ -73,21 +73,27 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
           })
           break
         case 'pro_small_success':
-          msg = tDashboard('successMessages.pro', { 
-            default: 'Pro subscription activated successfully.', 
+          msg = tDashboard('successMessages.starter', { 
+            default: 'Starter plan activated successfully.', 
             photos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits)
           })
           break
         case 'pro_large_success':
-          msg = tDashboard('successMessages.pro', { 
-            default: 'Pro subscription activated successfully.', 
+          msg = tDashboard('successMessages.business', { 
+            default: 'Business plan activated successfully.', 
             photos: calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits)
           })
           break
+        case 'enterprise_success':
+          msg = tDashboard('successMessages.enterprise', { 
+            default: 'Enterprise plan activated successfully.', 
+            photos: calculatePhotosFromCredits(PRICING_CONFIG.enterprise.credits)
+          })
+          break
         case 'pro_success':
-          // Legacy support - default to proSmall
-          msg = tDashboard('successMessages.pro', { 
-            default: 'Pro subscription activated successfully.', 
+          // Legacy support - default to starter
+          msg = tDashboard('successMessages.starter', { 
+            default: 'Starter plan activated successfully.', 
             photos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits)
           })
           break

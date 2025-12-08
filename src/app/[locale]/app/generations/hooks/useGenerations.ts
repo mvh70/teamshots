@@ -221,9 +221,9 @@ export function useGenerations(
     const hasActiveGenerations = generated.some(
       g => g.status === 'pending' || g.status === 'processing'
     )
-    
-    // Poll every 5 seconds when there are active generations, otherwise every 30 seconds
-    const pollIntervalMs = hasActiveGenerations ? 5000 : 30000
+
+    // Poll every 2 seconds when there are active generations, otherwise every 30 seconds
+    const pollIntervalMs = hasActiveGenerations ? 2000 : 30000
     
     const interval = setInterval(() => {
       // Only poll if we're not currently loading and not on a paginated view

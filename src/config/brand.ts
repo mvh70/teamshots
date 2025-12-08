@@ -80,86 +80,90 @@ const SHARED_CONFIG = {
   },
 } as const satisfies { colors: BrandColors; legal: Omit<BrandLegal, 'teamName'> };
 
-// Domain-specific typography configurations
+// Typography per domain
 const TYPOGRAPHY_CONFIGS: Record<string, BrandTypography> = {
   [TEAM_DOMAIN]: {
-    displayFont: 'font-display',  // Corporate/professional display font
-    bodyFont: 'font-sans',        // Clean sans-serif for readability
+    displayFont: 'font-display',
+    bodyFont: 'font-sans',
   },
   [INDIVIDUAL_DOMAIN]: {
-    displayFont: 'font-display',  // Can be customized to a friendlier font
-    bodyFont: 'font-sans',        // Consistent body font
+    displayFont: 'font-display',
+    bodyFont: 'font-sans',
   },
 };
 
-// Domain-specific style configurations
+// Style tokens per domain
 const STYLE_CONFIGS: Record<string, BrandStyle> = {
   [TEAM_DOMAIN]: {
-    borderRadius: 'rounded',      // Professional, modern rounded corners
-    shadowIntensity: 'medium',    // Balanced depth
-    tone: 'corporate',            // B2B professional tone
+    borderRadius: 'rounded',
+    shadowIntensity: 'medium',
+    tone: 'corporate',
   },
   [INDIVIDUAL_DOMAIN]: {
-    borderRadius: 'pill',         // Friendlier, softer appearance
-    shadowIntensity: 'dramatic',  // More visual impact for individuals
-    tone: 'friendly',             // Approachable, personal tone
+    borderRadius: 'pill',
+    shadowIntensity: 'dramatic',
+    tone: 'friendly',
   },
 };
 
-// Complete brand configurations per domain
+// Explicit brand configs (avoid dynamic lookups in client bundles)
+const TEAM_BRAND: BrandConfig = {
+  name: 'TeamShotsPro',
+  domain: TEAM_DOMAIN,
+  contact: {
+    hello: 'hello@teamshotspro.com',
+    support: 'support@teamshotspro.com',
+    privacy: 'privacy@teamshotspro.com',
+    legal: 'legal@teamshotspro.com',
+  },
+  logo: {
+    light: '/branding/teamshotspro_trans.webp',
+    dark: '/branding/teamshotspro_trans.webp',
+    icon: '/branding/icon.png',
+    favicon: '/branding/favicon.ico',
+  },
+  ogImage: '/branding/og-image.jpg',
+  legal: {
+    ...SHARED_CONFIG.legal,
+    teamName: 'TeamShotsPro',
+  },
+  colors: SHARED_CONFIG.colors,
+  typography: TYPOGRAPHY_CONFIGS[TEAM_DOMAIN],
+  style: STYLE_CONFIGS[TEAM_DOMAIN],
+};
+
+const INDIVIDUAL_BRAND: BrandConfig = {
+  name: 'PhotoShotsPro',
+  domain: INDIVIDUAL_DOMAIN,
+  contact: {
+    hello: 'hello@photoshotspro.com',
+    support: 'support@photoshotspro.com',
+    privacy: 'privacy@photoshotspro.com',
+    legal: 'legal@photoshotspro.com',
+  },
+  logo: {
+    light: '/branding/PhotoShotsPro_trans.webp',
+    dark: '/branding/PhotoShotsPro_trans.webp',
+    icon: '/branding/icon.png',
+    favicon: '/branding/favicon.ico',
+  },
+  ogImage: '/branding/og-image.jpg',
+  legal: {
+    ...SHARED_CONFIG.legal,
+    teamName: 'PhotoShotsPro',
+  },
+  colors: SHARED_CONFIG.colors,
+  typography: TYPOGRAPHY_CONFIGS[INDIVIDUAL_DOMAIN],
+  style: STYLE_CONFIGS[INDIVIDUAL_DOMAIN],
+};
+
 export const BRAND_CONFIGS: Record<string, BrandConfig> = {
-  [TEAM_DOMAIN]: {
-    name: 'TeamShotsPro',
-    domain: TEAM_DOMAIN,
-    contact: {
-      hello: 'hello@teamshotspro.com',
-      support: 'support@teamshotspro.com',
-      privacy: 'privacy@teamshotspro.com',
-      legal: 'legal@teamshotspro.com',
-    },
-    logo: {
-      light: '/branding/teamshotspro_trans.webp',
-      dark: '/branding/teamshotspro_trans.webp',
-      icon: '/branding/icon.png',
-      favicon: '/branding/favicon.ico',
-    },
-    ogImage: '/branding/og-image.jpg',
-    legal: {
-      ...SHARED_CONFIG.legal,
-      teamName: 'TeamShotsPro',
-    },
-    colors: SHARED_CONFIG.colors,
-    typography: TYPOGRAPHY_CONFIGS[TEAM_DOMAIN],
-    style: STYLE_CONFIGS[TEAM_DOMAIN],
-  },
-  [INDIVIDUAL_DOMAIN]: {
-    name: 'PhotoShotsPro',
-    domain: INDIVIDUAL_DOMAIN,
-    contact: {
-      hello: 'hello@photoshotspro.com',
-      support: 'support@photoshotspro.com',
-      privacy: 'privacy@photoshotspro.com',
-      legal: 'legal@photoshotspro.com',
-    },
-    logo: {
-      light: '/branding/PhotoShotsPro_trans.webp',
-      dark: '/branding/PhotoShotsPro_trans.webp',
-      icon: '/branding/icon.png',
-      favicon: '/branding/favicon.ico',
-    },
-    ogImage: '/branding/og-image.jpg',
-    legal: {
-      ...SHARED_CONFIG.legal,
-      teamName: 'PhotoShotsPro',
-    },
-    colors: SHARED_CONFIG.colors,
-    typography: TYPOGRAPHY_CONFIGS[INDIVIDUAL_DOMAIN],
-    style: STYLE_CONFIGS[INDIVIDUAL_DOMAIN],
-  },
+  [TEAM_DOMAIN]: TEAM_BRAND,
+  [INDIVIDUAL_DOMAIN]: INDIVIDUAL_BRAND,
 };
 
 // Default brand config (TeamShotsPro) - for backwards compatibility
-export const BRAND_CONFIG = BRAND_CONFIGS[TEAM_DOMAIN];
+export const BRAND_CONFIG = TEAM_BRAND;
 
 /**
  * Get the current domain from request headers.

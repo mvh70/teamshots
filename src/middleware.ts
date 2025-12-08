@@ -68,19 +68,20 @@ function addSecurityHeaders(response: NextResponse) {
   // TODO: Re-enable strict CSP when codebase stabilizes
   // For now, allow unsafe-inline in both dev and production to avoid hash management
   const isDevelopment = process.env.NODE_ENV === 'development'
-  
-  // Allow unsafe-inline and unsafe-eval for now (both dev and production)
-  // This allows all inline scripts without needing to manage hashes
-  // When ready to re-enable strict CSP:
-  // 1. Remove 'unsafe-inline' from production
-  // 2. Add production hashes when you see CSP violations
-  const unsafeInlineDirective = "'unsafe-inline'" // Temporarily enabled for both environments
+  const isProduction = process.env.NODE_ENV === 'production'
+
+  // SECURITY NOTE: CSP currently uses 'unsafe-inline' which creates XSS risk
+  // TODO: Migrate to nonce-based CSP for production (Phase 2)
+  // For now:
+  // - unsafe-eval REMOVED from production (Phase 1 complete)
+  // - unsafe-inline still present but monitored via report-only CSP
+  const unsafeInlineDirective = "'unsafe-inline'" // Temporary - needed for Next.js CSS-in-JS
   const unsafeEvalDirective = isDevelopment ? "'unsafe-eval'" : '' // Only in dev for webpack HMR
-  
+
   const scriptSrc = [
     "'self'",
-    unsafeInlineDirective, // Allows all inline scripts (temporary)
-    unsafeEvalDirective, // Only in development for webpack HMR
+    unsafeInlineDirective, // Allows inline scripts (monitored)
+    unsafeEvalDirective, // PRODUCTION: REMOVED (Phase 1 security fix)
     'https://static.cloudflareinsights.com',
     'https://pineapple.teamshotspro.com',
     posthogDomains
@@ -101,14 +102,42 @@ function addSecurityHeaders(response: NextResponse) {
     "worker-src 'self' blob:",
     "child-src 'self' blob:"
   ].join('; ')
-  
+
   response.headers.set('Content-Security-Policy', csp)
-  
+
+  // Add report-only CSP in production to monitor for violations without blocking
+  // This helps us track inline script usage before removing unsafe-inline
+  if (isProduction) {
+    const strictScriptSrc = [
+      "'self'",
+      // NO unsafe-inline or unsafe-eval in strict policy
+      'https://static.cloudflareinsights.com',
+      'https://pineapple.teamshotspro.com',
+      posthogDomains
+    ].filter(Boolean).join(' ')
+
+    const reportOnlyCSP = [
+      "default-src 'self'",
+      `script-src ${strictScriptSrc}`,
+      "style-src 'self'",
+      "img-src 'self' data: https: blob:",
+      "font-src 'self' data:",
+      `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com ${posthogDomains} ws: wss:`,
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+      "report-uri /api/csp-report" // TODO: Create CSP report endpoint
+    ].join('; ')
+
+    response.headers.set('Content-Security-Policy-Report-Only', reportOnlyCSP)
+  }
+
   // Add missing security headers
   response.headers.set('X-DNS-Prefetch-Control', 'off')
   response.headers.set('X-Download-Options', 'noopen')
   response.headers.set('X-Permitted-Cross-Domain-Policies', 'none')
-  
+
   return response
 }
 

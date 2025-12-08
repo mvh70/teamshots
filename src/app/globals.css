@@ -102,6 +102,8 @@
   transform: none !important;
   margin: 0 !important;
   padding: 0 !important;
+  z-index: 10000 !important; /* Ensure it appears above the overlay */
+  pointer-events: auto !important; /* Allow interaction */
 }
 
 /* Ensure highlight overlay doesn't affect parent layout */

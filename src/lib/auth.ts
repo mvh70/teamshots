@@ -11,8 +11,10 @@ import type { JWT } from "next-auth/jwt"
 import { Env } from '@/lib/env'
 import { randomBytes } from 'crypto'
 
-const SESSION_MAX_AGE_SECONDS = 30 * 60 // 30 minutes
-const SESSION_EXTENSION_THRESHOLD_SECONDS = 5 * 60 // 5 minutes
+// SECURITY: Tightened session configuration for better security
+const SESSION_MAX_AGE_SECONDS = 15 * 60 // 15 minutes (reduced from 30)
+const SESSION_EXTENSION_THRESHOLD_SECONDS = 2 * 60 // 2 minutes (reduced from 5)
+const ABSOLUTE_MAX_SESSION_AGE_SECONDS = 4 * 60 * 60 // 4 hours absolute maximum
 
 /**
  * Generate a unique JWT ID (jti) for token tracking
@@ -255,10 +257,10 @@ export const authOptions = {
         token.role = user.role
         token.isAdmin = user.isAdmin
         token.locale = user.locale
-        
+
         // SECURITY: Generate unique JWT ID (jti) for token tracking and revocation
         token.jti = generateJti()
-        
+
         // SECURITY: Store token version to invalidate all tokens when role/permissions change
         // Also fetch signupDomain for cross-domain redirect
         try {
@@ -274,9 +276,10 @@ export const authOptions = {
           token.tokenVersion = 0
           token.signupDomain = null
         }
-        
-        // Set token expiration time when user first authenticates
+
+        // SECURITY: Track session creation time for absolute maximum enforcement
         const now = Math.floor(Date.now() / 1000)
+        token.iat = now // Issued at time
         token.exp = now + SESSION_MAX_AGE_SECONDS
       }
       
@@ -330,10 +333,23 @@ export const authOptions = {
         const now = Math.floor(Date.now() / 1000)
         const expirationTime = token.exp
         const timeUntilExpiry = expirationTime - now
-        
+
+        // SECURITY: Enforce absolute maximum session age (4 hours)
+        // Even with extensions, session cannot exceed this limit from initial creation
+        const sessionAge = now - (token.iat as number || now)
+        if (sessionAge >= ABSOLUTE_MAX_SESSION_AGE_SECONDS) {
+          // Session has exceeded absolute maximum age - force re-authentication
+          throw new Error('Session exceeded absolute maximum age - please sign in again')
+        }
+
         // If the token is close to expiring, extend it by the full session window
+        // But never beyond the absolute maximum age
         if (timeUntilExpiry < SESSION_EXTENSION_THRESHOLD_SECONDS && timeUntilExpiry > 0) {
-          token.exp = now + SESSION_MAX_AGE_SECONDS
+          const proposedExpiry = now + SESSION_MAX_AGE_SECONDS
+          const absoluteMaxExpiry = (token.iat as number || now) + ABSOLUTE_MAX_SESSION_AGE_SECONDS
+
+          // Use whichever is sooner: proposed expiry or absolute max
+          token.exp = Math.min(proposedExpiry, absoluteMaxExpiry)
         }
       }
       

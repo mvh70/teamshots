@@ -39,6 +39,7 @@ const envSchema = z.object({
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   GOOGLE_CLOUD_API_KEY: z.string().optional(),
   GOOGLE_PROJECT_ID: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
   
   // Stripe
   STRIPE_SECRET_KEY: z.string().optional(),
@@ -61,11 +62,9 @@ const envSchema = z.object({
   // Node Environment
   NODE_ENV: z.enum(['development', 'production', 'test']),
 
-  // Domain override for testing (localhost only)
-  FORCE_DOMAIN_SIGNUP_TYPE: z.enum(['team', 'individual']).optional(),
-  NEXT_PUBLIC_FORCE_DOMAIN_SIGNUP_TYPE: z.enum(['team', 'individual']).optional(),
-  // Force specific domain for brand/landing testing (localhost only)
-  // Example: 'photoshotspro.com' or 'teamshotspro.com'
+  // Force specific domain for local testing (localhost only)
+  // This controls both brand/landing AND signup type
+  // Example: 'photoshotspro.com' (individual) or 'teamshotspro.com' (team)
   NEXT_PUBLIC_FORCE_DOMAIN: z.string().optional(),
 }).refine(
   (data) => {
@@ -83,11 +82,12 @@ const envSchema = z.object({
     // Ensure at least one Gemini AI authentication method is configured
     const hasApiKey = !!data.GOOGLE_CLOUD_API_KEY;
     const hasServiceAccount = !!data.GOOGLE_APPLICATION_CREDENTIALS || !!data.GOOGLE_PROJECT_ID;
-    return hasApiKey || hasServiceAccount;
+    const hasOpenRouter = !!data.OPENROUTER_API_KEY;
+    return hasApiKey || hasServiceAccount || hasOpenRouter;
   },
   {
-    message: 'Either GOOGLE_CLOUD_API_KEY or both GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_PROJECT_ID must be configured for Gemini AI access.',
-    path: ['GOOGLE_CLOUD_API_KEY'],
+    message: 'Configure one of: OPENROUTER_API_KEY (preferred), GOOGLE_CLOUD_API_KEY, or both GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_PROJECT_ID for Gemini AI access.',
+    path: ['OPENROUTER_API_KEY'],
   }
 );
 

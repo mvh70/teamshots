@@ -182,6 +182,63 @@ export default function BackgroundSelector({
           // On mobile, hide custom upload option when predefined
           const hideCustomUpload = isPredefined && type.value === 'custom'
           
+          if (type.value === 'neutral' || type.value === 'gradient') {
+             const isNeutral = type.value === 'neutral'
+             const currentColor = value.color ?? (isNeutral ? '#ffffff' : '#667eea')
+             
+             return (
+               <div
+                 key={type.value}
+                 className={`${shouldHide ? 'hidden md:block' : ''}`}
+               >
+                 <ColorPicker
+                    value={currentColor}
+                    onChange={isNeutral ? handleColorChange : handleGradientColorChange}
+                    presets={isNeutral ? NEUTRAL_COLORS : GRADIENT_COLORS}
+                    disabled={isPredefined || isDisabled}
+                    buttonClassName={`w-full bg-gray-50 rounded-lg p-4 border-2 transition-all ${
+                        isSelected
+                          ? 'border-brand-primary bg-brand-primary-light shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-white hover:shadow-sm'
+                      } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                    onTriggerClick={() => {
+                        if (!isSelected && !(isPredefined || isDisabled)) {
+                            handleTypeChange(type.value as BackgroundSettings['type'])
+                        }
+                    }}
+                 >
+                    <div className="flex items-center gap-3 w-full">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl ${
+                          isSelected 
+                            ? `bg-gradient-to-br ${type.color}` 
+                            : 'bg-gray-200'
+                        }`}>
+                          {type.icon}
+                        </div>
+                        <div className="flex-1 text-left flex items-center gap-2">
+                          <div className={`text-sm font-semibold ${isSelected ? 'text-brand-primary' : 'text-gray-900'}`}>
+                            {type.label}
+                          </div>
+                          {isSelected && (
+                              <div 
+                                className="w-4 h-4 rounded-sm border border-gray-300 shadow-sm ml-2" 
+                                style={{ backgroundColor: currentColor }} 
+                              />
+                          )}
+                        </div>
+                        {isSelected && (
+                          <div className="w-5 h-5 bg-brand-primary rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                 </ColorPicker>
+               </div>
+             )
+          }
+
           return (
             <button
               type="button"
@@ -239,29 +296,7 @@ export default function BackgroundSelector({
         </div>
       )}
 
-      {value.type === 'neutral' && (
-        <div className="space-y-3">
-          <ColorPicker
-            label={t('neutralColor', { default: 'Background Color' })}
-            value={value.color ?? '#ffffff'}
-            onChange={handleColorChange}
-            presets={NEUTRAL_COLORS}
-            disabled={isPredefined || isDisabled}
-          />
-        </div>
-      )}
-
-      {value.type === 'gradient' && (
-        <div className="space-y-3">
-          <ColorPicker
-            label={t('gradientColor', { default: 'Gradient Color' })}
-            value={value.color ?? '#667eea'}
-            onChange={handleGradientColorChange}
-            presets={GRADIENT_COLORS}
-            disabled={isPredefined || isDisabled}
-          />
-        </div>
-      )}
+      {/* Removed separate ColorPickers for neutral and gradient as they are now integrated in the list */}
 
       {value.type === 'custom' && (
         <div className="space-y-3">
@@ -332,4 +367,3 @@ export default function BackgroundSelector({
     </div>
   )
 }
-

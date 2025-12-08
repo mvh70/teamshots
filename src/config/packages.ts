@@ -27,6 +27,13 @@ export const PACKAGES_CONFIG = {
       price: 0, // Free (included with signup)
       audience: 'team',
     } as PackageMetadata,
+    outfit1: {
+      id: 'outfit1',
+      name: 'Outfit Transfer',
+      description: 'Generate professional headshots wearing your own outfit. Upload a photo of your clothing and get headshots matching that exact style.',
+      price: 0, // Free (included with signup)
+      audience: 'team',
+    } as PackageMetadata,
     freepackage: {
       id: 'freepackage',
       name: 'Free Package',
@@ -81,6 +88,7 @@ export const PACKAGES_CONFIG = {
   // Package purchase prices (for future purchases)
   prices: {
     headshot1: 0, // Free
+    outfit1: 0, // Free
     freepackage: 0, // Free
     tryitforfree: 0, // Free
     linkedin: 0, // Free

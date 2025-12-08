@@ -114,6 +114,7 @@ export async function GET() {
     const onboardingState = await getTeamOnboardingState({
       isTeamAdmin: roles.isTeamAdmin,
       teamId,
+      teamName,
       prefetchedMemberCount: typeof stats.teamMembers === 'number' ? stats.teamMembers : undefined
     })
     stats.pendingInvites = onboardingState.pendingInviteCount

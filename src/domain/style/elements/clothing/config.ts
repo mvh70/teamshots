@@ -57,9 +57,9 @@ export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, Wardrob
       notes: 'Pressed fabrics and polished appearance suitable for boardroom settings.'
     },
     casual: {
-      details: 'Smart business-casual outfit with relaxed tailoring. Do NOT add a tie or other accessories by default, only add them when specifically specified in the accessories section.',
-      baseLayer: 'premium knit top or blouse ideal for tasteful logo placement',
-      outerLayer: 'unstructured blazer worn open for an approachable look',
+      details: 'High-end business-casual ensemble with modern styling. Do NOT add a tie or other accessories by default, only add them when specifically specified in the accessories section.',
+      baseLayer: 'Fine-gauge merino wool crewneck sweater, fitted chest',
+      outerLayer: ' It appears to be a single-breasted jacket with a subtle herringbone weave, adding a classic and refined touch to the overall look.',
       notes: 'Maintain relaxed but refined posture.'
     },
     blouse: {

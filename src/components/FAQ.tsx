@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { BRAND_CONFIGS } from '@/config/brand';
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain';
 import { PRICING_CONFIG } from '@/config/pricing';
 import { calculatePhotosFromCredits, formatPrice } from '@/domain/pricing/utils';
 import type { LandingVariant } from '@/config/landing-content';
@@ -18,9 +16,11 @@ interface FAQItem {
 interface FAQProps {
   /** Landing page variant for domain-specific content (from server) */
   variant: LandingVariant;
+  /** Support email from server */
+  supportEmail: string;
 }
 
-export default function FAQ({ variant }: FAQProps) {
+export default function FAQ({ variant, supportEmail }: FAQProps) {
   // Use domain-specific translations for title/subtitle
   const tLanding = useTranslations(`landing.${variant}.faq`);
   // Use legacy translations for FAQ items (complex structure)
@@ -28,11 +28,6 @@ export default function FAQ({ variant }: FAQProps) {
   const [openItems, setOpenItems] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-
-  // Get brand config based on server-provided variant (no client-side detection)
-  const brand = variant === 'photoshotspro' 
-    ? BRAND_CONFIGS[INDIVIDUAL_DOMAIN] 
-    : BRAND_CONFIGS[TEAM_DOMAIN];
 
   // Derive signup type from server-provided variant (no client-side detection)
   const domainSignupType: 'individual' | 'team' | null = 
@@ -246,7 +241,7 @@ export default function FAQ({ variant }: FAQProps) {
             {t('stillHaveQuestions')}
           </p>
             <a
-              href={`mailto:${brand.contact.support}`}
+              href={`mailto:${supportEmail}`}
               className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white rounded-2xl hover:shadow-depth-lg transition-all duration-300 shadow-depth-md transform hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98]"
             >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -4,31 +4,36 @@ import { usePathname } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
-import { BRAND_CONFIGS } from '@/config/brand';
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain';
 import type { LandingVariant } from '@/config/landing-content';
 
 interface FooterProps {
-  /** Variant from server-side to avoid hydration mismatch */
+  /** Brand name from server */
+  brandName: string;
+  /** Brand logo URL from server (dark variant for dark background) */
+  brandLogo: string;
+  /** Brand contact emails from server */
+  brandContact: {
+    hello: string;
+    support: string;
+    privacy: string;
+    legal: string;
+  };
+  /** Variant for translations (from server) */
   variant?: LandingVariant;
 }
 
-export default function Footer({ variant = 'teamshotspro' }: FooterProps) {
+export default function Footer({ brandName, brandLogo, variant = 'teamshotspro' }: FooterProps) {
   const pathname = usePathname();
   const t = useTranslations('nav');
   
   // Get domain-specific footer translations using server-provided variant
   const tFooter = useTranslations(`landing.${variant}.footer`);
   
-  // Get brand config based on server-provided variant (no client-side detection)
-  const brand = variant === 'photoshotspro' 
-    ? BRAND_CONFIGS[INDIVIDUAL_DOMAIN] 
-    : BRAND_CONFIGS[TEAM_DOMAIN];
-  
-  // Don't show footer on app routes
+  // Don't show footer on app routes or mobile upload-selfie page
   const isAppRoute = pathname?.includes('/app/') || pathname?.includes('/auth/');
+  const isUploadSelfiePage = pathname?.includes('/upload-selfie/');
   
-  if (isAppRoute) {
+  if (isAppRoute || isUploadSelfiePage) {
     return null;
   }
 
@@ -39,8 +44,8 @@ export default function Footer({ variant = 'teamshotspro' }: FooterProps) {
           <div className="mb-6 flex justify-center">
             {/* Dark background footer uses the dark logo variant */}
             <Image
-              src={brand.logo.dark}
-              alt={brand.name}
+              src={brandLogo}
+              alt={brandName}
               width={150}
               height={40}
               className="opacity-90"
@@ -82,4 +87,3 @@ export default function Footer({ variant = 'teamshotspro' }: FooterProps) {
     </footer>
   );
 }
-

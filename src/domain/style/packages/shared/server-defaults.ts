@@ -122,7 +122,11 @@ export function ensureServerDefaults(
   if (packageConfig.defaultSettings.clothingColors) {
     result.clothingColors = packageConfig.defaultSettings.clothingColors
   }
-  
+
+  if (packageConfig.defaultSettings.customClothing) {
+    result.customClothing = packageConfig.defaultSettings.customClothing
+  }
+
   if (packageConfig.defaultSettings.expression) {
     result.expression = packageConfig.defaultSettings.expression
   }
@@ -160,6 +164,7 @@ export function mergeUserSettings(
     'branding': 'branding',
     'clothing': 'clothing',
     'clothingColors': 'clothingColors',
+    'customClothing': 'customClothing',
     'pose': 'pose',
     'expression': 'expression',
     'shotType': 'shotType',

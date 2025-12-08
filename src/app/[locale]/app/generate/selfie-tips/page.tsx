@@ -10,6 +10,8 @@ import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
 import Header from '@/app/[locale]/app/components/Header'
+import { useOnboardingState } from '@/lib/onborda/hooks'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
 /**
  * Selfie tips intro page for logged-in users.
@@ -26,6 +28,11 @@ export default function SelfieTipsPage() {
   const isMobile = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()
   const { markSeenSelfieTips, hydrated, customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META } = useGenerationFlowState()
+  const { context, updateContext } = useOnboardingState()
+  const [isSavingPreference, setIsSavingPreference] = useState(false)
+  const hasAutoSkippedRef = useRef(false)
+
+  const skipSelfieTips = context.hiddenScreens?.includes('selfie-tips')
 
   // Build step indicator for selfie tips (before selfie selection, so step 0)
   const selfieStepIndicator = buildSelfieStepIndicator(customizationStepsMeta, {
@@ -42,13 +49,42 @@ export default function SelfieTipsPage() {
       }
     : undefined
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     markSeenSelfieTips()
     router.push('/app/generate/selfie')
+  }, [markSeenSelfieTips, router])
+
+  const handleDontShow = async () => {
+    if (isSavingPreference) return
+    setIsSavingPreference(true)
+    try {
+      const response = await fetch('/api/onboarding/hide-screen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ screenName: 'selfie-tips' })
+      })
+      const data = await response.json().catch(() => ({}))
+      const updatedHiddenScreens = Array.from(
+        new Set([...(context.hiddenScreens || []), ...(data.hiddenScreens || ['selfie-tips'])])
+      )
+      updateContext({ hiddenScreens: updatedHiddenScreens })
+    } catch (error) {
+      console.error('[SelfieTipsPage] Failed to persist skip preference', error)
+    } finally {
+      setIsSavingPreference(false)
+      handleContinue()
+    }
   }
 
+  useEffect(() => {
+    if (!hydrated || !context._loaded || !skipSelfieTips || hasAutoSkippedRef.current) return
+    hasAutoSkippedRef.current = true
+    handleContinue()
+  }, [hydrated, context._loaded, skipSelfieTips, handleContinue])
+
   // Don't render until hydration completes to avoid flash
-  if (!hydrated) {
+  // Show nothing while loading or if we're about to auto-skip
+  if (!hydrated || !context._loaded || skipSelfieTips) {
     return null
   }
 
@@ -72,15 +108,18 @@ export default function SelfieTipsPage() {
           showBack: isMobile,
           onBack: handleBack
         }}
-        maxWidth="5xl"
+        maxWidth="full"
         background="white"
         bottomPadding={isMobile ? 'lg' : 'none'}
         fixedHeaderOnMobile
-        mobileHeaderSpacerHeight={120}
+        mobileHeaderSpacerHeight={80}
+        contentClassName="py-0 sm:py-6"
       >
-        <div className="py-8 md:py-12">
+        <div className="pt-6 md:pt-10">
           <SelfieTipsContent 
             variant="swipe"
+            onSkip={handleDontShow}
+            onContinue={handleContinue}
           />
         </div>
 

@@ -1,4 +1,5 @@
 import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 import type { Job } from 'bullmq'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import type { DownloadAssetFn, EvaluationFeedback } from '@/types/generation'
@@ -11,6 +12,22 @@ import { executeV3Step1b } from './steps/v3-step1b-background-generation'
 import { executeV3Step1bEval } from './steps/v3-step1b-background-eval'
 import { executeV3Step2 } from './steps/v3-step2-final-composition'
 import { executeV3Step3 } from './steps/v3-step3-final-eval'
+
+import { getVertexGenerativeModel } from './gemini'
+import type { Part } from '@google-cloud/vertexai'
+
+type LightingPrompt = {
+  scene?: { description?: string }
+  lighting?: { direction?: string }
+} & Record<string, unknown>
+
+// Import cost tracking types
+import type { CostReason, CostResult } from '@/domain/services/CostTrackingService'
+import type { AIModelId, AIProvider } from '@/config/ai-costs'
+
+// Import asset management services
+import { AssetService } from '@/domain/services/AssetService'
+import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
 
 // Import shared utilities
 import { 
@@ -29,6 +46,7 @@ import {
   logEvaluationResult,
   checkMaxAttemptsAndThrow
 } from './utils/evaluation-orchestrator'
+import { logStepStart } from './utils/logging'
 import { EvaluationFailedError } from './errors'
 import type { ImageEvaluationResult } from './evaluator'
 import { getProgressMessage } from '@/lib/generation-progress-messages'
@@ -37,17 +55,53 @@ import { buildBackgroundComposite } from '@/lib/generation/reference-utils'
 // Import configuration
 import { RETRY_CONFIG, PROGRESS_STEPS } from './config'
 
+/**
+ * Cost tracking context for workflow steps
+ */
+export interface CostTrackingContext {
+  teamId?: string
+  selfieAssetIds?: string[]
+  workflowVersion: string
+}
+
+/**
+ * Handler for tracking costs after each AI call
+ */
+export type CostTrackingHandler = (params: {
+  stepName: string
+  reason: CostReason
+  result: CostResult
+  model: AIModelId
+  provider?: AIProvider  // Actual provider used (vertex, gemini-rest, or replicate)
+  inputTokens?: number
+  outputTokens?: number
+  imagesGenerated?: number
+  durationMs?: number
+  errorMessage?: string
+  outputAssetId?: string
+  reusedAssetId?: string
+  // NEW: Evaluation outcome tracking
+  evaluationStatus?: 'approved' | 'rejected'
+  rejectionReason?: string
+  intermediateS3Key?: string
+}) => Promise<void>
+
 export interface V3WorkflowInput {
   job: Job
   generationId: string
   personId: string
   userId?: string
+  teamId?: string // For cost tracking
   selfieReferences: { label: string; base64: string; mimeType: string }[]
+  selfieAssetIds?: string[] // For fingerprinting and cost tracking
+  backgroundAssetId?: string // Background asset ID for fingerprinting
+  logoAssetId?: string // Logo asset ID for fingerprinting
   selfieComposite: ReferenceImage
   styleSettings: PhotoStyleSettings
   prompt: string // JSON only (no rules)
   mustFollowRules: string[] // Rules from elements
   freedomRules: string[] // Freedom rules from elements
+  referenceImages?: BaseReferenceImage[] // Pre-built reference images (e.g., garment collage from outfit1)
   aspectRatio: string
   resolution?: '1K' | '2K' | '4K'
   downloadAsset: DownloadAssetFn
@@ -58,6 +112,7 @@ export interface V3WorkflowInput {
   workflowState?: V3WorkflowState
   persistWorkflowState: (state: V3WorkflowState | undefined) => Promise<void>
   intermediateStorage: IntermediateStorageHandlers
+  onCostTracking?: CostTrackingHandler // Optional handler for cost tracking
 }
 
 export interface V3WorkflowResult {
@@ -72,6 +127,76 @@ interface IntermediateStorageHandlers {
   loadBuffer: (reference: PersistedImageReference) => Promise<Buffer>
 }
 
+
+/**
+ * Helper to analyze lighting from an image using Gemini
+ */
+async function analyzeLightingFromImage(imageBuffer: Buffer): Promise<string> {
+  try {
+    // Use a fast multimodal model for analysis
+    const modelName = Env.string('GEMINI_IMAGE_MODEL', 'gemini-1.5-flash-002')
+    const model = await getVertexGenerativeModel(modelName)
+    
+    const parts: Part[] = [
+      { text: "Analyze the lighting in this image. Is the primary light source coming from the left, right, top, or is it soft/dispersed? Return ONLY a short phrase describing the lighting direction (e.g., 'lighting coming from the left', 'soft dispersed lighting'). Do not include any other text." },
+      { inlineData: { mimeType: 'image/png', data: imageBuffer.toString('base64') } }
+    ]
+    
+    const result = await model.generateContent({ contents: [{ role: 'user', parts }] })
+    const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    return text.trim() || 'soft dispersed lighting'
+  } catch (error) {
+    Logger.warn('Failed to analyze lighting from image', { error })
+    return 'soft dispersed lighting' // Fallback
+  }
+}
+
+/**
+ * Helper to determine lighting direction based on background type
+ */
+async function determineLighting(
+  styleSettings: PhotoStyleSettings,
+  promptObj: LightingPrompt,
+  downloadAsset: DownloadAssetFn,
+  generationId: string
+): Promise<string> {
+  // 1. Custom Background: Analyze the image
+  if (styleSettings.background?.type === 'custom' && styleSettings.background.key) {
+    try {
+      const asset = await downloadAsset(styleSettings.background.key)
+      if (asset) {
+        const buffer = Buffer.from(asset.base64, 'base64')
+        const direction = await analyzeLightingFromImage(buffer)
+        Logger.debug('V3: Analyzed custom background lighting', { generationId, direction })
+        return direction
+      }
+    } catch (e) {
+      Logger.warn('V3: Failed to download custom background for lighting analysis', {
+        generationId,
+        error: e instanceof Error ? e.message : String(e)
+      })
+    }
+  }
+
+  // 2. Generated Background Logic
+  const sceneDesc = (promptObj.scene?.description || '').toLowerCase()
+  const bgType = (styleSettings.background?.type || '').toLowerCase()
+  
+  // Outdoor / Nature
+  if (bgType === 'outdoor' || sceneDesc.includes('outdoor') || sceneDesc.includes('outside') || sceneDesc.includes('park') || sceneDesc.includes('nature') || sceneDesc.includes('sky')) {
+    return 'soft dispersed natural lighting'
+  }
+  
+  // Office / Indoor with Window
+  if (bgType === 'office' || sceneDesc.includes('office') || sceneDesc.includes('indoor') || sceneDesc.includes('window')) {
+    const side = Math.random() > 0.5 ? 'left' : 'right'
+    return `natural window light coming from the ${side}`
+  }
+  
+  // Default (Studio / Neutral / Gradient / Other)
+  const side = Math.random() > 0.5 ? 'left' : 'right'
+  return `soft studio lighting coming from the ${side}`
+}
 
 /**
  * Step 1a: Generate person with retry on evaluation rejection
@@ -89,10 +214,16 @@ async function generatePersonWithRetry({
   prompt,
   mustFollowRules,
   freedomRules,
+  referenceImages,
   generationId,
+  personId,
+  teamId,
+  selfieAssetIds,
+  onCostTracking,
   debugMode,
   stopAfterStep,
-  formatProgress
+  formatProgress,
+  intermediateStorage
 }: {
   job: Job
   processedSelfieReferences: ReferenceImage[]
@@ -106,20 +237,26 @@ async function generatePersonWithRetry({
   prompt: string
   mustFollowRules: string[]
   freedomRules: string[]
+  referenceImages?: BaseReferenceImage[]
   generationId: string
+  personId: string
+  teamId?: string
+  selfieAssetIds?: string[]
+  onCostTracking?: CostTrackingHandler
   debugMode: boolean
   stopAfterStep?: number
   formatProgress: (message: { message: string; emoji?: string }, progress: number) => string
-}): Promise<{ imageBuffer: Buffer; imageBase64: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; evaluatorComments: string[] } | undefined> {
-  let step1Output: { imageBuffer: Buffer; imageBase64: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage } | undefined
+  intermediateStorage: IntermediateStorageHandlers
+}): Promise<{ imageBuffer: Buffer; imageBase64: string; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; evaluatorComments: string[]; reused?: boolean } | undefined> {
+  let step1Output: { imageBuffer: Buffer; imageBase64: string; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; reused?: boolean } | undefined
   let evaluationFeedback: EvaluationFeedback | undefined
   const evaluatorComments: string[] = []
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     if (attempt === 1) {
-      Logger.info('>>> STARTING V3 STEP 1a: Generating person on white background <<<')
+      logStepStart('V3 Step 1a: Generating person on grey background', generationId)
     }
-    Logger.info('V3 Step 1a: Generating person on white background', { attempt, max: 3 })
+    Logger.debug('V3 Step 1a: Generating person on grey background', { attempt, max: 3 })
 
     await updateJobProgress(job, PROGRESS_STEPS.V3_GENERATING_PERSON, formatProgress(getProgressMessage('v3-generating-person'), PROGRESS_STEPS.V3_GENERATING_PERSON))
 
@@ -138,7 +275,12 @@ async function generatePersonWithRetry({
           prompt,
           mustFollowRules,
           freedomRules,
+          referenceImages, // Pre-built references from package (e.g., outfit collage)
           generationId: `v3-step1a-${Date.now()}`,
+          personId,
+          teamId,
+          selfieAssetIds,
+          onCostTracking,
           debugMode,
           evaluationFeedback
         })
@@ -152,7 +294,7 @@ async function generatePersonWithRetry({
     )
 
     step1Output = currentStep1Output
-    await saveIntermediateFile(step1Output.imageBuffer, 'v3-step1a-person-white-bg', generationId, debugMode)
+    await saveIntermediateFile(step1Output.imageBuffer, 'v3-step1a-person-grey-bg', generationId, debugMode)
 
     if (stopAfterStep === 1) {
       Logger.info('V3: Stopping after Step 1a (person generation complete)', {
@@ -164,11 +306,20 @@ async function generatePersonWithRetry({
 
     // Evaluate
     if (attempt === 1) {
-      Logger.info('>>> STARTING V3 STEP 1a EVAL: Evaluating person <<<')
+      logStepStart('V3 Step 1a Eval: Evaluating person', generationId)
     }
     await updateJobProgress(job, PROGRESS_STEPS.V3_EVALUATING_PERSON, formatProgress({ message: 'Evaluating quality...', emoji: '🔍' }, PROGRESS_STEPS.V3_EVALUATING_PERSON))
 
-    Logger.info('V3 Step 1a Eval: Evaluating person', { attempt })
+    Logger.debug('V3 Step 1a Eval: Evaluating person', { attempt })
+
+    // Upload to S3 for evaluation tracking (gets S3 key for cost tracking)
+    const intermediateS3Upload = (selfieAssetIds && selfieAssetIds.length > 0)
+      ? await intermediateStorage.saveBuffer(step1Output.imageBuffer, {
+          fileName: `step1a-person-eval-${attempt}-${Date.now()}.png`,
+          description: `V3 Step 1a person eval attempt ${attempt}`,
+          mimeType: 'image/png'
+        })
+      : undefined
 
     const step2Output = await executeWithRateLimitRetry(
       async () => {
@@ -181,7 +332,12 @@ async function generatePersonWithRetry({
           expectedHeight,
           aspectRatioConfig,
           generationPrompt: prompt,
-          clothingLogoReference: step1Output!.clothingLogoReference
+          clothingLogoReference: step1Output!.clothingLogoReference,
+          generationId,
+          personId,
+          teamId,
+          intermediateS3Key: intermediateS3Upload?.key,
+          onCostTracking,
         })
       },
       {
@@ -228,9 +384,15 @@ async function generateBackgroundWithRetry({
   aspectRatio,
   prompt,
   generationId,
+  personId,
+  teamId,
+  backgroundAssetId,
+  logoAssetId,
+  onCostTracking,
   debugMode,
   formatProgress,
-  backgroundComposite
+  backgroundComposite,
+  intermediateStorage
 }: {
   job: Job
   styleSettings: PhotoStyleSettings
@@ -238,10 +400,16 @@ async function generateBackgroundWithRetry({
   aspectRatio: string
   prompt: string
   generationId: string
+  personId: string
+  teamId?: string
+  backgroundAssetId?: string
+  logoAssetId?: string
+  onCostTracking?: CostTrackingHandler
   debugMode: boolean
   formatProgress: (message: { message: string; emoji?: string }, progress: number) => string
   backgroundComposite?: BaseReferenceImage
-}): Promise<{ backgroundBuffer: Buffer; backgroundBase64: string; backgroundLogoReference: BaseReferenceImage; evaluatorComments: string[]; compositeReference?: BaseReferenceImage } | undefined> {
+  intermediateStorage: IntermediateStorageHandlers
+}): Promise<{ backgroundBuffer: Buffer; backgroundBase64: string; assetId?: string; backgroundLogoReference: BaseReferenceImage; evaluatorComments: string[]; compositeReference?: BaseReferenceImage; reused?: boolean } | undefined> {
   // Check if Step 1b should run
   const shouldRunStep1b = styleSettings.branding?.type === 'include' && 
                           styleSettings.branding?.position &&
@@ -315,9 +483,9 @@ async function generateBackgroundWithRetry({
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     if (attempt === 1) {
-      Logger.info('>>> STARTING V3 STEP 1b: Generating background with branding <<<')
+      logStepStart('V3 Step 1b: Generating background with branding', generationId)
     }
-    Logger.info('V3 Step 1b: Generating background with branding', { attempt, max: 3 })
+    Logger.debug('V3 Step 1b: Generating background with branding', { attempt, max: 3 })
 
     await updateJobProgress(job, PROGRESS_STEPS.V3_GENERATING_BACKGROUND, formatProgress(getProgressMessage('v3-generating-background'), PROGRESS_STEPS.V3_GENERATING_BACKGROUND))
 
@@ -330,6 +498,12 @@ async function generateBackgroundWithRetry({
           customBackgroundReference,
           aspectRatio,
           generationId: `v3-step1b-${Date.now()}`,
+          personId,
+          teamId,
+          styleSettings,
+          backgroundAssetId,
+          logoAssetId,
+          onCostTracking,
           debugMode,
           backgroundComposite: cachedComposite
         })
@@ -346,11 +520,20 @@ async function generateBackgroundWithRetry({
 
     // Evaluate
     if (attempt === 1) {
-      Logger.info('>>> STARTING V3 STEP 1b EVAL: Evaluating background <<<')
+      logStepStart('V3 Step 1b Eval: Evaluating background', generationId)
     }
     await updateJobProgress(job, PROGRESS_STEPS.V3_EVALUATING_BACKGROUND, formatProgress({ message: 'Checking background quality...', emoji: '🔍' }, PROGRESS_STEPS.V3_EVALUATING_BACKGROUND))
 
-    Logger.info('V3 Step 1b Eval: Evaluating background', { attempt })
+    Logger.debug('V3 Step 1b Eval: Evaluating background', { attempt })
+
+    // Upload to S3 for evaluation tracking (gets S3 key for cost tracking)
+    const intermediateS3Upload = (backgroundAssetId || logoAssetId)
+      ? await intermediateStorage.saveBuffer(step1bOutput.backgroundBuffer, {
+          fileName: `step1b-background-eval-${attempt}-${Date.now()}.png`,
+          description: `V3 Step 1b background eval attempt ${attempt}`,
+          mimeType: 'image/png'
+        })
+      : undefined
 
     const evalOutput = await executeWithRateLimitRetry(
       async () => {
@@ -358,7 +541,11 @@ async function generateBackgroundWithRetry({
           backgroundBuffer: step1bOutput.backgroundBuffer,
           backgroundBase64: step1bOutput.backgroundBase64,
           logoReference: brandingLogoReference,
-          generationId: `v3-step1b-eval-${Date.now()}`
+          generationId: `v3-step1b-eval-${Date.now()}`,
+          personId,
+          teamId,
+          intermediateS3Key: intermediateS3Upload?.key,
+          onCostTracking,
         })
       },
       {
@@ -402,12 +589,19 @@ async function generateBackgroundWithRetry({
 export async function executeV3Workflow({
   job,
   generationId,
+  personId,
+  userId,
+  teamId,
   selfieReferences,
+  selfieAssetIds,
+  backgroundAssetId,
+  logoAssetId,
   selfieComposite,
   styleSettings,
   prompt,
   mustFollowRules,
   freedomRules,
+  referenceImages,
   aspectRatio,
   resolution,
   downloadAsset,
@@ -416,8 +610,10 @@ export async function executeV3Workflow({
   stopAfterStep,
   workflowState,
   persistWorkflowState,
-  intermediateStorage
+  intermediateStorage,
+  onCostTracking
 }: V3WorkflowInput): Promise<V3WorkflowResult> {
+  Logger.debug('V3 workflow start', { generationId, personId, userId, teamId })
   // Get expected dimensions from aspect ratio
   const aspectRatioConfig = resolveAspectRatioConfig(aspectRatio)
   const expectedWidth = aspectRatioConfig.width
@@ -426,6 +622,30 @@ export async function executeV3Workflow({
   // Selfie rotation is already normalized in generateImage.ts before PNG conversion
   // No need to normalize again here
   const processedSelfieReferences = selfieReferences
+
+  // Determine and inject consistent lighting direction
+  try {
+    const promptObj = JSON.parse(prompt) as LightingPrompt
+    if (!promptObj.lighting) {
+      promptObj.lighting = {}
+    }
+    
+    // Only determine if not explicitly provided
+    if (!promptObj.lighting.direction) {
+      const direction = await determineLighting(styleSettings, promptObj, downloadAsset, generationId)
+      promptObj.lighting.direction = direction
+      
+      // Update prompt string with injected lighting
+      prompt = JSON.stringify(promptObj)
+      Logger.debug('V3: Injected consistent lighting direction', { generationId, direction })
+    }
+  } catch (error) {
+    Logger.warn('V3: Failed to parse/inject lighting into prompt', { 
+      generationId, 
+      error: error instanceof Error ? error.message : String(error)
+    })
+    // Continue with original prompt if parsing fails
+  }
 
   let state = workflowState
 
@@ -530,10 +750,16 @@ export async function executeV3Workflow({
       prompt,
       mustFollowRules,
       freedomRules,
+      referenceImages,
       generationId,
+      personId,
+      teamId,
+      selfieAssetIds,
+      onCostTracking,
       debugMode,
       stopAfterStep,
-      formatProgress
+      formatProgress,
+      intermediateStorage
     })
 
     if (!generatedOutput) {
@@ -546,6 +772,58 @@ export async function executeV3Workflow({
       mimeType: 'image/png'
     })
 
+    // Create Asset for person-on-white intermediate (if not reused)
+    let personAssetId: string | undefined = generatedOutput.assetId
+    if (!generatedOutput.reused && selfieAssetIds && selfieAssetIds.length > 0) {
+      try {
+        const personAsset = await AssetService.createAsset({
+          s3Key: personImage.key,
+          type: 'intermediate',
+          subType: 'person_on_grey',
+          mimeType: 'image/png',
+          ownerType: teamId ? 'team' : 'person',
+          teamId: teamId,
+          personId: personId,
+          parentAssetIds: selfieAssetIds,
+          temporary: false, // Mark as permanent so it can be reused via fingerprinting
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days (for cleanup, but asset is reusable)
+        })
+
+        // Create and set fingerprint for future reuse
+        const styleParams = StyleFingerprintService.extractFromStyleSettings(styleSettings as Record<string, unknown>)
+        const fingerprint = StyleFingerprintService.createPersonFingerprint(
+          selfieAssetIds,
+          {
+            aspectRatio: aspectRatio,
+            expression: styleParams.expression,
+            pose: styleParams.pose,
+            shotType: styleParams.shotType,
+            clothingType: styleParams.clothingType,
+            clothingColor: styleParams.clothingColor,
+            lighting: styleParams.lighting,
+          }
+        )
+
+        await AssetService.updateFingerprint(personAsset.id, fingerprint, {
+          ...styleParams,
+          step: 'person_on_grey',
+        })
+
+        personAssetId = personAsset.id
+
+        Logger.info('V3 Step 1a: Created Asset for person-on-grey intermediate', {
+          assetId: personAsset.id,
+          fingerprint,
+          generationId,
+        })
+      } catch (error) {
+        Logger.warn('V3 Step 1a: Failed to create asset for intermediate', {
+          error: error instanceof Error ? error.message : String(error),
+          generationId,
+        })
+      }
+    }
+
     const backgroundImage = generatedOutput.backgroundBuffer
       ? await intermediateStorage.saveBuffer(generatedOutput.backgroundBuffer, {
           fileName: `step1a-background-${Date.now()}.png`,
@@ -557,6 +835,7 @@ export async function executeV3Workflow({
     const patch: V3WorkflowState = {
       step1a: {
         personImage,
+        personAssetId,
         backgroundImage,
         clothingLogoReference: generatedOutput.clothingLogoReference,
         backgroundLogoReference: generatedOutput.backgroundLogoReference,
@@ -617,8 +896,14 @@ export async function executeV3Workflow({
       aspectRatio,
       prompt,
       generationId,
+      personId,
+      teamId,
+      backgroundAssetId,
+      logoAssetId,
+      onCostTracking,
       debugMode,
-      formatProgress
+      formatProgress,
+      intermediateStorage
       // Don't pass cached composite - let it rebuild fresh to ensure branding is included
     })
 
@@ -632,9 +917,61 @@ export async function executeV3Workflow({
       mimeType: 'image/png'
     })
 
+    // Create Asset for background-with-branding intermediate (if not reused)
+    let backgroundAssetIdResult: string | undefined = generatedOutput.assetId
+    if (!generatedOutput.reused && (backgroundAssetId || logoAssetId)) {
+      try {
+        const bgAsset = await AssetService.createAsset({
+          s3Key: backgroundImage.key,
+          type: 'intermediate',
+          subType: 'background_with_branding',
+          mimeType: 'image/png',
+          ownerType: teamId ? 'team' : 'person',
+          teamId: teamId,
+          personId: personId,
+          parentAssetIds: [backgroundAssetId, logoAssetId].filter((id): id is string => !!id),
+          temporary: false, // Mark as permanent so it can be reused via fingerprinting
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days (for cleanup, but asset is reusable)
+        })
+
+        // Create and set fingerprint for future reuse
+        const styleParams = StyleFingerprintService.extractFromStyleSettings(styleSettings as Record<string, unknown>)
+        const fingerprint = StyleFingerprintService.createBackgroundFingerprint(
+          backgroundAssetId || null,
+          logoAssetId || null,
+          {
+            backgroundType: styleParams.backgroundType,
+            backgroundColor: styleParams.backgroundColor,
+            backgroundGradient: styleParams.backgroundGradient,
+            brandingPosition: styleParams.brandingPosition,
+            aspectRatio: aspectRatio,
+          }
+        )
+
+        await AssetService.updateFingerprint(bgAsset.id, fingerprint, {
+          ...styleParams,
+          step: 'background_with_branding',
+        })
+
+        backgroundAssetIdResult = bgAsset.id
+
+        Logger.info('V3 Step 1b: Created Asset for background-with-branding intermediate', {
+          assetId: bgAsset.id,
+          fingerprint,
+          generationId,
+        })
+      } catch (error) {
+        Logger.warn('V3 Step 1b: Failed to create asset for intermediate', {
+          error: error instanceof Error ? error.message : String(error),
+          generationId,
+        })
+      }
+    }
+
       const patch: V3WorkflowState = {
         step1b: {
           backgroundImage,
+          backgroundAssetId: backgroundAssetIdResult,
           backgroundLogoReference: generatedOutput.backgroundLogoReference,
           evaluatorComments: generatedOutput.evaluatorComments
         }
@@ -664,25 +1001,14 @@ export async function executeV3Workflow({
 
   const [step1aResult, step1bResult] = await Promise.allSettled([step1aPromise, step1bPromise])
 
-  if (step1aResult.status === 'rejected') {
-    Logger.error('V3 Step 1a failed', { error: step1aResult.reason })
-    throw step1aResult.reason
-  }
-
-  const step1aOutput = step1aResult.value.output
-  if (!step1aOutput) {
-    throw new Error('V3 Step 1a: No output generated')
-  }
-
-  if (step1aResult.value.statePatch) {
-    await persistStatePatch(step1aResult.value.statePatch)
-  }
-
+  // IMPORTANT: Always persist Step 1b state first, even if Step 1a failed
+  // This allows Step 1b results to be cached and reused on retry
   let step1bOutput: Awaited<ReturnType<typeof generateBackgroundWithRetry>> | undefined
   if (step1bResult.status === 'fulfilled') {
     step1bOutput = step1bResult.value.output
     if (step1bResult.value.statePatch) {
       await persistStatePatch(step1bResult.value.statePatch)
+      Logger.info('V3 Step 1b: State persisted for reuse on retry', { generationId })
     }
 
     if (step1bOutput) {
@@ -695,6 +1021,25 @@ export async function executeV3Workflow({
       error: step1bResult.reason,
       generationId
     })
+  }
+
+  // Now check Step 1a and throw error if it failed (after Step 1b state is saved)
+  if (step1aResult.status === 'rejected') {
+    Logger.error('V3 Step 1a failed - Step 1b state saved for reuse on retry', {
+      error: step1aResult.reason,
+      step1bCached: !!step1bResult.value?.statePatch,
+      generationId
+    })
+    throw step1aResult.reason
+  }
+
+  const step1aOutput = step1aResult.value.output
+  if (!step1aOutput) {
+    throw new Error('V3 Step 1a: No output generated')
+  }
+
+  if (step1aResult.value.statePatch) {
+    await persistStatePatch(step1aResult.value.statePatch)
   }
 
   Logger.info('V3: Step 1 phases completed', {
@@ -715,10 +1060,10 @@ export async function executeV3Workflow({
   const faceCompositeReference = step1aOutput.selfieComposite
 
   // STEP 2: Composition and Refinement
-  Logger.info('>>> STARTING V3 STEP 2: Compositing and refining <<<')
+  logStepStart('V3 Step 2: Compositing and refining', generationId)
   await updateJobProgress(job, PROGRESS_STEPS.V3_COMPOSITING, formatProgress(getProgressMessage('v3-compositing'), PROGRESS_STEPS.V3_COMPOSITING))
 
-  Logger.info('V3 Step 2: Compositing and refining')
+  Logger.debug('V3 Step 2: Compositing and refining')
 
   const step2Output = await executeWithRateLimitRetry(
     () => executeV3Step2(
@@ -730,7 +1075,11 @@ export async function executeV3Workflow({
         evaluatorComments: allEvaluatorComments.length > 0 ? allEvaluatorComments : undefined,
         aspectRatio,
         resolution,
-        originalPrompt: prompt
+        originalPrompt: prompt,
+        generationId,
+        personId,
+        teamId,
+        onCostTracking,
       },
       debugMode
     ),
@@ -750,10 +1099,17 @@ export async function executeV3Workflow({
   }
 
   // STEP 3: Final evaluation
-  Logger.info('>>> STARTING V3 STEP 3: Final evaluation <<<')
+  logStepStart('V3 Step 3: Final evaluation', generationId)
   await updateJobProgress(job, PROGRESS_STEPS.V3_FINAL_EVAL, formatProgress({ message: 'Final quality check...', emoji: '🎯' }, PROGRESS_STEPS.V3_FINAL_EVAL))
 
-  Logger.info('V3 Step 3: Final evaluation')
+  Logger.debug('V3 Step 3: Final evaluation')
+
+  // Upload to S3 for evaluation tracking (gets S3 key for cost tracking)
+  const step3IntermediateS3Upload = await intermediateStorage.saveBuffer(step2Output.refinedBuffer, {
+    fileName: `step3-final-eval-${Date.now()}.png`,
+    description: 'V3 Step 3 final composition for evaluation',
+    mimeType: 'image/png'
+  })
 
   const step3Output = await executeWithRateLimitRetry(
     async () => {
@@ -765,7 +1121,12 @@ export async function executeV3Workflow({
         expectedHeight,
         aspectRatio,
         logoReference: step1bOutput?.backgroundLogoReference || step1aOutput.backgroundLogoReference,
-        generationPrompt: prompt
+        generationPrompt: prompt,
+        generationId,
+        personId,
+        teamId,
+        intermediateS3Key: step3IntermediateS3Upload.key,
+        onCostTracking,
       }, debugMode)
     },
     {

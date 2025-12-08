@@ -8,7 +8,6 @@ import { SwipeableContainer, FlowNavigation } from '@/components/generation/navi
 import { LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import dynamic from 'next/dynamic'
-import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
 import { StickyFlowPage } from '@/components/generation/layout'
 import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
@@ -17,6 +16,8 @@ import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
 import SharedMobileSelfieFlow from '@/components/generation/selfie/SharedMobileSelfieFlow'
 import Header from '@/app/[locale]/app/components/Header'
+import { QRPlaceholder } from '@/components/MobileHandoff'
+import SelfieInfoOverlayTrigger from '@/components/generation/SelfieInfoOverlayTrigger'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -38,6 +39,11 @@ function SelfieSelectionPageContent() {
   
   
   const uploadErrorHandler = useCallback((error: string) => {
+    // Don't show alert for camera errors - PhotoUpload handles those with a modal
+    if (error.includes('Camera') || error.includes('camera')) {
+      console.log('Camera error handled by PhotoUpload modal:', error)
+      return
+    }
     console.error('Selfie upload error:', error)
     alert(`Error: ${error}`)
   }, [])
@@ -57,7 +63,7 @@ function SelfieSelectionPageContent() {
     throw new Error('Selfie selection page requires individual selfie management mode')
   }
 
-  const { uploads, selectedIds, loading, loadSelected, handleSelfiesApproved } = selfieManager
+  const { uploads, selectedIds, loading, loadSelected, loadUploads, handleSelfiesApproved } = selfieManager
   
   // Type assertion: in individual mode, uploads is always UploadListItem[]
   type UploadListItem = { id: string; uploadedKey: string; createdAt: string; hasGenerations: boolean }
@@ -73,13 +79,16 @@ function SelfieSelectionPageContent() {
 
   // Use a ref to prevent infinite loops
   const isLoadingRef = useRef(false)
-  const handleSelectionChange = useCallback(() => {
+  const handleSelectionChange = useCallback(async () => {
     // Only reload if not already loading
-    if (!isLoadingRef.current) {
-      isLoadingRef.current = true
-      loadSelected().finally(() => {
-        isLoadingRef.current = false
-      })
+    if (isLoadingRef.current) return
+
+    isLoadingRef.current = true
+    try {
+      await loadSelected()
+    } finally {
+      // Always reset flag even if error occurs
+      isLoadingRef.current = false
     }
   }, [loadSelected])
 
@@ -132,7 +141,17 @@ function SelfieSelectionPageContent() {
     upload: {
       onSelfiesApproved: handleSelfiesApproved,
       onError: uploadErrorHandler
-    }
+    },
+    qrTile: (
+      <QRPlaceholder
+        size={100}
+        className="w-full h-full"
+        onSelfieUploaded={async () => {
+          await loadUploads()
+          await loadSelected()
+        }}
+      />
+    )
   }
 
   const navigationControls = (
@@ -219,7 +238,11 @@ function SelfieSelectionPageContent() {
             {isMobile ? (
               <SharedMobileSelfieFlow
                 canContinue={canContinue}
-                infoBanner={<SelfieSelectionInfoBanner selectedCount={selectedCount} className="flex-1 mb-0" />}
+                infoBanner={
+                  <div className="flex-1">
+                    <SelfieInfoOverlayTrigger dense className="w-full" />
+                  </div>
+                }
                 grid={<SelectableGrid {...selectableGridProps} />}
                 navigation={navigationControls}
                 uploadSection={mobileUploadSection}
@@ -228,7 +251,7 @@ function SelfieSelectionPageContent() {
             ) : (
               <div className="px-4 sm:px-6 lg:px-8 py-8">
                 <div className="mb-4">
-                  <SelfieSelectionInfoBanner selectedCount={selectedCount} />
+                  <SelfieInfoOverlayTrigger />
                 </div>
                 <SelectableGrid {...selectableGridProps} />
                 <div className="mt-8 pb-8">

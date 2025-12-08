@@ -99,12 +99,51 @@ export interface GenerationOptions {
   topP?: number
   seed?: number
   safetySettings?: SafetySetting[]
+  /**
+   * Preferred provider for this generation.
+   * If not available or fails, will fall back to other providers.
+   * Use for load balancing: e.g., Step 1a -> 'vertex', Step 1b -> 'openrouter'
+   */
+  preferredProvider?: 'openrouter' | 'vertex' | 'rest' | 'replicate'
+}
+
+/**
+ * Usage metadata returned from generation calls
+ */
+export interface GeminiUsageMetadata {
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  imagesGenerated: number
+  durationMs: number
+}
+
+/**
+ * Internal result type (without provider info)
+ */
+interface GeminiGenerationResultInternal {
+  images: Buffer[]
+  usage: GeminiUsageMetadata
+}
+
+/**
+ * Result of a generation call with usage metadata
+ */
+export interface GeminiGenerationResult extends GeminiGenerationResultInternal {
+  providerUsed: 'vertex' | 'gemini-rest' | 'replicate' | 'openrouter'  // Track which provider actually succeeded
 }
 
 /**
  * Provider types for Gemini image generation
  */
-type GeminiProvider = 'vertex' | 'rest' | 'replicate'
+type GeminiProvider = 'vertex' | 'rest' | 'replicate' | 'openrouter'
+
+/**
+ * Normalize provider names to the values we persist in cost tracking
+ */
+function normalizeProvider(provider: GeminiProvider): 'vertex' | 'gemini-rest' | 'replicate' | 'openrouter' {
+  return provider === 'rest' ? 'gemini-rest' : provider
+}
 
 /**
  * Convert Vertex AI safety settings to REST API format
@@ -125,27 +164,34 @@ function convertToRestOptions(options?: GenerationOptions) {
 
 /**
  * Build the ordered list of providers to try based on configuration and available credentials
+ * @param preferredProvider Optional provider to prioritize first (for load balancing)
  */
-function buildProviderOrder(): GeminiProvider[] {
+function buildProviderOrder(preferredProvider?: GeminiProvider): GeminiProvider[] {
   const hasApiKey = !!Env.string('GOOGLE_CLOUD_API_KEY', '')
   // GOOGLE_APPLICATION_CREDENTIALS JSON file contains project_id, so we only need to check for that
   const hasServiceAccount = !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', '')
   const hasReplicate = !!Env.string('REPLICATE_API_TOKEN', '')
-  
-  // Determine primary provider (configurable via env var)
-  const primaryProvider = Env.string('GEMINI_PRIMARY_PROVIDER', 'vertex') as GeminiProvider
+  const hasOpenRouter = !!Env.string('OPENROUTER_API_KEY', '')
+
+  // Use preferred provider if specified, otherwise use env var default
+  const primaryProvider = preferredProvider ?? (Env.string('GEMINI_PRIMARY_PROVIDER', 'openrouter') as GeminiProvider)
   const providers: GeminiProvider[] = []
-  
+
   // Add primary provider first if available
-  if (primaryProvider === 'vertex' && hasServiceAccount) {
+  if (primaryProvider === 'openrouter' && hasOpenRouter) {
+    providers.push('openrouter')
+  } else if (primaryProvider === 'vertex' && hasServiceAccount) {
     providers.push('vertex')
   } else if (primaryProvider === 'rest' && hasApiKey) {
     providers.push('rest')
   } else if (primaryProvider === 'replicate' && hasReplicate) {
     providers.push('replicate')
   }
-  
+
   // Add remaining providers as fallbacks (in order of preference)
+  if (!providers.includes('openrouter') && hasOpenRouter) {
+    providers.push('openrouter')
+  }
   if (!providers.includes('vertex') && hasServiceAccount) {
     providers.push('vertex')
   }
@@ -155,7 +201,7 @@ function buildProviderOrder(): GeminiProvider[] {
   if (!providers.includes('replicate') && hasReplicate) {
     providers.push('replicate')
   }
-  
+
   return providers
 }
 
@@ -165,21 +211,26 @@ export async function generateWithGemini(
   aspectRatio?: string,
   resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
-): Promise<Buffer[]> {
-  const providers = buildProviderOrder()
-  
+): Promise<GeminiGenerationResult> {
+  // Use preferred provider if specified, otherwise use default order
+  const providers = options?.preferredProvider
+    ? buildProviderOrder(options.preferredProvider)
+    : buildProviderOrder()
+
   if (providers.length === 0) {
     throw new Error(
       'No Gemini API credentials configured. Need one of: ' +
+      'OPENROUTER_API_KEY (for OpenRouter), ' +
       'GOOGLE_CLOUD_API_KEY (for AI Studio REST), ' +
       'GOOGLE_APPLICATION_CREDENTIALS (for Vertex AI - project_id is in the JSON), ' +
       'or REPLICATE_API_TOKEN (for Replicate)'
     )
   }
-  
+
   Logger.debug('Gemini providers configured', {
     providers,
     primaryProvider: providers[0],
+    preferredProvider: options?.preferredProvider,
     fallbackCount: providers.length - 1
   })
   
@@ -188,21 +239,34 @@ export async function generateWithGemini(
   for (let i = 0; i < providers.length; i++) {
     const provider = providers[i]
     const isLastProvider = i === providers.length - 1
+    const providerUsed = normalizeProvider(provider)
     
     try {
       if (provider === 'vertex') {
         Logger.debug(`Using Vertex AI client (provider ${i + 1}/${providers.length})`)
-        return await generateWithGeminiVertex(prompt, images, aspectRatio, resolution, options)
+        const result = await generateWithGeminiVertex(prompt, images, aspectRatio, resolution, options)
+        return { ...result, providerUsed: 'vertex' }
       } else if (provider === 'rest') {
         Logger.debug(`Using Gemini REST API client (provider ${i + 1}/${providers.length})`)
-        return await generateWithGeminiRest(prompt, images, aspectRatio, resolution, convertToRestOptions(options))
+        const result = await generateWithGeminiRest(prompt, images, aspectRatio, resolution, convertToRestOptions(options))
+        return { ...result, providerUsed: 'gemini-rest' }
       } else if (provider === 'replicate') {
         Logger.debug(`Using Replicate API client (provider ${i + 1}/${providers.length})`)
-        // Replicate integration will be added in Phase 2
         const { generateWithGeminiReplicate } = await import('./gemini-replicate')
-        return await generateWithGeminiReplicate(prompt, images, aspectRatio, resolution)
+        const result = await generateWithGeminiReplicate(prompt, images, aspectRatio, resolution)
+        return { ...result, providerUsed: 'replicate' }
+      } else if (provider === 'openrouter') {
+        Logger.debug(`Using OpenRouter API client (provider ${i + 1}/${providers.length})`)
+        const { generateWithGeminiOpenRouter } = await import('./gemini-openrouter')
+        const result = await generateWithGeminiOpenRouter(prompt, images, aspectRatio, resolution, options)
+        return { ...result, providerUsed: 'openrouter' }
       }
     } catch (error) {
+      // Attach the attempted provider so failure tracking can log it correctly
+      if (error && typeof error === 'object') {
+        ;(error as { providerUsed?: 'vertex' | 'gemini-rest' | 'replicate' }).providerUsed = providerUsed
+      }
+
       lastError = error
       const rateLimited = isRateLimitError(error)
       
@@ -231,7 +295,8 @@ async function generateWithGeminiVertex(
   aspectRatio?: string,
   resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
-): Promise<Buffer[]> {
+): Promise<GeminiGenerationResultInternal> {
+  const startTime = Date.now()
   // Validate images before sending
   if (!images || images.length === 0) {
     Logger.error('generateWithGeminiVertex: No reference images provided!', {
@@ -303,6 +368,7 @@ async function generateWithGeminiVertex(
     imageConfig?: {
       aspectRatio?: string
       imageSize?: '1K' | '2K' | '4K'
+      denoisingStrength?: number
     }
   } = {}
   
@@ -368,7 +434,10 @@ async function generateWithGeminiVertex(
       ...(Object.keys(generationConfig).length > 0 ? { generationConfig: generationConfig as any } : {})
     })
 
-    const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
+    const candidate = response.response.candidates?.[0]
+    const finishReason = candidate?.finishReason ? String(candidate.finishReason) : undefined
+    const safetyRatings = candidate?.safetyRatings
+    const responseParts = candidate?.content?.parts ?? []
     const generatedImages: Buffer[] = []
     for (const part of responseParts) {
       if (part.inlineData?.data) {
@@ -376,7 +445,56 @@ async function generateWithGeminiVertex(
       }
     }
 
-    return generatedImages
+    // Extract usage metadata if available
+    const usageMetadata = response.response.usageMetadata
+    const durationMs = Date.now() - startTime
+
+    const usage: GeminiUsageMetadata = {
+      inputTokens: usageMetadata?.promptTokenCount,
+      outputTokens: usageMetadata?.candidatesTokenCount,
+      totalTokens: usageMetadata?.totalTokenCount,
+      imagesGenerated: generatedImages.length,
+      durationMs,
+    }
+
+    Logger.debug('Gemini Vertex AI generation completed', {
+      modelName: normalizedModelName,
+      imagesGenerated: generatedImages.length,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      durationMs,
+      finishReason: finishReason || 'SUCCESS',
+    })
+
+    // If no images were generated, log detailed error and throw
+    if (generatedImages.length === 0) {
+      Logger.error('Gemini Vertex AI returned no images - inspecting response', {
+        modelName: normalizedModelName,
+        finishReason: finishReason || 'UNKNOWN',
+        safetyRatings: safetyRatings ? JSON.stringify(safetyRatings) : undefined,
+        hasCandidates: !!response.response.candidates,
+        candidatesLength: response.response.candidates?.length,
+        hasContent: !!candidate?.content,
+        hasParts: !!candidate?.content?.parts,
+        partsLength: candidate?.content?.parts?.length,
+        promptLength: prompt.length,
+        imageCount: images.length,
+        aspectRatio,
+        resolution,
+      })
+
+      const finishReasonStr = finishReason || 'UNKNOWN'
+      const errorMessage = finishReasonStr === 'IMAGE_OTHER'
+        ? `Gemini Vertex AI failed to generate image (IMAGE_OTHER finish reason). This typically indicates the model encountered an issue processing the prompt or reference images. Model: ${normalizedModelName}, AspectRatio: ${aspectRatio}, Resolution: ${resolution}. Prompt length: ${prompt.length} chars, Reference images: ${images.length}.`
+        : `Gemini Vertex AI returned no images. Model: ${normalizedModelName}, FinishReason: ${finishReasonStr}, AspectRatio: ${aspectRatio}, Resolution: ${resolution}. Check logs for response structure details.`
+      
+      throw new Error(errorMessage)
+    }
+
+    return {
+      images: generatedImages,
+      usage,
+    }
   } catch (error) {
     // Extract comprehensive error details
     const errorMessage = error instanceof Error ? error.message : String(error)

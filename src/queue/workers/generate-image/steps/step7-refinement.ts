@@ -199,7 +199,7 @@ export async function executeStep7(
   
   // Generate with Gemini (this is a refinement/adjustment pass)
   // Use lower temperature (0.3) for maximum adherence to selfie matching instructions
-  const generatedBuffers = await generateWithGemini(
+  const generatedResult = await generateWithGemini(
     refinementPrompt,
     referenceImages,
     aspectRatio,
@@ -209,12 +209,12 @@ export async function executeStep7(
     }
   )
   
-  if (!generatedBuffers.length) {
+  if (!generatedResult.images.length) {
     throw new Error('Step 7: Gemini returned no images')
   }
   
   // Convert to PNG
-  const pngBuffer = await sharp(generatedBuffers[0]).png().toBuffer()
+  const pngBuffer = await sharp(generatedResult.images[0]).png().toBuffer()
   const base64 = pngBuffer.toString('base64')
   
   Logger.info('V2 Step 7: Face refinement completed', {

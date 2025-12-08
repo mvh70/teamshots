@@ -421,7 +421,7 @@ export default function SettingsPage() {
       {activeTab === 'subscription' && (
         <SubscriptionSection 
           userId={session?.user?.id || ''}
-          userMode={settings.mode === 'pro' ? 'team' : settings.mode}
+          userMode={settings.mode}
         />
       )}
 

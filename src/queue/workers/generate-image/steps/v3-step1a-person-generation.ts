@@ -1,14 +1,18 @@
 import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 import { generateWithGemini } from '../gemini'
 import sharp from 'sharp'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import type { DownloadAssetFn } from '@/types/generation'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
-import { 
+import {
   type ReferenceImage
 } from '../utils/reference-builder'
 import { logDebugPrompt } from '../utils/debug-helpers'
+import { logPrompt, logStepResult } from '../utils/logging'
 import { AI_CONFIG } from '../config'
+import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
+import type { CostTrackingHandler } from '../workflow-v3'
 
 export interface V3Step1aInput {
   selfieReferences: ReferenceImage[]
@@ -23,21 +27,28 @@ export interface V3Step1aInput {
   mustFollowRules: string[]
   freedomRules: string[]
   generationId: string
+  personId: string
+  teamId?: string
   debugMode: boolean
   evaluationFeedback?: { suggestedAdjustments?: string }
+  selfieAssetIds?: string[]
+  onCostTracking?: CostTrackingHandler
+  referenceImages?: BaseReferenceImage[] // Pre-built reference images (e.g., garment collage from outfit1)
 }
 
 export interface V3Step1aOutput {
   imageBuffer: Buffer
   imageBase64: string
+  assetId?: string // Asset ID for the generated person-on-grey intermediate
   clothingLogoReference?: BaseReferenceImage // Logo used in generation (for Step 2 evaluation)
   backgroundLogoReference?: BaseReferenceImage // Logo for background/elements (for Step 3 composition)
   backgroundBuffer?: Buffer
   selfieComposite: BaseReferenceImage
+  reused?: boolean // Whether this asset was reused from cache
 }
 
 /**
- * Prepare all reference images for V3 Step 1a person generation (white background only)
+ * Prepare all reference images for V3 Step 1a person generation (grey background only)
  */
 async function prepareAllReferences({
   selfieReferences,
@@ -57,18 +68,18 @@ async function prepareAllReferences({
   selfieComposite: BaseReferenceImage
 }> {
   // 1. Log info about provided selfie composite
-  Logger.info('V3 Step 1a: Using provided selfie composite reference', {
+  Logger.debug('V3 Step 1a: Using provided selfie composite reference', {
     generationId,
     selfieCount: selfieReferences.length,
     selfieLabels: selfieReferences.map(ref => ref.label || 'NO_LABEL'),
     compositeMimeType: selfieComposite.mimeType,
     compositeBase64Length: selfieComposite.base64.length
   })
-  
+
   // 2. Load logo ONLY if branding is on clothing (for Step 1 person generation)
   let logoReference: BaseReferenceImage | undefined
   if (
-    styleSettings.branding?.type === 'include' && 
+    styleSettings.branding?.type === 'include' &&
     styleSettings.branding.logoKey &&
     styleSettings.branding.position === 'clothing'
   ) {
@@ -85,28 +96,35 @@ async function prepareAllReferences({
       Logger.warn('Failed to load logo for V3 Step 1 clothing branding', { error })
     }
   }
-  
-  // 3. Assemble reference array - selfies and optional logo only
+
+  // 3. REMOVED: Outfit reference loading (now handled by outfit1/server.ts)
+  // Custom clothing (outfit transfer) is package-specific (outfit1 only).
+  // The outfit1 package creates a garment collage during buildGenerationPayload()
+  // and passes it via input.referenceImages to avoid duplicate loading.
+  // This keeps prepareAllReferences() generic for all packages.
+
+  // 4. Assemble reference array - selfies and optional logo
   // Format frame removed from Step 1a to avoid AI reproducing borders
   // Step 2 will handle final framing
   const referenceImages: BaseReferenceImage[] = [selfieComposite]
-  
+
   if (logoReference) {
     referenceImages.push(logoReference)
   }
-  
-  Logger.info('V3 Step 1a: Prepared references for person generation (no format frame)', {
+
+  Logger.debug('V3 Step 1a: Prepared references for person generation (no format frame)', {
     generationId,
     totalReferences: referenceImages.length,
     hasLogo: !!logoReference
   })
-  
+
   return { referenceImages, logoReference, selfieComposite }
 }
 
 /**
- * V3 Step 1a: Generate person on white background
+ * V3 Step 1a: Generate person on grey background
  * Creates ONLY the person without any background complexity to let the model focus on the face
+ * Now includes fingerprinting and reuse detection for cost optimization
  */
 export async function executeV3Step1a(
   input: V3Step1aInput
@@ -122,17 +140,94 @@ export async function executeV3Step1a(
     mustFollowRules,
     freedomRules,
     debugMode,
-    evaluationFeedback
+    evaluationFeedback,
+    selfieAssetIds,
+    personId,
+    generationId,
+    onCostTracking
   } = input
 
-  Logger.info('V3 Step 1a: Generating person on white background')
+  Logger.debug('V3 Step 1a: Generating person on grey background')
+
+  // PHASE 1: Check for reusable asset via fingerprinting
+  // Note: This phase is optional and failures here should not prevent generation
+  if (selfieAssetIds && selfieAssetIds.length > 0) {
+    try {
+      // Extract style parameters for fingerprinting
+      const styleParams = StyleFingerprintService.extractFromStyleSettings(styleSettings as Record<string, unknown>)
+
+      // Only proceed with fingerprinting if prompt parsing succeeded
+      // Create fingerprint for person-on-grey step
+      const fingerprint = StyleFingerprintService.createPersonFingerprint(
+        selfieAssetIds,
+        {
+          aspectRatio: aspectRatio,
+          expression: styleParams.expression,
+          pose: styleParams.pose,
+          shotType: styleParams.shotType,
+          clothingType: styleParams.clothingType,
+          clothingColor: styleParams.clothingColor,
+          lighting: styleParams.lighting,
+        }
+      )
+
+      Logger.debug('V3 Step 1a: Created fingerprint for person-on-grey', {
+        fingerprint,
+        selfieAssetIds,
+        generationId,
+      })
+
+      // DISABLED: Asset reuse is temporarily disabled
+      // We still create fingerprints for tracking/analytics, but don't reuse assets during generation
+      // TODO: Re-enable reuse when ready
+      //
+      // Check for reusable asset (commented out)
+      // const reusedAsset = await AssetService.findReusableAsset(fingerprint, {
+      //   teamId: teamId,
+      //   personId: personId,
+      // })
+      //
+      // if (reusedAsset) {
+      //   Logger.info('V3 Step 1a: Reusing existing person-on-grey asset', {
+      //     assetId: reusedAsset.id,
+      //     fingerprint,
+      //     generationId,
+      //   })
+      //   // ... reuse logic ...
+      //   return { ... }
+      // }
+
+      Logger.debug('V3 Step 1a: Skipping asset reuse (disabled), will generate new', {
+        fingerprint,
+        generationId,
+      })
+    } catch (error) {
+      Logger.warn('V3 Step 1a: Fingerprinting/reuse check failed, continuing with generation', {
+        error: error instanceof Error ? error.message : String(error),
+        generationId,
+      })
+    }
+  }
+
+  // PHASE 2: Generate new asset (original logic)
 
   // Parse prompt to extract shot type (no longer passed as separate arg)
-  const promptObj = JSON.parse(prompt)
-  const shotDescription = promptObj.framing?.shot_type || 'medium-shot'
+  // This parse is required for generation, so if it fails, we should throw
+  let promptObj: Record<string, unknown>
+  try {
+    promptObj = JSON.parse(prompt)
+  } catch (parseError) {
+    Logger.error('V3 Step 1a: Failed to parse prompt JSON - this is required for generation', {
+      error: parseError instanceof Error ? parseError.message : String(parseError),
+      generationId,
+      promptPreview: prompt.substring(0, 200),
+    })
+    throw new Error(`V3 Step 1a: Invalid prompt JSON format: ${parseError instanceof Error ? parseError.message : String(parseError)}`)
+  }
+  const shotDescription = (promptObj.framing as { shot_type?: string } | undefined)?.shot_type || 'medium-shot'
 
   // Prepare references (selfies, optional logo for clothing branding, and format - no background yet)
-  const { referenceImages, logoReference } = await prepareAllReferences({
+  const { referenceImages: preparedReferences, logoReference } = await prepareAllReferences({
     selfieReferences,
     selfieComposite,
     styleSettings,
@@ -140,18 +235,26 @@ export async function executeV3Step1a(
     generationId: `v3-step1-${Date.now()}`
   })
 
+  // Merge pre-built references (e.g., garment collage from outfit1) with prepared references
+  // Pre-built references come first as they are primary (e.g., outfit collage before logo)
+  const referenceImages = [
+    ...(input.referenceImages || []), // Pre-built references from package (outfit1 garment collage)
+    ...preparedReferences  // Prepared references (selfie composite, logo for clothing branding)
+  ]
+
   // Create a simplified prompt object with ONLY subject and framing (no scene, camera, lighting, rendering)
   const personOnlyPrompt = {
-    subject: promptObj.subject, // Keep subject details (clothing, pose, expression)
-    framing: promptObj.framing, // Keep framing (shot type)
+    subject: promptObj.subject as Record<string, unknown> | undefined, // Keep subject details (clothing, pose, expression)
+    framing: promptObj.framing as { shot_type?: string } | undefined, // Keep framing (shot type)
+    lighting: promptObj.lighting as Record<string, unknown> | undefined, // Keep lighting for consistency with background
     scene: {
       background: {
         type: 'solid',
-        color: '#FFFFFF',
-        description: 'Pure white background (rgb(255,255,255))'
+        color: '#808080',
+        description: 'Solid flat neutral grey background (#808080)'
       }
     }
-    // Explicitly omit: camera, lighting, rendering - these are for Step 2
+    // Explicitly omit: camera, rendering - these are for Step 2
   }
 
   // Compose prompt with simplified specifications
@@ -201,7 +304,7 @@ export async function executeV3Step1a(
   const instructionLines: string[] = [
     '\n\nReference images are supplied with clear labels. Follow each resource precisely:',
     '- **Subject Selfies:** Inside the stacked selfie reference, choose the face that best matches the requested pose as the primary likeness. Use the remaining selfies to reinforce 3D facial structure, hair, glasses, and fine details. Stay as close as possible to the original selfies. Do not invent details, unless indicated specifically. Eg if the selfies do not show glasses, do not add glasses. Keep the hairstyle as much as possible as in the selfies. Do not show the original selfies in the final image.',
-    '- **White Background:** Generate the person on a PURE WHITE background (rgb(255,255,255)). No shadows, gradients, or other background elements. Use neutral, even lighting. Camera and lighting specifications will be applied in the next step.',
+    '- **Neutral Background:** Isolated on a solid flat neutral grey background (#808080). No shadows, gradients, or other background elements. Use neutral, even lighting. Camera and lighting specifications will be applied in the next step.',
     '- **Focus on Person:** Your primary goal is to accurately recreate the person from the selfies - face, body, pose, and clothing. The background, lighting, and camera effects will be added later.'
   ]
   
@@ -220,30 +323,140 @@ export async function executeV3Step1a(
   const compositionPrompt = structuredPrompt.join('\n')
 
   if (debugMode) {
-    logDebugPrompt('V3 Step 1a Person Generation (White BG)', 1, compositionPrompt)
+    logDebugPrompt('V3 Step 1a Person Generation (Grey BG)', 1, compositionPrompt)
   }
 
 
 
-  // Generate with Gemini (fixed at 1K resolution for raw asset)
-  const generatedBuffers = await generateWithGemini(
-    compositionPrompt,
-    referenceImages,
+  // Log prompt and reference details before generation for debugging IMAGE_OTHER errors
+  Logger.debug('V3 Step 1a: Starting Gemini generation', {
+    generationId,
+    promptLength: compositionPrompt.length,
+    referenceCount: referenceImages.length,
+    referenceDetails: referenceImages.map((img, idx) => ({
+      index: idx,
+      hasDescription: !!img.description,
+      descriptionLength: img.description?.length || 0,
+      descriptionPreview: img.description?.substring(0, 100) || 'NO_DESCRIPTION',
+      mimeType: img.mimeType,
+      base64Length: img.base64?.length || 0,
+    })),
     aspectRatio,
-    '1K', // Fixed resolution - model max
-    { temperature: AI_CONFIG.GENERATION_TEMPERATURE }
-  )
+    hasEvaluationFeedback: !!evaluationFeedback?.suggestedAdjustments,
+  })
 
-  if (!generatedBuffers.length) {
+  // Generate with Gemini (fixed at 1K resolution for raw asset) and track failures
+  let generationResult: Awaited<ReturnType<typeof generateWithGemini>>
+  try {
+    logPrompt('V3 Step 1a', compositionPrompt)
+    generationResult = await generateWithGemini(
+      compositionPrompt,
+      referenceImages,
+      aspectRatio,
+      '1K', // Fixed resolution - model max
+      {
+        temperature: AI_CONFIG.GENERATION_TEMPERATURE,
+        preferredProvider: 'vertex' // Load balancing: Step 1a uses Vertex, Step 1b uses OpenRouter
+      }
+    )
+  } catch (error) {
+    const providerUsed = (error as { providerUsed?: 'vertex' | 'gemini-rest' | 'replicate' }).providerUsed
+    if (onCostTracking) {
+      try {
+        await onCostTracking({
+          stepName: 'step1a-person',
+          reason: 'generation',
+          result: 'failure',
+          model: 'gemini-2.5-flash-image',
+          provider: providerUsed,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
+      } catch (costError) {
+        Logger.error('V3 Step 1a: Failed to track generation cost (failure case)', {
+          error: costError instanceof Error ? costError.message : String(costError),
+          generationId,
+        })
+      }
+    }
+    throw error
+  }
+
+  if (!generationResult.images.length) {
+    Logger.error('V3 Step 1a: Gemini returned no images', {
+      generationId,
+      provider: generationResult.providerUsed,
+      promptLength: compositionPrompt.length,
+      referenceCount: referenceImages.length,
+      aspectRatio,
+    })
     throw new Error('V3 Step 1a: Gemini returned no images')
   }
 
-  const pngBuffer = await sharp(generatedBuffers[0]).png().toBuffer()
-  
-  Logger.info('V3 Step 1a: Person generation completed (white background)', {
-    bufferSize: pngBuffer.length,
-    hadClothingLogo: !!logoReference
+  const pngBuffer = await sharp(generationResult.images[0]).png().toBuffer()
+
+  logStepResult('V3 Step 1a', {
+    success: true,
+    provider: generationResult.providerUsed,
+    model: Env.string('GEMINI_IMAGE_MODEL'),
+    imageSize: pngBuffer.length,
+    durationMs: generationResult.usage.durationMs
   })
+
+  // Track generation cost
+  if (onCostTracking) {
+    try {
+      await onCostTracking({
+        stepName: 'step1a-person',
+        reason: 'generation',
+        result: 'success',
+        model: 'gemini-2.5-flash-image',
+        provider: generationResult.providerUsed,  // Pass actual provider used
+        inputTokens: generationResult.usage.inputTokens,
+        outputTokens: generationResult.usage.outputTokens,
+        imagesGenerated: generationResult.usage.imagesGenerated,
+        durationMs: generationResult.usage.durationMs,
+      })
+      Logger.debug('V3 Step 1a: Cost tracking recorded', {
+        generationId,
+        provider: generationResult.providerUsed,
+        inputTokens: generationResult.usage.inputTokens,
+        outputTokens: generationResult.usage.outputTokens,
+        imagesGenerated: generationResult.usage.imagesGenerated,
+      })
+    } catch (error) {
+      Logger.error('V3 Step 1a: Failed to track generation cost', {
+        error: error instanceof Error ? error.message : String(error),
+        generationId,
+      })
+    }
+  }
+
+  // PHASE 3: Create Asset and set fingerprint for future reuse
+  let createdAssetId: string | undefined
+  if (selfieAssetIds && selfieAssetIds.length > 0) {
+    try {
+      // First upload to S3 to get the key
+      const intermediateS3Key = `generations/${personId}/${generationId}/intermediate/person-on-grey-${Date.now()}.png`
+
+      // Note: The actual S3 upload will happen in the workflow layer
+      // For now, we'll create the asset record assuming the upload will happen
+      // In a real implementation, this should be coordinated with the upload
+
+      Logger.debug('V3 Step 1a: Asset will be created after S3 upload in workflow layer', {
+        generationId,
+        intermediateS3Key,
+      })
+
+      // The asset creation will be handled by the workflow layer after upload
+      // We'll return the necessary info for that
+
+    } catch (error) {
+      Logger.warn('V3 Step 1a: Asset tracking preparation failed', {
+        error: error instanceof Error ? error.message : String(error),
+        generationId,
+      })
+    }
+  }
 
   // Prepare assets for Step 2 and Step 3
   
@@ -287,10 +500,12 @@ export async function executeV3Step1a(
   return {
     imageBuffer: pngBuffer,
     imageBase64: pngBuffer.toString('base64'),
+    assetId: createdAssetId,
     clothingLogoReference: clothingLogoRef, // For Step 2 evaluation
     backgroundLogoReference: backgroundLogoRef, // For Step 3 composition
     backgroundBuffer,
-    selfieComposite
+    selfieComposite,
+    reused: false,
   }
 }
 

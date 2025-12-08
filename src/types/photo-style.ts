@@ -19,6 +19,7 @@ import type {
 import type { BrandingSettings } from '../domain/style/elements/branding/types'
 import type { ClothingColorSettings } from '../domain/style/elements/clothing-colors/types'
 import type { BackgroundSettings } from '../domain/style/elements/background/types'
+import type { CustomClothingSettings } from '../domain/style/elements/custom-clothing/types'
 
 export {
   ArmPositionSetting,
@@ -38,6 +39,7 @@ export {
 export { BrandingSettings }
 export { ClothingColorSettings }
 export { BackgroundSettings }
+export { CustomClothingSettings }
 
 export interface StyleSettings {
   type: 'preset' | 'user-choice'
@@ -58,6 +60,7 @@ export interface PhotoStyleSettings {
   branding?: BrandingSettings
   clothing?: ClothingSettings
   clothingColors?: ClothingColorSettings
+  customClothing?: CustomClothingSettings
   shotType?: ShotTypeSettings
   aspectRatio?: string
   // Camera settings (focal length, aperture, ISO, white balance) are now calculated
@@ -78,6 +81,7 @@ export type CategoryType =
   | 'branding'
   | 'clothing'
   | 'clothingColors'
+  | 'customClothing'
   | 'shotType'
   | 'aspectRatio'
   | 'bodyAngle'
@@ -111,6 +115,9 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
   },
   clothingColors: {
     type: 'user-choice'
+  },
+  customClothing: {
+    enabled: false
   },
   shotType: {
     type: 'user-choice'

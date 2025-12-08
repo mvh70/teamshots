@@ -175,14 +175,14 @@ export default function AppShell({
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${isGenerationFlow ? '' : 'overflow-x-hidden'}`}>
+    <div className={`min-h-screen ${isGenerationFlow ? 'bg-white' : 'bg-gray-50'} ${isGenerationFlow ? '' : 'overflow-x-hidden'}`}>
       <div className="flex relative">
         {showSidebar && (
           <>
             {/* Hover/touch zone on left edge for mobile - shows sidebar when hovered/touched (only when sidebar is hidden) */}
             {sidebarCollapsed && (
               <div 
-                className="fixed left-0 top-0 bottom-0 w-8 z-50 lg:hidden"
+                className="fixed left-0 top-0 bottom-0 w-8 z-[100] lg:hidden"
                 onMouseEnter={() => {
                   if (typeof window !== 'undefined' && window.innerWidth < 1024) {
                     setSidebarCollapsed(false)
@@ -199,7 +199,7 @@ export default function AppShell({
             {/* Backdrop overlay for mobile when sidebar is open */}
             {!sidebarCollapsed && (
               <div 
-                className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
+                className="fixed inset-0 bg-black/50 z-[90] lg:hidden transition-opacity duration-300"
                 onClick={() => setSidebarCollapsed(true)}
                 aria-hidden="true"
               />
@@ -226,7 +226,7 @@ export default function AppShell({
           </>
         )}
         <div
-          className={`flex-1 flex flex-col transition-all duration-300 ${
+          className={`flex-1 flex flex-col transition-all duration-300 relative z-0 ${
             showSidebar ? (sidebarCollapsed ? 'ml-0 lg:ml-16' : 'ml-0 lg:ml-64') : 'ml-0'
           }`}
         >
@@ -238,7 +238,7 @@ export default function AppShell({
           <main
             className={`
               flex-1 w-full min-w-0
-              ${isGenerationFlow ? 'p-0 md:p-6 lg:p-8' : 'p-4 sm:p-6'}
+              ${isGenerationFlow ? 'pt-6 md:pt-8' : 'p-4 sm:p-6'}
               overflow-x-hidden
             `}
           >

@@ -31,7 +31,7 @@ export function getDefaultPresetSettings(preset: StandardPresetConfig): PhotoSty
       armPosition: preset.defaults.pose.armPosition,
       // sittingPose is optional, added below if present
     },
-    expression: { type: preset.defaults.pose.expression ?? 'user-choice' }
+    expression: { type: preset.defaults.expression ?? 'user-choice' }
   }
 
   if (preset.defaults.aspectRatio) {
@@ -122,7 +122,7 @@ export function applyStandardPreset(
     }
 
     if (!settings.expression || !settings.expression.type) {
-      settings.expression = { type: preset.defaults.pose.expression ?? 'user-choice' }
+      settings.expression = { type: preset.defaults.expression ?? 'user-choice' }
     }
   }
 

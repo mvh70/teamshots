@@ -6,6 +6,7 @@ import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { validateImageFileByHeader } from '@/lib/file-validation'
+import { validateMobileHandoffToken } from '@/lib/mobile-handoff'
 
 
 export const runtime = 'nodejs'
@@ -16,8 +17,9 @@ export async function POST(req: NextRequest) {
   if (!bucket) return NextResponse.json({ error: 'Missing bucket' }, { status: 500 })
   try {
     const { searchParams } = new URL(req.url)
-    // Accept invite token via query or header to support token-auth uploads from invite flows
+    // Accept invite token or handoff token via query or header
     const inviteToken = searchParams.get('token') || (await getRequestHeader('x-invite-token')) || undefined
+    const handoffToken = searchParams.get('handoffToken') || (await getRequestHeader('x-handoff-token')) || undefined
     const contentType = (await getRequestHeader('x-file-content-type')) || 'application/octet-stream'
     const extension = (await getRequestHeader('x-file-extension')) || ''
     const keyHeader = await getRequestHeader('x-upload-key')
@@ -36,10 +38,22 @@ export async function POST(req: NextRequest) {
     // For selfies, backgrounds, and logos, include personId in the path when available
     let relativeKey: string
     if (!keyHeader && (fileType === 'selfie' || fileType === 'background' || fileType === 'logo')) {
-      // Resolve person via session OR invite token
+      // Resolve person via session, invite token, OR handoff token
       let person: { id: string; firstName: string | null } | null = null
 
-      if (inviteToken) {
+      if (handoffToken) {
+        // Mobile handoff token auth
+        const handoffResult = await validateMobileHandoffToken(handoffToken)
+        if (!handoffResult.success) {
+          return NextResponse.json({ error: handoffResult.error, code: handoffResult.code }, { status: 401 })
+        }
+        if (handoffResult.context.personId) {
+          person = await prisma.person.findUnique({
+            where: { id: handoffResult.context.personId },
+            select: { id: true, firstName: true }
+          })
+        }
+      } else if (inviteToken) {
         const invite = await prisma.teamInvite.findFirst({
           where: { token: inviteToken, usedAt: { not: null } },
           include: { person: { select: { id: true, firstName: true } } }

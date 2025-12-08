@@ -4,6 +4,7 @@ import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '../gemini'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
+import type { CostTrackingHandler } from '../workflow-v3'
 
 export interface V3Step3FinalInput {
   refinedBuffer: Buffer
@@ -14,6 +15,11 @@ export interface V3Step3FinalInput {
   aspectRatio: string
   logoReference?: BaseReferenceImage // Logo for background/elements branding evaluation
   generationPrompt?: string // Full prompt JSON with branding info
+  generationId?: string // For cost tracking
+  personId?: string // For cost tracking
+  teamId?: string // For cost tracking
+  intermediateS3Key?: string // S3 key of the image being evaluated
+  onCostTracking?: CostTrackingHandler // For cost tracking
 }
 
 const DIMENSION_TOLERANCE_PX = 2
@@ -30,7 +36,7 @@ export async function executeV3Step3(
 ): Promise<Step8Output> {
   const { refinedBuffer, refinedBase64, selfieComposite, expectedWidth, expectedHeight, aspectRatio, logoReference, generationPrompt } = input
   
-  Logger.info('V3 Step 3: Evaluating final refined image')
+  Logger.debug('V3 Step 3: Evaluating final refined image')
   
   // Get image metadata
   const sharp = (await import('sharp')).default
@@ -235,14 +241,23 @@ export async function executeV3Step3(
     })
   }
 
+  let evalDurationMs = 0
+  let usageMetadata: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined
+
+  const evalStartTime = Date.now()
   try {
     const response: GenerateContentResult = await model.generateContent({
       contents,
       generationConfig: { temperature: 0.2 }
     })
 
+    evalDurationMs = Date.now() - evalStartTime
+    usageMetadata = response.response.usageMetadata
     const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
     const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+
+    // Note: Cost tracking moved to after evaluation status is determined
+    // (see below after finalStatus is computed)
 
     if (textPart) {
       const evaluation = parseFinalEvaluation(textPart)
@@ -279,7 +294,7 @@ export async function executeV3Step3(
         })
 
         // Log detailed evaluation results
-        Logger.info('V3 Step 3: Final Image Evaluation Details', {
+        Logger.debug('V3 Step 3: Final Image Evaluation Details', {
           face_similarity: evaluation.face_similarity,
           characteristic_preservation: evaluation.characteristic_preservation,
           body_framing: evaluation.body_framing,
@@ -293,10 +308,40 @@ export async function executeV3Step3(
           brandingApproved
         })
 
+        const finalReason = failedCriteria.length > 0 ? failedCriteria.join(' | ') : 'All criteria met'
+
+        // Track evaluation cost with outcome
+        if (input.onCostTracking && usageMetadata) {
+          try {
+            await input.onCostTracking({
+              stepName: 'step3-final-eval',
+              reason: 'evaluation',
+              result: 'success',
+              model: 'gemini-2.5-flash',
+              inputTokens: usageMetadata.promptTokenCount,
+              outputTokens: usageMetadata.candidatesTokenCount,
+              durationMs: evalDurationMs,
+              evaluationStatus: finalStatus === 'Approved' ? 'approved' : 'rejected',
+              rejectionReason: finalStatus === 'Not Approved' ? finalReason : undefined,
+              intermediateS3Key: input.intermediateS3Key,
+            })
+            Logger.debug('V3 Step 3: Cost tracking with outcome recorded', {
+              generationId: input.generationId,
+              evaluationStatus: finalStatus,
+              s3Key: input.intermediateS3Key,
+            })
+          } catch (costError) {
+            Logger.error('V3 Step 3: Failed to track evaluation cost', {
+              error: costError instanceof Error ? costError.message : String(costError),
+              generationId: input.generationId,
+            })
+          }
+        }
+
         return {
           evaluation: {
             status: finalStatus,
-            reason: failedCriteria.length > 0 ? failedCriteria.join(' | ') : 'All criteria met',
+            reason: finalReason,
             failedCriteria: failedCriteria.length > 0 ? failedCriteria : undefined,
             suggestedAdjustments: finalStatus === 'Not Approved' ? generateAdjustmentSuggestions(failedCriteria) : undefined
           }
@@ -304,16 +349,60 @@ export async function executeV3Step3(
       }
     }
   } catch (error) {
+    const evalDurationMs = Date.now() - evalStartTime
     Logger.error('V3 Step 3: Failed to evaluate final image', {
       error: error instanceof Error ? error.message : String(error)
     })
+
+    // Track failed evaluation cost
+    if (input.onCostTracking) {
+      try {
+        await input.onCostTracking({
+          stepName: 'step3-final-eval',
+          reason: 'evaluation',
+          result: 'failure',
+          model: 'gemini-2.5-flash',
+          durationMs: evalDurationMs,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
+      } catch (costError) {
+        Logger.error('V3 Step 3: Failed to track failed evaluation cost', {
+          error: costError instanceof Error ? costError.message : String(costError),
+        })
+      }
+    }
+
     throw error
+  }
+
+  const rejectionReason = 'Evaluation did not return a valid structured response.'
+  
+  // Track evaluation cost with rejection for parsing failure
+  if (input.onCostTracking && usageMetadata) {
+    try {
+      await input.onCostTracking({
+        stepName: 'step3-final-eval',
+        reason: 'evaluation',
+        result: 'success',
+        model: 'gemini-2.5-flash',
+        inputTokens: usageMetadata.promptTokenCount,
+        outputTokens: usageMetadata.candidatesTokenCount,
+        durationMs: evalDurationMs,
+        evaluationStatus: 'rejected',
+        rejectionReason,
+        intermediateS3Key: input.intermediateS3Key,
+      })
+    } catch (costError) {
+      Logger.error('V3 Step 3: Failed to track evaluation cost for parsing failure', {
+        error: costError instanceof Error ? costError.message : String(costError),
+      })
+    }
   }
 
   return {
     evaluation: {
       status: 'Not Approved',
-      reason: 'Evaluation did not return a valid structured response.'
+      reason: rejectionReason
     }
   }
 }

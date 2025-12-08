@@ -438,14 +438,14 @@ export const POSE_PRESET_MAP: Record<string, GranularPoseSettings> = {
     shoulderPosition: 'level',
     weightDistribution: 'even',
     armPosition: 'relaxed-sides',
-    expression: 'confident'
+    //expression: 'confident'
   },
   power_crossed: {
     bodyAngle: 'slight-angle',
     headPosition: 'face-turn',
     weightDistribution: 'back-foot-70',
     armPosition: 'arms-crossed',
-    expression: 'confident'
+    //expression: 'confident'
   },
   casual_confident: {
     bodyAngle: 'slight-angle',
@@ -453,35 +453,35 @@ export const POSE_PRESET_MAP: Record<string, GranularPoseSettings> = {
     shoulderPosition: 'front-shoulder-dropped',
     weightDistribution: 'hip-shift',
     armPosition: 'one-hand-pocket',
-    expression: 'genuine_smile'
+    //expression: 'genuine_smile'
   },
   approachable_cross: {
     bodyAngle: 'slight-angle',
     headPosition: 'slight-tilt',
     weightDistribution: 'hip-shift',
     armPosition: 'arms-crossed',
-    expression: 'soft_smile'
+    //expression: 'soft_smile'
   },
   walking_confident: {
     bodyAngle: 'slight-angle',
     headPosition: 'straight-level',
     weightDistribution: 'back-foot-70',
     armPosition: 'relaxed-sides',
-    expression: 'confident'
+    //expression: 'confident'
   },
   sitting_engaged: {
     sittingPose: 'upright-lean-forward',
     headPosition: 'slight-tilt',
-    expression: 'soft_smile'
+    //expression: 'soft_smile'
   },
   executive_seated: {
     sittingPose: 'relaxed-back',
     headPosition: 'straight-level',
-    expression: 'confident'
+    //expression: 'confident'
   },
   thinker: {
     headPosition: 'slight-tilt',
-    expression: 'contemplative'
+    //expression: 'contemplative'
   }
 }
 
@@ -525,10 +525,9 @@ export function applyPosePresetToSettings(
     sittingPose: poseConfig.sittingPose
   } as PoseSettings
 
-  // Also update expression if it's part of the preset
-  if (poseConfig.expression) {
-    updatedSettings.expression = { type: poseConfig.expression }
-  }
+  // NOTE: Expression is now independent of pose presets
+  // Users can set their expression separately without it being overridden
+  // Previously, changing pose would override the expression setting
 
   return updatedSettings
 }

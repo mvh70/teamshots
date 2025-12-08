@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     // Parse existing onboarding state (stored as JSON string)
     let completedTours: string[] = []
     let pendingTours: string[] = []
+    let hiddenScreens: string[] = []
     let overallState: 'not_started' | 'in_progress' | 'completed' = 'not_started'
 
     if (person.onboardingState) {
@@ -41,6 +42,9 @@ export async function POST(request: NextRequest) {
         }
         if (parsed.pendingTours && Array.isArray(parsed.pendingTours)) {
           pendingTours = parsed.pendingTours
+        }
+        if (parsed.hiddenScreens && Array.isArray(parsed.hiddenScreens)) {
+          hiddenScreens = parsed.hiddenScreens.filter((s: unknown): s is string => typeof s === 'string')
         }
         if (parsed.state && ['not_started', 'in_progress', 'completed'].includes(parsed.state)) {
           overallState = parsed.state
@@ -78,6 +82,7 @@ export async function POST(request: NextRequest) {
       state: overallState,
       completedTours,
       pendingTours,
+      hiddenScreens,
       lastUpdated: new Date().toISOString(),
     })
 
@@ -131,6 +136,7 @@ export async function DELETE(request: NextRequest) {
     // Parse existing onboarding state
     let completedTours: string[] = []
     let pendingTours: string[] = []
+    let hiddenScreens: string[] = []
     let overallState: 'not_started' | 'in_progress' | 'completed' = 'not_started'
 
     if (person.onboardingState) {
@@ -141,6 +147,9 @@ export async function DELETE(request: NextRequest) {
         }
         if (parsed.pendingTours && Array.isArray(parsed.pendingTours)) {
           pendingTours = parsed.pendingTours
+        }
+        if (parsed.hiddenScreens && Array.isArray(parsed.hiddenScreens)) {
+          hiddenScreens = parsed.hiddenScreens.filter((s: unknown): s is string => typeof s === 'string')
         }
         if (parsed.state && ['not_started', 'in_progress', 'completed'].includes(parsed.state)) {
           overallState = parsed.state
@@ -161,6 +170,7 @@ export async function DELETE(request: NextRequest) {
       state: overallState,
       completedTours,
       pendingTours,
+      hiddenScreens,
       lastUpdated: new Date().toISOString(),
     })
 

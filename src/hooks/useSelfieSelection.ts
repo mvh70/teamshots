@@ -2,9 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 interface UseSelfieSelectionOptions {
   token?: string
+  /**
+   * Optional error callback invoked when selection operations fail.
+   * If not provided, errors are stored in the returned error state.
+   */
+  onError?: (error: string) => void
 }
 
-export function useSelfieSelection({ token }: UseSelfieSelectionOptions) {
+export function useSelfieSelection({ token, onError }: UseSelfieSelectionOptions) {
   const [selectedSet, setSelectedSet] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,13 +28,16 @@ export function useSelfieSelection({ token }: UseSelfieSelectionOptions) {
       }
       const data = (await res.json()) as { selfies?: { id: string }[] }
       setSelectedSet(new Set((data.selfies || []).map(s => s.id)))
-    } catch {
-      setError('Failed to load selected selfies')
+    } catch (err) {
+      const errorMessage = 'Failed to load selected selfies'
+      console.error('[useSelfieSelection] loadSelected failed', err)
+      setError(errorMessage)
       setSelectedSet(new Set())
+      onError?.(errorMessage)
     } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [token, onError])
 
   const toggleSelect = useCallback(async (selfieId: string, nextSelected: boolean) => {
     // optimistic update
@@ -40,15 +48,21 @@ export function useSelfieSelection({ token }: UseSelfieSelectionOptions) {
     })
     try {
       const qs = token ? `?token=${encodeURIComponent(token)}` : ''
-      await fetch(`/api/selfies/${selfieId}/select${qs}`, {
+      const response = await fetch(`/api/selfies/${selfieId}/select${qs}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ selected: nextSelected, token }),
         credentials: 'include'
       })
-      // re-sync from server to ensure persistence
-      await loadSelected()
-    } catch {
+
+      if (!response.ok) {
+        throw new Error('Failed to toggle selection')
+      }
+      // Parent's onAfterChange callback will handle re-sync if needed
+      // Removed redundant loadSelected() call here to avoid duplicate API requests
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to toggle selection'
+      onError?.(errorMessage)
       // revert on failure
       setSelectedSet(prev => {
         const n = new Set(prev)
@@ -56,7 +70,7 @@ export function useSelfieSelection({ token }: UseSelfieSelectionOptions) {
         return n
       })
     }
-  }, [token, loadSelected])
+  }, [token, onError])
 
   // Load selected selfies on mount
   useEffect(() => {

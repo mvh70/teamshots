@@ -63,6 +63,27 @@ export async function PATCH(
       }
     }
 
+    // Also allow valid MobileHandoffToken for this person (mobile handoff QR flow)
+    if (!hasValidToken && token && selfie.person.id) {
+      try {
+        const handoffToken = await prisma.mobileHandoffToken.findFirst({
+          where: {
+            token,
+            personId: selfie.person.id,
+            expiresAt: { gt: new Date() },
+            absoluteExpiry: { gt: new Date() }
+          },
+          select: { id: true, personId: true }
+        })
+        if (handoffToken && handoffToken.personId === selfie.person.id) {
+          hasValidToken = true
+        }
+      } catch (error) {
+        // Log error but continue with other checks
+        console.error('Error checking MobileHandoffToken:', error)
+      }
+    }
+
     if (!isOwner && !hasValidToken) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }

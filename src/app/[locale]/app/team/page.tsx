@@ -177,7 +177,9 @@ export default function TeamPage() {
               setUserRoles({ isTeamAdmin, isTeamMember, isPlatformAdmin })
 
               if (isTeamAdmin) {
-                if (needsTeamSetup) {
+                // Check if team name is the default "My Team" value - treat as needing setup
+                const hasDefaultTeamName = teamName === 'My Team' || teamName === 'My team'
+                if (needsTeamSetup || hasDefaultTeamName) {
                   setNeedsTeamSetup(true)
                   setLoading(false)
 
@@ -209,7 +211,9 @@ export default function TeamPage() {
             setUserRoles({ isTeamAdmin, isTeamMember, isPlatformAdmin })
 
             if (isTeamAdmin) {
-              if (needsTeamSetup) {
+              // Check if team name is the default "My Team" value - treat as needing setup
+              const hasDefaultTeamName = teamName === 'My Team' || teamName === 'My team'
+              if (needsTeamSetup || hasDefaultTeamName) {
                 setNeedsTeamSetup(true)
                 setLoading(false)
               } else if (teamId && teamName) {

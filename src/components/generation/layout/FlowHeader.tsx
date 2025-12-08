@@ -107,7 +107,7 @@ export default function FlowHeader({
               {title}
             </h1>
             {subtitle && (
-              <p className="text-xs text-gray-600 mt-1 line-clamp-1 transition-opacity duration-300 font-medium">
+              <p className="text-xs text-gray-600 mt-1 transition-opacity duration-300 font-medium break-words">
                 {subtitle}
               </p>
             )}

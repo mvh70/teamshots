@@ -13,8 +13,22 @@ export async function GET(request: NextRequest) {
     // Resolve person: prioritize invite token when present (invite dashboard use-case)
     let personId: string | null = null
     if (token) {
+      // Check for team invite token
       const invite = await prisma.teamInvite.findFirst({ where: { token, usedAt: { not: null } }, select: { personId: true } })
       personId = invite?.personId || null
+
+      // If not found, check for mobile handoff token
+      if (!personId) {
+        const handoffToken = await prisma.mobileHandoffToken.findFirst({
+          where: {
+            token,
+            expiresAt: { gt: new Date() },
+            absoluteExpiry: { gt: new Date() }
+          },
+          select: { personId: true }
+        })
+        personId = handoffToken?.personId || null
+      }
     }
     // Fallback to session user when no valid token mapping
     if (!personId && session?.user?.id) {

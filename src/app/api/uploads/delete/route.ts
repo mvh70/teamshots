@@ -17,26 +17,51 @@ if (!bucket) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { searchParams } = new URL(request.url)
     const key = searchParams.get('key')
+    const token = searchParams.get('token')
 
     if (!key || key === 'undefined') {
       return NextResponse.json({ error: 'Missing or invalid key parameter' }, { status: 400 })
     }
 
-    // Get person to verify ownership
-    const person = await prisma.person.findUnique({
-      where: { userId: session.user.id },
-      select: { id: true }
-    })
+    let personId: string | null = null
 
-    if (!person) {
-      return NextResponse.json({ error: 'Person record not found' }, { status: 404 })
+    // Try session authentication first
+    const session = await auth()
+    if (session?.user?.id) {
+      const person = await prisma.person.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true }
+      })
+      personId = person?.id || null
+    }
+
+    // If no session, try token authentication (team invite or mobile handoff)
+    if (!personId && token) {
+      // Try team invite token
+      const invite = await prisma.teamInvite.findFirst({
+        where: { token, usedAt: { not: null } },
+        select: { personId: true }
+      })
+      personId = invite?.personId || null
+
+      // If not found, try mobile handoff token
+      if (!personId) {
+        const handoffToken = await prisma.mobileHandoffToken.findFirst({
+          where: {
+            token,
+            expiresAt: { gt: new Date() },
+            absoluteExpiry: { gt: new Date() }
+          },
+          select: { personId: true }
+        })
+        personId = handoffToken?.personId || null
+      }
+    }
+
+    if (!personId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Verify the selfie belongs to the user (if it exists in database)
@@ -44,9 +69,7 @@ export async function DELETE(request: NextRequest) {
     const selfie = await prisma.selfie.findFirst({
       where: {
         key: key,
-        person: {
-          userId: session.user.id,
-        },
+        personId: personId,
       },
     })
 
@@ -57,14 +80,14 @@ export async function DELETE(request: NextRequest) {
       const personIdWithName = keyParts[1]
       const filePersonId = personIdWithName?.split('-')[0] || keyParts[1]
 
-      if (!filePersonId || filePersonId !== person.id) {
+      if (!filePersonId || filePersonId !== personId) {
         return NextResponse.json({ error: 'Unauthorized - selfie does not belong to user' }, { status: 403 })
       }
     }
 
     // If selfie exists, check if it's used in any non-deleted generations
     if (selfie) {
-      const isUsed = await isSelfieUsedInGenerations(person.id, selfie.id, selfie.key)
+      const isUsed = await isSelfieUsedInGenerations(personId, selfie.id, selfie.key)
       
       // Prevent deletion if selfie is used in any non-deleted generations
       if (isUsed) {

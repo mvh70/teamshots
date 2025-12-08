@@ -70,7 +70,7 @@ export async function executeStep1(
   })
   
   // Generate with Gemini
-  const generatedBuffers = await generateWithGemini(
+  const generatedResult = await generateWithGemini(
     personPrompt,
     referenceImages,
     aspectRatio,
@@ -80,12 +80,12 @@ export async function executeStep1(
     }
   )
   
-  if (!generatedBuffers.length) {
+  if (!generatedResult.images.length) {
     throw new Error('Step 1: Gemini returned no images')
   }
   
   // Convert to PNG
-  const pngBuffer = await sharp(generatedBuffers[0]).png().toBuffer()
+  const pngBuffer = await sharp(generatedResult.images[0]).png().toBuffer()
   const base64 = pngBuffer.toString('base64')
   
   Logger.info('V2 Step 1: Person generation completed', {

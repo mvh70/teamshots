@@ -7,6 +7,7 @@ import ConditionalHeader from '@/components/ConditionalHeader';
 import Footer from '@/components/Footer';
 import { Playfair_Display, Inter } from 'next/font/google';
 import { getLandingVariant } from '@/config/landing-content';
+import { getBrand } from '@/config/brand';
 import '../globals.css';
 
 const displayFont = Playfair_Display({
@@ -32,18 +33,6 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-/**
- * Get domain from request headers (server-side)
- */
-async function getDomainFromHeaders(): Promise<string | undefined> {
-  const headersList = await headers();
-  const host = headersList.get('host') || headersList.get('x-forwarded-host');
-  if (host) {
-    return host.split(':')[0].replace(/^www\./, '').toLowerCase();
-  }
-  return undefined;
-}
-
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
   
@@ -52,8 +41,11 @@ export default async function LocaleLayout({ children, params }: Props) {
     notFound();
   }
 
-  // Detect domain server-side for branding
-  const domain = await getDomainFromHeaders();
+  // Server-side brand detection - all brand decisions happen here
+  const headersList = await headers();
+  const brand = getBrand(headersList);
+  const host = headersList.get('host') || headersList.get('x-forwarded-host');
+  const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined;
   const variant = getLandingVariant(domain);
 
   // Providing all messages to the client
@@ -64,10 +56,18 @@ export default async function LocaleLayout({ children, params }: Props) {
     <NextIntlClientProvider messages={messages}>
       <div className={`${displayFont.variable} ${bodyFont.variable} font-body`}>
           {/* Conditional header that only shows on non-app routes */}
-          <ConditionalHeader variant={variant} />
+          <ConditionalHeader 
+            brandName={brand.name}
+            brandLogo={brand.logo.light}
+          />
           {children}
           {/* Footer that shows on public routes (landing, pricing, etc.) */}
-          <Footer variant={variant} />
+          <Footer 
+            brandName={brand.name}
+            brandLogo={brand.logo.dark}
+            brandContact={brand.contact}
+            variant={variant}
+          />
       </div>
     </NextIntlClientProvider>
   );

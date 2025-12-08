@@ -31,6 +31,7 @@ import {
 import BackgroundSelector from '@/domain/style/elements/background/BackgroundSelector'
 import ClothingSelector from '@/domain/style/elements/clothing/ClothingSelector'
 import ClothingColorSelector from '@/domain/style/elements/clothing-colors/ClothingColorSelector'
+import { CustomClothingSelector } from '@/domain/style/elements/custom-clothing/CustomClothingSelector'
 import ShotTypeSelector from '@/domain/style/elements/shot-type/ShotTypeSelector'
 import BrandingSelector from '@/domain/style/elements/branding/BrandingSelector'
 import ExpressionSelector from '@/domain/style/elements/expression/ExpressionSelector'
@@ -345,6 +346,13 @@ export default function PhotoStyleSettings({
               }
             }
             break
+          case 'customClothing':
+            if (packageDefaults.customClothing) {
+              newSettings.customClothing = { ...packageDefaults.customClothing }
+            } else {
+              newSettings.customClothing = { enabled: true }
+            }
+            break
           case 'shotType':
             newSettings.shotType = { type: 'headshot' }
             syncAspectRatioWithShotType(newSettings, newSettings.shotType)
@@ -379,6 +387,9 @@ export default function PhotoStyleSettings({
             break
           case 'clothingColors':
             newSettings.clothingColors = { type: 'user-choice' }
+            break
+          case 'customClothing':
+            newSettings.customClothing = { enabled: false }
             break
           case 'shotType':
             newSettings.shotType = { type: 'user-choice' }
@@ -434,67 +445,62 @@ export default function PhotoStyleSettings({
     onChange(newSettings)
   }
 
-  const isCategoryPredefined = (category: CategoryType) => {
-    // When showToggles is true (admin setting style), always check current value
-    // to reflect the admin's active changes, not the original context
-    if (showToggles) {
-      const categorySettings = (value as Record<string, unknown>)[category]
-      if (category === 'clothing') {
-        return !!(
-          categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
-        )
-      }
-      return !!(
-        categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
-      )
-    }
-
-    // If we have original context settings, check if this category was predefined in the original context
-    if (originalContextSettings) {
-      const originalSettings = (originalContextSettings as Record<string, unknown>)[category]
-      if (category === 'clothing') {
-        return !!(
-          originalSettings && (originalSettings as { style?: string }).style !== 'user-choice'
-        )
-      }
-      if (category === 'pose') {
-        return !!(
-          originalSettings && (originalSettings as { type?: string }).type !== 'user-choice'
-        )
-      }
-      return !!(
-        originalSettings && (originalSettings as { type?: string }).type !== 'user-choice'
-      )
-    }
-
-    // Fallback to current value logic
-    const categorySettings = (value as Record<string, unknown>)[category]
+  const isUserChoiceSetting = (category: CategoryType, settings: unknown) => {
+    if (!settings) return false
     if (category === 'clothing') {
-      return !!(
-        categorySettings && (categorySettings as { style?: string }).style !== 'user-choice'
-      )
+      return (settings as { style?: string }).style === 'user-choice'
+    }
+    if (category === 'customClothing') {
+      return (settings as { enabled?: boolean }).enabled === false
     }
     if (category === 'pose') {
-      return !!(
-        categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
-      )
+      return (settings as { type?: string }).type === 'user-choice'
     }
-    return !!(
-      categorySettings && (categorySettings as { type?: string }).type !== 'user-choice'
-    )
+    return (settings as { type?: string }).type === 'user-choice'
+  }
+
+  const isPredefinedSetting = (category: CategoryType, settings: unknown) => {
+    if (!settings) return false
+    if (category === 'clothing') {
+      return (settings as { style?: string }).style !== 'user-choice'
+    }
+    if (category === 'customClothing') {
+      return (settings as { enabled?: boolean }).enabled === true
+    }
+    return (settings as { type?: string }).type !== 'user-choice'
+  }
+
+  const isCategoryPredefined = (category: CategoryType) => {
+    const categorySettings = (value as Record<string, unknown>)[category]
+
+    // If the current value is explicitly user-choice, treat it as not predefined
+    if (isUserChoiceSetting(category, categorySettings)) {
+      return false
+    }
+
+    // Admin mode should always reflect the current value
+    if (showToggles) {
+      return isPredefinedSetting(category, categorySettings)
+    }
+
+    // When users can override predefined values, rely on their current selection
+    if (!readonlyPredefined) {
+      return isPredefinedSetting(category, categorySettings)
+    }
+
+    // If predefined fields are readonly, use the original context to know which were locked
+    if (originalContextSettings) {
+      const originalSettings = (originalContextSettings as Record<string, unknown>)[category]
+      return isPredefinedSetting(category, originalSettings)
+    }
+
+    return isPredefinedSetting(category, categorySettings)
   }
 
   const getCategoryStatus = (category: CategoryType) => {
     const categorySettings = (value as Record<string, unknown>)[category]
     if (!categorySettings) return 'not-set'
-    if (category === 'clothing') {
-      if ((categorySettings as { style?: string }).style === 'user-choice') return 'user-choice'
-    } else if (category === 'pose') {
-      if ((categorySettings as { type?: string }).type === 'user-choice') return 'user-choice'
-    } else {
-      if ((categorySettings as { type?: string }).type === 'user-choice') return 'user-choice'
-    }
-    return 'predefined'
+    return isUserChoiceSetting(category, categorySettings) ? 'user-choice' : 'predefined'
   }
 
 
@@ -665,6 +671,14 @@ export default function PhotoStyleSettings({
             />
           )}
 
+          {category.key === 'customClothing' && (
+            <CustomClothingSelector
+              value={value.customClothing || { enabled: false }}
+              onChange={(settings) => handleCategorySettingsChange('customClothing', settings)}
+              disabled={!showToggles && readonlyPredefined && isPredefined}
+            />
+          )}
+
           {category.key === 'shotType' && (
             <ShotTypeSelector
               value={value.shotType || { type: 'user-choice' }}
@@ -705,7 +719,7 @@ export default function PhotoStyleSettings({
           )}
           
           {/* Placeholder for other categories */}
-          {!['background', 'clothing', 'clothingColors', 'shotType', 'branding', 'expression', 'pose'].includes(category.key) && (
+          {!['background', 'clothing', 'clothingColors', 'customClothing', 'shotType', 'branding', 'expression', 'pose'].includes(category.key) && (
             <div className={`text-center py-8 text-gray-500 ${isUserChoice ? 'pointer-events-none' : ''}`}>
               <p className="text-sm">
                 {t('comingSoon', { default: 'Settings for this category coming soon' })}

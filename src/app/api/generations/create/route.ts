@@ -25,6 +25,7 @@ import { Telemetry } from '@/lib/telemetry'
 import { getPackageConfig } from '@/domain/style/packages'
 import { CreditService } from '@/domain/services/CreditService'
 import { UserService } from '@/domain/services/UserService'
+import { AssetService } from '@/domain/services/AssetService'
 import { RegenerationService } from '@/domain/generation'
 import { deriveGenerationType, deriveCreditSource } from '@/domain/generation/utils'
 import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
@@ -42,12 +43,13 @@ const createGenerationSchema = z.object({
   selfieKeys: z.array(z.string()).optional(), // NEW: multiple selfies by S3 key
   contextId: z.string().optional(),
   styleSettings: z.object({
-    packageId: z.string().optional(), // Package folder name (e.g., 'headshot1', 'freepackage')
+    packageId: z.string().optional(), // Package folder name (e.g., 'headshot1', 'freepackage', 'outfit1')
     style: z.any().optional(), // Allow any type since it might be an object
     background: z.any().optional(),
     branding: z.any().optional(),
     clothing: z.any().optional(),
     clothingColors: z.any().optional(),
+    customClothing: z.any().optional(), // Outfit transfer settings
     shotType: z.any().optional(),
     expression: z.any().optional(),
     pose: z.any().optional(),
@@ -475,6 +477,33 @@ export async function POST(request: NextRequest) {
     const packageConfig = getPackageConfig(packageId)
     const resolvedPackageId = packageId
 
+    // Server-side category validation: ensure users can only set visible categories
+    if (styleSettings) {
+      const allowedCategories = new Set([
+        ...packageConfig.visibleCategories,
+        'packageId',
+        'presetId',
+        'aspectRatio',
+        'subjectCount',
+        'usageContext',
+        'style' // Legacy field
+      ])
+
+      for (const key of Object.keys(styleSettings)) {
+        if (!allowedCategories.has(key)) {
+          Logger.warn('Attempted to set non-visible category', {
+            packageId,
+            category: key,
+            userId: session.user.id
+          })
+          return NextResponse.json(
+            { error: `Category '${key}' is not allowed for package '${packageId}'` },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
     // Convert raw settings to PhotoStyleSettings objects for the resolver
     const contextSettingsObj = contextStyleSettings && typeof contextStyleSettings === 'object' && !Array.isArray(contextStyleSettings)
       ? packageConfig.persistenceAdapter.deserialize(contextStyleSettings as Record<string, unknown>)
@@ -633,11 +662,101 @@ export async function POST(request: NextRequest) {
     // Note: Regenerations are handled early with RegenerationService
     const jobSelfieS3Keys = selfieS3Keys
 
+    // Resolve selfie S3 keys to Asset IDs for fingerprinting and cost tracking
+    // This ensures deterministic fingerprints based on Asset IDs, not S3 keys
+    const selfieAssetIds: string[] = []
+    try {
+      for (const key of jobSelfieS3Keys) {
+        const asset = await AssetService.resolveToAsset(key, {
+          ownerType: ownerPerson.teamId ? 'team' : 'person',
+          teamId: ownerPerson.teamId ?? undefined,
+          personId: primarySelfie.personId,
+          type: 'selfie',
+        })
+        selfieAssetIds.push(asset.id)
+        
+        // Link selfie to asset if not already linked
+        const selfie = selfies.find(s => s.key === key)
+        if (selfie) {
+          const selfieRecord = await prisma.selfie.findUnique({
+            where: { id: selfie.id },
+            select: { assetId: true }
+          })
+          if (!selfieRecord?.assetId) {
+            await AssetService.linkSelfieToAsset(selfie.id, asset.id)
+          }
+        }
+      }
+      Logger.debug('Resolved selfie assets for generation', {
+        generationId: generation.id,
+        selfieAssetIds,
+        selfieS3Keys: jobSelfieS3Keys,
+      })
+    } catch (assetError) {
+      // Log error but don't fail the generation - asset resolution is for optimization
+      Logger.warn('Failed to resolve selfie assets, continuing without asset IDs', {
+        generationId: generation.id,
+        error: assetError instanceof Error ? assetError.message : String(assetError),
+      })
+    }
+
+    // Resolve background and logo assets for fingerprinting
+    let backgroundAssetId: string | undefined
+    let logoAssetId: string | undefined
+    try {
+      const { getBackgroundIdentifier } = await import('@/domain/style/elements/background/deserializer')
+      const { getLogoIdentifier } = await import('@/domain/style/elements/branding/deserializer')
+
+      // Resolve background asset if present
+      const bgIdentifier = getBackgroundIdentifier(finalStyleSettingsObj.background)
+      if (bgIdentifier) {
+        const bgAsset = await AssetService.resolveToAsset(bgIdentifier, {
+          ownerType: ownerPerson.teamId ? 'team' : 'person',
+          teamId: ownerPerson.teamId ?? undefined,
+          personId: primarySelfie.personId,
+          type: 'background',
+          mimeType: 'image/png',
+        })
+        backgroundAssetId = bgAsset.id
+        Logger.debug('Resolved background asset', {
+          generationId: generation.id,
+          backgroundAssetId,
+          bgIdentifier,
+        })
+      }
+
+      // Resolve logo asset if present
+      const logoIdentifier = getLogoIdentifier(finalStyleSettingsObj.branding)
+      if (logoIdentifier) {
+        const logoAsset = await AssetService.resolveToAsset(logoIdentifier, {
+          ownerType: ownerPerson.teamId ? 'team' : 'person',
+          teamId: ownerPerson.teamId ?? undefined,
+          personId: primarySelfie.personId,
+          type: 'logo',
+          mimeType: 'image/png',
+        })
+        logoAssetId = logoAsset.id
+        Logger.debug('Resolved logo asset', {
+          generationId: generation.id,
+          logoAssetId,
+          logoIdentifier,
+        })
+      }
+    } catch (assetError) {
+      // Log error but don't fail the generation
+      Logger.warn('Failed to resolve style assets, continuing without asset IDs', {
+        generationId: generation.id,
+        error: assetError instanceof Error ? assetError.message : String(assetError),
+      })
+    }
+
     const job = await enqueueGenerationJob({
       generationId: generation.id,
       personId: primarySelfie.personId,
       userId: primarySelfie.person.userId || undefined,
+      teamId: ownerPerson.teamId ?? undefined,
       selfieS3Keys: jobSelfieS3Keys,
+      selfieAssetIds: selfieAssetIds.length > 0 ? selfieAssetIds : undefined,
       prompt,
       workflowVersion: finalWorkflowVersion,
       debugMode,

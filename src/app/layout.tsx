@@ -1,5 +1,7 @@
 import SessionProvider from '@/components/SessionProvider'
 import { PostHogProvider } from '@/components/PostHogProvider'
+import GoogleAnalytics from '@/components/GoogleAnalytics'
+import GoogleTagManager, { GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
 import { auth } from '@/auth'
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
@@ -77,8 +79,14 @@ export default function RootLayout({
         {/* Preconnect to PostHog for faster analytics loading - crossorigin for CORS fetch */}
         <link rel="preconnect" href="https://pineapple.teamshotspro.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://pineapple.teamshotspro.com" />
+        {/* Google Tag Manager */}
+        <GoogleTagManager />
+        {/* Google Analytics */}
+        <GoogleAnalytics />
       </head>
       <body className="overflow-x-hidden bg-gray-50">
+        {/* Google Tag Manager (noscript) */}
+        <GoogleTagManagerNoScript />
         <Script
           src="/safari-compatibility.js"
           strategy="beforeInteractive"

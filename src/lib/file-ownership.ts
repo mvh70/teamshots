@@ -247,8 +247,13 @@ export function isFileAuthorized(
   invitePersonId: string | null,
   inviteTeamId: string | null = null,
   inviteContextId: string | null = null,
-  fileKey?: string
+  fileKey?: string,
+  handoffPersonId?: string | null
 ): boolean {
+  // Handoff token access - person can access their own selfies
+  if (handoffPersonId && ownership.type === 'selfie' && ownership.personId === handoffPersonId) {
+    return true
+  }
   if (invitePersonId) {
     return isInviteAuthorized(ownership, invitePersonId, inviteTeamId, inviteContextId, fileKey)
   }

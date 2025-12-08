@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { BeforeAfterSlider } from '@/components/onboarding/BeforeAfterSlider'
+import { Sparkles } from 'lucide-react'
 
 interface InviteData {
   email: string
@@ -17,6 +18,7 @@ interface InviteData {
 
 export default function InvitePage() {
   const t = useTranslations('invite')
+  const tTeam = useTranslations('team')
   const params = useParams()
   const router = useRouter()
   const token = params.token as string
@@ -27,6 +29,12 @@ export default function InvitePage() {
   const [emailResent, setEmailResent] = useState(false)
   const [accepting, setAccepting] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [needsTeamSetup, setNeedsTeamSetup] = useState(false)
+  const [checkingTeamName, setCheckingTeamName] = useState(true)
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false)
+  const [teamNameValue, setTeamNameValue] = useState('')
+  const [teamWebsiteValue, setTeamWebsiteValue] = useState('')
+  const [submittingTeam, setSubmittingTeam] = useState(false)
 
   // Random before/after sample selection
   const samplePairs = [
@@ -85,11 +93,70 @@ export default function InvitePage() {
     }
   }, [token, router])
 
+  // Check if user needs team setup (using same logic as team page)
+  // Also check if team name is the default "My Team" value
+  const checkTeamName = useCallback(async () => {
+    try {
+      const response = await fetch('/api/dashboard/stats')
+      if (response.ok) {
+        const data = await response.json()
+        const { needsTeamSetup, isTeamAdmin, teamName } = data.userRole || {}
+        // Show setup if needsTeamSetup is true OR if team name is the default "My Team"
+        const hasDefaultTeamName = teamName === 'My Team' || teamName === 'My team'
+        if (isTeamAdmin && (needsTeamSetup || hasDefaultTeamName)) {
+          setNeedsTeamSetup(true)
+          setShowWelcomePopup(true)
+        }
+      }
+    } catch {
+      // If user is not authenticated or error, continue normally
+    } finally {
+      setCheckingTeamName(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (token) {
       validateInvite()
+      checkTeamName()
     }
-  }, [token, validateInvite])
+  }, [token, validateInvite, checkTeamName])
+
+  const handleCreateTeam = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setSubmittingTeam(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: teamNameValue,
+          website: teamWebsiteValue
+        })
+      })
+
+      if (response.ok) {
+        // Team created successfully, hide the setup modal
+        setNeedsTeamSetup(false)
+        setShowWelcomePopup(false)
+        setSubmittingTeam(false)
+        // Re-check team name to ensure it's updated
+        await checkTeamName()
+        // Re-validate invite in case it wasn't loaded yet
+        if (!inviteData) {
+          await validateInvite()
+        }
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to create team.')
+        setSubmittingTeam(false)
+      }
+    } catch {
+      setError('An error occurred while creating the team.')
+      setSubmittingTeam(false)
+    }
+  }
 
   const acceptInvite = async () => {
     setAccepting(true)
@@ -117,12 +184,100 @@ export default function InvitePage() {
     }
   }
 
-  if (loading) {
+  if (loading || checkingTeamName) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
           <p className="mt-2 text-sm text-gray-600">Validating invite...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show team setup modal if needed (show even if inviteData isn't loaded yet)
+  if (needsTeamSetup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4 py-8 sm:py-12">
+        {/* Welcome Popup Modal */}
+        {showWelcomePopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-scale-in">
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-brand-primary/10 mb-4">
+                  <Sparkles className="h-6 w-6 text-brand-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  {tTeam('setup.welcomePopup.title')}
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  {tTeam('setup.welcomePopup.message')}
+                </p>
+                <button
+                  onClick={() => setShowWelcomePopup(false)}
+                  className="w-full px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors"
+                >
+                  {tTeam('setup.welcomePopup.dismiss')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div className="max-w-xl w-full bg-white rounded-2xl shadow-depth-md border border-gray-100 p-8 sm:p-10">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">{tTeam('setup.title')}</h2>
+            <p className="mt-2 text-gray-600">{tTeam('setup.subtitle')}</p>
+          </div>
+          <form onSubmit={handleCreateTeam} className="space-y-4">
+            <div>
+              <label htmlFor="teamName" className="block text-sm font-medium text-gray-700 mb-1">
+                {tTeam('setup.teamNameLabel')}
+              </label>
+              <input
+                type="text"
+                name="teamName"
+                id="teamName"
+                required
+                value={teamNameValue}
+                onChange={(e) => setTeamNameValue(e.target.value)}
+                disabled={submittingTeam}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder={tTeam('setup.teamNamePlaceholder')}
+              />
+            </div>
+            <div>
+              <label htmlFor="teamWebsite" className="block text-sm font-medium text-gray-700 mb-1">
+                {tTeam('setup.teamWebsiteLabel')}
+              </label>
+              <input
+                type="url"
+                name="teamWebsite"
+                id="teamWebsite"
+                value={teamWebsiteValue}
+                onChange={(e) => setTeamWebsiteValue(e.target.value)}
+                disabled={submittingTeam}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder={tTeam('setup.teamWebsitePlaceholder')}
+              />
+            </div>
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={submittingTeam}
+              className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submittingTeam ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+              ) : (
+                tTeam('setup.createButton')
+              )}
+            </button>
+          </form>
         </div>
       </div>
     )

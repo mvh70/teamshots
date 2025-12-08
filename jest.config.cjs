@@ -1,4 +1,4 @@
-import nextJest from 'next/jest'
+const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({
   // Provide the path to your Next.js app to load next.config.js and .env files
@@ -15,7 +15,7 @@ const customJestConfig = {
     '<rootDir>/tests/e2e/',
     '<rootDir>/tests/integration/'
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: [
@@ -36,15 +36,6 @@ const customJestConfig = {
   testMatch: [
     '<rootDir>/tests/unit/**/*.test.{js,jsx,ts,tsx}',
     '<rootDir>/src/**/*.test.{js,jsx,ts,tsx}',
-  ],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.json',
-    }],
-  },
-  transformIgnorePatterns: [
-    'node_modules/(?!(.*\\.mjs$|@stripe/stripe-js))',
   ],
 }
 

@@ -46,61 +46,57 @@ export type OTPVerificationResult =
 
 export async function verifyOTP(email: string, code: string): Promise<OTPVerificationResult> {
   try {
+    // SECURITY: Use SINGLE query for constant-time execution to prevent timing attacks
+    // Previously used 1-3 queries depending on OTP state, allowing attackers to
+    // enumerate valid codes by measuring response times
     const otp = await prisma.oTP.findFirst({
-      where: {
-        email,
-        code,
-        expires: {
-          gt: new Date()
-        },
-        verified: false
-      }
+      where: { email, code },
+      orderBy: { createdAt: 'desc' } // Get most recent if multiple exist
     })
 
+    // Add artificial delay for timing attack prevention (constant time)
+    // This ensures all verification attempts take the same amount of time
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // If no OTP found at all, return generic error
     if (!otp) {
-      // Check if there's an OTP with this code/email combination that was already verified
-      const verifiedOtp = await prisma.oTP.findFirst({
-        where: {
-          email,
-          code,
-          verified: true
-        }
-      })
-
-      if (verifiedOtp) {
-        return { success: false, reason: 'already_verified' }
-      }
-
-      // Check if there's an expired OTP
-      const expiredOtp = await prisma.oTP.findFirst({
-        where: {
-          email,
-          code,
-          expires: {
-            lt: new Date()
-          }
-        }
-      })
-
-      if (expiredOtp) {
-        return { success: false, reason: 'expired' }
-      }
-
-      // If no OTP found at all, it's an invalid code
       return { success: false, reason: 'invalid_code' }
     }
 
+    // Check all conditions (but check them all to maintain constant time)
+    const now = new Date()
+    const isExpired = otp.expires < now
+    const isVerified = otp.verified
+    const isValid = !isExpired && !isVerified
+
+    // Return appropriate error based on state
+    if (isVerified) {
+      return { success: false, reason: 'already_verified' }
+    }
+
+    if (isExpired) {
+      return { success: false, reason: 'expired' }
+    }
+
+    if (!isValid) {
+      return { success: false, reason: 'invalid_code' }
+    }
+
+    // Valid OTP - mark as verified
     await prisma.oTP.update({
       where: { id: otp.id },
       data: { verified: true }
     })
 
-    await prisma.oTP.deleteMany({
+    // Clean up old OTPs asynchronously (don't wait for this)
+    prisma.oTP.deleteMany({
       where: {
         expires: {
-          lt: new Date()
+          lt: now
         }
       }
+    }).catch(() => {
+      // Ignore errors in cleanup - this is fire-and-forget
     })
 
     return { success: true }

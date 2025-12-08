@@ -9,8 +9,9 @@ import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Header from '@/app/[locale]/app/components/Header'
+import { useOnboardingState } from '@/lib/onborda/hooks'
 
 /**
  * Customization intro page for logged-in users.
@@ -33,6 +34,11 @@ export default function CustomizationIntroPage() {
     flags,
     customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META
   } = useGenerationFlowState()
+  const { context, updateContext } = useOnboardingState()
+  const [isSavingPreference, setIsSavingPreference] = useState(false)
+  const hasAutoSkippedRef = useRef(false)
+
+  const skipCustomizationIntro = context.hiddenScreens?.includes('customization-intro')
 
   // Build step indicator for customization intro (after selfie selection, so selfie is complete)
   const selfieStepIndicator = buildSelfieStepIndicator(customizationStepsMeta, {
@@ -53,18 +59,59 @@ export default function CustomizationIntroPage() {
   // Only redirect if already seen AND not coming from selfie selection (pendingGeneration flag)
   // If coming from selfie selection, always show the intro page
   useEffect(() => {
-    if (hydrated && hasSeenCustomizationIntro && !flags.pendingGeneration) {
-      router.replace('/app/generate/start')
+    const shouldSkip =
+      skipCustomizationIntro ||
+      (hasSeenCustomizationIntro && !flags.pendingGeneration)
+
+    if (hydrated && context._loaded && shouldSkip && !hasAutoSkippedRef.current) {
+      hasAutoSkippedRef.current = true
+      if (skipCustomizationIntro && !hasSeenCustomizationIntro) {
+        markSeenCustomizationIntro()
+      }
+      router.replace('/app/generate/start?skipUpload=1')
     }
-  }, [hydrated, hasSeenCustomizationIntro, flags.pendingGeneration, router])
+  }, [
+    hydrated,
+    hasSeenCustomizationIntro,
+    skipCustomizationIntro,
+    context._loaded,
+    flags.pendingGeneration,
+    router,
+    markSeenCustomizationIntro
+  ])
 
   const handleContinue = () => {
     markSeenCustomizationIntro()
     router.push('/app/generate/start?skipUpload=1')
   }
 
+  const handleDontShow = async () => {
+    if (isSavingPreference) return
+    setIsSavingPreference(true)
+    try {
+      const response = await fetch('/api/onboarding/hide-screen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ screenName: 'customization-intro' })
+      })
+      const data = await response.json().catch(() => ({}))
+      const updatedHiddenScreens = Array.from(
+        new Set([...(context.hiddenScreens || []), ...(data.hiddenScreens || ['customization-intro'])])
+      )
+      updateContext({ hiddenScreens: updatedHiddenScreens })
+    } catch (error) {
+      console.error('[CustomizationIntroPage] Failed to persist skip preference', error)
+    } finally {
+      setIsSavingPreference(false)
+      handleContinue()
+    }
+  }
+
   // Don't render while checking or if redirecting (but allow rendering if coming from selfie selection)
-  if (!hydrated || (hasSeenCustomizationIntro && !flags.pendingGeneration)) {
+  const shouldRedirect =
+    skipCustomizationIntro || (hasSeenCustomizationIntro && !flags.pendingGeneration)
+
+  if (!hydrated || !context._loaded || shouldRedirect) {
     return null
   }
 
@@ -84,19 +131,22 @@ export default function CustomizationIntroPage() {
           // Only show flow header content on mobile - desktop shows it in the main content area
           kicker: isMobile ? tIntro('kicker', { default: 'Before you generate' }) : undefined,
           title: isMobile ? tIntro('title', { default: 'Customize your professional headshots' }) : '',
-          subtitle: isMobile ? tIntro('body', { default: "You're about to customize how your photos look." }) : undefined,
+          subtitle: isMobile ? tIntro('subtitle', { default: "You're about to customize how your photos look." }) : undefined,
           showBack: isMobile,
           onBack: handleBack
         }}
-        maxWidth="5xl"
+        maxWidth="full"
         background="white"
         bottomPadding={isMobile ? 'lg' : 'none'}
         fixedHeaderOnMobile
-        mobileHeaderSpacerHeight={120}
+        mobileHeaderSpacerHeight={80}
+        contentClassName="py-0 sm:py-6"
       >
-        <div className="py-8 md:py-12">
+        <div className="pt-6 md:pt-10">
           <CustomizationIntroContent 
             variant="swipe"
+            onSkip={handleDontShow}
+            onContinue={handleContinue}
           />
         </div>
 

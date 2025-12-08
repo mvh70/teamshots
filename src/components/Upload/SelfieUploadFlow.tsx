@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import { useUploadFlow } from '@/hooks/useUploadFlow'
 import type { UploadResult } from '@/hooks/useUploadFlow'
+import StickyUploadBar from './StickyUploadBar'
 
 // Detect if we can auto-trigger file picker (desktop with pointer device)
 function getCanAutoTrigger(): boolean {
@@ -33,11 +34,9 @@ interface SelfieUploadFlowProps {
   onSelfiesApproved: (results: { key: string; selfieId?: string }[]) => void
   onCancel: () => void
   onError?: (error: string) => void
-  onRetake?: () => void
   saveEndpoint?: (key: string) => Promise<string | undefined> // Custom save function for invite flows, can return selfie ID
   uploadEndpoint?: (file: File) => Promise<{ key: string; url?: string }> // Custom upload function for invite flows or other custom flows
   hideHeader?: boolean // Hide title and cancel button for compact/sticky views
-  onProcessingCompleteRef?: React.MutableRefObject<(() => void) | null> // Ref to call when upload processing is complete
   initialMode?: 'camera' | 'upload' // Auto-open camera or file picker on mount
   buttonLayout?: 'vertical' | 'horizontal' // Layout for camera/upload buttons
 }
@@ -46,11 +45,9 @@ export default function SelfieUploadFlow({
   onSelfiesApproved,
   onCancel,
   onError,
-  onRetake,
   saveEndpoint,
   uploadEndpoint,
   hideHeader = false,
-  onProcessingCompleteRef,
   initialMode,
   buttonLayout = 'vertical'
 }: SelfieUploadFlowProps) {
@@ -148,8 +145,7 @@ export default function SelfieUploadFlow({
     retakePending()
     setCameraKey(prev => prev + 1)
     setShouldOpenCamera(true)
-    onRetake?.()
-  }, [retakePending, onRetake])
+  }, [retakePending])
 
   const handleCancelApproval = useCallback(() => {
     cancelPending()
@@ -174,7 +170,6 @@ export default function SelfieUploadFlow({
     multiple: true,
     onUpload: uploadFile,
     onUploaded: (result: UploadResult | UploadResult[]) => handleUploadResult(result),
-    onProcessingCompleteRef,
     testId: 'desktop-file-input',
     autoOpenCamera: shouldOpenCamera,
     isProcessing,
@@ -201,12 +196,10 @@ export default function SelfieUploadFlow({
     ) : null
 
     const mobileContent = (
-      <div data-testid="upload-flow" className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] px-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] border-t border-gray-100/50 backdrop-blur-xl bg-white/95" style={{ transform: 'translateZ(0)' }}>
-        <div data-testid="mobile-upload-interface" className="[&>div]:!p-0">
-          {manualPrompt}
-          <PhotoUpload {...commonPhotoUploadProps} />
-        </div>
-      </div>
+      <StickyUploadBar className="md:hidden">
+        {manualPrompt}
+        <PhotoUpload {...commonPhotoUploadProps} />
+      </StickyUploadBar>
     )
 
     return (

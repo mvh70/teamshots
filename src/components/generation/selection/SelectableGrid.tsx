@@ -56,6 +56,8 @@ interface SelectableGridProps {
   showLoadingState?: boolean
   /** Additional CSS classes */
   className?: string
+  /** Custom QR tile to show between selfies and upload tile (desktop only) */
+  qrTile?: React.ReactNode
 }
 
 /**
@@ -82,7 +84,8 @@ export default function SelectableGrid({
   onUploadClick,
   upload,
   showLoadingState = true,
-  className = ''
+  className = '',
+  qrTile
 }: SelectableGridProps) {
   const t = useTranslations('selfies.gallery')
   
@@ -281,7 +284,7 @@ export default function SelectableGrid({
                 className={`absolute top-3 right-3 z-20 inline-flex items-center justify-center rounded-full transition-all duration-200 ${
                   item.used
                     ? 'bg-gray-300 text-white cursor-not-allowed opacity-70'
-                    : 'bg-red-500 text-white shadow-lg md:opacity-0 md:group-hover:opacity-100 md:hover:opacity-100 md:scale-90 md:group-hover:scale-100'
+                    : 'bg-red-500 text-white shadow-lg opacity-100 md:group-hover:opacity-100'
                 }`}
                 onMouseEnter={item.used ? () => setHoveredDeleteId(item.id) : undefined}
                 onMouseLeave={item.used ? () => setHoveredDeleteId((current) => current === item.id ? null : current) : undefined}
@@ -309,6 +312,13 @@ export default function SelectableGrid({
           </div>
         )
       })}
+
+      {/* QR tile (desktop only) - between selfies and upload */}
+      {qrTile && (
+        <div className="hidden md:block aspect-square">
+          {qrTile}
+        </div>
+      )}
 
       {/* Upload tile */}
       {showUploadTile && (

@@ -5,9 +5,10 @@ import { SelectableGrid } from '@/components/generation/selection'
 import { useState } from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
-import SelfieInfoBanner from '@/components/generation/SelfieInfoBanner'
 import dynamic from 'next/dynamic'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
+import SelfieInfoOverlayTrigger from '@/components/generation/SelfieInfoOverlayTrigger'
+import { QRPlaceholder } from '@/components/MobileHandoff'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -43,14 +44,13 @@ function SelfiesPageContent() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between relative z-10 gap-6">
+      <div className="flex flex-col gap-3 relative z-10">
         <div className="space-y-2">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight" data-testid="selfies-title">{t('title')}</h1>
           <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed">Upload and manage your selfies for photo generation</p>
         </div>
+        <SelfieInfoOverlayTrigger />
       </div>
-
-      <SelfieInfoBanner variant="detailed" />
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4" data-testid="error-message">
@@ -101,6 +101,15 @@ function SelfiesPageContent() {
               onSelfiesApproved: handleSelfiesApprovedWrapper,
               onError: handleUploadError
             }}
+            qrTile={
+              <QRPlaceholder
+                size={100}
+                className="w-full h-full"
+                onSelfieUploaded={async () => {
+                  await loadUploads()
+                }}
+              />
+            }
           />
         </div>
       )}

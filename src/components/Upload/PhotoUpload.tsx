@@ -17,11 +17,9 @@ type PhotoUploadProps = {
   onSelect?: (file: File | File[]) => void;
   onUpload?: (file: File, metadata?: UploadMetadata) => Promise<UploadResult | void>;
   onUploaded?: (result: UploadResult | UploadResult[], metadata?: UploadMetadata | UploadMetadata[]) => void;
-  onProcessingCompleteRef?: React.MutableRefObject<(() => void) | null>;
   testId?: string;
   autoOpenCamera?: boolean;
   isProcessing?: boolean;
-  processingText?: string;
   onCameraError?: (message: string) => void;
   /** Layout for camera/upload buttons: 'vertical' (default) or 'horizontal' (side-by-side) */
   buttonLayout?: 'vertical' | 'horizontal';
@@ -40,12 +38,12 @@ export default function PhotoUpload({
   testId = "file-input",
   autoOpenCamera = false,
   isProcessing = false,
-  processingText,
   onCameraError,
   buttonLayout = 'vertical',
   hidePlusIcon = false
 }: PhotoUploadProps) {
   const t = useTranslations("common");
+  const tMobileHandoff = useTranslations("mobileHandoff");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoRefMobile = useRef<HTMLVideoElement | null>(null);
@@ -158,9 +156,14 @@ export default function PhotoUpload({
 
   const reportCameraError = useCallback(
     (message: string, type?: string) => {
+      const errorType = type ?? 'camera-error'
       setError(message)
-      setErrorType(type ?? 'camera-error')
-      onCameraError?.(message)
+      setErrorType(errorType)
+      // Only call onCameraError for non-camera errors, or camera errors that won't show the modal
+      // Camera errors starting with 'camera-' will show the modal instead
+      if (!errorType.startsWith('camera-')) {
+        onCameraError?.(message)
+      }
     },
     [onCameraError]
   )
@@ -693,11 +696,9 @@ export default function PhotoUpload({
           <div className="flex flex-col items-center justify-center space-y-6">
             <LoadingSpinner size="lg" />
             <p className="text-lg text-gray-700 font-medium">
-            {processingText ||
-              (uploadingFileCount > 1
-                ? t("processingImages", { count: uploadingFileCount })
-                : t("processingImage"))
-            }
+            {uploadingFileCount > 1
+              ? t("processingImages", { count: uploadingFileCount })
+              : t("processingImage")}
             </p>
           </div>
         </div>
@@ -760,6 +761,12 @@ export default function PhotoUpload({
               </button>
             </div>
           </div>
+          {/* Show "Use on computer" text on desktop when QR code is also visible - positioned to align with QR code text */}
+          {!isMobile && (
+            <p className="mt-2 text-xs text-gray-500 font-medium text-center">
+              {tMobileHandoff('useHere')}
+            </p>
+          )}
           <input
             ref={inputRef}
             type="file"
@@ -774,17 +781,30 @@ export default function PhotoUpload({
         </div>
       )}
 
-      {error && errorType === 'camera-permission-denied' ? (
-        <CameraPermissionError 
-          onRetry={() => {
-            setError(null);
-            setErrorType(null);
-            openCamera();
-          }}
-        />
-      ) : error && (
-        <InlineError message={error} className="mt-3" data-testid={errorType || "error-message"} />
-      )}
+      {(() => {
+        // Always show modal for camera errors, even if errorType is somehow not set
+        const isCameraError = (errorType && errorType.startsWith('camera-')) ||
+                             (error && (error.includes('Camera') || error.includes('camera')))
+
+        if (error && isCameraError) {
+          return (
+            <CameraPermissionError
+              onRetry={() => {
+                setError(null);
+                setErrorType(null);
+                openCamera();
+              }}
+              onDismiss={() => {
+                setError(null);
+                setErrorType(null);
+              }}
+            />
+          )
+        } else if (error) {
+          return <InlineError message={error} className="mt-3" data-testid={errorType || "error-message"} />
+        }
+        return null
+      })()}
 
       {cameraOpen && typeof window !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] bg-black/60" data-testid="camera-interface">

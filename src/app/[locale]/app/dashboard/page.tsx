@@ -22,11 +22,11 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { jsonFetcher } from '@/lib/fetcher'
 import { useCredits } from '@/contexts/CreditsContext'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
-import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
+import { INDIVIDUAL_DOMAIN } from '@/config/domain'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -105,6 +105,13 @@ export default function DashboardPage() {
   const [showUploadFlow, setShowUploadFlow] = useState(false)
   const [mounted, setMounted] = useState(false)
 
+  // Detect brand name based on domain
+  const brandName = useMemo(() => {
+    if (typeof window === 'undefined') return 'TeamShotsPro'
+    const hostname = window.location.hostname.replace(/^www\./, '').toLowerCase()
+    return hostname === INDIVIDUAL_DOMAIN ? 'PhotoShotsPro' : 'TeamShotsPro'
+  }, [])
+
   // Compute success message from URL params (derived during render, not in effect)
   const successMessage = useMemo(() => {
     const successParam = searchParams.get('success')
@@ -116,9 +123,11 @@ export default function DashboardPage() {
         return t('successMessages.individual', { credits: PRICING_CONFIG.individual.credits })
       case 'pro_success':
       case 'pro_small_success':
-        return t('successMessages.proSmall', { credits: PRICING_CONFIG.proSmall.credits })
+        return t('successMessages.starter', { photos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits) })
       case 'pro_large_success':
-        return t('successMessages.proLarge', { credits: PRICING_CONFIG.proLarge.credits })
+        return t('successMessages.business', { photos: calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits) })
+      case 'enterprise_success':
+        return t('successMessages.enterprise', { photos: calculatePhotosFromCredits(PRICING_CONFIG.enterprise.credits) })
       case 'top_up_success':
         return t('successMessages.topUp')
       default:
@@ -129,7 +138,6 @@ export default function DashboardPage() {
   // Onboarding state
   const { context: onboardingContext, updateContext: updateOnboardingContext } = useOnboardingState()
   const { track } = useAnalytics()
-  const [onboardingStep, setOnboardingStep] = useState(1)
   const [hasCompletedMainOnboarding, setHasCompletedMainOnboarding] = useState(false) // Start as false, will be set to true if completed
   const [showOnboardingImmediately, setShowOnboardingImmediately] = useState(false)
   const [onboardingStartedTracked, setOnboardingStartedTracked] = useState(false)
@@ -172,7 +180,7 @@ export default function DashboardPage() {
         user_id: session.user.id,
         onboarding_segment: onboardingContext.onboardingSegment,
         is_free_plan: onboardingContext.isFreePlan,
-        total_steps: 2
+        total_steps: 1
       })
       setOnboardingStartedTracked(true)
     }
@@ -183,13 +191,13 @@ export default function DashboardPage() {
     if (showOnboardingSection && session?.user?.id) {
       track('onboarding_step_viewed', {
         user_id: session.user.id,
-        step_number: onboardingStep,
-        step_name: onboardingStep === 1 ? 'how_it_works' : 'first_action',
+      step_number: 1,
+      step_name: 'how_it_works',
         onboarding_segment: onboardingContext.onboardingSegment,
         is_free_plan: onboardingContext.isFreePlan
       })
     }
-  }, [onboardingStep, showOnboardingSection, session?.user?.id, onboardingContext.onboardingSegment, onboardingContext.isFreePlan, track])
+}, [showOnboardingSection, session?.user?.id, onboardingContext.onboardingSegment, onboardingContext.isFreePlan, track])
 
   // Onboarding handlers
   const handleStartAction = async () => {
@@ -221,31 +229,15 @@ export default function DashboardPage() {
           user_id: session.user.id,
           onboarding_segment: onboardingContext.onboardingSegment,
           is_free_plan: onboardingContext.isFreePlan,
-          final_step: onboardingStep,
+          final_step: 1,
           completion_time: Date.now()
         })
       }
 
       // Navigate based on plan type and segment
-      const segment = onboardingContext.onboardingSegment || 'individual';
-      const isFree = onboardingContext.isFreePlan ?? true;
-
-      if (segment === 'organizer') {
-        if (isFree) {
-          // Free plan: redirect to team page to invite yourself
-          // Set flag to automatically open invite modal when they arrive at team page
-          sessionStorage.setItem('open-invite-modal', 'true');
-          router.push('/app/team');
-        } else {
-          // Paid plan: stay on dashboard (user can navigate to photo styles when ready)
-          // Don't auto-redirect to photo styles page
-        }
-      } else {
-        // Individual users go to generate
-        // Clear any stale flow flags to ensure a clean start
-        resetFlow()
-        router.push('/app/generate/start');
-      }
+      // Send everyone straight to generation start with mobile handoff
+      resetFlow()
+      router.push('/app/generate/start');
     } catch (error) {
       console.error('Failed to mark onboarding as complete:', error);
       // Show user-facing error (you can style this better or use a toast library)
@@ -418,80 +410,84 @@ export default function DashboardPage() {
     <div className="space-y-8 md:space-y-10 lg:space-y-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Onboarding Flow - Show first if applicable to prevent flickering */}
       {showOnboardingSection && (
-        <div className="bg-white rounded-xl shadow-depth-sm border border-gray-200 p-8 animate-fade-in">
-          <OnboardingProgress
-            currentStep={onboardingStep}
-            totalSteps={2}
-            className="mb-8"
-          />
-
-          {/* Step 1: How It Works */}
-          {onboardingStep === 1 && (
-            <div className="text-center space-y-6" id="how-it-works">
-              <div className="max-w-md mx-auto">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+        <div className="bg-white rounded-xl shadow-depth-sm border border-gray-200 p-8 md:p-10 lg:p-12 animate-fade-in">
+          {/* How It Works */}
+          <div className="text-center space-y-6" id="how-it-works">
+              <div className="max-w-3xl mx-auto">
+                <h3 className="text-xl md:text-2xl font-semibold text-gray-900 mb-6">
                   {t('onboarding.howItWorks.title')}
                 </h3>
-                <div className="space-y-4 text-left">
+                <div className="space-y-5 md:space-y-6 text-left">
                   {onboardingContext.onboardingSegment === 'organizer' ? (
                     <>
                       {onboardingContext.isFreePlan ? (
                         <>
-                          <div className="flex items-start gap-4">
-                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          <div className="flex items-start gap-5 md:gap-6">
+                            <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
                               1
                             </div>
-                            <div>
-                              <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.free.step1.title')}</h4>
-                              <p className="text-sm text-gray-600">
-                                {t('onboarding.howItWorks.organizer.free.step1.description')}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.free.step1.title')}</h4>
+                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                                {t('onboarding.howItWorks.organizer.free.step1.description', { brandName })}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-start gap-4">
-                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          <div className="flex items-start gap-5 md:gap-6">
+                            <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
                               2
                             </div>
-                            <div>
-                              <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.free.step2.title')}</h4>
-                              <p className="text-sm text-gray-600">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.free.step2.title')}</h4>
+                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                                 {t('onboarding.howItWorks.organizer.free.step2.description')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-5 md:gap-6">
+                            <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
+                              3
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.free.step3.title')}</h4>
+                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                                {t('onboarding.howItWorks.organizer.free.step3.description')}
                               </p>
                             </div>
                           </div>
                         </>
                       ) : (
                         <>
-                          <div className="flex items-start gap-4">
-                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          <div className="flex items-start gap-5 md:gap-6">
+                            <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
                               1
                             </div>
-                            <div>
-                              <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step1.title')}</h4>
-                              <p className="text-sm text-gray-600">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.step1.title')}</h4>
+                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                                 {t('onboarding.howItWorks.organizer.step1.description')}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-start gap-4">
-                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          <div className="flex items-start gap-5 md:gap-6">
+                            <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
                               2
                             </div>
-                            <div>
-                              <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step2.title')}</h4>
-                              <p className="text-sm text-gray-600">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.step2.title')}</h4>
+                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                                 {t('onboarding.howItWorks.organizer.step2.description')}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-start gap-4">
-                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                          <div className="flex items-start gap-5 md:gap-6">
+                            <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
                               3
                             </div>
-                            <div>
-                              <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.organizer.step4.title')}</h4>
-                              <p className="text-sm text-gray-600">
-                                {t('onboarding.howItWorks.organizer.step4.description')}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.organizer.step3.title')}</h4>
+                              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                                {t('onboarding.howItWorks.organizer.step3.description')}
                               </p>
                             </div>
                           </div>
@@ -500,35 +496,35 @@ export default function DashboardPage() {
                     </>
                   ) : onboardingContext.onboardingSegment === 'invited' ? (
                     <>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="flex items-start gap-5 md:gap-6">
+                        <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
                           1
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.invited.step1.title')}</h4>
-                          <p className="text-sm text-gray-600">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.invited.step1.title')}</h4>
+                          <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                             {t('onboarding.howItWorks.invited.step1.description')}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="flex items-start gap-5 md:gap-6">
+                        <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
                           2
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.invited.step2.title')}</h4>
-                          <p className="text-sm text-gray-600">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.invited.step2.title')}</h4>
+                          <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                             {t('onboarding.howItWorks.invited.step2.description')}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="flex items-start gap-5 md:gap-6">
+                        <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
                           3
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.invited.step3.title')}</h4>
-                          <p className="text-sm text-gray-600">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.invited.step3.title')}</h4>
+                          <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                             {t('onboarding.howItWorks.invited.step3.description')}
                           </p>
                         </div>
@@ -536,24 +532,24 @@ export default function DashboardPage() {
                     </>
                   ) : (
                     <>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="flex items-start gap-5 md:gap-6">
+                        <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
                           1
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.individual.step1.title')}</h4>
-                          <p className="text-sm text-gray-600">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.individual.step1.title')}</h4>
+                          <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                             {t('onboarding.howItWorks.individual.step1.description')}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="flex items-start gap-5 md:gap-6">
+                        <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold text-base md:text-lg">
                           2
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-1">{t('onboarding.howItWorks.individual.step3.title')}</h4>
-                          <p className="text-sm text-gray-600">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 mb-2 text-base md:text-lg">{t('onboarding.howItWorks.individual.step3.title')}</h4>
+                          <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                             {onboardingContext.isFreePlan 
                               ? t('onboarding.howItWorks.individual.step3.descriptionFree')
                               : t('onboarding.howItWorks.individual.step3.descriptionPaid')}
@@ -561,138 +557,24 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       {!onboardingContext.isFreePlan && (
-                        <p className="mt-6 text-sm text-gray-500 italic">
+                        <p className="mt-6 text-sm md:text-base text-gray-500 italic leading-relaxed">
                           {t('onboarding.howItWorks.individual.note')}
                         </p>
                       )}
                     </>
                   )}
                 </div>
+
+                <div className="mt-8">
+                  <button
+                    onClick={handleStartAction}
+                    className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px]"
+                  >
+                    {t('onboarding.firstAction.shared.button')}
+                  </button>
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Step 2: First Action */}
-          {onboardingStep === 2 && (
-            <div className="text-center space-y-6" id="first-action">
-              <div className="max-w-md mx-auto">
-                {onboardingContext.onboardingSegment === 'organizer' ? (
-                  <>
-                    {onboardingContext.isFreePlan ? (
-                      <>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                          {t('onboarding.firstAction.organizer.free.title')}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-6">
-                          {t('onboarding.firstAction.organizer.free.description')}
-                        </p>
-                        <button
-                          onClick={handleStartAction}
-                          className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px]"
-                        >
-                          {t('onboarding.firstAction.organizer.free.button')}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                          {t('onboarding.firstAction.organizer.paid.title')}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-6">
-                          {t('onboarding.firstAction.organizer.paid.description')}
-                        </p>
-                        <button
-                          onClick={handleStartAction}
-                          className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px]"
-                        >
-                          {t('onboarding.firstAction.organizer.paid.button')}
-                        </button>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {onboardingContext.isFreePlan ? (
-                      <>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                          {t('onboarding.firstAction.individual.free.title')}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-6">
-                          {t('onboarding.firstAction.individual.free.description')}
-                        </p>
-                        <button
-                          onClick={handleStartAction}
-                          className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px]"
-                        >
-                          {t('onboarding.firstAction.individual.free.button')}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                          {t('onboarding.firstAction.individual.paid.title')}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-6">
-                          {t('onboarding.firstAction.individual.paid.description')}
-                        </p>
-                        <button
-                          onClick={handleStartAction}
-                          className="w-full inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary min-h-[48px]"
-                        >
-                          {t('onboarding.firstAction.individual.paid.button')}
-                        </button>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Navigation buttons for onboarding */}
-          <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-            <button
-              onClick={() => setOnboardingStep(Math.max(1, onboardingStep - 1))}
-              disabled={onboardingStep === 1}
-              className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {t('onboarding.navigation.back')}
-            </button>
-
-            <div className="flex gap-3">
-              <button
-                onClick={async () => {
-                  // Mark onboarding as complete in database
-                  try {
-                    await fetch('/api/onboarding/complete-tour', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ tourName: 'main-onboarding' }),
-                    })
-                    setHasCompletedMainOnboarding(true)
-                    window.location.reload() // Refresh to hide onboarding
-                  } catch (error) {
-                    console.error('Failed to mark onboarding as complete:', error)
-                    // Continue anyway
-                    setHasCompletedMainOnboarding(true)
-                    window.location.reload()
-                  }
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
-              >
-                {t('onboarding.navigation.skip')}
-              </button>
-
-              {onboardingStep < 2 && (
-                <button
-                  onClick={() => setOnboardingStep(onboardingStep + 1)}
-                  className="px-6 py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-primary-hover min-h-[40px]"
-                >
-                  {t('onboarding.navigation.next')}
-                </button>
-              )}
-            </div>
-          </div>
         </div>
       )}
 

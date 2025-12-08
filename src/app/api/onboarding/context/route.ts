@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
     // Load completed and pending tours from Person.onboardingState
     let completedTours: string[] = []
     let pendingTours: string[] = []
+  let hiddenScreens: string[] = []
     if (personId) {
       const person = await prisma.person.findUnique({
         where: { id: personId },
@@ -83,6 +84,9 @@ export async function GET(request: NextRequest) {
           }
           if (parsed.pendingTours && Array.isArray(parsed.pendingTours)) {
             pendingTours = parsed.pendingTours
+          }
+        if (parsed.hiddenScreens && Array.isArray(parsed.hiddenScreens)) {
+          hiddenScreens = parsed.hiddenScreens.filter((s: unknown): s is string => typeof s === 'string')
           }
         } catch {
           // If parsing fails, treat as empty (old format or invalid JSON)
@@ -113,7 +117,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build onboarding context
-    let context: OnboardingContext & { completedTours?: string[]; pendingTours?: string[] }
+  let context: OnboardingContext & { completedTours?: string[]; pendingTours?: string[]; hiddenScreens?: string[] }
     
     if (token && personId && inviteData && 'person' in inviteData && inviteData.person) {
       // Invite flow: build context from invite and person data (already fetched above)
@@ -150,6 +154,7 @@ export async function GET(request: NextRequest) {
         _loaded: true,
         completedTours, // Include completed tours from database
         pendingTours, // Include pending tours from database
+        hiddenScreens,
       }
     } else if (userContext) {
       // Normal flow: use userContext data
@@ -171,6 +176,7 @@ export async function GET(request: NextRequest) {
         _loaded: true,
         completedTours, // Include completed tours from database
         pendingTours, // Include pending tours from database
+        hiddenScreens,
       }
     } else {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

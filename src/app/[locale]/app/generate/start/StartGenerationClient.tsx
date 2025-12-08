@@ -11,7 +11,6 @@ import { useTranslations } from 'next-intl'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
 import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
-import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import PackageSelector from '@/components/packages/PackageSelector'
 import { PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { BRAND_CONFIG } from '@/config/brand'
@@ -123,11 +122,17 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     if (!skipUpload && !keyFromQuery && !isSuccess && session && hydrated) {
       markGenerationFlow()
       startTransition(() => {
-        // Always go through selfie tips page first - flow pages handle redirecting as needed
-        router.push('/app/generate/selfie-tips')
+        // Check if user has enough selfies to skip selfie upload flow
+        if (hasEnoughSelfies(selectedSelfies.length)) {
+          // User has enough selfies, skip directly to customization-intro
+          router.push('/app/generate/customization-intro')
+        } else {
+          // Not enough selfies, go through selfie tips page first
+          router.push('/app/generate/selfie-tips')
+        }
       })
     }
-  }, [skipUpload, keyFromQuery, router, isSuccess, session, markGenerationFlow, hydrated])
+  }, [skipUpload, keyFromQuery, router, isSuccess, session, markGenerationFlow, hydrated, selectedSelfies.length])
 
   useEffect(() => {
     // Don't run this effect if we're starting a fresh flow (will be redirected by first useEffect)
@@ -299,7 +304,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     }
   }, [hydrated, skipUpload, hasSeenCustomizationIntro, router])
 
-  if (isSuccess && (successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success')) {
+  if (isSuccess && (successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success' || successType === 'enterprise_success')) {
     return <PurchaseSuccess />
   }
 
@@ -370,7 +375,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   }
 
   return (
-    <div className={`${pagePaddingClasses} space-y-8 pb-24 md:pb-0 w-full max-w-full overflow-x-hidden`}>
+    <div className={`${pagePaddingClasses} space-y-8 pb-24 md:pb-0 w-full max-w-full overflow-x-hidden bg-white min-h-screen`}>
       {!skipUpload && (creditsLoading || !session) ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
@@ -401,12 +406,72 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
         />
       ) : skipUpload ? (
         <>
-          {/* Header card with selfie thumbnails and summary - hidden on mobile to match invited user flow */}
-          <div className="hidden md:block bg-white rounded-xl shadow-md border border-gray-200/60 p-6 sm:p-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6 tracking-tight">{t('readyToGenerate')}</h1>
+          {/* Generate button section - full width on desktop */}
+          <div className="hidden md:block mb-6 space-y-4">
+            {/* Alert for insufficient credits */}
+            {!hasEnoughCredits && (
+              <div className="p-4 bg-white/80 backdrop-blur-sm border border-amber-300/60 rounded-lg shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center mt-0.5">
+                    <svg className="h-3.5 w-3.5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-900 mb-1">
+                      {t('insufficientCredits')}
+                    </p>
+                    <p className="text-sm text-amber-800 leading-snug">
+                      {t('insufficientCreditsMessage', {
+                        required: calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration),
+                        current: calculatePhotosFromCredits(effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual)
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Full-width generate button */}
+            <div className="w-full">
+              {!hasEnoughCredits ? (
+                <Link
+                  href={buyCreditsHrefWithReturn}
+                  className="w-full inline-flex items-center justify-center px-6 py-4 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
+                  style={{ 
+                    background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.ctaHover}, #4F46E5)`
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
+                  }}
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  {t('buyMoreCredits')}
+                </Link>
+              ) : (
+                <GenerateButton
+                  onClick={onProceed}
+                  disabled={!canGenerate || isPending}
+                  isGenerating={isGenerating || isPending}
+                  size="lg"
+                  disabledReason={hasUneditedFields ? t('customizeFirstTooltip') : undefined}
+                  integrateInPopover={hasUneditedFields}
+                >
+                  Generate
+                </GenerateButton>
+              )}
+            </div>
+          </div>
+
+          {/* Header card with selfie thumbnails and summary - hidden completely */}
+          <div className="hidden bg-white rounded-xl shadow-md border border-gray-200/60 p-4 sm:p-6">
+            <h1 className="hidden text-xl sm:text-2xl font-bold text-gray-900 mb-3 tracking-tight">{t('readyToGenerate')}</h1>
             
             {/* Alternative Layout: More balanced card-based approach */}
-            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
               {/* Left Section: Thumbnails and Summary */}
               <div className="flex gap-5 lg:flex-1 min-w-0">
                 {/* Selected Selfie Thumbnails */}
@@ -443,31 +508,21 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
               </div>
 
               {/* Right Section: Credits and Generate Action */}
-              <div className="hidden md:block lg:flex-none lg:w-80 xl:w-96">
-                <div className={`rounded-xl p-5 lg:p-6 border transition-all shadow-sm ${
-                  !hasEnoughCredits 
-                    ? 'bg-amber-50/50 border-amber-200/60' 
-                    : 'bg-gradient-to-br from-gray-50 to-gray-100/50 border-gray-200/60'
-                }`}>
-                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Cost per generation</div>
-                  <div className="mb-5">
-                    <div className="text-3xl lg:text-4xl font-bold text-gray-900 leading-none">{photoCreditsPerGeneration}</div>
-                    <div className="text-sm text-gray-600 mt-2">photo credits</div>
-                  </div>
-                  
+              <div className="hidden lg:flex-none lg:w-64 xl:w-72">
+                <div className="space-y-4">
                   {!hasEnoughCredits && (
-                    <div className="mb-5 p-4 bg-white/80 backdrop-blur-sm border border-amber-300/60 rounded-xl shadow-sm">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
-                          <svg className="h-4 w-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="p-3 bg-white/80 backdrop-blur-sm border border-amber-300/60 rounded-lg shadow-sm">
+                      <div className="flex items-start gap-2.5">
+                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
+                          <svg className="h-3.5 w-3.5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                           </svg>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-amber-900 mb-1.5">
+                          <p className="text-xs font-semibold text-amber-900 mb-1">
                             {t('insufficientCredits')}
                           </p>
-                          <p className="text-xs text-amber-800 leading-relaxed">
+                          <p className="text-xs text-amber-800 leading-snug">
                             {t('insufficientCreditsMessage', {
                               required: calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration),
                               current: calculatePhotosFromCredits(effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual)
@@ -478,37 +533,10 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                     </div>
                   )}
                   
-                  <div>
-                    {!hasEnoughCredits ? (
-                      <Link
-                        href={buyCreditsHrefWithReturn}
-                        className="w-full inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
-                        style={{ 
-                          background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.ctaHover}, #4F46E5)`
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
-                        }}
-                      >
-                        <PlusIcon className="h-5 w-5 mr-2" />
-                        {t('buyMoreCredits')}
-                      </Link>
-                    ) : (
-                      <GenerateButton
-                        onClick={onProceed}
-                        disabled={!canGenerate || isPending}
-                        isGenerating={isGenerating || isPending}
-                        size="sm"
-                        className="w-full"
-                        disabledReason={hasUneditedFields ? t('customizeFirstTooltip') : undefined}
-                        integrateInPopover={hasUneditedFields}
-                      >
-                        Generate
-                      </GenerateButton>
-                    )}
+                  <div className="hidden text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Cost per generation</div>
+                  <div className="hidden mb-4">
+                    <div className="text-xl lg:text-2xl font-bold text-gray-900 leading-none">{photoCreditsPerGeneration}</div>
+                    <div className="text-xs lg:text-sm text-gray-600">photo credits</div>
                   </div>
                 </div>
               </div>
@@ -582,13 +610,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             </div>
           )}
           
-          {/* Free plan banner + Free package info */}
-          {(isFreePlan || selectedPackageId === 'freepackage') && (
-            <div className="hidden md:block">
-              <FreePlanBanner variant="personal" className="mb-6" />
-            </div>
-          )}
-
           {/* Package Selector - Hide for free package contexts or predefined styles */}
           {!activeContext && selectedPackageId !== 'freepackage' && (
             <div className="hidden md:block">
@@ -636,6 +657,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             isFreePlan={isFreePlan}
             teamContext={effectiveGenerationType === 'team'}
             className="hidden md:block"
+            noContainer
             onStepMetaChange={setCustomizationStepsMeta}
           />
 

@@ -18,10 +18,8 @@ export function applyToPayload(context: PromptBuildContext): void {
     bodyAngle: poseResult.bodyAngle
   })
 
-  // Set expression if present (uses user's expression selection)
-  if (poseResult.expression) {
-    setPath(context.payload, 'subject.pose.expression', poseResult.expression)
-  }
+  // NOTE: Expression is NOT set here - it's already set correctly in createBasePayload
+  // from the user's expression selection in photo style settings. Pose should not override it.
 
   // Set detailed pose instructions on payload based on generatedPose results
   // This handles both template-based poses and component-based resolution

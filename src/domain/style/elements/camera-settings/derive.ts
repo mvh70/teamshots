@@ -72,20 +72,20 @@ function getAperture(input: CameraSettingsInput): number {
   if (subjectCount >= 2) return 5.6
 
   // Fashion editorial override (shallow DOF for creative look)
-  if (presetId === 'fashion-editorial') return 2.8
+  if (presetId === 'fashion-editorial') return 2.0
 
   // Shot type defaults
   const shotTypeMap: Record<string, number> = {
-    'extreme-close-up': 2.8,
-    'close-up': 4.0,
-    'headshot': 4.0,
-    'medium-close-up': 4.0,
-    'bust': 4.0,
-    'medium-shot': 5.6,
-    'midchest': 5.6,
-    'three-quarter': 5.6,
-    'full-length': 5.6,
-    'full-body': 5.6,
+    'extreme-close-up': 2.0,
+    'close-up': 2.0,
+    'headshot': 2.0,
+    'medium-close-up': 2.0,
+    'bust': 2.0,
+    'medium-shot': 2.0,
+    'midchest': 2.0,
+    'three-quarter': 2.0,
+    'full-length': 4.0,
+    'full-body': 4.0,
     'wide-shot': 8.0,      // Need more DOF for wider shots
     'environmental': 5.6    // Show context but not too deep
   }

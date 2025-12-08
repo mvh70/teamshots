@@ -3,12 +3,15 @@
 import React from 'react'
 import { useTranslations } from 'next-intl'
 import IntroScreenContent, { IntroTip } from './IntroScreenContent'
+import { useMobileViewport } from '@/hooks/useMobileViewport'
 
 interface SelfieTipsContentProps {
   /** 'swipe' for mobile swipe flow, 'button' for desktop with continue button */
   variant: 'swipe' | 'button'
   /** Callback when user clicks Continue (only used when variant='button') */
   onContinue?: () => void
+  /** Callback when user chooses to skip future displays */
+  onSkip?: () => void
   /** Optional additional class names */
   className?: string
 }
@@ -16,10 +19,13 @@ interface SelfieTipsContentProps {
 export default function SelfieTipsContent({ 
   variant, 
   onContinue,
+  onSkip,
   className = ''
 }: SelfieTipsContentProps) {
   const t = useTranslations('customization.photoStyle.mobile.selfieTips')
   const tCommon = useTranslations('customization.photoStyle.mobile')
+  const tQr = useTranslations('generate.selfie.qrTip')
+  const isMobile = useMobileViewport()
 
   const tips: IntroTip[] = [
     {
@@ -85,6 +91,31 @@ export default function SelfieTipsContent({
     }
   ]
 
+  if (!isMobile) {
+    tips.unshift({
+      key: 'qr',
+      icon: (
+        <svg className="h-6 w-6 md:h-7 md:w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="6" height="6" />
+          <rect x="15" y="3" width="6" height="6" />
+          <rect x="3" y="15" width="6" height="6" />
+          <path d="M15 15h2v2h-2z" />
+          <path d="M19 15h2v2h-2z" />
+          <path d="M17 17h2v2h-2z" />
+          <path d="M15 19h2v2h-2z" />
+          <path d="M19 19h2v2h-2z" />
+        </svg>
+      ),
+      bgColor: 'bg-blue-100',
+      textColor: 'text-blue-700',
+      content: {
+        type: 'titled',
+        title: tQr('title', { default: 'Upload from your phone' }),
+        description: tQr('description', { default: 'Scan this QR code with your phone to upload selfies directly from your camera roll.' })
+      }
+    })
+  }
+
   return (
     <IntroScreenContent
       variant={variant}
@@ -93,15 +124,17 @@ export default function SelfieTipsContent({
       body={t('body', { default: "Great photos start with great selfies. Here's how to nail them." })}
       tips={tips}
       image={{
-        src: '/samples/good_bad_selfie.jpeg',
+        src: '/images/good_bad_selfie_2.jpeg',
         alt: 'Examples of good and bad selfies for AI photo generation',
         width: 600,
-        height: 300,
+        height: 320,
         priority: true
       }}
       swipeHintText={tCommon('swipeHint', { default: 'Swipe or tap Next to continue' })}
       continueButtonText="Continue"
       onContinue={onContinue}
+      onSkip={onSkip}
+      skipText={t('skip', { default: "Don't show again" })}
       className={className}
     />
   )

@@ -146,6 +146,9 @@ export async function POST(request: NextRequest) {
       } else if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
         successMessage = 'pro_large_success'
         successTier = 'proLarge' // For metadata - actual tier will be 'pro', period 'large'
+      } else if (priceId === PRICING_CONFIG.enterprise.stripePriceId) {
+        successMessage = 'enterprise_success'
+        successTier = 'enterprise' // For metadata - actual tier will be 'pro', period 'large'
       }
     } else if (type === 'top_up') {
       successMessage = 'top_up_success'

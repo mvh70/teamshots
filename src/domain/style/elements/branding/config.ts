@@ -22,7 +22,7 @@ export const BRANDING_POSITIONS = [
 
 export const BACKGROUND_BRANDING_PROMPT: Record<string, unknown> = {
   logo_source: 'Use the attached image labeled "logo" as the branding element for the scene',
-  placement: 'Place the provided brand logo ONCE as a photorealistic 3D integration. Extract [logo/text] and ignore white/transparent background. Rnder as physical three-dimensional objects embedded into the background scene. Logo must have depth, volume, cast accurate shadows, reflect ambient lighting, and match scene perspective. Result should appear as if logo was photographed as tangible installation within the original environment, not overlaid or composited.',
+  placement: 'Physical 3D Wall Signage. The logo is not a print, but a dimensional object made of matte acrylic mounted on the rear wall. It has visible thickness/extrusion. It casts a natural soft shadow on the wall. Due to the f/2.0 aperture, the logo should be slightly soft/blurred compared to the sharp subject.',
   material: 'Choose what fits best, depending on the size and scenery: in brushed metal / carved stone / illuminated acrylic',
   rules: [
     'Align with scene perspective and lighting.',
@@ -35,7 +35,7 @@ export const BACKGROUND_BRANDING_PROMPT: Record<string, unknown> = {
 
 export const ELEMENT_BRANDING_PROMPT: Record<string, unknown> = {
   logo_source: 'Use the attached image labeled "logo" as the branding element for the scene',
-  placement: 'Place the provided brand logo once on a falcon banner flag (vertical flag with a curved top edge). Adapt the flag color to the logo: if the logo has a distinct background color, use that same color for the flag background; if the logo has a white or transparent background, make the flag WHITE. The element must be grounded in the scene behind the subject, standing on the floor. The logo must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.',
+  placement: 'Place the provided brand logo once on a vertical falcon banner flag (a vertical pull-up/retractable banner stand with a curved top edge - NOT a horizontal banner). Adapt the flag color to the logo: if the logo has a distinct background color, use that same color for the flag background; if the logo has a white or transparent background, make the flag WHITE. The element must be grounded in the scene behind the subject, standing on the floor. The logo must be perfectly aligned with the banner flag vertical axis, centered horizontally on the flag, and look like it is professionally printed on the fabric. It must follow the element perspective without warping or repeating. Do not place on the person, skin, or clothing when using elements mode; do not float in mid-air; no duplicates or patterns.',
   allowed_elements: ['falcon banner flag'],
   rules: [
     'Ground the element in the scene with correct perspective.',

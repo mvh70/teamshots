@@ -22,6 +22,10 @@ import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 import { PhotoStyleSettings } from '@/types/photo-style'
 import { isRateLimitError, MAX_RATE_LIMIT_RETRIES, RATE_LIMIT_SLEEP_MS } from '@/lib/rate-limit-retry'
 import { asRecord } from '@/lib/type-guards'
+import { CostTrackingService } from '@/domain/services/CostTrackingService'
+import type { CostReason, CostResult } from '@/domain/services/CostTrackingService'
+import type { AIModelId, AIProvider } from '@/config/ai-costs'
+import { AssetService } from '@/domain/services/AssetService'
 
 // Import shared utilities for V1 workflow improvements
 import { executeWithRateLimitRetry, createProgressRetryCallback } from './generate-image/utils/retry-handler'
@@ -57,8 +61,76 @@ const BUCKET_NAME = getS3BucketName()
 const imageGenerationWorker = new Worker<ImageGenerationJobData>(
   'image-generation',
   async (job: Job<ImageGenerationJobData>) => {
-    const { generationId, personId, userId, selfieS3Keys, prompt, creditSource, providerOptions } = job.data as (typeof job.data) & {
+    const { generationId, personId, userId, teamId, selfieS3Keys, selfieAssetIds, prompt, creditSource, providerOptions } = job.data as (typeof job.data) & {
       workflowState?: V3WorkflowState
+    }
+
+    // Create cost tracking handler for the workflow
+    const handleCostTracking = async (params: {
+      stepName: string
+      reason: CostReason
+      result: CostResult
+      model: AIModelId
+      provider?: AIProvider  // UPDATED: Accept actual provider from generation result
+      inputTokens?: number
+      outputTokens?: number
+      imagesGenerated?: number
+      durationMs?: number
+      errorMessage?: string
+      outputAssetId?: string
+      reusedAssetId?: string
+      // NEW: Evaluation outcome tracking
+      evaluationStatus?: 'approved' | 'rejected'
+      rejectionReason?: string
+      intermediateS3Key?: string
+    }) => {
+      try {
+        if (params.reusedAssetId) {
+          await CostTrackingService.trackReuse({
+            generationId,
+            personId,
+            teamId,
+            model: params.model,
+            reason: params.reason,
+            reusedAssetId: params.reusedAssetId,
+            workflowVersion: providerOptions?.workflowVersion as string || 'v3',
+            stepName: params.stepName,
+          })
+        } else {
+          // Use actual provider if provided, otherwise fall back to config
+          const provider = params.provider || 
+            (await import('@/config/ai-costs').then(m => m.getModelConfig(params.model))).provider as AIProvider
+          
+          await CostTrackingService.trackCall({
+            generationId,
+            personId,
+            teamId,
+            provider,  // Use actual provider from generation result
+            model: params.model,
+            inputTokens: params.inputTokens,
+            outputTokens: params.outputTokens,
+            imagesGenerated: params.imagesGenerated,
+            reason: params.reason,
+            result: params.result,
+            errorMessage: params.errorMessage,
+            durationMs: params.durationMs,
+            workflowVersion: providerOptions?.workflowVersion as string || 'v3',
+            stepName: params.stepName,
+            outputAssetId: params.outputAssetId,
+            // NEW: Evaluation outcome tracking
+            evaluationStatus: params.evaluationStatus,
+            rejectionReason: params.rejectionReason,
+            intermediateS3Key: params.intermediateS3Key,
+          })
+        }
+      } catch (costError) {
+        // Don't fail the generation if cost tracking fails
+        Logger.warn('Cost tracking failed', {
+          generationId,
+          stepName: params.stepName,
+          error: costError instanceof Error ? costError.message : String(costError),
+        })
+      }
     }
 
     let workflowState = getWorkflowState(job)
@@ -383,12 +455,17 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             generationId,
             personId,
             userId,
+            teamId,
             selfieReferences: v3SelfieReferences,
+            selfieAssetIds,
+            backgroundAssetId: job.data.backgroundAssetId,
+            logoAssetId: job.data.logoAssetId,
             selfieComposite: v3SelfieComposite,
             styleSettings: mergedStyleSettings,
             prompt: basePrompt,
             mustFollowRules: mustFollowRulesFromPayload,
             freedomRules: freedomRulesFromPayload,
+            referenceImages, // Pre-built references from package (e.g., outfit collage)
             aspectRatio: aspectRatioFromPayload,
             downloadAsset: (key) => downloadAssetAsBase64({ bucketName: BUCKET_NAME, s3Client, key }),
             currentAttempt,
@@ -397,7 +474,8 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             stopAfterStep: providerOptions?.stopAfterStep as number | undefined,
             workflowState,
             persistWorkflowState,
-            intermediateStorage
+            intermediateStorage,
+            onCostTracking: handleCostTracking,
           })
 
           approvedImageBuffers = v3Result.approvedImageBuffers
@@ -457,7 +535,6 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           data: {
             status: 'completed',
             generatedPhotoKeys: [],
-            actualCost: undefined,
             provider: 'debug-skip',
             completedAt: new Date(),
             updatedAt: new Date()
@@ -510,11 +587,11 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
             const buffers = await generateWithGemini(finalPrompt, referenceImages, aspectRatioFromPayload, resolution)
             
             // Check for model not found error after generation
-            if (!buffers || buffers.length === 0) {
+            if (!buffers || !buffers.images || buffers.images.length === 0) {
               throw new Error('AI generation returned no images')
             }
             
-            return buffers
+            return buffers.images
           },
           {
             maxRetries: MAX_RATE_LIMIT_RETRIES,
@@ -766,13 +843,70 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         })
       }
 
+      // Track output assets (create Asset records for final generated images)
+      const outputAssets: string[] = []
+      for (const finalImageKey of generatedImageKeys) {
+        try {
+          // Get parent asset IDs from workflow state
+          const parentAssetIds: string[] = []
+          if (workflowState?.step1a?.personAssetId) {
+            parentAssetIds.push(workflowState.step1a.personAssetId)
+          }
+          if (workflowState?.step1b?.backgroundAssetId) {
+            parentAssetIds.push(workflowState.step1b.backgroundAssetId)
+          }
+
+          const outputAsset = await AssetService.createAsset({
+            s3Key: finalImageKey,
+            type: 'generated',
+            mimeType: 'image/png',
+            ownerType: teamId ? 'team' : 'person',
+            teamId: teamId ?? undefined,
+            personId: personId,
+            parentAssetIds,
+            // No fingerprint for final outputs (unique per generation)
+          })
+
+          outputAssets.push(outputAsset.id)
+
+          Logger.info('Created Asset for final output', {
+            assetId: outputAsset.id,
+            generationId,
+            s3Key: finalImageKey,
+            parentAssetIds,
+          })
+        } catch (error) {
+          Logger.warn('Failed to create asset for final output', {
+            error: error instanceof Error ? error.message : String(error),
+            s3Key: finalImageKey,
+            generationId,
+          })
+        }
+      }
+
+      // Link first output asset to generation
+      if (outputAssets.length > 0) {
+        try {
+          await AssetService.linkGenerationToAsset(generationId, outputAssets[0])
+          Logger.info('Linked generation to output asset', {
+            generationId,
+            outputAssetId: outputAssets[0],
+          })
+        } catch (error) {
+          Logger.warn('Failed to link generation to asset', {
+            error: error instanceof Error ? error.message : String(error),
+            generationId,
+            outputAssetId: outputAssets[0],
+          })
+        }
+      }
+
       // Update generation record with results
       await prisma.generation.update({
         where: { id: generationId },
         data: {
           status: 'completed',
           generatedPhotoKeys: generatedImageKeys,
-          actualCost: undefined,
           provider: 'gemini',
           completedAt: new Date(),
           updatedAt: new Date()

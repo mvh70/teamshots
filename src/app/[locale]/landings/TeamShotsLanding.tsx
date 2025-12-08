@@ -12,6 +12,7 @@ import { TrackedLink } from '@/components/TrackedLink';
 import { prefersReducedMotion, ANIMATION_DELAYS } from '@/lib/animations';
 import { FeedbackButton } from '@/components/feedback/FeedbackButton';
 import type { LandingVariant, LandingSections } from '@/config/landing-content';
+import type { LandingProps } from '../page';
 
 /**
  * TeamShotsPro Landing Page
@@ -23,7 +24,7 @@ import type { LandingVariant, LandingSections } from '@/config/landing-content';
  * - 5-step team workflow
  * - Team Command Center feature highlight
  */
-export default function TeamShotsLanding() {
+export default function TeamShotsLanding({ supportEmail }: LandingProps) {
   const variant: LandingVariant = 'teamshotspro';
   
   // Use domain-specific translations
@@ -68,7 +69,6 @@ export default function TeamShotsLanding() {
               </span>{' '}
               <span className="lg:whitespace-nowrap">
                 <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent drop-shadow-sm">60</span>{' '}
-                <span className="line-through opacity-60 text-text-body">days</span>{' '}
                 <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent drop-shadow-sm">seconds</span>
               </span>
             </h1>
@@ -147,7 +147,7 @@ export default function TeamShotsLanding() {
       <PricingPreview variant={variant} />
 
       {/* FAQ Section */}
-      <FAQ variant={variant} />
+      <FAQ variant={variant} supportEmail={supportEmail} />
 
       {/* Final CTA Section */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24 lg:py-40 text-center">

@@ -1,4 +1,4 @@
-import { ShotTypeValue } from '@/types/photo-style'
+import { ShotTypeValue, ExpressionSettings } from '@/types/photo-style'
 import type {
   ApertureSetting,
   FocalLengthSetting,
@@ -47,7 +47,8 @@ export interface StandardPresetDefaults {
     lookingSpaceNotes?: string[]
     groundNotes?: string[]
   }
-  pose: PoseDetails & { notes?: string[] }
+  pose: Omit<PoseDetails, 'expression'> & { notes?: string[] }
+  expression?: ExpressionSettings['type'] // Separate from pose
   promptTemplate: string
 }
 
@@ -96,9 +97,9 @@ export const CORPORATE_HEADSHOT: StandardPresetConfig = {
       shoulderPosition: 'front-shoulder-dropped',
       weightDistribution: 'back-foot-70',
       armPosition: 'not-visible',
-      expression: 'genuine_smile',
       notes: ['Chin extended forward and slightly down for jaw definition.']
     },
+    expression: 'genuine_smile',
     promptTemplate:
       'Professional corporate headshot, medium close-up from head to mid-chest, shot on an 85mm lens at f/4.0 with soft diffused lighting from a 45° angle and subtle reflector fill. Background is a soft gray seamless or blurred office interior with the subject separated by 6-8 feet. Body angled 25° to camera, front shoulder relaxed, face turned slightly toward light, chin extended forward and down, genuine warm smile, vertical portrait orientation.'
   }
@@ -140,9 +141,9 @@ export const EXECUTIVE_PORTRAIT: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'even',
       armPosition: 'arms-crossed',
-      expression: 'neutral_serious',
       notes: ['Arms crossed or hands visible to project control and confidence.']
     },
+    expression: 'neutral_serious',
     promptTemplate:
       'Executive portrait, medium shot from head to waist on a 105mm lens at f/4.5. Controlled studio lighting at 45° with subtle shadow sculpting, dark gray backdrop. Subject stands square or slightly angled with strong shoulders, arms crossed confidently, chin level, authoritative expression. Vertical orientation with rule-of-thirds composition for leadership presence.'
   }
@@ -184,9 +185,9 @@ export const LINKEDIN_PROFILE: StandardPresetConfig = {
       shoulderPosition: 'front-shoulder-dropped',
       weightDistribution: 'back-foot-70',
       armPosition: 'not-visible',
-      expression: 'genuine_smile',
       notes: ['Warm genuine smile conveying approachability.']
     },
+    expression: 'genuine_smile',
     promptTemplate:
       'LinkedIn profile portrait, medium close-up from head to mid-chest using an 85mm lens at f/4.0. Soft natural window light from 45° with reflector fill, blurred professional background. Body angled 20° with relaxed shoulders, slight friendly head tilt, warm approachable smile. Vertical 4:5 orientation optimised for LinkedIn feeds.'
   }
@@ -229,9 +230,9 @@ export const FULL_LENGTH_BUSINESS: StandardPresetConfig = {
       shoulderPosition: 'front-shoulder-dropped',
       weightDistribution: 'back-foot-70',
       armPosition: 'one-hand-pocket',
-      expression: 'soft_smile',
       notes: ['Front knee slightly bent; alternate pose with arms crossed acceptable.']
     },
+    expression: 'soft_smile',
     promptTemplate:
       'Full-length business portrait, head to toe with ample breathing room, shot on an 85mm lens at f/5.6. Soft diffused lighting from 45° maintains even illumination. Blurred office background, subject angled 30° to camera with weight on back foot, front shoulder relaxed, one hand in pocket or arms crossed, confident professional smile, vertical composition showing the full outfit.'
   }
@@ -273,9 +274,9 @@ export const TEAM_GROUP: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'even',
       armPosition: 'relaxed-sides',
-      expression: 'genuine_smile',
       notes: ['Encourage light physical connection (touching shoulders) for unity.']
     },
+    expression: 'genuine_smile',
     promptTemplate:
       'Professional team portrait of multiple people, medium shot on a 50mm lens at f/5.6, evenly lit from the front with soft diffusion. Subjects arranged in a staggered triangular formation, relaxed shoulders, slight body angle variations, genuine cohesive smiles, horizontal 3:2 or 16:9 orientation for web hero usage.'
   }
@@ -315,9 +316,9 @@ export const FASHION_EDITORIAL: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'hip-shift',
       armPosition: 'adjusting-jacket',
-      expression: 'neutral_serious',
       notes: ['Encourage angular limbs and fashion-forward body language.']
     },
+    expression: 'neutral_serious',
     promptTemplate:
       'Fashion editorial portrait with dramatic styling, three-quarter framing on a 135mm lens at f/2.8. Directional creative lighting highlighting wardrobe texture, minimalist studio or high-fashion location. Subject angles body 45° with hip shift, asymmetrical shoulders, angular arm positioning, intense fashion expression, vertical composition emphasising elongated lines.'
   }
@@ -356,9 +357,9 @@ export const LIFESTYLE_CASUAL: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'hip-shift',
       armPosition: 'one-hand-pocket',
-      expression: 'genuine_smile',
       notes: ['Encourage real interaction (hold coffee, adjust hair) for authenticity.']
     },
+    expression: 'genuine_smile',
     promptTemplate:
       'Lifestyle portrait in a natural environment, medium framing on a 50mm lens at f/2.8. Warm natural lighting (window or golden hour) with contextual background elements. Subject casually angled 20-30° with relaxed shoulders, hand in pocket or holding an object, authentic candid expression. Orientation may be vertical or horizontal, emphasising personality.'
   }
@@ -398,9 +399,9 @@ export const INSTAGRAM_SOCIAL: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'hip-shift',
       armPosition: 'relaxed-sides',
-      expression: 'genuine_smile',
       notes: ['Capture warm relatable energy; maintain modern styling.']
     },
+    expression: 'genuine_smile',
     promptTemplate:
       'Instagram-ready portrait, medium close-up on an 85mm lens at f/2.8, soft golden-hour lighting or diffused window light. Aesthetic background with gentle blur, subject centered with slight body angle and relaxed posture, genuine warm expression, vertical 4:5 aspect ratio with negative space for social media text overlays.'
   }
@@ -439,9 +440,9 @@ export const DATING_PROFILE: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'hip-shift',
       armPosition: 'one-hand-pocket',
-      expression: 'genuine_smile',
       notes: ['Relaxed posture showing open approachable body language.']
     },
+    expression: 'genuine_smile',
     promptTemplate:
       'Dating profile portrait, medium close-up on an 85mm lens at f/2.8 with soft natural lighting. Lifestyle background reflecting interests, body angled 20° to camera, one hand in pocket, relaxed shoulders, confident but approachable posture, genuine warm smile, vertical 4:5 orientation.'
   }
@@ -481,9 +482,9 @@ export const FAMILY_PORTRAIT: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'even',
       armPosition: 'relaxed-sides',
-      expression: 'genuine_smile',
       notes: ['Ensure natural physical connection—hands on shoulders, arms around family members.']
     },
+    expression: 'genuine_smile',
     promptTemplate:
       'Family portrait of multiple people, full-length on a 50mm lens at f/5.6 with soft natural lighting. Subjects arranged in a triangular grouping with varied heights, close physical connection, relaxed shoulders, genuine warm smiles, horizontal 3:2 composition capturing authentic family warmth.'
   }
@@ -523,9 +524,9 @@ export const ACTOR_HEADSHOT: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'even',
       armPosition: 'not-visible',
-      expression: 'neutral_serious',
       notes: ['Chin extended forward and down to sharpen jawline; maintain strong eye contact.']
     },
+    expression: 'neutral_serious',
     promptTemplate:
       'Actor headshot, tight framing from just below shoulders to top of head on an 85mm lens at f/4.0. Soft lighting from 45° with defined catch light, neutral muted background, shoulders relaxed with minimal head tilt, chin extended forward and down, strong eye contact with authentic expression, vertical 8x10-style composition.'
   }
@@ -565,9 +566,9 @@ export const REAL_ESTATE_AGENT: StandardPresetConfig = {
       shoulderPosition: 'both-relaxed',
       weightDistribution: 'even',
       armPosition: 'arms-crossed',
-      expression: 'genuine_smile',
       notes: ['Alternate pose with hands on hips or one hand in pocket.']
     },
+    expression: 'genuine_smile',
     promptTemplate:
       'Real estate agent portrait, medium framing on an 85mm lens at f/4.0 with bright even studio lighting. Clean gray or property-inspired backdrop, subject angled 20° with confident stance, arms crossed or one hand on hip, big genuine trustworthy smile, vertical orientation ideal for marketing collateral.'
   }
@@ -605,9 +606,9 @@ export const UNIVERSAL_PRESET: StandardPresetConfig = {
       shoulderPosition: 'front-shoulder-dropped',
       weightDistribution: 'back-foot-70',
       armPosition: 'not-visible',
-      expression: 'genuine_smile',
       notes: ['Chin out and down; adjust pose to suit context.']
     },
+    expression: 'genuine_smile',
     promptTemplate:
       'Balanced professional portrait, medium close-up on an 85mm lens at f/4.0 with soft diffused 45° lighting. Neutral blurred background, subject angled 20-30° with front shoulder relaxed, head gently turned toward light, chin extended forward and down, friendly approachable expression, vertical composition appropriate for most professional uses.'
   }

@@ -1,5 +1,3 @@
-import type { ExpressionSettings } from '../expression/types'
-
 export type BodyAngleSetting = 'square' | 'slight-angle' | 'angle-45' | 'user-choice'
 export type HeadPositionSetting = 'straight-level' | 'slight-tilt' | 'face-turn' | 'user-choice'
 export type ShoulderPositionSetting = 'front-shoulder-dropped' | 'both-relaxed' | 'level' | 'user-choice'
@@ -17,7 +15,7 @@ export interface PoseDetails {
   bodyAngle?: BodyAngleSetting
   weightDistribution?: WeightDistributionSetting
   armPosition?: ArmPositionSetting
-  expression?: ExpressionSettings['type']
+  // NOTE: expression removed - it's a separate PhotoStyleSettings field, not part of pose
   headPosition?: HeadPositionSetting
   shoulderPosition?: ShoulderPositionSetting
   sittingPose?: SittingPoseSetting

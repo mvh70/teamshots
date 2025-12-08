@@ -3,12 +3,17 @@ import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '../gemini'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { ImageEvaluationResult } from '../evaluator'
+import type { CostTrackingHandler } from '../workflow-v3'
 
 export interface V3Step1bEvalInput {
   backgroundBuffer: Buffer
   backgroundBase64: string
   logoReference?: ReferenceImage // Optional - only required if branding is in background/elements
   generationId: string
+  personId?: string // For cost tracking
+  teamId?: string // For cost tracking
+  intermediateS3Key?: string // S3 key of the image being evaluated
+  onCostTracking?: CostTrackingHandler // For cost tracking
 }
 
 interface ReferenceImage {
@@ -30,9 +35,9 @@ export async function executeV3Step1bEval(
     generationId
   } = input
 
-  const hasLogoReference = logoReference && logoReference.base64
+  const hasLogoReference = !!(logoReference && logoReference.base64)
 
-  Logger.info('V3 Step 1b Eval: Evaluating background', { 
+  Logger.debug('V3 Step 1b Eval: Evaluating background', { 
     generationId,
     hasLogoReference: !!hasLogoReference
   })
@@ -63,7 +68,7 @@ EVALUATION CRITERIA:
 3. **Logo Presence** (CRITICAL):
    - The logo must be visible somewhere in the background/environment
    - The logo should be clear and recognizable
-   - The logo placement should look natural and professional (on banner, wall, frame, etc.)
+   - The logo placement should look natural and professional
 
 4. **Logo Exactly Matches Reference** (CRITICAL):
    - Does the logo in the generated image EXACTLY match the provided logo reference?
@@ -124,6 +129,7 @@ REJECTION CRITERIA:
 
   const evaluationPrompt = basePrompt + logoCriteria + responseFormat
 
+  const evalStartTime = Date.now()
   try {
     const modelName = Env.string('GEMINI_EVAL_MODEL', Env.string('GEMINI_IMAGE_MODEL'))
     const model = await getVertexGenerativeModel(modelName)
@@ -150,7 +156,12 @@ REJECTION CRITERIA:
       generationConfig: { temperature: 0.2 }
     })
 
+    const evalDurationMs = Date.now() - evalStartTime
+    const usageMetadata = response.response.usageMetadata
     const responseText = response.response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    
+    // Note: Cost tracking moved to after evaluation status is determined
+    // (see below after finalStatus is computed)
     
     // Parse JSON response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
@@ -213,7 +224,7 @@ REJECTION CRITERIA:
       (evaluation as unknown as Record<string, unknown>).suggestedAdjustments = parsed.suggestedAdjustments
     }
 
-    Logger.info('V3 Step 1b Eval: Evaluation completed', {
+    Logger.debug('V3 Step 1b Eval: Evaluation completed', {
       generationId,
       status: evaluation.status,
       hasLogoReference,
@@ -226,12 +237,60 @@ REJECTION CRITERIA:
       reasonPreview: evaluation.reason.substring(0, 100)
     })
 
+    // Track evaluation cost with outcome
+    if (input.onCostTracking) {
+      try {
+        await input.onCostTracking({
+          stepName: 'step1b-eval',
+          reason: 'evaluation',
+          result: 'success',
+          model: 'gemini-2.5-flash',
+          inputTokens: usageMetadata?.promptTokenCount,
+          outputTokens: usageMetadata?.candidatesTokenCount,
+          durationMs: evalDurationMs,
+          evaluationStatus: evaluation.status === 'Approved' ? 'approved' : 'rejected',
+          rejectionReason: evaluation.status === 'Not Approved' ? evaluation.reason : undefined,
+          intermediateS3Key: input.intermediateS3Key,
+        })
+        Logger.debug('V3 Step 1b Eval: Cost tracking with outcome recorded', {
+          generationId,
+          evaluationStatus: evaluation.status,
+          s3Key: input.intermediateS3Key,
+        })
+      } catch (costError) {
+        Logger.error('V3 Step 1b Eval: Failed to track evaluation cost', {
+          error: costError instanceof Error ? costError.message : String(costError),
+          generationId,
+        })
+      }
+    }
+
     return { evaluation }
   } catch (error) {
+    const evalDurationMs = Date.now() - evalStartTime
     Logger.error('V3 Step 1b Eval: Evaluation failed', {
       generationId,
       error: error instanceof Error ? error.message : String(error)
     })
+
+    // Track failed evaluation cost
+    if (input.onCostTracking) {
+      try {
+        await input.onCostTracking({
+          stepName: 'step1b-eval',
+          reason: 'evaluation',
+          result: 'failure',
+          model: 'gemini-2.5-flash',
+          durationMs: evalDurationMs,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
+      } catch (costError) {
+        Logger.error('V3 Step 1b Eval: Failed to track failed evaluation cost', {
+          error: costError instanceof Error ? costError.message : String(costError),
+        })
+      }
+    }
+
     throw error
   }
 }

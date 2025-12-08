@@ -13,7 +13,9 @@ export interface JobEnqueueOptions {
   generationId: string
   personId: string
   userId: string | undefined
+  teamId?: string
   selfieS3Keys: string[]
+  selfieAssetIds?: string[] // Asset IDs for fingerprinting and cost tracking
   prompt: string
   workflowVersion: 'v1' | 'v2' | 'v3'
   debugMode: boolean
@@ -32,7 +34,9 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
     generationId,
     personId,
     userId,
+    teamId,
     selfieS3Keys,
+    selfieAssetIds,
     prompt,
     workflowVersion,
     debugMode,
@@ -47,7 +51,9 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
       generationId,
       personId,
       userId,
+      teamId,
       selfieS3Keys,
+      selfieAssetIds, // Pass asset IDs for fingerprinting and cost tracking
       prompt,
       providerOptions: {
         model: Env.string('GEMINI_IMAGE_MODEL'),

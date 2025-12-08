@@ -17,7 +17,7 @@ interface OnbordaProviderProps {
 // Helper function to generate tours with translations and firstName interpolation
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function generateTours(t: (key: string, values?: Record<string, any>) => string, context?: OnboardingContext, isMobile = false) {
-  const translatedTours = createTranslatedTours(t, context)
+  const translatedTours = createTranslatedTours(t)
   
   return Object.values(translatedTours).map(tour => ({
     tour: tour.name,
@@ -271,7 +271,11 @@ export function OnbordaProvider({ children }: OnbordaProviderProps) {
 
   return (
     <OnbordaProviderLib>
-      <Onborda steps={finalTours} cardComponent={OnbordaCard}>
+      <Onborda 
+        steps={finalTours} 
+        cardComponent={OnbordaCard}
+        shadowOpacity="0.8"
+      >
         <TourStarter />
         {children}
       </Onborda>

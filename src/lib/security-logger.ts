@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getRequestIp, getRequestHeader } from '@/lib/server-headers'
 
@@ -61,9 +62,28 @@ export class SecurityLogger {
       data: {
         type: 'suspicious_activity',
         userId,
-        details: { reason, ...details },
+        details: { reason, ...details } as Prisma.InputJsonValue,
         ipAddress: (await getRequestIp()) || 'unknown',
         success: false,
+      },
+    })
+  }
+
+  static async logFailedLogin(
+    email: string,
+    reason: string,
+    details: Record<string, unknown>
+  ) {
+    const ip = (await getRequestIp()) || 'unknown'
+
+    await prisma.securityLog.create({
+      data: {
+        type: 'failed_login',
+        email,
+        ipAddress: ip,
+        success: false,
+        action: reason,
+        details: details as Prisma.InputJsonValue,
       },
     })
   }
@@ -76,7 +96,7 @@ export class SecurityLogger {
   ) {
     const ip = (await getRequestIp()) || 'unknown'
     const userAgent = await getRequestHeader('user-agent')
-    
+
     await prisma.securityLog.create({
       data: {
         type: 'impersonation',
@@ -91,7 +111,7 @@ export class SecurityLogger {
           impersonatedUserId,
           impersonatedUserEmail,
           timestamp: new Date().toISOString()
-        }
+        } as Prisma.InputJsonValue
       },
     })
   }

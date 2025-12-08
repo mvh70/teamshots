@@ -5,7 +5,7 @@ import { CheckoutButton } from "@/components/ui"
 import { PRICING_CONFIG } from "@/config/pricing"
 import { InformationCircleIcon } from "@heroicons/react/24/outline"
 import { useTranslations } from "next-intl"
-import { getPricePerPhoto, formatPrice } from "@/domain/pricing/utils"
+import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from "@/domain/pricing/utils"
 import SubscriptionStatusBanner from "@/components/subscription/SubscriptionStatusBanner"
 import { isFreePlan, PlanPeriod, PlanTier } from "@/domain/subscription/utils"
 import { BRAND_CONFIG } from "@/config/brand"
@@ -70,6 +70,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
     credits: PRICING_CONFIG.individual.credits,
     regenerations: PRICING_CONFIG.regenerations.individual,
     pricePerPhoto: formatPrice(getPricePerPhoto('individual')),
+    totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.individual.credits) * (1 + PRICING_CONFIG.regenerations.individual),
     popular: userMode === 'user',
   }
 
@@ -79,6 +80,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
     credits: PRICING_CONFIG.proSmall.credits,
     regenerations: PRICING_CONFIG.regenerations.proSmall,
     pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
+    totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits) * (1 + PRICING_CONFIG.regenerations.proSmall),
     popular: userMode === 'team',
   }
 
@@ -88,51 +90,78 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
     credits: PRICING_CONFIG.proLarge.credits,
     regenerations: PRICING_CONFIG.regenerations.proLarge,
     pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
+    totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits) * (1 + PRICING_CONFIG.regenerations.proLarge),
+    popular: false,
+  }
+
+  const enterprisePlan = {
+    id: 'enterprise' as const,
+    price: `$${PRICING_CONFIG.enterprise.price}`,
+    credits: PRICING_CONFIG.enterprise.credits,
+    regenerations: PRICING_CONFIG.regenerations.enterprise,
+    pricePerPhoto: formatPrice(getPricePerPhoto('enterprise')),
+    totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.enterprise.credits) * (1 + PRICING_CONFIG.regenerations.enterprise),
     popular: false,
   }
 
   // Filter plans based on user mode
   const plansToShow = [
-    // Show Individual if user mode, Pro Small and Pro Large if team mode
+    // Show Individual if user mode, Pro Small, Pro Large, and Enterprise if team mode
     // tryItForFree is automatically granted on signup, not a purchasable option
-    ...(userMode === 'team' ? [proSmallPlan, proLargePlan] : [individualPlan]),
+    ...(userMode === 'team' ? [proSmallPlan, proLargePlan, enterprisePlan] : [individualPlan]),
   ]
 
 
   return (
     <div className="space-y-4">
       {userIsFreePlan ? (
-        <div className="space-y-4">
+        <div className="space-y-16">
           <SubscriptionStatusBanner
             title={tPricing('plans.free.name', { default: 'Free Plan' })}
             subtitle={tPricing('plans.free.description', { default: 'Upgrade to unlock more features' })}
           />
 
-          <br />
+          <div className={`grid gap-8 ${
+            plansToShow.length === 3 ? 'md:grid-cols-3' :
+            plansToShow.length === 2 ? 'md:grid-cols-2' :
+            'md:grid-cols-1'
+          }`}>
+            {plansToShow.map((plan) => {
+              const checkoutType = 'plan'
+              const stripePriceId = plan.id === 'proSmall'
+                ? PRICING_CONFIG.proSmall.stripePriceId
+                : plan.id === 'proLarge'
+                  ? PRICING_CONFIG.proLarge.stripePriceId
+                  : plan.id === 'enterprise'
+                    ? PRICING_CONFIG.enterprise.stripePriceId
+                    : PRICING_CONFIG.individual.stripePriceId
 
-          <div className="grid md:grid-cols-1 gap-8 mt-2">
-            <PricingCard
-              id="individual"
-              titleOverride={tAll("app.settings.subscription.plan.individual", { default: "Individual subscription" })}
-              price={`$${PRICING_CONFIG.individual.price}`}
-              credits={PRICING_CONFIG.individual.credits}
-              regenerations={PRICING_CONFIG.regenerations.individual}
-              popular
-              ctaSlot={
-                <CheckoutButton
-                  loadingText={tAll("common.loading", { default: "Loading..." })}
-                  type="plan"
-                  priceId={PRICING_CONFIG.individual.stripePriceId}
-                  onError={onCheckoutError}
-                  fullWidth
-                  useBrandCtaColors
-                >
-                  {tPricing("plans.individual.cta")}
-                </CheckoutButton>
-              }
-              popularLabelKey="pricingPreview.recommended"
-              className="h-full"
-            />
+              return (
+                <PricingCard
+                  key={plan.id}
+                  id={plan.id}
+                  price={plan.price}
+                  credits={plan.credits}
+                  regenerations={plan.regenerations}
+                  pricePerPhoto={plan.pricePerPhoto}
+                  popular={plan.popular}
+                  popularLabelKey={plan.popular ? "pricing.mostPopular" : undefined}
+                  ctaSlot={
+                    <CheckoutButton
+                      loadingText={tAll("common.loading", { default: "Loading..." })}
+                      type={checkoutType}
+                      priceId={stripePriceId}
+                      onError={onCheckoutError}
+                      useBrandCtaColors={checkoutType === 'plan'}
+                      fullWidth={checkoutType === 'plan'}
+                    >
+                      {tPricing(`plans.${plan.id}.cta`, { totalPhotos: plan.totalPhotos })}
+                    </CheckoutButton>
+                  }
+                  className="h-full"
+                />
+              )
+            })}
           </div>
         </div>
       ) : hasActiveSubscription ? (
@@ -218,7 +247,9 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
                 ? PRICING_CONFIG.proSmall.stripePriceId
                 : plan.id === 'proLarge'
                   ? PRICING_CONFIG.proLarge.stripePriceId
-                  : PRICING_CONFIG.individual.stripePriceId
+                  : plan.id === 'enterprise'
+                    ? PRICING_CONFIG.enterprise.stripePriceId
+                    : PRICING_CONFIG.individual.stripePriceId
 
               return (
                 <PricingCard
@@ -229,7 +260,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
                   regenerations={plan.regenerations}
                   pricePerPhoto={plan.pricePerPhoto}
                   popular={plan.popular}
-                  popularLabelKey={plan.popular ? "pricingPreview.recommended" : undefined}
+                  popularLabelKey={plan.popular ? "pricing.mostPopular" : undefined}
                   ctaSlot={
                     <CheckoutButton
                       loadingText={tAll("common.loading", { default: "Loading..." })}
@@ -239,7 +270,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
                       useBrandCtaColors={checkoutType === 'plan'}
                       fullWidth={checkoutType === 'plan'}
                     >
-                      {tPricing(`plans.${plan.id}.cta`)}
+                      {tPricing(`plans.${plan.id}.cta`, { totalPhotos: plan.totalPhotos })}
                     </CheckoutButton>
                   }
                   className="h-full"

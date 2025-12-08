@@ -20,8 +20,10 @@ export function useSelfieUploads() {
 
     try {
       setLoading(true)
-      const data = await jsonFetcher<{ items?: UploadListItem[] }>('/api/uploads/list', {
-        credentials: 'include'
+      const url = `/api/uploads/list?t=${Date.now()}`
+      const data = await jsonFetcher<{ items?: UploadListItem[] }>(url, {
+        credentials: 'include',
+        cache: 'no-store'
       })
 
       // Just return the raw uploads - selection state is managed separately

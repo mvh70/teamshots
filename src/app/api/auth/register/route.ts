@@ -8,6 +8,9 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
+  // SECURITY: Track request start time for timing attack prevention
+  const requestStartTime = Date.now()
+
   try {
     Logger.info('1. Starting registration...')
     Logger.debug('2. Request object', { type: typeof request, present: !!request })
@@ -165,85 +168,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Batch existence check for user and person
-    Logger.info('12. Checking existing user and person...')
-    const existingRecords = await prisma.$queryRaw`
-      SELECT
-        u.id as "userId", u.email as "userEmail", u.role as "userRole", u.locale as "userLocale",
-        p.id as "personId", p."firstName", p."lastName", p."userId" as "personUserId", p."teamId",
-        p."onboardingState",
-        t.id as "teamId", t.name as "teamName"
-      FROM "User" u
-      FULL OUTER JOIN "Person" p ON u.email = p.email
-      LEFT JOIN "Team" t ON p."teamId" = t.id
-      WHERE u.email = ${email} OR p.email = ${email}
-      LIMIT 1
-    ` as Array<{
-      userId: string | null
-      userEmail: string | null
-      userRole: string | null
-      userLocale: string | null
-      personId: string | null
-      firstName: string | null
-      lastName: string | null
-      personUserId: string | null
-      teamId: string | null
-      onboardingState: string | null
-      teamName: string | null
-    }>
-    Logger.debug('13. Batched existence check complete')
+    // SECURITY: Wrap user creation in transaction to prevent race condition
+    // Without transaction, concurrent registrations could both check for existing user,
+    // find none, and both try to create, causing unique constraint violation
+    Logger.info('12. Starting user creation transaction...')
 
-    const existingUser = existingRecords[0]?.userId ? {
-      id: existingRecords[0].userId,
-      email: existingRecords[0].userEmail,
-      role: existingRecords[0].userRole,
-      locale: existingRecords[0].userLocale
-    } : null
-
-    const existingPerson = existingRecords[0]?.personId ? {
-      id: existingRecords[0].personId,
-      firstName: existingRecords[0].firstName,
-      lastName: existingRecords[0].lastName,
-      userId: existingRecords[0].personUserId,
-      teamId: existingRecords[0].teamId,
-      onboardingState: existingRecords[0].onboardingState,
-      team: existingRecords[0].teamId ? { id: existingRecords[0].teamId, name: existingRecords[0].teamName } : null
-    } : null
-
-    if (existingUser) {
-      // User may have been created via Stripe webhook during checkout.
-      // Since OTP is verified, safely set password and ensure a Person exists/linked.
-      // Note: password is required for normal signup (guest checkout returns earlier)
-      if (!password) {
-        return NextResponse.json(
-          badRequest('PASSWORD_REQUIRED', 'auth.signup.passwordRequired', 'Password is required'),
-          { status: 400 }
-        )
-      }
-      Logger.info('Existing user found; updating credentials and linking person')
-      const hashedPasswordExisting = await bcrypt.hash(password, 13)
-      const updated = await prisma.user.update({
-        where: { id: existingUser.id },
-        data: { password: hashedPasswordExisting }
-      })
-      // Ensure person exists
-      let person = await prisma.person.findFirst({ where: { userId: updated.id } })
-      if (!person) {
-        person = await prisma.person.create({
-          data: { firstName: firstName || 'User', lastName: lastName || null, email, userId: updated.id }
-        })
-      }
-      Logger.info('User updated and person ensured')
-      return NextResponse.json({
-        success: true,
-        user: { id: updated.id, email: updated.email, role: updated.role, locale: updated.locale },
-        person: { id: person.id, firstName: person.firstName },
-        teamId: person.teamId ?? null,
-      })
-    }
-
-    // Hash password with increased cost factor for better security
-    // Cost factor 13 provides good security while maintaining reasonable performance
+    // Hash password first (outside transaction for better performance)
     // Note: password is required for normal signup (guest checkout returns earlier)
     if (!password) {
       return NextResponse.json(
@@ -251,37 +181,111 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    Logger.info('14. Hashing password...')
+    Logger.info('13. Hashing password...')
     const hashedPassword = await bcrypt.hash(password, 13)
-    Logger.debug('15. Password hashed')
+    Logger.debug('14. Password hashed')
 
-    // Determine initial role based on existing person/invite or userType
-    // If userType is 'team' and no existing person, set role to 'team_admin' so they can set up their team
-    const initialRole = existingPerson?.teamId 
-      ? 'team_member' 
-      : (userType === 'team' ? 'team_admin' : 'user')
-
-    // Create user with correct role
-    Logger.info('18. Creating user...')
-    
     // Extract and normalize the signup domain for email links later
     const signupDomain = domain ? domain.replace(/^www\./, '') : null
-    
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        role: initialRole,
-        locale,
-        signupDomain,
+
+    // Transaction ensures atomicity: check existence + create/update happens atomically
+    const { user, existingPerson } = await prisma.$transaction(async (tx) => {
+      // Batch existence check for user and person
+      Logger.info('15. Checking existing user and person (within transaction)...')
+      const existingRecords = await tx.$queryRaw`
+        SELECT
+          u.id as "userId", u.email as "userEmail", u.role as "userRole", u.locale as "userLocale",
+          p.id as "personId", p."firstName", p."lastName", p."userId" as "personUserId", p."teamId",
+          p."onboardingState",
+          t.id as "teamId", t.name as "teamName"
+        FROM "User" u
+        FULL OUTER JOIN "Person" p ON u.email = p.email
+        LEFT JOIN "Team" t ON p."teamId" = t.id
+        WHERE u.email = ${email} OR p.email = ${email}
+        LIMIT 1
+      ` as Array<{
+        userId: string | null
+        userEmail: string | null
+        userRole: string | null
+        userLocale: string | null
+        personId: string | null
+        firstName: string | null
+        lastName: string | null
+        personUserId: string | null
+        teamId: string | null
+        onboardingState: string | null
+        teamName: string | null
+      }>
+      Logger.debug('16. Batched existence check complete (within transaction)')
+
+      const existingUser = existingRecords[0]?.userId ? {
+        id: existingRecords[0].userId,
+        email: existingRecords[0].userEmail,
+        role: existingRecords[0].userRole,
+        locale: existingRecords[0].userLocale
+      } : null
+
+      const existingPerson = existingRecords[0]?.personId ? {
+        id: existingRecords[0].personId,
+        firstName: existingRecords[0].firstName,
+        lastName: existingRecords[0].lastName,
+        userId: existingRecords[0].personUserId,
+        teamId: existingRecords[0].teamId,
+        onboardingState: existingRecords[0].onboardingState,
+        team: existingRecords[0].teamId ? { id: existingRecords[0].teamId, name: existingRecords[0].teamName } : null
+      } : null
+
+      let user
+      if (existingUser) {
+        // User may have been created via Stripe webhook during checkout.
+        // Since OTP is verified, safely set password and ensure a Person exists/linked.
+        Logger.info('17. Existing user found; updating credentials (within transaction)')
+        user = await tx.user.update({
+          where: { id: existingUser.id },
+          data: { password: hashedPassword }
+        })
+        Logger.info('18. User updated (within transaction)', { userId: user.id })
+      } else {
+        // Determine initial role based on existing person/invite or userType
+        // If userType is 'team' and no existing person, set role to 'team_admin' so they can set up their team
+        const initialRole = existingPerson?.teamId
+          ? 'team_member'
+          : (userType === 'team' ? 'team_admin' : 'user')
+
+        // Create user with correct role
+        Logger.info('17. Creating new user (within transaction)...')
+        user = await tx.user.create({
+          data: {
+            email,
+            password: hashedPassword,
+            role: initialRole,
+            locale,
+            signupDomain,
+          }
+        })
+        Logger.info('18. User created (within transaction)', { userId: user.id, role: initialRole, signupDomain })
       }
+
+      return { user, existingPerson }
+    }, {
+      // Set transaction isolation level to prevent phantom reads
+      isolationLevel: 'Serializable'
     })
-    Logger.info('19. User created', { userId: user.id, role: initialRole, signupDomain })
+
+    Logger.info('19. User creation transaction complete', { userId: user.id })
 
     let person
     let teamId = null
 
-    if (existingPerson && !existingPerson.userId) {
+    // Ensure person exists for the user
+    const existingUserPerson = await prisma.person.findFirst({ where: { userId: user.id } })
+
+    if (existingUserPerson) {
+      // Person already exists and is linked to this user
+      person = existingUserPerson
+      teamId = existingUserPerson.teamId
+      Logger.info('20. Person already linked to user', { personId: person.id })
+    } else if (existingPerson && !existingPerson.userId) {
       Logger.info('20. Linking existing person...')
       // Link existing person (from invite) to new user and convert invite in single transaction
       const result = await prisma.$transaction(async (tx) => {
@@ -501,6 +505,15 @@ export async function POST(request: NextRequest) {
       Logger.error('Admin signup email failed', {
         error: adminEmailResult.reason instanceof Error ? adminEmailResult.reason.message : String(adminEmailResult.reason)
       })
+    }
+
+    // SECURITY: Normalize response time to prevent user enumeration via timing
+    // Different code paths (existing user vs new user) take different amounts of time
+    // This adds artificial delay to make all responses take ~1 second minimum
+    const processingTime = Date.now() - requestStartTime
+    const targetTime = 1000 // 1 second constant response time
+    if (processingTime < targetTime) {
+      await new Promise(resolve => setTimeout(resolve, targetTime - processingTime))
     }
 
     return NextResponse.json({

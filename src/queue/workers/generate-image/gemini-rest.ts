@@ -21,6 +21,25 @@ export interface GenerationOptions {
   }>
 }
 
+/**
+ * Usage metadata returned from Gemini API calls
+ */
+export interface GeminiUsageMetadata {
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  imagesGenerated: number
+  durationMs: number
+}
+
+/**
+ * Result of a Gemini generation call (internal - without provider info)
+ */
+export interface GeminiGenerationResult {
+  images: Buffer[]
+  usage: GeminiUsageMetadata
+}
+
 // Map Vertex AI safety settings to REST API format
 function mapSafetySettings(vertexSettings?: Array<{
   category: HarmCategory
@@ -43,6 +62,19 @@ function mapSafetySettings(vertexSettings?: Array<{
 /**
  * Generate images using Google Gemini REST API client
  * This uses the @google/genai package for direct REST API access
+ * 
+ * Supports both text-to-image and image-to-image generation:
+ * - gemini-2.5-flash / gemini-2.5-flash-image: Fast, 1K resolution (auto-normalized for REST API)
+ * - gemini-3-pro-image: Advanced, up to 4K resolution
+ * 
+ * Note: Vertex AI model names ending in "-image" are automatically normalized to their base
+ * model names for REST API compatibility (e.g., "gemini-2.5-flash-image" → "gemini-2.5-flash").
+ * Image generation is enabled via the responseModalities configuration.
+ * 
+ * Note: Uses non-streaming API as image generation doesn't work with streaming.
+ * See: https://ai.google.dev/gemini-api/docs/image-generation
+ * 
+ * Returns both the generated images and usage metadata for cost tracking.
  */
 export async function generateWithGeminiRest(
   prompt: string,
@@ -50,13 +82,25 @@ export async function generateWithGeminiRest(
   aspectRatio?: string,
   resolution?: '1K' | '2K' | '4K',
   options?: GenerationOptions
-): Promise<Buffer[]> {
+): Promise<GeminiGenerationResult> {
+  const startTime = Date.now()
   const apiKey = Env.string('GOOGLE_CLOUD_API_KEY')
   if (!apiKey) {
     throw new Error('GOOGLE_CLOUD_API_KEY environment variable is required for REST API client')
   }
 
-  const modelName = Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
+  let modelName = Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
+  
+  // Normalize Vertex AI model names ending in "-image" to base model names for REST API
+  // e.g., "gemini-2.5-flash-image" → "gemini-2.5-flash"
+  // REST API uses the base model name with responseModalities to enable image generation
+  if (modelName.endsWith('-image')) {
+    modelName = modelName.slice(0, -6) // Remove '-image' suffix
+    Logger.debug('Normalized model name for REST API', {
+      original: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash'),
+      normalized: modelName
+    })
+  }
 
   // Initialize the REST API client
   const ai = new GoogleGenAI({
@@ -68,7 +112,6 @@ export async function generateWithGeminiRest(
     maxOutputTokens: 32768,
     temperature: options?.temperature ?? 1,
     topP: options?.topP ?? 0.95,
-    responseModalities: ["TEXT", "IMAGE"] as const,
     imageConfig: {
       aspectRatio: aspectRatio ?? "1:1",
       imageSize: resolution ?? "1K",
@@ -225,46 +268,119 @@ export async function generateWithGeminiRest(
       contents,
       generationConfig,
       safetySettings,
+      // Required for image generation - tells API to return images
+      config: {
+        responseModalities: ['TEXT', 'IMAGE'] as string[],
+      },
     }
 
-    const streamingResp = await ai.models.generateContentStream(req)
+    // Use non-streaming for image generation (per official docs)
+    // Image generation doesn't work properly with streaming
+    const response = await ai.models.generateContent(req)
 
-    // Collect all chunks
-    const chunks: Array<{
-      candidates?: Array<{
-        content?: {
-          parts?: Array<{
-            inlineData?: {
-              data?: string
-            }
-          }>
-        }
-      }>
-    }> = []
-    for await (const chunk of streamingResp) {
-      chunks.push(chunk)
-    }
-
-    // Extract generated images from all chunks
+    // Extract generated images from response
     const generatedImages: Buffer[] = []
 
-    for (const chunk of chunks) {
-      if (chunk?.candidates?.[0]?.content?.parts) {
-        for (const part of chunk.candidates[0].content.parts) {
-          if (part.inlineData?.data) {
-            generatedImages.push(Buffer.from(part.inlineData.data, 'base64'))
-          }
+    // Extract usage metadata
+    let inputTokens: number | undefined
+    let outputTokens: number | undefined
+    let totalTokens: number | undefined
+
+    // Log response structure
+    Logger.debug('Gemini REST API response received', {
+      modelName,
+      hasCandidates: !!response?.candidates,
+      candidatesLength: response?.candidates?.length,
+      hasContent: !!response?.candidates?.[0]?.content,
+      hasParts: !!response?.candidates?.[0]?.content?.parts,
+      partsLength: response?.candidates?.[0]?.content?.parts?.length,
+      partTypes: response?.candidates?.[0]?.content?.parts?.map(p => 
+        p.inlineData ? 'inlineData' : (p as { text?: string }).text ? 'text' : 'unknown'
+      ),
+      finishReason: (response?.candidates?.[0] as { finishReason?: string })?.finishReason,
+      safetyRatings: (response?.candidates?.[0] as { safetyRatings?: unknown[] })?.safetyRatings,
+      hasUsageMetadata: !!response?.usageMetadata,
+    })
+
+    // Extract images from parts (per official documentation)
+    if (response?.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.text) {
+          Logger.debug('Gemini returned text part', { 
+            textPreview: (part.text as string).substring(0, 200) 
+          })
+        } else if (part.inlineData?.data) {
+          generatedImages.push(Buffer.from(part.inlineData.data, 'base64'))
+          Logger.debug('Gemini returned image part', {
+            dataLength: part.inlineData.data.length,
+            mimeType: part.inlineData.mimeType
+          })
         }
       }
+    }
+    
+    // Extract usage metadata
+    if (response?.usageMetadata) {
+      inputTokens = response.usageMetadata.promptTokenCount
+      outputTokens = response.usageMetadata.candidatesTokenCount
+      totalTokens = response.usageMetadata.totalTokenCount
+    }
+
+    // Extract finish reason for better error reporting
+    const finishReason = (response?.candidates?.[0] as { finishReason?: string })?.finishReason
+    const safetyRatings = (response?.candidates?.[0] as { safetyRatings?: unknown[] })?.safetyRatings
+
+    // If no images were generated, log the full response for debugging
+    if (generatedImages.length === 0) {
+      Logger.error('Gemini REST API returned no images - inspecting response', {
+        modelName,
+        hasResponse: !!response,
+        finishReason: finishReason || 'UNKNOWN',
+        safetyRatings: safetyRatings ? JSON.stringify(safetyRatings) : undefined,
+        hasCandidates: !!response?.candidates,
+        candidatesLength: response?.candidates?.length,
+        hasContent: !!response?.candidates?.[0]?.content,
+        hasParts: !!response?.candidates?.[0]?.content?.parts,
+        partsLength: response?.candidates?.[0]?.content?.parts?.length,
+        responsePreview: JSON.stringify(response, null, 2).substring(0, 2000),
+        promptLength: prompt.length,
+        imageCount: images.length,
+        aspectRatio,
+        resolution,
+      })
+    }
+
+    const durationMs = Date.now() - startTime
+    const usage: GeminiUsageMetadata = {
+      inputTokens,
+      outputTokens,
+      totalTokens,
+      imagesGenerated: generatedImages.length,
+      durationMs,
     }
 
     Logger.debug('Gemini REST API generation completed', {
       modelName,
-      chunksReceived: chunks.length,
-      imagesGenerated: generatedImages.length
+      imagesGenerated: generatedImages.length,
+      inputTokens,
+      outputTokens,
+      durationMs,
+      finishReason: finishReason || 'SUCCESS',
     })
 
-    return generatedImages
+    // If no images were generated, throw an error with detailed context
+    if (generatedImages.length === 0) {
+      const errorMessage = finishReason === 'IMAGE_OTHER'
+        ? `Gemini REST API failed to generate image (IMAGE_OTHER finish reason). This typically indicates the model encountered an issue processing the prompt or reference images. Model: ${modelName}, AspectRatio: ${aspectRatio}, Resolution: ${resolution}. Prompt length: ${prompt.length} chars, Reference images: ${images.length}.`
+        : `Gemini REST API returned no images. Model: ${modelName}, FinishReason: ${finishReason || 'UNKNOWN'}, AspectRatio: ${aspectRatio}, Resolution: ${resolution}. Check logs for response structure details.`
+      
+      throw new Error(errorMessage)
+    }
+
+    return {
+      images: generatedImages,
+      usage,
+    }
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)

@@ -1,13 +1,16 @@
 import { Logger } from '@/lib/logger'
+import { Env } from '@/lib/env'
 import { generateWithGemini } from '../gemini'
 import sharp from 'sharp'
 import type { Step7Output, ReferenceImage } from '@/types/generation'
+import { logPrompt, logStepResult } from '../utils/logging'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import { buildAspectRatioFormatReference } from '../utils/reference-builder'
 import { resolveAspectRatioConfig } from '@/domain/style/elements/aspect-ratio/config'
+import type { CostTrackingHandler } from '../workflow-v3'
 
 export interface V3Step2FinalInput {
-  personBuffer: Buffer // Person on white background from Step 1 (with clothing logo already applied if applicable)
+  personBuffer: Buffer // Person on grey background from Step 1 (with clothing logo already applied if applicable)
   backgroundBuffer?: Buffer // Custom background if provided (from Step 1b OR user's custom background)
   styleSettings?: Record<string, unknown> // For user's background choice if Step 1b was skipped
   faceCompositeReference?: BaseReferenceImage // Face-focused composite from selfies for refinement
@@ -16,11 +19,15 @@ export interface V3Step2FinalInput {
   aspectRatio: string
   resolution?: '1K' | '2K' | '4K'
   originalPrompt: string // Original prompt with background/scene info
+  generationId?: string // For cost tracking
+  personId?: string // For cost tracking
+  teamId?: string // For cost tracking
+  onCostTracking?: CostTrackingHandler // For cost tracking
 }
 
 /**
  * V3 Step 2: Background composition + refinement
- * Takes the person from Step 1 (on white background) and composites with final background
+ * Takes the person from Step 1 (on grey background) and composites with final background
  * Applies camera/lighting settings and refines face using selfie references
  */
 export async function executeV3Step2(
@@ -38,7 +45,7 @@ export async function executeV3Step2(
     originalPrompt
   } = input
   
-  Logger.info('V3 Step 2: Compositing background and refining', {
+  Logger.debug('V3 Step 2: Compositing background and refining', {
     hasBackgroundFromStep1b: !!backgroundBuffer,
     hasStyleSettings: !!styleSettings,
     hasFaceComposite: !!faceCompositeReference,
@@ -73,7 +80,7 @@ export async function executeV3Step2(
     // Extract the rules that were stored in the branding object
     if (Array.isArray(sceneBranding.rules)) {
       brandingRules = sceneBranding.rules as string[]
-      Logger.info('V3 Step 2: Scene branding detected with rules', {
+      Logger.debug('V3 Step 2: Scene branding detected with rules', {
         position: sceneBranding.position,
         placement: sceneBranding.placement,
         ruleCount: brandingRules.length
@@ -100,10 +107,12 @@ export async function executeV3Step2(
   // Build the structured prompt for background composition
   const structuredPrompt = [
     // Section 1: Intro & Task
-    'You are a world-class graphics professional specializing in photo realistic composition and integration. Your task is to take the person from the base image (currently on a white background) and composite them naturally into the scene specified below, applying the camera, lighting, and rendering specifications.',
+    'You are a world-class graphics professional specializing in photo realistic composition and integration. Your task is to take the person from the base image (currently on a grey background) and composite them naturally into the scene specified below, applying the camera, lighting, and rendering specifications.',
     'The person is the primary subject and the background is the secondary subject.',
     'The background can not be changed, it must be the same as the background specified in the scene specifications without alterations.',
     'The person can not be changed, the pose, expression,clothes and every detail must remain the same.',
+    'Ensure cohesive lighting, color grading, and photorealistic integration between the person and the background.',
+    'Refine the image with a low denoising strength (approx 0.25 to 0.35) to fix lighting spill and shadows, "baking" the person into the room.',
 
     // Section 2: Scene Specifications (NO subject - person already generated)
     '',
@@ -204,7 +213,7 @@ export async function executeV3Step2(
   // Build reference images array
   const referenceImages: ReferenceImage[] = [
     {
-      description: 'BASE IMAGE - Person on white background from previous step (with clothing branding already applied if enabled). Keep the person EXACTLY as is, including any logo on clothing. Only change the background.',
+      description: 'BASE IMAGE - Person on grey background from previous step (with clothing branding already applied if enabled). Keep the person EXACTLY as is, including any logo on clothing. Only change the background.',
       base64: personBuffer.toString('base64'),
       mimeType: 'image/png'
     }
@@ -249,28 +258,87 @@ export async function executeV3Step2(
     hasEvaluatorComments: !!evaluatorComments && evaluatorComments.length > 0
   })
   
-  // Generate with Gemini
-  const generatedBuffers = await generateWithGemini(
-    compositionPrompt,
-    referenceImages,
-    aspectRatio,
-    resolution,
-    {
-      temperature: 0.4  // Moderate temperature for natural composition
+  // Generate with Gemini (track both success and failure for cost accounting)
+  // Use low denoising strength (approx 0.25 to 0.35) to fix lighting spill and shadows
+  let generationResult: Awaited<ReturnType<typeof generateWithGemini>>
+  try {
+    logPrompt('V3 Step 2', compositionPrompt)
+    generationResult = await generateWithGemini(
+      compositionPrompt,
+      referenceImages,
+      aspectRatio,
+      resolution,
+      {
+        temperature: 0.3, // Lower temperature for more consistent refinement
+        preferredProvider: 'openrouter' // Load balancing: Step 2 uses OpenRouter with fallback to Vertex
+      }
+    )
+  } catch (error) {
+    const providerUsed = (error as { providerUsed?: 'vertex' | 'gemini-rest' | 'replicate' }).providerUsed
+    if (input.onCostTracking) {
+      try {
+        await input.onCostTracking({
+          stepName: 'step2-composition',
+          reason: 'generation',
+          result: 'failure',
+          model: 'gemini-2.5-flash-image',
+          provider: providerUsed,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
+      } catch (costError) {
+        Logger.error('V3 Step 2: Failed to track generation cost (failure case)', {
+          error: costError instanceof Error ? costError.message : String(costError),
+          generationId: input.generationId,
+        })
+      }
     }
-  )
+    throw error
+  }
   
-  if (!generatedBuffers.length) {
+  if (!generationResult.images.length) {
     throw new Error('V3 Step 2: Gemini returned no images')
   }
   
   // Convert to PNG
-  const pngBuffer = await sharp(generatedBuffers[0]).png().toBuffer()
+  const pngBuffer = await sharp(generationResult.images[0]).png().toBuffer()
   const base64 = pngBuffer.toString('base64')
   
-  Logger.info('V3 Step 2: Background composition completed', {
-    bufferSize: pngBuffer.length
+  logStepResult('V3 Step 2', {
+    success: true,
+    provider: generationResult.providerUsed,
+    model: Env.string('GEMINI_IMAGE_MODEL'),
+    imageSize: pngBuffer.length,
+    durationMs: generationResult.usage.durationMs
   })
+
+  // Track generation cost
+  if (input.onCostTracking) {
+    try {
+      await input.onCostTracking({
+        stepName: 'step2-composition',
+        reason: 'generation',
+        result: 'success',
+        model: 'gemini-2.5-flash-image',
+        provider: generationResult.providerUsed,  // Pass actual provider used
+        inputTokens: generationResult.usage.inputTokens,
+        outputTokens: generationResult.usage.outputTokens,
+        imagesGenerated: generationResult.usage.imagesGenerated,
+        durationMs: generationResult.usage.durationMs,
+      })
+      Logger.debug('V3 Step 2: Cost tracking recorded', {
+        generationId: input.generationId,
+        provider: generationResult.providerUsed,
+        inputTokens: generationResult.usage.inputTokens,
+        outputTokens: generationResult.usage.outputTokens,
+        imagesGenerated: generationResult.usage.imagesGenerated,
+      })
+    } catch (error) {
+      Logger.error('V3 Step 2: Failed to track generation cost', {
+        error: error instanceof Error ? error.message : String(error),
+        generationId: input.generationId,
+      })
+    }
+  }
   
   return {
     refinedBuffer: pngBuffer,

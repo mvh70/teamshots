@@ -11,14 +11,15 @@ import InviteDashboardHeader from '@/components/invite/InviteDashboardHeader'
 import { ErrorBanner } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import { useInviteSelfieEndpoints } from '@/hooks/useInviteSelfieEndpoints'
-import SelfieSelectionInfoBanner from '@/components/generation/SelfieSelectionInfoBanner'
 import SharedMobileSelfieFlow from '@/components/generation/selfie/SharedMobileSelfieFlow'
 import SelfieUploadSuccess from '@/components/Upload/SelfieUploadSuccess'
+import { QRPlaceholder } from '@/components/MobileHandoff'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { hasEnoughSelfies } from '@/constants/generation'
 import { useTranslations } from 'next-intl'
+import SelfieInfoOverlayTrigger from '@/components/generation/SelfieInfoOverlayTrigger'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -147,10 +148,6 @@ export default function SelfiesPage() {
     setIsApproved(false)
   }
 
-  const handleRetake = () => {
-    setIsApproved(false)
-  }
-
   if (loading) { // loading comes from useSelfieManagement hook
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -224,7 +221,9 @@ export default function SelfiesPage() {
           <SharedMobileSelfieFlow
             canContinue={canContinue}
             infoBanner={
-              <SelfieSelectionInfoBanner selectedCount={selectedCount} className="flex-1 mb-0" />
+              <div className="flex-1">
+                <SelfieInfoOverlayTrigger dense className="w-full" />
+              </div>
             }
             grid={
               <SelectableGrid
@@ -253,6 +252,17 @@ export default function SelfiesPage() {
                   uploadEndpoint: handlePhotoUpload,
                   saveEndpoint: inviteSaveEndpoint
                 }}
+                qrTile={
+                  <QRPlaceholder 
+                    inviteToken={token}
+                    size={100}
+                    className="w-full h-full"
+                    onSelfieUploaded={async () => {
+                      await loadUploads()
+                      await loadSelected()
+                    }}
+                  />
+                }
               />
             }
             navigation={
@@ -303,7 +313,6 @@ export default function SelfiesPage() {
                   saveEndpoint={inviteSaveEndpoint}
                   onSelfiesApproved={handleSelfiesApproved!}
                   onCancel={handleCancelUpload}
-                  onRetake={handleRetake}
                 />
               ) : null
             }
@@ -342,7 +351,7 @@ export default function SelfiesPage() {
                   )}
                 </div>
                 <div className="px-6 pb-4">
-                  <SelfieSelectionInfoBanner selectedCount={selectedCount} />
+                  <SelfieInfoOverlayTrigger />
                 </div>
                 <div className="px-6 pt-2 pb-6">
                   <SelectableGrid
@@ -371,6 +380,17 @@ export default function SelfiesPage() {
                       uploadEndpoint: handlePhotoUpload,
                       saveEndpoint: inviteSaveEndpoint
                     }}
+                    qrTile={
+                      <QRPlaceholder 
+                        inviteToken={token} 
+                        size={100}
+                        className="w-full h-full"
+                        onSelfieUploaded={async () => {
+                          await loadUploads()
+                          await loadSelected()
+                        }}
+                      />
+                    }
                   />
                 </div>
                 <div className="px-6 pb-6">

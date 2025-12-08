@@ -6,7 +6,8 @@
   "common": {
     "processingImage": "Processing image...",
     "processingImages": "Processing {count} images...",
-    "uploading": "Uploading..."
+    "uploading": "Uploading...",
+    "loading": "Loading..."
   },
   "nav": {
     "home": "Home",
@@ -336,6 +337,10 @@
     "checkoutCanceled": "Checkout canceled. No charges were made. (Changed your mind? We get it, happens to the best of us)",
     "checkoutError": "Oops! Something went wrong. Please try again. (If it keeps happening, let us know-we're here to help)",
     "plans": {
+      "free": {
+        "name": "Free Plan",
+        "description": "Upgrade to unlock more features and customization options"
+      },
       "vip": {
         "name": "VIP",
         "period": "one-time",
@@ -413,6 +418,12 @@
       }
     },
     "perPhotoVariation": "per photo",
+    "perPhoto": "per photo",
+    "chooseTheBest": "Choose the best.",
+    "redirectingToCheckout": "Redirecting to checkout...",
+    "time": "time",
+    "times": "times",
+    "generated": "generated",
     "includesVariationsPerPhoto": "Includes {count} retries per photo",
     "customizablePhotos": "{count, plural, one {# customizable photo} other {# customizable photos}}",
     "variationsBullet": "Retry up to {count} times to perfect each photo",
@@ -450,12 +461,26 @@
         "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
         "styles": "Custom backgrounds and styles"
       },
-      "pro": {
-        "title": "Pro Plan",
+      "starter": {
+        "title": "Starter Plan",
         "credits": "{uniquePhotos} photos",
-        "retriesAndVariations": "{retries} free retries per generation, so {totalVariations} photo variations in total",
+        "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
         "styles": "Custom backgrounds and team styles",
         "team": "Team collaboration features"
+      },
+      "business": {
+        "title": "Business Plan",
+        "credits": "{uniquePhotos} photos",
+        "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
+        "styles": "Custom backgrounds and team styles",
+        "team": "Team collaboration features"
+      },
+      "enterprise": {
+        "title": "Enterprise Plan",
+        "credits": "{uniquePhotos} photos",
+        "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
+        "styles": "Full customization options",
+        "team": "Team management dashboard"
       },
       "topUp": {
         "title": "Credit Top-Up",
@@ -609,13 +634,13 @@
       "brand": "TeamShotsPro",
       "nav": {
         "dashboard": "Dashboard",
-        "team": "Team",
+        "team": "Invites",
         "personalGenerations": "Personal generations",
         "teamGenerations": "Generated photos",
-        "selfies": "Selfies",
+        "selfies": "My selfies",
         "contexts": "Photo styles",
         "personalPhotoStyles": "Personal photo styles",
-        "teamPhotoStyles": "Predefined photo styles",
+        "teamPhotoStyles": "Your photo style settings",
         "analytics": "Analytics",
         "settings": "Settings",
         "admin": "Admin"
@@ -636,7 +661,8 @@
         "allocated": "of which allocated to invites",
         "monthlyReset": "Monthly reset",
         "progress": "{used}/{total}",
-        "buyMore": "Buy more photos"
+        "buyMore": "Buy more photos",
+        "upgradeToPaid": "Upgrade to unlock full customization"
       },
       "generate": {
         "photo": "photo",
@@ -748,7 +774,9 @@
       "successMessages": {
         "tryItForFree": "Your free test is ready! {photos} photos have been added to your account.",
         "individual": "Individual plan activated successfully! {photos} photos have been added to your account.",
-        "pro": "Pro plan activated successfully! {photos} photos have been added to your account.",
+        "starter": "Starter plan activated successfully! {photos} photos have been added to your account.",
+        "business": "Business plan activated successfully! {photos} photos have been added to your account.",
+        "enterprise": "Enterprise plan activated successfully! {photos} photos have been added to your account.",
         "topUp": "Photo top-up completed successfully! Your photos have been added to your account.",
         "default": "Purchase completed successfully! Your photos have been added to your account.",
         "titleTryItForFree": "Welcome! 🎉",
@@ -773,64 +801,72 @@
           "individual": "Observe the transformation: We convert your casual selfie into a standout professional headshot. Ideal for LinkedIn, portfolios, and professional networking. Pro tip: Use natural lighting and frame from the chest up for optimal results.",
           "invited": "Observe the transformation: We convert your selfie into a professional headshot that aligns with your team's style. This ensures consistent visuals while highlighting your unique professional presence."
         },
+        "nextSteps": "Next step",
         "howItWorks": {
           "title": "How it works",
           "organizer": {
             "step1": {
-              "title": "Set your team's style",
-              "description": "Select backgrounds, outfits, and branding to align with your needs."
+              "title": "You're on a paid plan",
+              "description": "Thanks for choosing us. You can customize every detail to match your team's style. No fixed branding, no limitations. Create headshots that perfectly fit your brand."
             },
             "step2": {
-              "title": "Invite your team members",
-              "description": "Send invitations so your team can join and begin creating photos."
+              "title": "Test with your own photo first",
+              "description": "Upload 2-3 selfies, or scan the QR code to capture them on your phone. Adjust the pose, colors, and overall feel. Think of it as a preview of your team's new professional look."
             },
-            "step4": {
-              "title": "Receive the results",
-              "description": "Photos generate in 60 seconds once selfies are uploaded, ensuring consistent and professional results."
+            "step3": {
+              "title": "Set the photo style and invite your team",
+              "description": "Lock in your preferred settings and send out invitations. Your team scans a QR code or clicks a link to upload from their devices. No more chasing down colleagues for photos."
             },
             "free": {
               "step1": {
-                "title": "Invite your team members",
-                "description": "No sign-ups required. Links allow them to start with our Free Package Style preset, which provides a fixed professional look for testing without customizations."
+                "title": "You're on the free plan",
+                "description": "Perfect for testing things out. You'll get limited customization with {brandName} branding. Paid plans unlock full customization."
               },
               "step2": {
-                "title": "Receive the results",
-                "description": "Photos appear in 60 seconds once selfies are uploaded, matching the Free Package Style preset for quick evaluation."
+                "title": "Generate your test photo",
+                "description": "Upload 2-3 selfies (you can use QR code for easy mobile capture). Customize the photo and generate. This gives you a feel for how the process works."
+              },
+              "step3": {
+                "title": "Set team photo style and send invites",
+                "description": "After your test, define a photo style and invite your colleagues to generate photos with this style. Team members upload via QR code or link. No registration or sign-up needed. That simple."
               }
             }
           },
           "invited": {
             "step1": {
-              "title": "Upload your selfie",
-              "description": "Capture a photo. Any device works."
+              "title": "Capture your selfie",
+              "description": "Grab a quick photo on any device. We've made it straightforward because your time matters."
             },
             "step2": {
               "title": "Customize your look",
-              "description": "Adjust details such as clothing colors."
+              "description": "Adjust clothing colors and details to fit you while staying consistent with the team. It's your professional image, just aligned with the guidelines."
             },
             "step3": {
-              "title": "Receive your professionals",
-              "description": "Ready in 60 seconds once your selfie is uploaded, approved for team consistency."
+              "title": "Get your professional headshots",
+              "description": "In about 60 seconds, you'll have polished photos ready to use. All matching your team's photo style, because consistency counts."
             }
           },
           "individual": {
             "step1": {
               "title": "Upload your selfie",
-              "description": "Capture a photo. Simple and straightforward."
+              "description": "Take a quick photo on any device. Keep it simple. Natural light helps, but it's not required."
             },
             "step2": {
-              "title": "Set your style",
-              "description": "Choose backgrounds, outfits, and expressions."
+              "title": "Pick your photo style",
+              "description": "Choose backgrounds, outfits, and expressions that work for you. It's like having a personal stylist, only faster."
             },
             "step3": {
-              "title": "Receive the results",
-              "descriptionFree": "Professional results ready in under 60 seconds once your selfie is uploaded, with our fixed free style.",
-              "descriptionPaid": "Custom professional results in under 60 seconds once your selfie is uploaded, tailored to your preferences."
+              "title": "Get your results",
+              "descriptionFree": "In under 60 seconds, you'll have professional headshots with our free photo style. Quick and easy, perfect for trying it out.",
+              "descriptionPaid": "Custom professional headshots in under 60 seconds, exactly how you want them. You deserve that kind of control."
             },
-            "note": "No photoshoots or scheduling required. Just effective results."
+            "note": "No scheduling, no stress. Just great results when you need them."
           }
         },
         "firstAction": {
+          "shared": {
+            "button": "Start my generation"
+          },
           "organizer": {
             "free": {
               "title": "Ready to begin?",
@@ -916,6 +952,7 @@
       },
       "accountInfo": {
         "title": "Account information",
+        "subtitle": "View your account details and role information",
         "intro": "🛟 You won't need this info unless something's gone wrong and support asks for it. Just in case, here it is!",
         "email": "Email",
         "name": "Name",
@@ -931,6 +968,7 @@
           "button": "Proceed anyway (we tried!) 😅"
         },
         "title": "Pricing plan",
+        "subtitle": "Manage your subscription and pricing plan",
         "noSubscription": "Choose a plan to get started and start looking amazing!",
         "upgradeOptions": "Upgrade options",
         "plan": {
@@ -952,6 +990,7 @@
       },
       "billing": {
         "title": "Billing & invoices",
+        "subtitle": "View and download your invoices",
         "free": {
           "message": "🎉 Hey there! You haven't bought anything yet, so this screen is empty. No invoices, no bills, no surprises (except the good kind when you see our photos!)",
           "button": "Fill this screen with greatness! 🚀"
@@ -984,6 +1023,7 @@
       }
     },
     "onboarding": {
+      "nextSteps": "Next step",
       "benefits": {
         "noScheduling": {
           "description": "No scheduling needed"
@@ -1329,6 +1369,8 @@
       "enoughSelected": "You've selected {count} selfie{count, plural, =1 {} other {s}}. You can continue or select more.",
       "swipeHint": "Swipe right when you're ready to customize.",
       "clickHint": "Click Continue when you're ready to customize.",
+      "qrTitle": "Upload from your phone",
+      "qrDescription": "Scan the QR code to capture or upload selfies from your mobile.",
       "status": {
         "start": "Select selfies",
         "oneMore": "Add one more",
@@ -1348,7 +1390,54 @@
   "generate": {
     "selfie": {
       "title": "Choose your selfie",
-      "subtitle": "Select a selfie to use for generation, or upload a new one."
+      "subtitle": "Select a selfie to use for generation, or upload a new one.",
+      "qrTip": {
+        "title": "Upload from your phone",
+        "description": "Scan this QR code with your phone to upload selfies directly from your camera roll."
+      }
+    }
+  },
+  "mobileHandoff": {
+    "title": "Upload from your phone",
+    "description": "Scan this QR code to upload selfies from your mobile device.",
+    "scanToUpload": "Scan to upload",
+    "scanForMobile": "Scan for mobile selfies",
+    "scanForSelfies": "Switch to mobile",
+    "useHere": "Use on computer",
+    "phoneConnected": "Phone connected",
+    "expiresIn": "Expires in {time}",
+    "howToScan": "Open your phone camera and point it at this QR code",
+    "retry": "Try again",
+    "tapToRetry": "Tap to retry",
+    "errors": {
+      "createFailed": "Could not create QR code. Please try again."
+    }
+  },
+  "uploadSelfie": {
+    "loading": "Loading...",
+    "greeting": "Hi {name}!",
+    "subtitle": "Upload selfies from your phone",
+    "addSelfie": "Add selfie",
+    "useCamera": "Use camera",
+    "uploadPhoto": "Upload photo",
+    "progress": "{count} selfie{count, plural, =1 {} other {s}} uploaded",
+    "uploadedCount": "+{count} new",
+    "statusReady": "Ready to generate",
+    "statusUploading": "Upload more selfies",
+    "readyMessage": "You have enough selfies. Head back to desktop to generate your photos.",
+    "doneHint": "When you're done uploading, you can close this page.",
+    "viewDashboard": "View dashboard",
+    "errors": {
+      "title": "Something went wrong",
+      "invalidToken": "This link is invalid or has expired.",
+      "tokenExpired": "This link has expired. Please scan a new QR code from your desktop.",
+      "validationFailed": "Could not validate this link. Please try again.",
+      "scanNewQR": "Please scan a new QR code from your desktop to continue.",
+      "desktopAccess": {
+        "title": "Mobile only",
+        "message": "This page is designed for mobile devices only. Please open this link on your phone.",
+        "hint": "Scan the QR code from your desktop using your mobile camera."
+      }
     }
   },
   "generation": {
@@ -1443,7 +1532,7 @@
       "greeting": "You've been invited to join {teamName}!",
       "greetingWithName": "Hi {firstName}! {inviterFirstName} invited you to get professional headshots for {teamName}.",
       "photosDescription": "You can generate {photos} customizable photos. And each photo can be redone up to 4 times each. From just a selfie.\n\nYour selfie doesn't need to be perfect. We'll handle the professional polish.",
-      "mobileAdvice": "For the best experience, open this on your mobile device. That's where you'll take your selfie.",
+      "mobileAdvice": "Open this link on any device. If you start on desktop, you can easily scan a QR code to upload selfies from your phone.",
       "acceptButton": "Accept invitation",
       "expires": "This invitation expires in 24 hours. If you can't click the button, copy and paste this link in your browser:",
       "questions": "Questions? Just reply to this email. We're real people and we'll get back to you."
@@ -1525,17 +1614,20 @@
         "intro": {
           "kicker": "Before you generate",
           "title": "Customize your professional headshots",
+          "subtitle": "You're about to customize how your photos look.",
           "body": "You're about to customize how your photos look. Each card controls one part of the shoot. Swipe through and adjust to match your preferences.",
           "bodyDesktop": "You're about to customize how your photos look. Each section below controls a different aspect of your professional headshot.",
           "swipe": "Swipe right to move forward, left to go back. You can also use the navigation buttons below.",
           "scrollDesktop": "Scroll down to see all customization options. Adjust each setting to match your preferences.",
           "editable": "Sparkles badge means you can edit this setting. Adjust until it matches your preferences.",
-          "locked": "Lock badge means your team admin set this. You can view it but not change it to maintain consistency."
+          "locked": "Lock badge means your team admin set this. You can view it but not change it to maintain consistency.",
+          "skip": "Don't show again"
         },
         "selfieTips": {
           "kicker": "Get the best results",
           "title": "Selfie tips for amazing photos",
           "body": "Great photos start with great selfies. Follow these tips to get the best results.",
+          "skip": "Don't show again",
           "angles": {
             "title": "Mix up your angles",
             "desc": "Different positions help our AI understand your face better."
@@ -1881,6 +1973,8 @@
   },
   "selfieApproval": {
     "title": "Review your selfie",
+    "subtitle": "Check the photo quality before continuing",
+    "awaitingApproval": "Awaiting approval",
     "guidelines": {
       "title": "Photo quality guidelines",
       "clearFace": "Clear, well-lit face",
@@ -2125,6 +2219,10 @@
     },
     "selfieSelection": {
       "title": "Choose selfies to use",
+      "qrTip": {
+        "title": "Upload from your phone",
+        "description": "Scan this QR code with your phone to upload selfies directly from your camera roll."
+      },
       "mobile": {
         "bannerTitle": "Select your selfies",
         "bannerMessage": "Choose at least 2 selfies, then swipe right when you're ready to customize.",
