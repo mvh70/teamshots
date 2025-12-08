@@ -1,6 +1,6 @@
 import SessionProvider from '@/components/SessionProvider'
 import { PostHogProvider } from '@/components/PostHogProvider'
-import GoogleAnalytics from '@/components/GoogleAnalytics'
+// import GoogleAnalytics from '@/components/GoogleAnalytics' // Removed - managed through GTM instead
 import GoogleTagManager, { GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
 import { auth } from '@/auth'
 import type { Metadata, Viewport } from 'next'
@@ -79,10 +79,9 @@ export default function RootLayout({
         {/* Preconnect to PostHog for faster analytics loading - crossorigin for CORS fetch */}
         <link rel="preconnect" href="https://pineapple.teamshotspro.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://pineapple.teamshotspro.com" />
-        {/* Google Tag Manager */}
+        {/* Google Tag Manager - manages all tracking tags including GA4 */}
         <GoogleTagManager />
-        {/* Google Analytics */}
-        <GoogleAnalytics />
+        {/* Google Analytics is now managed through GTM dashboard */}
       </head>
       <body className="overflow-x-hidden bg-gray-50">
         {/* Google Tag Manager (noscript) */}

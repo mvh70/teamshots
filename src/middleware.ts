@@ -84,6 +84,7 @@ function addSecurityHeaders(response: NextResponse) {
     unsafeEvalDirective, // PRODUCTION: REMOVED (Phase 1 security fix)
     'https://static.cloudflareinsights.com',
     'https://pineapple.teamshotspro.com',
+    'https://www.googletagmanager.com', // Google Tag Manager & Analytics
     posthogDomains
   ].filter(Boolean).join(' ')
   
@@ -93,7 +94,7 @@ function addSecurityHeaders(response: NextResponse) {
     "style-src 'self' 'unsafe-inline'", // Keep unsafe-inline for styles as Next.js requires it for CSS-in-JS
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com ${posthogDomains} ws: wss:`,
+    `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com ${posthogDomains} ws: wss:`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -113,6 +114,7 @@ function addSecurityHeaders(response: NextResponse) {
       // NO unsafe-inline or unsafe-eval in strict policy
       'https://static.cloudflareinsights.com',
       'https://pineapple.teamshotspro.com',
+      'https://www.googletagmanager.com', // Google Tag Manager & Analytics
       posthogDomains
     ].filter(Boolean).join(' ')
 
@@ -122,7 +124,7 @@ function addSecurityHeaders(response: NextResponse) {
       "style-src 'self'",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data:",
-      `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com ${posthogDomains} ws: wss:`,
+      `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com ${posthogDomains} ws: wss:`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
