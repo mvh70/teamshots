@@ -91,9 +91,9 @@ function addSecurityHeaders(response: NextResponse) {
   const csp = [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
-    "style-src 'self' 'unsafe-inline'", // Keep unsafe-inline for styles as Next.js requires it for CSS-in-JS
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.googletagmanager.com", // Allow GTM & Google Fonts styles
     "img-src 'self' data: https: blob:",
-    "font-src 'self' data:",
+    "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts
     `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com ${posthogDomains} ws: wss:`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -106,34 +106,33 @@ function addSecurityHeaders(response: NextResponse) {
 
   response.headers.set('Content-Security-Policy', csp)
 
-  // Add report-only CSP in production to monitor for violations without blocking
-  // This helps us track inline script usage before removing unsafe-inline
-  if (isProduction) {
-    const strictScriptSrc = [
-      "'self'",
-      // NO unsafe-inline or unsafe-eval in strict policy
-      'https://static.cloudflareinsights.com',
-      'https://pineapple.teamshotspro.com',
-      'https://www.googletagmanager.com', // Google Tag Manager & Analytics
-      posthogDomains
-    ].filter(Boolean).join(' ')
+  // Report-only CSP temporarily disabled to reduce console noise during GTM setup
+  // TODO: Re-enable after analytics stabilizes for better security monitoring
+  // if (isProduction) {
+  //   const strictScriptSrc = [
+  //     "'self'",
+  //     'https://static.cloudflareinsights.com',
+  //     'https://pineapple.teamshotspro.com',
+  //     'https://www.googletagmanager.com',
+  //     posthogDomains
+  //   ].filter(Boolean).join(' ')
 
-    const reportOnlyCSP = [
-      "default-src 'self'",
-      `script-src ${strictScriptSrc}`,
-      "style-src 'self'",
-      "img-src 'self' data: https: blob:",
-      "font-src 'self' data:",
-      `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com ${posthogDomains} ws: wss:`,
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "object-src 'none'",
-      "report-uri /api/csp-report" // TODO: Create CSP report endpoint
-    ].join('; ')
+  //   const reportOnlyCSP = [
+  //     "default-src 'self'",
+  //     `script-src ${strictScriptSrc}`,
+  //     "style-src 'self'",
+  //     "img-src 'self' data: https: blob:",
+  //     "font-src 'self' data:",
+  //     `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com ${posthogDomains} ws: wss:`,
+  //     "frame-ancestors 'none'",
+  //     "base-uri 'self'",
+  //     "form-action 'self'",
+  //     "object-src 'none'",
+  //     "report-uri /api/csp-report"
+  //   ].join('; ')
 
-    response.headers.set('Content-Security-Policy-Report-Only', reportOnlyCSP)
-  }
+  //   response.headers.set('Content-Security-Policy-Report-Only', reportOnlyCSP)
+  // }
 
   // Add missing security headers
   response.headers.set('X-DNS-Prefetch-Control', 'off')
