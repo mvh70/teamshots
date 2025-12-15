@@ -6,6 +6,12 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig = {
   transpilePackages: ['next-intl'],
   output: 'standalone', // Enable for Docker deployment
+  // Performance optimizations
+  swcMinify: true,
+  experimental: {
+    optimizeCss: true,
+    scrollRestoration: true,
+  },
   images: {
     // Enable Next.js image optimization
     remotePatterns: [
@@ -53,6 +59,11 @@ const nextConfig = {
           {
             key: 'Cross-Origin-Opener-Policy',
             value: 'same-origin'
+          },
+          // Preconnect to PostHog analytics domain for better performance
+          {
+            key: 'Link',
+            value: '<https://pineapple.teamshotspro.com>; rel=preconnect; crossorigin'
           }
         ]
       },
@@ -77,6 +88,25 @@ const nextConfig = {
       },
       {
         source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          }
+        ]
+      },
+      // Cache other static assets aggressively
+      {
+        source: '/images/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          }
+        ]
+      },
+      {
+        source: '/public/:path*',
         headers: [
           {
             key: 'Cache-Control',

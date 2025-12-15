@@ -9,7 +9,12 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    initPostHog()
+    // Defer PostHog initialization to improve PageSpeed
+    const timer = setTimeout(() => {
+      initPostHog()
+    }, 100) // Small delay to prioritize critical resources
+
+    return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {

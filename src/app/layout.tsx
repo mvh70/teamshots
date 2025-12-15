@@ -76,9 +76,9 @@ export default function RootLayout({
         <meta httpEquiv="Permissions-Policy" content="camera=(self)" />
         {/* Force protocol detection for Safari */}
         <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
-        {/* Preconnect to PostHog for faster analytics loading - crossorigin for CORS fetch */}
-        <link rel="preconnect" href="https://pineapple.teamshotspro.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://pineapple.teamshotspro.com" />
+        {/* Performance optimizations */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Google Tag Manager - manages all tracking tags including GA4 */}
         <GoogleTagManager />
         {/* Google Analytics is now managed through GTM dashboard */}

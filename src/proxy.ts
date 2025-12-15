@@ -5,8 +5,6 @@ import { getRequestHeader } from '@/lib/server-headers'
 import { auth } from '@/auth'
 import { ALLOWED_DOMAINS } from '@/lib/url'
 
-export const runtime = 'nodejs'
-
 const PROTECTED_PATH_PREFIXES = ['/app']
 const ADMIN_PATH_PREFIXES = ['/app/admin']
 
@@ -148,10 +146,10 @@ const intlMiddleware = createMiddleware({
   localePrefix: routing.localePrefix
 })
 
-export default async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   try {
     // Allow E2E tests to bypass locale detection/redirects
-    if (await getRequestHeader('x-playwright-e2e') === '1') {
+    if ((await getRequestHeader('x-playwright-e2e')) === '1') {
       const res = NextResponse.next()
       // Preserve existing E2E headers if they exist, otherwise add defaults
       if (!res.headers.get('x-e2e-user-id')) {
