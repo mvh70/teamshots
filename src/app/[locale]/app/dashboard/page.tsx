@@ -18,7 +18,7 @@ import { calculatePhotosFromCredits } from '@/domain/pricing'
 import dynamic from 'next/dynamic'
 import { useRouter } from '@/i18n/routing'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { jsonFetcher } from '@/lib/fetcher'
 import { useCredits } from '@/contexts/CreditsContext'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
@@ -200,7 +200,7 @@ export default function DashboardPage() {
 }, [showOnboardingSection, session?.user?.id, onboardingContext.onboardingSegment, onboardingContext.isFreePlan, track])
 
   // Onboarding handlers
-  const handleStartAction = async () => {
+  const handleStartAction = useCallback(async () => {
     try {
       const response = await fetch('/api/onboarding/complete-tour', {
         method: 'POST',
@@ -244,7 +244,7 @@ export default function DashboardPage() {
       alert('Failed to save onboarding completion. Please try again.');
       // Do NOT set hasCompletedMainOnboarding(true) on error
     }
-  }
+  }, [session?.user?.id, onboardingContext.onboardingSegment, onboardingContext.isFreePlan, track, updateOnboardingContext, resetFlow, router])
 
   // Read onboarding completion status from database (via onboardingContext.completedTours)
   useEffect(() => {
@@ -283,48 +283,48 @@ export default function DashboardPage() {
     return () => clearTimeout(timer)
   }, [showSuccessMessage])
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true)
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true)
+      
+      // OPTIMIZATION: Fetch all dashboard data in a single API call
+      // This consolidates stats, activity, and pending invites into one request
+      // reducing database queries from 9-15 to 3-5 per dashboard load
+      const dashboardData = await jsonFetcher<{ 
+        success: boolean;
+        stats: DashboardStats; 
+        userRole: UserPermissions & {
+          needsPhotoStyleSetup?: boolean;
+          nextTeamOnboardingStep?: 'team_setup' | 'style_setup' | 'invite_members' | null;
+        };
+        activities: Activity[];
+        pendingInvites: PendingInvite[];
+      }>('/api/dashboard')
+      
+      if (dashboardData.success && dashboardData.stats) {
+        setStats(dashboardData.stats)
+        setUserPermissions(normalizeUserPermissions(dashboardData.userRole))
+        setRecentActivity(dashboardData.activities || [])
+        setPendingInvites(dashboardData.pendingInvites || [])
         
-        // OPTIMIZATION: Fetch all dashboard data in a single API call
-        // This consolidates stats, activity, and pending invites into one request
-        // reducing database queries from 9-15 to 3-5 per dashboard load
-        const dashboardData = await jsonFetcher<{ 
-          success: boolean;
-          stats: DashboardStats; 
-          userRole: UserPermissions & {
-            needsPhotoStyleSetup?: boolean;
-            nextTeamOnboardingStep?: 'team_setup' | 'style_setup' | 'invite_members' | null;
-          };
-          activities: Activity[];
-          pendingInvites: PendingInvite[];
-        }>('/api/dashboard')
-        
-        if (dashboardData.success && dashboardData.stats) {
-          setStats(dashboardData.stats)
-          setUserPermissions(normalizeUserPermissions(dashboardData.userRole))
-          setRecentActivity(dashboardData.activities || [])
-          setPendingInvites(dashboardData.pendingInvites || [])
-          
-          // IMPORTANT: Do NOT redirect based on needsPhotoStyleSetup
-          // Users should complete onboarding first, then navigate to photo styles when ready
-          // The onboarding flow will guide them appropriately
-        }
-
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error)
-        // Keep default stats on error
-      } finally {
-        setLoading(false)
+        // IMPORTANT: Do NOT redirect based on needsPhotoStyleSetup
+        // Users should complete onboarding first, then navigate to photo styles when ready
+        // The onboarding flow will guide them appropriately
       }
-    }
 
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+      // Keep default stats on error
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
     if (session?.user?.id) {
       fetchDashboardData()
     }
-  }, [session?.user?.id])
+  }, [session?.user?.id, fetchDashboardData])
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
@@ -345,7 +345,7 @@ export default function DashboardPage() {
     }
   }
 
-  const handleResendInvite = async (inviteId: string) => {
+  const handleResendInvite = useCallback(async (inviteId: string) => {
     setResending(inviteId)
     try {
       await jsonFetcher('/api/team/invites/resend', {
@@ -362,7 +362,7 @@ export default function DashboardPage() {
     } finally {
       setResending(null)
     }
-  }
+  }, [])
 
   // SSR hydration indicator - prevents hydration mismatch for client-only content
   /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
@@ -371,12 +371,12 @@ export default function DashboardPage() {
   }, [])
   /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
-  const handleSelfiesApproved = async (results: { key: string; selfieId?: string }[]) => {
+  const handleSelfiesApproved = useCallback(async (results: { key: string; selfieId?: string }[]) => {
     // Redirect to generation start with the first approved selfie
     if (results.length > 0) {
       router.push(`/app/generate/start?key=${encodeURIComponent(results[0].key)}`)
     }
-  }
+  }, [router])
 
   // Calculate total photos
   // For team admins/members: only show team credits converted to photos (individual credits are unmigrated pro credits already included in team balance)

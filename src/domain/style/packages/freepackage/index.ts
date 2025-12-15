@@ -52,7 +52,7 @@ const AVAILABLE_EXPRESSIONS = [
   'laugh_joy',
   'contemplative',
   'confident',
-  'sad'
+  //'sad'
 ]
 
 const FREE_PRESET = CORPORATE_HEADSHOT
