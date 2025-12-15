@@ -12,7 +12,7 @@ import { Logger } from './logger'
  */
 export function isRateLimitError(error: unknown): boolean {
   const metadata = collectErrorMetadata(error)
-  
+
   // Check for 429 status code
   if (metadata.statusCodes.includes(429)) {
     return true
@@ -21,9 +21,33 @@ export function isRateLimitError(error: unknown): boolean {
   // Check for rate limit messages
   return metadata.messages.some((message) => {
     const normalized = message.toLowerCase()
-    return normalized.includes('too many requests') || 
+    return normalized.includes('too many requests') ||
            normalized.includes('resource exhausted') ||
            normalized.includes('rate limit')
+  })
+}
+
+/**
+ * Checks if an error is a transient service error that should trigger fallback to another provider
+ * This includes 503 Service Unavailable errors and HTML error responses
+ */
+export function isTransientServiceError(error: unknown): boolean {
+  const metadata = collectErrorMetadata(error)
+
+  // Check for 503 status code
+  if (metadata.statusCodes.includes(503)) {
+    return true
+  }
+
+  // Check for service unavailable messages or HTML error responses
+  return metadata.messages.some((message) => {
+    const normalized = message.toLowerCase()
+    return normalized.includes('service unavailable') ||
+           normalized.includes('service temporarily unavailable') ||
+           normalized.includes('503') ||
+           // HTML error responses (<!DOCTYPE or <!doctype)
+           normalized.includes('<!doctype html') ||
+           normalized.includes('<!doctype')
   })
 }
 

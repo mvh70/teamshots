@@ -25,8 +25,8 @@ export default function GenerateButton({
 }: GenerateButtonProps) {
   const sizeClasses = {
     sm: 'px-4 py-2 text-sm',
-    md: 'px-6 py-4 md:px-4 md:py-2 text-lg md:text-sm',
-    lg: 'px-6 py-4 text-lg'
+    md: 'px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 text-base md:text-lg lg:text-xl font-bold',
+    lg: 'px-8 py-5 text-xl font-bold'
   }
 
   const isDisabled = disabled || isGenerating
@@ -37,9 +37,9 @@ export default function GenerateButton({
     <button
       onClick={onClick}
       disabled={isDisabled}
-      className={`w-full ${sizeClasses[size]} font-semibold md:font-medium rounded-xl transition-all duration-200 ${
+      className={`w-full ${sizeClasses[size]} rounded-xl transition-all duration-200 ${
         isEnabled
-          ? 'bg-gradient-to-r from-brand-primary to-indigo-600 text-white hover:from-brand-primary-hover hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0'
+          ? 'bg-gradient-to-r from-brand-primary to-indigo-600 text-white hover:from-brand-primary-hover hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 hover:scale-105 active:scale-95'
           : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-sm'
       } ${className}`}
     >

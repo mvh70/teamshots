@@ -6,7 +6,7 @@ import type { Content, GenerateContentResult, Part, GenerativeModel, SafetySetti
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { generateWithGeminiRest } from './gemini-rest'
-import { isRateLimitError } from '@/lib/rate-limit-retry'
+import { isRateLimitError, isTransientServiceError } from '@/lib/rate-limit-retry'
 
 export interface GeminiReferenceImage {
   mimeType: string
@@ -302,6 +302,7 @@ export async function generateWithGemini(
 
       lastError = error
       const rateLimited = isRateLimitError(error)
+      const serviceError = isTransientServiceError(error)
 
       // Check if this is a transient IMAGE_OTHER error from OpenRouter
       // Be more defensive - check for "returned no images" OR "IMAGE_OTHER" in the message
@@ -317,15 +318,20 @@ export async function generateWithGemini(
         provider,
         providerUsed,
         rateLimited,
+        serviceError,
         isImageOtherError,
         isLastProvider,
         errorMessage: error instanceof Error ? error.message.substring(0, 200) : String(error).substring(0, 200),
-        willFallback: (rateLimited || isImageOtherError) && !isLastProvider
+        willFallback: (rateLimited || serviceError || isImageOtherError) && !isLastProvider
       })
 
-      // Fall back to next provider if rate limited OR transient image generation failure
-      if ((rateLimited || isImageOtherError) && !isLastProvider) {
-        const reason = rateLimited ? 'rate limited' : 'returned no images (IMAGE_OTHER)'
+      // Fall back to next provider if rate limited OR service error OR transient image generation failure
+      if ((rateLimited || serviceError || isImageOtherError) && !isLastProvider) {
+        const reason = rateLimited
+          ? 'rate limited'
+          : serviceError
+            ? 'service unavailable (503)'
+            : 'returned no images (IMAGE_OTHER)'
         Logger.warn(`Provider ${reason}, falling back to next provider`, {
           provider,
           providerUsed,
@@ -344,6 +350,7 @@ export async function generateWithGemini(
         providerUsed,
         isLastProvider,
         rateLimited,
+        serviceError,
         isImageOtherError
       })
       throw error

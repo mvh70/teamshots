@@ -92,20 +92,73 @@ export function formatProgressWithAttempt(
   return `Generation #${currentAttempt}\n${progress}% - ${formatted}`
 }
 
+// Track the last progress value to ensure monotonic increases
+const progressTrackers = new Map<string, number>()
+
+/**
+ * Get the current progress for a job
+ */
+function getLastProgress(jobId: string): number {
+  return progressTrackers.get(jobId) ?? 0
+}
+
+/**
+ * Set the last progress for a job
+ */
+function setLastProgress(jobId: string, progress: number): void {
+  progressTrackers.set(jobId, progress)
+}
+
+/**
+ * Clean up progress tracker for completed job
+ */
+export function cleanupProgressTracker(jobId: string): void {
+  progressTrackers.delete(jobId)
+}
+
 /**
  * Safe progress update with error handling
- * Consolidates duplicate progress update patterns
+ * Ensures progress never goes backwards
+ *
+ * @param job - The BullMQ job
+ * @param targetProgress - The desired progress percentage (0-100)
+ * @param message - The status message to display
+ * @param forceUpdate - Force the update even if progress hasn't increased (for message-only updates)
  */
 export async function updateJobProgress(
   job: Job,
-  progress: number,
-  message: string
+  targetProgress: number,
+  message: string,
+  forceUpdate = false
 ): Promise<void> {
   try {
-    await job.updateProgress({ progress, message })
+    const jobId = job.id ?? 'unknown'
+    const lastProgress = getLastProgress(jobId)
+
+    // Only update if progress increases OR if force update is requested
+    if (targetProgress > lastProgress || forceUpdate) {
+      const actualProgress = Math.max(targetProgress, lastProgress)
+      await job.updateProgress({ progress: actualProgress, message })
+      setLastProgress(jobId, actualProgress)
+
+      Logger.debug('Updated job progress', {
+        jobId,
+        targetProgress,
+        actualProgress,
+        lastProgress,
+        messagePreview: message.substring(0, 50)
+      })
+    } else {
+      Logger.debug('Skipped progress update (would go backwards)', {
+        jobId,
+        targetProgress,
+        lastProgress,
+        messagePreview: message.substring(0, 50)
+      })
+    }
   } catch (error) {
     Logger.warn('Failed to update job progress', {
-      progress,
+      progress: targetProgress,
       error: error instanceof Error ? error.message : String(error)
     })
   }

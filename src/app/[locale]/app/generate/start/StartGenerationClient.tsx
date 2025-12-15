@@ -433,7 +433,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                   size="md"
                   className="!w-auto min-w-[140px]"
                 >
-                  Generate
+                  Generate photo
                 </GenerateButton>
               </div>
             )}
@@ -745,7 +745,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                 }
                 integrateInPopover={hasUneditedFields && hasVisitedClothingColorsIfEditable}
               >
-                Generate
+                Generate photo
               </GenerateButton>
           </>
             )}

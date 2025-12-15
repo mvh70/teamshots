@@ -70,18 +70,23 @@ export const PROGRESS_CONFIG = {
 } as const
 
 // Workflow Step Progress Percentages
+// NOTE: Steps 1a and 1b run in parallel, so progress tracking prevents backwards movement
 export const PROGRESS_STEPS = {
   // V3 Workflow (Parallel)
-  V3_INIT: 10,
-  V3_PREPARING: 15,
-  V3_GENERATING_PERSON: 20, // Step 1a: Person generation
-  V3_EVALUATING_PERSON: 35, // Step 1a eval
-  V3_GENERATING_BACKGROUND: 25, // Step 1b: Background generation (parallel with 1a)
-  V3_EVALUATING_BACKGROUND: 40, // Step 1b eval
-  V3_COMPOSITING: 50, // Step 2: Composition/refinement
-  V3_FINAL_EVAL: 80, // Step 3: Final evaluation
+  V3_INIT: 5,
+  V3_PREPARING: 10,
+  // Steps 1a and 1b run in parallel - both start around 15%, complete around 40%
+  V3_GENERATING_PERSON: 15, // Step 1a: Person generation start
+  V3_EVALUATING_PERSON: 30, // Step 1a eval
+  V3_PERSON_COMPLETE: 40, // Step 1a complete (both person + eval done)
+  V3_GENERATING_BACKGROUND: 15, // Step 1b: Background generation (parallel with 1a)
+  V3_EVALUATING_BACKGROUND: 30, // Step 1b eval
+  V3_BACKGROUND_COMPLETE: 40, // Step 1b complete (both background + eval done)
+  // Step 2: Composition happens after both 1a and 1b complete
+  V3_COMPOSITING: 60, // Step 2: Composition/refinement
+  V3_FINAL_EVAL: 85, // Step 3: Final evaluation
   V3_COMPLETE: 100,
-  
+
   // V1 Workflow
   V1_INIT: 10,
   V1_PREPROCESSING: 15,

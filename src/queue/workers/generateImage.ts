@@ -28,7 +28,7 @@ import type { AIModelId, AIProvider } from '@/config/ai-costs'
 import { AssetService } from '@/domain/services/AssetService'
 
 // Import shared utilities for V1 workflow improvements
-import { executeWithRateLimitRetry, createProgressRetryCallback } from './generate-image/utils/retry-handler'
+import { executeWithRateLimitRetry, createProgressRetryCallback, cleanupProgressTracker } from './generate-image/utils/retry-handler'
 
 import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/domain/style/elements/aspect-ratio/config'
 import type { AspectRatioId } from '@/domain/style/elements/aspect-ratio/config'
@@ -1238,6 +1238,10 @@ Error Details: ${JSON.stringify(errorDetails, null, 2)}`,
 // Worker event handlers
 imageGenerationWorker.on('completed', (job) => {
   Logger.info('Job completed successfully', { jobId: job.id })
+  // Clean up progress tracker to prevent memory leaks
+  if (job.id) {
+    cleanupProgressTracker(job.id)
+  }
 })
 
 imageGenerationWorker.on('failed', (job, error) => {
@@ -1246,6 +1250,10 @@ imageGenerationWorker.on('failed', (job, error) => {
     return
   }
   Logger.error('Job failed', { jobId: job.id, attempts: job.attemptsMade, error: error instanceof Error ? error.message : String(error) })
+  // Clean up progress tracker to prevent memory leaks
+  if (job.id) {
+    cleanupProgressTracker(job.id)
+  }
 })
 
 imageGenerationWorker.on('stalled', (jobId) => {
