@@ -1667,10 +1667,10 @@
         "compositionDesc": "Background, branding, and shot type",
         "userStyle": "User Style Settings",
         "userStyleDesc": "Clothing, expression, and lighting preferences",
-        "customizable": "Customize Your Style",
-        "customizableDesc": "Personalize these settings to match your preferences",
-        "preset": "Team Preset Settings",
-        "presetDesc": "These settings are configured by your team admin"
+        "customizable": "Customize your photo",
+        "customizableDesc": "Make it your best beautiful you",
+        "preset": "Team presets",
+        "presetDesc": "These are fixed for your team"
       },
       "categories": {
         "background": {

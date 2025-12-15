@@ -1677,10 +1677,10 @@
         "compositionDesc": "Fondo, marca y tipo de toma",
         "userStyle": "Configuración de Estilo de Usuario",
         "userStyleDesc": "Preferencias de ropa, expresión e iluminación",
-        "customizable": "Personaliza Tu Estilo",
-        "customizableDesc": "Personaliza estas configuraciones para que coincidan con tus preferencias",
-        "preset": "Configuraciones Predefinidas del Equipo",
-        "presetDesc": "Estas configuraciones están configuradas por el administrador de tu equipo"
+        "customizable": "Personaliza tu foto",
+        "customizableDesc": "Hazla tu mejor y más hermosa versión",
+        "preset": "Preajustes del equipo",
+        "presetDesc": "Estos están fijos para tu equipo"
       },
       "categories": {
         "background": {

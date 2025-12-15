@@ -375,7 +375,73 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   }
 
   return (
-    <div className={`${pagePaddingClasses} space-y-8 pb-24 md:pb-0 w-full max-w-full overflow-x-hidden bg-white min-h-screen`}>
+    <>
+      {/* Floating Generate Button - Top Right (Desktop) - Outside main container */}
+      {skipUpload && (
+        <div className="hidden md:block fixed top-28 right-6 z-[100] pointer-events-auto">
+          <div className="relative">
+            {!hasEnoughCredits ? (
+              <Link
+                href={buyCreditsHrefWithReturn}
+                className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
+                style={{ 
+                  background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.ctaHover}, #4F46E5)`
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
+                }}
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                {t('buyMoreCredits')}
+              </Link>
+            ) : (
+              <div className={`rounded-xl shadow-lg p-3 min-w-[200px] transition-colors duration-200 ${
+                canGenerate 
+                  ? 'bg-gradient-to-br from-green-50 to-emerald-50/50 border border-green-200/60' 
+                  : 'bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200/60'
+              }`}>
+                {!canGenerate && hasUneditedFields ? (
+                  <div className="mb-2 flex items-start gap-2">
+                    <div className="flex-shrink-0 w-4 h-4 rounded-full bg-amber-100 flex items-center justify-center mt-0.5">
+                      <svg className="w-3 h-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-xs text-amber-800 leading-snug flex-1">
+                      {t('customizeFirstTooltip')}
+                    </p>
+                  </div>
+                ) : canGenerate && (
+                  <div className="mb-2 flex items-start gap-2">
+                    <div className="flex-shrink-0 w-4 h-4 rounded-full bg-green-100 flex items-center justify-center mt-0.5">
+                      <svg className="w-3 h-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="text-xs text-green-800 leading-snug flex-1 font-medium">
+                      Ready to generate
+                    </p>
+                  </div>
+                )}
+                <GenerateButton
+                  onClick={onProceed}
+                  disabled={!canGenerate || isPending}
+                  isGenerating={isGenerating || isPending}
+                  size="md"
+                  className="!w-auto min-w-[140px]"
+                >
+                  Generate
+                </GenerateButton>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      <div className={`${pagePaddingClasses} space-y-8 pb-24 md:pb-8 w-full max-w-full overflow-x-hidden bg-white min-h-screen`}>
       {!skipUpload && (creditsLoading || !session) ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
@@ -406,10 +472,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
         />
       ) : skipUpload ? (
         <>
-          {/* Generate button section - full width on desktop */}
-          <div className="hidden md:block mb-6 space-y-4">
-            {/* Alert for insufficient credits */}
-            {!hasEnoughCredits && (
+          {/* Alert for insufficient credits - shown inline if needed */}
+          {!hasEnoughCredits && (
+            <div className="hidden md:block mb-6">
               <div className="p-4 bg-white/80 backdrop-blur-sm border border-amber-300/60 rounded-lg shadow-sm">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center mt-0.5">
@@ -430,41 +495,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                   </div>
                 </div>
               </div>
-            )}
-            
-            {/* Full-width generate button */}
-            <div className="w-full">
-              {!hasEnoughCredits ? (
-                <Link
-                  href={buyCreditsHrefWithReturn}
-                  className="w-full inline-flex items-center justify-center px-6 py-4 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
-                  style={{ 
-                    background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.ctaHover}, #4F46E5)`
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
-                  }}
-                >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  {t('buyMoreCredits')}
-                </Link>
-              ) : (
-                <GenerateButton
-                  onClick={onProceed}
-                  disabled={!canGenerate || isPending}
-                  isGenerating={isGenerating || isPending}
-                  size="lg"
-                  disabledReason={hasUneditedFields ? t('customizeFirstTooltip') : undefined}
-                  integrateInPopover={hasUneditedFields}
-                >
-                  Generate
-                </GenerateButton>
-              )}
             </div>
-          </div>
+          )}
 
           {/* Header card with selfie thumbnails and summary - hidden completely */}
           <div className="hidden bg-white rounded-xl shadow-md border border-gray-200/60 p-4 sm:p-6">
@@ -720,7 +752,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           </div>
         </>
       ) : null}
-    </div>
+      </div>
+    </>
   )
 }
 
