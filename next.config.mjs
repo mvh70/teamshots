@@ -6,8 +6,6 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig = {
   transpilePackages: ['next-intl'],
   output: 'standalone', // Enable for Docker deployment
-  // Performance optimizations
-  swcMinify: true,
   experimental: {
     optimizeCss: true,
     scrollRestoration: true,
