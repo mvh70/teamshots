@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { useRouter } from '@/i18n/routing'
 import PhotoStyleSettings from '@/components/customization/PhotoStyleSettings'
+import PackageSelector from '@/components/packages/PackageSelector'
 import { useAutosaveStyle } from '@/lib/ui/useAutosaveStyle'
 import { PhotoStyleSettings as PhotoStyleSettingsType, DEFAULT_PHOTO_STYLE_SETTINGS } from '@/types/photo-style'
 import { jsonFetcher } from '@/lib/fetcher'
@@ -61,17 +62,17 @@ export default function StyleForm({
   const [customPrompt, setCustomPrompt] = useState('')
   const [setAsActive, setSetAsActive] = useState(false)
   const [pendingSetActive, setPendingSetActive] = useState(false)
-  
+  const [selectedPackageId, setSelectedPackageId] = useState(scope === 'freePackage' ? 'freepackage' : 'headshot1')
+
   const autosaveInitialContextId = mode === 'edit'
     ? (loading ? null : (styleContextId ?? undefined))
     : undefined
 
-  const packageId = scope === 'freePackage' ? 'freepackage' : 'headshot1'
-  const pkg = getPackageConfig(packageId)
+  const pkg = getPackageConfig(selectedPackageId)
 
   const { status: styleStatus, contextId: autosaveContextId } = useAutosaveStyle({
     scope,
-    packageId,
+    packageId: selectedPackageId,
     settings: photoStyleSettings,
     initialContextId: autosaveInitialContextId,
     name: autosaveName || name
@@ -115,9 +116,10 @@ export default function StyleForm({
         try {
           // For freePackage scope, load by scope instead of by ID
           if (scope === 'freePackage') {
-            const { ui, contextId: loadedId } = await loadStyle({ scope: 'freePackage' })
+            const { ui, contextId: loadedId, pkg } = await loadStyle({ scope: 'freePackage' })
             setPhotoStyleSettings(ui)
             setStyleContextId(loadedId)
+            setSelectedPackageId(pkg.id)
             // Ensure we're using freepackage defaults if no context found
             if (!loadedId || !ui || Object.keys(ui).length === 0) {
               const freepackagePkg = getPackageConfig('freepackage')
@@ -129,15 +131,18 @@ export default function StyleForm({
             const endpoint = apiEndpoint || `/api/styles/${idToLoad}`
             const data = await jsonFetcher<{ context?: Context } & Context>(endpoint)
             const contextData = data.context || data
-            
+
             if (contextData) {
               setContext(contextData)
               setName(contextData.name || '')
               setCustomPrompt(contextData.settings?.customPrompt || '')
               // Load via unified style service
-              const { ui, contextId: loadedId } = await loadStyleByContextId(idToLoad)
+              const { ui, contextId: loadedId, pkg } = await loadStyleByContextId(idToLoad)
+              console.log('[StyleForm] Loaded style:', { packageId: pkg.id, contextId: loadedId, customClothing: ui.customClothing })
               setPhotoStyleSettings(ui)
               setStyleContextId(loadedId)
+              setSelectedPackageId(pkg.id)
+              console.log('[StyleForm] Set selectedPackageId to:', pkg.id)
               // Determine if this context is currently the default (active)
               try {
                 const listEndpoint = `/api/styles/${contextType === 'team' ? 'team' : 'personal'}`
@@ -314,6 +319,18 @@ export default function StyleForm({
         </div>
       )}
 
+      {/* Package Selector - only for non-freePackage scopes */}
+      {scope !== 'freePackage' && (
+        <PackageSelector
+          value={selectedPackageId}
+          onChange={(packageId) => {
+            setSelectedPackageId(packageId)
+            const pkg = getPackageConfig(packageId)
+            setPhotoStyleSettings(pkg.defaultSettings)
+          }}
+        />
+      )}
+
       <div>
         <label className="block text-lg font-semibold text-gray-900 mb-6">
           Photo Style Settings
@@ -321,7 +338,8 @@ export default function StyleForm({
         <PhotoStyleSettings
           value={photoStyleSettings}
           onChange={setPhotoStyleSettings}
-          packageId={scope === 'freePackage' ? 'freepackage' : 'headshot1'}
+          packageId={selectedPackageId}
+          showToggles={true}
         />
       </div>
 

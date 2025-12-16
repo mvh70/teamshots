@@ -10,7 +10,7 @@ import { CustomClothingSettings } from './types'
  * Build prompt text for custom clothing
  */
 export function buildCustomClothingPrompt(settings: CustomClothingSettings): string {
-  if (!settings.enabled) {
+  if (settings.type !== 'user-choice') {
     return ''
   }
 

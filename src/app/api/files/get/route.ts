@@ -221,8 +221,8 @@ export async function GET(req: NextRequest) {
     }
 
     const ownership = await findFileOwnership(key)
-    
-    // Special case: Allow access to background/logo files users uploaded
+
+    // Special case: Allow access to background/logo/outfit files users uploaded
     // even if not yet saved to a context (e.g., during style customization)
     // Also allow selfie access via handoff token
     let allowAccessWithoutOwnership = false
@@ -230,12 +230,12 @@ export async function GET(req: NextRequest) {
     
     
     if (!ownership) {
-      if (effectivePersonId && (key.startsWith(`backgrounds/${effectivePersonId}/`) || key.startsWith(`logos/${effectivePersonId}/`))) {
+      if (effectivePersonId && (key.startsWith(`backgrounds/${effectivePersonId}/`) || key.startsWith(`logos/${effectivePersonId}/`) || key.startsWith(`outfits/${effectivePersonId}/`))) {
         allowAccessWithoutOwnership = true
       } else if (effectivePersonId && key.startsWith(`selfies/${effectivePersonId}`)) {
         // Allow selfie access via handoff or invite token for the associated person
         allowAccessWithoutOwnership = true
-      } else if (userWithRoles?.person?.id && (key.startsWith(`backgrounds/${userWithRoles.person.id}/`) || key.startsWith(`logos/${userWithRoles.person.id}/`))) {
+      } else if (userWithRoles?.person?.id && (key.startsWith(`backgrounds/${userWithRoles.person.id}/`) || key.startsWith(`logos/${userWithRoles.person.id}/`) || key.startsWith(`outfits/${userWithRoles.person.id}/`))) {
         allowAccessWithoutOwnership = true
       } else {
         return fileNotFoundResponse()

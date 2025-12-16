@@ -1653,6 +1653,7 @@
         "shotType": "Different framings work better for different platforms. Headshots for LinkedIn, full body for team pages.",
         "clothing": "Set the dress code for your team photos - from casual to business formal.",
         "clothingColors": "Specify exact colors for clothing items to match your brand palette.",
+        "customClothing": "Upload an outfit image to transfer the clothing style to your generated photos.",
         "expression": "Control the facial expression and mood of your team photos.",
         "lighting": "Set the lighting style to match your brand aesthetic - from natural to studio lighting.",
         "pose": "Choose a body pose and positioning that matches your professional image and brand style."
@@ -1688,6 +1689,10 @@
         "clothingColors": {
           "title": "Clothing colors",
           "description": "Colors for clothing items"
+        },
+        "customClothing": {
+          "title": "Custom Clothing",
+          "description": "Upload your own outfit for the AI to match"
         },
         "shotType": {
           "title": "Shot type",

@@ -19,6 +19,11 @@ export function deserializeCustomClothing(json: string | null | undefined): Cust
   try {
     const parsed = JSON.parse(json)
 
+    // Migrate old format: { enabled: false } -> { type: 'predefined' }
+    if ('enabled' in parsed && typeof parsed.enabled === 'boolean') {
+      return DEFAULT_CUSTOM_CLOTHING
+    }
+
     // Validate the parsed object
     if (!customClothingConfig.validate(parsed)) {
       Logger.warn('Invalid custom clothing settings, using default', { parsed })

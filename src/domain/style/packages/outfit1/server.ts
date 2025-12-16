@@ -121,8 +121,8 @@ export const outfit1Server: Outfit1ServerPackage = {
     pose.applyToPayload(context)
     backgroundElement.applyToPayload(context)
 
-    // Apply custom clothing if enabled
-    if (effectiveSettings.customClothing?.enabled) {
+    // Apply custom clothing if user-choice
+    if (effectiveSettings.customClothing?.type === 'user-choice') {
       const customClothingPrompt = customClothing.buildCustomClothingPrompt(effectiveSettings.customClothing)
       if (customClothingPrompt) {
         // Add outfit description to the subject prompt

@@ -1,4 +1,7 @@
 import type { ExpressionSettings } from '@/types/photo-style'
+import type { ElementConfig } from '../registry'
+import type { PhotoStyleSettings } from '@/types/photo-style'
+import { deserialize } from './deserializer'
 
 export type ExpressionType = ExpressionSettings['type']
 
@@ -107,4 +110,13 @@ export function getExpressionLabel(type?: ExpressionType | null): string {
 export function getExpressionDescription(type?: ExpressionType | null): string {
   const expressionType = type || 'soft_smile'
   return EXPRESSION_DESCRIPTIONS[expressionType] ?? EXPRESSION_DESCRIPTIONS.soft_smile
+}
+
+/**
+ * Element registry config for expression
+ */
+export const expressionElementConfig: ElementConfig<PhotoStyleSettings['expression']> = {
+  getDefaultPredefined: () => ({ type: 'neutral_serious' }),
+  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+  deserialize
 }

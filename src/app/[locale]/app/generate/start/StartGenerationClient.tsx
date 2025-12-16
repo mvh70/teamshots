@@ -660,6 +660,19 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           {/* Photo Style Settings - Mobile */}
           <div className="md:hidden pb-24 w-full max-w-full overflow-x-hidden">
             <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+              {/* Package Selector - Mobile */}
+              {selectedPackageId !== 'freepackage' && (
+                <PackageSelector
+                  value={selectedPackageId}
+                  onChange={(packageId) => {
+                    setSelectedPackageId(packageId)
+                    const pkg = getPackageConfig(packageId)
+                    setPhotoStyleSettings(pkg.defaultSettings)
+                    setOriginalContextSettings(pkg.defaultSettings)
+                    setActiveContext(null) // Clear activeContext when switching packages
+                  }}
+                />
+              )}
               <StyleSettingsSection
                 value={photoStyleSettings}
                 onChange={setPhotoStyleSettings}
@@ -679,19 +692,34 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           </div>
 
           {/* Photo Style Settings - Desktop */}
-          <StyleSettingsSection
-            value={photoStyleSettings}
-            onChange={setPhotoStyleSettings}
-            readonlyPredefined={!!activeContext}
-            originalContextSettings={originalContextSettings}
-            showToggles={false}
-            packageId={effectivePackageId}
-            isFreePlan={isFreePlan}
-            teamContext={effectiveGenerationType === 'team'}
-            className="hidden md:block"
-            noContainer
-            onStepMetaChange={setCustomizationStepsMeta}
-          />
+          <div className="space-y-6">
+            {/* Package Selector - Desktop (in style settings area) */}
+            {selectedPackageId !== 'freepackage' && (
+              <PackageSelector
+                value={selectedPackageId}
+                onChange={(packageId) => {
+                  setSelectedPackageId(packageId)
+                  const pkg = getPackageConfig(packageId)
+                  setPhotoStyleSettings(pkg.defaultSettings)
+                  setOriginalContextSettings(pkg.defaultSettings)
+                  setActiveContext(null) // Clear activeContext when switching packages
+                }}
+              />
+            )}
+            <StyleSettingsSection
+              value={photoStyleSettings}
+              onChange={setPhotoStyleSettings}
+              readonlyPredefined={!!activeContext}
+              originalContextSettings={originalContextSettings}
+              showToggles={false}
+              packageId={effectivePackageId}
+              isFreePlan={isFreePlan}
+              teamContext={effectiveGenerationType === 'team'}
+              className="hidden md:block"
+              noContainer
+              onStepMetaChange={setCustomizationStepsMeta}
+            />
+          </div>
 
           {/* Custom Prompt */}
           {activeContext?.customPrompt && (

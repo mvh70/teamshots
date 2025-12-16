@@ -8,9 +8,11 @@
 
 export interface CustomClothingSettings {
   /**
-   * Whether custom clothing is enabled
+   * Type of custom clothing setting
+   * - 'user-choice': User can upload and customize outfit
+   * - 'predefined': Custom clothing disabled (not used)
    */
-  enabled: boolean
+  type: 'user-choice' | 'predefined'
 
   /**
    * S3 key of the uploaded outfit image
@@ -49,5 +51,5 @@ export interface CustomClothingSettings {
  * Default settings for custom clothing element
  */
 export const DEFAULT_CUSTOM_CLOTHING: CustomClothingSettings = {
-  enabled: false,
+  type: 'predefined', // Disabled by default
 }

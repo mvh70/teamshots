@@ -1,4 +1,7 @@
 import type { BrandingSettings } from './types'
+import type { ElementConfig } from '../registry'
+import type { PhotoStyleSettings } from '@/types/photo-style'
+import { deserialize } from './deserializer'
 
 export { BrandingSettings }
 
@@ -54,3 +57,12 @@ export const CLOTHING_BRANDING_RULES_BASE = [
   'Keep original aspect ratio and colors; The colors of each letter and icon should be the same as the original.',
   'The logo size should be modest and proportional to the garment.'
 ]
+
+/**
+ * Element registry config for branding
+ */
+export const brandingElementConfig: ElementConfig<PhotoStyleSettings['branding']> = {
+  getDefaultPredefined: () => ({ type: 'include' }),
+  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+  deserialize
+}

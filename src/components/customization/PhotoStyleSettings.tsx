@@ -2,16 +2,11 @@
 
 import React from 'react'
 import { useTranslations } from 'next-intl'
-import { 
-  PhotoIcon, 
-  SwatchIcon, 
-  UserIcon, 
-  FaceSmileIcon, 
-  LightBulbIcon,
-  CameraIcon,
-  SparklesIcon,
+import {
   LockClosedIcon,
-  HandRaisedIcon
+  SparklesIcon,
+  CameraIcon,
+  UserIcon
 } from '@heroicons/react/24/outline'
 import { SwipeableContainer, FlowNavigation } from '@/components/generation/navigation'
 import { ScrollAwareHeader } from '@/components/generation/layout'
@@ -46,6 +41,11 @@ import { CardGrid, Tooltip } from '@/components/ui'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import { buildCustomizationStepIndicatorWithSelfie, CustomizationStepsMeta } from '@/lib/customizationSteps'
 import { useCustomizationWizard } from '@/hooks/useCustomizationWizard'
+// Import element registry
+import { getElements } from '@/domain/style/elements'
+import type { ElementMetadata as CategoryConfig } from '@/domain/style/elements'
+import { getElementConfig } from '@/domain/style/elements/registry'
+import '@/domain/style/elements/init-registry' // Initialize element registry
 
 interface PhotoStyleSettingsProps {
   value: PhotoStyleSettingsType
@@ -66,13 +66,6 @@ interface PhotoStyleSettingsProps {
   topHeader?: React.ReactNode
 }
 
-type CategoryConfig = {
-  key: CategoryType
-  label: string
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-  description: string
-}
-
 export type MobileStep = {
   type: 'intro' | 'selfie-tips' | 'custom' | 'editable' | 'locked'
   category?: CategoryConfig
@@ -90,53 +83,8 @@ type MobileCustomStep = {
   noBorder?: boolean
 }
 
-const PHOTO_STYLE_CATEGORIES: CategoryConfig[] = [
-  {
-    key: 'background',
-    label: 'Background',
-    icon: PhotoIcon,
-    description: 'Choose background style'
-  },
-  {
-    key: 'branding',
-    label: 'Branding',
-    icon: SwatchIcon,
-    description: 'Logo and branding options'
-  },
-  {
-    key: 'pose',
-    label: 'Pose',
-    icon: HandRaisedIcon,
-    description: 'Body pose and positioning'
-  }
-]
-
-const USER_STYLE_CATEGORIES: CategoryConfig[] = [
-  {
-    key: 'clothing',
-    label: 'Clothing',
-    icon: UserIcon,
-    description: 'Clothing style and accessories'
-  },
-  {
-    key: 'clothingColors',
-    label: 'Clothing Colors',
-    icon: SwatchIcon,
-    description: 'Colors for clothing items'
-  },
-  {
-    key: 'expression',
-    label: 'Expression',
-    icon: FaceSmileIcon,
-    description: 'Facial expression and mood'
-  },
-  {
-    key: 'lighting',
-    label: 'Lighting',
-    icon: LightBulbIcon,
-    description: 'Lighting style and mood'
-  }
-]
+// Categories are now loaded dynamically from element metadata registry
+// No hardcoded lists needed!
 
 export default function PhotoStyleSettings({
   value,
@@ -167,66 +115,74 @@ export default function PhotoStyleSettings({
   )
 
   const { visiblePhotoCategories, visibleUserCategories, allCategories } = React.useMemo(() => {
+    // Get all elements for this package's visible categories
+    const allElements = getElements(pkg.visibleCategories)
+
     // Use package-defined groupings, with defaults for backward compatibility
-    const compositionCategoryKeys = pkg.compositionCategories ?? ['background', 'branding', 'pose']
-    const userStyleCategoryKeys = pkg.userStyleCategories ?? ['clothing', 'clothingColors', 'expression', 'lighting']
-    
-    // Filter categories based on package's visibleCategories and groupings
-    const visiblePhoto = PHOTO_STYLE_CATEGORIES.filter(c => 
-      pkg.visibleCategories.includes(c.key) && compositionCategoryKeys.includes(c.key)
+    const compositionCategoryKeys = pkg.compositionCategories ?? ['background', 'branding', 'pose', 'shotType']
+    const userStyleCategoryKeys = pkg.userStyleCategories ?? ['clothing', 'clothingColors', 'customClothing', 'expression', 'lighting']
+
+    // Split by group
+    const visiblePhoto = allElements.filter(e =>
+      (e.group === 'composition' || compositionCategoryKeys.includes(e.key)) &&
+      compositionCategoryKeys.includes(e.key)
     )
-    const visibleUser = USER_STYLE_CATEGORIES.filter(c => 
-      pkg.visibleCategories.includes(c.key) && userStyleCategoryKeys.includes(c.key)
+    const visibleUser = allElements.filter(e =>
+      (e.group === 'userStyle' || userStyleCategoryKeys.includes(e.key)) &&
+      userStyleCategoryKeys.includes(e.key)
     )
-    const all = [...visiblePhoto, ...visibleUser]
-    return { visiblePhotoCategories: visiblePhoto, visibleUserCategories: visibleUser, allCategories: all }
+
+    return {
+      visiblePhotoCategories: visiblePhoto,
+      visibleUserCategories: visibleUser,
+      allCategories: allElements
+    }
   }, [pkg])
 
   // State for tracking customization progress (for locked sections reveal)
   const [hasCustomizedEditable, setHasCustomizedEditable] = React.useState(false)
   const [activeMobileStep, setActiveMobileStep] = React.useState(0)
-  
+
   // Get persisted visited steps from flow state
   const { visitedSteps: persistedVisitedSteps, setVisitedSteps: setPersistentVisitedSteps } = useGenerationFlowState()
-  
+
   // Track which editable steps have been visited (by their index in allNumberedSteps)
   // Initialize from persisted state
   const [visitedEditableSteps, setVisitedEditableSteps] = React.useState<Set<number>>(() => new Set(persistedVisitedSteps))
 
-  const resolvedClothingColors = React.useMemo<ClothingColorSettings>(() => {
-    const defaults = packageDefaults.clothingColors
-    const current = value.clothingColors
-    const defaultColors = defaults?.colors || {}
+  // Compute resolved clothing colors (no memoization to ensure fresh values)
+  const defaults = packageDefaults.clothingColors
+  const current = value.clothingColors
+  const defaultColors = defaults?.colors || {}
 
-    if (current) {
-      if (current.type === 'user-choice') {
-        return {
-          type: 'user-choice',
-          colors: {
-            ...defaultColors,
-            ...(current.colors || {})
-          }
+  let resolvedClothingColors: ClothingColorSettings
+
+  if (current) {
+    if (current.type === 'user-choice') {
+      resolvedClothingColors = {
+        type: 'user-choice' as const,
+        colors: {
+          ...defaultColors,
+          ...(current.colors || {})
         }
       }
-
-      return {
-        type: 'predefined',
+    } else {
+      resolvedClothingColors = {
+        type: 'predefined' as const,
         colors: {
           ...defaultColors,
           ...(current.colors || {})
         }
       }
     }
-
-    if (Object.keys(defaultColors).length > 0) {
-      return {
-        type: 'user-choice',
-        colors: { ...defaultColors }
-      }
+  } else if (Object.keys(defaultColors).length > 0) {
+    resolvedClothingColors = {
+      type: 'user-choice',
+      colors: { ...defaultColors }
     }
-
-    return { type: 'user-choice' }
-  }, [packageDefaults.clothingColors, value.clothingColors])
+  } else {
+    resolvedClothingColors = { type: 'user-choice' }
+  }
 
   // Compute which clothing color pickers to hide based on shot type and clothing style
   const excludedClothingColors = React.useMemo<ClothingColorKey[]>(() => {
@@ -256,6 +212,47 @@ export default function PhotoStyleSettings({
     
     return Array.from(exclusions)
   }, [value.shotType?.type, value.clothing?.style, value.clothing?.details, packageDefaults.shotType?.type, packageDefaults.clothing?.style, packageDefaults.clothing?.details])
+
+  // Track last synced outfit colors to avoid infinite loops
+  const lastSyncedOutfitColorsRef = React.useRef<string | null>(null)
+
+  // Auto-sync outfit colors to clothing colors when outfit analysis completes
+  React.useEffect(() => {
+    // Only sync if we have detected colors from outfit analysis
+    const outfitColors = value.customClothing?.colors
+    if (!outfitColors) return
+
+    // Create a signature of the outfit colors to track if they've changed
+    const outfitColorSignature = JSON.stringify(outfitColors)
+
+    // Skip if we've already synced these exact colors
+    if (lastSyncedOutfitColorsRef.current === outfitColorSignature) {
+      return
+    }
+
+    // Map outfit colors to clothing colors:
+    // outfit.topBase -> clothing.topBase (shirt), outfit.topCover -> clothing.topCover (jacket), etc.
+    const newClothingColors: Record<string, string> = {}
+    if (outfitColors.topBase) newClothingColors.topBase = outfitColors.topBase
+    if (outfitColors.topCover) newClothingColors.topCover = outfitColors.topCover
+    if (outfitColors.bottom) newClothingColors.bottom = outfitColors.bottom
+    if (outfitColors.shoes) newClothingColors.shoes = outfitColors.shoes
+
+    // Only update if we have at least one color
+    if (Object.keys(newClothingColors).length > 0) {
+      // Mark these colors as synced
+      lastSyncedOutfitColorsRef.current = outfitColorSignature
+
+      const newSettings = { ...value }
+      // Preserve the existing type (predefined/user-choice), only default to user-choice if not set
+      const existingType = newSettings.clothingColors?.type || 'user-choice'
+      newSettings.clothingColors = {
+        type: existingType,
+        colors: newClothingColors
+      }
+      onChange(newSettings)
+    }
+  }, [value.customClothing?.colors, value, onChange]) // Re-run when outfit colors change
 
   // Auto-reveal locked sections after user customizes editable sections (Context B only)
   React.useEffect(() => {
@@ -303,114 +300,50 @@ export default function PhotoStyleSettings({
       event.preventDefault()
       event.stopPropagation()
     }
-    
+
     const newSettings = { ...value }
-    
+
+    // Get element config from registry
+    const elementConfig = getElementConfig(category)
+
+    if (!elementConfig) {
+      console.warn(`No element config found for category: ${category}`)
+      return
+    }
+
+    // Initialize if not set
     if (!(newSettings as Record<string, unknown>)[category]) {
-      // Initialize with default values
       const packageDefaultValue = (packageDefaults as Record<string, unknown>)[category]
       const defaultValue = (DEFAULT_PHOTO_STYLE_SETTINGS as Record<string, unknown>)[category]
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(newSettings as any)[category] =
         packageDefaultValue !== undefined ? packageDefaultValue : defaultValue
     }
-    
-    // Update the type based on toggle
-    if ((newSettings as Record<string, unknown>)[category]) {
-      if (isPredefined) {
-        // Set to a predefined value (not user-choice)
-        switch (category) {
-          case 'background':
-            newSettings.background = { type: 'office' }
-            break
-          case 'branding':
-            newSettings.branding = { type: 'include' }
-            break
-          case 'clothing':
-            if (packageDefaults.clothing) {
-              newSettings.clothing = { ...packageDefaults.clothing }
-            } else {
-            newSettings.clothing = { style: 'business' }
-            }
-            break
-          case 'clothingColors':
-            if (packageDefaults.clothingColors) {
-              newSettings.clothingColors = {
-                type: packageDefaults.clothingColors.type,
-                colors: { ...packageDefaults.clothingColors.colors }
-              }
-            } else {
-              newSettings.clothingColors = {
-                type: 'predefined',
-                colors: { topCover: 'navy', topBase: 'white', bottom: 'gray' }
-              }
-            }
-            break
-          case 'customClothing':
-            if (packageDefaults.customClothing) {
-              newSettings.customClothing = { ...packageDefaults.customClothing }
-            } else {
-              newSettings.customClothing = { enabled: true }
-            }
-            break
-          case 'shotType':
-            newSettings.shotType = { type: 'headshot' }
-            syncAspectRatioWithShotType(newSettings, newSettings.shotType)
-            break
-          case 'style':
-            newSettings.style = { type: 'preset', preset: 'corporate' }
-            break
-          case 'expression':
-            newSettings.expression = { type: 'neutral_serious' }
-            break
-          case 'lighting':
-            newSettings.lighting = { type: 'natural' }
-            break
-          case 'pose':
-            newSettings.pose = { type: 'power_classic' }
-            // Apply pose preset settings
-            const poseSettings = applyPosePresetToSettings(newSettings, 'power_classic')
-            Object.assign(newSettings, poseSettings)
-            break
-        }
-      } else {
-        // Set to user-choice
-        switch (category) {
-          case 'background':
-            newSettings.background = { type: 'user-choice' }
-            break
-          case 'branding':
-            newSettings.branding = { type: 'user-choice' }
-            break
-          case 'clothing':
-            newSettings.clothing = { style: 'user-choice' }
-            break
-          case 'clothingColors':
-            newSettings.clothingColors = { type: 'user-choice' }
-            break
-          case 'customClothing':
-            newSettings.customClothing = { enabled: false }
-            break
-          case 'shotType':
-            newSettings.shotType = { type: 'user-choice' }
-            syncAspectRatioWithShotType(newSettings, newSettings.shotType)
-            break
-          case 'style':
-            newSettings.style = { type: 'user-choice' }
-            break
-          case 'expression':
-            newSettings.expression = { type: 'user-choice' }
-            break
-          case 'lighting':
-            newSettings.lighting = { type: 'user-choice' }
-            break
-          case 'pose':
-            newSettings.pose = { type: 'user-choice' }
-            break
-        }
-      }
+
+    // Get the new value from the element config
+    const packageDefault = (packageDefaults as Record<string, unknown>)[category]
+    const newValue = isPredefined
+      ? elementConfig.getDefaultPredefined(packageDefault)
+      : elementConfig.getDefaultUserChoice()
+
+    // Special handling for clothingColors to preserve existing colors
+    if (category === 'clothingColors' && newSettings.clothingColors?.colors) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (newValue as any).colors = newSettings.clothingColors.colors
     }
-    
+
+    // Update the setting
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(newSettings as any)[category] = newValue
+
+    // Special post-processing for certain categories
+    if (category === 'shotType') {
+      syncAspectRatioWithShotType(newSettings, newSettings.shotType)
+    } else if (category === 'pose' && isPredefined && newSettings.pose?.type !== 'user-choice') {
+      const poseSettings = applyPosePresetToSettings(newSettings, newSettings.pose.type)
+      Object.assign(newSettings, poseSettings)
+    }
+
     onChange(newSettings)
   }
 
@@ -451,7 +384,7 @@ export default function PhotoStyleSettings({
       return (settings as { style?: string }).style === 'user-choice'
     }
     if (category === 'customClothing') {
-      return (settings as { enabled?: boolean }).enabled === false
+      return (settings as { type?: string }).type === 'user-choice'
     }
     if (category === 'pose') {
       return (settings as { type?: string }).type === 'user-choice'
@@ -465,7 +398,7 @@ export default function PhotoStyleSettings({
       return (settings as { style?: string }).style !== 'user-choice'
     }
     if (category === 'customClothing') {
-      return (settings as { enabled?: boolean }).enabled === true
+      return (settings as { type?: string }).type === 'predefined'
     }
     return (settings as { type?: string }).type !== 'user-choice'
   }
@@ -673,9 +606,11 @@ export default function PhotoStyleSettings({
 
           {category.key === 'customClothing' && (
             <CustomClothingSelector
-              value={value.customClothing || { enabled: false }}
+              value={value.customClothing || { type: 'predefined' }}
               onChange={(settings) => handleCategorySettingsChange('customClothing', settings)}
               disabled={!showToggles && readonlyPredefined && isPredefined}
+              mode={showToggles ? 'admin' : 'user'}
+              token={token}
             />
           )}
 

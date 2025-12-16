@@ -166,3 +166,21 @@ export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, Wardrob
     }
   }
 }
+
+import type { ElementConfig } from '../registry'
+import type { PhotoStyleSettings } from '@/types/photo-style'
+import { deserialize } from './deserializer'
+
+/**
+ * Element registry config for clothing
+ */
+export const clothingElementConfig: ElementConfig<PhotoStyleSettings['clothing']> = {
+  getDefaultPredefined: (packageDefaults) => {
+    if (packageDefaults) {
+      return { ...packageDefaults }
+    }
+    return { style: 'business' }
+  },
+  getDefaultUserChoice: () => ({ style: 'user-choice' }),
+  deserialize
+}

@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 6. Call Gemini for color analysis
+    // 6. Call Gemini for color analysis (using generation system infrastructure)
     const analysisResult = await analyzeOutfitColors(imageData, mimeType)
 
     if (!analysisResult.success) {
@@ -169,14 +169,18 @@ export async function POST(req: NextRequest) {
     Telemetry.increment('outfit.analysis.error')
 
     return NextResponse.json(
-      { error: 'Analysis failed', code: 'ANALYSIS_ERROR' },
+      {
+        error: 'Analysis failed',
+        code: 'ANALYSIS_ERROR',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     )
   }
 }
 
 /**
- * Analyze outfit colors using Gemini 2.0 Flash
+ * Analyze outfit colors using Gemini (reuses generation infrastructure)
  */
 async function analyzeOutfitColors(
   imageData: string,
@@ -186,19 +190,10 @@ async function analyzeOutfitColors(
   | { success: false; error: string; code?: string }
 > {
   try {
-    const { VertexAI } = await import('@google-cloud/vertexai')
+    // Use the same Gemini utilities as generation system
+    const { getVertexGenerativeModel } = await import('@/queue/workers/generate-image/gemini')
 
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'teamshots'
-    const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
-
-    const vertexAI = new VertexAI({ project: projectId, location })
-    const model = vertexAI.getGenerativeModel({
-      model: 'gemini-2.0-flash-exp', // Using experimental model for color analysis
-      generationConfig: {
-        temperature: 0.1, // Low temperature for consistent color detection
-        maxOutputTokens: 500,
-      }
-    })
+    const model = await getVertexGenerativeModel('gemini-2.5-flash')
 
     const prompt = `Analyze this outfit image and extract the dominant colors and description.
 
@@ -287,8 +282,14 @@ Example valid response:
     return { success: true, data: parsed, usage }
 
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+
     Logger.error('Gemini color analysis failed', {
-      error: error instanceof Error ? error.message : String(error)
+      error: errorMessage,
+      stack: errorStack,
+      errorType: error?.constructor?.name,
+      fullError: JSON.stringify(error, null, 2)
     })
 
     if (error instanceof Error) {
@@ -300,6 +301,6 @@ Example valid response:
       }
     }
 
-    return { success: false, error: 'Analysis failed', code: 'GEMINI_ERROR' }
+    return { success: false, error: errorMessage || 'Analysis failed', code: 'GEMINI_ERROR' }
   }
 }

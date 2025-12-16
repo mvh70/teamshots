@@ -459,3 +459,16 @@ export function resolveShutterSpeed(input?: string): ShutterSpeedConfig {
 export function shotTypeSuggestedAspectRatio(shotType?: string) {
   return defaultAspectRatioForShot(shotType)
 }
+
+import type { ElementConfig } from '../registry'
+import type { PhotoStyleSettings } from '@/types/photo-style'
+import { deserialize } from './deserializer'
+
+/**
+ * Element registry config for shot type
+ */
+export const shotTypeElementConfig: ElementConfig<PhotoStyleSettings['shotType']> = {
+  getDefaultPredefined: () => ({ type: 'headshot' }),
+  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+  deserialize
+}

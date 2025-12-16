@@ -7,6 +7,7 @@ import { CORPORATE_HEADSHOT } from '../defaults'
 import * as backgroundElement from '../../elements/background'
 import * as branding from '../../elements/branding'
 import * as customClothing from '../../elements/custom-clothing'
+import * as clothingColors from '../../elements/clothing-colors'
 import * as pose from '../../elements/pose'
 import * as expression from '../../elements/expression'
 import * as shotTypeElement from '../../elements/shot-type'
@@ -18,6 +19,7 @@ const VISIBLE_CATEGORIES: CategoryType[] = [
   'background',
   'branding',
   'customClothing',
+  'clothingColors',
   'pose',
   'expression']
 
@@ -55,7 +57,10 @@ const OUTFIT1_PRESET_DEFAULTS = getDefaultPresetSettings(OUTFIT1_PRESET)
 const DEFAULTS = {
   ...OUTFIT1_PRESET_DEFAULTS,
   customClothing: {
-    enabled: false
+    type: 'predefined' as const
+  },
+  clothingColors: {
+    type: 'user-choice' as const
   },
   shotType: { type: 'medium-shot' as const },
   subjectCount: '1' as const
@@ -75,8 +80,8 @@ function buildPrompt(settings: PhotoStyleSettings): string {
   pose.applyToPayload(context)
   backgroundElement.applyToPayload(context)
 
-  // Apply custom clothing if enabled
-  if (settings.customClothing?.enabled) {
+  // Apply custom clothing if user-choice
+  if (settings.customClothing?.type === 'user-choice') {
     const customClothingPrompt = customClothing.buildCustomClothingPrompt(settings.customClothing)
     if (customClothingPrompt) {
       // Add outfit description to the subject prompt
@@ -100,7 +105,7 @@ export const outfit1: ClientStylePackage = {
   version: 1,
   visibleCategories: VISIBLE_CATEGORIES,
   compositionCategories: ['background', 'branding', 'pose'],
-  userStyleCategories: ['customClothing', 'expression'],
+  userStyleCategories: ['customClothing', 'clothingColors', 'expression'],
   availableBackgrounds: AVAILABLE_BACKGROUNDS,
   availablePoses: AVAILABLE_POSES,
   availableExpressions: AVAILABLE_EXPRESSIONS,
@@ -116,6 +121,7 @@ export const outfit1: ClientStylePackage = {
       background: getValueOrDefault(settings.background, DEFAULTS.background),
       branding: getValueOrDefault(settings.branding, DEFAULTS.branding),
       customClothing: getValueOrDefault(settings.customClothing, DEFAULTS.customClothing),
+      clothingColors: getValueOrDefault(settings.clothingColors, DEFAULTS.clothingColors),
       pose: getValueOrDefault(settings.pose, DEFAULTS.pose),
       expression: getValueOrDefault(settings.expression, DEFAULTS.expression),
       shotType: DEFAULTS.shotType, // Fixed to medium-shot for outfit1
@@ -134,6 +140,7 @@ export const outfit1: ClientStylePackage = {
       background: rawStyleSettings.background as PhotoStyleSettings['background'],
       branding: rawStyleSettings.branding as PhotoStyleSettings['branding'],
       customClothing: rawStyleSettings.customClothing as PhotoStyleSettings['customClothing'],
+      clothingColors: rawStyleSettings.clothingColors as PhotoStyleSettings['clothingColors'],
       pose: rawStyleSettings.pose as PhotoStyleSettings['pose'],
       expression: rawStyleSettings.expression as PhotoStyleSettings['expression'],
     }
@@ -144,7 +151,8 @@ export const outfit1: ClientStylePackage = {
       settings: {
         background: ui.background,
         branding: ui.branding,
-        customClothing: ui.customClothing || { enabled: false },
+        customClothing: ui.customClothing || { type: 'predefined' as const },
+        clothingColors: ui.clothingColors || { type: 'user-choice' as const },
         pose: ui.pose,
         expression: ui.expression,
       }
@@ -157,6 +165,9 @@ export const outfit1: ClientStylePackage = {
         ? r.settings as Record<string, unknown>
         : r
 
+      console.log('[outfit1.deserialize] Loading outfit1 package on page load')
+      console.log('[outfit1.deserialize] inner.clothingColors:', JSON.stringify(inner.clothingColors, null, 2))
+
       // Deserialize categories
       const backgroundResult = backgroundElement.deserialize(inner)
       const brandingResult = branding.deserialize(inner)
@@ -165,14 +176,18 @@ export const outfit1: ClientStylePackage = {
           ? inner.customClothing
           : JSON.stringify(inner.customClothing || DEFAULTS.customClothing)
       )
+      const clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
       const poseResult = pose.deserialize(inner, DEFAULTS.pose)
       const expressionResult = expression.deserialize(inner, DEFAULTS.expression)
+
+      console.log('[outfit1.deserialize] clothingColorsResult:', JSON.stringify(clothingColorsResult, null, 2))
 
       return {
         presetId: outfit1.defaultPresetId,
         background: backgroundResult || { type: 'user-choice' },
         branding: brandingResult,
         customClothing: customClothingResult,
+        clothingColors: clothingColorsResult,
         pose: poseResult,
         expression: expressionResult,
       }

@@ -7,6 +7,9 @@ import { StandardPresetConfig } from './defaults'
 import { isFeatureEnabled } from '@/config/feature-flags'
 import { validateAllPackages } from './validation'
 
+// Load element metadata registry
+import '@/domain/style/elements'
+
 export type { StandardPresetConfig, StandardPresetDefaults } from './defaults'
 
 export interface ClientStylePackage {

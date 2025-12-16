@@ -52,6 +52,7 @@ export default function StyleSummary({ settings }: StyleSummaryProps) {
   const logoKey = settings?.branding?.logoKey
   const brandingType = settings?.branding?.type
   const logoPosition = settings?.branding?.position
+
   // Style preset computed but intentionally not displayed on the summary card
   const shotType = settings?.shotType?.type
   const shotTypeConfig =

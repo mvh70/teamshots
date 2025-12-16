@@ -3,6 +3,9 @@
  */
 
 import { CustomClothingSettings, DEFAULT_CUSTOM_CLOTHING } from './types'
+import type { ElementConfig } from '../registry'
+import type { PhotoStyleSettings } from '@/types/photo-style'
+import { deserializeCustomClothing } from './deserializer'
 
 // Define StyleElementConfig inline since '../types' may not exist
 interface StyleElementConfig<T> {
@@ -33,13 +36,13 @@ export const customClothingConfig: StyleElementConfig<CustomClothingSettings> = 
 
     const settings = value as CustomClothingSettings
 
-    // enabled is required
-    if (typeof settings.enabled !== 'boolean') {
+    // type is required
+    if (settings.type !== 'user-choice' && settings.type !== 'predefined') {
       return false
     }
 
-    // If enabled, must have assetId or outfitS3Key
-    if (settings.enabled) {
+    // If user-choice, must have assetId or outfitS3Key
+    if (settings.type === 'user-choice') {
       if (!settings.assetId && !settings.outfitS3Key) {
         return false
       }
@@ -78,4 +81,17 @@ export const customClothingConfig: StyleElementConfig<CustomClothingSettings> = 
   serialize: (value: CustomClothingSettings): string => {
     return JSON.stringify(value)
   },
+}
+
+/**
+ * Element registry config for custom clothing
+ */
+export const customClothingElementConfig: ElementConfig<PhotoStyleSettings['customClothing']> = {
+  getDefaultPredefined: () => ({ type: 'predefined' }),
+  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+  deserialize: (raw) => deserializeCustomClothing(
+    typeof raw.customClothing === 'string'
+      ? raw.customClothing
+      : JSON.stringify(raw.customClothing || DEFAULT_CUSTOM_CLOTHING)
+  )
 }

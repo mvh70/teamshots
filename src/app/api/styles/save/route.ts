@@ -18,6 +18,14 @@ export async function POST(request: NextRequest) {
     name?: string
   }
 
+  console.log('[POST /api/styles/save] Received:', {
+    scope: body.scope,
+    contextId: body.contextId,
+    packageId: body.packageId,
+    settingsPackage: body.settings.package,
+    customClothing: (body.settings as any).settings?.customClothing
+  })
+
   try {
     const result = await createOrUpdateStyleServer({
       scope: body.scope,

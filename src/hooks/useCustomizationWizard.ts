@@ -1,18 +1,11 @@
 import { useMemo } from 'react'
-import { 
-  PhotoStyleSettings as PhotoStyleSettingsType, 
-  CategoryType 
+import {
+  PhotoStyleSettings as PhotoStyleSettingsType,
+  CategoryType
 } from '@/types/photo-style'
 import { MobileStep } from '@/components/customization/PhotoStyleSettings'
 import { CustomizationStepsMeta } from '@/lib/customizationSteps'
-
-// Duplicate types locally to avoid circular dependencies if they aren't exported
-type CategoryConfig = {
-  key: CategoryType
-  label: string
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-  description: string
-}
+import type { ElementMetadata as CategoryConfig } from '@/domain/style/elements'
 
 type UseCustomizationWizardProps = {
   value: PhotoStyleSettingsType

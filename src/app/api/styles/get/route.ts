@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
       select: { id: true, name: true, settings: true, packageName: true }
     })
     if (!ctx) return NextResponse.json({ context: null, packageId: 'headshot1' })
-    const packageId = extractPackageId(ctx.settings as Record<string, unknown>) || ctx.packageName || 'headshot1'
+    console.log('[GET /api/styles/get] contextId:', contextIdParam, 'ctx.packageName:', ctx.packageName, 'ctx.settings:', JSON.stringify(ctx.settings).substring(0, 200))
+    const extractedPackageId = extractPackageId(ctx.settings as Record<string, unknown>)
+    console.log('[GET /api/styles/get] extractedPackageId:', extractedPackageId)
+    const packageId = extractedPackageId || ctx.packageName || 'headshot1'
+    console.log('[GET /api/styles/get] final packageId:', packageId)
     const pkg = getPackageConfig(packageId)
     const ui = pkg.persistenceAdapter.deserialize((ctx.settings as Record<string, unknown>) || {})
     return NextResponse.json({ context: { ...ctx, settings: ui }, packageId: pkg.id })

@@ -5,14 +5,14 @@ export function deserialize(
   defaults: { type: 'predefined'; colors: { topBase: string; topCover: string; bottom?: string; shoes?: string } }
 ): PhotoStyleSettings['clothingColors'] {
   const rawClothingColors = raw.clothingColors as PhotoStyleSettings['clothingColors'] | null | undefined
-  
+
   if (rawClothingColors === null || rawClothingColors === undefined || !('clothingColors' in raw)) {
     return { type: 'user-choice' }
   }
-  
+
   if (rawClothingColors.type === 'user-choice') {
     if (rawClothingColors.colors) {
-      return { 
+      return {
         type: 'user-choice',
         colors: {
           topBase: rawClothingColors.colors.topBase,
@@ -24,7 +24,7 @@ export function deserialize(
     }
     return { type: 'user-choice' }
   }
-  
+
   if (rawClothingColors.type === 'predefined') {
     return {
       type: 'predefined',
@@ -36,7 +36,7 @@ export function deserialize(
       }
     }
   }
-  
+
   if (rawClothingColors.colors) {
     return {
       type: 'user-choice',
@@ -48,7 +48,7 @@ export function deserialize(
       }
     }
   }
-  
+
   return { type: 'user-choice' }
 }
 

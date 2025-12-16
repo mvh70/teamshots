@@ -9,8 +9,8 @@ export const RATE_LIMITS = {
   
   // File upload endpoints
   upload: { limit: 10, window: 300 }, // 10 uploads per 5 minutes
-  outfitUpload: { limit: 5, window: 300 }, // 5 outfit uploads per 5 minutes
-  outfitAnalysis: { limit: 5, window: 300 }, // 5 color analysis per 5 minutes
+  outfitUpload: { limit: 50, window: 300 }, // 50 outfit uploads per 5 minutes (generous for dev/testing)
+  outfitAnalysis: { limit: 50, window: 300 }, // 50 color analysis per 5 minutes (generous for dev/testing)
 
   // API endpoints
   api: { limit: 100, window: 60 }, // 100 requests per minute

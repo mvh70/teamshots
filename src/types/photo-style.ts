@@ -117,7 +117,7 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
     type: 'user-choice'
   },
   customClothing: {
-    enabled: false
+    type: 'predefined'
   },
   shotType: {
     type: 'user-choice'

@@ -531,3 +531,16 @@ export function applyPosePresetToSettings(
 
   return updatedSettings
 }
+
+import type { ElementConfig } from '../registry'
+import type { PhotoStyleSettings } from '@/types/photo-style'
+import { deserialize } from './deserializer'
+
+/**
+ * Element registry config for pose
+ */
+export const poseElementConfig: ElementConfig<PhotoStyleSettings['pose']> = {
+  getDefaultPredefined: () => ({ type: 'power_classic' }),
+  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+  deserialize
+}

@@ -1,5 +1,8 @@
 import { NEUTRAL_COLORS, GRADIENT_COLORS } from './colors'
 import type { BackgroundEnvironment } from './types'
+import type { ElementConfig } from '../registry'
+import type { PhotoStyleSettings } from '@/types/photo-style'
+import { deserialize } from './deserializer'
 
 export const BACKGROUND_TYPES = [
   { value: 'office', label: 'Office Environment', icon: '🏢', color: 'from-blue-500 to-indigo-500' },
@@ -35,3 +38,12 @@ export function getBackgroundEnvironment(backgroundType?: string): BackgroundEnv
 
 // Re-export color palettes for backward compatibility
 export { NEUTRAL_COLORS, GRADIENT_COLORS }
+
+/**
+ * Element registry config for background
+ */
+export const backgroundElementConfig: ElementConfig<PhotoStyleSettings['background']> = {
+  getDefaultPredefined: () => ({ type: 'office' }),
+  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+  deserialize
+}
