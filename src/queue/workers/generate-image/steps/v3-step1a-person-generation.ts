@@ -13,6 +13,11 @@ import { logPrompt, logStepResult } from '../utils/logging'
 import { AI_CONFIG } from '../config'
 import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
 import type { CostTrackingHandler } from '../workflow-v3'
+import { isFeatureEnabled } from '@/config/feature-flags'
+import {
+  compositionRegistry,
+  type ElementContext,
+} from '@/domain/style/elements/composition'
 
 export interface V3Step1aInput {
   selfieReferences: ReferenceImage[]
@@ -119,6 +124,56 @@ async function prepareAllReferences({
   })
 
   return { referenceImages, logoReference, selfieComposite }
+}
+
+/**
+ * Compose element contributions for person generation phase
+ *
+ * Uses the element composition system to build prompt rules from independent elements.
+ * This provides better separation of concerns and makes the prompt system more modular.
+ */
+async function composeElementContributions(
+  styleSettings: PhotoStyleSettings,
+  generationContext: {
+    selfieS3Keys: string[]
+    generationId?: string
+    personId?: string
+    teamId?: string
+  }
+): Promise<{
+  instructions: string[]
+  mustFollow: string[]
+  freedom: string[]
+}> {
+  // Create element context for person-generation phase
+  const elementContext: ElementContext = {
+    phase: 'person-generation',
+    settings: styleSettings,
+    generationContext: {
+      selfieS3Keys: generationContext.selfieS3Keys,
+      userId: generationContext.personId,
+      teamId: generationContext.teamId,
+      generationId: generationContext.generationId,
+    },
+    existingContributions: [],
+  }
+
+  // Compose contributions from all relevant elements
+  const contributions = await compositionRegistry.composeContributions(elementContext)
+
+  Logger.debug('[ElementComposition] Step 1a contributions composed', {
+    generationId: generationContext.generationId,
+    instructionCount: contributions.instructions?.length || 0,
+    mustFollowCount: contributions.mustFollow?.length || 0,
+    freedomCount: contributions.freedom?.length || 0,
+    referenceImagesCount: contributions.referenceImages?.length || 0,
+  })
+
+  return {
+    instructions: contributions.instructions || [],
+    mustFollow: contributions.mustFollow || [],
+    freedom: contributions.freedom || [],
+  }
 }
 
 /**
@@ -259,6 +314,49 @@ export async function executeV3Step1a(
     finalDescriptions: referenceImages.map(r => r.description?.substring(0, 50))
   })
 
+  // Compose element contributions if feature flag is enabled
+  let elementContributions: {
+    instructions: string[]
+    mustFollow: string[]
+    freedom: string[]
+  } | null = null
+
+  if (isFeatureEnabled('elementComposition')) {
+    Logger.info('[ElementComposition] Feature flag enabled, composing element contributions for Step 1a')
+    try {
+      elementContributions = await composeElementContributions(styleSettings, {
+        selfieS3Keys: input.selfieReferences.map(r => r.label || ''),
+        generationId,
+        personId,
+        teamId: input.teamId,
+      })
+      Logger.debug('[ElementComposition] Element contributions composed successfully', {
+        generationId,
+        hasInstructions: elementContributions.instructions.length > 0,
+        hasMustFollow: elementContributions.mustFollow.length > 0,
+        hasFreedom: elementContributions.freedom.length > 0,
+      })
+    } catch (error) {
+      Logger.error('[ElementComposition] Failed to compose element contributions, falling back to provided rules', {
+        error: error instanceof Error ? error.message : String(error),
+        generationId,
+      })
+      // Fall back to provided rules on error
+      elementContributions = null
+    }
+  }
+
+  // Use element contributions if available, otherwise use provided rules
+  const effectiveMustFollowRules = elementContributions?.mustFollow || mustFollowRules
+  const effectiveFreedomRules = elementContributions?.freedom || freedomRules
+
+  Logger.debug('[ElementComposition] Using rules', {
+    generationId,
+    source: elementContributions ? 'element-composition' : 'provided',
+    mustFollowCount: effectiveMustFollowRules.length,
+    freedomCount: effectiveFreedomRules.length,
+  })
+
   // Create a simplified prompt object with ONLY subject and framing (no scene, camera, lighting, rendering)
   const personOnlyPrompt = {
     subject: promptObj.subject as Record<string, unknown> | undefined, // Keep subject details (clothing, pose, expression)
@@ -325,23 +423,23 @@ export async function executeV3Step1a(
       `- Shot Type: Respect the requested shot type (${shotDescription}) and ensure proper framing.`
     ])
   ]
-  
-  // Add element-specific must follow rules
-  if (mustFollowRules && mustFollowRules.length > 0) {
-    for (const rule of mustFollowRules) {
+
+  // Add element-specific must follow rules (using effective rules from element composition or fallback)
+  if (effectiveMustFollowRules && effectiveMustFollowRules.length > 0) {
+    for (const rule of effectiveMustFollowRules) {
       structuredPrompt.push(`- ${rule}`)
     }
   }
-  
+
   // Section 4: Freedom Rules
   structuredPrompt.push('')
   structuredPrompt.push('Freedom Rules:')
   structuredPrompt.push('- You are free to optimize lighting, shadows, and micro-details to ensure realistic 3D volume, texture, and natural scene integration.')
   structuredPrompt.push('- You may adjust subtle color grading and contrast to enhance the professional appearance, provided all specifications from the JSON are maintained.')
-  
-  // Add element-specific freedom rules
-  if (freedomRules && freedomRules.length > 0) {
-    for (const rule of freedomRules) {
+
+  // Add element-specific freedom rules (using effective rules from element composition or fallback)
+  if (effectiveFreedomRules && effectiveFreedomRules.length > 0) {
+    for (const rule of effectiveFreedomRules) {
       structuredPrompt.push(`- ${rule}`)
     }
   }

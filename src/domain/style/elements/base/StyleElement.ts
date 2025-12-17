@@ -1,0 +1,161 @@
+/**
+ * Element-Level Prompt Composition System
+ *
+ * Elements are self-contained, composable pieces that contribute prompt instructions
+ * at specific workflow phases. This allows for:
+ * - Separation of concerns (branding, clothing, camera, etc.)
+ * - Reusability across packages
+ * - Phase-aware prompt building
+ * - Independent testing and maintenance
+ */
+
+import type { PhotoStyleSettings } from '@/types/photo-style'
+
+/**
+ * Workflow phases where elements can contribute
+ */
+export type WorkflowPhase =
+  | 'background-generation'  // Step 1b: Generate background
+  | 'person-generation'      // Step 1a: Generate person
+  | 'composition'            // Step 2: Compose person + background
+  | 'evaluation'             // Step 3: Evaluate result
+
+/**
+ * Reference image that can be included in prompts
+ */
+export interface ReferenceImage {
+  url: string
+  description: string
+  type?: 'selfie' | 'clothing' | 'branding' | 'background' | 'other'
+}
+
+/**
+ * Contribution from an element to a specific phase
+ */
+export interface ElementContribution {
+  // Prompt instructions to add
+  instructions?: string[]
+
+  // Rules that must be followed
+  mustFollow?: string[]
+
+  // Creative freedom allowed
+  freedom?: string[]
+
+  // Reference images to include
+  referenceImages?: ReferenceImage[]
+
+  // Structured data for the AI model
+  metadata?: Record<string, unknown>
+}
+
+/**
+ * Context provided to elements for decision-making
+ */
+export interface ElementContext {
+  // Current workflow phase
+  phase: WorkflowPhase
+
+  // All user settings
+  settings: PhotoStyleSettings
+
+  // Generation context data
+  generationContext: {
+    selfieS3Keys: string[]
+    userId?: string
+    teamId?: string
+    generationId?: string
+    [key: string]: unknown
+  }
+
+  // Results from previous phases (if available)
+  previousPhaseResults?: {
+    backgroundImage?: string
+    personImage?: string
+    intermediateImages?: string[]
+  }
+
+  // Other elements' contributions so far (for coordination)
+  existingContributions: ElementContribution[]
+}
+
+/**
+ * Validation result from element
+ */
+export interface ValidationResult {
+  valid: boolean
+  errors: string[]
+}
+
+/**
+ * Abstract base class for style elements
+ *
+ * Elements are responsible for contributing prompt instructions
+ * at specific workflow phases based on user settings.
+ */
+export abstract class StyleElement {
+  /**
+   * Unique identifier for this element
+   */
+  abstract readonly id: string
+
+  /**
+   * Human-readable name
+   */
+  abstract readonly name: string
+
+  /**
+   * Description of what this element does
+   */
+  abstract readonly description: string
+
+  /**
+   * Determine if this element is relevant for the given phase
+   *
+   * @param context - Element context with phase, settings, etc.
+   * @returns true if element should contribute to this phase
+   */
+  abstract isRelevantForPhase(context: ElementContext): boolean
+
+  /**
+   * Contribute prompt instructions for this phase
+   *
+   * Only called if isRelevantForPhase returns true
+   *
+   * @param context - Element context with phase, settings, etc.
+   * @returns Element contribution (instructions, rules, images, metadata)
+   */
+  abstract contribute(context: ElementContext): Promise<ElementContribution>
+
+  /**
+   * Validate settings before generation
+   *
+   * Optional - only implement if element has validation requirements
+   *
+   * @param settings - User's photo style settings
+   * @returns Array of error messages (empty if valid)
+   */
+  validate?(settings: PhotoStyleSettings): string[]
+
+  /**
+   * Priority for ordering contributions (lower = earlier)
+   *
+   * Default: 100
+   * Lower priorities contribute first, allowing higher priorities
+   * to see their contributions and potentially coordinate
+   */
+  get priority(): number {
+    return 100
+  }
+
+  /**
+   * Helper method to check if a setting exists and is not empty
+   */
+  protected hasValue(value: unknown): boolean {
+    if (value === null || value === undefined) return false
+    if (typeof value === 'string') return value.trim().length > 0
+    if (Array.isArray(value)) return value.length > 0
+    if (typeof value === 'object') return Object.keys(value).length > 0
+    return true
+  }
+}

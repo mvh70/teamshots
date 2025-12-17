@@ -44,6 +44,17 @@ export const FEATURE_FLAGS = {
     enabled: process.env.NEXT_PUBLIC_FEATURE_V3_WORKFLOW !== 'false', // Enabled by default
     description: 'Enable V3 4-step generation workflow',
   },
+
+  /**
+   * Element Composition System
+   * Controls whether to use the new element-level prompt composition system
+   * When enabled, prompts are built by composing contributions from independent elements
+   * instead of monolithic package-level prompt building
+   */
+  elementComposition: {
+    enabled: process.env.FEATURE_ELEMENT_COMPOSITION === 'true', // Disabled by default
+    description: 'Enable element-level prompt composition system for modular, phase-aware prompt building',
+  },
 } as const
 
 export type FeatureFlagKey = keyof typeof FEATURE_FLAGS
