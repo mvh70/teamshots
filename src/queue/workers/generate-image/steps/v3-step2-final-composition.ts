@@ -14,7 +14,6 @@ export interface V3Step2FinalInput {
   personBuffer: Buffer // Person on grey background from Step 1 (with clothing logo already applied if applicable)
   backgroundBuffer?: Buffer // Custom background if provided (from Step 1b OR user's custom background)
   styleSettings?: Record<string, unknown> // For user's background choice if Step 1b was skipped
-  faceCompositeReference?: BaseReferenceImage // Face-focused composite from selfies for refinement
   logoReference?: BaseReferenceImage // Logo for background/environmental branding (not clothing)
   evaluatorComments?: string[] // Comments from Step 1a and Step 1b evaluations
   aspectRatio: string
@@ -39,7 +38,6 @@ export async function executeV3Step2(
     personBuffer,
     backgroundBuffer,
     styleSettings,
-    faceCompositeReference,
     evaluatorComments,
     aspectRatio,
     resolution,
@@ -49,7 +47,6 @@ export async function executeV3Step2(
   Logger.debug('V3 Step 2: Compositing background and refining', {
     hasBackgroundFromStep1b: !!backgroundBuffer,
     hasStyleSettings: !!styleSettings,
-    hasFaceComposite: !!faceCompositeReference,
     hasEvaluatorComments: !!evaluatorComments && evaluatorComments.length > 0
   })
   
@@ -78,35 +75,34 @@ export async function executeV3Step2(
     // Explicitly exclude: subject (person already generated in Step 1)
   }
   
-  // Extract branding rules from scene.branding if present (background/elements branding only)
+  // Extract branding context from scene.branding (for understanding design intent only)
   // Clothing branding rules were already applied in Step 1
   const sceneBranding = promptObj.scene?.branding as Record<string, unknown> | undefined
-  let brandingRules: string[] = []
-  
+
+  // CRITICAL: If background was generated in Step 1b, it ALREADY contains the logo
+  // If user provided custom background, it may or may not have branding
+  // In BOTH cases, we must preserve the background exactly as provided
+  const backgroundPreservationRules: string[] = []
+
   if (sceneBranding && sceneBranding.enabled === true) {
-    // Scene branding is present (background or elements position)
-    // Extract the rules that were stored in the branding object
-    if (Array.isArray(sceneBranding.rules)) {
-      brandingRules = sceneBranding.rules as string[]
-      Logger.debug('V3 Step 2: Scene branding detected with rules', {
-        position: sceneBranding.position,
-        placement: sceneBranding.placement,
-        ruleCount: brandingRules.length
-      })
-    }
-    
-    // Add specific positioning and depth rule for scene branding
-    brandingRules.push(
-      'The branding should be placed prominently behind the subject, ideally top half, and behind the subject. Ideally, the subject hides partially the branding to create visual depth and make the composition feel more natural and integrated. Do not place the branding in a corner.'
+    Logger.debug('V3 Step 2: Scene branding context detected', {
+      position: sceneBranding.position,
+      placement: sceneBranding.placement
+    })
+
+    backgroundPreservationRules.push(
+      'CRITICAL BACKGROUND PRESERVATION: The background image already contains all necessary branding elements (if any).',
+      'You MUST preserve the background exactly as provided, including all logos, text, signs, banners, and flags.',
+      'Do NOT add, remove, modify, regenerate, or adjust any branding elements.',
+      'Do NOT create new logos based on the scene description.',
+      'Your ONLY task is to composite the person naturally into this existing background.'
     )
-    
-    // Remove rules from branding object to avoid duplication in prompt
-    // Rules will be added as clear text instructions separately
+
+    // Remove branding rules to prevent AI from trying to apply them
     delete sceneBranding.rules
   }
   
   // Compose background composition prompt with branding rules, evaluator comments, and face refinement
-  const includeFaceRefinement = !!faceCompositeReference
   const jsonPrompt = JSON.stringify(backgroundPrompt, null, 2)
   
   // Extract subject for reference (helps AI understand intended framing/scale)
@@ -118,9 +114,15 @@ export async function executeV3Step2(
     'You are a world-class graphics professional specializing in photo realistic composition and integration. Your task is to take the person from the base image (currently on a grey background) and composite them naturally into the scene specified below, applying the camera, lighting, and rendering specifications.',
     'The person is the primary subject and the background is the secondary subject.',
     'The background can not be changed, it must be the same as the background specified in the scene specifications without alterations.',
-    'The person can not be changed, the pose, expression,clothes and every detail must remain the same.',
-    'Ensure cohesive lighting, color grading, and photorealistic integration between the person and the background.',
-    'Refine the image with a low denoising strength (approx 0.25 to 0.35) to fix lighting spill and shadows, "baking" the person into the room.',
+    'The person can not be changed - pose, expression, clothes, body framing, and crop points must remain EXACTLY the same.',
+    `CRITICAL: The person is already framed as ${shotType}. DO NOT reframe or change where the body is cropped. Maintain the exact crop point from the base image.`,
+    
+    // Professional Compositing Instructions
+    '**Advanced Compositing & Refinement:**',
+    '- **Light Wrap:** Simulate realistic light wrap by allowing the brightest parts of the background to slightly bleed over the edges of the subject, integrating them into the environment.',
+    '- **Color Matching:** Match the black levels, white balance, and color grading of the subject to the background environment for a cohesive look.',
+    '- **Shadows:** Cast a realistic soft shadow from the subject onto the background based on the specified lighting direction.',
+    '- **Global Grading:** Apply a final global color grade to "glue" the layers together, ensuring cohesive tone and atmosphere.',
 
     // Section 2: Scene Specifications (NO subject - person already generated)
     '',
@@ -145,23 +147,15 @@ export async function executeV3Step2(
     `- **Output Dimensions (${aspectRatioConfig.id})**: Generate the image at exactly ${aspectRatioConfig.width}x${aspectRatioConfig.height} pixels. Fill the entire canvas edge-to-edge with the composition. Do NOT add any borders, frames, letterboxing, or black bars. The image content should extend to all edges.`,
     '',
     '**CRITICAL Depth and Spatial Composition:**',
-    '- Position the person 6-8 feet in front of the background wall to create CLEAR SPATIAL SEPARATION.',
+    '- Create CLEAR SPATIAL SEPARATION using optical depth cues rather than moving the camera.',
     '- Apply DEPTH OF FIELD based on the camera aperture (f/2.0) - the person should be TACK SHARP while the background is SLIGHTLY SOFTER (not blurred, just gentler focus).',
     '- Add NATURAL SHADOWS: The person should cast a very subtle, soft shadow on the background wall behind them - positioned appropriately based on the lighting direction.',
     '- Create ATMOSPHERIC PERSPECTIVE: The background should be slightly less saturated and have lower contrast than the sharp, vibrant subject in the foreground.',
     '- Ensure LIGHTING WRAP: The key light (45° from camera left) should illuminate the person brightly while creating natural falloff on the background.',
-    '- The person should appear to STAND IN 3D SPACE, not pasted flat against the wall - there should be visible air/space between them and the background.',
+    '- Ensure VISIBLE AIR/SPACE between the subject and background through lighting falloff and bokeh.',
     '- If there\'s a logo on the background, the person can naturally OCCLUDE parts of it, reinforcing that they\'re in front of the background plane.',
     '- Apply subtle EDGE LIGHTING or rim light on the person\'s shoulders/hair to separate them from the background and enhance three-dimensionality.',
     '- Think: "subject standing naturally in a studio" not "subject pasted onto a backdrop".',
-    '',
-    '**CRITICAL Body Framing Rules:**',
-    '- NEVER crop the person at the waist or mid-torso. This looks unprofessional.',
-    '- For medium-shot: Show from head down to the waist, showing torso and arms.',
-    '- For three-quarter: Show from head to mid-thigh (3/4 body length).',
-    '- For full-shot: Show the entire body from head to feet.',
-    '- For close-up/headshot: Show from head to chest/shoulders.',
-    '- When in doubt, show MORE of the body, not less. It is better to show full body than to cut off awkwardly.',
     '',
     '**CRITICAL Person Prominence Rules:**',
     '- The person must be the DOMINANT element in the frame - they should occupy 40-60% of the image height at minimum.',
@@ -174,22 +168,10 @@ export async function executeV3Step2(
     '',
   ]
   
-  // Add face refinement instructions if requested
-  if (includeFaceRefinement) {
-    structuredPrompt.push(
-      '**Face Refinement**:',
-      '- Do not alter the fundamental facial structure and do not any additional accesories like glasses. Use the provided face reference images to refine facial features.', 
-      '- Match carefully:',
-      '-- form of the eyes, nose, mouth, ears, eyebrows, cheeks, chin',
-      '-- color of the eyes, skintone and hair color',
-      '-- unique skin details like moles, scars, or freckles visible in the source selfies',
-      '',
-    )
-  }
-  
-  // Add branding rules for background/elements branding (if provided)
-  if (brandingRules && brandingRules.length > 0) {
-    for (const rule of brandingRules) {
+  // Add background preservation rules for branding (if applicable)
+  if (backgroundPreservationRules && backgroundPreservationRules.length > 0) {
+    structuredPrompt.push('')
+    for (const rule of backgroundPreservationRules) {
       structuredPrompt.push(`- ${rule}`)
     }
   }
@@ -238,15 +220,6 @@ export async function executeV3Step2(
     }
   ]
   
-  // Add face composite for refinement if provided
-  if (faceCompositeReference) {
-    referenceImages.push({
-      description: faceCompositeReference.description || 'FACE REFERENCES - Use these faces to refine facial features in the final image.',
-      base64: faceCompositeReference.base64,
-      mimeType: faceCompositeReference.mimeType
-    })
-  }
-  
   // Add background - either from Step 1b or user's custom background
   if (backgroundBuffer) {
     referenceImages.push({
@@ -272,7 +245,6 @@ export async function executeV3Step2(
   Logger.debug('V3 Step 2: Sending to Gemini', {
     promptLength: compositionPrompt.length,
     referenceCount: referenceImages.length,
-    hasFaceComposite: !!faceCompositeReference,
     hasBackgroundFromStep1b: !!backgroundBuffer,
     hasEvaluatorComments: !!evaluatorComments && evaluatorComments.length > 0
   })

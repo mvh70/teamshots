@@ -20,11 +20,12 @@
   "landing": {
     "teamshotspro": {
       "hero": {
-        "titleMain": "Fotos profesionales de equipo",
+        "titleLine1": "Retratos profesionales",
+        "titleLine2": "para tu equipo",
         "titleHighlightTime": "en 60 segundos",
-        "subtitle": "Tú defines lo esencial de la marca (ej. logo, estilo de ropa, fondos). Tu equipo elige el resto (ej. colores y poses). Todos lucen unificados pero personales. Retratos profesionales desde cualquier selfie en 60 segundos, ",
-        "subtitleBold": "sin drama de fotógrafos ni coordinación.",
-        "subtitleMain": "Convierte cualquier selfie en retratos consistentes y acordes a tu marca. Sin fotógrafo, sin coordinación.",
+        "subtitle": "Define tu estilo de marca y genera retratos profesionales para cada miembro. Calidad consistente en toda la empresa.",
+        "subtitleBold": "100% acorde a tu marca, 0% complicaciones.",
+        "subtitleMain": "Convierte selfies individuales en una imagen de equipo unificada. Sin fotógrafo, sin agenda.",
         "finalCtaTitle": "¿Listo para transformar las fotos de tu equipo?",
         "finalCtaSubtitle": "Obtén retratos profesionales para tu equipo y ve la diferencia en 60 segundos.",
         "getStarted": "Empezar",
@@ -75,7 +76,7 @@
             "duration": "1 min"
           },
           "3": {
-            "title": "Fotos profesionales en 60 segundos",
+            "title": "Retratos individuales generados",
             "description": "Resultados profesionales en 60 segundos por persona. Sin edición necesaria.",
             "duration": "60s/persona"
           },
@@ -612,6 +613,9 @@
       "tipSpam": "Revisa spam o no deseado",
       "tipCorrect": "Asegúrate correo correcto",
       "tipDelay": "Correo puede tardar minutos",
+      "tip1": "Revisa tu carpeta de spam o no deseado",
+      "tip2": "Verifica que la dirección de correo sea correcta",
+      "tip3": "Espera unos minutos para la entrega",
       "backToSignIn": "Volver a inicio",
       "loading": "Cargando…"
     }
@@ -1538,7 +1542,15 @@
     },
     "magicLink": {
       "subject": "Tu enlace de inicio de sesión",
-      "body": "Haz clic en el siguiente enlace para iniciar sesión:\n\n{link}\n\nEste enlace expira en 24 horas."
+      "body": "Haz clic en el siguiente enlace para iniciar sesión:\n\n{link}\n\nEste enlace expira en 24 horas.",
+      "preview": "Haz clic en el enlace para iniciar sesión en tu cuenta",
+      "title": "Inicia sesión en tu cuenta",
+      "greeting": "Haz clic en el botón a continuación para iniciar sesión de forma segura en tu cuenta de TeamShots.",
+      "instructions": "Este enlace mágico te permitirá iniciar sesión sin necesidad de una contraseña.",
+      "button": "Iniciar sesión",
+      "expires": "Este enlace expira en 24 horas por razones de seguridad.",
+      "linkFallback": "Si el botón no funciona, copia y pega este enlace en tu navegador:",
+      "footer": "Si no solicitaste este enlace de inicio de sesión, puedes ignorar este correo electrónico de forma segura."
     },
     "teamInvite": {
       "subject": "Invitación al equipo de {teamName}",

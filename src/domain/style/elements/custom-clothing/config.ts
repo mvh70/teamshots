@@ -41,12 +41,9 @@ export const customClothingConfig: StyleElementConfig<CustomClothingSettings> = 
       return false
     }
 
-    // If user-choice, must have assetId or outfitS3Key
+    // If user-choice, validate optional fields if present
     if (settings.type === 'user-choice') {
-      if (!settings.assetId && !settings.outfitS3Key) {
-        return false
-      }
-
+      // assetId/outfitS3Key are optional - user may set type to user-choice before uploading
       // If colors are provided, validate structure
       if (settings.colors) {
         const { topBase, bottom } = settings.colors

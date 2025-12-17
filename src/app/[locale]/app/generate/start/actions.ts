@@ -17,6 +17,12 @@ export type ContextOption = {
   stylePreset?: string
 }
 
+export type OwnedPackage = {
+  packageId: string
+  name: string
+  label: string
+}
+
 export type GenerationPageData = {
   session: {
     userId: string
@@ -41,6 +47,7 @@ export type GenerationPageData = {
     isTeamAdmin: boolean
     isTeamMember: boolean
   }
+  ownedPackages: OwnedPackage[]
 }
 
 /**
@@ -68,16 +75,25 @@ export async function getGenerationPageData(keyFromQuery?: string): Promise<Gene
         isProUser: false,
         isTeamAdmin: false,
         isTeamMember: false
-      }
+      },
+      ownedPackages: []
     }
   }
+
+  type PrismaWithUserPackage = typeof prisma & { 
+    userPackage: { 
+      findMany: (...args: unknown[]) => Promise<Array<{ packageId: string; purchasedAt: Date | null; createdAt: Date }>> 
+    } 
+  }
+  const prismaEx = prisma as unknown as PrismaWithUserPackage
 
   // Fetch all data in parallel
   const [
     person,
     selectedSelfies,
     selfieFromQuery,
-    subscription
+    subscription,
+    userPackages
   ] = await Promise.all([
     prisma.person.findUnique({
       where: { userId: session.user.id },
@@ -110,8 +126,28 @@ export async function getGenerationPageData(keyFromQuery?: string): Promise<Gene
       select: { id: true }
     }) : Promise.resolve(null),
     // Fetch subscription
-    getUserSubscription(session.user.id)
+    getUserSubscription(session.user.id),
+    // Fetch owned packages
+    prismaEx.userPackage.findMany({
+      where: { userId: session.user.id },
+      select: {
+        packageId: true
+      },
+      orderBy: { createdAt: 'asc' }
+    })
   ])
+
+  // Process owned packages
+  const ownedPackages = userPackages.map(up => {
+    const packageConfig = getPackageConfig(up.packageId)
+    const packageMetadata = PACKAGES_CONFIG.active[up.packageId as keyof typeof PACKAGES_CONFIG.active]
+    
+    return {
+      packageId: up.packageId,
+      name: packageMetadata?.name || packageConfig.label,
+      label: packageConfig.label
+    }
+  })
 
   // Determine plan info
   const tier = subscription?.tier ?? null
@@ -153,7 +189,8 @@ export async function getGenerationPageData(keyFromQuery?: string): Promise<Gene
       isProUser,
       isTeamAdmin,
       isTeamMember
-    }
+    },
+    ownedPackages
   }
 }
 
@@ -264,14 +301,18 @@ async function fetchStyleData(params: {
           activeContextData = fallbackContext as typeof team.activeContext
         }
       } catch (error) {
-        console.error('[Server Action] Error fetching fallback context:', error)
+        Logger.error('[fetchStyleData] Error fetching fallback context', { error })
       }
     }
     
     if (activeContextData) {
       try {
         // Deserialize the context settings directly
-        const packageId = extractPackageId(activeContextData.settings as Record<string, unknown>) || 'headshot1'
+        // Try to extract packageId from settings first, then fall back to packageName field on context
+        const extractedPackageId = extractPackageId(activeContextData.settings as Record<string, unknown>)
+        const contextPackageName = (activeContextData as { packageName?: string }).packageName
+        const packageId = extractedPackageId || contextPackageName || 'headshot1'
+        
         const pkg = getPackageConfig(packageId)
         const ui = pkg.persistenceAdapter.deserialize(
           (activeContextData.settings as Record<string, unknown>) || {}
@@ -387,7 +428,11 @@ async function fetchStyleData(params: {
     
     if (activeCtx) {
       // Deserialize the context settings directly
-      const packageId = extractPackageId(activeCtx.settings as Record<string, unknown>) || 'headshot1'
+      // Try to extract packageId from settings first, then fall back to packageName field on context
+      const extractedPackageId = extractPackageId(activeCtx.settings as Record<string, unknown>)
+      const contextPackageName = (activeCtx as { packageName?: string }).packageName
+      const packageId = extractedPackageId || contextPackageName || 'headshot1'
+      
       const pkg = getPackageConfig(packageId)
       const ui = pkg.persistenceAdapter.deserialize(
         (activeCtx.settings as Record<string, unknown>) || {}

@@ -11,7 +11,6 @@ import { useTranslations } from 'next-intl'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
 import type { MobileStep } from '@/components/customization/PhotoStyleSettings'
-import PackageSelector from '@/components/packages/PackageSelector'
 import { PhotoStyleSettings as PhotoStyleSettingsType } from '@/types/photo-style'
 import { BRAND_CONFIG } from '@/config/brand'
 import { PRICING_CONFIG } from '@/config/pricing'
@@ -53,8 +52,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   
   // Initialize state from server data - no useEffect needed!
   const selectedSelfies = initialData.selectedSelfies
+  const ownedPackages = initialData.ownedPackages || []
   const [generationType, setGenerationType] = useState<'personal' | 'team' | null>(null)
-  const { credits: userCredits, loading: creditsLoading } = useCredits()
+  const { credits: userCredits, loading: creditsLoading, refetch: refetchCredits } = useCredits()
   const { href: buyCreditsHref } = useBuyCreditsLink()
   
   // Add returnTo parameter to buy credits link
@@ -246,6 +246,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
         },
         body: JSON.stringify(payload),
       })
+
+      // Refresh credits in background to update sidebar
+      refetchCredits()
 
       const redirectUrl = response.accountMode?.redirectUrl || 
         (session?.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
@@ -576,25 +579,33 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           </div>
 
           {/* Context Selection for Personal and Team Generations - Hide for free plan users */}
-          {!isFreePlan && (generationType === 'personal' || generationType === 'team') && (
+          {!isFreePlan && (effectiveGenerationType === 'personal' || effectiveGenerationType === 'team') && (
             <div className="hidden md:block bg-white rounded-xl shadow-md border border-gray-200/60 p-6 sm:p-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">
-                {generationType === 'personal' ? t('selectPhotoStyle') : 'Select Team Photo Style'}
+                {effectiveGenerationType === 'personal' ? t('selectPhotoStyle') : 'Select Team Photo Style'}
               </h2>
               
               <div className="space-y-4">
                 <div>
                   <select
-                    value={activeContext?.id || 'freestyle'}
+                    value={activeContext?.id || (ownedPackages.length > 1 ? `package_${selectedPackageId}` : 'freestyle')}
                     onChange={async (e) => {
-                      if (e.target.value === 'freestyle') {
+                      const value = e.target.value
+                      if (value === 'freestyle') {
                         setActiveContext(null)
                         const fallbackPackage = getPackageConfig(fallbackPackageId)
                         setSelectedPackageId(fallbackPackageId)
                         setPhotoStyleSettings(fallbackPackage.defaultSettings)
                         setOriginalContextSettings(fallbackPackage.defaultSettings)
+                      } else if (value.startsWith('package_')) {
+                        const pkgId = value.replace('package_', '')
+                        setActiveContext(null)
+                        setSelectedPackageId(pkgId)
+                        const pkg = getPackageConfig(pkgId)
+                        setPhotoStyleSettings(pkg.defaultSettings)
+                        setOriginalContextSettings(pkg.defaultSettings)
                       } else {
-                        const selectedContext = availableContexts.find(ctx => ctx.id === e.target.value)
+                        const selectedContext = availableContexts.find(ctx => ctx.id === value)
                         if (selectedContext) {
                           const { ui, pkg, context } = await loadStyleByContextId(selectedContext.id)
                           const contextIndex = availableContexts.findIndex((ctx) => ctx.id === selectedContext.id)
@@ -622,19 +633,27 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                     }}
                     className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
                   >
-                    <option value="freestyle">{t('freestyle')}</option>
                     {availableContexts.map((context) => (
                       <option key={context.id} value={context.id}>
                         {context.name}
                       </option>
                     ))}
+                    {ownedPackages.length > 1 ? (
+                      ownedPackages.map(pkg => (
+                        <option key={pkg.packageId} value={`package_${pkg.packageId}`}>
+                          {pkg.name} (all settings customizable)
+                        </option>
+                      ))
+                    ) : (
+                      <option value="freestyle">{t('freestyle')}</option>
+                    )}
                   </select>
                   <p className="text-sm text-gray-600 mt-3 leading-relaxed">
                     {activeContext ? 
-                      (generationType === 'personal' ? t('predefinedStyle') : 'Predefined team style settings are applied. You can customize user-choice settings for this generation.') : 
+                      (effectiveGenerationType === 'personal' ? t('predefinedStyle') : 'Predefined team style settings are applied. You can customize user-choice settings for this generation.') : 
                       (availableContexts.length > 0 ? 
-                        (generationType === 'personal' ? t('freestyleDescription') : 'Create a custom team photo style for this generation.') : 
-                        (generationType === 'personal' ? t('freestyleOnlyDescription') : 'No team styles available. Create a custom team photo style for this generation.'))
+                        (effectiveGenerationType === 'personal' ? t('freestyleDescription') : 'Create a custom team photo style for this generation.') : 
+                        (effectiveGenerationType === 'personal' ? t('freestyleOnlyDescription') : 'No team styles available. Create a custom team photo style for this generation.'))
                     }
                   </p>
                 </div>
@@ -642,37 +661,12 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             </div>
           )}
           
-          {/* Package Selector - Hide for free package contexts or predefined styles */}
-          {!activeContext && selectedPackageId !== 'freepackage' && (
-            <div className="hidden md:block">
-              <PackageSelector
-                value={selectedPackageId}
-                onChange={(packageId) => {
-                  setSelectedPackageId(packageId)
-                  const pkg = getPackageConfig(packageId)
-                  setPhotoStyleSettings(pkg.defaultSettings)
-                  setOriginalContextSettings(pkg.defaultSettings)
-                }}
-              />
-            </div>
-          )}
+          {/* Package Selector - Hide for free package contexts or predefined styles */ }
+          {/* Removed as integrated into main dropdown */}
 
-          {/* Photo Style Settings - Mobile */}
+          {/* Photo Style Settings - Mobile */ }
           <div className="md:hidden pb-24 w-full max-w-full overflow-x-hidden">
             <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-              {/* Package Selector - Mobile */}
-              {selectedPackageId !== 'freepackage' && (
-                <PackageSelector
-                  value={selectedPackageId}
-                  onChange={(packageId) => {
-                    setSelectedPackageId(packageId)
-                    const pkg = getPackageConfig(packageId)
-                    setPhotoStyleSettings(pkg.defaultSettings)
-                    setOriginalContextSettings(pkg.defaultSettings)
-                    setActiveContext(null) // Clear activeContext when switching packages
-                  }}
-                />
-              )}
               <StyleSettingsSection
                 value={photoStyleSettings}
                 onChange={setPhotoStyleSettings}
@@ -693,19 +687,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
           {/* Photo Style Settings - Desktop */}
           <div className="space-y-6">
-            {/* Package Selector - Desktop (in style settings area) */}
-            {selectedPackageId !== 'freepackage' && (
-              <PackageSelector
-                value={selectedPackageId}
-                onChange={(packageId) => {
-                  setSelectedPackageId(packageId)
-                  const pkg = getPackageConfig(packageId)
-                  setPhotoStyleSettings(pkg.defaultSettings)
-                  setOriginalContextSettings(pkg.defaultSettings)
-                  setActiveContext(null) // Clear activeContext when switching packages
-                }}
-              />
-            )}
+            {/* Package Selector - Desktop (in style settings area) - Removed as integrated into main dropdown */}
             <StyleSettingsSection
               value={photoStyleSettings}
               onChange={setPhotoStyleSettings}

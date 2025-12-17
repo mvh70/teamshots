@@ -45,6 +45,7 @@ export default function PhotoUpload({
   const t = useTranslations("common");
   const tMobileHandoff = useTranslations("mobileHandoff");
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoRefMobile = useRef<HTMLVideoElement | null>(null);
   const videoRefDesktop = useRef<HTMLVideoElement | null>(null);
@@ -473,6 +474,9 @@ export default function PhotoUpload({
     if (inputRef.current) {
       inputRef.current.value = '';
     }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
+    }
   };
 
   const onDrop = async (e: React.DragEvent<HTMLDivElement>) => {
@@ -510,8 +514,12 @@ export default function PhotoUpload({
     setErrorType(null);
 
     if (preferNativeCamera) {
-      awaitingIOSCameraCaptureRef.current = isIOSDevice
-      inputRef.current?.click();
+      awaitingIOSCameraCaptureRef.current = isIOSDevice;
+      if (isIOSDevice) {
+        cameraInputRef.current?.click();
+      } else {
+        inputRef.current?.click();
+      }
       return;
     }
     
@@ -772,11 +780,20 @@ export default function PhotoUpload({
             type="file"
             accept={accept}
             multiple={multiple}
-            capture={isIOSDevice ? "user" : undefined}
             className="hidden"
             onChange={onInputChange}
             disabled={disabled}
             data-testid={testId}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept={accept}
+            capture="user"
+            className="hidden"
+            onChange={onInputChange}
+            disabled={disabled}
+            data-testid={`${testId}-camera`}
           />
         </div>
       )}

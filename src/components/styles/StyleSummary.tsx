@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Image from 'next/image'
 import { ExclamationTriangleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
@@ -39,6 +40,7 @@ function getThumbnailUrl(key: string): string {
 
 export default function StyleSummary({ settings }: StyleSummaryProps) {
   const t = useTranslations('customization.photoStyle.pose')
+  const [showPoseTooltip, setShowPoseTooltip] = React.useState(false)
   const backgroundKey = settings?.background?.key
   const backgroundPrompt = settings?.background?.prompt
   const backgroundType = settings?.background?.type
@@ -253,9 +255,13 @@ export default function StyleSummary({ settings }: StyleSummaryProps) {
                   })}
                 </span>
                 {t(`poses.${poseType}.description`, { default: '' }) && (
-                  <span className="relative inline-flex group">
+                  <span
+                    className="relative inline-block w-4 h-4"
+                    onMouseEnter={() => setShowPoseTooltip(true)}
+                    onMouseLeave={() => setShowPoseTooltip(false)}
+                  >
                     <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 hover:text-brand-primary transition-colors cursor-help" />
-                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-xl bg-gray-900 px-4 py-2.5 text-xs leading-relaxed text-white opacity-0 shadow-2xl transition-opacity duration-200 group-hover:opacity-100">
+                    <span className={`pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-xl bg-gray-900 px-4 py-2.5 text-xs leading-relaxed text-white shadow-2xl transition-opacity duration-200 ${showPoseTooltip ? 'opacity-100' : 'opacity-0'}`}>
                       {t(`poses.${poseType}.description`, { default: '' })}
                     </span>
                   </span>

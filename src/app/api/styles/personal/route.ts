@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
+import { getPackageConfig } from '@/domain/style/packages'
+import { extractPackageId } from '@/domain/style/settings-resolver'
 
 
 export const runtime = 'nodejs'
@@ -13,13 +15,26 @@ export async function GET() {
     }
 
     // Get user's personal contexts only
-    const individualContexts = await prisma.context.findMany({
+    const rawContexts = await prisma.context.findMany({
       where: { 
         userId: session.user.id,
         teamId: null // Only personal contexts
       },
       orderBy: { createdAt: 'desc' }
     })
+
+    // Deserialize settings for each context
+    const deserializeContext = (ctx: { id: string; name: string | null; settings: unknown; packageName: string | null; createdAt: Date }) => {
+      const packageId = extractPackageId(ctx.settings as Record<string, unknown>) || ctx.packageName || 'headshot1'
+      const pkg = getPackageConfig(packageId)
+      const deserializedSettings = pkg.persistenceAdapter.deserialize(ctx.settings as Record<string, unknown>)
+      return {
+        ...ctx,
+        settings: deserializedSettings
+      }
+    }
+
+    const individualContexts = rawContexts.map(deserializeContext)
 
     // Get the user's active context ID from metadata
     const userWithMetadata = await prisma.user.findUnique({
@@ -31,8 +46,8 @@ export async function GET() {
     if ((userWithMetadata as { metadata?: unknown })?.metadata && typeof (userWithMetadata as { metadata?: unknown }).metadata === 'object') {
       const metadata = (userWithMetadata as { metadata?: Record<string, unknown> }).metadata as Record<string, unknown>
       if (metadata.activeContextId) {
-        const list = individualContexts as Array<{ id: string }>
-        activeContext = list.find((ctx: { id: string }) => ctx.id === (metadata.activeContextId as string)) || null
+        const rawActive = rawContexts.find((ctx: { id: string }) => ctx.id === (metadata.activeContextId as string))
+        activeContext = rawActive ? deserializeContext(rawActive) : null
       }
     }
 

@@ -127,7 +127,10 @@ export default function TeamGenerationsPage() {
         console.warn('Team generation failed', errorMessage)
       }
       setFailureToast('Generation failed')
-      void refetchCredits()
+      // Delay credit refetch to ensure backend refund transaction has completed
+      setTimeout(() => {
+        void refetchCredits()
+      }, 2000)
     },
     [refetchCredits]
   )

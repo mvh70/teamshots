@@ -65,7 +65,8 @@ export function CreditsProvider({ children, initialCredits }: CreditsProviderPro
 
       // OPTIMIZATION: Fetch both credit types in a single API call
       // This reduces from 2 HTTP requests + 4+ queries to 1 HTTP request + 2-3 queries
-      const creditsData = await jsonFetcher<{ individual: number; team: number }>('/api/credits/balance?type=both')
+      // Add timestamp to prevent caching
+      const creditsData = await jsonFetcher<{ individual: number; team: number }>(`/api/credits/balance?type=both&_t=${Date.now()}`)
         .catch(() => ({ individual: 0, team: 0 }))
 
       setCredits({

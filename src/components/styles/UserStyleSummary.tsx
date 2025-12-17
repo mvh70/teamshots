@@ -3,7 +3,7 @@
 import React from 'react'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
 import { UserIcon } from '@heroicons/react/24/outline'
-import { getElementMetadata } from '@/domain/style/elements/metadata'
+import { getElementMetadata } from '@/domain/style/elements'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 interface UserStyleSummaryProps {
   settings?: Partial<PhotoStyleSettings> | null
@@ -73,7 +73,15 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
             if (metadata.summaryComponent) {
               const SummaryComponent = metadata.summaryComponent
               const elementSettings = settings[elementKey]
-              if (!elementSettings) return null
+              
+              // For customClothing, always pass settings if they exist (Summary component handles visibility logic)
+              // For other elements, only show if settings exist
+              if (elementKey === 'customClothing') {
+                if (!elementSettings) return null
+                // Pass settings even if just { type: 'user-choice' } - let Summary component decide
+              } else {
+                if (!elementSettings) return null
+              }
 
               return (
                 <SummaryComponent

@@ -130,11 +130,15 @@ export async function executeV3Step3(
     '   - Are unique facial features maintained without beautification?',
     '   - Does the person look like themselves, not an idealized version?',
     '',
-    '3. body_framing',
-    '   - Is the person\'s body shown at an appropriate length (NOT cut off awkwardly at the waist or mid-torso)?',
-    '   - For professional photos, the person should show at minimum 3/4 body (head to mid-thigh) or full body.',
-    '   - Answer NO if the person is cut off mid picture at the waist, stomach, or mid-torso (awkward mid-body cropping). IMPORTANT: Bottom-border cutoffs (where the person\'s lower body extends to the bottom edge of the image) are acceptable and should be answered YES.',
-    '   - Answer YES if showing: full body, 3/4 body (to mid-thigh/knees), intentional close-up (head/shoulders only), OR if the person is cut off at the bottom border of the image (feet/legs at image edge).',
+    '3. shot_type_match',
+    '   - Does the image reasonably match the REQUESTED shot type from the generation prompt?',
+    '   - For medium-shot: Person should be cropped around waist/belt area (±15% tolerance). Accept if cropped between bottom ribcage and top of hips.',
+    '   - For three-quarter: Person shown from head to mid-thigh (±15% tolerance). Accept if cropped between waist and knees.',
+    '   - For full-shot: Person shown from head to feet. Should include full body.',
+    '   - For close-up/headshot: Person shown from head to chest/shoulders.',
+    '   - Answer YES if body is cropped within reasonable tolerance of the shot type.',
+    '   - Answer NO only if shot type is SIGNIFICANTLY wrong (e.g., showing full legs when medium-shot requested, or only head when full-shot requested).',
+    '   - Minor variations in exact crop point (±10-15%) should be ACCEPTED as long as the general shot type is correct.',
     '',
     '4. person_prominence',
     '   - Is the person the DOMINANT element in the frame?',
@@ -178,13 +182,13 @@ export async function executeV3Step3(
       '{',
       '  "face_similarity": "YES",',
       '  "characteristic_preservation": "YES",',
-      '  "body_framing": "YES",',
+      '  "shot_type_match": "YES",',
       '  "person_prominence": "YES",',
       '  "overall_quality": "YES",',
       '  "branding_placement": "YES",',
       '  "explanations": {',
       '    "face_similarity": "Face matches selfie characteristics",',
-      '    "body_framing": "Person shown at 3/4 length, not cut off awkwardly",',
+      '    "shot_type_match": "Image matches medium-shot specification (head to waist)",',
       '    "person_prominence": "Person occupies ~50% of image height and is larger than background elements",',
       '    "branding_placement": "Logo visible and properly placed",',
       '    ...',
@@ -197,12 +201,12 @@ export async function executeV3Step3(
       '{',
       '  "face_similarity": "YES",',
       '  "characteristic_preservation": "YES",',
-      '  "body_framing": "YES",',
+      '  "shot_type_match": "YES",',
       '  "person_prominence": "YES",',
       '  "overall_quality": "YES",',
       '  "explanations": {',
       '    "face_similarity": "Face matches selfie characteristics",',
-      '    "body_framing": "Person shown at 3/4 length, not cut off awkwardly",',
+      '    "shot_type_match": "Image matches medium-shot specification (head to waist)",',
       '    "person_prominence": "Person occupies ~50% of image height and is larger than background elements",',
       '    ...',
       '  }',
@@ -268,11 +272,11 @@ export async function executeV3Step3(
           evaluation.characteristic_preservation === 'NO'
         ].some(Boolean)
 
-        // Check all required criteria including body framing, prominence, and branding if applicable
+        // Check all required criteria including shot type, prominence, and branding if applicable
         const baseApproved =
           evaluation.face_similarity === 'YES' &&
           evaluation.characteristic_preservation === 'YES' &&
-          evaluation.body_framing === 'YES' &&
+          evaluation.shot_type_match === 'YES' &&
           evaluation.person_prominence === 'YES' &&
           evaluation.overall_quality === 'YES'
         
@@ -297,7 +301,7 @@ export async function executeV3Step3(
         Logger.debug('V3 Step 3: Final Image Evaluation Details', {
           face_similarity: evaluation.face_similarity,
           characteristic_preservation: evaluation.characteristic_preservation,
-          body_framing: evaluation.body_framing,
+          shot_type_match: evaluation.shot_type_match,
           person_prominence: evaluation.person_prominence,
           overall_quality: evaluation.overall_quality,
           branding_placement: evaluation.branding_placement,
@@ -417,7 +421,7 @@ function parseFinalEvaluation(text: string) {
     const result: {
       face_similarity: 'YES' | 'NO' | 'UNCERTAIN'
       characteristic_preservation: 'YES' | 'NO' | 'UNCERTAIN'
-      body_framing: 'YES' | 'NO' | 'UNCERTAIN'
+      shot_type_match: 'YES' | 'NO' | 'UNCERTAIN'
       person_prominence: 'YES' | 'NO' | 'UNCERTAIN'
       overall_quality: 'YES' | 'NO' | 'UNCERTAIN'
       branding_placement?: 'YES' | 'NO' | 'UNCERTAIN'
@@ -425,7 +429,7 @@ function parseFinalEvaluation(text: string) {
     } = {
       face_similarity: normalizeYesNoUncertain(parsed.face_similarity),
       characteristic_preservation: normalizeYesNoUncertain(parsed.characteristic_preservation),
-      body_framing: normalizeYesNoUncertain(parsed.body_framing),
+      shot_type_match: normalizeYesNoUncertain(parsed.shot_type_match),
       person_prominence: normalizeYesNoUncertain(parsed.person_prominence),
       overall_quality: normalizeYesNoUncertain(parsed.overall_quality),
       explanations: (parsed.explanations as Record<string, string>) || {}
@@ -463,8 +467,8 @@ function generateAdjustmentSuggestions(failedCriteria: string[]): string {
     if (criterion.includes('characteristic_preservation')) {
       suggestions.push('Maintain unique facial features without beautification or idealization')
     }
-    if (criterion.includes('body_framing')) {
-      suggestions.push('Show more of the person\'s body - do NOT cut off at waist or mid-torso. Show at least 3/4 body (head to mid-thigh) or full body')
+    if (criterion.includes('shot_type_match')) {
+      suggestions.push('Adjust framing to better match the requested shot type - ensure body is cropped within the appropriate range for the shot type')
     }
     if (criterion.includes('person_prominence')) {
       suggestions.push('Make the person LARGER in the frame - they should occupy at least 40-50% of the image height and be larger than background elements')

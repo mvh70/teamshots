@@ -30,7 +30,7 @@ interface HandoffState {
   lastSelfieCount: number
 }
 
-const POLL_INTERVAL = 5000 // 5 seconds
+const POLL_INTERVAL = 2000 // 2 seconds
 
 export default function MobileHandoffQR({
   inviteToken,
@@ -68,7 +68,12 @@ export default function MobileHandoffQR({
       return
     }
 
-    setState(prev => ({ ...prev, loading: true, error: null }))
+    // Only show full loading state if we don't have a QR code yet
+    setState(prev => ({ 
+      ...prev, 
+      loading: !prev.qrUrl, 
+      error: null 
+    }))
     
     try {
       const response = await fetch('/api/mobile-handoff/create', {
@@ -88,8 +93,13 @@ export default function MobileHandoffQR({
         qrUrl: data.qrUrl,
         expiresAt: new Date(data.expiresAt),
         loading: false,
-        error: null
+        error: null,
+        // Reset device connected state for new token
+        deviceConnected: false
       }))
+      
+      // Reset connection tracking
+      previousDeviceConnected.current = false
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -119,32 +129,43 @@ export default function MobileHandoffQR({
       // Only update state if not aborted
       if (!abortControllerRef.current?.signal.aborted) {
         setState(prev => {
+          let hasChanges = false
           const newState = { ...prev }
 
-          // Check if device just connected
-          if (data.deviceConnected && !previousDeviceConnected.current) {
-            newState.deviceConnected = true
-            onMobileConnected?.()
+          // Check if device connection status changed
+          if (data.deviceConnected !== prev.deviceConnected) {
+            newState.deviceConnected = data.deviceConnected
+            hasChanges = true
+            
+            // Trigger callback if just connected
+            if (data.deviceConnected && !previousDeviceConnected.current) {
+              onMobileConnected?.()
+            }
           }
           previousDeviceConnected.current = data.deviceConnected
 
           // Check if selfie count increased
-          if (data.selfieCount > prev.lastSelfieCount && prev.lastSelfieCount > 0) {
-            onSelfieUploaded?.()
+          if (data.selfieCount > prev.lastSelfieCount) {
+             if (prev.lastSelfieCount > 0) {
+               onSelfieUploaded?.()
+             }
+             newState.lastSelfieCount = data.selfieCount
+             hasChanges = true
+          } else if (data.selfieCount !== prev.lastSelfieCount) {
+             // Sync count if it changed (e.g. decreased or initial load)
+             newState.lastSelfieCount = data.selfieCount
+             hasChanges = true
           }
-          newState.lastSelfieCount = data.selfieCount
 
           // Check if token expired - trigger refresh
           if (!data.valid) {
-            newState.token = null
-            newState.qrUrl = null
-            newState.expiresAt = null
-            newState.deviceConnected = false
-            // Trigger token refresh
+            // Trigger token refresh immediately
+            // We don't clear state here to avoid UI flash - createToken will replace it
             createToken()
+            return prev
           }
 
-          return newState
+          return hasChanges ? newState : prev
         })
       }
     } catch (error) {

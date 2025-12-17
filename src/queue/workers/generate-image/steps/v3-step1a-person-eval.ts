@@ -18,6 +18,7 @@ export interface V3Step1aEvalInput {
   aspectRatioConfig: { id: string; width: number; height: number }
   generationPrompt: string // JSON prompt - contains framing.shot_type
   clothingLogoReference?: BaseReferenceImage // Logo on clothing (if branding.position === 'clothing')
+  garmentCollageReference?: BaseReferenceImage // Garment collage from custom clothing (authorizes accessories)
   // Note: No backgroundBuffer - Step 1a generates on white background, actual background comes in Step 2
   generationId?: string // For cost tracking
   personId?: string // For cost tracking
@@ -50,19 +51,21 @@ export async function executeV3Step1aEval(
     expectedWidth,
     expectedHeight,
     generationPrompt,
-    clothingLogoReference
+    clothingLogoReference,
+    garmentCollageReference
   } = input
 
   Logger.debug('V3 Step 1a Eval: Evaluating person generation (grey background)', {
     hasClothingLogo: !!clothingLogoReference,
-    hasSelfieComposite: !!selfieComposite
+    hasSelfieComposite: !!selfieComposite,
+    hasGarmentCollage: !!garmentCollageReference
   })
 
   // Parse prompt to extract shot type (no longer passed as separate arg)
   const promptObj = JSON.parse(generationPrompt)
   const shotType = promptObj.framing?.shot_type || 'medium-shot'
   const shotLabel = shotType.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
-  const shotDescription = promptObj.framing?.description || `${shotLabel} framing`
+  const shotDescription = promptObj.framing?.description || promptObj.framing?.crop_points || `${shotLabel} framing`
 
   const metadata = await sharp(imageBuffer).metadata()
   const actualWidth = metadata.width ?? null
@@ -111,7 +114,10 @@ export async function executeV3Step1aEval(
     '',
     '2. composition_matches_shot',
     `   - Shot guidance: ${shotLabel} — ${shotDescription}`,
-    '   - Does subject pose and framing match?',
+    '   - Does the body framing reasonably match the requested shot type?',
+    '   - Answer YES if body is cropped within ±15% tolerance of the target (e.g., medium-shot cropped between bottom ribcage and top of hips).',
+    '   - Answer NO only if significantly wrong (e.g., showing full legs when medium-shot requested).',
+    '   - Minor variations in exact crop point should be ACCEPTED.',
     '',
     '3. identity_preserved',
     '   - Does the face clearly resemble the reference selfies?',
@@ -127,18 +133,20 @@ export async function executeV3Step1aEval(
     '   - Are there NO unauthorized add-ons, like tie, unless specified in the accessories list',
     '',
     '6. no_unauthorized_accessories',
-    '   - CRITICAL: Compare the reference selfies CAREFULLY to the generated image',
-    '   - Are there NO unauthorized accessories that are ABSENT from the reference selfies?',
+    '   - CRITICAL: Compare the reference selfies AND garment collage (if provided) CAREFULLY to the generated image',
+    '   - Are there NO unauthorized accessories that are ABSENT from BOTH the reference selfies AND the garment collage?',
     '   - Check specifically for:',
     '     * Jewelry: earrings, necklaces, bracelets, rings, watches, chains',
     '     * Piercings: ear piercings, nose piercings, facial piercings',
     '     * Glasses: eyeglasses, sunglasses, reading glasses',
     '     * Headwear: hats, caps, headbands, hair accessories',
     '     * Tattoos: any visible tattoos or body art',
-    '   - Answer NO (REJECT) if ANY accessory appears in the generated image but is NOT visible in ANY of the reference selfies',
-    '   - Answer NO (REJECT) if the person has earrings in the generated image but NO earrings in the selfies',
-    '   - Answer NO (REJECT) if the person has glasses in the generated image but NO glasses in the selfies',
-    '   - Answer YES only if ALL accessories in the generated image match what is visible in the reference selfies',
+    '     * Clothing accessories: belt, pocket square, tie, cufflinks',
+    '   - If a garment collage reference is provided, accessories visible in the collage ARE AUTHORIZED',
+    '   - Answer YES if all accessories appear in EITHER the selfies OR the garment collage',
+    '   - Answer NO (REJECT) only if an accessory appears in the generated image but is NOT in the selfies AND NOT in the garment collage',
+    '   - Answer NO (REJECT) if the person has earrings in the generated image but NO earrings in the selfies AND NO earrings in the collage',
+    '   - Answer NO (REJECT) if the person has glasses in the generated image but NO glasses in the selfies AND NO glasses in the collage',
     '   - Answer YES if no accessories are present in either the generated image or the selfies',
     '',
     '7. no_visible_reference_labels',
@@ -260,6 +268,15 @@ Generation prompt used:\n${generationPrompt}`
     })
     parts.push({
       inlineData: { mimeType: selfieComposite.mimeType, data: selfieComposite.base64 }
+    })
+  }
+
+  if (garmentCollageReference) {
+    parts.push({
+      text: garmentCollageReference.description ?? 'Garment collage showing authorized clothing and accessories for this outfit.'
+    })
+    parts.push({
+      inlineData: { mimeType: garmentCollageReference.mimeType, data: garmentCollageReference.base64 }
     })
   }
 

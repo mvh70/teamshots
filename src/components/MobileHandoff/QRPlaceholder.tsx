@@ -16,7 +16,7 @@ interface QRPlaceholderProps {
   onSelfieUploaded?: () => void
 }
 
-const POLL_INTERVAL = 5000
+const POLL_INTERVAL = 2000
 const REFRESH_BEFORE_EXPIRY = 60000
 const AUTO_REFRESH_INTERVAL = 3000 // Refresh every 3 seconds when mobile is connected
 
@@ -28,11 +28,7 @@ const subscribeMobile = (callback: () => void) => {
 
 const getMobileSnapshot = () => {
   if (typeof window === 'undefined') return false
-  return (
-    window.matchMedia('(max-width: 768px)').matches ||
-    'ontouchstart' in window ||
-    navigator.maxTouchPoints > 0
-  )
+  return window.matchMedia('(max-width: 768px)').matches
 }
 
 const getMobileServerSnapshot = () => false
@@ -76,7 +72,10 @@ export default function QRPlaceholder({
       return
     }
 
-    setLoading(true)
+    // Only set loading if we don't have a QR code yet
+    if (!qrUrl) {
+      setLoading(true)
+    }
     setError(null)
 
     try {
@@ -118,7 +117,7 @@ export default function QRPlaceholder({
       setLoading(false)
       setError(t('errors.createFailed'))
     }
-  }, [inviteToken, t])
+  }, [inviteToken, t, qrUrl])
 
   // Poll for status updates (logged-in users only)
   const pollStatus = useCallback(async () => {
@@ -132,9 +131,8 @@ export default function QRPlaceholder({
       if (!response.ok) {
         // If unauthorized or token not found, clear and recreate
         if (response.status === 401 || response.status === 404) {
-          setToken(null)
-          setQrUrl(null)
-          setDeviceConnected(false)
+          // Don't clear state immediately to avoid flash
+          
           if (typeof window !== 'undefined') {
             try {
               sessionStorage.removeItem('mobileHandoffToken')
@@ -151,13 +149,14 @@ export default function QRPlaceholder({
       const data = await response.json()
 
       // Update device connection state
-      setDeviceConnected(!!data.deviceConnected)
+      if (deviceConnected !== !!data.deviceConnected) {
+        setDeviceConnected(!!data.deviceConnected)
+      }
 
       // Check if token expired or invalid
       if (data.valid === false || data.expired === true) {
-        setToken(null)
-        setQrUrl(null)
-        setDeviceConnected(false)
+        // Don't clear state immediately to avoid flash
+        
         // Clear stored token
         if (typeof window !== 'undefined') {
           try {
@@ -172,7 +171,7 @@ export default function QRPlaceholder({
     } catch {
       // Silently fail polling
     }
-  }, [token, inviteToken, createToken])
+  }, [token, inviteToken, createToken, deviceConnected])
 
   // Initialize - restore from storage or create new token
   useEffect(() => {

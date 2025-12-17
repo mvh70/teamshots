@@ -20,11 +20,12 @@
   "landing": {
     "teamshotspro": {
       "hero": {
-        "titleMain": "Professional team photos",
+        "titleLine1": "Professional headshots",
+        "titleLine2": "for your whole team",
         "titleHighlightTime": "in 60 seconds",
-        "subtitle": "You set the brand essentials (e.g. logo, clothing style, backgrounds). Your team picks the rest (e.g. colors and poses). Everyone looks unified yet personal. Professional headshots from any selfie in 60 seconds, ",
-        "subtitleBold": "no photographer or scheduling drama required.",
-        "subtitleMain": "Turn any selfie into consistent, on-brand headshots. No photographer, no coordination.",
+        "subtitle": "Set your brand style and generate professional headshots for every team member. Consistent quality across your entire company.",
+        "subtitleBold": "100% on-brand, 0% hassle.",
+        "subtitleMain": "Turn individual selfies into a unified team look. No photographer, no scheduling.",
         "finalCtaTitle": "Ready to transform your team photos?",
         "finalCtaSubtitle": "Get your team's professional headshots and see the difference in 60 seconds.",
         "getStarted": "Get Started",
@@ -75,7 +76,7 @@
             "duration": "1 min"
           },
           "3": {
-            "title": "Professional photos in 60 seconds",
+            "title": "Individual headshots generated",
             "description": "Get polished headshots instantly. No editing required.",
             "duration": "60s/person"
           },
@@ -606,6 +607,9 @@
       "tipSpam": "Check your spam or junk folder",
       "tipCorrect": "Make sure you entered the correct email address",
       "tipDelay": "The email might take a few minutes to arrive",
+      "tip1": "Check your spam or junk folder",
+      "tip2": "Verify the email address is correct",
+      "tip3": "Wait a few minutes for delivery",
       "backToSignIn": "Back to sign in",
       "loading": "Loading…"
     }
@@ -1528,7 +1532,15 @@
     },
     "magicLink": {
       "subject": "Your sign-in link",
-      "body": "Click the following link to sign in:\n\n{link}\n\nThis link expires in 24 hours."
+      "body": "Click the following link to sign in:\n\n{link}\n\nThis link expires in 24 hours.",
+      "preview": "Click the link to sign in to your account",
+      "title": "Sign in to your account",
+      "greeting": "Click the button below to securely sign in to your TeamShots account.",
+      "instructions": "This magic link will sign you in without needing a password.",
+      "button": "Sign in",
+      "expires": "This link expires in 24 hours for security reasons.",
+      "linkFallback": "If the button doesn't work, copy and paste this link into your browser:",
+      "footer": "If you didn't request this sign-in link, you can safely ignore this email."
     },
     "teamInvite": {
       "subject": "Team invitation from {teamName}",

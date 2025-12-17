@@ -56,6 +56,7 @@ export function CustomClothingSelector({
   const [error, setError] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const previewSetRef = useRef<string | null>(null)
+  const analyzingRef = useRef(false)
 
   // Sync preview URL from value.outfitS3Key when editing existing outfits
   // This is an intentional prop sync pattern: when the parent provides a saved key,
@@ -77,6 +78,23 @@ export function CustomClothingSelector({
   }, [value.outfitS3Key, token])
   /* eslint-enable react-hooks/exhaustive-deps */
 
+  // Sync analyzing ref with state for debugging
+  useEffect(() => {
+    analyzingRef.current = analyzing
+    if (analyzing) {
+      console.log('[CustomClothingSelector] Analyzing state is true, spinner should be visible')
+      // Force check if spinner element exists in DOM
+      setTimeout(() => {
+        const spinner = document.getElementById('analyzing-spinner-element')
+        console.log('[CustomClothingSelector] Spinner element in DOM:', spinner)
+        if (spinner) {
+          console.log('[CustomClothingSelector] Spinner computed styles:', window.getComputedStyle(spinner))
+          console.log('[CustomClothingSelector] Spinner parent:', spinner.parentElement)
+        }
+      }, 100)
+    }
+  }, [analyzing])
+
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0]
@@ -96,8 +114,10 @@ export function CustomClothingSelector({
         return
       }
 
+      // Clear error
       setError(null)
-      setUploading(true)
+      setUploading(true) // Track internally but don't show spinner
+    
       Telemetry.increment('outfit.upload.started')
 
       try {
@@ -118,11 +138,30 @@ export function CustomClothingSelector({
         const uploadData: UploadResponse = await uploadResponse.json()
         Logger.info('Outfit uploaded', { assetId: uploadData.assetId, reused: uploadData.reused })
 
-        // Set preview URL immediately
+        // Set preview URL first
         setPreviewUrl(uploadData.url)
         setUploading(false)
+        
+        // Set analyzing state FIRST and ensure it renders before any parent updates
+        console.log('[CustomClothingSelector] Setting analyzing to true')
+        setAnalyzing(true)
+        analyzingRef.current = true
+        
+        // Force a synchronous render cycle to ensure analyzing state is visible
+        await new Promise<void>((resolve) => {
+          // Use multiple animation frames to ensure React processes the update
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                resolve()
+              }, 100)
+            })
+          })
+        })
+        
+        Telemetry.increment('outfit.analysis.started')
 
-        // Save upload data immediately (before analysis)
+        // Save upload data AFTER spinner is visible (delayed to avoid parent re-render interference)
         // In admin mode: type='predefined' (admin is setting the preset outfit)
         // In user mode: type='user-choice' (user is customizing their outfit)
         onChange({
@@ -133,8 +172,6 @@ export function CustomClothingSelector({
         })
 
         // 2. Analyze colors using Gemini
-        setAnalyzing(true)
-        Telemetry.increment('outfit.analysis.started')
 
         // Convert file to base64
         const reader = new FileReader()
@@ -213,7 +250,12 @@ export function CustomClothingSelector({
   // Determine if upload section should be shown based on mode and type
   const shouldShowUpload = mode === 'admin'
     ? value.type === 'predefined'  // Admin mode: show when predefined (admin configures outfit)
-    : value.type === 'user-choice' || !!(value.outfitS3Key || value.assetId)  // User mode: show when user-choice OR preset outfit exists
+    : true  // User mode: always show upload (outfit1 package requires user to upload their outfit)
+
+  // Debug: Log render with analyzing state
+  if (analyzing) {
+    console.log('[CustomClothingSelector] Component rendering with analyzing=true, shouldShowUpload=', shouldShowUpload)
+  }
 
   return (
     <div className="space-y-4">
@@ -231,17 +273,6 @@ export function CustomClothingSelector({
                   className="absolute inset-0 w-full h-full object-cover"
                   unoptimized
                 />
-                {/* Loading/Analyzing Overlay */}
-                {(uploading || analyzing) && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <div className="text-center text-white">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2" />
-                      <p className="text-sm">
-                        {uploading ? 'Uploading outfit...' : 'Analyzing colors...'}
-                      </p>
-                    </div>
-                  </div>
-                )}
                 {/* Choose File Button Overlay */}
                 <div className="absolute inset-x-0 bottom-0 p-3 flex justify-center bg-gradient-to-t from-black/30 to-transparent">
                   <label
@@ -258,31 +289,20 @@ export function CustomClothingSelector({
               </div>
             ) : (
               <div className="p-6">
-                {uploading || analyzing ? (
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400 mx-auto mb-4" />
-                    <p className="text-sm text-gray-600 mb-2">
-                      {uploading ? 'Uploading outfit...' : 'Analyzing colors...'}
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-sm text-gray-600 mb-2">
-                      Click to upload or drag and drop
-                    </p>
-                    <label
-                      htmlFor="outfit-upload"
-                      className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md ${
-                        disabled
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-brand-primary text-white hover:bg-brand-primary-hover cursor-pointer'
-                      }`}
-                    >
-                      Choose File
-                    </label>
-                  </>
-                )}
+                <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-sm text-gray-600 mb-2">
+                  Click to upload or drag and drop
+                </p>
+                <label
+                  htmlFor="outfit-upload"
+                  className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md ${
+                    disabled
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-brand-primary text-white hover:bg-brand-primary-hover cursor-pointer'
+                  }`}
+                >
+                  Choose File
+                </label>
               </div>
             )}
             <input
@@ -295,8 +315,50 @@ export function CustomClothingSelector({
             />
           </div>
 
+          {/* Analyzing Spinner - shown where results appear */}
+          {analyzing && (() => {
+            console.log('[CustomClothingSelector] INSIDE shouldShowUpload, rendering spinner, analyzing=', analyzing)
+            // Force render by using a ref to check parent
+            setTimeout(() => {
+              const spinner = document.getElementById('analyzing-spinner-element')
+              if (spinner) {
+                const parent = spinner.parentElement
+                console.log('[CustomClothingSelector] Spinner parent classes:', parent?.className)
+                console.log('[CustomClothingSelector] Spinner parent display:', parent ? window.getComputedStyle(parent).display : 'no parent')
+                console.log('[CustomClothingSelector] Spinner own display:', window.getComputedStyle(spinner).display)
+                console.log('[CustomClothingSelector] Spinner own visibility:', window.getComputedStyle(spinner).visibility)
+                console.log('[CustomClothingSelector] Spinner own height:', window.getComputedStyle(spinner).height)
+              }
+            }, 50)
+            return (
+              <div 
+                data-testid="analyzing-spinner"
+                id="analyzing-spinner-element"
+                className="text-sm text-gray-700 bg-blue-100 p-6 rounded-lg border-4 border-blue-500 shadow-lg" 
+                role="status" 
+                aria-live="polite"
+                style={{ 
+                  display: 'flex !important',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  minHeight: '60px',
+                  width: '100%',
+                  position: 'relative',
+                  zIndex: 9999,
+                  backgroundColor: 'rgb(219, 234, 254)',
+                  borderColor: 'rgb(59, 130, 246)'
+                }}
+              >
+                <div className="flex items-center justify-center gap-3 w-full">
+                  <div className="animate-spin rounded-full h-6 w-6 border-3 border-blue-600 border-t-transparent" style={{ borderWidth: '3px' }} />
+                  <p className="text-blue-900 font-bold text-lg">🔍 Analyzing outfit colors...</p>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Outfit Details - shown after analysis */}
-          {value.description && (
+          {value.description && !analyzing && (
             <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
               <p className="font-medium mb-1">Detected outfit:</p>
               <p>{value.description}</p>
@@ -304,7 +366,7 @@ export function CustomClothingSelector({
           )}
 
           {/* Color Swatches - shown after analysis */}
-          {value.colors && (
+          {value.colors && !analyzing && (
             <div className="flex gap-2 flex-wrap">
               <div className="flex items-center gap-1">
                 <div

@@ -52,7 +52,8 @@ EVALUATION CRITERIA:
 1. **Background Quality** (CRITICAL):
    - Background should be suitable for compositing a person into it
    - Background should have appropriate depth and realism
-   - Background should not contain any people or subjects
+   - Background should NOT contain any SHARP, PROMINENT, or IN-FOCUS people that would compete with the main subject
+   - Blurred, out-of-focus, or distant background people are ACCEPTABLE if they are part of an urban/street scene and provide depth/context
    - Background should look professional and well-composed`
 
   // Add logo-specific criteria only if logo is expected
@@ -99,7 +100,9 @@ Provide your evaluation as a JSON object:
     "logoMatchDetails": "describe what matches/doesn't match (letters, colors, icons)",
     "logoQuality": "description of logo quality",
     "backgroundQuality": "description of background quality",
-    "hasPeople": true/false
+    "hasProminentPeople": true/false,
+    "hasBlurredBackgroundPeople": true/false,
+    "peopleDescription": "describe any people present and their prominence/focus level"
   },
   "suggestedAdjustments": "If not approved, what specific changes should be made?"
 }
@@ -109,7 +112,10 @@ REJECTION CRITERIA (any of these = REJECT):
 - Logo letters/text don't match reference exactly
 - Logo colors significantly different from reference
 - Logo icons/symbols missing or modified
-- Logo not present at all` : `
+- Logo not present at all
+- Background contains SHARP, PROMINENT, or IN-FOCUS people
+
+NOTE: Blurred/out-of-focus background people in urban/street scenes are acceptable` : `
 
 RESPONSE FORMAT:
 Provide your evaluation as a JSON object:
@@ -118,14 +124,18 @@ Provide your evaluation as a JSON object:
   "reason": "Brief explanation of your decision",
   "details": {
     "backgroundQuality": "description of background quality",
-    "hasPeople": true/false
+    "hasProminentPeople": true/false,
+    "hasBlurredBackgroundPeople": true/false,
+    "peopleDescription": "describe any people present and their prominence/focus level"
   },
   "suggestedAdjustments": "If not approved, what specific changes should be made?"
 }
 
 REJECTION CRITERIA:
-- Background contains people or subjects
-- Background is unsuitable for compositing (poor quality, unrealistic)`
+- Background contains SHARP, PROMINENT, or IN-FOCUS people that compete with the subject
+- Background is unsuitable for compositing (poor quality, unrealistic)
+
+NOTE: Blurred/out-of-focus background people in urban/street scenes are acceptable and do NOT trigger rejection`
 
   const evaluationPrompt = basePrompt + logoCriteria + responseFormat
 
@@ -180,7 +190,12 @@ REJECTION CRITERIA:
         logoMatchDetails?: string
         logoQuality?: string
         backgroundQuality?: string
-        hasPeople?: boolean
+        visualCompetition?: string
+        isTooBusy?: boolean
+        hasPeople?: boolean // Legacy field for backward compatibility
+        hasProminentPeople?: boolean
+        hasBlurredBackgroundPeople?: boolean
+        peopleDescription?: string
       }
       suggestedAdjustments?: string
     }
@@ -188,12 +203,22 @@ REJECTION CRITERIA:
     let finalStatus = parsed.status
     let finalReason = parsed.reason
     
+    // Check for prominent people (applies regardless of logo presence)
+    const hasProminentPeople = parsed.details.hasProminentPeople === true
+    
+    if (hasProminentPeople) {
+      finalStatus = 'Not Approved'
+      finalReason = `The background contains prominent, sharp, or in-focus people that would compete with the main subject. ${parsed.details.peopleDescription || 'People in the background must be blurred/out-of-focus only.'}`
+    }
+    
     // Only apply logo-specific rejection logic if logo was expected
-    if (hasLogoReference) {
+    if (hasLogoReference && finalStatus !== 'Not Approved') {
       // Force rejection if reference labels are detected (even if model approved)
       const hasReferenceLabels = parsed.details.hasReferenceLabels === true
       // Force rejection if logo doesn't match reference
       const logoMismatch = parsed.details.logoMatchesReference === false
+      // Force rejection if background is too busy
+      const isTooBusy = parsed.details.isTooBusy === true
       
       if (hasReferenceLabels) {
         finalStatus = 'Not Approved'
@@ -201,7 +226,16 @@ REJECTION CRITERIA:
       } else if (logoMismatch) {
         finalStatus = 'Not Approved'
         finalReason = `Logo does not match reference: ${parsed.details.logoMatchDetails || 'Letters, colors, or icons differ from the original'}. All elements of the logo must exactly match the reference.`
+      } else if (isTooBusy) {
+        finalStatus = 'Not Approved'
+        finalReason = `Background is too busy/cluttered: ${parsed.details.visualCompetition || 'Distracting elements present'}. The background must be clean enough for compositing.`
       }
+    } else if (!hasLogoReference && finalStatus !== 'Not Approved') {
+        // If no logo, still check for busyness
+        if (parsed.details.isTooBusy === true) {
+            finalStatus = 'Not Approved'
+            finalReason = `Background is too busy/cluttered: ${parsed.details.visualCompetition || 'Distracting elements present'}. The background must be clean enough for compositing.`
+        }
     }
 
     const evaluation: ImageEvaluationResult = {

@@ -10,6 +10,10 @@ import type { AdapterUser } from "next-auth/adapters"
 import type { JWT } from "next-auth/jwt"
 import { Env } from '@/lib/env'
 import { randomBytes } from 'crypto'
+import { BRAND_CONFIG } from '@/config/brand'
+import MagicLinkEmail from '@/emails/MagicLink'
+import { render } from '@react-email/render'
+import { getEmailTranslation } from '@/lib/translations'
 
 // SECURITY: Tightened session configuration for better security
 const SESSION_MAX_AGE_SECONDS = 15 * 60 // 15 minutes (reduced from 30)
@@ -181,8 +185,64 @@ export const authOptions = {
 
     // Magic link authentication
     ResendProvider({
+      id: 'email',
       apiKey: Env.string('RESEND_API_KEY'),
-      from: Env.string('EMAIL_FROM'),
+      from: Env.string('EMAIL_FROM') || `${BRAND_CONFIG.name} <${BRAND_CONFIG.contact.hello}>`,
+      async sendVerificationRequest({ identifier: email, url, provider }) {
+        // Detect locale from email domain or default to 'en'
+        // For now, default to 'en' - could be enhanced to detect from user preferences
+        const locale = 'en' as 'en' | 'es'
+        
+        // Parse the URL to extract and fix the callbackUrl
+        // The url parameter contains the full callback URL with token
+        // We need to ensure the callbackUrl points to dashboard, not verify-request
+        const urlObj = new URL(url)
+        const currentCallbackUrl = urlObj.searchParams.get('callbackUrl')
+        
+        // If callbackUrl points to verify-request, replace it with dashboard
+        if (currentCallbackUrl && currentCallbackUrl.includes('/auth/verify-request')) {
+          // Extract the original callbackUrl from the verify-request URL if present
+          const verifyRequestUrl = new URL(currentCallbackUrl, urlObj.origin)
+          const originalCallbackUrl = verifyRequestUrl.searchParams.get('callbackUrl') || '/app/dashboard'
+          
+          // Update the callbackUrl in the magic link URL
+          urlObj.searchParams.set('callbackUrl', originalCallbackUrl)
+        } else if (!currentCallbackUrl) {
+          // If no callbackUrl, default to dashboard
+          urlObj.searchParams.set('callbackUrl', '/app/dashboard')
+        }
+        
+        const magicLinkUrl = urlObj.toString()
+        
+        const subject = getEmailTranslation('magicLink.subject', locale)
+        
+        // Render the React email template to HTML
+        const html = await render(
+          MagicLinkEmail({
+            magicLink: magicLinkUrl,
+            locale,
+          })
+        )
+        
+        // Also provide plain text fallback
+        const text = getEmailTranslation('magicLink.body', locale, { link: magicLinkUrl })
+        
+        try {
+          const { Resend } = await import('resend')
+          const resend = new Resend(provider.apiKey)
+          
+          await resend.emails.send({
+            from: provider.from as string,
+            to: email,
+            subject,
+            html,
+            text,
+          })
+        } catch (error) {
+          console.error('Failed to send magic link email:', error)
+          throw error
+        }
+      },
     })
   ],
   

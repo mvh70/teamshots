@@ -20,6 +20,7 @@ import * as subjectElement from '../../elements/subject'
 import * as branding from '../../elements/branding'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
 import { CostTrackingService } from '@/domain/services/CostTrackingService'
+import { AssetService } from '@/domain/services/AssetService'
 import { prisma } from '@/lib/prisma'
 
 export type Outfit1ServerPackage = typeof outfit1Base & {
@@ -162,29 +163,59 @@ export const outfit1Server: Outfit1ServerPackage = {
 
     if (hasCustomOutfit && effectiveSettings.customClothing) {
       Logger.info('[DEBUG] Entering custom clothing block', { generationId })
-      const customClothingPrompt = customClothing.buildCustomClothingPrompt(effectiveSettings.customClothing)
-      Logger.info('[DEBUG] Custom clothing prompt built', {
-        generationId,
-        hasPrompt: !!customClothingPrompt,
-        promptLength: customClothingPrompt?.length,
-        prompt: customClothingPrompt
-      })
 
-      if (customClothingPrompt) {
-        // Add outfit description to the subject prompt
+      // Add color specifications if provided (user-adjustable)
+      // Colors are sent as structured data to complement the garment collage visual reference
+      if (effectiveSettings.customClothing.colors) {
         if (typeof context.payload.subject !== 'object' || context.payload.subject === null) {
           context.payload.subject = {}
         }
-        (context.payload.subject as Record<string, unknown>).outfit = customClothingPrompt
-        Logger.info('[DEBUG] Added outfit to context.payload.subject', {
-          generationId,
-          subjectPayload: JSON.stringify(context.payload.subject)
-        })
+
+        const colorSpec: Record<string, string> = {}
+        const colors = effectiveSettings.customClothing.colors as Record<string, string>
+
+        if (colors.topBase) colorSpec.top_color = colors.topBase
+        if (colors.bottom) colorSpec.bottom_color = colors.bottom
+        if (colors.topAccent) colorSpec.accent_color = colors.topAccent
+
+        if (Object.keys(colorSpec).length > 0) {
+          (context.payload.subject as Record<string, unknown>).clothing_colors = colorSpec
+          Logger.info('[DEBUG] Added clothing colors to context.payload.subject', {
+            generationId,
+            colors: colorSpec
+          })
+        }
       }
 
       // Add garment reference to referenceImages
-      const outfitKey = effectiveSettings.customClothing.outfitS3Key
+      let outfitKey = effectiveSettings.customClothing.outfitS3Key
       const cachedCollageKey = effectiveSettings.customClothing.collageS3Key
+
+      // If no outfitS3Key but assetId is provided, resolve assetId to get S3 key
+      if (!outfitKey && effectiveSettings.customClothing.assetId) {
+        try {
+          const asset = await AssetService.getAsset(effectiveSettings.customClothing.assetId)
+          if (asset) {
+            outfitKey = asset.s3Key
+            Logger.info('[DEBUG] Resolved assetId to S3 key', {
+              generationId,
+              assetId: effectiveSettings.customClothing.assetId,
+              s3Key: outfitKey
+            })
+          } else {
+            Logger.warn('[DEBUG] Asset not found for assetId', {
+              generationId,
+              assetId: effectiveSettings.customClothing.assetId
+            })
+          }
+        } catch (error) {
+          Logger.error('[DEBUG] Failed to resolve assetId to S3 key', {
+            generationId,
+            assetId: effectiveSettings.customClothing.assetId,
+            error: error instanceof Error ? error.message : String(error)
+          })
+        }
+      }
 
       if (outfitKey) {
         try {
@@ -212,15 +243,22 @@ export const outfit1Server: Outfit1ServerPackage = {
             if (!outfitImage) {
               Logger.warn('Outfit image download returned null', { outfitKey, generationId })
             } else {
-            // Download logo if provided (for branding on outfit)
+            // Download logo ONLY if branding is on clothing (not background or elements)
             let logoImage: { base64: string; mimeType: string } | null = null
-            if (effectiveSettings.branding?.type !== 'exclude' && effectiveSettings.branding?.logoKey) {
+            if (effectiveSettings.branding?.type !== 'exclude' &&
+                effectiveSettings.branding?.logoKey &&
+                effectiveSettings.branding?.position === 'clothing') {
               try {
                 logoImage = await downloadAssetAsBase64({ bucketName, s3Client, key: effectiveSettings.branding.logoKey })
                 if (!logoImage) {
                   Logger.warn('Logo image download returned null, proceeding without logo', {
                     logoKey: effectiveSettings.branding.logoKey,
                     generationId
+                  })
+                } else {
+                  Logger.info('[DEBUG] Logo downloaded for clothing branding in collage', {
+                    generationId,
+                    position: effectiveSettings.branding.position
                   })
                 }
               } catch (error) {
@@ -230,6 +268,12 @@ export const outfit1Server: Outfit1ServerPackage = {
                   error: error instanceof Error ? error.message : String(error)
                 })
               }
+            } else if (effectiveSettings.branding?.logoKey) {
+              Logger.info('[DEBUG] Logo present but not for clothing - skipping in collage', {
+                generationId,
+                brandingType: effectiveSettings.branding.type,
+                brandingPosition: effectiveSettings.branding.position
+              })
             }
 
             // Generate garment collage using Gemini
@@ -350,7 +394,7 @@ export const outfit1Server: Outfit1ServerPackage = {
             payload.referenceImages.push({
               base64: collageBase64,
               mimeType: 'image/png',
-              description: 'Garment collage - dress the person using these exact clothing items and style. Match the colors, fit, and details shown in each garment.'
+              description: 'GARMENT COLLAGE - Dress the person in these exact clothing items. Match the style, fit, and details shown in each garment precisely. Use the specified clothing_colors from the subject JSON for accurate color rendering (user may have adjusted colors). This is professional business attire - ensure proper fit and styling.'
             })
 
             Logger.info('Added garment collage to reference images', {
@@ -402,18 +446,38 @@ async function createGarmentCollage(
   try {
     const { generateWithGemini } = await import('@/queue/workers/generate-image/gemini')
 
-    const prompt = `Ultra-realistic 8K flat-lay photo in strict knolling style. Top-down 90º shot of the clothing objects from the attached image, fully disassembled into 8–12 key parts and arranged in a clean grid or radial pattern on a minimalist wooden or matte gray table. Even spacing, perfect alignment, no overlaps, no extra objects. Soft, diffused multi-source lighting with subtle shadows, neutral color balance and crisp focus across the whole frame. Highly detailed real-world materials (fabric textures, buttons, zippers, stitching). For every part, add a thin white rectangular frame and a short, sharp English label in clean sans-serif text, placed beside the component without covering it; annotations must be legible but unobtrusive.
+    const prompt = `Create a high-quality flat-lay garment collage from the attached outfit image.
 
-Key clothing items to display from the reference image:
-- Shirt/top (main upper garment)
-- Jacket/blazer (if present)
-- Pants/trousers
-- Shoes (if visible)
-- Accessories (belt, tie, pocket square, etc. if present)
+GOAL: Extract and display ONLY the actual clothing items and accessories visible in the input image.
 
-${logo ? `LOGO PLACEMENT: If a logo image is provided, place it naturally on the shirt or jacket as if embroidered or printed on the fabric.` : ''}
+LAYOUT INSTRUCTIONS:
+- Disassemble the outfit into its individual components.
+- Arrange items in a clean, organized grid or knolling pattern on a neutral background (white or light gray).
+- Ensure even spacing and no overlaps.
+- Each item must be clearly separated.
+- Add a subtle drop shadow to give depth.
+- Label each item with a clean, sans-serif text label next to it (e.g., "Jacket", "Shirt", "Pants").
 
-Style: Professional product photography, sharp focus, minimal aesthetic.`
+CRITICAL RULES (ANTI-HALLUCINATION):
+1. NO DUPLICATES: Each physical item from the source image must appear EXACTLY ONCE. Do not show the same shirt twice.
+2. ONLY VISIBLE ITEMS: Do not invent items. If the person is not wearing a watch, do not add a watch. If you cannot see shoes, do not add shoes.
+3. NO HUMAN PARTS: Do not include hands, feet, heads, or bodies. Only the inanimate clothing/accessories.
+4. EXACT MATCH: The extracted items must look identical to the source (same color, pattern, texture, logo).
+
+ITEMS TO EXTRACT (ONLY IF VISIBLE):
+- Outerwear (Jacket, Coat, Blazer) - if present
+- Tops (Shirt, T-shirt, Sweater, Hoodie)
+- Bottoms (Pants, Jeans, Shorts, Skirt)
+- Footwear (One pair of shoes/boots) - IF VISIBLE
+- Accessories (ONLY IF CLEARLY VISIBLE: Watch, Glasses, Hat, Bag, Belt, Scarf, Jewelry)
+
+${logo ? `LOGO PLACEMENT (MANDATORY):
+- You MUST place the provided logo on the primary top garment (Shirt/T-shirt/Hoodie).
+- If there is an outer layer (Jacket), place the logo on the inner layer (Shirt) if visible, otherwise on the Jacket.
+- Position the logo naturally on the chest area.
+- It should look like it is printed or embroidered on the fabric.` : ''}
+
+Style: Clean, commercial product photography.`
 
     // Build reference images
     const images = [
@@ -442,7 +506,7 @@ Style: Professional product photography, sharp focus, minimal aesthetic.`
       '1:1', // Square aspect ratio for collage
       undefined, // no resolution specified
       {
-        temperature: 0.3
+        temperature: 0.2
       }
     )
 

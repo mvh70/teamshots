@@ -138,25 +138,34 @@ export async function executeV3Step1b(
   let brandingRules: string[] = []
   
   if (sceneBranding && sceneBranding.enabled === true) {
+    // Extract rules array if present
     if (Array.isArray(sceneBranding.rules)) {
       brandingRules = sceneBranding.rules as string[]
-      Logger.debug('V3 Step 1b: Scene branding detected', {
-        generationId,
-        position: sceneBranding.position,
-        placement: sceneBranding.placement,
-        ruleCount: brandingRules.length
-      })
     }
     
-    // Remove rules from branding object to avoid duplication in prompt
-    // Rules will be added as clear text instructions in "Branding Requirements" section
+    // Extract placement text if present (this often contains the main branding instructions)
+    if (typeof sceneBranding.placement === 'string' && sceneBranding.placement.trim()) {
+      brandingRules.unshift(sceneBranding.placement as string)
+    }
+    
+    Logger.debug('V3 Step 1b: Scene branding detected', {
+      generationId,
+      position: sceneBranding.position,
+      ruleCount: brandingRules.length
+    })
+    
+    // Remove rules and placement from branding object to avoid duplication in JSON
+    // These will be added as clear text instructions in "Branding Requirements" section
     delete sceneBranding.rules
+    delete sceneBranding.placement
   }
 
-  // Extract scene (exclude subject, camera, lighting, rendering)
+  // Extract scene (exclude subject, lighting, rendering)
+  // We explicitly include camera settings if provided to respect user's depth of field choices
   const backgroundPrompt = {
     scene: promptObj.scene,
-    lighting: promptObj.lighting // Keep lighting for consistency with person
+    lighting: promptObj.lighting, // Keep lighting for consistency with person
+    camera: promptObj.camera // Include camera settings (aperture, etc.) if provided
   }
 
   // Compose prompt for background generation
@@ -164,6 +173,9 @@ export async function executeV3Step1b(
   
   // Check if this is a neutral or gradient background (plain wall requirements apply)
   const isPlainBackground = styleSettings?.background?.type === 'neutral' || styleSettings?.background?.type === 'gradient'
+  
+  // Check if user provided specific camera/aperture settings
+  const hasUserCameraSettings = !!promptObj.camera && Object.keys(promptObj.camera).length > 0
   
   const structuredPrompt = [
     'You are a professional photographer creating a background scene for a professional photo.',
@@ -176,12 +188,21 @@ export async function executeV3Step1b(
     '- Generate ONLY the background/environment/scene - NO people, NO subjects, NO persons.',
     '- Do not add any format frames or aspect ratio constraints - preserve the natural format of the background, preferably in wider format, to make it easier to compose the person in the center later.',
     '- If no background image is provided, create a high-quality, professional background that matches the scene description.',
+    '- If a custom background image is provided and contains watermarks, logos, or text overlays, remove them seamlessly while maintaining the background quality and integrity.',
     ...(isPlainBackground 
       ? ['- Create subtle depth and realism through smooth lighting gradients ONLY - never through architectural features, lines, or interruptions.']
       : ['- Create depth and realism in the scene appropriate to the background type.']),
-    '- Ensure the background is suitable for compositing a person into it later. The logo element should be placed off center, so that we can compose the person in the center later. It is ok if the person overlaps the logo element.',
-    '- Leave space in the composition for a person to be added (center or appropriate position).',
+    
+    // Dynamic Aperture / Depth Instructions
+    ...(hasUserCameraSettings 
+      ? ['- **Camera Settings:** Respect the specific camera settings provided in the JSON (e.g., aperture, depth of field).'] 
+      : ['- **Depth of Field:** Generate the background with a wide aperture look (f/2.8) to create soft bokeh and separation, ensuring the subject will pop when composited later.']),
+
+    '- **Composition:** Compose the scene with a clear, uncluttered central area where the portrait subject will stand. Any complex elements or logos should be placed off-center.',
     '- CRITICAL: Do NOT add any cables, wires, cords, or electrical connections to the logo or any scene elements. The logo should appear clean and standalone without any attached cables or wires.',
+    ...(promptObj.lighting?.direction ? [
+      `- **Lighting Consistency:** The lighting MUST come from the direction specified in the JSON (${promptObj.lighting.direction}). Do NOT include light sources (windows, lamps) that contradict this direction.`
+    ] : []),
   ]
 
   // Add strict plain wall requirements ONLY for neutral and gradient backgrounds
@@ -238,6 +259,8 @@ export async function executeV3Step1b(
     if (isPlainBackground) {
       referenceInstructions.push(
         '- **CRITICAL Logo Placement (Neutral/Gradient Backgrounds Only):** The logo should be mounted FLAT ON THE WALL SURFACE as physical signage (like vinyl lettering or printed acrylic). It should follow the natural contours and lighting of the wall behind it.',
+        '- **Wall Placement Only:** Place the logo ONLY on solid walls or wall surfaces - NEVER on windows, glass, doors, or transparent surfaces.',
+        '- **Follow Wall Design:** The logo must conform to and follow the wall\'s surface design, flow, texture, and any architectural features (curved walls, textured surfaces, etc.).',
         '- The logo should receive the SAME LIGHTING as the wall - if the wall has gradient lighting (brighter on one side), the logo should reflect that same lighting pattern.',
         '- Add VERY SUBTLE soft shadows around/beneath the logo to suggest it\'s a physical object on the wall, not painted or floating.',
         '- The logo should appear SLIGHTLY OUT OF FOCUS compared to a sharp subject in the foreground (respecting the depth of field from a 70mm f/2.0 lens).',
@@ -245,6 +268,8 @@ export async function executeV3Step1b(
       )
     } else {
       referenceInstructions.push(
+        '- **Wall Placement Only:** Place the logo ONLY on solid walls or wall surfaces - NEVER on windows, glass, doors, or transparent surfaces.',
+        '- **Follow Wall Design:** The logo must conform to and follow the wall\'s surface design, flow, texture, and any architectural features.',
         '- Ensure the logo is integrated naturally into the scene with appropriate depth and lighting.'
       )
     }
@@ -283,19 +308,18 @@ export async function executeV3Step1b(
     generationId,
     promptLength: composedPrompt.length,
     referenceCount: referenceImages.length,
-    note: 'No aspect ratio constraint - background format will be preserved'
+    note: 'Aspect ratio constrained to match target output'
   })
 
-  // Generate with Gemini (fixed at 1K resolution, no aspect ratio constraint, no camera/lighting settings)
-  // Note: We don't constrain aspect ratio here - custom backgrounds preserve their format,
-  // and generated backgrounds will be composited in Step 2 which handles format constraints
+  // Generate with Gemini (fixed at 1K resolution, with aspect ratio constraint)
+  // Note: We constrain aspect ratio here to prevent Step 2 from having to "outpaint" or stretch
   let generationResult: Awaited<ReturnType<typeof generateWithGemini>>
   try {
     logPrompt('V3 Step 1b', composedPrompt)
     generationResult = await generateWithGemini(
       composedPrompt,
       referenceImages,
-      undefined, // No aspect ratio constraint - preserve original format or let model decide
+      aspectRatio, // Enforce aspect ratio constraint
       '1K', // Fixed resolution for raw asset
       {
         temperature: AI_CONFIG.GENERATION_TEMPERATURE,

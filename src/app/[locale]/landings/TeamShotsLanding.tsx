@@ -57,21 +57,26 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bg-gray-50/30 -z-10"></div>
       
       {/* Hero Section - Professional B2B Layout */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-20 sm:pb-24 lg:pt-40 lg:pb-24">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-16 lg:gap-20 items-center">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-20 sm:pb-24 lg:pb-28">
+        
+        {/* Full Width Heading Part 1 (Lines 1 & 2) */}
+        <div className="text-left mb-2 lg:mb-4">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold text-text-dark leading-[0.9] tracking-tight">
+            <span className="block">{t('titleLine1')}</span>
+            <span className="block">{t('titleLine2')}</span>
+          </h1>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 xl:gap-18 items-start relative">
           {/* Left Content - 60% */}
-          <div className="lg:col-span-3 text-left relative z-10">
-            {/* Hero Title */}
-            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold text-text-dark mb-8 leading-[1.1] tracking-tight">
-              {t('titleMain')}{' '}
-              <span className="lg:whitespace-nowrap">
-                <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent drop-shadow-sm">in</span>
-              </span>{' '}
-              <span className="lg:whitespace-nowrap">
-                <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent drop-shadow-sm">60</span>{' '}
-                <span className="bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent drop-shadow-sm">seconds</span>
+          <div className="lg:col-span-8 xl:col-span-8 text-left relative z-10 lg:-mr-8 xl:-mr-16 lg:pr-32 xl:pr-40">
+            
+            {/* Hero Title Part 2 (Line 3) */}
+            <div className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold mb-6 leading-[0.9] tracking-tight">
+              <span className="block bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent">
+                {t('titleHighlightTime')}
               </span>
-            </h1>
+            </div>
 
             {/* Subtitle */}
             <p 
@@ -90,13 +95,12 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
               } transition-all duration-700 ease-out`}
               style={{ transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.subtitle + 100}ms` }}
             >
-              {t('subtitle')}
-              <strong>{t('subtitleBold')}</strong>
+              {t('subtitle')} {t('subtitleBold')}
             </p>
 
             {/* Primary CTA */}
             <div 
-              className={`flex flex-col sm:flex-row items-start sm:items-center gap-5 ${
+              className={`flex flex-col sm:flex-row items-start sm:items-center gap-6 ${
                 heroMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
               } transition-all duration-700 ease-out`}
               style={{ transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.cta}ms` }}
@@ -122,12 +126,12 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
 
           {/* Right Gallery */}
           <div 
-            className={`lg:col-span-2 relative ${
+            className={`lg:col-span-4 relative ${
               heroMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             } transition-all duration-1000 ease-out`}
             style={{ transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.gallery}ms` }}
           >
-            <div className="w-full max-w-lg mx-auto lg:ml-auto lg:mr-0 lg:translate-x-12 lg:translate-y-4">
+            <div className="w-full max-w-lg mx-auto lg:ml-auto lg:mr-0 lg:absolute lg:top-0 lg:right-4 xl:right-8 lg:translate-x-0">
               <HeroGallery />
             </div>
           </div>
@@ -180,4 +184,3 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
     </div>
   );
 }
-

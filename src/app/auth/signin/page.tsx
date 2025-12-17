@@ -62,17 +62,38 @@ export default function SignInPage() {
     setIsLoading(true)
     setError('')
 
+    // Validate email before proceeding
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      setError('errors.errorOccurred')
+      setIsLoading(false)
+      return
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('errors.invalidCredentials')
+      setIsLoading(false)
+      return
+    }
+
     try {
       if (useMagicLink) {
         // Send magic link
+        // Get the callbackUrl from search params or default to dashboard
+        const callbackUrl = searchParams.get('callbackUrl') || '/app/dashboard'
         const result = await signIn('email', {
-          email,
+          email: trimmedEmail,
           redirect: false,
-          // Pass email forward so verify page can display it
-          callbackUrl: `/auth/verify-request?email=${encodeURIComponent(email)}`,
+          // Set callbackUrl to redirect after magic link is clicked
+          callbackUrl,
         })
 
         if (result?.error) {
+          // Log the error for debugging
+          console.error('Magic link sign-in error:', result.error)
+          
           // Check for rate limit error
           const errorMessage = result.error.toLowerCase()
           if (errorMessage.includes('too many') || errorMessage.includes('rate limit')) {
@@ -81,16 +102,27 @@ export default function SignInPage() {
             setError('errors.magicLinkFailed')
           }
           track('signin_magiclink_error', { reason: result.error })
-        } else {
+        } else if (result?.ok) {
           // Redirect to verification page
-          router.push(`/auth/verify-request?email=${encodeURIComponent(email)}`)
-          track('signin_magiclink_sent', { email })
+          router.push(`/auth/verify-request?email=${encodeURIComponent(trimmedEmail)}`)
+          track('signin_magiclink_sent', { email: trimmedEmail })
+        } else {
+          // Unexpected result - log and show error
+          console.error('Unexpected magic link result:', result)
+          setError('errors.magicLinkFailed')
+          track('signin_magiclink_error', { reason: 'unexpected_result' })
         }
       } else {
         // Password authentication
+        if (!password.trim()) {
+          setError('errors.invalidCredentials')
+          setIsLoading(false)
+          return
+        }
+
         const result = await signIn('credentials', {
-          email,
-          password,
+          email: trimmedEmail,
+          password: password.trim(),
           redirect: false,
         })
 
@@ -144,9 +176,11 @@ export default function SignInPage() {
           }
         }
       }
-    } catch {
+    } catch (error) {
+      // Log the full error for debugging
+      console.error('Sign-in exception:', error)
       setError('errors.errorOccurred')
-      track('signin_exception')
+      track('signin_exception', { error: error instanceof Error ? error.message : String(error) })
     } finally {
       setIsLoading(false)
     }
@@ -205,18 +239,32 @@ export default function SignInPage() {
             />
           )}
           <div className="flex items-center justify-between pt-1">
-            <label className="inline-flex items-center gap-2.5 text-sm text-slate-600 cursor-pointer hover:text-slate-700 transition-colors">
+            <label 
+              className="inline-flex items-center gap-2.5 text-sm text-slate-600 cursor-pointer hover:text-slate-700 transition-colors"
+              onClick={(e) => {
+                // Prevent form submission when clicking the label
+                e.stopPropagation()
+              }}
+            >
               <input
                 id="magic-link"
                 name="magic-link"
                 type="checkbox"
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 focus:ring-2 border-slate-200 rounded transition-all duration-200 cursor-pointer bg-white"
                 checked={useMagicLink}
-                onChange={(e) => setUseMagicLink(e.target.checked)}
+                onChange={(e) => {
+                  e.stopPropagation()
+                  setUseMagicLink(e.target.checked)
+                  // Clear password when switching to magic link
+                  if (e.target.checked) {
+                    setPassword('')
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
               />
               <span className="font-medium">{t('useMagicLink')}</span>
             </label>
-            <a href="#" className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-all duration-200 hover:underline underline-offset-2 decoration-2">{t('forgotPassword')}</a>
+            <Link href="/auth/forgot-password" className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-all duration-200 hover:underline underline-offset-2 decoration-2">{t('forgotPassword')}</Link>
           </div>
           {error && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-200">

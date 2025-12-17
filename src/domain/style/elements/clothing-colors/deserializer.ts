@@ -28,7 +28,13 @@ export function deserialize(
         }
       }
     }
-    return { type: 'user-choice' }
+    return {
+      type: 'user-choice',
+      colors: {
+        topBase: fallbackColors.topBase,
+        topCover: fallbackColors.topCover
+      }
+    }
   }
 
   if (rawClothingColors.type === 'predefined') {

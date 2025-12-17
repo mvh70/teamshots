@@ -237,10 +237,27 @@ export async function executeV3Step1a(
 
   // Merge pre-built references (e.g., garment collage from outfit1) with prepared references
   // Pre-built references come first as they are primary (e.g., outfit collage before logo)
+  // IMPORTANT: Filter out selfie composite from input.referenceImages to avoid duplication
+  // since prepareAllReferences already includes it
+  const filteredInputReferences = (input.referenceImages || []).filter(ref => {
+    const desc = ref.description?.toLowerCase() || ''
+    // Exclude selfie composite (it's in preparedReferences already)
+    return !desc.includes('composite image containing') && !desc.includes('stacked subject selfies')
+  })
+  
   const referenceImages = [
-    ...(input.referenceImages || []), // Pre-built references from package (outfit1 garment collage)
+    ...filteredInputReferences, // Pre-built references from package (outfit1 garment collage, format frame, etc.)
     ...preparedReferences  // Prepared references (selfie composite, logo for clothing branding)
   ]
+  
+  Logger.debug('V3 Step 1a: Merged reference images', {
+    generationId: `v3-step1-${Date.now()}`,
+    inputReferencesCount: input.referenceImages?.length || 0,
+    filteredInputReferencesCount: filteredInputReferences.length,
+    preparedReferencesCount: preparedReferences.length,
+    finalReferenceCount: referenceImages.length,
+    finalDescriptions: referenceImages.map(r => r.description?.substring(0, 50))
+  })
 
   // Create a simplified prompt object with ONLY subject and framing (no scene, camera, lighting, rendering)
   const personOnlyPrompt = {
@@ -262,7 +279,7 @@ export async function executeV3Step1a(
   
   const structuredPrompt = [
     // Section 1: Intro & Task
-    "You are a world-class professional photographer with an IQ of 145, specializing in corporate and professional portraits. Your task is to create a photorealistic portrait composition from the attached selfies and scene specifications. Below first you'll find a JSON describing the complete scene, subject, framing, camera, lighting, and rendering. Below that there are rules you must absolutely follow.",
+    "You are a world-class professional photographer specializing in corporate and professional portraits. Your task is to create a photorealistic portrait composition from the attached selfies and scene specifications. Below first you'll find a JSON describing the complete scene, subject, framing, camera, lighting, and rendering. Below that there are rules you must absolutely follow.",
 
     // Section 2: Composition JSON
     '',
@@ -272,12 +289,41 @@ export async function executeV3Step1a(
     // Section 3: Must Follow Rules
     '',
     'Must Follow Rules:',
-    '- Quality: Make the image as realistic as possible, with all the natural imperfections. Add realistic effects, taken from the selfies, like some hairs sticking out',
+    '- Quality: Make the image as realistic as possible, with all the natural imperfections. Ensure the skin texture and hair details are high-frequency and realistic, avoiding plastic smoothness. Add realistic effects, taken from the selfies, like some hairs sticking out.',
+    '- Lighting: The subject is currently on a neutral grey background, but treat this as a "studio cycling wall" illuminated by the lighting specified in the JSON. The lighting on the person MUST match the intended final scene.',
     
     `- Output Dimensions: Generate the image at ${aspectRatioConfig.width}x${aspectRatioConfig.height} pixels (${aspectRatioConfig.id || aspectRatio}). Fill the entire canvas edge-to-edge with no borders, frames, letterboxing, or black bars.`,
-    shotDescription
-      ? `- Shot Type: Respect the requested shot type (${shotDescription}) and ensure proper framing.`
-      : '- Shot Type: Follow the shot type specifications in the JSON.'
+    ...(shotDescription === 'medium-shot' ? [
+      '- Shot Type (ABSOLUTE REQUIREMENT): MEDIUM SHOT - frame from top of head to bottom of ribcage/top of belt area.',
+      '- The bottom edge of the image MUST crop at the waist/belt level. DO NOT show hips, legs, knees, or feet.',
+      '- If you include legs or hips, the image will be rejected.'
+    ] : shotDescription === 'medium-close-up' ? [
+      '- Shot Type (ABSOLUTE REQUIREMENT): MEDIUM CLOSE-UP - frame from top of head to mid-chest (armpit level).',
+      '- The bottom edge of the image MUST crop across the chest. DO NOT show the stomach, waist, belt, hips, or legs.',
+      '- This is a head-and-shoulders portrait. If you show the torso below the chest, the image will be rejected.'
+    ] : shotDescription === 'close-up' ? [
+      '- Shot Type (ABSOLUTE REQUIREMENT): CLOSE-UP - frame from top of head to just below the chin/neck.',
+      '- The bottom edge of the image MUST crop at the neck/collarbone level. DO NOT show shoulders or chest.',
+      '- Focus intensely on the face.'
+    ] : shotDescription === 'extreme-close-up' ? [
+      '- Shot Type (ABSOLUTE REQUIREMENT): EXTREME CLOSE-UP - tight framing on the face/eyes.',
+      '- The frame should cut off part of the forehead and chin to focus purely on facial features.',
+      '- DO NOT show neck or shoulders.'
+    ] : shotDescription === 'full-length' ? [
+      '- Shot Type (ABSOLUTE REQUIREMENT): FULL SHOT - frame from top of head to feet, showing entire body.',
+      '- You MUST show the subject\'s feet. Do not crop the legs.',
+      '- Ensure the entire person fits within the frame with a small amount of headroom and footroom.'
+    ] : shotDescription === 'three-quarter' ? [
+      '- Shot Type (ABSOLUTE REQUIREMENT): THREE-QUARTER SHOT - frame from top of head to mid-thigh.',
+      '- The bottom edge of the image MUST crop at the mid-thigh level (knees not visible).',
+      '- DO NOT show knees, calves, or feet.'
+    ] : shotDescription === 'wide-shot' ? [
+      '- Shot Type (ABSOLUTE REQUIREMENT): WIDE SHOT - show the full person with ample space around them.',
+      '- The subject should be fully visible from head to toe, occupying a smaller portion of the frame to allow for environmental context (even if currently on grey).',
+      '- DO NOT crop any part of the body.'
+    ] : [
+      `- Shot Type: Respect the requested shot type (${shotDescription}) and ensure proper framing.`
+    ])
   ]
   
   // Add element-specific must follow rules
@@ -307,7 +353,25 @@ export async function executeV3Step1a(
     '- **Neutral Background:** Isolated on a solid flat neutral grey background (#808080). No shadows, gradients, or other background elements. Use neutral, even lighting. Camera and lighting specifications will be applied in the next step.',
     '- **Focus on Person:** Your primary goal is to accurately recreate the person from the selfies - face, body, pose, and clothing. The background, lighting, and camera effects will be added later.'
   ]
-  
+
+  // Check for garment collage reference (from outfit1 package)
+  const hasGarmentCollage = input.referenceImages?.some(ref =>
+    ref.description?.toUpperCase().includes('GARMENT COLLAGE')
+  )
+
+  if (hasGarmentCollage) {
+    instructionLines.push(
+      '- **Garment Collage:** Dress the person in the EXACT clothing items shown in the garment collage reference. Match the style, fit, and details of each garment precisely. Use the clothing_colors specified in the subject JSON for accurate color rendering (these are user-adjusted hex values and must be respected). Ensure professional fit and styling appropriate for business attire.'
+    )
+    
+    // Add specific instruction to ignore lower body parts of the collage for tighter shots
+    if (['medium-close-up', 'close-up', 'extreme-close-up', 'medium-shot'].includes(shotDescription)) {
+      instructionLines.push(
+        `- **Shot Constraints vs Collage:** Since the requested shot is ${shotDescription.toUpperCase().replace('-', ' ')}, you must IGNORE any lower body garments (pants, shoes, skirts) visible in the garment collage. Focus ONLY on the upper body clothing (shirt, jacket, tie, etc.) that fits within the frame.`
+      )
+    }
+  }
+
   if (logoReference) {
     instructionLines.push(
       '- **Branding:** Place the logo exactly once on the clothing following the BRANDING guidance from the reference assets. The logo should be part of the person\'s appearance.'

@@ -15,6 +15,7 @@ interface PackageSelectorProps {
   onChange: (packageId: string) => void
 }
 
+// HMR flush
 export default function PackageSelector({ value, onChange }: PackageSelectorProps) {
   const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)

@@ -115,7 +115,10 @@ export default function PersonalGenerationsPage() {
         console.warn('Generation failed', errorMessage)
       }
       setFailureToast(toastMessages('generationFailed'))
-      void refetchCredits()
+      // Delay credit refetch to ensure backend refund transaction has completed
+      setTimeout(() => {
+        void refetchCredits()
+      }, 2000)
     },
     [toastMessages, refetchCredits]
   )

@@ -321,6 +321,12 @@ async function generatePersonWithRetry({
         })
       : undefined
 
+    // Extract garment collage from reference images (if present)
+    const garmentCollageReference = referenceImages?.find(ref =>
+      ref.description?.toLowerCase().includes('garment') ||
+      ref.description?.toLowerCase().includes('collage')
+    )
+
     const step2Output = await executeWithRateLimitRetry(
       async () => {
         return await executeV3Step1aEval({
@@ -333,6 +339,7 @@ async function generatePersonWithRetry({
           aspectRatioConfig,
           generationPrompt: prompt,
           clothingLogoReference: step1Output!.clothingLogoReference,
+          garmentCollageReference, // Pass garment collage to authorize accessories
           generationId,
           personId,
           teamId,
@@ -361,6 +368,8 @@ async function generatePersonWithRetry({
     logEvaluationResult('V3 Step 1a Eval', attempt, evaluation, approved)
 
     if (approved) {
+      // Clear comments on success to avoid ghost feedback from previous failed attempts
+      evaluatorComments.length = 0
       break
     }
 
@@ -481,6 +490,10 @@ async function generateBackgroundWithRetry({
     }
   }
 
+  // Track last generated output in case all evaluations fail
+  // We'll return this to Step 2 so it can at least attempt to preserve it
+  let lastGeneratedOutput: Awaited<ReturnType<typeof executeV3Step1b>> | undefined
+
   for (let attempt = 1; attempt <= 3; attempt++) {
     if (attempt === 1) {
       logStepStart('V3 Step 1b: Generating background with branding', generationId)
@@ -515,6 +528,9 @@ async function generateBackgroundWithRetry({
       },
       createProgressRetryCallback(job, PROGRESS_STEPS.V3_GENERATING_BACKGROUND)
     )
+
+    // Save this output in case all evaluations fail
+    lastGeneratedOutput = step1bOutput
 
     await saveIntermediateFile(step1bOutput.backgroundBuffer, 'v3-step1b-background-with-branding', generationId, debugMode)
 
@@ -571,10 +587,25 @@ async function generateBackgroundWithRetry({
     logEvaluationResult('V3 Step 1b Eval', attempt, evaluation, approved)
 
     if (approved) {
-      return { ...step1bOutput, evaluatorComments, compositeReference: cachedComposite ?? step1bOutput.compositeReference }
+      // Clear comments on success to avoid ghost feedback from previous failed attempts
+      return { ...step1bOutput, evaluatorComments: [], compositeReference: cachedComposite ?? step1bOutput.compositeReference }
     }
 
     checkMaxAttemptsAndThrow('V3 Step 1b', attempt, 3, evaluation)
+  }
+
+  // All evaluation attempts failed, but return the last generated background anyway
+  // This allows Step 2 to at least attempt to preserve it rather than regenerating from scratch
+  if (lastGeneratedOutput) {
+    Logger.warn('V3 Step 1b: All evaluations failed, but returning last generated background for Step 2 to use as reference', {
+      generationId,
+      evaluatorCommentsCount: evaluatorComments.length
+    })
+    return { 
+      ...lastGeneratedOutput, 
+      evaluatorComments, 
+      compositeReference: cachedComposite ?? lastGeneratedOutput.compositeReference 
+    }
   }
 
   throw new Error('V3 Step 1b: Failed to generate background after retries')

@@ -62,7 +62,7 @@ const DEFAULTS = {
   clothingColors: {
     type: 'user-choice' as const
   },
-  shotType: { type: 'medium-shot' as const },
+  shotType: { type: 'medium-close-up' as const },
   subjectCount: '1' as const
 }
 
@@ -151,7 +151,10 @@ export const outfit1: ClientStylePackage = {
       settings: {
         background: ui.background,
         branding: ui.branding,
-        customClothing: ui.customClothing || { type: 'predefined' as const },
+        // Preserve customClothing if it exists, even if just { type: 'user-choice' } without uploaded outfit
+        customClothing: ui.customClothing && typeof ui.customClothing === 'object' && 'type' in ui.customClothing
+          ? ui.customClothing
+          : { type: 'predefined' as const },
         clothingColors: ui.clothingColors || { type: 'user-choice' as const },
         pose: ui.pose,
         expression: ui.expression,
@@ -165,8 +168,7 @@ export const outfit1: ClientStylePackage = {
         ? r.settings as Record<string, unknown>
         : r
 
-      console.log('[outfit1.deserialize] Loading outfit1 package on page load')
-      console.log('[outfit1.deserialize] inner.clothingColors:', JSON.stringify(inner.clothingColors, null, 2))
+      // Debug logging removed - using Logger instead if needed
 
       // Deserialize categories
       const backgroundResult = backgroundElement.deserialize(inner)
@@ -176,11 +178,34 @@ export const outfit1: ClientStylePackage = {
           ? inner.customClothing
           : JSON.stringify(inner.customClothing || DEFAULTS.customClothing)
       )
-      const clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
+      let clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
       const poseResult = pose.deserialize(inner, DEFAULTS.pose)
       const expressionResult = expression.deserialize(inner, DEFAULTS.expression)
 
-      console.log('[outfit1.deserialize] clothingColorsResult:', JSON.stringify(clothingColorsResult, null, 2))
+      // Sync colors from customClothing to clothingColors if outfit has colors
+      // This ensures colors show up on initial page load (server-side)
+      // Merge customClothing colors into clothingColors (customClothing colors take precedence)
+      if (customClothingResult.colors && 
+          customClothingResult.type === 'user-choice' &&
+          clothingColorsResult?.type === 'user-choice') {
+        const outfitColors = customClothingResult.colors
+        const existingColors = clothingColorsResult?.colors || {}
+        
+        // Merge colors: outfit colors take precedence, but keep existing ones if outfit doesn't have them
+        const mergedColors: Record<string, string> = { ...existingColors }
+        if (outfitColors.topBase) mergedColors.topBase = outfitColors.topBase
+        if (outfitColors.topCover) mergedColors.topCover = outfitColors.topCover
+        if (outfitColors.bottom) mergedColors.bottom = outfitColors.bottom
+        if (outfitColors.shoes) mergedColors.shoes = outfitColors.shoes
+
+        // Update clothingColors with merged colors (only if we have at least one color from outfit)
+        if (outfitColors.topBase || outfitColors.bottom) {
+          clothingColorsResult = {
+            type: 'user-choice',
+            colors: mergedColors
+          }
+        }
+      }
 
       return {
         presetId: outfit1.defaultPresetId,

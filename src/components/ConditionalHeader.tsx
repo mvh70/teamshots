@@ -76,25 +76,36 @@ export default function ConditionalHeader({ brandName, brandLogo }: ConditionalH
             {t('blog')}
           </Link>
           <LanguageSwitcher />
-          <Link
-            href={session ? "/app/dashboard" : "/auth/signin"}
-            className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
-          >
-            {session ? t('dashboard') : t('signin')}
-          </Link>
-          <Link
-            href="/auth/signup"
-            onClick={() =>
-              track('cta_clicked', {
-                placement: 'header',
-                action: 'signup',
-                viewport: 'desktop',
-              })
-            }
-            className="px-6 py-3 bg-brand-cta text-white rounded-xl hover:bg-brand-cta-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2"
-          >
-            {t('getStarted')}
-          </Link>
+          {session ? (
+            <Link
+              href="/app/dashboard"
+              className="px-6 py-3 bg-brand-secondary text-white rounded-xl hover:bg-brand-secondary-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:ring-offset-2"
+            >
+              {t('dashboard')}
+            </Link>
+          ) : (
+            <Link
+              href="/auth/signin"
+              className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
+            >
+              {t('signin')}
+            </Link>
+          )}
+          {!session && (
+            <Link
+              href="/auth/signup"
+              onClick={() =>
+                track('cta_clicked', {
+                  placement: 'header',
+                  action: 'signup',
+                  viewport: 'desktop',
+                })
+              }
+              className="px-6 py-3 bg-brand-cta text-white rounded-xl hover:bg-brand-cta-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2"
+            >
+              {t('getStarted')}
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -144,27 +155,39 @@ export default function ConditionalHeader({ brandName, brandLogo }: ConditionalH
             <div className="py-2">
               <LanguageSwitcher />
             </div>
-            <Link
-              href={session ? "/app/dashboard" : "/auth/signin"}
-              onClick={toggleMobileMenu}
-              className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
-            >
-              {session ? t('dashboard') : t('signin')}
-            </Link>
-            <Link
-              href="/auth/signup"
-              onClick={() => {
-                toggleMobileMenu()
-                track('cta_clicked', {
-                  placement: 'header',
-                  action: 'signup',
-                  viewport: 'mobile',
-                })
-              }}
-              className="block w-full text-center px-6 py-3 bg-brand-cta text-white rounded-xl hover:bg-brand-cta-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2"
-            >
-              {t('getStarted')}
-            </Link>
+            {session ? (
+              <Link
+                href="/app/dashboard"
+                onClick={toggleMobileMenu}
+                className="block w-full text-center px-6 py-3 bg-brand-secondary text-white rounded-xl hover:bg-brand-secondary-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:ring-offset-2"
+              >
+                {t('dashboard')}
+              </Link>
+            ) : (
+              <Link
+                href="/auth/signin"
+                onClick={toggleMobileMenu}
+                className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
+              >
+                {t('signin')}
+              </Link>
+            )}
+            {!session && (
+              <Link
+                href="/auth/signup"
+                onClick={() => {
+                  toggleMobileMenu()
+                  track('cta_clicked', {
+                    placement: 'header',
+                    action: 'signup',
+                    viewport: 'mobile',
+                  })
+                }}
+                className="block w-full text-center px-6 py-3 bg-brand-cta text-white rounded-xl hover:bg-brand-cta-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2"
+              >
+                {t('getStarted')}
+              </Link>
+            )}
           </div>
         </div>
       )}

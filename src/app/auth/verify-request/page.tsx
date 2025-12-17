@@ -1,5 +1,4 @@
 import { Suspense } from 'react'
-import Link from 'next/link'
 import VerifyContent from './verify-content'
 import {useTranslations} from 'next-intl'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
@@ -10,47 +9,33 @@ export default function VerifyRequestPage() {
   return (
     <AuthSplitLayout
       left={
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-primary-light via-white to-brand-cta-light rounded-2xl" />
-          <div className="relative p-10">
-            <h1 className="text-4xl font-extrabold text-gray-900 mb-4">{t('title')}</h1>
-            <p className="text-gray-700 mb-8 text-lg">{t('subtitle')}</p>
+        <div className="relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-pink-500/10 rounded-3xl shadow-xl border border-white/20 backdrop-blur-sm transition-all duration-500 group-hover:shadow-2xl group-hover:from-blue-500/15 group-hover:via-purple-500/8 group-hover:to-pink-500/15" />
+          <div className="relative p-12 lg:p-14">
+            <h1 className="text-5xl lg:text-6xl font-display font-bold text-slate-900 mb-6 tracking-tight leading-tight bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">{t('title')}</h1>
+            <p className="text-xl lg:text-2xl text-slate-600 mb-12 leading-relaxed font-medium">{t('subtitle')}</p>
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1">
+                <span className="w-3 h-3 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full shadow-sm animate-pulse" style={{ animationDuration: '2s' }} />
+                <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('tip1')}</span>
+              </div>
+              <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1" style={{ transitionDelay: '50ms' }}>
+                <span className="w-3 h-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full shadow-sm animate-pulse" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+                <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('tip2')}</span>
+              </div>
+              <div className="flex items-center gap-4 transform transition-all duration-200 hover:translate-x-1" style={{ transitionDelay: '100ms' }}>
+                <span className="w-3 h-3 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full shadow-sm animate-pulse" style={{ animationDuration: '2s', animationDelay: '1s' }} />
+                <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('tip3')}</span>
+              </div>
+            </div>
           </div>
         </div>
       }
     >
-      <AuthCard>
-        <div className="space-y-6">
-          <Suspense fallback={<div className="text-center text-gray-600">{t('loading')}</div>}>
-            <VerifyContent />
-          </Suspense>
-          <div className="bg-brand-primary-light border border-brand-primary-lighter rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-brand-primary" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-brand-primary">
-                  {t('cantFindTitle')}
-                </h3>
-                <div className="mt-2 text-sm text-gray-700">
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>{t('tipSpam')}</li>
-                    <li>{t('tipCorrect')}</li>
-                    <li>{t('tipDelay')}</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="text-center">
-            <Link href="/auth/signin" className="font-medium text-brand-primary hover:text-brand-primary-hover">
-              {t('backToSignIn')}
-            </Link>
-          </div>
-        </div>
+      <AuthCard title={t('title')}>
+        <Suspense fallback={<div className="text-center text-slate-600">{t('loading')}</div>}>
+          <VerifyContent />
+        </Suspense>
       </AuthCard>
     </AuthSplitLayout>
   )
