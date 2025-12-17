@@ -5,6 +5,12 @@ import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '../gemini'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { CostTrackingHandler } from '../workflow-v3'
+import { isFeatureEnabled } from '@/config/feature-flags'
+import {
+  compositionRegistry,
+  type ElementContext,
+} from '@/domain/style/elements/composition'
+import type { PhotoStyleSettings } from '@/types/photo-style'
 
 export interface V3Step3FinalInput {
   refinedBuffer: Buffer
@@ -15,6 +21,7 @@ export interface V3Step3FinalInput {
   aspectRatio: string
   logoReference?: BaseReferenceImage // Logo for background/elements branding evaluation
   generationPrompt?: string // Full prompt JSON with branding info
+  styleSettings?: PhotoStyleSettings // For element composition
   generationId?: string // For cost tracking
   personId?: string // For cost tracking
   teamId?: string // For cost tracking
@@ -24,6 +31,37 @@ export interface V3Step3FinalInput {
 
 const DIMENSION_TOLERANCE_PX = 2
 const ASPECT_RATIO_TOLERANCE = 0.02
+
+/**
+ * Compose contributions from all registered elements for the evaluation phase
+ */
+async function composeElementContributions(
+  styleSettings: PhotoStyleSettings,
+  generationContext: {
+    generationId?: string
+    personId?: string
+    teamId?: string
+  }
+): Promise<{
+  instructions: string[]
+  mustFollow: string[]
+  freedom: string[]
+}> {
+  const elementContext: ElementContext = {
+    phase: 'evaluation',
+    settings: styleSettings,
+    generationContext,
+    existingContributions: []
+  }
+
+  const contributions = await compositionRegistry.composeContributions(elementContext)
+
+  return {
+    instructions: contributions.instructions || [],
+    mustFollow: contributions.mustFollow || [],
+    freedom: contributions.freedom || []
+  }
+}
 
 /**
  * V3 Step 3: Final evaluation

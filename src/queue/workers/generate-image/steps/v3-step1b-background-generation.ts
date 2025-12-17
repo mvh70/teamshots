@@ -8,6 +8,11 @@ import { AI_CONFIG } from '../config'
 import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
 import type { CostTrackingHandler } from '../workflow-v3'
 import type { PhotoStyleSettings } from '@/types/photo-style'
+import { isFeatureEnabled } from '@/config/feature-flags'
+import {
+  compositionRegistry,
+  type ElementContext,
+} from '@/domain/style/elements/composition'
 
 export interface V3Step1bInput {
   prompt: string // JSON string with scene and branding info
@@ -32,6 +37,54 @@ export interface V3Step1bOutput {
   backgroundLogoReference: ReferenceImage
   compositeReference?: ReferenceImage
   reused?: boolean // Whether this asset was reused from cache
+}
+
+/**
+ * Compose element contributions for background generation phase
+ *
+ * Uses the element composition system to build prompt rules from independent elements.
+ * For background-generation, primarily BrandingElement will contribute logo placement rules.
+ */
+async function composeElementContributions(
+  styleSettings: PhotoStyleSettings,
+  generationContext: {
+    generationId?: string
+    personId?: string
+    teamId?: string
+  }
+): Promise<{
+  instructions: string[]
+  mustFollow: string[]
+  freedom: string[]
+}> {
+  // Create element context for background-generation phase
+  const elementContext: ElementContext = {
+    phase: 'background-generation',
+    settings: styleSettings,
+    generationContext: {
+      selfieS3Keys: [],
+      userId: generationContext.personId,
+      teamId: generationContext.teamId,
+      generationId: generationContext.generationId,
+    },
+    existingContributions: [],
+  }
+
+  // Compose contributions from all relevant elements
+  const contributions = await compositionRegistry.composeContributions(elementContext)
+
+  Logger.debug('[ElementComposition] Step 1b contributions composed', {
+    generationId: generationContext.generationId,
+    instructionCount: contributions.instructions?.length || 0,
+    mustFollowCount: contributions.mustFollow?.length || 0,
+    freedomCount: contributions.freedom?.length || 0,
+  })
+
+  return {
+    instructions: contributions.instructions || [],
+    mustFollow: contributions.mustFollow || [],
+    freedom: contributions.freedom || [],
+  }
 }
 
 /**
@@ -132,33 +185,73 @@ export async function executeV3Step1b(
 
   // Parse prompt to extract scene and branding info
   const promptObj = JSON.parse(prompt)
-  
+
   // Extract branding rules from scene.branding if present (before modifying)
   const sceneBranding = promptObj.scene?.branding as Record<string, unknown> | undefined
   let brandingRules: string[] = []
-  
+
   if (sceneBranding && sceneBranding.enabled === true) {
     // Extract rules array if present
     if (Array.isArray(sceneBranding.rules)) {
       brandingRules = sceneBranding.rules as string[]
     }
-    
+
     // Extract placement text if present (this often contains the main branding instructions)
     if (typeof sceneBranding.placement === 'string' && sceneBranding.placement.trim()) {
       brandingRules.unshift(sceneBranding.placement as string)
     }
-    
+
     Logger.debug('V3 Step 1b: Scene branding detected', {
       generationId,
       position: sceneBranding.position,
       ruleCount: brandingRules.length
     })
-    
+
     // Remove rules and placement from branding object to avoid duplication in JSON
     // These will be added as clear text instructions in "Branding Requirements" section
     delete sceneBranding.rules
     delete sceneBranding.placement
   }
+
+  // Compose element contributions if feature flag is enabled
+  let elementContributions: {
+    instructions: string[]
+    mustFollow: string[]
+    freedom: string[]
+  } | null = null
+
+  if (isFeatureEnabled('elementComposition') && styleSettings) {
+    Logger.info('[ElementComposition] Feature flag enabled, composing element contributions for Step 1b')
+    try {
+      elementContributions = await composeElementContributions(styleSettings, {
+        generationId,
+        personId: input.personId,
+        teamId: input.teamId,
+      })
+      Logger.debug('[ElementComposition] Element contributions composed successfully', {
+        generationId,
+        hasInstructions: elementContributions.instructions.length > 0,
+        hasMustFollow: elementContributions.mustFollow.length > 0,
+        hasFreedom: elementContributions.freedom.length > 0,
+      })
+    } catch (error) {
+      Logger.error('[ElementComposition] Failed to compose element contributions, falling back to extracted rules', {
+        error: error instanceof Error ? error.message : String(error),
+        generationId,
+      })
+      // Fall back to extracted rules on error
+      elementContributions = null
+    }
+  }
+
+  // Use element contributions if available, otherwise use extracted branding rules
+  const effectiveBrandingRules = elementContributions?.mustFollow || brandingRules
+
+  Logger.debug('[ElementComposition] Using branding rules', {
+    generationId,
+    source: elementContributions ? 'element-composition' : 'extracted-from-prompt',
+    ruleCount: effectiveBrandingRules.length,
+  })
 
   // Extract scene (exclude subject, lighting, rendering)
   // We explicitly include camera settings if provided to respect user's depth of field choices
@@ -228,10 +321,10 @@ export async function executeV3Step1b(
   
   structuredPrompt.push('')
 
-  // Add branding rules
-  if (brandingRules.length > 0) {
+  // Add branding rules (using effective rules from element composition or fallback)
+  if (effectiveBrandingRules.length > 0) {
     structuredPrompt.push('', 'Branding Requirements:')
-    for (const rule of brandingRules) {
+    for (const rule of effectiveBrandingRules) {
       structuredPrompt.push(`- ${rule}`)
     }
   }

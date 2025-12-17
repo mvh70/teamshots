@@ -9,6 +9,12 @@ import { buildAspectRatioFormatReference } from '../utils/reference-builder'
 import { resolveAspectRatioConfig } from '@/domain/style/elements/aspect-ratio/config'
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import type { CostTrackingHandler } from '../workflow-v3'
+import { isFeatureEnabled } from '@/config/feature-flags'
+import {
+  compositionRegistry,
+  type ElementContext,
+} from '@/domain/style/elements/composition'
+import type { PhotoStyleSettings } from '@/types/photo-style'
 
 export interface V3Step2FinalInput {
   personBuffer: Buffer // Person on grey background from Step 1 (with clothing logo already applied if applicable)
@@ -24,6 +30,37 @@ export interface V3Step2FinalInput {
   personId?: string // For cost tracking
   teamId?: string // For cost tracking
   onCostTracking?: CostTrackingHandler // For cost tracking
+}
+
+/**
+ * Compose contributions from all registered elements for the composition phase
+ */
+async function composeElementContributions(
+  styleSettings: PhotoStyleSettings,
+  generationContext: {
+    generationId?: string
+    personId?: string
+    teamId?: string
+  }
+): Promise<{
+  instructions: string[]
+  mustFollow: string[]
+  freedom: string[]
+}> {
+  const elementContext: ElementContext = {
+    phase: 'composition',
+    settings: styleSettings,
+    generationContext,
+    existingContributions: []
+  }
+
+  const contributions = await compositionRegistry.composeContributions(elementContext)
+
+  return {
+    instructions: contributions.instructions || [],
+    mustFollow: contributions.mustFollow || [],
+    freedom: contributions.freedom || []
+  }
 }
 
 /**
@@ -80,6 +117,28 @@ export async function executeV3Step2(
   // Clothing branding rules were already applied in Step 1
   const sceneBranding = promptObj.scene?.branding as Record<string, unknown> | undefined
 
+  // Try to compose contributions from elements if feature flag is enabled
+  let elementContributions: { instructions: string[], mustFollow: string[], freedom: string[] } | null = null
+  if (isFeatureEnabled('elementComposition') && styleSettings) {
+    try {
+      elementContributions = await composeElementContributions(styleSettings, {
+        generationId: input.generationId,
+        personId: input.personId,
+        teamId: input.teamId
+      })
+      Logger.debug('V3 Step 2: Element composition succeeded', {
+        hasInstructions: elementContributions.instructions.length > 0,
+        hasMustFollow: elementContributions.mustFollow.length > 0,
+        hasFreedom: elementContributions.freedom.length > 0,
+        rulesSource: 'element-composition'
+      })
+    } catch (error) {
+      Logger.error('V3 Step 2: Element composition failed, falling back to extracted rules', {
+        error: error instanceof Error ? error.message : String(error)
+      })
+    }
+  }
+
   // CRITICAL: If background was generated in Step 1b, it ALREADY contains the logo
   // If user provided custom background, it may or may not have branding
   // In BOTH cases, we must preserve the background exactly as provided
@@ -102,7 +161,17 @@ export async function executeV3Step2(
     // Remove branding rules to prevent AI from trying to apply them
     delete sceneBranding.rules
   }
-  
+
+  // Use element contributions if available, otherwise fall back to extracted rules
+  const effectiveBackgroundPreservationRules = elementContributions?.mustFollow ?? backgroundPreservationRules
+
+  if (!elementContributions) {
+    Logger.debug('V3 Step 2: Using extracted background preservation rules', {
+      rulesCount: effectiveBackgroundPreservationRules.length,
+      rulesSource: 'extracted-from-prompt'
+    })
+  }
+
   // Compose background composition prompt with branding rules, evaluator comments, and face refinement
   const jsonPrompt = JSON.stringify(backgroundPrompt, null, 2)
   
@@ -168,11 +237,12 @@ export async function executeV3Step2(
     '- Avoid placing the person directly adjacent to banner-like structures that could compete as a second subject. Maintain clear spatial separation and depth hierarchy.',
     '',
   ]
-  
+
   // Add background preservation rules for branding (if applicable)
-  if (backgroundPreservationRules && backgroundPreservationRules.length > 0) {
+  // Uses element composition rules when available, otherwise falls back to extracted rules
+  if (effectiveBackgroundPreservationRules && effectiveBackgroundPreservationRules.length > 0) {
     structuredPrompt.push('')
-    for (const rule of backgroundPreservationRules) {
+    for (const rule of effectiveBackgroundPreservationRules) {
       structuredPrompt.push(`- ${rule}`)
     }
   }
