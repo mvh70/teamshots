@@ -81,7 +81,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
     regenerations: PRICING_CONFIG.regenerations.proSmall,
     pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
     totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits) * (1 + PRICING_CONFIG.regenerations.proSmall),
-    popular: userMode === 'team',
+    popular: false,
   }
 
   const proLargePlan = {
@@ -91,7 +91,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
     regenerations: PRICING_CONFIG.regenerations.proLarge,
     pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
     totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits) * (1 + PRICING_CONFIG.regenerations.proLarge),
-    popular: false,
+    popular: userMode === 'team',
   }
 
   const enterprisePlan = {

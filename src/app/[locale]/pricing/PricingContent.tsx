@@ -70,6 +70,7 @@ export default function PricingContent({ variant }: PricingContentProps) {
     price: `$${PRICING_CONFIG.proLarge.price}`,
     credits: PRICING_CONFIG.proLarge.credits,
     regenerations: PRICING_CONFIG.regenerations.proLarge,
+    popular: domainSignupType === 'team' || domainSignupType === null, // Popular only when team-restricted or no restriction
     pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
     totalPhotos: getTotalPhotos(PRICING_CONFIG.proLarge.credits, PRICING_CONFIG.regenerations.proLarge),
   }
@@ -79,7 +80,6 @@ export default function PricingContent({ variant }: PricingContentProps) {
     price: `$${PRICING_CONFIG.proSmall.price}`,
     credits: PRICING_CONFIG.proSmall.credits,
     regenerations: PRICING_CONFIG.regenerations.proSmall,
-    popular: domainSignupType === 'team' || domainSignupType === null, // Popular only when team-restricted or no restriction
     pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
     totalPhotos: getTotalPhotos(PRICING_CONFIG.proSmall.credits, PRICING_CONFIG.regenerations.proSmall),
   }
