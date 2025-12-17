@@ -18,7 +18,6 @@ interface QRPlaceholderProps {
 
 const POLL_INTERVAL = 2000
 const REFRESH_BEFORE_EXPIRY = 60000
-const AUTO_REFRESH_INTERVAL = 3000 // Refresh every 3 seconds when mobile is connected
 
 const subscribeMobile = (callback: () => void) => {
   if (typeof window === 'undefined') return () => {}
@@ -51,10 +50,10 @@ export default function QRPlaceholder({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deviceConnected, setDeviceConnected] = useState(false)
+  const [lastSelfieCount, setLastSelfieCount] = useState(0)
   
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const onSelfieUploadedRef = useRef(onSelfieUploaded)
   const initRef = useRef(false)
   
@@ -93,6 +92,8 @@ export default function QRPlaceholder({
       setToken(data.token)
       setQrUrl(data.qrUrl)
       setLoading(false)
+      // Reset selfie count tracking for new token
+      setLastSelfieCount(0)
 
       // Store token in sessionStorage for persistence across refreshes
       if (typeof window !== 'undefined') {
@@ -153,6 +154,18 @@ export default function QRPlaceholder({
         setDeviceConnected(!!data.deviceConnected)
       }
 
+      // Check if selfie count increased (new selfie uploaded)
+      if (data.selfieCount !== undefined && data.selfieCount > lastSelfieCount) {
+        // Only trigger callback if we had a previous count (to avoid triggering on initial load)
+        if (lastSelfieCount > 0) {
+          onSelfieUploadedRef.current?.()
+        }
+        setLastSelfieCount(data.selfieCount)
+      } else if (data.selfieCount !== undefined && data.selfieCount !== lastSelfieCount) {
+        // Sync count if it changed (e.g. decreased or initial load)
+        setLastSelfieCount(data.selfieCount)
+      }
+
       // Check if token expired or invalid
       if (data.valid === false || data.expired === true) {
         // Don't clear state immediately to avoid flash
@@ -171,7 +184,7 @@ export default function QRPlaceholder({
     } catch {
       // Silently fail polling
     }
-  }, [token, inviteToken, createToken, deviceConnected])
+  }, [token, inviteToken, createToken, deviceConnected, lastSelfieCount])
 
   // Initialize - restore from storage or create new token
   useEffect(() => {
@@ -220,11 +233,10 @@ export default function QRPlaceholder({
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current)
-      if (autoRefreshIntervalRef.current) clearInterval(autoRefreshIntervalRef.current)
     }
   }, [])
 
-  // Start polling for device connection status
+  // Start polling for device connection status and selfie count
   useEffect(() => {
     if (token && !inviteToken) {
       pollIntervalRef.current = setInterval(pollStatus, POLL_INTERVAL)
@@ -238,29 +250,6 @@ export default function QRPlaceholder({
       }
     }
   }, [token, inviteToken, pollStatus])
-
-  // Auto-refresh when mobile device is connected
-  useEffect(() => {
-    if (deviceConnected) {
-      // Start auto-refreshing
-      autoRefreshIntervalRef.current = setInterval(() => {
-        onSelfieUploadedRef.current?.()
-      }, AUTO_REFRESH_INTERVAL)
-    } else {
-      // Stop auto-refreshing when device disconnects
-      if (autoRefreshIntervalRef.current) {
-        clearInterval(autoRefreshIntervalRef.current)
-        autoRefreshIntervalRef.current = null
-      }
-    }
-
-    return () => {
-      if (autoRefreshIntervalRef.current) {
-        clearInterval(autoRefreshIntervalRef.current)
-        autoRefreshIntervalRef.current = null
-      }
-    }
-  }, [deviceConnected])
 
   // Hide on mobile/touch devices
   const isMobile = useSyncExternalStore(subscribeMobile, getMobileSnapshot, getMobileServerSnapshot)
