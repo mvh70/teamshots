@@ -2,6 +2,7 @@
 
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Logger } from '@/lib/logger'
 import { getPackageConfig } from '@/domain/style/packages'
 import { PhotoStyleSettings, DEFAULT_PHOTO_STYLE_SETTINGS } from '@/types/photo-style'
 import { getUserSubscription } from '@/domain/subscription/subscription'

@@ -338,9 +338,9 @@ export function CustomClothingSelector({
                 role="status" 
                 aria-live="polite"
                 style={{ 
-                  display: 'flex !important',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
+                  display: 'flex',
+                  visibility: 'visible',
+                  opacity: 1,
                   minHeight: '60px',
                   width: '100%',
                   position: 'relative',

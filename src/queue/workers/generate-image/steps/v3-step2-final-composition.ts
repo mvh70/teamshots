@@ -15,6 +15,7 @@ export interface V3Step2FinalInput {
   backgroundBuffer?: Buffer // Custom background if provided (from Step 1b OR user's custom background)
   styleSettings?: Record<string, unknown> // For user's background choice if Step 1b was skipped
   logoReference?: BaseReferenceImage // Logo for background/environmental branding (not clothing)
+  faceCompositeReference?: BaseReferenceImage // Selfie composite from Step 1a for face refinement
   evaluatorComments?: string[] // Comments from Step 1a and Step 1b evaluations
   aspectRatio: string
   resolution?: '1K' | '2K' | '4K'
