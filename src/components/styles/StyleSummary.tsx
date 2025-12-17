@@ -248,7 +248,7 @@ export default function StyleSummary({ settings }: StyleSummaryProps) {
             ) : (
               <span className="inline-flex items-center gap-2 text-gray-700">
                 <span className="font-semibold">
-                  {t(`poses.${poseType}.label`, { 
+                  {t(`poses.${poseType}.label`, {
                     default: poseType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                   })}
                 </span>

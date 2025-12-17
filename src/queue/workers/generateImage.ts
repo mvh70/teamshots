@@ -208,6 +208,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
       if (state.composites?.selfie) refs.push(state.composites.selfie)
       if (state.composites?.background) refs.push(state.composites.background)
+      if (state.composites?.garmentCollage) refs.push(state.composites.garmentCollage)
       if (state.step1a?.personImage) refs.push(state.step1a.personImage)
       if (state.step1a?.backgroundImage) refs.push(state.step1a.backgroundImage)
       if (state.step1b?.backgroundImage) refs.push(state.step1b.backgroundImage)
@@ -345,10 +346,21 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
       let aspectRatioFromPayload: string
       let aspectRatioDescription: string
 
+      // Check if custom clothing is configured
+      const hasCustomClothing = Boolean(
+        mergedStyleSettings.customClothing &&
+        (mergedStyleSettings.customClothing.outfitS3Key || mergedStyleSettings.customClothing.assetId)
+      )
+
+      // Can only use cached payload if:
+      // 1. V3 workflow
+      // 2. Has cached payload and selfie composite
+      // 3. If custom clothing is configured, must have garment collage in state
       const canUseCachedPayload =
         workflowVersion === 'v3' &&
         Boolean(workflowState?.cachedPayload) &&
-        Boolean(workflowState?.composites?.selfie)
+        Boolean(workflowState?.composites?.selfie) &&
+        (!hasCustomClothing || Boolean(workflowState?.composites?.garmentCollage))
 
       if (canUseCachedPayload && workflowState?.cachedPayload) {
         basePrompt = workflowState.cachedPayload.prompt
@@ -356,6 +368,16 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         freedomRulesFromPayload = workflowState.cachedPayload.freedomRules
         aspectRatioFromPayload = workflowState.cachedPayload.aspectRatio
         aspectRatioDescription = workflowState.cachedPayload.aspectRatioDescription
+
+        // Restore garment collage from workflow state if it exists
+        if (workflowState.composites?.garmentCollage) {
+          const garmentCollage = await referenceFromPersisted(workflowState.composites.garmentCollage)
+          referenceImages.push(garmentCollage)
+          Logger.info('[DEBUG] Restored garment collage from workflow state', {
+            generationId,
+            s3Key: workflowState.composites.garmentCollage.key
+          })
+        }
       } else {
         const generationPayload = await stylePackage.buildGenerationPayload({
           generationId,
@@ -378,6 +400,39 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         labelInstruction = generationPayload.labelInstruction
         aspectRatioFromPayload = generationPayload.aspectRatio
         aspectRatioDescription = generationPayload.aspectRatioDescription
+
+        // Persist garment collage to workflow state if it was generated
+        const garmentCollage = referenceImages.find((ref) =>
+          ref.description?.toLowerCase().includes('garment') ||
+          ref.description?.toLowerCase().includes('collage')
+        )
+
+        if (garmentCollage && workflowVersion === 'v3') {
+          const persistedGarmentCollage = await uploadIntermediateAsset(
+            Buffer.from(garmentCollage.base64, 'base64'),
+            {
+              fileName: `garment-collage-${randomUUID()}.png`,
+              description: garmentCollage.description,
+              mimeType: garmentCollage.mimeType ?? 'image/png'
+            }
+          )
+
+          const patch: V3WorkflowState = {
+            ...workflowState,
+            composites: {
+              ...(workflowState?.composites ?? {}),
+              garmentCollage: persistedGarmentCollage
+            }
+          }
+
+          await persistWorkflowState(patch)
+          workflowState = patch
+
+          Logger.info('[DEBUG] Persisted garment collage to workflow state', {
+            generationId,
+            s3Key: persistedGarmentCollage.key
+          })
+        }
       }
 
       const finalPrompt = labelInstruction ? `${basePrompt}\n\n${labelInstruction}` : basePrompt

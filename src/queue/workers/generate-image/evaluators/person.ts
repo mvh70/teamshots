@@ -13,13 +13,14 @@ interface EvaluatePersonInput {
   selfieReferences: ReferenceImage[]
   logoReference?: ReferenceImage
   brandingPosition?: string
+  garmentCollageReference?: ReferenceImage // Garment collage from custom clothing
 }
 
 export async function evaluatePersonGeneration(
   input: EvaluatePersonInput,
   debugMode = false
 ): Promise<EvaluationFeedback> {
-  const { imageBase64, imageIndex, generationPrompt, selfieReferences, logoReference, brandingPosition } = input
+  const { imageBase64, imageIndex, generationPrompt, selfieReferences, logoReference, brandingPosition, garmentCollageReference } = input
   
   const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
   const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
@@ -53,9 +54,11 @@ export async function evaluatePersonGeneration(
     '   - Pay special attention to head-to-body ratio - it should match realistic human proportions',
     '',
     '4. no_unauthorized_accessories',
-    '   - Compare the reference selfies to the generated image',
-    '   - Are there NO accessories (glasses, jewelry, piercings, tattoos, hats)',
-    '     that are ABSENT from the reference selfies?'
+    '   - Compare the reference selfies AND garment collage (if provided) to the generated image',
+    '   - Are there NO accessories (glasses, jewelry, piercings, tattoos, hats, belt, watch, pocket square)',
+    '     that are ABSENT from BOTH the reference selfies AND the garment collage?',
+    '   - If a garment collage is provided, accessories visible in the collage are AUTHORIZED',
+    '   - Answer YES if all accessories appear in either the selfies OR the garment collage'
   ]
 
   // Add branding checks if logo is on clothing
@@ -112,6 +115,11 @@ export async function evaluatePersonGeneration(
   for (const selfie of selfieReferences) {
     parts.push({ text: `Reference ${selfie.description || 'selfie'}` })
     parts.push({ inlineData: { mimeType: selfie.mimeType, data: selfie.base64 } })
+  }
+
+  if (garmentCollageReference) {
+    parts.push({ text: garmentCollageReference.description ?? 'Garment collage showing authorized clothing and accessories' })
+    parts.push({ inlineData: { mimeType: garmentCollageReference.mimeType, data: garmentCollageReference.base64 } })
   }
 
   if (logoReference && brandingPosition === 'clothing') {

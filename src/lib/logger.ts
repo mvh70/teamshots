@@ -5,13 +5,16 @@ const BOLD = '\x1b[1m'
 const RESET = '\x1b[0m'
 
 function log(level: Level, message: string, meta?: Record<string, unknown>): void {
+  // Get current timestamp in ISO format with milliseconds
+  const timestamp = new Date().toISOString()
+
   // Check if this is a step log (V2 Step X: or V3 Step X:)
   const isStepLog = (message.includes('V2 Step') || message.includes('V3 Step')) && message.includes(':')
-  
-  // Format the message with bold for step logs
-  const formattedMessage = isStepLog 
-    ? `${BOLD}[${level.toUpperCase()}] ${message}${RESET}`
-    : `[${level.toUpperCase()}] ${message}`
+
+  // Format the message with timestamp and bold for step logs
+  const formattedMessage = isStepLog
+    ? `[${timestamp}] ${BOLD}[${level.toUpperCase()}] ${message}${RESET}`
+    : `[${timestamp}] [${level.toUpperCase()}] ${message}`
   
   if (meta) {
     // Check if there's a prompt field that should be formatted with real line breaks

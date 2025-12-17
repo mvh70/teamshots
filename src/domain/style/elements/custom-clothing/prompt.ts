@@ -10,7 +10,8 @@ import { CustomClothingSettings } from './types'
  * Build prompt text for custom clothing
  */
 export function buildCustomClothingPrompt(settings: CustomClothingSettings): string {
-  if (settings.type !== 'user-choice') {
+  // Only build prompt if there's an actual outfit set
+  if (!settings.outfitS3Key && !settings.assetId) {
     return ''
   }
 

@@ -26,6 +26,13 @@ export interface CustomClothingSettings {
   assetId?: string
 
   /**
+   * S3 key of the generated garment collage (cached)
+   * This is the processed image showing individual clothing items extracted from the outfit
+   * Cached to avoid regenerating for team members using the same outfit
+   */
+  collageS3Key?: string
+
+  /**
    * Dominant colors extracted from the outfit
    */
   colors?: {

@@ -710,7 +710,11 @@
         "backToDashboard": "Volver al panel",
         "noCreditsTitle": "Sin créditos disponibles",
         "noCreditsMessage": "Necesitas créditos para generar fotos. Compra un plan o paquete de créditos para comenzar.",
-        "buyCredits": "Comprar créditos"
+        "buyCredits": "Comprar créditos",
+        "noTeamCreditsTitle": "Sin créditos de equipo disponibles",
+        "noTeamCreditsMessage": "Tu equipo no tiene créditos disponibles para generaciones de equipo. Contacta al administrador del equipo para solicitar créditos o usa tus créditos personales.",
+        "requestCredits": "Solicitar créditos",
+        "usePersonalCredits": "Usar créditos personales"
       },
       "profile": {
         "pro": "PRO",

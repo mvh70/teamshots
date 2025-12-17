@@ -1,15 +1,15 @@
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
-import { Playfair_Display, Inter } from 'next/font/google'
+import { Work_Sans, Inter } from 'next/font/google'
 import { OnbordaProvider } from '@/components/onboarding/OnbordaProvider'
 import { OnboardingProvider } from '@/contexts/OnboardingContext'
 import '../globals.css'
 
-const displayFont = Playfair_Display({
+const displayFont = Work_Sans({
   subsets: ['latin'],
   variable: '--font-display',
   display: 'swap',
-  weight: ['400', '700', '900'],
+  weight: ['400', '600', '700', '800'],
 })
 
 const bodyFont = Inter({

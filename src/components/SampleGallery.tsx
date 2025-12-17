@@ -18,6 +18,7 @@ interface SamplePhoto {
     name: string;
     role: string;
     team: string;
+    teamUrl?: string;
   };
 }
 
@@ -36,24 +37,27 @@ const SAMPLE_PHOTOS: SamplePhoto[] = [
   },
   {
     id: '2',
-    before: '/samples/before-1.webp',
-    after: '/samples/after-1.webp',
-    alt: 'Professional headshot transformation example 1',
+    before: '/samples/before-4.webp',
+    after: '/samples/after-4.webp',
+    alt: 'Professional headshot transformation example 4',
     attribution: {
-      name: 'Matthieu van Haperen',
-      role: 'Entrepreneur',
-      team: 'Carpe Diem Ventures'
+      name: 'Clarice Pinto',
+      role: 'Founder',
+      team: 'Pausetiv',
+      teamUrl: 'https://www.pausetiv.com'
     }
   },
   {
     id: '3',
     before: '/samples/before-3.webp',
-    after: '/samples/after-3.webp',
-    alt: 'Professional headshot transformation example 3',
+    after: '/samples/after-5.webp',
+    alt: 'Professional headshot transformation example 5',
     attribution: {
       name: 'Matthieu van Haperen',
       role: 'Founder',
-      team: BRAND_CONFIG.name
+      team: 'Teamshotspro',
+      teamUrl: 'https://www.teamshotspro.com'
+
     }
   }
 ];
@@ -187,7 +191,7 @@ export default function SampleGallery({ variant }: SampleGalleryProps) {
                   >
                     {/* Background: After image (now background so left = Before) */}
                     <Image
-                      src={photo.after}
+                      src={`${photo.after}?v=3`}
                       alt={`${photo.alt} - After`}
                       fill
                       className="object-cover"
@@ -198,7 +202,7 @@ export default function SampleGallery({ variant }: SampleGalleryProps) {
                     {/* Foreground: Before image clipped to slider position */}
                     <div className="absolute inset-0">
                       <Image
-                        src={photo.before}
+                        src={`${photo.before}?v=3`}
                         alt={`${photo.alt} - Before`}
                         fill
                         className="object-cover"
@@ -247,7 +251,19 @@ export default function SampleGallery({ variant }: SampleGalleryProps) {
                         {photo.attribution.name}
                       </p>
                       <p className="text-sm text-text-body mt-1">
-                        {photo.attribution.role} • {photo.attribution.team}
+                        {photo.attribution.role} •{' '}
+                        {photo.attribution.teamUrl ? (
+                          <a
+                            href={photo.attribution.teamUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand-primary hover:text-brand-primary-hover underline transition-colors"
+                          >
+                            {photo.attribution.team}
+                          </a>
+                        ) : (
+                          photo.attribution.team
+                        )}
                       </p>
                     </div>
                   )}

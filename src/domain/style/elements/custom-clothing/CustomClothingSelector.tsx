@@ -213,7 +213,7 @@ export function CustomClothingSelector({
   // Determine if upload section should be shown based on mode and type
   const shouldShowUpload = mode === 'admin'
     ? value.type === 'predefined'  // Admin mode: show when predefined (admin configures outfit)
-    : value.type === 'user-choice'  // User mode: show when user-choice (user customizes outfit)
+    : value.type === 'user-choice' || !!(value.outfitS3Key || value.assetId)  // User mode: show when user-choice OR preset outfit exists
 
   return (
     <div className="space-y-4">

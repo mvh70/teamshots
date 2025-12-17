@@ -9,6 +9,10 @@
 import type { ComponentType, SVGProps } from 'react'
 import type { CategoryType } from '@/types/photo-style'
 
+export interface ElementSummaryProps<T = unknown> {
+  settings?: T
+}
+
 export interface ElementMetadata {
   key: CategoryType
   label: string
@@ -16,6 +20,8 @@ export interface ElementMetadata {
   description: string
   /** Group this element belongs to for UI organization */
   group: 'composition' | 'userStyle'
+  /** Component to render in the summary card (optional) */
+  summaryComponent?: ComponentType<ElementSummaryProps>
 }
 
 /**

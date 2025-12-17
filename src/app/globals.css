@@ -333,13 +333,13 @@ p, li, span, div {
 h1, h2, h3, h4, h5, h6 {
   color: var(--text-dark);
   font-weight: 700;
-  font-family: var(--font-display), serif;
+  font-family: var(--font-display), sans-serif;
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
 
 h1 {
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1.1;
 }

@@ -19,6 +19,7 @@ export interface V3WorkflowState {
   composites?: {
     selfie?: PersistedImageReference
     background?: PersistedImageReference
+    garmentCollage?: PersistedImageReference // Custom clothing garment collage
   }
   step1a?: {
     personImage: PersistedImageReference

@@ -704,7 +704,11 @@
         "backToDashboard": "Back to dashboard",
         "noCreditsTitle": "No credits available",
         "noCreditsMessage": "You need credits to generate photos. Purchase a plan or credit package to get started.",
-        "buyCredits": "Buy credits"
+        "buyCredits": "Buy credits",
+        "noTeamCreditsTitle": "No team credits available",
+        "noTeamCreditsMessage": "Your team has no credits available for team generations. Contact your team admin to request credits or use your personal credits instead.",
+        "requestCredits": "Request credits",
+        "usePersonalCredits": "Use personal credits"
       },
       "profile": {
         "pro": "PRO",

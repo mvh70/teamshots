@@ -32,13 +32,57 @@ function extractFailedCriteria(structuredEvaluation: StructuredEvaluation): stri
  * Extract suggested adjustments from structured evaluation
  */
 function extractSuggestedAdjustments(structuredEvaluation: StructuredEvaluation): string {
-  return Object.entries(structuredEvaluation.explanations || {})
-    .filter(([key]) => {
-      const value = structuredEvaluation[key as keyof StructuredEvaluation]
-      return value === 'NO' || value === 'UNCERTAIN'
-    })
-    .map(([, explanation]) => explanation)
-    .join('; ')
+  const adjustments: string[] = []
+
+  Object.entries(structuredEvaluation.explanations || {}).forEach(([key, explanation]) => {
+    const value = structuredEvaluation[key as keyof StructuredEvaluation]
+
+    if (value === 'NO' || value === 'UNCERTAIN') {
+      // Add the explanation
+      adjustments.push(`❌ ${key}: ${explanation}`)
+
+      // Add prescriptive guidance for specific failures
+      if (key === 'no_unauthorized_accessories') {
+        adjustments.push(
+          '⚠️ CRITICAL FIX: DO NOT add ANY accessories (belt, watch, pocket square, tie, cufflinks, jewelry, etc.) ' +
+          'that are not clearly visible in the reference selfies. ONLY include accessories explicitly present in the selfies. ' +
+          'If unsure whether an accessory is visible in the selfies, OMIT it entirely. ' +
+          'The outfit description is for clothing style guidance only - do NOT infer accessories from it.'
+        )
+      }
+
+      if (key === 'face_similarity') {
+        adjustments.push(
+          '⚠️ CRITICAL FIX: The face MUST closely match the reference selfies. ' +
+          'Pay special attention to facial structure, eye shape, nose, mouth, and unique characteristics like glasses, beard, hair.'
+        )
+      }
+
+      if (key === 'body_framing') {
+        adjustments.push(
+          '⚠️ CRITICAL FIX: Ensure proper body framing. Do NOT crop at the waist or mid-torso. ' +
+          'Show at minimum 3/4 body (to mid-thigh) or full body. Bottom-border cutoffs are acceptable.'
+        )
+      }
+
+      if (key === 'person_prominence') {
+        adjustments.push(
+          '⚠️ CRITICAL FIX: The person MUST be the dominant element, occupying 40-60% of image height. ' +
+          'The person should be LARGER than any background elements (banners, logos, signs). ' +
+          'Do NOT make the person small to fit background elements - let the person overlap them.'
+        )
+      }
+
+      if (key === 'branding_placement') {
+        adjustments.push(
+          '⚠️ CRITICAL FIX: Logo must be visible and properly placed in the background. ' +
+          'Partial occlusion by the person is good (adds depth). Logo should be on wall/banner behind subject.'
+        )
+      }
+    }
+  })
+
+  return adjustments.join('\n\n')
 }
 
 /**

@@ -8,6 +8,7 @@ import { ensureServerDefaults, mergeUserSettings } from '../shared/utils'
 import { resolvePackageAspectRatio } from '../shared/aspect-ratio-resolver'
 import { downloadAssetAsBase64 } from '@/queue/workers/generate-image/s3-utils'
 import { getS3BucketName, createS3Client } from '@/lib/s3-client'
+import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { buildStandardPrompt } from '../../prompt-builders/context'
 import * as shotTypeElement from '../../elements/shot-type'
 import * as cameraSettings from '../../elements/camera-settings'
@@ -19,13 +20,11 @@ import * as subjectElement from '../../elements/subject'
 import * as branding from '../../elements/branding'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
 import { CostTrackingService } from '@/domain/services/CostTrackingService'
-import type { Part } from '@google-cloud/vertexai'
+import { prisma } from '@/lib/prisma'
 
 export type Outfit1ServerPackage = typeof outfit1Base & {
   buildGenerationPayload: (context: GenerationContext) => Promise<GenerationPayload>
 }
-
-type GeminiContentPart = Part
 
 export const outfit1Server: Outfit1ServerPackage = {
   ...outfit1Base,
@@ -36,6 +35,16 @@ export const outfit1Server: Outfit1ServerPackage = {
     processedSelfies,
     options
   }: GenerationContext): Promise<GenerationPayload> => {
+    // DEBUG: Log incoming styleSettings
+    Logger.info('[DEBUG] buildGenerationPayload called', {
+      generationId,
+      hasCustomClothing: !!styleSettings.customClothing,
+      customClothingType: styleSettings.customClothing?.type,
+      customClothingOutfitS3Key: styleSettings.customClothing?.outfitS3Key,
+      customClothingAssetId: styleSettings.customClothing?.assetId,
+      fullCustomClothing: JSON.stringify(styleSettings.customClothing)
+    })
+
     // Track package usage
     Telemetry.increment(`generation.package.${outfit1Base.id}`)
     Telemetry.increment(`generation.package.${outfit1Base.id}.workflow.${options.workflowVersion}`)
@@ -61,6 +70,17 @@ export const outfit1Server: Outfit1ServerPackage = {
       styleSettings,
       outfit1Base.visibleCategories
     )
+
+    // DEBUG: Log effectiveSettings after merging
+    Logger.info('[DEBUG] effectiveSettings after merging', {
+      generationId,
+      hasCustomClothing: !!effectiveSettings.customClothing,
+      customClothingType: effectiveSettings.customClothing?.type,
+      customClothingOutfitS3Key: effectiveSettings.customClothing?.outfitS3Key,
+      customClothingAssetId: effectiveSettings.customClothing?.assetId,
+      fullCustomClothing: JSON.stringify(effectiveSettings.customClothing),
+      visibleCategories: outfit1Base.visibleCategories
+    })
 
     // Use package default shotType (respects package configuration)
     const packageShotType = outfit1Base.defaultSettings.shotType?.type || 'medium-shot'
@@ -121,27 +141,77 @@ export const outfit1Server: Outfit1ServerPackage = {
     pose.applyToPayload(context)
     backgroundElement.applyToPayload(context)
 
-    // Apply custom clothing if user-choice
-    if (effectiveSettings.customClothing?.type === 'user-choice') {
+    // Apply custom clothing if outfit is set (either user-choice or predefined with outfit)
+    // DEBUG: Log custom clothing data before processing
+    Logger.info('[DEBUG] Custom clothing check', {
+      generationId,
+      hasCustomClothingObject: !!effectiveSettings.customClothing,
+      customClothingType: effectiveSettings.customClothing?.type,
+      hasOutfitS3Key: !!effectiveSettings.customClothing?.outfitS3Key,
+      hasAssetId: !!effectiveSettings.customClothing?.assetId,
+      outfitS3Key: effectiveSettings.customClothing?.outfitS3Key,
+      assetId: effectiveSettings.customClothing?.assetId,
+      hasCachedCollage: !!effectiveSettings.customClothing?.collageS3Key,
+      fullCustomClothingObject: JSON.stringify(effectiveSettings.customClothing)
+    })
+
+    const hasCustomOutfit = effectiveSettings.customClothing &&
+      (effectiveSettings.customClothing.outfitS3Key || effectiveSettings.customClothing.assetId)
+
+    Logger.info('[DEBUG] hasCustomOutfit result', { generationId, hasCustomOutfit })
+
+    if (hasCustomOutfit) {
+      Logger.info('[DEBUG] Entering custom clothing block', { generationId })
       const customClothingPrompt = customClothing.buildCustomClothingPrompt(effectiveSettings.customClothing)
+      Logger.info('[DEBUG] Custom clothing prompt built', {
+        generationId,
+        hasPrompt: !!customClothingPrompt,
+        promptLength: customClothingPrompt?.length,
+        prompt: customClothingPrompt
+      })
+
       if (customClothingPrompt) {
         // Add outfit description to the subject prompt
         if (typeof context.payload.subject !== 'object' || context.payload.subject === null) {
           context.payload.subject = {}
         }
         (context.payload.subject as Record<string, unknown>).outfit = customClothingPrompt
+        Logger.info('[DEBUG] Added outfit to context.payload.subject', {
+          generationId,
+          subjectPayload: JSON.stringify(context.payload.subject)
+        })
       }
 
       // Add garment reference to referenceImages
       const outfitKey = effectiveSettings.customClothing.outfitS3Key
+      const cachedCollageKey = effectiveSettings.customClothing.collageS3Key
 
       if (outfitKey) {
         try {
-          // Download the original outfit image
-          const outfitImage = await downloadAssetAsBase64({ bucketName, s3Client, key: outfitKey })
-          if (!outfitImage) {
-            Logger.warn('Outfit image download returned null', { outfitKey, generationId })
+          let collageBase64: string | null = null
+          let shouldSaveCollage = false
+
+          // Check if we have a cached collage
+          if (cachedCollageKey) {
+            Logger.info('Using cached garment collage', { cachedCollageKey, generationId })
+            const cachedCollage = await downloadAssetAsBase64({ bucketName, s3Client, key: cachedCollageKey })
+            if (cachedCollage) {
+              collageBase64 = cachedCollage.base64
+            } else {
+              Logger.warn('Cached collage not found, will regenerate', { cachedCollageKey, generationId })
+              shouldSaveCollage = true
+            }
           } else {
+            shouldSaveCollage = true
+          }
+
+          // If no cached collage, generate a new one
+          if (!collageBase64) {
+            // Download the original outfit image
+            const outfitImage = await downloadAssetAsBase64({ bucketName, s3Client, key: outfitKey })
+            if (!outfitImage) {
+              Logger.warn('Outfit image download returned null', { outfitKey, generationId })
+            } else {
             // Download logo if provided (for branding on outfit)
             let logoImage: { base64: string; mimeType: string } | null = null
             if (effectiveSettings.branding?.type !== 'exclude' && effectiveSettings.branding?.logoKey) {
@@ -175,17 +245,79 @@ export const outfit1Server: Outfit1ServerPackage = {
             }
 
             if (collageResult.success) {
-              // Use the generated collage
-              payload.referenceImages.push({
-                base64: collageResult.data.base64,
-                mimeType: 'image/png',
-                description: 'Garment collage - dress the person using these exact clothing items and style. Match the colors, fit, and details shown in each garment.'
-              })
+              collageBase64 = collageResult.data.base64
 
-              Logger.info('Added garment collage to reference images', {
-                generationId,
-                hasLogo: !!logoImage
-              })
+              // Save collage to S3 if needed
+              if (shouldSaveCollage) {
+                try {
+                  const collageBuffer = Buffer.from(collageBase64, 'base64')
+                  const collageKey = `collages/${generationId}-${Date.now()}.png`
+
+                  await s3Client.send(
+                    new PutObjectCommand({
+                      Bucket: bucketName,
+                      Key: collageKey,
+                      Body: collageBuffer,
+                      ContentType: 'image/png'
+                    })
+                  )
+
+                  Logger.info('Saved garment collage to S3', { collageKey, generationId })
+
+                  // Update context with cached collage key (separate try-catch to not block tmp save)
+                  if (contextId) {
+                    try {
+                      await prisma.context.update({
+                        where: { id: contextId },
+                        data: {
+                          settings: {
+                            ...effectiveSettings,
+                            customClothing: {
+                              ...effectiveSettings.customClothing,
+                              collageS3Key: collageKey
+                            }
+                          }
+                        }
+                      })
+                      Logger.info('Updated context with collage S3 key', { contextId, collageKey })
+                    } catch (contextError) {
+                      Logger.warn('Failed to update context with collage key', {
+                        contextId,
+                        error: contextError instanceof Error ? contextError.message : String(contextError)
+                      })
+                    }
+                  }
+
+                  // Save to tmp folder in development
+                  if (process.env.NODE_ENV === 'development') {
+                    try {
+                      const fs = await import('fs/promises')
+                      const path = await import('path')
+
+                      const tmpDir = path.join(process.cwd(), 'tmp', 'collages')
+                      await fs.mkdir(tmpDir, { recursive: true })
+
+                      await fs.writeFile(
+                        path.join(tmpDir, `${generationId}-collage.png`),
+                        collageBuffer
+                      )
+
+                      Logger.info('Saved collage to tmp folder', {
+                        path: `tmp/collages/${generationId}-collage.png`
+                      })
+                    } catch (tmpError) {
+                      Logger.warn('Failed to save collage to tmp folder', {
+                        error: tmpError instanceof Error ? tmpError.message : String(tmpError)
+                      })
+                    }
+                  }
+                } catch (uploadError) {
+                  Logger.error('Failed to save collage to S3', {
+                    generationId,
+                    error: uploadError instanceof Error ? uploadError.message : String(uploadError)
+                  })
+                }
+              }
             } else {
               // Fallback to original outfit photo
               payload.referenceImages.push({
@@ -200,6 +332,25 @@ export const outfit1Server: Outfit1ServerPackage = {
                 code: collageResult.code
               })
             }
+            }
+          }
+
+          // Add collage to reference images (whether cached or newly generated)
+          if (collageBase64) {
+            if (!payload.referenceImages) {
+              payload.referenceImages = []
+            }
+
+            payload.referenceImages.push({
+              base64: collageBase64,
+              mimeType: 'image/png',
+              description: 'Garment collage - dress the person using these exact clothing items and style. Match the colors, fit, and details shown in each garment.'
+            })
+
+            Logger.info('Added garment collage to reference images', {
+              generationId,
+              fromCache: !!cachedCollageKey
+            })
           }
         } catch (error) {
           Logger.error('Failed to process outfit image', {
@@ -243,122 +394,91 @@ async function createGarmentCollage(
   const startTime = Date.now()
 
   try {
-    const { VertexAI } = await import('@google-cloud/vertexai')
+    const { generateWithGemini } = await import('@/queue/workers/generate-image/gemini')
 
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'teamshots'
-    const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
+    const prompt = `Ultra-realistic 8K flat-lay photo in strict knolling style. Top-down 90º shot of the clothing objects from the attached image, fully disassembled into 8–12 key parts and arranged in a clean grid or radial pattern on a minimalist wooden or matte gray table. Even spacing, perfect alignment, no overlaps, no extra objects. Soft, diffused multi-source lighting with subtle shadows, neutral color balance and crisp focus across the whole frame. Highly detailed real-world materials (fabric textures, buttons, zippers, stitching). For every part, add a thin white rectangular frame and a short, sharp English label in clean sans-serif text, placed beside the component without covering it; annotations must be legible but unobtrusive.
 
-    const vertexAI = new VertexAI({ project: projectId, location })
-    const model = vertexAI.getGenerativeModel({
-      model: 'gemini-2.0-flash-exp',
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 2048,
-      }
-    })
+Key clothing items to display from the reference image:
+- Shirt/top (main upper garment)
+- Jacket/blazer (if present)
+- Pants/trousers
+- Shoes (if visible)
+- Accessories (belt, tie, pocket square, etc. if present)
 
-    const prompt = `You are a professional clothing stylist creating a garment collage for a headshot photoshoot.
+${logo ? `LOGO PLACEMENT: If a logo image is provided, place it naturally on the shirt or jacket as if embroidered or printed on the fabric.` : ''}
 
-TASK: Analyze this outfit photo and create a neat collage showing the individual clothing items extracted from this outfit.
+Style: Professional product photography, sharp focus, minimal aesthetic.`
 
-STEPS:
-1. Identify and extract these garment items (if visible):
-   - Shirt/top (the main upper garment)
-   - Jacket/blazer (outer layer, if present)
-   - Pants/trousers (lower garment)
-   - Shoes (if visible in the photo)
-
-2. For each garment:
-   - Isolate it from the person
-   - Show it as if laid flat or on a mannequin
-   - Maintain the original colors, textures, and style
-   - Keep details like collars, cuffs, buttons clearly visible
-
-3. Arrange the items in a clean grid layout:
-   - Use a 2x2 grid if 4 items are present
-   - Use a 1x3 vertical layout if 3 items
-   - Use a 1x2 horizontal layout if 2 items
-   - Clean white or light gray background
-   - Each garment clearly separated and labeled
-
-${logo ? `
-4. LOGO PLACEMENT (IMPORTANT):
-   - A logo image is provided separately
-   - Place this logo naturally on the appropriate garment(s)
-   - Typically position on the chest area of the shirt or jacket
-   - Make it look like it's embroidered or printed on the fabric
-   - Ensure logo is clearly visible but proportional
-   - Logo should follow the contours of the fabric naturally
-` : ''}
-
-REQUIREMENTS:
-- Remove the person completely - show only the clothing items
-- Maintain professional presentation
-- Each garment should be clearly identifiable
-- Colors and patterns must match the original exactly
-- Professional studio-quality presentation
-
-OUTPUT: Generate a single collage image showing all extracted garments.`
-
-    // Build the request parts
-    const parts: GeminiContentPart[] = [
+    // Build reference images
+    const images = [
       {
-        inlineData: {
-          mimeType: outfitMimeType,
-          data: outfitImageBase64.replace(/^data:image\/[a-z]+;base64,/, '')
-        }
+        mimeType: outfitMimeType,
+        base64: outfitImageBase64.replace(/^data:image\/[a-z]+;base64,/, ''),
+        description: 'Outfit image to extract garments from'
       }
     ]
 
     // Add logo if provided
     if (logo) {
-      parts.push({
-        inlineData: {
-          mimeType: logo.mimeType,
-          data: logo.base64.replace(/^data:image\/[a-z]+;base64,/, '')
-        }
+      images.push({
+        mimeType: logo.mimeType,
+        base64: logo.base64.replace(/^data:image\/[a-z]+;base64,/, ''),
+        description: 'Logo to place on garments'
       })
     }
 
-    // Add text prompt
-    parts.push({ text: prompt })
+    Logger.info('[DEBUG] Garment collage prompt:', { prompt: prompt.substring(0, 300) + '...' })
 
-    const result = await model.generateContent({
-      contents: [{
-        role: 'user',
-        parts
-      }]
-    })
-
-    const response = result.response
-
-    // Extract generated image from response
-    const imagePart = response.candidates?.[0]?.content?.parts?.find(
-      (part: { inlineData?: { mimeType: string; data: string } }) =>
-        part.inlineData?.mimeType?.startsWith('image/')
+    // Use the existing generation system with fallbacks
+    const result = await generateWithGemini(
+      prompt,
+      images,
+      '1:1', // Square aspect ratio for collage
+      undefined, // no resolution specified
+      {
+        temperature: 0.3,
+        model: 'gemini-2.5-flash-image'
+      }
     )
 
-    if (!imagePart?.inlineData?.data) {
+    Logger.info('[DEBUG] Garment collage generation result', {
+      generationId,
+      hasImages: !!(result.images && result.images.length > 0),
+      imageCount: result.images?.length || 0,
+      provider: result.providerUsed,
+      inputTokens: result.usage?.inputTokens,
+      outputTokens: result.usage?.outputTokens
+    })
+
+    if (!result.images || result.images.length === 0) {
       Logger.warn('Gemini did not return an image for garment collage', {
         generationId,
-        response: JSON.stringify(response)
+        provider: result.providerUsed,
+        hasImages: !!result.images,
+        imageCount: result.images?.length || 0
       })
       return { success: false, error: 'No image generated', code: 'NO_IMAGE' }
     }
 
-    // Extract usage metadata
-    const usage = {
-      inputTokens: response.usageMetadata?.promptTokenCount || 0,
-      outputTokens: response.usageMetadata?.candidatesTokenCount || 0
-    }
+    // Convert Buffer to base64
+    const imageBuffer = result.images[0]
+    const base64Image = imageBuffer.toString('base64')
 
-    // Track cost (no personId/teamId available in this context, will be tracked at generation level)
+    Logger.info('[DEBUG] Garment collage created successfully', {
+      generationId,
+      provider: result.providerUsed,
+      imageSizeBytes: imageBuffer.length,
+      inputTokens: result.usage.inputTokens,
+      outputTokens: result.usage.outputTokens
+    })
+
+    // Track cost using the result data
     await CostTrackingService.trackCall({
       generationId,
-      provider: 'vertex',
+      provider: result.providerUsed || 'unknown',
       model: 'gemini-2.5-flash-image',
-      inputTokens: usage.inputTokens,
-      outputTokens: usage.outputTokens,
+      inputTokens: result.usage.inputTokens || 0,
+      outputTokens: result.usage.outputTokens || 0,
       imagesGenerated: 1,
       reason: 'outfit_collage_creation',
       result: 'success',
@@ -370,8 +490,11 @@ OUTPUT: Generate a single collage image showing all extracted garments.`
 
     return {
       success: true,
-      data: { base64: imagePart.inlineData.data },
-      usage
+      data: { base64: base64Image },
+      usage: {
+        inputTokens: result.usage.inputTokens || 0,
+        outputTokens: result.usage.outputTokens || 0
+      }
     }
 
   } catch (error) {
@@ -383,7 +506,7 @@ OUTPUT: Generate a single collage image showing all extracted garments.`
     // Track failed cost
     await CostTrackingService.trackCall({
       generationId,
-      provider: 'vertex',
+      provider: 'unknown',
       model: 'gemini-2.5-flash-image',
       inputTokens: 0,
       outputTokens: 0,

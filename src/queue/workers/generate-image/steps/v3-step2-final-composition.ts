@@ -7,6 +7,7 @@ import { logPrompt, logStepResult } from '../utils/logging'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import { buildAspectRatioFormatReference } from '../utils/reference-builder'
 import { resolveAspectRatioConfig } from '@/domain/style/elements/aspect-ratio/config'
+import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import type { CostTrackingHandler } from '../workflow-v3'
 
 export interface V3Step2FinalInput {
@@ -59,6 +60,13 @@ export async function executeV3Step2(
   
   // Parse original prompt and extract scene/camera/lighting/rendering (exclude subject)
   const promptObj = JSON.parse(originalPrompt)
+
+  // Extract shot type information for proper framing instructions
+  const framing = promptObj.framing as { shot_type?: string; crop_points?: string } | undefined
+  const shotTypeId = framing?.shot_type || 'medium-shot'
+  const shotTypeConfig = resolveShotType(shotTypeId)
+  const shotType = shotTypeConfig.label
+  const shotDescription = framing?.crop_points || shotTypeConfig.framingDescription
 
   // Create background composition prompt WITHOUT subject (person is already generated)
   const backgroundPrompt = {
@@ -131,7 +139,7 @@ export async function executeV3Step2(
     // Section 3: Composition Rules
     '',
     'Composition Rules:',
-    '- The final image must respect the **${shotType}** framing (${shotDescription}). Ensure the person is scaled correctly for this shot type, satisfying the framing constraints mentioned in the json.',
+    `- The final image must respect the **${shotType}** framing (${shotDescription}). Ensure the person is scaled correctly for this shot type, satisfying the framing constraints mentioned in the json.`,
     '- Do NOT shrink the person to make space for background elements or logos. The person is the primary subject and they must blend naturally with the background.',
     '- Match lighting, shadows, perspective, and scale.',
     `- **Output Dimensions (${aspectRatioConfig.id})**: Generate the image at exactly ${aspectRatioConfig.width}x${aspectRatioConfig.height} pixels. Fill the entire canvas edge-to-edge with the composition. Do NOT add any borders, frames, letterboxing, or black bars. The image content should extend to all edges.`,
@@ -149,7 +157,8 @@ export async function executeV3Step2(
     '',
     '**CRITICAL Body Framing Rules:**',
     '- NEVER crop the person at the waist or mid-torso. This looks unprofessional.',
-    '- For medium-shot: Show from head to at least mid-thigh (3/4 body length).',
+    '- For medium-shot: Show from head down to the waist, showing torso and arms.',
+    '- For three-quarter: Show from head to mid-thigh (3/4 body length).',
     '- For full-shot: Show the entire body from head to feet.',
     '- For close-up/headshot: Show from head to chest/shoulders.',
     '- When in doubt, show MORE of the body, not less. It is better to show full body than to cut off awkwardly.',
