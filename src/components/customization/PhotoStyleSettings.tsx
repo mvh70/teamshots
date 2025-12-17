@@ -44,7 +44,7 @@ import { useCustomizationWizard } from '@/hooks/useCustomizationWizard'
 // Import element registry
 import { getElements } from '@/domain/style/elements'
 import type { ElementMetadata as CategoryConfig } from '@/domain/style/elements'
-import { getElementConfig } from '@/domain/style/elements/registry'
+import { getElementConfig, type CategoryType as RegistryCategoryType } from '@/domain/style/elements/registry'
 import '@/domain/style/elements/init-registry' // Initialize element registry
 
 interface PhotoStyleSettingsProps {
@@ -303,8 +303,29 @@ export default function PhotoStyleSettings({
 
     const newSettings = { ...value }
 
-    // Get element config from registry
-    const elementConfig = getElementConfig(category)
+    // Check if category has an element config (some categories like 'aspectRatio' don't)
+    // Valid registry categories that have ElementConfig implementations
+    const registryCategories: readonly string[] = [
+      'background',
+      'branding',
+      'clothing',
+      'clothingColors',
+      'customClothing',
+      'shotType',
+      'style',
+      'expression',
+      'lighting',
+      'pose'
+    ] as const
+
+    // Skip categories that don't have element configs (like aspectRatio)
+    if (!registryCategories.includes(category)) {
+      console.warn(`Category ${category} does not support toggling via element config`)
+      return
+    }
+
+    // Get element config from registry (category is now narrowed to RegistryCategoryType)
+    const elementConfig = getElementConfig(category as RegistryCategoryType)
 
     if (!elementConfig) {
       console.warn(`No element config found for category: ${category}`)
@@ -339,7 +360,7 @@ export default function PhotoStyleSettings({
     // Special post-processing for certain categories
     if (category === 'shotType') {
       syncAspectRatioWithShotType(newSettings, newSettings.shotType)
-    } else if (category === 'pose' && isPredefined && newSettings.pose?.type !== 'user-choice') {
+    } else if (category === 'pose' && isPredefined && newSettings.pose?.type !== 'user-choice' && newSettings.pose) {
       const poseSettings = applyPosePresetToSettings(newSettings, newSettings.pose.type)
       Object.assign(newSettings, poseSettings)
     }

@@ -1,5 +1,5 @@
 import { FaceSmileIcon } from '@heroicons/react/24/outline'
-import { registerElement } from '../metadata'
+import { registerElement, type ElementMetadata } from '../metadata'
 import { ExpressionSummary } from './Summary'
 
 registerElement({
@@ -8,5 +8,5 @@ registerElement({
   icon: FaceSmileIcon,
   description: 'Facial expression and mood',
   group: 'userStyle',
-  summaryComponent: ExpressionSummary
+  summaryComponent: ExpressionSummary as ElementMetadata['summaryComponent']
 })

@@ -1,5 +1,5 @@
 import { SwatchIcon } from '@heroicons/react/24/outline'
-import { registerElement } from '../metadata'
+import { registerElement, type ElementMetadata } from '../metadata'
 import { ClothingColorsSummary } from './Summary'
 
 registerElement({
@@ -8,5 +8,5 @@ registerElement({
   icon: SwatchIcon,
   description: 'Colors for clothing items',
   group: 'userStyle',
-  summaryComponent: ClothingColorsSummary
+  summaryComponent: ClothingColorsSummary as ElementMetadata['summaryComponent']
 })

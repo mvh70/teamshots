@@ -160,7 +160,7 @@ export const outfit1Server: Outfit1ServerPackage = {
 
     Logger.info('[DEBUG] hasCustomOutfit result', { generationId, hasCustomOutfit })
 
-    if (hasCustomOutfit) {
+    if (hasCustomOutfit && effectiveSettings.customClothing) {
       Logger.info('[DEBUG] Entering custom clothing block', { generationId })
       const customClothingPrompt = customClothing.buildCustomClothingPrompt(effectiveSettings.customClothing)
       Logger.info('[DEBUG] Custom clothing prompt built', {
@@ -265,10 +265,16 @@ export const outfit1Server: Outfit1ServerPackage = {
                   Logger.info('Saved garment collage to S3', { collageKey, generationId })
 
                   // Update context with cached collage key (separate try-catch to not block tmp save)
-                  if (contextId) {
+                  // Get contextId from generation record
+                  const generation = await prisma.generation.findUnique({
+                    where: { id: generationId },
+                    select: { contextId: true }
+                  })
+
+                  if (generation?.contextId) {
                     try {
                       await prisma.context.update({
-                        where: { id: contextId },
+                        where: { id: generation.contextId },
                         data: {
                           settings: {
                             ...effectiveSettings,
@@ -276,13 +282,13 @@ export const outfit1Server: Outfit1ServerPackage = {
                               ...effectiveSettings.customClothing,
                               collageS3Key: collageKey
                             }
-                          }
+                          } as unknown as Parameters<typeof prisma.context.update>[0]['data']['settings']
                         }
                       })
-                      Logger.info('Updated context with collage S3 key', { contextId, collageKey })
+                      Logger.info('Updated context with collage S3 key', { contextId: generation.contextId, collageKey })
                     } catch (contextError) {
                       Logger.warn('Failed to update context with collage key', {
-                        contextId,
+                        contextId: generation.contextId,
                         error: contextError instanceof Error ? contextError.message : String(contextError)
                       })
                     }
@@ -436,8 +442,7 @@ Style: Professional product photography, sharp focus, minimal aesthetic.`
       '1:1', // Square aspect ratio for collage
       undefined, // no resolution specified
       {
-        temperature: 0.3,
-        model: 'gemini-2.5-flash-image'
+        temperature: 0.3
       }
     )
 
@@ -506,7 +511,7 @@ Style: Professional product photography, sharp focus, minimal aesthetic.`
     // Track failed cost
     await CostTrackingService.trackCall({
       generationId,
-      provider: 'unknown',
+      provider: 'gemini-rest', // Default provider for Gemini calls (actual provider unknown on failure)
       model: 'gemini-2.5-flash-image',
       inputTokens: 0,
       outputTokens: 0,

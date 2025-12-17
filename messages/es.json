@@ -1667,6 +1667,7 @@
         "shotType": "Diferentes encuadres funcionan mejor para diferentes plataformas. Retratos para LinkedIn, cuerpo completo para páginas de equipo.",
         "clothing": "Establece el código de vestimenta para las fotos de tu equipo - desde casual hasta formal de negocios.",
         "clothingColors": "Especifica colores exactos para artículos de ropa para que coincidan con tu paleta de marca.",
+        "customClothing": "Sube una imagen de un outfit para transferir el estilo de ropa a tus fotos generadas.",
         "expression": "Controla la expresión facial y el estado de ánimo de las fotos de tu equipo.",
         "lighting": "Establece el estilo de iluminación para que coincida con tu estética de marca - desde natural hasta iluminación de estudio.",
         "pose": "Elige una pose corporal y posicionamiento que coincida con tu imagen profesional y estilo de marca."
@@ -1702,6 +1703,10 @@
         "clothingColors": {
           "title": "Colores de Ropa",
           "description": "Colores para artículos de ropa"
+        },
+        "customClothing": {
+          "title": "Ropa Personalizada",
+          "description": "Sube tu propio outfit para que la IA lo coincida"
         },
         "shotType": {
           "title": "Tipo de Toma",

@@ -1,5 +1,5 @@
 import { SparklesIcon } from '@heroicons/react/24/outline'
-import { registerElement } from '../metadata'
+import { registerElement, type ElementMetadata } from '../metadata'
 import { CustomClothingSummary } from './Summary'
 
 registerElement({
@@ -8,5 +8,5 @@ registerElement({
   icon: SparklesIcon,
   description: 'Upload your own outfit',
   group: 'userStyle',
-  summaryComponent: CustomClothingSummary
+  summaryComponent: CustomClothingSummary as ElementMetadata['summaryComponent']
 })

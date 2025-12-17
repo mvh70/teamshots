@@ -11,6 +11,7 @@ import type {
   ExpressionSettings,
   PhotoStyleSettings
 } from '@/types/photo-style'
+import type { ElementConfig } from '../registry'
 import { getExpressionLabel } from '../expression/config'
 
 export { getExpressionLabel }
@@ -532,8 +533,6 @@ export function applyPosePresetToSettings(
   return updatedSettings
 }
 
-import type { ElementConfig } from '../registry'
-import type { PhotoStyleSettings } from '@/types/photo-style'
 import { deserialize } from './deserializer'
 
 /**
