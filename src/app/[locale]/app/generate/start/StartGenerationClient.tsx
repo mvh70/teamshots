@@ -29,6 +29,7 @@ import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import Header from '@/app/[locale]/app/components/Header'
+import { loadClothingColors, saveClothingColors } from '@/lib/clothing-colors-storage'
 
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
 
@@ -153,6 +154,38 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     }
   }, [flowFlags.pendingGeneration, skipUpload, keyFromQuery, isSuccess, session, selectedSelfies.length, router, pathname, searchParamsString, clearGenerationFlow])
 
+  // Load saved clothing colors from session storage
+  useEffect(() => {
+    // Only load colors once when component is hydrated and ready
+    if (!hydrated || !skipUpload) return
+    
+    // Load saved colors from session storage
+    const savedColors = loadClothingColors()
+    
+    if (!savedColors) return
+    
+    // Merge saved colors into current settings
+    setPhotoStyleSettings(prev => {
+      const currentClothingColors = prev.clothingColors
+      
+      // Only merge if user-choice type (editable)
+      if (!currentClothingColors || currentClothingColors.type !== 'user-choice') {
+        return prev
+      }
+      
+      return {
+        ...prev,
+        clothingColors: {
+          type: 'user-choice',
+          colors: {
+            ...currentClothingColors.colors,
+            ...savedColors // Saved colors take precedence
+          }
+        }
+      }
+    })
+  }, [hydrated, skipUpload])
+
   const normalizeContextName = useCallback((rawName: string | null | undefined, index: number, total: number, type: 'personal' | 'team'): string => {
     const trimmed = (rawName ?? '').trim()
     if (trimmed && trimmed.toLowerCase() !== 'unnamed') {
@@ -205,6 +238,11 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
     try {
       setIsGenerating(true)
+
+      // Save current clothing colors to session storage
+      if (photoStyleSettings.clothingColors?.colors) {
+        saveClothingColors(photoStyleSettings.clothingColors.colors)
+      }
 
       if (session?.user?.id) {
         track('generation_started', {
