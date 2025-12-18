@@ -54,21 +54,70 @@ export function OnbordaCard({
   const isLast = numberOfSteps > 0 ? currentStep === numberOfSteps - 1 : false
 
   // Detect when tour is closed and complete it
+  const previousTourRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!isOnbordaVisible && onbordaCurrentTour && !isCompletingRef.current) {
+    // Track when tour becomes visible to capture the tour name
+    if (isOnbordaVisible && onbordaCurrentTour) {
+      previousTourRef.current = onbordaCurrentTour
+    }
+    
+    // When tour becomes invisible, complete it if we haven't already
+    if (!isOnbordaVisible && previousTourRef.current && !isCompletingRef.current) {
+      const tourToComplete = previousTourRef.current
+      
       // Only complete if we haven't already completed this tour (check database)
       const completedTours = onboardingContext.completedTours || []
-      const hasCompleted = completedTours.includes(onbordaCurrentTour)
+      const hasCompleted = completedTours.includes(tourToComplete)
+      
+      console.log('[OnbordaCard] Tour closed, checking completion:', {
+        tour: tourToComplete,
+        hasCompleted,
+        completedTours,
+        isCompleting: isCompletingRef.current,
+        personId: onboardingContext.personId
+      })
+      
       if (!hasCompleted) {
-        // Fire and forget - don't await to avoid blocking UI
-        completeTour(onbordaCurrentTour).catch(() => {})
+        console.log('[OnbordaCard] Completing tour:', tourToComplete)
+        // Mark as completing to prevent duplicate calls
+        isCompletingRef.current = true
+        
+        // Complete the tour
+        completeTour(tourToComplete)
+          .then(() => {
+            console.log('[OnbordaCard] Tour completed successfully:', tourToComplete)
+            // Clear the ref after successful completion
+            previousTourRef.current = null
+          })
+          .catch((error) => {
+            console.error('[OnbordaCard] Error completing tour:', error)
+            // Reset completing flag on error so we can retry
+            isCompletingRef.current = false
+            // Try to complete it again after a short delay in case of transient errors
+            setTimeout(() => {
+              console.log('[OnbordaCard] Retrying tour completion:', tourToComplete)
+              isCompletingRef.current = true
+              completeTour(tourToComplete)
+                .then(() => {
+                  previousTourRef.current = null
+                })
+                .catch((retryError) => {
+                  console.error('[OnbordaCard] Retry also failed:', retryError)
+                  isCompletingRef.current = false
+                })
+            }, 1000)
+          })
+      } else {
+        console.log('[OnbordaCard] Tour already completed, skipping')
+        previousTourRef.current = null
       }
     }
+    
     // Reset the ref when tour becomes visible again (new tour starting)
     if (isOnbordaVisible) {
       isCompletingRef.current = false
     }
-  }, [isOnbordaVisible, onbordaCurrentTour, completeTour, onboardingContext.completedTours])
+  }, [isOnbordaVisible, onbordaCurrentTour, completeTour, onboardingContext.completedTours, onboardingContext.personId])
 
   const handleNext = async () => {
     if (isLast) {
@@ -76,8 +125,14 @@ export function OnbordaCard({
         // Mark that we're completing to prevent useEffect from running
         isCompletingRef.current = true
         // Mark tour as completed in database (not localStorage)
-        // Fire and forget - don't await to avoid blocking UI
-        completeTour(onbordaCurrentTour).catch(() => {})
+        console.log('[OnbordaCard] Completing tour via handleNext (last step):', onbordaCurrentTour)
+        completeTour(onbordaCurrentTour)
+          .then(() => {
+            console.log('[OnbordaCard] Tour completed successfully via handleNext:', onbordaCurrentTour)
+          })
+          .catch((error) => {
+            console.error('[OnbordaCard] Error completing tour via handleNext:', error)
+          })
       }
       // Close the tour and ensure it stays closed
       closeOnborda()
@@ -126,8 +181,14 @@ export function OnbordaCard({
       // Mark that we're completing to prevent useEffect from running
       isCompletingRef.current = true
       // Mark tour as completed in database (not localStorage)
-      // Fire and forget - don't await to avoid blocking UI
-      completeTour(onbordaCurrentTour).catch(() => {})
+      console.log('[OnbordaCard] Completing tour via handleContinue:', onbordaCurrentTour)
+      completeTour(onbordaCurrentTour)
+        .then(() => {
+          console.log('[OnbordaCard] Tour completed successfully via handleContinue:', onbordaCurrentTour)
+        })
+        .catch((error) => {
+          console.error('[OnbordaCard] Error completing tour via handleContinue:', error)
+        })
     }
     closeOnborda()
 

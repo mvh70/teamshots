@@ -166,16 +166,23 @@ export default function TeamGenerationsPage() {
     }
     
     // Check if tour has been completed using database (onboarding context)
-    const hasSeenTour = onboardingContext.personId
-      ? onboardingContext.completedTours?.includes('generation-detail')
-      : false
+    const completedTours = onboardingContext.completedTours || []
+    const pendingTours = onboardingContext.pendingTours || []
+    const hasSeenTour = completedTours.includes('generation-detail')
+    const isPendingTour = pendingTours.includes('generation-detail')
 
-    const isPendingTour = onboardingContext.personId
-      ? onboardingContext.pendingTours?.includes('generation-detail')
-      : false
+    console.log('[TeamGenerationsPage Tour] Checking tour status:', {
+      hasSeenTour,
+      isPendingTour,
+      completedTours,
+      pendingTours,
+      personId: onboardingContext.personId,
+      completedGenerationsCount: completedGenerations.length
+    })
 
-    // If tour has already been seen, nothing to do
+    // If tour has already been seen, nothing to do (even if it's in pendingTours)
     if (hasSeenTour) {
+      console.log('[TeamGenerationsPage Tour] Tour already completed, skipping')
       return
     }
 
@@ -196,14 +203,15 @@ export default function TeamGenerationsPage() {
       })
     }
 
-    // Trigger tour if it's pending or if this is the first time we see completed generations
-    if (isPendingTour) {
-      // Tour is already pending, just start it
+    // Trigger tour if it's pending (but only if not already completed) or if this is the first time we see completed generations
+    if (isPendingTour && !hasSeenTour) {
+      // Tour is already pending and not completed, just start it
+      console.log('[TeamGenerationsPage Tour] Tour is pending, starting tour...')
       tourTriggerAttemptedRef.current = true
       setTimeout(() => {
         startTour('generation-detail')
       }, 1500)
-    } else if (completedGenerations.length > 0) {
+    } else if (completedGenerations.length > 0 && !hasSeenTour) {
       // Set the tour as pending if there are completed generations and tour hasn't been seen
       tourTriggerAttemptedRef.current = true
       if (onboardingContext.personId) {

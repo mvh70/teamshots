@@ -68,10 +68,17 @@ export default function GenerationsPage() {
     // Check if tour is pending in database (works even without personId for invite flows)
     const isPendingTour = pendingTours.includes('generation-detail')
     
-    // Check if tour has been completed (only for users with personId, but allow guests to see tours)
-    const hasSeenTour = onboardingContext.personId
-      ? completedTours.includes('generation-detail')
-      : false
+    // Check if tour has been completed
+    // Check the completedTours array from the database (onboarding context)
+    const hasSeenTour = completedTours.includes('generation-detail')
+    
+    console.log('[GenerationsPage Tour] Checking tour status:', {
+      hasSeenTour,
+      completedTours,
+      pendingTours,
+      personId: onboardingContext.personId,
+      completedGenerationsCount: completedGenerations.length
+    })
 
     // If tour has already been completed, don't start it (even if we haven't checked before)
     if (hasSeenTour && !forceTour && !isPendingTour) {
@@ -125,8 +132,18 @@ export default function GenerationsPage() {
     // Priority 1: If tour is pending in database, start it (regardless of hasSeenTour - pending takes precedence)
     // This handles the case where the tour was set as pending after generation completed
     if (isPendingTour) {
+      console.log('[GenerationsPage Tour] Tour is pending, starting tour...', {
+        pendingTours,
+        completedTours,
+        personId: onboardingContext.personId,
+        completedGenerationsCount: completedGenerations.length
+      })
       setTimeout(() => {
-        startTour('generation-detail', true) // Force bypasses completion check
+        try {
+          startTour('generation-detail', true) // Force bypasses completion check
+        } catch (error) {
+          console.error('[GenerationsPage Tour] Error calling startTour (pending):', error)
+        }
       }, 1500)
       return
     }
@@ -135,12 +152,22 @@ export default function GenerationsPage() {
     // Changed from checking for exactly 1 generation to checking for any completed generations
     // This ensures the tour starts even if there are multiple generations from previous tests
     if (completedGenerations.length > 0 && !hasSeenTour) {
+      console.log('[GenerationsPage Tour] Starting tour for completed generations...', {
+        completedGenerationsCount: completedGenerations.length,
+        hasSeenTour,
+        personId: onboardingContext.personId,
+        pendingTours,
+        completedTours
+      })
+      
       // For invite flows, also set the tour as pending in the database if personId exists
       if (onboardingContext.personId) {
         fetch('/api/onboarding/pending-tour', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tourName: 'generation-detail' }),
+        }).then(() => {
+          console.log('[GenerationsPage Tour] Set tour as pending in database')
         }).catch(error => {
           console.error('[GenerationsPage Tour] Failed to set pending tour:', error)
         })
@@ -148,11 +175,19 @@ export default function GenerationsPage() {
       
       setTimeout(() => {
         try {
+          console.log('[GenerationsPage Tour] Calling startTour...')
           startTour('generation-detail', true) // Force bypasses completion check since we've already validated conditions
         } catch (error) {
           console.error('[GenerationsPage Tour] Error calling startTour:', error)
         }
       }, 1500)
+    } else {
+      console.log('[GenerationsPage Tour] Tour conditions not met:', {
+        completedGenerationsCount: completedGenerations.length,
+        hasSeenTour,
+        isPendingTour,
+        forceTour
+      })
     }
   }, [loading, generations, forceTour, onboardingContext._loaded, onboardingContext.completedTours, onboardingContext.pendingTours, onboardingContext.personId, startTour]) // Changed dependency from generations.length to generations to track status changes
 
