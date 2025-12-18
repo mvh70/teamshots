@@ -5,6 +5,6 @@ registerElement({
   key: 'clothing',
   label: 'Clothing',
   icon: UserIcon,
-  description: 'Clothing style and accessories',
+  description: 'Choose your clothing style and accessories',
   group: 'userStyle'
 })

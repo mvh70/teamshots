@@ -5,6 +5,6 @@ registerElement({
   key: 'pose',
   label: 'Pose',
   icon: HandRaisedIcon,
-  description: 'Body pose and positioning',
+  description: 'Choose your body pose and positioning',
   group: 'composition'
 })

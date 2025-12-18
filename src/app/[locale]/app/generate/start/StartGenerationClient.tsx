@@ -381,7 +381,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     <>
       {/* Floating Generate Button - Top Right (Desktop) - Outside main container */}
       {skipUpload && (
-        <div className="hidden md:block fixed top-28 right-6 z-[100] pointer-events-auto">
+        <div className="hidden md:block fixed top-19 right-8 z-[100] pointer-events-auto">
           <div className="relative">
             {!hasEnoughCredits ? (
               <Link

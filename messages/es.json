@@ -1408,8 +1408,8 @@
       "title": "Elige Tu Selfie",
       "subtitle": "Selecciona una selfie para usar en la generación, o sube una nueva.",
       "qrTip": {
-        "title": "Sube desde tu móvil",
-        "description": "Escanea este código QR con tu móvil para subir selfies directamente desde tu galería."
+        "title": "Toma o sube desde tu computadora o móvil",
+        "description": "Puedes usar el código QR para tomar o subir selfies desde tu móvil."
       }
     }
   },
@@ -1417,8 +1417,10 @@
     "title": "Sube desde tu móvil",
     "description": "Escanea este código QR para subir selfies desde tu dispositivo móvil.",
     "scanToUpload": "Escanea para subir",
+    "scanToUsePhone": "Escanea para usar tu móvil",
     "scanForMobile": "Escanea para selfies móvil",
     "scanForSelfies": "Cambiar a móvil",
+    "useYourComputer": "Usa este dispositivo",
     "useHere": "Usar en computadora",
     "phoneConnected": "Móvil conectado",
     "expiresIn": "Expira en {time}",
@@ -1638,20 +1640,21 @@
         },
         "swipeHint": "Desliza o toca Siguiente para continuar",
         "intro": {
-          "kicker": "Antes de generar",
-          "title": "Personaliza tus fotos profesionales",
+          "kicker": "",
+          "title": "Ahora, personaliza tu foto",
           "subtitle": "Estás a punto de personalizar cómo se verán tus fotos.",
-          "body": "Estás a punto de personalizar cómo se verán tus fotos. Cada tarjeta controla una parte de la sesión. Desliza y ajusta según tus preferencias.",
-          "bodyDesktop": "Estás a punto de personalizar cómo se verán tus fotos. Cada sección a continuación controla un aspecto diferente de tu foto profesional.",
+          "body": "Puedes cambiar el fondo, la pose, la expresión, etc. En la siguiente página, puedes personalizar cada uno de ellos, excepto los establecidos por el administrador de tu equipo.",
+          "bodyDesktop": "Puedes cambiar cómo se ve tu foto, el fondo, la pose, la expresión, etc. En la siguiente página, puedes personalizar cada uno de ellos, excepto los establecidos por el administrador de tu equipo",
           "swipe": "Desliza a la derecha para avanzar, a la izquierda para volver. También puedes usar los botones de navegación a continuación.",
           "scrollDesktop": "Desplázate hacia abajo para ver todas las opciones de personalización. Ajusta cada configuración según tus preferencias.",
-          "editable": "La insignia con destellos significa que puedes editar esta configuración. Ajusta hasta que coincida con tus preferencias.",
-          "locked": "La insignia con candado significa que el administrador de tu equipo estableció esto. Puedes verla pero no cambiarla para mantener la consistencia.",
-          "skip": "No volver a mostrar"
+          "editable": "El icono de estrellas significa que puedes editar esta configuración. Ajusta hasta que coincida con tus preferencias.",
+          "locked": "El icono de candado significa que el administrador de tu equipo fijó estos. Puedes verlos pero no cambiar para mantener la consistencia.",
+          "skip": "No volver a mostrar",
+          "continueButton": "Continuar para personalizar"
         },
         "selfieTips": {
           "kicker": "Obtén los mejores resultados",
-          "title": "Consejos para selfies increíbles",
+          "title": "Primero, toma o sube tus selfies",
           "body": "Las fotos geniales empiezan con buenas selfies. Sigue estos consejos para obtener los mejores resultados.",
           "skip": "No volver a mostrar",
           "angles": {
@@ -1695,7 +1698,7 @@
         "userStyle": "Configuración de Estilo de Usuario",
         "userStyleDesc": "Preferencias de ropa, expresión e iluminación",
         "customizable": "Personaliza tu foto",
-        "customizableDesc": "Hazla tu mejor y más hermosa versión",
+        "customizableDesc": "Selecciona tu elección para cada parte editable",
         "preset": "Preajustes del equipo",
         "presetDesc": "Estos están fijos para tu equipo"
       },
@@ -1706,15 +1709,15 @@
         },
         "branding": {
           "title": "Marca",
-          "description": "Opciones de logo y marca"
+          "description": "Establece las opciones de logo y marca"
         },
         "clothing": {
           "title": "Ropa",
-          "description": "Estilo de ropa y accesorios"
+          "description": "Elige tu estilo de ropa y accesorios"
         },
         "clothingColors": {
           "title": "Colores de Ropa",
-          "description": "Colores para artículos de ropa"
+          "description": "Elige tus colores para artículos de ropa"
         },
         "customClothing": {
           "title": "Ropa Personalizada",
@@ -1730,7 +1733,7 @@
         },
         "expression": {
           "title": "Expresión",
-          "description": "Expresión facial y estado de ánimo"
+          "description": "Elige tu expresión facial y estado de ánimo"
         },
         "lighting": {
           "title": "Iluminación",
@@ -1738,7 +1741,7 @@
         },
         "pose": {
           "title": "Pose",
-          "description": "Pose corporal y posicionamiento"
+          "description": "Elige tu pose corporal y posicionamiento"
         }
       },
       "background": {
@@ -2263,8 +2266,8 @@
     "selfieSelection": {
       "title": "Elige selfies para usar",
       "qrTip": {
-        "title": "Sube desde tu móvil",
-        "description": "Escanea este código QR con tu móvil para subir selfies directamente desde tu galería."
+        "title": "Toma o sube desde tu computadora o móvil",
+        "description": "Puedes usar el código QR para tomar o subir selfies desde tu móvil"
       },
       "mobile": {
         "bannerTitle": "Selecciona tus selfies",

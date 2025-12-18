@@ -6,7 +6,7 @@ registerElement({
   key: 'clothingColors',
   label: 'Clothing Colors',
   icon: SwatchIcon,
-  description: 'Colors for clothing items',
+  description: 'Choose your colors for clothing items',
   group: 'userStyle',
   summaryComponent: ClothingColorsSummary as ElementMetadata['summaryComponent']
 })

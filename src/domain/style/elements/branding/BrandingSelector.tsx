@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
-import Image from 'next/image'
 import { BrandingSettings } from '@/types/photo-style'
 import { Grid } from '@/components/ui'
 import { BRANDING_POSITIONS } from './config'
@@ -114,8 +113,9 @@ export default function BrandingSelector({
     // Only set preview if logoKey changed and we haven't set it yet
     if (value.logoKey && previewSetRef.current !== value.logoKey) {
       const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
-      setPreviewUrl(`/api/files/get?key=${encodeURIComponent(value.logoKey)}${tokenParam}`)
-      setImageLoaded(true)
+      const url = `/api/files/get?key=${encodeURIComponent(value.logoKey)}${tokenParam}`
+      setPreviewUrl(url)
+      setImageLoaded(false) // Reset to false, will be set to true on successful load
       previewSetRef.current = value.logoKey
     } else if (!value.logoKey && previewSetRef.current) {
       // Clear preview if no logoKey
@@ -177,15 +177,32 @@ export default function BrandingSelector({
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-0 text-center relative overflow-hidden">
             {previewUrl ? (
               <div className="relative w-full h-56">
-                <Image 
+                <img 
                   src={previewUrl} 
                   alt="Logo preview" 
-                  width={400}
-                  height={224}
                   className="absolute inset-0 w-full h-full object-contain" 
-                  onLoad={() => setImageLoaded(true)} 
-                  onError={() => setImageLoaded(false)}
-                  unoptimized
+                  onLoad={() => {
+                    setImageLoaded(true)
+                  }} 
+                  onError={async (e) => {
+                    setImageLoaded(false)
+                    // Try to fetch the URL to get more error details
+                    try {
+                      const response = await fetch(previewUrl, { method: 'HEAD' })
+                      console.error('[BrandingSelector] Failed to load logo preview:', {
+                        url: previewUrl,
+                        status: response.status,
+                        statusText: response.statusText,
+                        logoKey: value.logoKey
+                      })
+                    } catch (fetchError) {
+                      console.error('[BrandingSelector] Failed to load logo preview:', {
+                        url: previewUrl,
+                        logoKey: value.logoKey,
+                        error: fetchError instanceof Error ? fetchError.message : String(fetchError)
+                      })
+                    }
+                  }}
                 />
                 <div className={`absolute inset-x-0 bottom-0 p-3 flex justify-center bg-gradient-to-t from-black/30 to-transparent ${
                   isPredefined ? 'hidden md:flex' : ''

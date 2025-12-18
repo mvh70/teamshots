@@ -1400,8 +1400,8 @@
       "title": "Choose your selfie",
       "subtitle": "Select a selfie to use for generation, or upload a new one.",
       "qrTip": {
-        "title": "Upload from your phone",
-        "description": "Scan this QR code with your phone to upload selfies directly from your camera roll."
+        "title": "Take or upload from your computer or phone",
+        "description": "You can use the QR code to take or upload selfies from your phone."
       }
     }
   },
@@ -1409,8 +1409,10 @@
     "title": "Upload from your phone",
     "description": "Scan this QR code to upload selfies from your mobile device.",
     "scanToUpload": "Scan to upload",
+    "scanToUsePhone": "Scan to use your phone",
     "scanForMobile": "Scan for mobile selfies",
     "scanForSelfies": "Switch to mobile",
+    "useYourComputer": "Use this device",
     "useHere": "Use on computer",
     "phoneConnected": "Phone connected",
     "expiresIn": "Expires in {time}",
@@ -1628,20 +1630,21 @@
         },
         "swipeHint": "Swipe or tap Next to continue",
         "intro": {
-          "kicker": "Before you generate",
-          "title": "Customize your professional headshots",
+          "kicker": "",
+          "title": "Now, customize your photo",
           "subtitle": "You're about to customize how your photos look.",
-          "body": "You're about to customize how your photos look. Each card controls one part of the shoot. Swipe through and adjust to match your preferences.",
-          "bodyDesktop": "You're about to customize how your photos look. Each section below controls a different aspect of your professional headshot.",
+          "body": "You can change the background, the pose, the expression, etc. On the next page, you can set each one of them, except the ones fixed by your team admin",
+          "bodyDesktop": "You can change how your photo looks, the background, the pose, the expression, etc. On the next page, you can customize each one of them, except the ones set by your team admin",
           "swipe": "Swipe right to move forward, left to go back. You can also use the navigation buttons below.",
           "scrollDesktop": "Scroll down to see all customization options. Adjust each setting to match your preferences.",
-          "editable": "Sparkles badge means you can edit this setting. Adjust until it matches your preferences.",
-          "locked": "Lock badge means your team admin set this. You can view it but not change it to maintain consistency.",
-          "skip": "Don't show again"
+          "editable": "The stars icon means you can edit this setting. Adjust until it matches your preferences.",
+          "locked": "The lock icon means your team admin fixed these. You can view them but not change to maintain consistency.",
+          "skip": "Don't show again",
+          "continueButton": "Continue to customize"
         },
         "selfieTips": {
           "kicker": "Get the best results",
-          "title": "Selfie tips for amazing photos",
+          "title": "First, take or upload your selfies",
           "body": "Great photos start with great selfies. Follow these tips to get the best results.",
           "skip": "Don't show again",
           "angles": {
@@ -1685,7 +1688,7 @@
         "userStyle": "User Style Settings",
         "userStyleDesc": "Clothing, expression, and lighting preferences",
         "customizable": "Customize your photo",
-        "customizableDesc": "Make it your best beautiful you",
+        "customizableDesc": "Select your choice for each editable part",
         "preset": "Team presets",
         "presetDesc": "These are fixed for your team"
       },
@@ -1696,15 +1699,15 @@
         },
         "branding": {
           "title": "Branding",
-          "description": "Logo and branding options"
+          "description": "Set the logo and branding options"
         },
         "clothing": {
           "title": "Clothing",
-          "description": "Clothing style and accessories"
+          "description": "Choose your clothing style and accessories"
         },
         "clothingColors": {
           "title": "Clothing colors",
-          "description": "Colors for clothing items"
+          "description": "Choose your colors for clothing items"
         },
         "customClothing": {
           "title": "Custom Clothing",
@@ -1720,7 +1723,7 @@
         },
         "expression": {
           "title": "Expression",
-          "description": "Facial expression and mood"
+          "description": "Choose your facial expression and mood"
         },
         "lighting": {
           "title": "Lighting",
@@ -1728,7 +1731,7 @@
         },
         "pose": {
           "title": "Pose",
-          "description": "Body pose and positioning"
+          "description": "Choose your body pose and positioning"
         }
       },
       "background": {
@@ -2241,8 +2244,8 @@
     "selfieSelection": {
       "title": "Choose selfies to use",
       "qrTip": {
-        "title": "Upload from your phone",
-        "description": "Scan this QR code with your phone to upload selfies directly from your camera roll."
+        "title": "Take or upload from your computer or phone",
+        "description": "You can use the QR code to take or upload selfies from your phone"
       },
       "mobile": {
         "bannerTitle": "Select your selfies",

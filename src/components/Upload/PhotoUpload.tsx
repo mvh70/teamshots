@@ -740,9 +740,15 @@ export default function PhotoUpload({
           } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
           data-testid="dropzone"
         >
+          {/* Title - shown on desktop when QR code is also visible */}
+          {!isMobile && (
+            <h3 className="text-base font-semibold text-gray-900 text-center mb-3">
+              {tMobileHandoff('useYourComputer')}
+            </h3>
+          )}
           <div className={`w-full flex flex-col ${hidePlusIcon ? '' : 'items-center'}`}>
-            {/* Plus icon - hidden when hidePlusIcon is true */}
-            {!hidePlusIcon && (
+            {/* Plus icon - hidden when hidePlusIcon is true or on desktop */}
+            {!hidePlusIcon && isMobile && (
               <div className="mb-2 flex items-center justify-center">
                 <PlusIcon className="w-12 h-12 md:w-16 md:h-16 text-gray-400" />
               </div>
@@ -779,12 +785,6 @@ export default function PhotoUpload({
               </button>
             </div>
           </div>
-          {/* Show "Use on computer" text on desktop when QR code is also visible - positioned to align with QR code text */}
-          {!isMobile && (
-            <p className="mt-2 text-xs text-gray-500 font-medium text-center">
-              {tMobileHandoff('useHere')}
-            </p>
-          )}
           <input
             ref={inputRef}
             type="file"

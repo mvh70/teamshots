@@ -56,6 +56,7 @@ export default function QRPlaceholder({
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const onSelfieUploadedRef = useRef(onSelfieUploaded)
   const initRef = useRef(false)
+  const hasSyncedRef = useRef(false)
   
   // Keep ref in sync with prop
   useEffect(() => {
@@ -94,6 +95,7 @@ export default function QRPlaceholder({
       setLoading(false)
       // Reset selfie count tracking for new token
       setLastSelfieCount(0)
+      hasSyncedRef.current = false
 
       // Store token in sessionStorage for persistence across refreshes
       if (typeof window !== 'undefined') {
@@ -154,16 +156,21 @@ export default function QRPlaceholder({
         setDeviceConnected(!!data.deviceConnected)
       }
 
-      // Check if selfie count increased (new selfie uploaded)
-      if (data.selfieCount !== undefined && data.selfieCount > lastSelfieCount) {
-        // Only trigger callback if we had a previous count (to avoid triggering on initial load)
-        if (lastSelfieCount > 0) {
+      const currentCount = data.selfieCount ?? 0
+
+      // Handle initial sync vs updates
+      if (!hasSyncedRef.current) {
+        setLastSelfieCount(currentCount)
+        hasSyncedRef.current = true
+      } else {
+        // Check if selfie count increased (new selfie uploaded)
+        if (currentCount > lastSelfieCount) {
           onSelfieUploadedRef.current?.()
+          setLastSelfieCount(currentCount)
+        } else if (currentCount !== lastSelfieCount) {
+          // Sync count if it changed (e.g. decreased)
+          setLastSelfieCount(currentCount)
         }
-        setLastSelfieCount(data.selfieCount)
-      } else if (data.selfieCount !== undefined && data.selfieCount !== lastSelfieCount) {
-        // Sync count if it changed (e.g. decreased or initial load)
-        setLastSelfieCount(data.selfieCount)
       }
 
       // Check if token expired or invalid
@@ -265,6 +272,9 @@ export default function QRPlaceholder({
         <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
       ) : qrUrl ? (
         <>
+          <h3 className="text-base font-semibold text-gray-900 text-center mb-3">
+            {t('scanToUsePhone')}
+          </h3>
           <div className="relative flex-1 flex items-center justify-center w-full">
             <QRCodeSVG
               value={qrUrl}
@@ -280,9 +290,6 @@ export default function QRPlaceholder({
               </div>
             )}
           </div>
-          <p className="mt-2 text-xs text-gray-500 font-medium text-center">
-            {t('scanForSelfies')}
-          </p>
           {deviceConnected && (
             <span className="mt-1 text-xs text-green-600">{t('phoneConnected')}</span>
           )}

@@ -620,7 +620,7 @@ export default function PhotoStyleSettings({
               isDisabled={!showToggles && readonlyPredefined && isPredefined}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
               showPredefinedBadge={isPredefined}
-              showHeader
+              showHeader={false}
               excludeColors={excludedClothingColors}
             />
           )}
@@ -1145,7 +1145,7 @@ export default function PhotoStyleSettings({
             ) : (
               <div className="rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center">
                 <p className="text-sm text-gray-600">
-                  {t('sections.customizableDesc', { default: 'Personalize these settings to match your preferences' })}
+                  {t('sections.customizableDesc', { default: 'Select your choice for each editable part' })}
                 </p>
               </div>
             )}
@@ -1169,7 +1169,7 @@ export default function PhotoStyleSettings({
                         {t('sections.customizable', { default: 'Customize Your Style' })}
                       </h2>
                       <p className="text-sm md:text-base text-gray-600 leading-relaxed">
-                        {t('sections.customizableDesc', { default: 'Personalize these settings to match your preferences' })}
+                        {t('sections.customizableDesc', { default: 'Select your choice for each editable part' })}
                       </p>
                     </div>
                   </div>
