@@ -224,7 +224,8 @@ async function generatePersonWithRetry({
   debugMode,
   stopAfterStep,
   formatProgress,
-  intermediateStorage
+  intermediateStorage,
+  preparedAssets
 }: {
   job: Job
   processedSelfieReferences: ReferenceImage[]
@@ -248,6 +249,7 @@ async function generatePersonWithRetry({
   stopAfterStep?: number
   formatProgress: (message: { message: string; emoji?: string }, progress: number) => string
   intermediateStorage: IntermediateStorageHandlers
+  preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
 }): Promise<{ imageBuffer: Buffer; imageBase64: string; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; evaluatorComments: string[]; reused?: boolean } | undefined> {
   let step1Output: { imageBuffer: Buffer; imageBase64: string; assetId?: string; clothingLogoReference?: BaseReferenceImage; backgroundLogoReference?: BaseReferenceImage; backgroundBuffer?: Buffer; selfieComposite: BaseReferenceImage; reused?: boolean } | undefined
   let evaluationFeedback: EvaluationFeedback | undefined
@@ -283,7 +285,8 @@ async function generatePersonWithRetry({
           selfieAssetIds,
           onCostTracking,
           debugMode,
-          evaluationFeedback
+          evaluationFeedback,
+          preparedAssets // Assets from step 0 preparation
         })
       },
       {
@@ -402,7 +405,8 @@ async function generateBackgroundWithRetry({
   debugMode,
   formatProgress,
   backgroundComposite,
-  intermediateStorage
+  intermediateStorage,
+  preparedAssets
 }: {
   job: Job
   styleSettings: PhotoStyleSettings
@@ -419,6 +423,7 @@ async function generateBackgroundWithRetry({
   formatProgress: (message: { message: string; emoji?: string }, progress: number) => string
   backgroundComposite?: BaseReferenceImage
   intermediateStorage: IntermediateStorageHandlers
+  preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
 }): Promise<{ backgroundBuffer: Buffer; backgroundBase64: string; assetId?: string; backgroundLogoReference: BaseReferenceImage; evaluatorComments: string[]; compositeReference?: BaseReferenceImage; reused?: boolean } | undefined> {
   // Check if Step 1b should run
   const shouldRunStep1b = styleSettings.branding?.type === 'include' && 
@@ -519,7 +524,8 @@ async function generateBackgroundWithRetry({
           logoAssetId,
           onCostTracking,
           debugMode,
-          backgroundComposite: cachedComposite
+          backgroundComposite: cachedComposite,
+          preparedAssets // Assets from step 0
         })
       },
       {
@@ -837,7 +843,8 @@ export async function executeV3Workflow({
       debugMode,
       stopAfterStep,
       formatProgress,
-      intermediateStorage
+      intermediateStorage,
+      preparedAssets // Assets from step 0
     })
 
     if (!generatedOutput) {
@@ -981,7 +988,8 @@ export async function executeV3Workflow({
       onCostTracking,
       debugMode,
       formatProgress,
-      intermediateStorage
+      intermediateStorage,
+      preparedAssets // Assets from step 0
       // Don't pass cached composite - let it rebuild fresh to ensure branding is included
     })
 

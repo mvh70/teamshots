@@ -39,6 +39,7 @@ export interface V3Step1aInput {
   selfieAssetIds?: string[]
   onCostTracking?: CostTrackingHandler
   referenceImages?: BaseReferenceImage[] // Pre-built reference images (e.g., garment collage from outfit1)
+  preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset> // Assets from step 0 preparation
 }
 
 export interface V3Step1aOutput {
@@ -139,6 +140,7 @@ async function composeElementContributions(
     generationId?: string
     personId?: string
     teamId?: string
+    preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
   }
 ): Promise<{
   instructions: string[]
@@ -154,6 +156,7 @@ async function composeElementContributions(
       userId: generationContext.personId,
       teamId: generationContext.teamId,
       generationId: generationContext.generationId,
+      preparedAssets: generationContext.preparedAssets, // Pass prepared assets from step 0
     },
     existingContributions: [],
   }
@@ -167,6 +170,7 @@ async function composeElementContributions(
     mustFollowCount: contributions.mustFollow?.length || 0,
     freedomCount: contributions.freedom?.length || 0,
     referenceImagesCount: contributions.referenceImages?.length || 0,
+    preparedAssetsUsed: generationContext.preparedAssets?.size || 0,
   })
 
   return {
@@ -329,12 +333,14 @@ export async function executeV3Step1a(
         generationId,
         personId,
         teamId: input.teamId,
+        preparedAssets: input.preparedAssets, // Pass prepared assets from step 0
       })
       Logger.debug('[ElementComposition] Element contributions composed successfully', {
         generationId,
         hasInstructions: elementContributions.instructions.length > 0,
         hasMustFollow: elementContributions.mustFollow.length > 0,
         hasFreedom: elementContributions.freedom.length > 0,
+        preparedAssets: input.preparedAssets?.size || 0,
       })
     } catch (error) {
       Logger.error('[ElementComposition] Failed to compose element contributions, falling back to provided rules', {
