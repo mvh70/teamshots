@@ -72,6 +72,9 @@ export default function GenerationsPage() {
     // Check the completedTours array from the database (onboarding context)
     const hasSeenTour = completedTours.includes('generation-detail')
     
+    // Only check for completed generations (status === 'completed')
+    const completedGenerations = generations.filter(g => g.status === 'completed')
+    
     console.log('[GenerationsPage Tour] Checking tour status:', {
       hasSeenTour,
       completedTours,
@@ -85,9 +88,6 @@ export default function GenerationsPage() {
       hasCheckedTourRef.current = true
       return
     }
-    
-    // Only check for completed generations (status === 'completed')
-    const completedGenerations = generations.filter(g => g.status === 'completed')
     
     // If there are no completed generations yet, don't proceed (but allow re-checking when they complete)
     if (completedGenerations.length === 0) {
