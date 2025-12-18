@@ -154,37 +154,66 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     }
   }, [flowFlags.pendingGeneration, skipUpload, keyFromQuery, isSuccess, session, selectedSelfies.length, router, pathname, searchParamsString, clearGenerationFlow])
 
-  // Load saved clothing colors from session storage
-  useEffect(() => {
-    // Only load colors once when component is hydrated and ready
-    if (!hydrated || !skipUpload) return
+  // Track if we've loaded saved colors to avoid overwriting user changes
+  const hasLoadedSavedColorsRef = React.useRef(false)
+
+  // Helper function to merge saved colors into settings
+  // IMPORTANT: Only merges saved colors when clothingColors type is 'user-choice'
+  // Never modifies predefined/preset colors - they remain as-is
+  const mergeSavedColors = React.useCallback((settings: PhotoStyleSettingsType): PhotoStyleSettingsType => {
+    const currentClothingColors = settings.clothingColors
     
-    // Load saved colors from session storage
+    // CRITICAL: Only merge saved colors if type is 'user-choice'
+    // If type is 'predefined', return settings unchanged (preserve preset values)
+    if (!currentClothingColors || currentClothingColors.type !== 'user-choice') {
+      return settings
+    }
+    
     const savedColors = loadClothingColors()
+    if (!savedColors) return settings
     
-    if (!savedColors) return
-    
-    // Merge saved colors into current settings
-    setPhotoStyleSettings(prev => {
-      const currentClothingColors = prev.clothingColors
-      
-      // Only merge if user-choice type (editable)
-      if (!currentClothingColors || currentClothingColors.type !== 'user-choice') {
-        return prev
-      }
-      
-      return {
-        ...prev,
-        clothingColors: {
-          type: 'user-choice',
-          colors: {
-            ...currentClothingColors.colors,
-            ...savedColors // Saved colors take precedence
-          }
+    // Merge saved colors into user-choice settings
+    return {
+      ...settings,
+      clothingColors: {
+        type: 'user-choice',
+        colors: {
+          ...currentClothingColors.colors,
+          ...savedColors // Saved colors take precedence
         }
       }
+    }
+  }, [])
+
+  // Load saved clothing colors from session storage on mount
+  // IMPORTANT: Only loads saved colors if initial settings are 'user-choice' type
+  // Predefined/preset colors are never modified - they remain as preset values
+  useEffect(() => {
+    // Only load colors once when component is hydrated and ready
+    if (!hydrated || !skipUpload || hasLoadedSavedColorsRef.current) return
+    
+    // Merge saved colors into current settings
+    // mergeSavedColors will return settings unchanged if type is 'predefined'
+    setPhotoStyleSettings(prev => {
+      const merged = mergeSavedColors(prev)
+      hasLoadedSavedColorsRef.current = true
+      return merged
     })
-  }, [hydrated, skipUpload])
+  }, [hydrated, skipUpload, mergeSavedColors])
+
+  // Save clothing colors to session storage whenever they change
+  // IMPORTANT: Only saves when type is 'user-choice' - never saves predefined/preset colors
+  useEffect(() => {
+    // Skip saving during initial load
+    if (!hasLoadedSavedColorsRef.current || !hydrated || !skipUpload) return
+    
+    // CRITICAL: Only save if type is 'user-choice'
+    // Predefined/preset colors are never saved - they remain as preset values
+    const clothingColors = photoStyleSettings.clothingColors
+    if (clothingColors?.type === 'user-choice' && clothingColors?.colors) {
+      saveClothingColors(clothingColors.colors)
+    }
+  }, [photoStyleSettings.clothingColors, hydrated, skipUpload])
 
   const normalizeContextName = useCallback((rawName: string | null | undefined, index: number, total: number, type: 'personal' | 'team'): string => {
     const trimmed = (rawName ?? '').trim()
@@ -239,10 +268,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     try {
       setIsGenerating(true)
 
-      // Save current clothing colors to session storage
-      if (photoStyleSettings.clothingColors?.colors) {
-        saveClothingColors(photoStyleSettings.clothingColors.colors)
-      }
+      // Colors are now saved automatically via useEffect when they change
+      // No need to save here explicitly
 
       if (session?.user?.id) {
         track('generation_started', {
@@ -633,14 +660,18 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                         setActiveContext(null)
                         const fallbackPackage = getPackageConfig(fallbackPackageId)
                         setSelectedPackageId(fallbackPackageId)
-                        setPhotoStyleSettings(fallbackPackage.defaultSettings)
+                        // Freestyle packages are always user-choice, so merge saved colors
+                        const newSettings = mergeSavedColors(fallbackPackage.defaultSettings)
+                        setPhotoStyleSettings(newSettings)
                         setOriginalContextSettings(fallbackPackage.defaultSettings)
                       } else if (value.startsWith('package_')) {
                         const pkgId = value.replace('package_', '')
                         setActiveContext(null)
                         setSelectedPackageId(pkgId)
                         const pkg = getPackageConfig(pkgId)
-                        setPhotoStyleSettings(pkg.defaultSettings)
+                        // Packages are always user-choice, so merge saved colors
+                        const newSettings = mergeSavedColors(pkg.defaultSettings)
+                        setPhotoStyleSettings(newSettings)
                         setOriginalContextSettings(pkg.defaultSettings)
                       } else {
                         const selectedContext = availableContexts.find(ctx => ctx.id === value)
@@ -663,7 +694,12 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                             stylePreset: (context?.settings as Record<string, unknown> | undefined)?.['stylePreset'] as string | undefined
                           }
                           setActiveContext(enrichedContext)
-                          setPhotoStyleSettings(ui)
+                          // CRITICAL: Only merge saved colors if context allows user-choice
+                          // If type is 'predefined', use ui as-is (preserve preset values)
+                          const newSettings = ui.clothingColors?.type === 'user-choice' 
+                            ? mergeSavedColors(ui) 
+                            : ui // Predefined contexts: use preset values, never override with saved colors
+                          setPhotoStyleSettings(newSettings)
                           setSelectedPackageId(pkg.id)
                           setOriginalContextSettings(ui)
                         }
