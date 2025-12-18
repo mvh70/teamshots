@@ -250,7 +250,11 @@ export default function PhotoUpload({
           const finalResult: UploadResult = {
             key: result.key,
             url: result.url || preview,
-            source: metadata.source
+            source: result.source || metadata.source  // Use result.source first, fallback to metadata.source
+          }
+          // Ensure URL is always set for camera sources to show approval flow
+          if ((finalResult.source === 'camera' || finalResult.source === 'ios-camera') && !finalResult.url) {
+            finalResult.url = preview
           }
           onUploaded?.(finalResult, metadata);
           resetUploadState();
