@@ -7,6 +7,8 @@
 
 import { compositionRegistry } from './registry'
 import { shotTypeElement } from './camera/ShotTypeElement'
+import { aspectRatioElement } from './camera/AspectRatioElement'
+import { cameraSettingsElement } from './camera/CameraSettingsElement'
 import { brandingElement } from './branding/BrandingElement'
 import { customClothingElement } from './clothing/CustomClothingElement'
 import { backgroundElement } from './background/BackgroundElement'
@@ -15,6 +17,7 @@ import { clothingColorsElement } from './clothing/ClothingColorsElement'
 import { expressionElement } from './subject/ExpressionElement'
 import { poseElement } from './subject/PoseElement'
 import { subjectElement } from './subject/SubjectElement'
+import { lightingElement } from './lighting/LightingElement'
 
 /**
  * Initialize the element composition system by registering all elements
@@ -24,6 +27,9 @@ import { subjectElement } from './subject/SubjectElement'
 export function initializeElementComposition(): void {
   // Register subject elements (highest priority)
   compositionRegistry.register(subjectElement)        // Priority 10 - identity is critical
+  compositionRegistry.register(aspectRatioElement)    // Priority 20 - canvas dimensions
+  compositionRegistry.register(lightingElement)       // Priority 25 - lighting setup
+  compositionRegistry.register(cameraSettingsElement) // Priority 30 - camera technical specs
   compositionRegistry.register(poseElement)           // Priority 35 - fundamental positioning
   compositionRegistry.register(shotTypeElement)       // Priority 40 - framing
   compositionRegistry.register(expressionElement)     // Priority 45 - facial expression
