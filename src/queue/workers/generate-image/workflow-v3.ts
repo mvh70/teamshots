@@ -6,6 +6,7 @@ import type { DownloadAssetFn, EvaluationFeedback } from '@/types/generation'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import { resolveAspectRatioConfig } from '@/domain/style/elements/aspect-ratio/config'
 import type { PersistedImageReference, V3WorkflowState } from '@/types/workflow'
+import { executeStep0Preparation } from './steps/v3-step0-preparation'
 import { executeV3Step1a } from './steps/v3-step1a-person-generation'
 import { executeV3Step1aEval } from './steps/v3-step1a-person-eval'
 import { executeV3Step1b } from './steps/v3-step1b-background-generation'
@@ -733,6 +734,52 @@ export async function executeV3Workflow({
   // Helper to format progress messages with attempt info
   const formatProgress = (message: { message: string; emoji?: string }, progress: number): string => {
     return formatProgressWithAttempt(message, progress, currentAttempt)
+  }
+
+  // ===== STEP 0: ASSET PREPARATION =====
+  // Execute preparation phase to download/create assets asynchronously
+  Logger.info('V3: Starting Step 0 (asset preparation)', { generationId })
+
+  let preparedAssets: Map<string, import('@/domain/style/elements/composition').PreparedAsset> | undefined
+
+  try {
+    const { executeStep0Preparation } = await import('./steps/v3-step0-preparation')
+    const { getS3BucketName, createS3Client } = await import('@/lib/s3-client')
+
+    const s3Client = createS3Client()
+
+    const step0Result = await executeStep0Preparation({
+      styleSettings,
+      downloadAsset,
+      s3Client,
+      generationId,
+      personId,
+      teamId,
+      selfieS3Keys: selfieReferences.map(r => r.label), // Extract S3 keys from selfie references
+      debugMode: debugMode || false,
+    })
+
+    preparedAssets = step0Result.preparedAssets
+
+    if (step0Result.preparationErrors.length > 0) {
+      Logger.warn('V3 Step 0: Some asset preparations failed', {
+        generationId,
+        errorCount: step0Result.preparationErrors.length,
+        errors: step0Result.preparationErrors,
+      })
+    }
+
+    Logger.info('V3 Step 0: Asset preparation complete', {
+      generationId,
+      preparedAssetCount: preparedAssets.size,
+      assetKeys: Array.from(preparedAssets.keys()),
+    })
+  } catch (error) {
+    Logger.error('V3 Step 0: Asset preparation failed', {
+      generationId,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    // Continue without prepared assets - elements will fall back gracefully
   }
 
   Logger.info('V3: Preparing Step 1a and Step 1b execution', { generationId })

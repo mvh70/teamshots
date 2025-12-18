@@ -15,8 +15,9 @@ import type { PhotoStyleSettings } from '@/types/photo-style'
  * Workflow phases where elements can contribute
  */
 export type WorkflowPhase =
-  | 'background-generation'  // Step 1b: Generate background
+  | 'preparation'            // Step 0: Prepare assets (download, create collages, etc.)
   | 'person-generation'      // Step 1a: Generate person
+  | 'background-generation'  // Step 1b: Generate background
   | 'composition'            // Step 2: Compose person + background
   | 'evaluation'             // Step 3: Evaluate result
 
@@ -27,6 +28,29 @@ export interface ReferenceImage {
   url: string
   description: string
   type?: 'selfie' | 'clothing' | 'branding' | 'background' | 'other'
+}
+
+/**
+ * Asset prepared during preparation phase
+ *
+ * Elements can prepare expensive assets (downloads, collages, etc.) in the
+ * preparation phase and retrieve them in later phases via ElementContext
+ */
+export interface PreparedAsset {
+  // Element that prepared this asset
+  elementId: string
+
+  // Type of asset (for identification)
+  assetType: string
+
+  // The prepared data (base64 image, URL, or other data)
+  data: {
+    base64?: string
+    mimeType?: string
+    url?: string
+    s3Key?: string
+    metadata?: Record<string, unknown>
+  }
 }
 
 /**
@@ -65,6 +89,8 @@ export interface ElementContext {
     userId?: string
     teamId?: string
     generationId?: string
+    // Assets prepared in step 0 (preparation phase)
+    preparedAssets?: Map<string, PreparedAsset>
     [key: string]: unknown
   }
 
@@ -126,6 +152,29 @@ export abstract class StyleElement {
    * @returns Element contribution (instructions, rules, images, metadata)
    */
   abstract contribute(context: ElementContext): Promise<ElementContribution>
+
+  /**
+   * Determine if this element needs to prepare assets in step 0
+   *
+   * Optional - only implement if element requires asset preparation
+   * (e.g., downloading images, creating collages, etc.)
+   *
+   * @param context - Element context with phase='preparation'
+   * @returns true if element needs to prepare assets
+   */
+  needsPreparation?(context: ElementContext): boolean
+
+  /**
+   * Prepare assets in step 0 (preparation phase)
+   *
+   * Optional - only implement if needsPreparation returns true
+   * This runs before any generation steps, allowing expensive operations
+   * to happen in parallel without blocking prompt building
+   *
+   * @param context - Element context with phase='preparation'
+   * @returns Prepared asset to be stored in context for later phases
+   */
+  prepare?(context: ElementContext): Promise<PreparedAsset>
 
   /**
    * Validate settings before generation

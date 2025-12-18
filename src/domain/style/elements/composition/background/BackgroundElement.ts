@@ -3,10 +3,18 @@
  *
  * Contributes background scene and environment rules to background generation.
  * Handles different background types (office, tropical beach, city, neutral, gradient, custom).
+ *
+ * Implements preparation phase to download custom background assets asynchronously.
  */
 
-import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
+import {
+  StyleElement,
+  ElementContext,
+  ElementContribution,
+  type PreparedAsset,
+} from '../../base/StyleElement'
 import type { BackgroundSettings } from '@/types/photo-style'
+import { Logger } from '@/lib/logger'
 
 export class BackgroundElement extends StyleElement {
   readonly id = 'background'
@@ -24,6 +32,74 @@ export class BackgroundElement extends StyleElement {
 
     // Only contribute to background generation
     return phase === 'background-generation'
+  }
+
+  /**
+   * Check if this element needs to prepare assets (custom background download)
+   */
+  needsPreparation(context: ElementContext): boolean {
+    const { settings } = context
+    const background = settings.background
+
+    if (!background) {
+      return false
+    }
+
+    // Need preparation only for custom backgrounds with a key
+    return background.type === 'custom' && !!background.key
+  }
+
+  /**
+   * Prepare custom background asset in step 0
+   *
+   * Downloads the custom background image and returns it as a prepared asset
+   * for use in background-generation phase
+   */
+  async prepare(context: ElementContext): Promise<PreparedAsset> {
+    const { settings, generationContext } = context
+    const background = settings.background!
+    const generationId = generationContext.generationId || 'unknown'
+
+    // Type guard for downloadAsset service
+    const downloadAsset = generationContext.downloadAsset as
+      | ((key: string) => Promise<{ base64: string; mimeType: string } | null>)
+      | undefined
+
+    if (!downloadAsset) {
+      throw new Error('BackgroundElement.prepare(): downloadAsset must be provided in generationContext')
+    }
+
+    if (background.type !== 'custom' || !background.key) {
+      throw new Error('BackgroundElement.prepare(): Custom background requires a key')
+    }
+
+    Logger.info('[BackgroundElement] Downloading custom background', {
+      generationId,
+      backgroundKey: background.key,
+    })
+
+    // Download custom background
+    const backgroundImage = await downloadAsset(background.key)
+    if (!backgroundImage) {
+      throw new Error(`BackgroundElement.prepare(): Failed to download custom background: ${background.key}`)
+    }
+
+    Logger.info('[BackgroundElement] Custom background downloaded successfully', {
+      generationId,
+      backgroundKey: background.key,
+      mimeType: backgroundImage.mimeType,
+    })
+
+    // Return prepared asset
+    return {
+      elementId: this.id,
+      assetType: 'custom-background',
+      data: {
+        base64: backgroundImage.base64,
+        mimeType: backgroundImage.mimeType,
+        s3Key: background.key,
+      },
+    }
   }
 
   async contribute(context: ElementContext): Promise<ElementContribution> {
@@ -123,6 +199,31 @@ export class BackgroundElement extends StyleElement {
         )
         if (background.key) {
           metadata.customBackgroundKey = background.key
+        }
+
+        // Get prepared custom background from context
+        const preparedAssets = context.generationContext.preparedAssets
+        const backgroundAsset = preparedAssets?.get(`${this.id}-custom-background`)
+
+        // Add reference image if custom background was prepared
+        const referenceImages = []
+        if (backgroundAsset?.data.base64) {
+          referenceImages.push({
+            url: `data:${backgroundAsset.data.mimeType || 'image/png'};base64,${backgroundAsset.data.base64}`,
+            description: 'Custom background image - use exactly as provided for the scene',
+            type: 'background' as const,
+          })
+
+          Logger.info('[BackgroundElement] Added custom background to contribution', {
+            generationId: context.generationContext.generationId,
+          })
+
+          return {
+            instructions,
+            mustFollow,
+            metadata,
+            referenceImages,
+          }
         }
         break
 

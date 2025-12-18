@@ -3,14 +3,22 @@
  *
  * Contributes logo placement and brand color rules to background generation
  * and logo preservation rules to composition.
+ *
+ * Implements preparation phase to download logo assets asynchronously.
  */
 
-import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
+import {
+  StyleElement,
+  ElementContext,
+  ElementContribution,
+  type PreparedAsset,
+} from '../../base/StyleElement'
 import {
   BACKGROUND_BRANDING_PROMPT,
   ELEMENT_BRANDING_PROMPT,
   CLOTHING_BRANDING_RULES_BASE,
 } from '../../branding/config'
+import { Logger } from '@/lib/logger'
 
 export class BrandingElement extends StyleElement {
   readonly id = 'branding'
@@ -33,6 +41,79 @@ export class BrandingElement extends StyleElement {
 
     // Only contribute to background and composition phases
     return phase === 'background-generation' || phase === 'composition'
+  }
+
+  /**
+   * Check if this element needs to prepare assets (logo download)
+   */
+  needsPreparation(context: ElementContext): boolean {
+    const { settings } = context
+    const branding = settings.branding
+
+    if (!branding || branding.type === 'exclude') {
+      return false
+    }
+
+    // Need preparation if we have a logo to download
+    return !!(branding.logoKey || branding.logoAssetId)
+  }
+
+  /**
+   * Prepare logo asset in step 0
+   *
+   * Downloads the logo image and returns it as a prepared asset
+   * for use in background-generation and composition phases
+   */
+  async prepare(context: ElementContext): Promise<PreparedAsset> {
+    const { settings, generationContext } = context
+    const branding = settings.branding!
+    const generationId = generationContext.generationId || 'unknown'
+
+    // Type guard for downloadAsset service
+    const downloadAsset = generationContext.downloadAsset as
+      | ((key: string) => Promise<{ base64: string; mimeType: string } | null>)
+      | undefined
+
+    if (!downloadAsset) {
+      throw new Error('BrandingElement.prepare(): downloadAsset must be provided in generationContext')
+    }
+
+    const logoKey = branding.logoKey || branding.logoAssetId
+    if (!logoKey) {
+      throw new Error('BrandingElement.prepare(): No logo key or asset ID provided')
+    }
+
+    Logger.info('[BrandingElement] Downloading logo', {
+      generationId,
+      logoKey,
+      position: branding.position,
+    })
+
+    // Download logo
+    const logoImage = await downloadAsset(logoKey)
+    if (!logoImage) {
+      throw new Error(`BrandingElement.prepare(): Failed to download logo: ${logoKey}`)
+    }
+
+    Logger.info('[BrandingElement] Logo downloaded successfully', {
+      generationId,
+      logoKey,
+      mimeType: logoImage.mimeType,
+    })
+
+    // Return prepared asset
+    return {
+      elementId: this.id,
+      assetType: 'logo',
+      data: {
+        base64: logoImage.base64,
+        mimeType: logoImage.mimeType,
+        s3Key: logoKey,
+        metadata: {
+          position: branding.position,
+        },
+      },
+    }
   }
 
   async contribute(context: ElementContext): Promise<ElementContribution> {
@@ -68,6 +149,25 @@ export class BrandingElement extends StyleElement {
           ? this.getClothingBrandingPrompt()
           : BACKGROUND_BRANDING_PROMPT
 
+    // Get prepared logo from context
+    const preparedAssets = context.generationContext.preparedAssets
+    const logoAsset = preparedAssets?.get(`${this.id}-logo`)
+
+    // Add reference image if logo was prepared
+    const referenceImages = []
+    if (logoAsset?.data.base64) {
+      referenceImages.push({
+        url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
+        description: 'Company logo for branding - apply according to position rules',
+        type: 'branding' as const,
+      })
+
+      Logger.info('[BrandingElement] Added logo to background generation contribution', {
+        generationId: context.generationContext.generationId,
+        position,
+      })
+    }
+
     return {
       instructions: [
         typeof promptConfig.logo_source === 'string' ? promptConfig.logo_source : '',
@@ -77,6 +177,8 @@ export class BrandingElement extends StyleElement {
       mustFollow: Array.isArray(promptConfig.rules)
         ? promptConfig.rules.map((rule) => String(rule))
         : [],
+
+      referenceImages,
 
       metadata: {
         position,
