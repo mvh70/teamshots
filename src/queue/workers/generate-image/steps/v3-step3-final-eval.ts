@@ -50,7 +50,10 @@ async function composeElementContributions(
   const elementContext: ElementContext = {
     phase: 'evaluation',
     settings: styleSettings,
-    generationContext,
+    generationContext: {
+      selfieS3Keys: [], // Not directly available in Step 3, but required by interface
+      ...generationContext
+    },
     existingContributions: []
   }
 
@@ -72,10 +75,32 @@ export async function executeV3Step3(
   input: V3Step3FinalInput, 
   debugMode = false
 ): Promise<Step8Output> {
-  const { refinedBuffer, refinedBase64, selfieComposite, expectedWidth, expectedHeight, aspectRatio, logoReference, generationPrompt } = input
-  
+  const { refinedBuffer, refinedBase64, selfieComposite, expectedWidth, expectedHeight, aspectRatio, logoReference, generationPrompt, styleSettings } = input
+
   Logger.debug('V3 Step 3: Evaluating final refined image')
-  
+
+  // Try to compose contributions from elements if feature flag is enabled
+  let elementContributions: { instructions: string[], mustFollow: string[], freedom: string[] } | null = null
+  if (isFeatureEnabled('elementComposition') && styleSettings) {
+    try {
+      elementContributions = await composeElementContributions(styleSettings, {
+        generationId: input.generationId,
+        personId: input.personId,
+        teamId: input.teamId
+      })
+      Logger.debug('V3 Step 3: Element composition succeeded', {
+        hasInstructions: elementContributions.instructions.length > 0,
+        hasMustFollow: elementContributions.mustFollow.length > 0,
+        hasFreedom: elementContributions.freedom.length > 0,
+        rulesSource: 'element-composition'
+      })
+    } catch (error) {
+      Logger.error('V3 Step 3: Element composition failed, continuing with standard evaluation', {
+        error: error instanceof Error ? error.message : String(error)
+      })
+    }
+  }
+
   // Get image metadata
   const sharp = (await import('sharp')).default
   const metadata = await refinedBuffer ? await sharp(refinedBuffer).metadata() : { width: null, height: null }
@@ -206,6 +231,18 @@ export async function executeV3Step3(
       `   - Placement specification: ${brandingInfo.placement || 'as specified'} (partial occlusion still counts as correctly placed).`,
       `   - Does it look natural and properly integrated into the scene?`
     )
+  }
+
+  // Add element composition instructions if available
+  if (elementContributions && elementContributions.mustFollow && elementContributions.mustFollow.length > 0) {
+    instructions.push(
+      '',
+      'Additional Evaluation Criteria (from element composition):',
+      ...elementContributions.mustFollow.map(rule => `   - ${rule}`)
+    )
+    Logger.debug('V3 Step 3: Added element composition evaluation criteria', {
+      criteriaCount: elementContributions.mustFollow.length
+    })
   }
 
   instructions.push(

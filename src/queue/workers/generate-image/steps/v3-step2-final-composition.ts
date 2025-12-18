@@ -19,7 +19,7 @@ import type { PhotoStyleSettings } from '@/types/photo-style'
 export interface V3Step2FinalInput {
   personBuffer: Buffer // Person on grey background from Step 1 (with clothing logo already applied if applicable)
   backgroundBuffer?: Buffer // Custom background if provided (from Step 1b OR user's custom background)
-  styleSettings?: Record<string, unknown> // For user's background choice if Step 1b was skipped
+  styleSettings?: PhotoStyleSettings // For element composition and user's background choice
   logoReference?: BaseReferenceImage // Logo for background/environmental branding (not clothing)
   faceCompositeReference?: BaseReferenceImage // Selfie composite from Step 1a for face refinement
   evaluatorComments?: string[] // Comments from Step 1a and Step 1b evaluations
@@ -50,7 +50,10 @@ async function composeElementContributions(
   const elementContext: ElementContext = {
     phase: 'composition',
     settings: styleSettings,
-    generationContext,
+    generationContext: {
+      selfieS3Keys: [], // Not directly available in Step 2, but required by interface
+      ...generationContext
+    },
     existingContributions: []
   }
 
