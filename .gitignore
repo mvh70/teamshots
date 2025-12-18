@@ -77,7 +77,7 @@ certificates
 .cursor-generated-docs
 docs/**
 .testing
-storage/
+storage/**
 
 .claude
 .cursor
