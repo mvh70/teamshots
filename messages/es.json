@@ -1667,8 +1667,8 @@
             "desc": "Esto muestra a la IA tus proporciones corporales para que no tenga que adivinar."
           },
           "minimum": {
-            "title": "Sube al menos 2",
-            "desc": "Más variedad significa mejores resultados. Lo ideal son 3-5 selfies."
+            "title": "Lo ideal son 3-4 selfies. El mínimo es 2.",
+            "desc": "Cuanta más información le des sobre tu rostro y tu cuerpo, menos tiene que adivinar."
           }
         }
       },

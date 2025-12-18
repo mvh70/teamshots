@@ -99,15 +99,15 @@ export default function IntroScreenContent({
       )}
 
       {/* Tips List */}
-      <div className="space-y-4 md:space-y-6">
+      <div className="space-y-0.5">
         {tips.map((tip, index) => (
           <div 
             key={tip.key} 
-            className="group relative animate-in fade-in slide-in-from-bottom-4 duration-700"
+            className="animate-in fade-in slide-in-from-bottom-4 duration-700"
             style={{ animationDelay: `${(index + 1) * 100}ms` }}
           >
-            <div className="flex items-start gap-5 md:gap-6 p-5 md:p-6 rounded-2xl bg-gradient-to-br from-white via-white to-gray-50/50 border border-gray-200/80 shadow-sm hover:shadow-2xl hover:border-gray-300/90 transition-all duration-300 hover:-translate-y-1.5 hover:scale-[1.01] backdrop-blur-sm">
-              <div className={`flex h-14 w-14 md:h-16 md:w-16 flex-shrink-0 items-center justify-center rounded-xl border-2 border-white/90 shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-2xl group-hover:rotate-3 group-hover:border-white ${tip.bgColor} ${tip.textColor}`}>
+            <div className="flex items-start gap-5 md:gap-6 p-5 md:p-6 rounded-2xl bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-sm">
+              <div className={`flex h-14 w-14 md:h-16 md:w-16 flex-shrink-0 items-center justify-center rounded-xl border-2 border-white/90 ${tip.bgColor} ${tip.textColor}`}>
                 {tip.icon}
               </div>
               <div className="flex-1 pt-1 md:pt-2.5">

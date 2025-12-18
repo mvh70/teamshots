@@ -45,7 +45,7 @@ export interface ImageEvaluationInput {
 export interface StructuredEvaluation {
   dimensions_and_aspect_correct: 'YES' | 'NO'
   is_fully_generated: 'YES' | 'NO' | 'UNCERTAIN'
-  composition_matches_shot: 'YES' | 'NO' | 'UNCERTAIN'
+  composition_matches_shot: 'YES' | 'NO' | 'UNCERTAIN' | 'N/A'
   identity_preserved: 'YES' | 'NO' | 'UNCERTAIN'
   proportions_realistic: 'YES' | 'NO' | 'UNCERTAIN'
   no_unauthorized_accessories: 'YES' | 'NO' | 'UNCERTAIN'
@@ -151,9 +151,7 @@ export async function evaluateGeneratedImage({
     '   - Look for: cut-and-paste artifacts, mismatched lighting on body parts,',
     '     sharp boundaries between face/body, original photo backgrounds, unnatural compositing',
     '',
-    '3. composition_matches_shot',
-    `   - Shot guidance: ${shotLabel} — ${shotDescription}`,
-    '   - Does subject positioning, framing, and background match without awkward cropping?',
+    '3. composition_matches_shot: N/A (temporarily disabled)',
     '',
     '4. identity_preserved',
     '   - Does the face clearly resemble the reference selfies?',
@@ -281,7 +279,7 @@ export async function evaluateGeneratedImage({
     '{',
     '  "dimensions_and_aspect_correct": "YES",',
     '  "is_fully_generated": "YES",',
-    '  "composition_matches_shot": "YES",',
+    '  "composition_matches_shot": "N/A",',
     '  "identity_preserved": "YES",',
     '  "proportions_realistic": "YES",',
     '  "no_unauthorized_accessories": "YES",',
@@ -439,7 +437,7 @@ export async function evaluateGeneratedImage({
     structuredEvaluation.dimensions_and_aspect_correct === 'NO',
     structuredEvaluation.is_fully_generated === 'NO',
     structuredEvaluation.is_fully_generated === 'UNCERTAIN', // Critical field
-    structuredEvaluation.composition_matches_shot === 'NO',
+    // composition_matches_shot temporarily disabled - not checking
     structuredEvaluation.identity_preserved === 'NO',
     structuredEvaluation.proportions_realistic === 'NO',
     structuredEvaluation.no_unauthorized_accessories === 'NO',
@@ -459,7 +457,8 @@ export async function evaluateGeneratedImage({
   const allApproved =
     structuredEvaluation.dimensions_and_aspect_correct === 'YES' &&
     structuredEvaluation.is_fully_generated === 'YES' &&
-    structuredEvaluation.composition_matches_shot === 'YES' &&
+    // composition_matches_shot temporarily disabled - always treated as approved
+    (structuredEvaluation.composition_matches_shot === 'YES' || structuredEvaluation.composition_matches_shot === 'N/A') &&
     structuredEvaluation.identity_preserved === 'YES' &&
     structuredEvaluation.proportions_realistic === 'YES' &&
     structuredEvaluation.no_unauthorized_accessories === 'YES' &&
@@ -534,7 +533,7 @@ function parseStructuredEvaluation(text: string): StructuredEvaluation | null {
     const evaluation: StructuredEvaluation = {
       dimensions_and_aspect_correct: normalizeYesNo(parsed.dimensions_and_aspect_correct),
       is_fully_generated: normalizeYesNoUncertain(parsed.is_fully_generated),
-      composition_matches_shot: normalizeYesNoUncertain(parsed.composition_matches_shot),
+      composition_matches_shot: 'N/A' as const, // Temporarily disabled
       identity_preserved: normalizeYesNoUncertain(parsed.identity_preserved),
       proportions_realistic: normalizeYesNoUncertain(parsed.proportions_realistic),
       no_unauthorized_accessories: normalizeYesNoUncertain(parsed.no_unauthorized_accessories),

@@ -1657,8 +1657,8 @@
             "desc": "This shows the AI your body proportions so it doesn't have to guess."
           },
           "minimum": {
-            "title": "Upload at least 2",
-            "desc": "More variety means better results. 3-5 selfies is ideal."
+            "title": "3-4 selfies is ideal. Minimum is 2.",
+            "desc": "The more information you give it about your face and your body, the less it has to guess."
           }
         }
       },

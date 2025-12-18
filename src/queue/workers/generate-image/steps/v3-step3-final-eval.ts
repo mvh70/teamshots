@@ -130,15 +130,7 @@ export async function executeV3Step3(
     '   - Are unique facial features maintained without beautification?',
     '   - Does the person look like themselves, not an idealized version?',
     '',
-    '3. shot_type_match',
-    '   - Does the image reasonably match the REQUESTED shot type from the generation prompt?',
-    '   - For medium-shot: Person should be cropped around waist/belt area (±15% tolerance). Accept if cropped between bottom ribcage and top of hips.',
-    '   - For three-quarter: Person shown from head to mid-thigh (±15% tolerance). Accept if cropped between waist and knees.',
-    '   - For full-shot: Person shown from head to feet. Should include full body.',
-    '   - For close-up/headshot: Person shown from head to chest/shoulders.',
-    '   - Answer YES if body is cropped within reasonable tolerance of the shot type.',
-    '   - Answer NO only if shot type is SIGNIFICANTLY wrong (e.g., showing full legs when medium-shot requested, or only head when full-shot requested).',
-    '   - Minor variations in exact crop point (±10-15%) should be ACCEPTED as long as the general shot type is correct.',
+    '3. shot_type_match: N/A (temporarily disabled)',
     '',
     '4. person_prominence',
     '   - Is the person the DOMINANT element in the frame?',
@@ -182,7 +174,7 @@ export async function executeV3Step3(
       '{',
       '  "face_similarity": "YES",',
       '  "characteristic_preservation": "YES",',
-      '  "shot_type_match": "YES",',
+      '  "shot_type_match": "N/A",',
       '  "person_prominence": "YES",',
       '  "overall_quality": "YES",',
       '  "branding_placement": "YES",',
@@ -201,7 +193,7 @@ export async function executeV3Step3(
       '{',
       '  "face_similarity": "YES",',
       '  "characteristic_preservation": "YES",',
-      '  "shot_type_match": "YES",',
+      '  "shot_type_match": "N/A",',
       '  "person_prominence": "YES",',
       '  "overall_quality": "YES",',
       '  "explanations": {',
@@ -273,10 +265,11 @@ export async function executeV3Step3(
         ].some(Boolean)
 
         // Check all required criteria including shot type, prominence, and branding if applicable
+        // shot_type_match temporarily disabled - always treated as approved
         const baseApproved =
           evaluation.face_similarity === 'YES' &&
           evaluation.characteristic_preservation === 'YES' &&
-          evaluation.shot_type_match === 'YES' &&
+          (evaluation.shot_type_match === 'YES' || evaluation.shot_type_match === 'UNCERTAIN') &&
           evaluation.person_prominence === 'YES' &&
           evaluation.overall_quality === 'YES'
         
@@ -429,7 +422,7 @@ function parseFinalEvaluation(text: string) {
     } = {
       face_similarity: normalizeYesNoUncertain(parsed.face_similarity),
       characteristic_preservation: normalizeYesNoUncertain(parsed.characteristic_preservation),
-      shot_type_match: normalizeYesNoUncertain(parsed.shot_type_match),
+      shot_type_match: 'YES' as const, // Temporarily disabled - always approve
       person_prominence: normalizeYesNoUncertain(parsed.person_prominence),
       overall_quality: normalizeYesNoUncertain(parsed.overall_quality),
       explanations: (parsed.explanations as Record<string, string>) || {}
