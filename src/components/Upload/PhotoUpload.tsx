@@ -119,7 +119,7 @@ export default function PhotoUpload({
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           resolve(false);
-          return;
+          return false;
         }
         
         canvas.width = img.width;
@@ -352,7 +352,7 @@ export default function PhotoUpload({
       if (validFiles.length === 0) {
         setIsUploading(false);
         setUploadingFileCount(0);
-        return;
+        return false;
       }
       // If there are valid files, continue processing them
     }
@@ -527,13 +527,13 @@ export default function PhotoUpload({
       } else {
         inputRef.current?.click();
       }
-      return;
+      return false;
     }
     
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         reportCameraError("Camera not supported in this browser", 'camera-not-supported');
-        return;
+        return false;
       }
       
       try {
@@ -575,7 +575,7 @@ export default function PhotoUpload({
             setStream(s);
             setCameraOpen(true);
             setCameraReady(false);
-            return;
+            return false;
           } catch {
             reportCameraError("Camera access failed even with basic settings.", 'camera-error');
           }
@@ -875,7 +875,7 @@ export default function PhotoUpload({
               >
                 {isUploading ? (
                   <span className="flex items-center gap-2">
-                    <LoadingSpinner size="sm" color="white" />
+                    <LoadingSpinner size="sm" className="border-white/30 border-t-white" />
                     Processing...
                   </span>
                 ) : (
@@ -925,7 +925,7 @@ export default function PhotoUpload({
                 >
                   {isUploading ? (
                     <span className="flex items-center gap-2">
-                      <LoadingSpinner size="sm" color="white" />
+                      <LoadingSpinner size="sm" className="border-white/30 border-t-white" />
                       Processing...
                     </span>
                   ) : (
