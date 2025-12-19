@@ -16,6 +16,7 @@ export {
   type ReferenceImage,
   type ElementContribution,
   type ElementContext,
+  type PreparedAsset,
 } from '../base/StyleElement'
 export { initializeElementComposition } from './init'
 

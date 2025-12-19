@@ -399,7 +399,8 @@ export async function buildCollectiveReferenceImages(
   styleSettings: PhotoStyleSettings,
   selfieKeys: string[],
   getSelfieBuffer: SelfieBufferProvider,
-  downloadAsset: DownloadAssetFn
+  downloadAsset: DownloadAssetFn,
+  workflowVersion?: 'v1' | 'v2' | 'v3'
 ): Promise<ReferenceImage[]> {
   const references: ReferenceImage[] = []
 
@@ -440,14 +441,17 @@ export async function buildCollectiveReferenceImages(
     })
   }
 
-  if (styleSettings.branding?.type !== 'exclude') {
-    const logo = await buildLogoReference(styleSettings.branding?.logoKey, downloadAsset)
-    if (logo) references.push(logo)
-  }
+  // Skip logo/background downloads for v3 workflow - handled by element preparation in step 0
+  if (workflowVersion !== 'v3') {
+    if (styleSettings.branding?.type !== 'exclude') {
+      const logo = await buildLogoReference(styleSettings.branding?.logoKey, downloadAsset)
+      if (logo) references.push(logo)
+    }
 
-  if (styleSettings.background?.type === 'custom') {
-    const background = await buildBackgroundReference(styleSettings.background.key, downloadAsset)
-    if (background) references.push(background)
+    if (styleSettings.background?.type === 'custom') {
+      const background = await buildBackgroundReference(styleSettings.background.key, downloadAsset)
+      if (background) references.push(background)
+    }
   }
 
   return references
@@ -490,8 +494,10 @@ export async function buildDefaultReferencePayload({
     const additionalAssets: Array<{ label: string; buffer: Buffer }> = []
 
     // Add logo to composite if branding is enabled and positioned on clothing
+    // Skip for v3 workflow - handled by BrandingElement.prepare() in step 0
     if (
-      styleSettings.branding?.type !== 'exclude' && 
+      workflowVersion !== 'v3' &&
+      styleSettings.branding?.type !== 'exclude' &&
       styleSettings.branding?.logoKey &&
       styleSettings.branding?.position === 'clothing'
     ) {
@@ -519,7 +525,8 @@ export async function buildDefaultReferencePayload({
         'REFERENCE: Composite image containing vertically stacked subject selfies and labeled brand assets.'
     })
 
-    if (styleSettings.background?.type === 'custom' && styleSettings.background.key) {
+    // Skip custom background download for v3 workflow - handled by BackgroundElement.prepare() in step 0
+    if (workflowVersion !== 'v3' && styleSettings.background?.type === 'custom' && styleSettings.background.key) {
       const backgroundReference = await buildBackgroundReference(
         styleSettings.background.key,
         downloadAsset
@@ -576,7 +583,8 @@ export async function buildDefaultReferencePayload({
       styleSettings,
       selfieKeys,
       getSelfieBuffer,
-      downloadAsset
+      downloadAsset,
+      workflowVersion
     )
     referenceImages.push(...references)
 

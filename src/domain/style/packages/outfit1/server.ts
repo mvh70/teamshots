@@ -161,8 +161,9 @@ export const outfit1Server: Outfit1ServerPackage = {
 
     Logger.info('[DEBUG] hasCustomOutfit result', { generationId, hasCustomOutfit })
 
-    if (hasCustomOutfit && effectiveSettings.customClothing) {
-      Logger.info('[DEBUG] Entering custom clothing block', { generationId })
+    // Skip legacy custom clothing handling for v3 workflow - it's now handled by CustomClothingElement.prepare() in step 0
+    if (hasCustomOutfit && effectiveSettings.customClothing && options.workflowVersion !== 'v3') {
+      Logger.info('[DEBUG] Entering custom clothing block (legacy workflow)', { generationId, workflowVersion: options.workflowVersion })
 
       // Add color specifications if provided (user-adjustable)
       // Colors are sent as structured data to complement the garment collage visual reference
@@ -431,6 +432,9 @@ export const outfit1Server: Outfit1ServerPackage = {
 
 /**
  * Create garment collage using Gemini
+ *
+ * LEGACY: For v2 and earlier workflows only.
+ * v3 workflow uses CustomClothingElement.prepare() in step 0 preparation phase.
  */
 async function createGarmentCollage(
   outfitImageBase64: string,
