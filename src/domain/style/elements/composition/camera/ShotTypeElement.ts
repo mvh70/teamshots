@@ -190,3 +190,14 @@ export class ShotTypeElement extends StyleElement {
 // Export singleton instance
 export const shotTypeElement = new ShotTypeElement()
 export default shotTypeElement
+
+// ===== AUTO-REGISTRATION =====
+
+/**
+ * IMPORTANT: Elements self-register on import!
+ *
+ * When this module is imported, the element automatically registers
+ * with the composition registry. No manual registration required!
+ */
+import { autoRegisterElement } from '../../composition/registry'
+autoRegisterElement(shotTypeElement)

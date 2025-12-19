@@ -158,3 +158,14 @@ export class ClothingElement extends StyleElement {
 // Export singleton instance
 export const clothingElement = new ClothingElement()
 export default clothingElement
+
+// ===== AUTO-REGISTRATION =====
+
+/**
+ * IMPORTANT: Elements self-register on import!
+ *
+ * When this module is imported, the element automatically registers
+ * with the composition registry. No manual registration required!
+ */
+import { autoRegisterElement } from '../../composition/registry'
+autoRegisterElement(clothingElement)

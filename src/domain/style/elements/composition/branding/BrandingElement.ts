@@ -276,3 +276,14 @@ export class BrandingElement extends StyleElement {
 // Export singleton instance
 export const brandingElement = new BrandingElement()
 export default brandingElement
+
+// ===== AUTO-REGISTRATION =====
+
+/**
+ * IMPORTANT: Elements self-register on import!
+ *
+ * When this module is imported, the element automatically registers
+ * with the composition registry. No manual registration required!
+ */
+import { autoRegisterElement } from '../../composition/registry'
+autoRegisterElement(brandingElement)

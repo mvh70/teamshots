@@ -192,9 +192,42 @@ export abstract class StyleElement {
    * Default: 100
    * Lower priorities contribute first, allowing higher priorities
    * to see their contributions and potentially coordinate
+   *
+   * Note: Priority is used as a baseline ordering, but dependency
+   * resolution (before/after/dependsOn) takes precedence
    */
   get priority(): number {
     return 100
+  }
+
+  /**
+   * Element IDs this element must execute before
+   *
+   * Optional - specify if this element needs to contribute before others
+   * Example: A base element might need to contribute before enhancement elements
+   */
+  get before(): string[] | undefined {
+    return undefined
+  }
+
+  /**
+   * Element IDs this element must execute after
+   *
+   * Optional - specify if this element needs to see contributions from others
+   * Example: An enhancement element might need to see base contributions first
+   */
+  get after(): string[] | undefined {
+    return undefined
+  }
+
+  /**
+   * Element IDs that must be registered for this element to work
+   *
+   * Optional - specify hard dependencies on other elements
+   * If a required element is not registered, this element will fail validation
+   */
+  get dependsOn(): string[] | undefined {
+    return undefined
   }
 
   /**

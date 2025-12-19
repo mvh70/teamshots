@@ -143,3 +143,14 @@ export class AspectRatioElement extends StyleElement {
 // Export singleton instance
 export const aspectRatioElement = new AspectRatioElement()
 export default aspectRatioElement
+
+// ===== AUTO-REGISTRATION =====
+
+/**
+ * IMPORTANT: Elements self-register on import!
+ *
+ * When this module is imported, the element automatically registers
+ * with the composition registry. No manual registration required!
+ */
+import { autoRegisterElement } from '../../composition/registry'
+autoRegisterElement(aspectRatioElement)

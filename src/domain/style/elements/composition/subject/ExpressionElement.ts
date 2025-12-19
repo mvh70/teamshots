@@ -192,3 +192,14 @@ export class ExpressionElement extends StyleElement {
 // Export singleton instance
 export const expressionElement = new ExpressionElement()
 export default expressionElement
+
+// ===== AUTO-REGISTRATION =====
+
+/**
+ * IMPORTANT: Elements self-register on import!
+ *
+ * When this module is imported, the element automatically registers
+ * with the composition registry. No manual registration required!
+ */
+import { autoRegisterElement } from '../../composition/registry'
+autoRegisterElement(expressionElement)

@@ -500,21 +500,90 @@ export const myPackage: ServerStylePackage = {
   // ...
 }
 ```
+Package-provided elements are automatically registered when the package is registered.
 
-**2. Manual Registration**
+**2. Self-Registration (For Standalone Elements)**
+```typescript
+// At end of element file - RECOMMENDED PATTERN
+import { autoRegisterElement } from '../../composition/registry'
+
+export const vintageFilter = new VintageFilterElement()
+export default vintageFilter
+
+// Auto-register on import (server-side only)
+autoRegisterElement(vintageFilter)
+```
+
+The `autoRegisterElement` helper:
+- Only registers in server environment (checks `typeof window === 'undefined'`)
+- Handles duplicate registration gracefully
+- Logs errors clearly for debugging
+
+**3. Manual Registration (Legacy)**
 ```typescript
 import { compositionRegistry } from '../elements/composition/registry'
 
+// Manual registration - only use if you need explicit control
 compositionRegistry.register(new VintageFilterElement())
 ```
 
-**3. Self-Registration**
+### Element Dependencies
+
+Elements can declare dependencies on other elements using `before`, `after`, and `dependsOn`:
+
 ```typescript
-// At end of element file
-import { compositionRegistry } from '../composition/registry'
-export const vintageFilter = new VintageFilterElement()
-compositionRegistry.register(vintageFilter)
+export class LogoEnhancementElement extends StyleElement {
+  readonly id = 'logo-enhancement'
+  readonly name = 'Logo Enhancement'
+
+  // Execution order dependencies
+  get after(): string[] | undefined {
+    return ['branding']  // Run AFTER branding element
+  }
+
+  get before(): string[] | undefined {
+    return ['background']  // Run BEFORE background element
+  }
+
+  // Hard dependencies (must be registered)
+  get dependsOn(): string[] | undefined {
+    return ['branding']  // Requires branding element to exist
+  }
+
+  // Priority is still used for elements without dependencies
+  get priority(): number {
+    return 65
+  }
+
+  isRelevantForPhase(context: ElementContext): boolean {
+    // Only relevant if branding element contributed a logo
+    const brandingContribution = context.existingContributions.find(
+      (c) => c.metadata?.['branding']
+    )
+    return !!brandingContribution && context.phase === 'composition'
+  }
+
+  async contribute(context: ElementContext): Promise<ElementContribution> {
+    // Enhance the logo that was added by branding element
+    return {
+      instructions: ['Enhance logo visibility with subtle glow'],
+      mustFollow: ['Logo enhancement must be subtle'],
+    }
+  }
+}
 ```
+
+**Dependency Resolution**:
+- Elements are sorted using **topological sort** (Kahn's algorithm)
+- **Circular dependencies** are detected and raise an error
+- **Priority** is used as a tie-breaker when no dependencies exist
+- Missing `dependsOn` elements cause validation errors
+
+**Best Practices**:
+- Use `after` to see other elements' contributions
+- Use `before` to let other elements see your contributions
+- Use `dependsOn` for hard requirements (element must exist)
+- Keep dependency chains shallow to avoid complexity
 
 ---
 

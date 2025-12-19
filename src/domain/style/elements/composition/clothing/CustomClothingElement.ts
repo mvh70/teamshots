@@ -584,3 +584,14 @@ Style: Clean, commercial product photography.`
 // Export singleton instance
 export const customClothingElement = new CustomClothingElement()
 export default customClothingElement
+
+// ===== AUTO-REGISTRATION =====
+
+/**
+ * IMPORTANT: Elements self-register on import!
+ *
+ * When this module is imported, the element automatically registers
+ * with the composition registry. No manual registration required!
+ */
+import { autoRegisterElement } from '../../composition/registry'
+autoRegisterElement(customClothingElement)
