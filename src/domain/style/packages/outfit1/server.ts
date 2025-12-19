@@ -23,12 +23,62 @@ import { CostTrackingService } from '@/domain/services/CostTrackingService'
 import { AssetService } from '@/domain/services/AssetService'
 import { prisma } from '@/lib/prisma'
 
-export type Outfit1ServerPackage = typeof outfit1Base & {
-  buildGenerationPayload: (context: GenerationContext) => Promise<GenerationPayload>
+import type { ServerStylePackage, PackageMetadata, PackageCapabilities } from '../types'
+
+export type Outfit1ServerPackage = ServerStylePackage
+
+// Package metadata for discovery and compatibility
+const outfit1Metadata: PackageMetadata = {
+  author: 'TeamShots',
+  description: 'Professional outfit transfer package with garment collage generation',
+  license: 'Proprietary',
+  compatibility: {
+    minVersion: '1.0.0',
+    requires: [], // No dependencies
+  },
+  capabilities: {
+    supportsCustomClothing: true,
+    supportsBranding: true,
+    supportsCustomBackgrounds: true,
+    supportedWorkflowVersions: ['v2', 'v3'],
+    supportsPose: true,
+    supportsExpression: true,
+    supportsAspectRatio: true,
+  },
 }
 
 export const outfit1Server: Outfit1ServerPackage = {
   ...outfit1Base,
+
+  // Enhanced package fields
+  featureFlag: 'outfitTransfer',
+  metadata: outfit1Metadata,
+  requiredElements: ['custom-clothing', 'subject', 'pose'],
+  providedElements: [], // Could provide custom elements in the future
+
+  // Lifecycle hooks
+  async initialize() {
+    Logger.info('[Outfit1Package] Initializing outfit1 package')
+    // Perform any one-time setup here
+  },
+
+  validate() {
+    // Validate package configuration
+    return {
+      valid: true,
+      errors: [],
+      warnings: [],
+    }
+  },
+
+  onRegister() {
+    Logger.debug('[Outfit1Package] Package registered')
+  },
+
+  onUnregister() {
+    Logger.debug('[Outfit1Package] Package unregistered')
+  },
+
   buildGenerationPayload: async ({
     generationId,
     styleSettings,

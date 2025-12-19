@@ -1,45 +1,31 @@
-import { CategoryType, PhotoStyleSettings } from '@/types/photo-style'
 import { headshot1 } from './headshot1'
 import { outfit1 } from './outfit1'
 import { freepackage } from './freepackage'
 import { tryitforfree } from './tryitforfree'
-import { StandardPresetConfig } from './defaults'
 import { isFeatureEnabled } from '@/config/feature-flags'
 import { validateAllPackages } from './validation'
 
 // Load element metadata registry
 import '@/domain/style/elements'
 
+// Re-export types from centralized types file
 export type { StandardPresetConfig, StandardPresetDefaults } from './defaults'
+export type {
+  ClientStylePackage,
+  ServerStylePackage,
+  PackageMetadata,
+  PackageCapabilities,
+  PackageValidationResult,
+  PackagePreparedAssets,
+} from './types'
+export { isServerPackage, canPrepareAssets } from './types'
 
-export interface ClientStylePackage {
-  id: string
-  label: string
-  version: number
-  visibleCategories: CategoryType[]
-  /** Categories that belong to "Composition Settings" section (background, branding, pose, shotType) */
-  compositionCategories?: CategoryType[]
-  /** Categories that belong to "User Style Settings" section (clothing, clothingColors, expression, lighting) */
-  userStyleCategories?: CategoryType[]
-  availableBackgrounds?: string[]
-  availablePoses?: string[]
-  availableExpressions?: string[]
-  defaultSettings: PhotoStyleSettings
-  defaultPresetId: string
-  presets?: Record<string, StandardPresetConfig>
-  promptBuilder: (settings: PhotoStyleSettings, ctx?: Record<string, unknown>) => string | Record<string, unknown>
-  forPreviewPromptBuilder?: (settings: PhotoStyleSettings, ctx?: Record<string, unknown>) => string | Record<string, unknown>
-  persistenceAdapter: {
-    serialize: (ui: PhotoStyleSettings) => Record<string, unknown>
-    deserialize: (raw: Record<string, unknown>) => PhotoStyleSettings
-  }
-  /** Extract UI settings from raw request data */
-  extractUiSettings: (rawStyleSettings: Record<string, unknown>) => PhotoStyleSettings
-  resolveStandardPreset?: (
-    preset: StandardPresetConfig,
-    styleSettings: PhotoStyleSettings
-  ) => StandardPresetConfig
-}
+// Re-export registry
+export { packageRegistry, registerPackages } from './registry'
+export type { PackageRegistrationOptions } from './registry'
+
+// For backward compatibility, still export from old location
+import type { ClientStylePackage } from './types'
 
 // Build CLIENT_PACKAGES dynamically based on feature flags
 function buildClientPackages(): Record<string, ClientStylePackage> {
