@@ -164,6 +164,7 @@ export default function TeamPage() {
     const fetchInitialData = async () => {
       if (session?.user) {
         // OPTIMIZATION: Check sessionStorage for initial data first
+        // But validate team name - if it's suspicious (empty, null, or "My Team"), fetch fresh data
         try {
           const stored = sessionStorage.getItem('teamshots.initialData')
           if (stored) {
@@ -174,28 +175,37 @@ export default function TeamPage() {
               const teamId = initialData.roles.teamId
               const teamName = initialData.roles.teamName
 
-              setUserRoles({ isTeamAdmin, isTeamMember, isPlatformAdmin })
-
-              if (isTeamAdmin) {
-                // Check if team name is the default "My Team" value - treat as needing setup
-                const hasDefaultTeamName = teamName === 'My Team' || teamName === 'My team'
-                if (needsTeamSetup || hasDefaultTeamName) {
-                  setNeedsTeamSetup(true)
-                  setLoading(false)
-
-                  // Check if user just signed up - show welcome popup if data is fresh (within 30 seconds)
-                  // This will be checked in a separate useEffect to avoid hydration mismatch
-                } else if (teamId && teamName) {
-                  setTeamData({ id: teamId, name: teamName })
-                  await fetchTeamData()
-                } else {
-                  setLoading(false)
-                  setError('Could not retrieve team information.')
-                }
+              // Invalidate cache if team name is suspicious (empty, "My Team", etc)
+              const isSuspiciousName = !teamName || 
+                                       teamName.trim() === '' || 
+                                       teamName === 'My Team' || 
+                                       teamName === 'My team'
+              
+              // CRITICAL: If team has a valid name, ignore cached needsTeamSetup flag
+              // The team name is the source of truth, not the cached onboarding state
+              if (isSuspiciousName) {
+                // Don't trust cached data - fetch fresh data from API
+                console.log('Cached team name is suspicious, fetching fresh data from API')
+                // Fall through to API fetch below
               } else {
-                setLoading(false) // Not an admin, will show admin-only message
+                // Team has a valid name - use it regardless of cached needsTeamSetup flag
+                setUserRoles({ isTeamAdmin, isTeamMember, isPlatformAdmin })
+
+                if (isTeamAdmin) {
+                  // Team has a valid name, so it's fully set up - show the team page
+                  if (teamId && teamName) {
+                    setNeedsTeamSetup(false) // Override cached value
+                    setTeamData({ id: teamId, name: teamName })
+                    await fetchTeamData()
+                  } else {
+                    setLoading(false)
+                    setError('Could not retrieve team information.')
+                  }
+                } else {
+                  setLoading(false) // Not an admin, will show admin-only message
+                }
+                return
               }
-              return
             }
           }
         } catch {
@@ -211,14 +221,21 @@ export default function TeamPage() {
             setUserRoles({ isTeamAdmin, isTeamMember, isPlatformAdmin })
 
             if (isTeamAdmin) {
-              // Check if team name is the default "My Team" value - treat as needing setup
-              const hasDefaultTeamName = teamName === 'My Team' || teamName === 'My team'
-              if (needsTeamSetup || hasDefaultTeamName) {
-                setNeedsTeamSetup(true)
-                setLoading(false)
-              } else if (teamId && teamName) {
+              // CRITICAL: Team name is the source of truth, not needsTeamSetup flag
+              // If team has a valid name, it's set up - ignore needsTeamSetup
+              const hasValidTeamName = teamName && teamName.trim() !== '' && teamName !== 'My Team' && teamName !== 'My team'
+              
+              if (hasValidTeamName && teamId) {
+                // Team has a valid name - show the team page
+                console.log('Team has valid name, showing team page:', { teamId, teamName, needsTeamSetup })
+                setNeedsTeamSetup(false) // Override API flag if team name is valid
                 setTeamData({ id: teamId, name: teamName })
                 await fetchTeamData()
+              } else if (needsTeamSetup || !teamName || !teamId) {
+                // Team needs setup (no name or no team)
+                console.log('Team needs setup:', { teamId, teamName, needsTeamSetup })
+                setNeedsTeamSetup(true)
+                setLoading(false)
               } else {
                 setLoading(false)
                 setError('Could not retrieve team information.')
@@ -405,7 +422,23 @@ export default function TeamPage() {
         window.location.href = '/app/dashboard'
       } else {
         const data = await response.json()
-        setError(data.error || 'Failed to create team.')
+        
+        // Special handling for "already part of a team" error
+        if (data.shouldRedirect && data.teamId) {
+          setError(data.error || 'You are already part of a team. Redirecting...')
+          // Fetch the team data and show it instead of the creation form
+          setTimeout(async () => {
+            try {
+              await fetchTeamData()
+              setNeedsTeamSetup(false)
+            } catch {
+              // If fetching fails, just reload the page
+              window.location.reload()
+            }
+          }, 1500)
+        } else {
+          setError(data.error || 'Failed to create team.')
+        }
         setSubmittingTeam(false)
       }
     } catch {

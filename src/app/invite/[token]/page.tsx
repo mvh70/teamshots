@@ -93,17 +93,15 @@ export default function InvitePage() {
     }
   }, [token, router])
 
-  // Check if user needs team setup (using same logic as team page)
-  // Also check if team name is the default "My Team" value
+  // Check if user needs team setup (team exists but name is null)
   const checkTeamName = useCallback(async () => {
     try {
       const response = await fetch('/api/dashboard/stats')
       if (response.ok) {
         const data = await response.json()
-        const { needsTeamSetup, isTeamAdmin, teamName } = data.userRole || {}
-        // Show setup if needsTeamSetup is true OR if team name is the default "My Team"
-        const hasDefaultTeamName = teamName === 'My Team' || teamName === 'My team'
-        if (isTeamAdmin && (needsTeamSetup || hasDefaultTeamName)) {
+        const { needsTeamSetup, isTeamAdmin } = data.userRole || {}
+        // Show setup if needsTeamSetup is true (team has null name)
+        if (isTeamAdmin && needsTeamSetup) {
           setNeedsTeamSetup(true)
           setShowWelcomePopup(true)
         }

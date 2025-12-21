@@ -57,11 +57,11 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bg-gray-50/30 -z-10"></div>
       
       {/* Hero Section - Professional B2B Layout */}
-      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-20 pb-20 sm:pb-24 lg:pb-28">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 lg:pt-12 pb-20 sm:pb-24 lg:pb-28">
         
         {/* Full Width Heading Part 1 (Lines 1 & 2) */}
-        <div className="text-left mb-2 lg:mb-4">
-          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold text-text-dark leading-[0.9] tracking-tight">
+        <div className="text-left mb-0 lg:mb-1">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold text-text-dark leading-[0.75] tracking-tight">
             <span className="block">{t('titleLine1')}</span>
             <span className="block">{t('titleLine2')}</span>
           </h1>
@@ -72,7 +72,7 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
           <div className="lg:col-span-8 xl:col-span-8 text-left relative z-10 lg:-mr-8 xl:-mr-16 lg:pr-32 xl:pr-40">
             
             {/* Hero Title Part 2 (Line 3) */}
-            <div className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold mb-6 leading-[0.9] tracking-tight">
+            <div className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold mb-6 leading-[0.75] tracking-tight">
               <span className="block bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary bg-clip-text text-transparent">
                 {t('titleHighlightTime')}
               </span>
@@ -142,10 +142,33 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
       <SampleGallery variant={variant} />
 
       {/* Trust Indicators - Shows Team Command Center feature */}
-      <TrustIndicators variant={variant} showSection={showSection} />
+      {/* Hidden per user request */}
+      {/* <TrustIndicators variant={variant} showSection={showSection} /> */}
 
-      {/* How It Works - 5-step team workflow */}
+      {/* How It Works - 4-step team workflow */}
       <HowItWorks variant={variant} />
+
+      {/* Anti-Robot Guarantee Section */}
+      <section className="py-16 sm:py-20 bg-gradient-to-br from-brand-primary-light via-bg-white to-brand-secondary-light">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="bg-white rounded-3xl shadow-depth-2xl p-8 sm:p-12 border-4 border-brand-primary">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-brand-primary to-brand-primary-hover rounded-full mb-6 shadow-depth-xl">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <h3 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-text-dark mb-6">
+              100% Human-Look Guarantee
+            </h3>
+            <p className="text-lg sm:text-xl text-text-body leading-relaxed mb-4">
+              If your photos look like AI, we redo them for free.
+            </p>
+            <p className="text-base sm:text-lg text-text-muted">
+              Your team deserves to look professional, not robotic. We guarantee studio-quality results that look like you, just more polished.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Pricing Preview */}
       <PricingPreview variant={variant} />
@@ -154,7 +177,7 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
       <FAQ variant={variant} supportEmail={supportEmail} />
 
       {/* Final CTA Section */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24 lg:py-40 text-center">
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24 lg:py-40 text-center bg-bg-gray-50">
         <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
           {t('finalCtaTitle')}
         </h2>

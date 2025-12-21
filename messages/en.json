@@ -29,15 +29,16 @@
         "finalCtaTitle": "Ready to transform your team photos?",
         "finalCtaSubtitle": "Get your team's professional headshots and see the difference in 60 seconds.",
         "getStarted": "Get Started",
-        "cta": "Get your team's professional headshots",
-        "ctaSubtext": "Get your team's professional headshots in a predefined style when you sign up. No commitment, no credit card.",
-        "ctaAria": "Get your team's professional headshots in a predefined style when you sign up. No commitment.",
-        "noCreditCard": "No credit card required",
+        "cta": "See Your Team's New Look",
+        "ctaSubtext": "",
+        "ctaAria": "Start your team order with no commitment",
+        "noCreditCard": "Test with a fixed style for free, no credit card required",
         "badge": "Professional team photos without the photoshoot hassle"
       },
       "gallery": {
         "title": "From 'meh' selfies to LinkedIn-worthy headshots",
-        "subtitle": "See how we transform ordinary photos into professional headshots that actually impress clients and recruiters. No fancy camera or photographer required."
+        "subtitle": "See how we transform ordinary photos into professional headshots that actually impress clients and recruiters. No fancy camera or photographer required.",
+        "cta": "Make your team look like this today"
       },
       "trust": {
         "title": "Why teams choose TeamShotsPro over everyone else",
@@ -58,36 +59,30 @@
         }
       },
       "howItWorks": {
-        "title": "From team photo chaos to 'done' in 5 minutes",
-        "subtitle": "Stop wasting weeks coordinating photoshoots. Here's exactly how modern teams get professional headshots instantly.",
-        "totalTime": "Total time:",
-        "totalTimeValue": "5 minutes",
-        "cta": "Get your team's professional headshots now",
-        "guarantee": "Risk-free: Get your team's professional headshots to prove it works. No credit card, no commitment, no BS.",
+        "title": "Standardize your team's look without the logistical nightmare",
+        "subtitle": "You set an on-brand style once (e.g. background, logo), and you invite your team members. That's it. Your team members will get an invite and can generate their own photos, frictionless without registration. You see all the photos in the admin panel and select the best one.",
+        "totalTime": "Your setup time:",
+        "totalTimeValue": "2 minutes",
+        "cta": "Start My Team Order",
         "steps": {
           "1": {
-            "title": "Set your brand style",
-            "description": "Choose background and upload logo in 30 seconds.",
-            "duration": "30s"
-          },
-          "2": {
-            "title": "Invite your team",
-            "description": "Send personalized links. Each person uploads their selfie from any device.",
+            "title": "Set Your Brand Identity",
+            "description": "Backgrounds, logo, clothing style. You decide what's fixed and what team members can change (e.g. expression, or clothing colors).",
             "duration": "1 min"
           },
+          "2": {
+            "title": "Invite Your Team",
+            "description": "Invite your team (bulk upload available). They'll get a magic link. No scheduling grids, no calendar Tetris. Follow progress in your dashboard.",
+            "duration": "30s"
+          },
           "3": {
-            "title": "Individual headshots generated",
-            "description": "Get polished headshots instantly. No editing required.",
-            "duration": "60s/person"
+            "title": "They Upload a Selfie",
+            "description": "Team members snap a quick selfie from their phone. We transform it into your brand style instantly.",
+            "duration": "2 min/person"
           },
           "4": {
-            "title": "Review & approve",
-            "description": "See all results in one dashboard. Retry anything you want to improve.",
-            "duration": "2 min"
-          },
-          "5": {
-            "title": "Download headshots",
-            "description": "High-resolution files ready for your website, LinkedIn, and business cards.",
+            "title": "Get Your Assets",
+            "description": "Review and download a unified gallery of professional headshots. Consistent, high-res, and ready for your website.",
             "duration": "30s"
           }
         }
@@ -116,12 +111,13 @@
         "cta": "Get your professional headshots",
         "ctaSubtext": "Get your professional headshots in a predefined style when you sign up. No commitment, no credit card.",
         "ctaAria": "Get your professional headshots in a predefined style when you sign up. No commitment.",
-        "noCreditCard": "No credit card required",
+        "noCreditCard": "Test with a fixed style for free, no credit card required",
         "badge": "Professional headshots without the studio hassle"
       },
       "gallery": {
         "title": "From casual selfies to professional headshots",
-        "subtitle": "See how we transform everyday photos into stunning headshots perfect for LinkedIn, dating apps, and professional profiles."
+        "subtitle": "See how we transform everyday photos into stunning headshots perfect for LinkedIn, dating apps, and professional profiles.",
+        "cta": "Make your team look like this today"
       },
       "trust": {
         "title": "Why people choose PhotoShotsPro",
@@ -195,7 +191,8 @@
     "before": "Before",
     "after": "After",
     "dragToCompare": "Drag to compare",
-    "generatedIn": "Generated in 45 seconds"
+    "generatedIn": "Generated in 45 seconds",
+    "cta": "Make your team look like this today"
   },
   "trust": {
     "title": "Why teams choose TeamShotsPro over everyone else",
@@ -811,7 +808,7 @@
         },
         "nextSteps": "Next step",
         "howItWorks": {
-          "title": "How it works",
+          "title": "Standardize your team's look without the logistical nightmare",
           "organizer": {
             "step1": {
               "title": "You're on a paid plan",
@@ -1740,8 +1737,10 @@
         "predefined": "Predefined",
         "officePrompt": "Office description",
         "officePromptPlaceholder": "Describe the office environment...",
-        "neutralColor": "Background Color",
+        "neutralColor": "Neutral Color",
+        "neutralColorDesc": "Choose your neutral background color",
         "gradientColor": "Gradient Color",
+        "gradientColorDesc": "Choose your gradient base color",
         "customUpload": "Upload Background",
         "uploadPrompt": "Click to upload or drag and drop",
         "chooseFile": "Choose file",

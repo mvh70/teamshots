@@ -326,7 +326,7 @@ export default function ColorPicker({
                   {colorVariations.map((color, index) => (
                     <button
                       type="button"
-                      key={`${color}-${index}`}
+                      key={`variation-${index}-${color}`}
                       onClick={() => handleColorSelect(color)}
                       className={`w-10 h-10 rounded-lg border transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary ${
                         normalizedSelectedValue.toLowerCase() === color.toLowerCase()
@@ -351,10 +351,10 @@ export default function ColorPicker({
                   }
                 </label>
                 <div className="grid grid-cols-5 gap-1.5 max-h-48 overflow-y-auto">
-                  {presets.map((color) => (
+                  {presets.map((color, index) => (
                     <button
                       type="button"
-                      key={color}
+                      key={`preset-${index}-${color}`}
                       onClick={() => handleColorSelect(color)}
                       className={`w-10 h-10 rounded-lg border transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary ${
                         normalizedSelectedValue.toLowerCase() === color.toLowerCase()

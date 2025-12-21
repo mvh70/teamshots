@@ -2,8 +2,8 @@
 export const NEUTRAL_COLORS = [
   '#ffffff', '#fef7f0', '#f0f9ff', '#f0fdf4', '#fefce8',
   '#fdf2f8', '#f5f3ff', '#f0fdfa', '#fff7ed', '#fef3c7',
-  '#f3e8ff', '#e0f2fe', '#dcfce7', '#fef3c7', '#fce7f3',
-  '#ede9fe', '#ccfbf1', '#fed7aa', '#fde68a', '#f9a8d4'
+  '#f3e8ff', '#e0f2fe', '#dcfce7', '#fce7f3', '#ede9fe',
+  '#ccfbf1', '#fed7aa', '#fde68a', '#f9a8d4'
 ]
 
 export const GRADIENT_COLORS = [

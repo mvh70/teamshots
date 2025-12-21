@@ -32,12 +32,13 @@
         "cta": "Obtén retratos profesionales para tu equipo",
         "ctaSubtext": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
         "ctaAria": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso.",
-        "noCreditCard": "No se requiere tarjeta de crédito",
+        "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
         "badge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos"
       },
       "gallery": {
         "title": "De selfies normales a retratos profesionales",
-        "subtitle": "Mira cómo transformamos fotos ordinarias en retratos profesionales que realmente impresionan a clientes y reclutadores. Sin cámara profesional ni fotógrafo."
+        "subtitle": "Mira cómo transformamos fotos ordinarias en retratos profesionales que realmente impresionan a clientes y reclutadores. Sin cámara profesional ni fotógrafo.",
+        "cta": "Haz que tu equipo se vea así hoy"
       },
       "trust": {
         "title": "¿Por qué equipos eligen TeamShotsPro sobre todos los demás?",
@@ -58,8 +59,8 @@
         }
       },
       "howItWorks": {
-        "title": "De caos de fotos de equipo a 'listo' en 5 minutos",
-        "subtitle": "Sin dolores de cabeza de coordinación. Sin proveedores externos. Solo cinco pasos simples y listo.",
+        "title": "Estandariza el look de tu equipo sin la pesadilla logística",
+        "subtitle": "Configuras un estilo acorde a tu marca una vez (por ejemplo, fondo, logo) e invitas a los miembros de tu equipo. Eso es todo. Los miembros de tu equipo recibirán una invitación y podrán generar sus propias fotos, sin fricción y sin registro. Ves todas las fotos en el panel de administración y seleccionas la mejor.",
         "totalTime": "Tiempo total:",
         "totalTimeValue": "5 minutos",
         "cta": "¡Obtén retratos profesionales para tu equipo!",
@@ -67,13 +68,13 @@
         "steps": {
           "1": {
             "title": "Configura tu estilo de marca",
-            "description": "Elige el fondo y sube tu logo en 30 segundos.",
-            "duration": "30s"
+            "description": "Fondos, logo, estilo de ropa. Tú decides qué está fijo y qué pueden cambiar los miembros del equipo (por ejemplo, expresión o colores de ropa).",
+            "duration": "1 min"
           },
           "2": {
             "title": "Invita a tu equipo",
-            "description": "Envía enlaces personalizados. Cada persona sube su selfie desde cualquier dispositivo.",
-            "duration": "1 min"
+            "description": "Invita a tu equipo (carga masiva disponible). Recibirán un enlace mágico. Sin cuadrículas de programación, sin Tetris de calendario. Sigue el progreso en tu panel de control.",
+            "duration": "30s"
           },
           "3": {
             "title": "Retratos individuales generados",
@@ -116,7 +117,7 @@
         "cta": "Obtén tus retratos profesionales",
         "ctaSubtext": "Obtén tus retratos profesionales en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
         "ctaAria": "Obtén tus retratos profesionales en un estilo predefinido al registrarte. Sin compromiso.",
-        "noCreditCard": "No se requiere tarjeta de crédito",
+        "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
         "badge": "Retratos profesionales sin la molestia del estudio"
       },
       "gallery": {
@@ -186,7 +187,7 @@
     "joinWaitlist": "Obtén retratos profesionales para tu equipo",
     "freeCtaSubtext": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Lo entendemos, quieres probar antes de comprometerte.",
     "freeCtaAria": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso.",
-    "noCreditCard": "No se requiere tarjeta de crédito",
+    "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
     "joinedBadge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos",
     "freeOffer": "Obtén 1 generación gratis al registrarte"
   },
@@ -196,7 +197,8 @@
     "before": "Antes",
     "after": "Después",
     "dragToCompare": "Arrastra para comparar",
-    "generatedIn": "Generado en 45 segundos"
+    "generatedIn": "Generado en 45 segundos",
+    "cta": "Haz que tu equipo se vea así hoy"
   },
   "trust": {
     "title": "¿Por qué equipos eligen TeamShotsPro sobre todos los demás?",
@@ -817,7 +819,7 @@
         },
         "nextSteps": "Siguiente paso",
         "howItWorks": {
-          "title": "Cómo funciona",
+          "title": "Estandariza el look de tu equipo sin la pesadilla logística",
           "organizer": {
             "step1": {
               "title": "Estás en un plan pagado",
@@ -1750,8 +1752,10 @@
         "predefined": "Predefinido",
         "officePrompt": "Descripción de Oficina",
         "officePromptPlaceholder": "Describe el ambiente de oficina...",
-        "neutralColor": "Color de Fondo",
+        "neutralColor": "Color Neutral",
+        "neutralColorDesc": "Elige tu color de fondo neutral",
         "gradientColor": "Color de Gradiente",
+        "gradientColorDesc": "Elige tu color base de gradiente",
         "customUpload": "Subir Fondo",
         "uploadPrompt": "Haz clic para subir o arrastra y suelta",
         "chooseFile": "Elegir Archivo",
