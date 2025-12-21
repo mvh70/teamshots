@@ -61,7 +61,7 @@ async function fetchPersonForToken(userId: string): Promise<{
     teamId?: string | null
     team?: {
       id: string
-      name: string
+      name: string | null
       adminId: string
     } | null
   }

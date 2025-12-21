@@ -15,7 +15,7 @@ export interface UserWithRoles {
     teamId?: string | null
     team?: {
       id: string
-      name: string
+      name: string | null
       adminId: string
     } | null
   } | null

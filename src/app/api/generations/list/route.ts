@@ -54,7 +54,7 @@ type GenerationWithRelations = {
     teamId: string | null;
     team: {
       id: string;
-      name: string;
+      name: string | null;
     } | null;
   };
   context: {

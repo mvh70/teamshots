@@ -20,7 +20,7 @@ declare module "next-auth" {
         teamId?: string | null
         team?: {
           id: string
-          name: string
+          name: string | null
           adminId: string
         } | null
       } | null
@@ -42,7 +42,7 @@ declare module "next-auth" {
       teamId?: string | null
       team?: {
         id: string
-        name: string
+        name: string | null
       } | null
     } | null
   }
@@ -64,7 +64,7 @@ declare module "next-auth/jwt" {
       teamId?: string | null
       team?: {
         id: string
-        name: string
+        name: string | null
       } | null
     } | null
   }

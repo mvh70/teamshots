@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
       return await sendTeamInviteEmail({
         email: invite.email,
-        teamName: invite.team.name,
+        teamName: invite.team.name || 'Team',
         inviteLink,
         creditsAllocated: invite.creditsAllocated,
         firstName: invite.firstName,

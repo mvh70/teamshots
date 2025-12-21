@@ -148,6 +148,29 @@ export async function verifyTeamDomain(email: string, teamWebsite: string): Prom
   }
 }
 
+export async function verifyDomain(email: string, website: string): Promise<{
+  verified: boolean
+  error?: string
+}> {
+  const result = await verifyTeamDomain(email, website)
+  
+  if (result.isValid) {
+    return { verified: true }
+  }
+  
+  if (result.requiresVerification) {
+    return { 
+      verified: false, 
+      error: 'Team email verification required' 
+    }
+  }
+  
+  return { 
+    verified: false, 
+    error: 'Email domain does not match team website' 
+  }
+}
+
 export async function createTeamVerificationRequest(
   email: string, 
   teamWebsite: string,

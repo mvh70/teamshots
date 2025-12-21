@@ -40,7 +40,7 @@ export class UserService {
       onboardingState: string | null
       team: {
         id: string
-        name: string
+        name: string | null
       } | null
     } | null
   }> {
