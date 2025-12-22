@@ -1308,6 +1308,7 @@
       "viewOnly": "View only - team member's approved work"
     },
     "generating": "Generating...",
+    "finalizing": "Finalizing...",
     "actions": {
       "download": "Download",
       "regenerate": "Retry",

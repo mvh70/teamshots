@@ -30,6 +30,7 @@ export default function GenerationsPage() {
   const hasCheckedTourRef = useRef(false)
   const previousCompletedCountRef = useRef(0)
   const previousPendingTourRef = useRef(false)
+  const imageLoadedRef = useRef(false)
   
   // Filter state
   const [timeframe, setTimeframe] = useState<'all'|'7d'|'30d'>('all')
@@ -54,7 +55,20 @@ export default function GenerationsPage() {
     return true
   })
 
-  // Trigger generation-detail tour after first generation is completed (only once per page load)
+  // Listen for generation image load events
+  useEffect(() => {
+    const handleImageLoaded = () => {
+      imageLoadedRef.current = true
+      console.log('[GenerationsPage Tour] Generation image loaded')
+    }
+
+    window.addEventListener('generationImageLoaded', handleImageLoaded)
+    return () => {
+      window.removeEventListener('generationImageLoaded', handleImageLoaded)
+    }
+  }, [])
+
+  // Trigger generation-detail tour after first generation is completed AND image is loaded (only once per page load)
   useEffect(() => {
     // Skip if still loading or onboarding context not loaded yet
     if (loading || !onboardingContext._loaded) {
@@ -74,13 +88,20 @@ export default function GenerationsPage() {
     
     // Only check for completed generations (status === 'completed')
     const completedGenerations = generations.filter(g => g.status === 'completed')
+
+    // Wait for the image to be loaded before starting the tour
+    if (completedGenerations.length > 0 && !imageLoadedRef.current) {
+      console.log('[GenerationsPage Tour] Waiting for image to load...')
+      return
+    }
     
     console.log('[GenerationsPage Tour] Checking tour status:', {
       hasSeenTour,
       completedTours,
       pendingTours,
       personId: onboardingContext.personId,
-      completedGenerationsCount: completedGenerations.length
+      completedGenerationsCount: completedGenerations.length,
+      imageLoaded: imageLoadedRef.current
     })
 
     // If tour has already been completed, don't start it (even if we haven't checked before)
@@ -122,10 +143,10 @@ export default function GenerationsPage() {
 
     // If forceTour is true, always start the tour (ignore seen flag)
     if (forceTour) {
-      // Start the tour after a delay to ensure DOM is ready
+      // Start the tour after a small delay for stability
       setTimeout(() => {
         startTour('generation-detail', true) // Force bypasses completion check
-      }, 1500)
+      }, 300)
       return
     }
 
@@ -144,7 +165,7 @@ export default function GenerationsPage() {
         } catch (error) {
           console.error('[GenerationsPage Tour] Error calling startTour (pending):', error)
         }
-      }, 1500)
+      }, 300)
       return
     }
 
@@ -180,7 +201,7 @@ export default function GenerationsPage() {
         } catch (error) {
           console.error('[GenerationsPage Tour] Error calling startTour:', error)
         }
-      }, 1500)
+      }, 300)
     } else {
       console.log('[GenerationsPage Tour] Tour conditions not met:', {
         completedGenerationsCount: completedGenerations.length,

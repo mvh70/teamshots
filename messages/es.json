@@ -1322,6 +1322,7 @@
       "viewOnly": "Solo visualización - trabajo aprobado de miembros del equipo"
     },
     "generating": "Generando...",
+    "finalizing": "Finalizando...",
     "actions": {
       "download": "Descargar",
       "regenerate": "Reintentar",

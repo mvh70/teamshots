@@ -35,6 +35,7 @@ export default function TeamGenerationsPage() {
   const { startTour } = useOnbordaTours()
   const processedCompletedGenIdsRef = useRef<Set<string>>(new Set())
   const tourTriggerAttemptedRef = useRef(false)
+  const imageLoadedRef = useRef(false)
 
   // On individual-only domains (photoshotspro.com), redirect to personal generations
   // Team features don't exist on individual domains
@@ -150,7 +151,20 @@ export default function TeamGenerationsPage() {
     handleGenerationFailed
   )
 
-  // Trigger generation-detail tour after first completed generation
+  // Listen for generation image load events
+  useEffect(() => {
+    const handleImageLoaded = () => {
+      imageLoadedRef.current = true
+      console.log('[TeamGenerationsPage Tour] Generation image loaded')
+    }
+
+    window.addEventListener('generationImageLoaded', handleImageLoaded)
+    return () => {
+      window.removeEventListener('generationImageLoaded', handleImageLoaded)
+    }
+  }, [])
+
+  // Trigger generation-detail tour after first completed generation AND image is loaded
   useEffect(() => {
     // Skip if still loading or onboarding context not loaded
     if (loading || !onboardingContext._loaded) {
@@ -162,6 +176,12 @@ export default function TeamGenerationsPage() {
     
     // If there are no completed generations, nothing to do
     if (completedGenerations.length === 0) {
+      return
+    }
+
+    // Wait for the image to be loaded before starting the tour
+    if (!imageLoadedRef.current) {
+      console.log('[TeamGenerationsPage Tour] Waiting for image to load...')
       return
     }
     
@@ -177,7 +197,8 @@ export default function TeamGenerationsPage() {
       completedTours,
       pendingTours,
       personId: onboardingContext.personId,
-      completedGenerationsCount: completedGenerations.length
+      completedGenerationsCount: completedGenerations.length,
+      imageLoaded: imageLoadedRef.current
     })
 
     // If tour has already been seen, nothing to do (even if it's in pendingTours)
@@ -205,12 +226,12 @@ export default function TeamGenerationsPage() {
 
     // Trigger tour if it's pending (but only if not already completed) or if this is the first time we see completed generations
     if (isPendingTour && !hasSeenTour) {
-      // Tour is already pending and not completed, just start it
+      // Tour is already pending and not completed, just start it (with small delay for stability)
       console.log('[TeamGenerationsPage Tour] Tour is pending, starting tour...')
       tourTriggerAttemptedRef.current = true
       setTimeout(() => {
         startTour('generation-detail')
-      }, 1500)
+      }, 300)
     } else if (completedGenerations.length > 0 && !hasSeenTour) {
       // Set the tour as pending if there are completed generations and tour hasn't been seen
       tourTriggerAttemptedRef.current = true
@@ -220,18 +241,18 @@ export default function TeamGenerationsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tourName: 'generation-detail' }),
         }).then(() => {
-          // Start the tour after setting it as pending
+          // Start the tour after setting it as pending (with small delay for stability)
           setTimeout(() => {
             startTour('generation-detail')
-          }, 1500)
+          }, 300)
         }).catch(error => {
           console.error('[Tour Debug] Failed to set pending tour:', error)
         })
       } else {
-        // If no personId, still try to start the tour
+        // If no personId, still try to start the tour (with small delay for stability)
         setTimeout(() => {
           startTour('generation-detail')
-        }, 1500)
+        }, 300)
       }
     }
   }, [loading, generated, onboardingContext._loaded, onboardingContext.completedTours, onboardingContext.pendingTours, onboardingContext.personId, startTour])
