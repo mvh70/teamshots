@@ -43,7 +43,6 @@ export async function GET(request: NextRequest) {
       },
       take: 10,
       include: {
-        selfie: true,
         person: {
           select: {
             teamId: true // Needed to derive generationType

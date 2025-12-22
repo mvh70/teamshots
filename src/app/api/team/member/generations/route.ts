@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc'
       },
       include: {
-        selfie: true,
         context: true,
         person: {
           select: {

@@ -4,10 +4,9 @@ import { prisma } from '@/lib/prisma'
  * Check which selfies are used in generations for a given person
  * Returns sets of selfie IDs and keys that are referenced in any non-deleted generation
  * 
- * Checks three places:
- * 1. Direct selfieId relationship
- * 2. uploadedPhotoKey (primary selfie)
- * 3. styleSettings.inputSelfies.keys array (for multi-selfie generations)
+ * Checks two places:
+ * 1. uploadedPhotoKey (primary selfie)
+ * 2. styleSettings.inputSelfies.keys array (for multi-selfie generations)
  */
 export async function getUsedSelfiesForPerson(personId: string): Promise<{
   usedSelfieIds: Set<string>
@@ -20,7 +19,6 @@ export async function getUsedSelfiesForPerson(personId: string): Promise<{
       deleted: false
     },
     select: {
-      selfieId: true,
       uploadedPhotoKey: true,
       styleSettings: true
     }
@@ -31,11 +29,6 @@ export async function getUsedSelfiesForPerson(personId: string): Promise<{
   const usedSelfieKeys = new Set<string>()
 
   for (const generation of generations) {
-    // Check direct selfieId relationship
-    if (generation.selfieId) {
-      usedSelfieIds.add(generation.selfieId)
-    }
-    
     // Check uploadedPhotoKey (primary selfie)
     if (generation.uploadedPhotoKey) {
       usedSelfieKeys.add(generation.uploadedPhotoKey)
@@ -72,15 +65,12 @@ export async function isSelfieUsedInGenerations(
   selfieId: string,
   selfieKey: string
 ): Promise<boolean> {
-  // Check direct selfieId relationship and uploadedPhotoKey first
+  // Check uploadedPhotoKey first
   const directGenerations = await prisma.generation.findMany({
     where: {
       personId,
       deleted: false,
-      OR: [
-        { selfieId },
-        { uploadedPhotoKey: selfieKey }
-      ]
+      uploadedPhotoKey: selfieKey
     },
     select: {
       id: true
