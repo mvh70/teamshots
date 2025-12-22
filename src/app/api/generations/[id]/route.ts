@@ -74,8 +74,7 @@ export async function GET(
             team: true
           }
         },
-        context: true,
-        selfie: true
+        context: true
       }
     })
 
