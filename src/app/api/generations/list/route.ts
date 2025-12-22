@@ -21,7 +21,6 @@ import { UserService } from '@/domain/services/UserService'
 // Note: generationType is NOT included here because it's derived from person.teamId, not stored in DB
 type GenerationWithRelations = {
   id: string;
-  selfieId: string | null;
   status: string;
   creditSource: string;
   creditsUsed: number;
@@ -235,7 +234,6 @@ export async function GET(request: NextRequest) {
       
       return ({
       id: generation.id,
-      selfieId: generation.selfieId,
       status: generation.status,
       generationType: derivedGenerationType, // Derived from person.teamId, not stored field
       creditSource: generation.creditSource,
