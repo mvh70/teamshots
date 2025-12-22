@@ -99,6 +99,94 @@ export async function POST(request: NextRequest) {
     const requestedIds = Array.isArray(selfieIds) ? selfieIds : (selfieId ? [selfieId] : [])
     const requestedKeys = Array.isArray(selfieKeys) ? selfieKeys : (selfieKey ? [selfieKey] : [])
 
+    // Handle regeneration early - no selfies needed, get person from original generation
+    if (isRegeneration && originalGenerationId) {
+      const originalGeneration = await prisma.generation.findFirst({
+        where: { id: originalGenerationId },
+        select: { 
+          personId: true,
+          person: {
+            select: {
+              userId: true,
+              teamId: true,
+              inviteToken: true,
+              team: { select: { adminId: true } }
+            }
+          }
+        }
+      })
+
+      if (!originalGeneration) {
+        return NextResponse.json({ error: 'Original generation not found' }, { status: 404 })
+      }
+
+      // Get user person for authorization
+      const userPerson = await prisma.person.findUnique({ 
+        where: { userId: session.user.id }, 
+        select: { id: true, teamId: true } 
+      })
+
+      if (!userPerson) {
+        return NextResponse.json({ error: 'User person record not found' }, { status: 404 })
+      }
+
+      // Verify authorization
+      const isOwner = originalGeneration.personId === userPerson.id
+      const isSameTeam = Boolean(userPerson.teamId && originalGeneration.person.teamId && userPerson.teamId === originalGeneration.person.teamId)
+      
+      if (!isOwner && !isSameTeam) {
+        await SecurityLogger.logSuspiciousActivity(session.user.id, 'unauthorized_regeneration_attempt', { generationId: originalGenerationId })
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      }
+
+      // Get user context and determine credit source
+      const userContext = await UserService.getUserContext(session.user.id)
+      const creditSourceInfo = await CreditService.determineCreditSource(userContext)
+      const enforcedCreditSource = creditSourceInfo.creditSource
+
+      try {
+        const result = await RegenerationService.regenerate({
+          sourceGenerationId: originalGenerationId,
+          personId: originalGeneration.personId,
+          userId: session.user.id,
+          creditSource: enforcedCreditSource,
+          workflowVersion: finalWorkflowVersion
+        })
+
+        Logger.info('Session-based regeneration completed', {
+          generationId: result.generation.id,
+          jobId: result.jobId
+        })
+
+        // Return account mode info
+        const isPro = userContext.roles.isTeamAdmin ?? false
+        const hasTeamId = session?.user?.person?.teamId
+        const redirectUrl = isPro ? '/app/generations/team' :
+          (hasTeamId ? '/app/generations/team' : '/app/generations/personal')
+
+        return NextResponse.json({
+          success: true,
+          generationId: result.generation.id,
+          message: 'Regeneration started successfully',
+          redirectUrl,
+          accountMode: {
+            isPro,
+            isTeamMember: !!hasTeamId,
+            redirectUrl
+          }
+        })
+      } catch (error) {
+        Logger.error('Session-based regeneration error', { 
+          error: error instanceof Error ? error.message : String(error) 
+        })
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : 'Failed to start regeneration' },
+          { status: 500 }
+        )
+      }
+    }
+
+    // For non-regenerations, selfies are required
     if (requestedIds.length === 0 && requestedKeys.length === 0) {
       return NextResponse.json(
         { error: 'At least one selfie is required' },
@@ -319,51 +407,7 @@ export async function POST(request: NextRequest) {
     }
 
 
-    // Handle regeneration early - use RegenerationService
-    if (isRegeneration && originalGenerationId) {
-      try {
-        const result = await RegenerationService.regenerate({
-          sourceGenerationId: originalGenerationId,
-          personId: primarySelfie.personId,
-          userId: session.user.id,
-          creditSource: enforcedCreditSource,
-          workflowVersion: finalWorkflowVersion
-        })
-
-        Logger.info('Session-based regeneration completed', {
-          generationId: result.generation.id,
-          jobId: result.jobId
-        })
-
-        // Return account mode info to avoid redundant API call on client
-        const isPro = userContext.roles.isTeamAdmin ?? false
-        const hasTeamId = session?.user?.person?.teamId
-        const redirectUrl = isPro ? '/app/generations/team' :
-          (hasTeamId ? '/app/generations/team' : '/app/generations/personal')
-
-        return NextResponse.json({
-          success: true,
-          generationId: result.generation.id,
-          message: 'Regeneration started successfully',
-          redirectUrl,
-          accountMode: {
-            isPro,
-            isTeamMember: !!hasTeamId,
-            redirectUrl
-          }
-        })
-      } catch (error) {
-        Logger.error('Session-based regeneration error', { 
-          error: error instanceof Error ? error.message : String(error) 
-        })
-        return NextResponse.json(
-          { error: error instanceof Error ? error.message : 'Failed to start regeneration' },
-          { status: 500 }
-        )
-      }
-    }
-
-    // Check credits using CreditService (skip for regenerations which are free)
+    // Check credits using CreditService
     if (!isRegeneration) {
       const canAfford = await CreditService.canAffordOperation(
         session.user.id,
@@ -596,7 +640,6 @@ export async function POST(request: NextRequest) {
     const generation = await prisma.generation.create({
       data: {
         personId: primarySelfie.personId,
-        selfieId: primarySelfie.id,
         contextId: resolvedContextId,
         uploadedPhotoKey: primarySelfie.key,
         generatedPhotoKeys: [], // Will be populated by worker

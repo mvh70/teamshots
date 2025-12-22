@@ -199,8 +199,6 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
       const body = token
         ? JSON.stringify({ generationId: item.id })
         : JSON.stringify({
-            selfieId: item.selfieId || undefined,
-            selfieKey: item.selfieId ? undefined : item.uploadedKey,
             contextId: item.contextId,
             prompt: t('actions.retryPrompt'),
             generationType: item.generationType,

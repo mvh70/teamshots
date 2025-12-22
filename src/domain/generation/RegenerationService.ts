@@ -43,8 +43,8 @@ export class RegenerationService {
       }
     })
 
-    if (!sourceGeneration || !sourceGeneration.selfieId) {
-      throw new Error('Generation or selfie not found')
+    if (!sourceGeneration) {
+      throw new Error('Generation not found')
     }
 
     // Find the original generation in the group to check remaining regenerations
@@ -112,7 +112,6 @@ export class RegenerationService {
         personId: personId,
         uploadedPhotoKey: sourceGeneration.uploadedPhotoKey,
         contextId: sourceGeneration.contextId,
-        selfieId: sourceGeneration.selfieId,
         status: 'pending',
         maxRegenerations: 0, // Regenerations cannot be regenerated
         remainingRegenerations: 0,

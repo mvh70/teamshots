@@ -114,7 +114,6 @@ export class GenerationService {
         data: {
           id: generationId,
           personId,
-          selfieId: primarySelfieId,
           contextId: contextId || undefined,
           uploadedPhotoKey: primarySelfieKey,
           generatedPhotoKeys: [],
