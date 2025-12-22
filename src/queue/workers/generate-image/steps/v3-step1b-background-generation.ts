@@ -190,31 +190,20 @@ export async function executeV3Step1b(
   // Parse prompt to extract scene and branding info
   const promptObj = JSON.parse(prompt)
 
-  // Extract branding rules from scene.branding if present (before modifying)
+  // Check if branding is present - but DON'T extract/delete fields
+  // Keep branding info in the JSON where it belongs
   const sceneBranding = promptObj.scene?.branding as Record<string, unknown> | undefined
   let brandingRules: string[] = []
 
   if (sceneBranding && sceneBranding.enabled === true) {
-    // Extract rules array if present
-    if (Array.isArray(sceneBranding.rules)) {
-      brandingRules = sceneBranding.rules as string[]
-    }
-
-    // Extract placement text if present (this often contains the main branding instructions)
-    if (typeof sceneBranding.placement === 'string' && sceneBranding.placement.trim()) {
-      brandingRules.unshift(sceneBranding.placement as string)
-    }
-
     Logger.debug('V3 Step 1b: Scene branding detected', {
       generationId,
       position: sceneBranding.position,
-      ruleCount: brandingRules.length
+      hasBrandingInfo: true
     })
 
-    // Remove rules and placement from branding object to avoid duplication in JSON
-    // These will be added as clear text instructions in "Branding Requirements" section
-    delete sceneBranding.rules
-    delete sceneBranding.placement
+    // No longer extracting and deleting branding info from JSON
+    // It will stay in scene.branding where the AI can see it
   }
 
   // Compose element contributions if feature flag is enabled
@@ -250,12 +239,12 @@ export async function executeV3Step1b(
     }
   }
 
-  // Use element contributions if available, otherwise use extracted branding rules
-  const effectiveBrandingRules = elementContributions?.mustFollow || brandingRules
+  // Use element contributions if available
+  const effectiveBrandingRules = elementContributions?.mustFollow || []
 
   Logger.debug('[ElementComposition] Using branding rules', {
     generationId,
-    source: elementContributions ? 'element-composition' : 'extracted-from-prompt',
+    source: elementContributions ? 'element-composition' : 'none',
     ruleCount: effectiveBrandingRules.length,
   })
 
@@ -283,98 +272,47 @@ export async function executeV3Step1b(
     'Scene Specifications:',
     jsonPrompt,
     '',
-    'Background Generation Rules:',
-    '- Generate ONLY the background/environment/scene - NO people, NO subjects, NO persons.',
-    '- Do not add any format frames or aspect ratio constraints - preserve the natural format of the background, preferably in wider format, to make it easier to compose the person in the center later.',
-    '- If no background image is provided, create a high-quality, professional background that matches the scene description.',
-    '- If a custom background image is provided and contains watermarks, logos, or text overlays, remove them seamlessly while maintaining the background quality and integrity.',
-    ...(isPlainBackground 
-      ? ['- Create subtle depth and realism through smooth lighting gradients ONLY - never through architectural features, lines, or interruptions.']
-      : ['- Create depth and realism in the scene appropriate to the background type.']),
-    
-    // Dynamic Aperture / Depth Instructions
-    ...(hasUserCameraSettings 
-      ? ['- **Camera Settings:** Respect the specific camera settings provided in the JSON (e.g., aperture, depth of field).'] 
-      : ['- **Depth of Field:** Generate the background with a wide aperture look (f/2.8) to create soft bokeh and separation, ensuring the subject will pop when composited later.']),
-
-    '- **Composition:** Compose the scene with a clear, uncluttered central area where the portrait subject will stand. Any complex elements or logos should be placed off-center.',
-    '- CRITICAL: Do NOT add any cables, wires, cords, or electrical connections to the logo or any scene elements. The logo should appear clean and standalone without any attached cables or wires.',
+    'Key Requirements:',
+    '- Generate ONLY the background/environment - NO people, NO subjects.',
+    '- Leave the center area clear and uncluttered where the portrait subject will stand.',
+    ...(customBackgroundReference
+      ? ['- Use the reference image labeled "CUSTOM BACKGROUND" as the primary background source.',
+         '- If the custom background contains watermarks or logos, remove them seamlessly.']
+      : []),
     ...(promptObj.lighting?.direction ? [
-      `- **Lighting Consistency:** The lighting MUST come from the direction specified in the JSON (${promptObj.lighting.direction}). Do NOT include light sources (windows, lamps) that contradict this direction.`
+      `- Lighting must come from the specified direction: ${promptObj.lighting.direction}`
     ] : []),
+    ...(hasUserCameraSettings
+      ? ['- Respect the camera settings in the JSON (aperture, focal length, etc.)']
+      : []),
+    ...(isPlainBackground
+      ? ['- Create a clean professional wall with subtle depth through smooth lighting gradients only.',
+         '- NO plants, windows, furniture, or decorative elements.']
+      : ['- Create appropriate depth and realism for the background type.']),
   ]
 
-  // Add strict plain wall requirements ONLY for neutral and gradient backgrounds
-  if (isPlainBackground) {
-    structuredPrompt.push(
-      '',
-      'CRITICAL Background Wall Requirements (Neutral/Gradient Backgrounds Only):',
-      '- The background should be a clean, professional studio wall WITHOUT busy decorative elements.',
-      '- ABSOLUTELY NO plants, potted plants, foliage, or any vegetation in the background.',
-      '- ABSOLUTELY NO windows, furniture, or distracting objects.',
-      '- ABSOLUTELY NO visible wall-floor transitions, harsh corners, or seams that draw the eye.',
-      '',
-      '**Creating Depth in Studio Backgrounds:**',
-      '- The wall should have SUBTLE THREE-DIMENSIONAL QUALITY through natural lighting gradients and gentle shadows.',
-      '- Use SMOOTH LIGHTING FALLOFF from the light source (typically 45° from camera left) - the wall should be brighter near the light and gradually darker away from it.',
-      '- Add VERY SUBTLE texture variation in the wall surface (minimal paint texture, barely visible imperfections) - not completely uniform like a digital gradient.',
-      '- The wall should be positioned 6-8 feet behind where the subject will stand, creating NATURAL ATMOSPHERIC DEPTH through slight color desaturation and softness.',
-      '- Apply appropriate BACKGROUND SHADOWING - if there\'s a rim light or backlight on the subject, the wall should show very subtle, soft shadows that suggest the light setup.',
-      '- The gradient should feel ORGANIC and NATURAL, as if lit by studio lights, not artificial or digitally created.',
-      '- Think: "professional studio photography" where the background has dimension but doesn\'t compete with the subject.',
-    )
-  }
-  
   structuredPrompt.push('')
 
-  // Add branding rules (using effective rules from element composition or fallback)
+  // Add element composition rules if available (these are specific, targeted rules)
   if (effectiveBrandingRules.length > 0) {
-    structuredPrompt.push('', 'Branding Requirements:')
+    structuredPrompt.push('Branding & Elements:')
     for (const rule of effectiveBrandingRules) {
       structuredPrompt.push(`- ${rule}`)
     }
+    structuredPrompt.push('')
   }
 
-  // Add reference image instructions
-  const referenceInstructions: string[] = [
-    '',
-    'Reference Images Instructions:'
-  ]
-
-  // Add custom background instruction if provided
-  if (customBackgroundReference) {
-    referenceInstructions.push(
-      '- **Background Composite:** Use the labeled "CUSTOM BACKGROUND" in the composite image as your primary reference. Adapt the scene description to match the style, colors, and atmosphere of this background image while incorporating the branding requirements. The custom background should heavily influence the final scene composition.'
-    )
-  }
-
-  // Add branding logo instructions ONLY if logo is present
-  if (brandingLogoReference) {
-    referenceInstructions.push(
-      '- **Branding Logo:** Use the labeled "BRANDING LOGO" in the composite image to place branding elements exactly as specified in the Branding Requirements.'
-    )
-
-    // Add strict logo placement requirements ONLY for neutral and gradient backgrounds
-    if (isPlainBackground) {
-      referenceInstructions.push(
-        '- **CRITICAL Logo Placement (Neutral/Gradient Backgrounds Only):** The logo should be mounted FLAT ON THE WALL SURFACE as physical signage (like vinyl lettering or printed acrylic). It should follow the natural contours and lighting of the wall behind it.',
-        '- **Wall Placement Only:** Place the logo ONLY on solid walls or wall surfaces - NEVER on windows, glass, doors, or transparent surfaces.',
-        '- **Follow Wall Design:** The logo must conform to and follow the wall\'s surface design, flow, texture, and any architectural features (curved walls, textured surfaces, etc.).',
-        '- The logo should receive the SAME LIGHTING as the wall - if the wall has gradient lighting (brighter on one side), the logo should reflect that same lighting pattern.',
-        '- Add VERY SUBTLE soft shadows around/beneath the logo to suggest it\'s a physical object on the wall, not painted or floating.',
-        '- The logo should appear SLIGHTLY OUT OF FOCUS compared to a sharp subject in the foreground (respecting the depth of field from a 70mm f/2.0 lens).',
-        '- The logo should be integrated naturally as professional wall-mounted branding, maintaining depth while staying flush with the wall surface.'
-      )
-    } else {
-      referenceInstructions.push(
-        '- **Wall Placement Only:** Place the logo ONLY on solid walls or wall surfaces - NEVER on windows, glass, doors, or transparent surfaces.',
-        '- **Follow Wall Design:** The logo must conform to and follow the wall\'s surface design, flow, texture, and any architectural features.',
-        '- Ensure the logo is integrated naturally into the scene with appropriate depth and lighting.'
-      )
+  // Add reference image instructions (simplified - details are in the JSON)
+  if (brandingLogoReference || customBackgroundReference) {
+    structuredPrompt.push('Reference Images:')
+    if (customBackgroundReference) {
+      structuredPrompt.push('- Use the labeled "CUSTOM BACKGROUND" as your primary reference for scene style and atmosphere.')
     }
+    if (brandingLogoReference) {
+      structuredPrompt.push('- Use the labeled "BRANDING LOGO" to place branding elements as specified in Scene Specifications above.')
+    }
+    structuredPrompt.push('')
   }
-
-  structuredPrompt.push(...referenceInstructions)
 
   const composedPrompt = structuredPrompt.join('\n')
 
