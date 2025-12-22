@@ -204,7 +204,6 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
             contextId: item.contextId,
             prompt: t('actions.retryPrompt'),
             generationType: item.generationType,
-            creditSource: 'individual',
             isRegeneration: true,
             originalGenerationId: item.id,
             workflowVersion: 'v3', // Use V3 workflow (4-step with parallel person/background generation)
