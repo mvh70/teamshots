@@ -120,8 +120,8 @@ export async function GET(request: NextRequest) {
 
       return {
         id: generation.id,
-        selfieKey: generation.selfie?.key || '',
-        selfieUrl: generation.selfie?.key ? `/api/files/get?key=${encodeURIComponent(generation.selfie.key)}&${tokenParam}` : '',
+        selfieKey: generation.uploadedPhotoKey || '',
+        selfieUrl: generation.uploadedPhotoKey ? `/api/files/get?key=${encodeURIComponent(generation.uploadedPhotoKey)}&${tokenParam}` : '',
         inputSelfieUrls,
         generatedPhotos: generation.generatedPhotoKeys.map((key, index) => ({
           id: `${generation.id}-${index}`,
