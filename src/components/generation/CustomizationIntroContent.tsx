@@ -29,8 +29,8 @@ export default function CustomizationIntroContent({
 
   // Desktop-specific body text (no swipe instructions)
   const bodyText = variant === 'swipe'
-    ? t('body', { default: "You're about to customize how your photos look. Each card controls one part of the shoot. Swipe through and adjust to match your preferences." })
-    : t('bodyDesktop', { default: "You're about to customize how your photos look. Each section below controls a different aspect of your professional headshot." })
+    ? t('body', { default: "You can change how your photo looks, the background, the pose, the expression, etc. On the next page, you can customize each one of them, except the ones set by your team admin" })
+    : t('bodyDesktop', { default: "You can change how your photo looks, the background, the pose, the expression, etc. On the next page, you can customize each one of them, except the ones set by your team admin" })
 
   // Navigation instruction (mobile only)
   const navigationText = t('swipe', { default: "Swipe right to move forward, left to go back. You can also use the navigation buttons below." })
@@ -51,7 +51,7 @@ export default function CustomizationIntroContent({
       textColor: 'text-green-700',
       content: { 
         type: 'simple', 
-        text: t('editable', { default: "Sparkles badge means you can edit this setting. Adjust until it matches your preferences." })
+        text: t('editable', { default: "The stars icon means you can edit this setting. Adjust until it matches your preferences." })
       }
     },
     {
@@ -61,7 +61,7 @@ export default function CustomizationIntroContent({
       textColor: 'text-red-700',
       content: { 
         type: 'simple', 
-        text: t('locked', { default: "Lock badge means your team admin set this. You can view it but not change it to maintain consistency." })
+        text: t('locked', { default: "The lock icon means your team admin fixed these. You can view them but not change to maintain consistency." })
       }
     }
   ]
@@ -69,12 +69,12 @@ export default function CustomizationIntroContent({
   return (
     <IntroScreenContent
       variant={variant}
-      kicker={t('kicker', { default: 'Before you dive in' })}
-      title={t('title', { default: 'A quick pit stop before the glow-up' })}
+      kicker={t('kicker', { default: '' })}
+      title={t('title', { default: 'Now, customize your photo' })}
       body={bodyText}
       tips={tips}
       swipeHintText={tCommon('swipeHint', { default: 'Swipe or tap Next to continue' })}
-      continueButtonText="Continue to customize"
+      continueButtonText={t('continueButton', { default: 'Continue to customize' })}
       onContinue={onContinue}
       onSkip={onSkip}
       skipText={t('skip', { default: "Don't show again" })}

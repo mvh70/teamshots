@@ -6,7 +6,7 @@ registerElement({
   key: 'expression',
   label: 'Expression',
   icon: FaceSmileIcon,
-  description: 'Facial expression and mood',
+  description: 'Choose your facial expression and mood',
   group: 'userStyle',
   summaryComponent: ExpressionSummary as ElementMetadata['summaryComponent']
 })

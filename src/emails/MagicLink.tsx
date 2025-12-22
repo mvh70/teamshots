@@ -166,3 +166,4 @@ const footerText = {
   lineHeight: '18px',
   margin: '0',
 };
+

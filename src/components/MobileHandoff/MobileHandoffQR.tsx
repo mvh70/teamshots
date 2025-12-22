@@ -54,6 +54,7 @@ export default function MobileHandoffQR({
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const previousDeviceConnected = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const hasSyncedRef = useRef(false)
 
   // Create handoff token for logged-in users
   const createToken = useCallback(async () => {
@@ -87,6 +88,9 @@ export default function MobileHandoffQR({
       
       const data = await response.json()
       
+      // Reset sync state for new token
+      hasSyncedRef.current = false
+      
       setState(prev => ({
         ...prev,
         token: data.token,
@@ -95,7 +99,8 @@ export default function MobileHandoffQR({
         loading: false,
         error: null,
         // Reset device connected state for new token
-        deviceConnected: false
+        deviceConnected: false,
+        lastSelfieCount: 0
       }))
       
       // Reset connection tracking
@@ -128,6 +133,10 @@ export default function MobileHandoffQR({
 
       // Only update state if not aborted
       if (!abortControllerRef.current?.signal.aborted) {
+        // Handle first sync
+        const isFirstSync = !hasSyncedRef.current
+        if (isFirstSync) hasSyncedRef.current = true
+
         setState(prev => {
           let hasChanges = false
           const newState = { ...prev }
@@ -145,16 +154,23 @@ export default function MobileHandoffQR({
           previousDeviceConnected.current = data.deviceConnected
 
           // Check if selfie count increased
-          if (data.selfieCount > prev.lastSelfieCount) {
-             if (prev.lastSelfieCount > 0) {
-               onSelfieUploaded?.()
-             }
-             newState.lastSelfieCount = data.selfieCount
-             hasChanges = true
-          } else if (data.selfieCount !== prev.lastSelfieCount) {
-             // Sync count if it changed (e.g. decreased or initial load)
-             newState.lastSelfieCount = data.selfieCount
-             hasChanges = true
+          const currentCount = data.selfieCount ?? 0
+
+          if (isFirstSync) {
+            if (currentCount !== prev.lastSelfieCount) {
+              newState.lastSelfieCount = currentCount
+              hasChanges = true
+            }
+          } else {
+            if (currentCount > prev.lastSelfieCount) {
+              onSelfieUploaded?.()
+              newState.lastSelfieCount = currentCount
+              hasChanges = true
+            } else if (currentCount !== prev.lastSelfieCount) {
+              // Sync count if it changed (e.g. decreased or initial load)
+              newState.lastSelfieCount = currentCount
+              hasChanges = true
+            }
           }
 
           // Check if token expired - trigger refresh

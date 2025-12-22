@@ -13,7 +13,7 @@ model User {
   password             String?
   emailVerified        DateTime?
   locale               String               @default("en")
-  signupDomain         String?              // Domain user signed up from (e.g., "teamshotspro.com", "photoshotspro.com")
+  signupDomain         String? // Domain user signed up from (e.g., "teamshotspro.com", "photoshotspro.com")
   subscriptionStatus   String?
   stripeCustomerId     String?              @unique
   stripeSubscriptionId String?              @unique
@@ -25,7 +25,7 @@ model User {
   freeTrialGrantedAt   DateTime?
   planPeriod           String?
   planTier             String?
-  tokenVersion          Int                  @default(0) // Incremented when role/permissions change to invalidate all sessions
+  tokenVersion         Int                  @default(0) // Incremented when role/permissions change to invalidate all sessions
   accounts             Account[]
   teams                Team[]               @relation("TeamAdmin")
   creditTransactions   CreditTransaction[]
@@ -44,26 +44,26 @@ model User {
 }
 
 model Person {
-  id                 String              @id @default(cuid())
-  firstName          String
-  lastName           String?
-  email              String?
-  userId             String?             @unique
-  teamId             String?
-  inviteToken        String?             @unique
-  invitedAt          DateTime?
-  inviteAcceptedAt   DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  onboardingState    String?             @default("not_started") // "not_started", "in_progress", "completed"
-  creditTransactions CreditTransaction[]
-  generations        Generation[]
-  team               Team?               @relation(fields: [teamId], references: [id])
-  user               User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  selfies            Selfie[]
-  teamInvite         TeamInvite?
-  feedback           Feedback[]
-  assets             Asset[]
+  id                  String               @id @default(cuid())
+  firstName           String
+  lastName            String?
+  email               String?
+  userId              String?              @unique
+  teamId              String?
+  inviteToken         String?              @unique
+  invitedAt           DateTime?
+  inviteAcceptedAt    DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  onboardingState     String?              @default("not_started") // "not_started", "in_progress", "completed"
+  creditTransactions  CreditTransaction[]
+  generations         Generation[]
+  team                Team?                @relation(fields: [teamId], references: [id])
+  user                User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  selfies             Selfie[]
+  teamInvite          TeamInvite?
+  feedback            Feedback[]
+  assets              Asset[]
   mobileHandoffTokens MobileHandoffToken[]
 
   @@index([email])
@@ -74,7 +74,7 @@ model Person {
 
 model Team {
   id                   String               @id @default(cuid())
-  name                 String
+  name                 String?
   website              String?
   domain               String?
   adminId              String
@@ -98,19 +98,19 @@ model Team {
 }
 
 model Context {
-  id               String       @id @default(cuid())
-  name             String
-  teamId           String?
-  userId           String?
-  packageName      String       @default("headshot1")
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  settings         Json         @default("{}")
-  activeForTeam    Team?        @relation("ActiveContext")
-  team             Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user             User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  generations      Generation[]
-  teamInvites      TeamInvite[]
+  id            String       @id @default(cuid())
+  name          String
+  teamId        String?
+  userId        String?
+  packageName   String       @default("headshot1")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  settings      Json         @default("{}")
+  activeForTeam Team?        @relation("ActiveContext")
+  team          Team?        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generations   Generation[]
+  teamInvites   TeamInvite[]
 
   @@index([teamId])
   @@index([userId])
@@ -131,7 +131,6 @@ model Generation {
   contextId              String?
   generatedPhotoKeys     String[]
   personId               String
-  uploadedPhotoKey       String
   adminApproved          Boolean   @default(false)
   moderationDate         DateTime?
   moderationPassed       Boolean   @default(false)
@@ -143,7 +142,6 @@ model Generation {
   isPublic               Boolean   @default(false)
   maxRegenerations       Int       @default(2)
   remainingRegenerations Int       @default(2)
-  selfieId               String?
   generationGroupId      String?
   groupIndex             Int?
   isOriginal             Boolean   @default(true)
@@ -151,20 +149,18 @@ model Generation {
   outputAssetId          String?   @unique
 
   // Outfit transfer fields
-  generationType         String    @default("headshot") // 'headshot' | 'outfit_transfer'
-  outfitReferenceKey     String?   // S3 key for outfit image (deprecated - use outfitAssetId)
-  outfitAssetId          String?   // Asset ID for outfit image (preferred)
+  generationType     String  @default("headshot") // 'headshot' | 'outfit_transfer'
+  outfitReferenceKey String? // S3 key for outfit image (deprecated - use outfitAssetId)
+  outfitAssetId      String? // Asset ID for outfit image (preferred)
 
-  context                Context?  @relation(fields: [contextId], references: [id])
-  person                 Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
-  selfie                 Selfie?   @relation(fields: [selfieId], references: [id])
-  feedback               Feedback[]
-  outputAsset            Asset?    @relation("GenerationOutput", fields: [outputAssetId], references: [id])
-  outfitAsset            Asset?    @relation("GenerationOutfit", fields: [outfitAssetId], references: [id])
+  context     Context?   @relation(fields: [contextId], references: [id])
+  person      Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
+  feedback    Feedback[]
+  outputAsset Asset?     @relation("GenerationOutput", fields: [outputAssetId], references: [id])
+  outfitAsset Asset?     @relation("GenerationOutfit", fields: [outfitAssetId], references: [id])
 
   @@index([personId])
   @@index([contextId])
-  @@index([selfieId])
   @@index([status])
   @@index([createdAt])
   @@index([isPublic])
@@ -174,26 +170,25 @@ model Generation {
 }
 
 model Selfie {
-  id                 String       @id @default(cuid())
+  id                 String    @id @default(cuid())
   personId           String
-  key                String       // Legacy S3 key - prefer assetId
-  validated          Boolean      @default(false)
+  key                String // Legacy S3 key - prefer assetId
+  validated          Boolean   @default(false)
   usedInGenerationId String?
-  selected           Boolean      @default(false)
-  createdAt          DateTime     @default(now())
-  fitnessApproved    Boolean      @default(false)
+  selected           Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  fitnessApproved    Boolean   @default(false)
   moderationDate     DateTime?
-  moderationPassed   Boolean      @default(false)
+  moderationPassed   Boolean   @default(false)
   moderationScore    Float?
-  userApproved       Boolean      @default(false)
-  isPublic           Boolean      @default(false)
+  userApproved       Boolean   @default(false)
+  isPublic           Boolean   @default(false)
   processedKey       String?
   uploadedByUser     String?
   uploadedViaToken   String?
-  assetId            String?      @unique
-  generations        Generation[]
-  person             Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
-  asset              Asset?       @relation("SelfieAsset", fields: [assetId], references: [id])
+  assetId            String?   @unique
+  person             Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  asset              Asset?    @relation("SelfieAsset", fields: [assetId], references: [id])
 
   @@index([personId])
   @@index([uploadedViaToken])
@@ -435,18 +430,18 @@ model RevokedToken {
 
 // MobileHandoffToken: Temporary tokens for QR code mobile selfie upload flow
 model MobileHandoffToken {
-  id             String    @id @default(cuid())
-  token          String    @unique
+  id             String   @id @default(cuid())
+  token          String   @unique
   userId         String
   personId       String
-  expiresAt      DateTime  // 15-minute sliding expiration
-  absoluteExpiry DateTime  // 1-hour maximum lifetime
-  createdAt      DateTime  @default(now())
-  lastUsedAt     DateTime  @default(now())
-  deviceId       String?   // Device identifier after first use (for single-device binding)
-  userAgent      String?   // For security logging
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  person         Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime // 15-minute sliding expiration
+  absoluteExpiry DateTime // 1-hour maximum lifetime
+  createdAt      DateTime @default(now())
+  lastUsedAt     DateTime @default(now())
+  deviceId       String? // Device identifier after first use (for single-device binding)
+  userAgent      String? // For security logging
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person         Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
@@ -459,11 +454,11 @@ model Feedback {
   personId     String?
   email        String?
   generationId String?
-  type         String      // 'general' | 'generation'
-  rating       String      // 'up' | 'down'
+  type         String // 'general' | 'generation'
+  rating       String // 'up' | 'down'
   comment      String?
-  context      String      // 'landing' | 'dashboard' | 'generation'
-  options      Json?       // Array of selected feedback reasons
+  context      String // 'landing' | 'dashboard' | 'generation'
+  options      Json? // Array of selected feedback reasons
   resolved     Boolean     @default(false)
   resolvedAt   DateTime?
   createdAt    DateTime    @default(now())
@@ -482,16 +477,16 @@ model Feedback {
 
 // Asset: Single source of truth for all files (selfies, logos, backgrounds, intermediates, generated outputs, outfits)
 model Asset {
-  id               String           @id @default(cuid())
-  s3Key            String           @unique
-  type             String           // 'selfie' | 'logo' | 'background' | 'intermediate' | 'generated' | 'outfit'
-  subType          String?          // 'person_on_white' | 'background_with_logo' etc.
-  mimeType         String
+  id       String  @id @default(cuid())
+  s3Key    String  @unique
+  type     String // 'selfie' | 'logo' | 'background' | 'intermediate' | 'generated' | 'outfit'
+  subType  String? // 'person_on_white' | 'background_with_logo' etc.
+  mimeType String
 
   // Ownership
-  ownerType        String           // 'team' | 'person'
-  teamId           String?
-  personId         String?
+  ownerType String // 'team' | 'person'
+  teamId    String?
+  personId  String?
 
   // For reuse (intermediates)
   parentAssetIds   String[]
@@ -499,14 +494,14 @@ model Asset {
   styleContext     Json?
 
   // Metadata
-  width            Int?
-  height           Int?
-  sizeBytes        Int?
-  temporary        Boolean          @default(false)
-  expiresAt        DateTime?        // For cleanup job
-  metadata         Json?            // Additional metadata (e.g., outfit colors, description)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  width     Int?
+  height    Int?
+  sizeBytes Int?
+  temporary Boolean   @default(false)
+  expiresAt DateTime? // For cleanup job
+  metadata  Json? // Additional metadata (e.g., outfit colors, description)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
   team             Team?            @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -525,34 +520,34 @@ model Asset {
 
 // GenerationCost: Track every AI API call for cost analysis and optimization
 model GenerationCost {
-  id                String    @id @default(cuid())
-  generationId      String?
-  personId          String?
-  teamId            String?
-  provider          String    // 'vertex' | 'gemini-rest' | 'replicate'
-  model             String    // 'gemini-2.5-flash' | 'nano-banana'
-  inputTokens       Int?
-  outputTokens      Int?
-  estimatedCost     Float
-  reason            String    // 'generation' | 'evaluation' | 'refinement'
-  result            String    // 'success' | 'failure' (API call result)
-  errorMessage      String?
-  durationMs        Int?
-  workflowVersion   String?
-  stepName          String?
-  outputAssetId     String?
-  reusedAssetId     String?   // If we reused instead of generating
-  costSaved         Float?    // Amount saved by reusing
-  
+  id              String  @id @default(cuid())
+  generationId    String?
+  personId        String?
+  teamId          String?
+  provider        String // 'vertex' | 'gemini-rest' | 'replicate'
+  model           String // 'gemini-2.5-flash' | 'nano-banana'
+  inputTokens     Int?
+  outputTokens    Int?
+  estimatedCost   Float
+  reason          String // 'generation' | 'evaluation' | 'refinement'
+  result          String // 'success' | 'failure' (API call result)
+  errorMessage    String?
+  durationMs      Int?
+  workflowVersion String?
+  stepName        String?
+  outputAssetId   String?
+  reusedAssetId   String? // If we reused instead of generating
+  costSaved       Float? // Amount saved by reusing
+
   // NEW: Evaluation outcome tracking
-  evaluationStatus  String?   // 'approved' | 'rejected' (null for non-evaluation steps)
-  rejectionReason   String?   // Detailed reason why evaluation rejected the image
-  intermediateS3Key String?   // S3 key of intermediate/rejected image for review
-  
-  createdAt         DateTime  @default(now())
+  evaluationStatus  String? // 'approved' | 'rejected' (null for non-evaluation steps)
+  rejectionReason   String? // Detailed reason why evaluation rejected the image
+  intermediateS3Key String? // S3 key of intermediate/rejected image for review
+
+  createdAt DateTime @default(now())
 
   // Relations
-  outputAsset       Asset?    @relation(fields: [outputAssetId], references: [id])
+  outputAsset Asset? @relation(fields: [outputAssetId], references: [id])
 
   @@index([generationId])
   @@index([personId])

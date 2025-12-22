@@ -12,10 +12,8 @@ import { DeleteConfirmationDialog } from '@/components/generation/DeleteConfirma
 
 export type GenerationListItem = {
   id: string
-  selfieId?: string
   uploadedKey: string
   acceptedKey?: string
-  selfieKey?: string
   generatedKey?: string
   inputSelfieUrls?: string[]
   status: 'pending' | 'processing' | 'completed' | 'failed'
@@ -67,7 +65,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const [loadedGenerated, setLoadedGenerated] = useState(false)
   const [failedGenerationHidden, setFailedGenerationHidden] = useState(false)
   const failedGenerationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const beforeKey = item.selfieKey || item.uploadedKey
+  const beforeKey = item.uploadedKey
   const normalizedBeforeKey = beforeKey && beforeKey !== 'undefined' ? beforeKey : null
 
   // Use real-time status polling only for incomplete generations
@@ -124,17 +122,25 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const imageKey = effectiveAcceptedKey || effectiveGeneratedKey
 
   const isFailed = currentStatus === 'failed' && !failedGenerationHidden
-  const isIncomplete = (currentStatus === 'pending' || currentStatus === 'processing') || (!effectiveGeneratedKey && !effectiveAcceptedKey && !isFailed)
+  // A generation is incomplete if:
+  // 1. Status is pending or processing, OR
+  // 2. Status is completed but we don't have the generated keys yet (race condition during completion)
+  const isWaitingForKeys = currentStatus === 'completed' && !effectiveGeneratedKey && !effectiveAcceptedKey && !isFailed
+  const isIncomplete = (currentStatus === 'pending' || currentStatus === 'processing') || isWaitingForKeys
 
   // Update pos when live generation status changes
   useEffect(() => {
-    if (isIncomplete) {
+    if (currentStatus === 'completed' && isWaitingForKeys) {
+      // Status is completed but we're still waiting for the generated keys
+      // Show 100% progress to indicate completion, even though keys aren't available yet
+      setPos(100)
+    } else if (isIncomplete) {
       // Show at least 10% progress when processing to ensure spinner is visible
       setPos(Math.max(currentJobStatus?.progress || 0, 10))
     } else {
       setPos(100)
     }
-  }, [isIncomplete, currentJobStatus?.progress])
+  }, [isIncomplete, isWaitingForKeys, currentStatus, currentJobStatus?.progress])
 
   // Force re-render when live generation completes to show the image
   // Auto-hide failed generations after 10 seconds
@@ -186,6 +192,18 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const imgRef = useRef<HTMLImageElement | null>(null)
   const photoContainerRef = useRef<HTMLDivElement>(null) // Ref for the photo container
 
+  // Emit custom event when generated image is loaded (for tour triggering)
+  useEffect(() => {
+    if (loadedGenerated && currentStatus === 'completed' && !isIncomplete) {
+      // Dispatch a custom event that can be listened to by parent components
+      const event = new CustomEvent('generationImageLoaded', {
+        detail: { generationId: item.id },
+        bubbles: true,
+      })
+      window.dispatchEvent(event)
+    }
+  }, [loadedGenerated, currentStatus, isIncomplete, item.id])
+
   const handleRegenerate = async () => {
     if (isRegenerating) return
     
@@ -199,12 +217,9 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
       const body = token
         ? JSON.stringify({ generationId: item.id })
         : JSON.stringify({
-            selfieId: item.selfieId || undefined,
-            selfieKey: item.selfieId ? undefined : item.uploadedKey,
             contextId: item.contextId,
             prompt: t('actions.retryPrompt'),
             generationType: item.generationType,
-            creditSource: 'individual',
             isRegeneration: true,
             originalGenerationId: item.id,
             workflowVersion: 'v3', // Use V3 workflow (4-step with parallel person/background generation)
@@ -396,7 +411,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
                 return
               }
               setBeforeImageError(true)
-              console.warn('Selfie image failed to load, may not be migrated to Backblaze yet:', item.selfieKey || item.uploadedKey)
+              console.warn('Selfie image failed to load, may not be migrated to Backblaze yet:', item.uploadedKey)
             }}
             onLoadingComplete={() => {
               if (beforeRetryCount !== 0) {
@@ -424,6 +439,16 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
                   {currentJobStatus.failedReason}
                 </p>
               )}
+            </div>
+          </div>
+        ) : isWaitingForKeys ? (
+          // Status is completed but waiting for image keys to arrive
+          <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+            <div className="text-center px-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto mb-2"></div>
+              <p className="text-xs text-gray-600 whitespace-pre-line">
+                {t('finalizing', { default: 'Finalizing...' })}
+              </p>
             </div>
           </div>
         ) : isIncomplete ? (

@@ -43,7 +43,6 @@ export async function findFileOwnership(key: string): Promise<OwnershipRecord | 
     prisma.generation.findFirst({
       where: {
         OR: [
-          { uploadedPhotoKey: trimmedKey },
           { acceptedPhotoKey: trimmedKey },
           { generatedPhotoKeys: { has: trimmedKey } },
         ],

@@ -358,10 +358,10 @@ export async function POST(request: NextRequest) {
 
     // Handle team registration (only if not from invite - invites already have teamId)
     if (userType === 'team' && !teamId) {
-      // Create team for pro user immediately
+      // Create team for pro user immediately (with null name - they'll set it up later)
       const team = await prisma.team.create({
         data: {
-          name: 'My Team',
+          name: null,
           adminId: user.id,
           teamMembers: {
             connect: { id: person.id }

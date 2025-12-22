@@ -60,8 +60,7 @@ export function transformInvitedGeneration(
 
   return {
     id: generation.id,
-    selfieKey,
-    uploadedKey,
+    uploadedKey: uploadedKey || '',
     generatedKey: generatedKey || undefined,
     status: generation.status,
     createdAt: generation.createdAt,

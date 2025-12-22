@@ -29,15 +29,16 @@
         "finalCtaTitle": "Ready to transform your team photos?",
         "finalCtaSubtitle": "Get your team's professional headshots and see the difference in 60 seconds.",
         "getStarted": "Get Started",
-        "cta": "Get your team's professional headshots",
-        "ctaSubtext": "Get your team's professional headshots in a predefined style when you sign up. No commitment, no credit card.",
-        "ctaAria": "Get your team's professional headshots in a predefined style when you sign up. No commitment.",
-        "noCreditCard": "No credit card required",
+        "cta": "See Your Team's New Look",
+        "ctaSubtext": "",
+        "ctaAria": "Start your team order with no commitment",
+        "noCreditCard": "Test with a fixed style for free, no credit card required",
         "badge": "Professional team photos without the photoshoot hassle"
       },
       "gallery": {
         "title": "From 'meh' selfies to LinkedIn-worthy headshots",
-        "subtitle": "See how we transform ordinary photos into professional headshots that actually impress clients and recruiters. No fancy camera or photographer required."
+        "subtitle": "See how we transform ordinary photos into professional headshots that actually impress clients and recruiters. No fancy camera or photographer required.",
+        "cta": "Make your team look like this today"
       },
       "trust": {
         "title": "Why teams choose TeamShotsPro over everyone else",
@@ -58,36 +59,30 @@
         }
       },
       "howItWorks": {
-        "title": "From team photo chaos to 'done' in 5 minutes",
-        "subtitle": "Stop wasting weeks coordinating photoshoots. Here's exactly how modern teams get professional headshots instantly.",
-        "totalTime": "Total time:",
-        "totalTimeValue": "5 minutes",
-        "cta": "Get your team's professional headshots now",
-        "guarantee": "Risk-free: Get your team's professional headshots to prove it works. No credit card, no commitment, no BS.",
+        "title": "Standardize your team's look without the logistical nightmare",
+        "subtitle": "You set an on-brand style once (e.g. background, logo), and you invite your team members. That's it. Your team members will get an invite and can generate their own photos, frictionless without registration. You see all the photos in the admin panel and select the best one.",
+        "totalTime": "Your setup time:",
+        "totalTimeValue": "2 minutes",
+        "cta": "Start My Team Order",
         "steps": {
           "1": {
-            "title": "Set your brand style",
-            "description": "Choose background and upload logo in 30 seconds.",
-            "duration": "30s"
-          },
-          "2": {
-            "title": "Invite your team",
-            "description": "Send personalized links. Each person uploads their selfie from any device.",
+            "title": "Set Your Brand Identity",
+            "description": "Backgrounds, logo, clothing style. You decide what's fixed and what team members can change (e.g. expression, or clothing colors).",
             "duration": "1 min"
           },
+          "2": {
+            "title": "Invite Your Team",
+            "description": "Invite your team (bulk upload available). They'll get a magic link. No scheduling grids, no calendar Tetris. Follow progress in your dashboard.",
+            "duration": "30s"
+          },
           "3": {
-            "title": "Individual headshots generated",
-            "description": "Get polished headshots instantly. No editing required.",
-            "duration": "60s/person"
+            "title": "They Upload a Selfie",
+            "description": "Team members snap a quick selfie from their phone. We transform it into your brand style instantly.",
+            "duration": "2 min/person"
           },
           "4": {
-            "title": "Review & approve",
-            "description": "See all results in one dashboard. Retry anything you want to improve.",
-            "duration": "2 min"
-          },
-          "5": {
-            "title": "Download headshots",
-            "description": "High-resolution files ready for your website, LinkedIn, and business cards.",
+            "title": "Get Your Assets",
+            "description": "Review and download a unified gallery of professional headshots. Consistent, high-res, and ready for your website.",
             "duration": "30s"
           }
         }
@@ -116,12 +111,13 @@
         "cta": "Get your professional headshots",
         "ctaSubtext": "Get your professional headshots in a predefined style when you sign up. No commitment, no credit card.",
         "ctaAria": "Get your professional headshots in a predefined style when you sign up. No commitment.",
-        "noCreditCard": "No credit card required",
+        "noCreditCard": "Test with a fixed style for free, no credit card required",
         "badge": "Professional headshots without the studio hassle"
       },
       "gallery": {
         "title": "From casual selfies to professional headshots",
-        "subtitle": "See how we transform everyday photos into stunning headshots perfect for LinkedIn, dating apps, and professional profiles."
+        "subtitle": "See how we transform everyday photos into stunning headshots perfect for LinkedIn, dating apps, and professional profiles.",
+        "cta": "Make your team look like this today"
       },
       "trust": {
         "title": "Why people choose PhotoShotsPro",
@@ -195,7 +191,8 @@
     "before": "Before",
     "after": "After",
     "dragToCompare": "Drag to compare",
-    "generatedIn": "Generated in 45 seconds"
+    "generatedIn": "Generated in 45 seconds",
+    "cta": "Make your team look like this today"
   },
   "trust": {
     "title": "Why teams choose TeamShotsPro over everyone else",
@@ -811,7 +808,7 @@
         },
         "nextSteps": "Next step",
         "howItWorks": {
-          "title": "How it works",
+          "title": "Standardize your team's look without the logistical nightmare",
           "organizer": {
             "step1": {
               "title": "You're on a paid plan",
@@ -1311,6 +1308,7 @@
       "viewOnly": "View only - team member's approved work"
     },
     "generating": "Generating...",
+    "finalizing": "Finalizing...",
     "actions": {
       "download": "Download",
       "regenerate": "Retry",
@@ -1400,8 +1398,8 @@
       "title": "Choose your selfie",
       "subtitle": "Select a selfie to use for generation, or upload a new one.",
       "qrTip": {
-        "title": "Upload from your phone",
-        "description": "Scan this QR code with your phone to upload selfies directly from your camera roll."
+        "title": "Take or upload from your computer or phone",
+        "description": "You can use the QR code to take or upload selfies from your phone."
       }
     }
   },
@@ -1409,8 +1407,10 @@
     "title": "Upload from your phone",
     "description": "Scan this QR code to upload selfies from your mobile device.",
     "scanToUpload": "Scan to upload",
+    "scanToUsePhone": "Scan to use your phone",
     "scanForMobile": "Scan for mobile selfies",
     "scanForSelfies": "Switch to mobile",
+    "useYourComputer": "Use this device",
     "useHere": "Use on computer",
     "phoneConnected": "Phone connected",
     "expiresIn": "Expires in {time}",
@@ -1628,20 +1628,21 @@
         },
         "swipeHint": "Swipe or tap Next to continue",
         "intro": {
-          "kicker": "Before you generate",
-          "title": "Customize your professional headshots",
+          "kicker": "",
+          "title": "Now, customize your photo",
           "subtitle": "You're about to customize how your photos look.",
-          "body": "You're about to customize how your photos look. Each card controls one part of the shoot. Swipe through and adjust to match your preferences.",
-          "bodyDesktop": "You're about to customize how your photos look. Each section below controls a different aspect of your professional headshot.",
+          "body": "You can change the background, the pose, the expression, etc. On the next page, you can set each one of them, except the ones fixed by your team admin",
+          "bodyDesktop": "You can change how your photo looks, the background, the pose, the expression, etc. On the next page, you can customize each one of them, except the ones set by your team admin",
           "swipe": "Swipe right to move forward, left to go back. You can also use the navigation buttons below.",
           "scrollDesktop": "Scroll down to see all customization options. Adjust each setting to match your preferences.",
-          "editable": "Sparkles badge means you can edit this setting. Adjust until it matches your preferences.",
-          "locked": "Lock badge means your team admin set this. You can view it but not change it to maintain consistency.",
-          "skip": "Don't show again"
+          "editable": "The stars icon means you can edit this setting. Adjust until it matches your preferences.",
+          "locked": "The lock icon means your team admin fixed these. You can view them but not change to maintain consistency.",
+          "skip": "Don't show again",
+          "continueButton": "Continue to customize"
         },
         "selfieTips": {
           "kicker": "Get the best results",
-          "title": "Selfie tips for amazing photos",
+          "title": "First, take or upload your selfies",
           "body": "Great photos start with great selfies. Follow these tips to get the best results.",
           "skip": "Don't show again",
           "angles": {
@@ -1657,8 +1658,8 @@
             "desc": "This shows the AI your body proportions so it doesn't have to guess."
           },
           "minimum": {
-            "title": "Upload at least 2",
-            "desc": "More variety means better results. 3-5 selfies is ideal."
+            "title": "3-4 selfies is ideal. Minimum is 2.",
+            "desc": "The more information you give it about your face and your body, the less it has to guess."
           }
         }
       },
@@ -1685,7 +1686,7 @@
         "userStyle": "User Style Settings",
         "userStyleDesc": "Clothing, expression, and lighting preferences",
         "customizable": "Customize your photo",
-        "customizableDesc": "Make it your best beautiful you",
+        "customizableDesc": "Select your choice for each editable part",
         "preset": "Team presets",
         "presetDesc": "These are fixed for your team"
       },
@@ -1696,15 +1697,15 @@
         },
         "branding": {
           "title": "Branding",
-          "description": "Logo and branding options"
+          "description": "Set the logo and branding options"
         },
         "clothing": {
           "title": "Clothing",
-          "description": "Clothing style and accessories"
+          "description": "Choose your clothing style and accessories"
         },
         "clothingColors": {
           "title": "Clothing colors",
-          "description": "Colors for clothing items"
+          "description": "Choose your colors for clothing items"
         },
         "customClothing": {
           "title": "Custom Clothing",
@@ -1720,7 +1721,7 @@
         },
         "expression": {
           "title": "Expression",
-          "description": "Facial expression and mood"
+          "description": "Choose your facial expression and mood"
         },
         "lighting": {
           "title": "Lighting",
@@ -1728,7 +1729,7 @@
         },
         "pose": {
           "title": "Pose",
-          "description": "Body pose and positioning"
+          "description": "Choose your body pose and positioning"
         }
       },
       "background": {
@@ -1737,8 +1738,10 @@
         "predefined": "Predefined",
         "officePrompt": "Office description",
         "officePromptPlaceholder": "Describe the office environment...",
-        "neutralColor": "Background Color",
+        "neutralColor": "Neutral Color",
+        "neutralColorDesc": "Choose your neutral background color",
         "gradientColor": "Gradient Color",
+        "gradientColorDesc": "Choose your gradient base color",
         "customUpload": "Upload Background",
         "uploadPrompt": "Click to upload or drag and drop",
         "chooseFile": "Choose file",
@@ -2241,8 +2244,8 @@
     "selfieSelection": {
       "title": "Choose selfies to use",
       "qrTip": {
-        "title": "Upload from your phone",
-        "description": "Scan this QR code with your phone to upload selfies directly from your camera roll."
+        "title": "Take or upload from your computer or phone",
+        "description": "You can use the QR code to take or upload selfies from your phone"
       },
       "mobile": {
         "bannerTitle": "Select your selfies",

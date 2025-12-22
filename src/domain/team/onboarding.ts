@@ -54,9 +54,9 @@ export async function getTeamOnboardingState({
     }
   }
 
-  // Check if team name is the default "My Team" value - treat as needing setup
-  const hasDefaultTeamName = teamName === 'My Team' || teamName === 'My team'
-  if (hasDefaultTeamName) {
+  // Check if team name is null or empty string - treat as needing setup
+  // Team exists but hasn't been named yet
+  if (!teamName || teamName.trim() === '') {
     return {
       ...DEFAULT_STATE,
       needsTeamSetup: true,

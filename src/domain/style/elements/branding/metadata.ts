@@ -5,6 +5,6 @@ registerElement({
   key: 'branding',
   label: 'Branding',
   icon: SwatchIcon,
-  description: 'Logo and branding options',
+  description: 'Set the logo and branding options',
   group: 'composition'
 })

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { PreviewImage } from '@/components/ui'
 
 interface SelfieApprovalProps {
-  uploadedPhotoKey: string
+  photoKey: string
   previewUrl?: string
   onApprove: () => void
   onRetake: () => void
@@ -13,7 +13,7 @@ interface SelfieApprovalProps {
 }
 
 export default function SelfieApproval({
-  uploadedPhotoKey,
+  photoKey,
   previewUrl,
   onApprove,
   onRetake,
@@ -144,7 +144,7 @@ export default function SelfieApproval({
             <div className="relative rounded-2xl overflow-hidden shadow-depth-2xl ring-4 ring-white bg-white p-1.5">
               <div className="rounded-xl overflow-hidden">
                 <PreviewImage
-                  src={previewUrl || (uploadedPhotoKey && uploadedPhotoKey !== 'undefined' ? `/api/files/get?key=${encodeURIComponent(uploadedPhotoKey)}` : '/placeholder-image.png')}
+                  src={previewUrl || (photoKey && photoKey !== 'undefined' ? `/api/files/get?key=${encodeURIComponent(photoKey)}` : '/placeholder-image.png')}
                   alt="Uploaded selfie"
                   width={320}
                   height={320}

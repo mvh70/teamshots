@@ -110,7 +110,7 @@ export default function SelfieTipsContent({
       textColor: 'text-blue-700',
       content: {
         type: 'titled',
-        title: tQr('title', { default: 'Upload from your phone' }),
+        title: tQr('title', { default: 'Take or upload from your computer or phone' }),
         description: tQr('description', { default: 'Scan this QR code with your phone to upload selfies directly from your camera roll.' })
       }
     })
@@ -119,16 +119,25 @@ export default function SelfieTipsContent({
   return (
     <IntroScreenContent
       variant={variant}
-      kicker={t('kicker', { default: 'Get the best results' })}
-      title={t('title', { default: 'Selfie tips for amazing photos' })}
+      kicker=""
+      title={t('title', { default: 'First, take or upload your selfies' })}
       body={t('body', { default: "Great photos start with great selfies. Here's how to nail them." })}
       tips={tips}
-      image={{
-        src: '/images/good_bad_selfie_2.jpeg',
-        alt: 'Examples of good and bad selfies for AI photo generation',
-        width: 600,
-        height: 320,
-        priority: true
+      images={{
+        good: {
+          src: '/images/good_selfies_1.png',
+          alt: 'Examples of good selfies for AI photo generation',
+          width: 300,
+          height: 300,
+          priority: true
+        },
+        bad: {
+          src: '/images/bad_selfies_1.png',
+          alt: 'Examples of bad selfies for AI photo generation',
+          width: 300,
+          height: 300,
+          priority: true
+        }
       }}
       swipeHintText={tCommon('swipeHint', { default: 'Swipe or tap Next to continue' })}
       continueButtonText="Continue"

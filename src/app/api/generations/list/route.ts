@@ -21,12 +21,10 @@ import { UserService } from '@/domain/services/UserService'
 // Note: generationType is NOT included here because it's derived from person.teamId, not stored in DB
 type GenerationWithRelations = {
   id: string;
-  selfieId: string | null;
   status: string;
   creditSource: string;
   creditsUsed: number;
   provider: string;
-  uploadedPhotoKey: string;
   generatedPhotoKeys: string[];
   acceptedPhotoKey: string | null;
   userApproved: boolean;
@@ -54,7 +52,7 @@ type GenerationWithRelations = {
     teamId: string | null;
     team: {
       id: string;
-      name: string;
+      name: string | null;
     } | null;
   };
   context: {
@@ -217,14 +215,17 @@ export async function GET(request: NextRequest) {
     const transformedGenerations = generations.map((generation: GenerationWithRelations) => {
       // Extract input selfie keys from persisted style settings if present
       let inputSelfieUrls: string[] = []
+      let primarySelfieKey: string | undefined = undefined
       try {
         const styles = generation.styleSettings as Record<string, unknown> | null
         const inputSelfies = styles && typeof styles === 'object' ? (styles['inputSelfies'] as Record<string, unknown> | undefined) : undefined
         const keys = inputSelfies && typeof inputSelfies === 'object' ? (inputSelfies['keys'] as unknown) : undefined
         if (Array.isArray(keys)) {
-          inputSelfieUrls = keys
-            .filter((k): k is string => typeof k === 'string')
-            .map(key => `/api/files/get?key=${encodeURIComponent(key)}`)
+          const validKeys = keys.filter((k): k is string => typeof k === 'string')
+          if (validKeys.length > 0) {
+            primarySelfieKey = validKeys[0]
+            inputSelfieUrls = validKeys.map(key => `/api/files/get?key=${encodeURIComponent(key)}`)
+          }
         }
       } catch {
         // ignore malformed style settings
@@ -235,15 +236,14 @@ export async function GET(request: NextRequest) {
       
       return ({
       id: generation.id,
-      selfieId: generation.selfieId,
       status: generation.status,
       generationType: derivedGenerationType, // Derived from person.teamId, not stored field
       creditSource: generation.creditSource,
       creditsUsed: generation.creditsUsed,
       provider: generation.provider,
       // Provide keys used by client card components
-      uploadedKey: generation.uploadedPhotoKey || undefined, // Original selfie key
-      selfieKey: generation.uploadedPhotoKey || undefined, // Same as uploadedKey for consistency
+      uploadedKey: primarySelfieKey, // Original selfie key from style settings
+      selfieKey: primarySelfieKey, // Same as uploadedKey for consistency
       generatedKey: generation.generatedPhotoKeys[0] || undefined,
       acceptedKey: generation.acceptedPhotoKey || undefined,
       inputSelfieUrls,

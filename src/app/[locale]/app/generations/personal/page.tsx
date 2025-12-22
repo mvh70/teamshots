@@ -36,6 +36,7 @@ export default function PersonalGenerationsPage() {
   const { startTour } = useOnbordaTours()
   const processedCompletedGenIdsRef = useRef<Set<string>>(new Set())
   const tourTriggerAttemptedRef = useRef(false)
+  const imageLoadedRef = useRef(false)
   const { href: buyCreditsHref } = useBuyCreditsLink()
   
   // Team functionality lives on the team page. Pro accounts and invited team members should not access personal generations.
@@ -134,7 +135,20 @@ export default function PersonalGenerationsPage() {
     handleGenerationFailed
   )
 
-  // Trigger generation-detail tour after first completed generation
+  // Listen for generation image load events
+  useEffect(() => {
+    const handleImageLoaded = () => {
+      imageLoadedRef.current = true
+      console.log('[PersonalGenerationsPage Tour] Generation image loaded')
+    }
+
+    window.addEventListener('generationImageLoaded', handleImageLoaded)
+    return () => {
+      window.removeEventListener('generationImageLoaded', handleImageLoaded)
+    }
+  }, [])
+
+  // Trigger generation-detail tour after first completed generation AND image is loaded
   useEffect(() => {
     // Skip if still loading or onboarding context not loaded
     if (loading || !onboardingContext._loaded) {
@@ -148,18 +162,32 @@ export default function PersonalGenerationsPage() {
     if (completedGenerations.length === 0) {
       return
     }
+
+    // Wait for the image to be loaded before starting the tour
+    if (!imageLoadedRef.current) {
+      console.log('[PersonalGenerationsPage Tour] Waiting for image to load...')
+      return
+    }
     
     // Check if tour has been completed using database (onboarding context)
-    const hasSeenTour = onboardingContext.personId
-      ? onboardingContext.completedTours?.includes('generation-detail')
-      : false
+    const completedTours = onboardingContext.completedTours || []
+    const pendingTours = onboardingContext.pendingTours || []
+    const hasSeenTour = completedTours.includes('generation-detail')
+    const isPendingTour = pendingTours.includes('generation-detail')
 
-    const isPendingTour = onboardingContext.personId
-      ? onboardingContext.pendingTours?.includes('generation-detail')
-      : false
+    console.log('[PersonalGenerationsPage Tour] Checking tour status:', {
+      hasSeenTour,
+      isPendingTour,
+      completedTours,
+      pendingTours,
+      personId: onboardingContext.personId,
+      completedGenerationsCount: completedGenerations.length,
+      imageLoaded: imageLoadedRef.current
+    })
 
-    // If tour has already been seen, nothing to do
+    // If tour has already been seen, nothing to do (even if it's in pendingTours)
     if (hasSeenTour) {
+      console.log('[PersonalGenerationsPage Tour] Tour already completed, skipping')
       return
     }
 
@@ -180,14 +208,15 @@ export default function PersonalGenerationsPage() {
       })
     }
 
-    // Trigger tour if it's pending or if this is the first time we see completed generations
-    if (isPendingTour) {
-      // Tour is already pending, just start it
+    // Trigger tour if it's pending (but only if not already completed) or if this is the first time we see completed generations
+    if (isPendingTour && !hasSeenTour) {
+      // Tour is already pending and not completed, just start it (with small delay for stability)
+      console.log('[PersonalGenerationsPage Tour] Tour is pending, starting tour...')
       tourTriggerAttemptedRef.current = true
       setTimeout(() => {
         startTour('generation-detail')
-      }, 1500)
-    } else if (completedGenerations.length > 0) {
+      }, 300)
+    } else if (completedGenerations.length > 0 && !hasSeenTour) {
       // Set the tour as pending if there are completed generations and tour hasn't been seen
       tourTriggerAttemptedRef.current = true
       if (onboardingContext.personId) {
@@ -196,18 +225,18 @@ export default function PersonalGenerationsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tourName: 'generation-detail' }),
         }).then(() => {
-          // Start the tour after setting it as pending
+          // Start the tour after setting it as pending (with small delay for stability)
           setTimeout(() => {
             startTour('generation-detail')
-          }, 1500)
+          }, 300)
         }).catch(error => {
           console.error('[Tour Debug] Failed to set pending tour:', error)
         })
       } else {
-        // If no personId, still try to start the tour
+        // If no personId, still try to start the tour (with small delay for stability)
         setTimeout(() => {
           startTour('generation-detail')
-        }, 1500)
+        }, 300)
       }
     }
   }, [loading, generated, onboardingContext._loaded, onboardingContext.completedTours, onboardingContext.pendingTours, onboardingContext.personId, startTour])

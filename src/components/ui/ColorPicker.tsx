@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useMemo, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
-import { ChevronDownIcon } from '@heroicons/react/24/outline'
 import { normalizeColorToHex } from '@/lib/color-utils'
 
 interface ColorPickerProps {
@@ -111,18 +110,20 @@ export default function ColorPicker({
   const t = useTranslations('customization.photoStyle.background')
   const [isOpen, setIsOpen] = useState(false)
   const [isMounted] = useState(true)
+  const [inputValue, setInputValue] = useState('') // Local state for what user is typing
   const [portalPosition, setPortalPosition] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 280 })
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   // Update dropdown position when open and on scroll/resize
   useEffect(() => {
-    if (!isOpen || !buttonRef.current) return
+    if (!isOpen || !containerRef.current) return
 
     const handleReposition = () => {
-      if (!buttonRef.current) return
-      const rect = buttonRef.current.getBoundingClientRect()
+      if (!containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
       setPortalPosition({
         top: rect.bottom + 8,
         left: rect.left,
@@ -143,7 +144,7 @@ export default function ColorPicker({
     }
   }, [isOpen])
 
-  // Close on click outside
+  // Close on click outside or Escape key
   useEffect(() => {
     if (!isOpen) return
 
@@ -152,27 +153,52 @@ export default function ColorPicker({
       const clickedInsideContainer = containerRef.current?.contains(target)
       const clickedInsideDropdown = dropdownRef.current?.contains(target)
       const clickedOnButton = buttonRef.current?.contains(target)
+      const clickedOnInput = inputRef.current?.contains(target)
 
-      // Don't close if clicking on the button or inside the container/dropdown
-      if (!clickedInsideContainer && !clickedInsideDropdown && !clickedOnButton) {
-        setIsOpen(false)
+      // Don't close if clicking on the button, input, or inside the container/dropdown
+      if (!clickedInsideContainer && !clickedInsideDropdown && !clickedOnButton && !clickedOnInput) {
+        handleClose()
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        handleClose()
+        inputRef.current?.blur()
       }
     }
     
     // Use a small delay to avoid catching the opening click
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleEscape)
     }, 0)
 
     return () => {
       clearTimeout(timeoutId)
       document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
     }
   }, [isOpen])
 
   const handleColorSelect = (color: string) => {
     onChange(color)
+    setInputValue('') // Clear input when color is selected
     setIsOpen(false)
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value
+    setInputValue(newValue)
+    // Update parent with typed value so variations update in real-time
+    onChange(newValue)
+  }
+
+  // Clear input when popup closes without selection
+  const handleClose = () => {
+    setIsOpen(false)
+    // Always clear input when closing - input is just for searching/typing
+    setInputValue('')
   }
 
   const toggleOpen = () => {
@@ -192,16 +218,26 @@ export default function ColorPicker({
   }
 
 
+  // Use inputValue for variations if user is typing, otherwise use the selected value
+  const colorForVariations = inputValue || value
+  
   const normalizedValue = normalizeColorToHex(
+    (colorForVariations && !colorForVariations.startsWith('#') && /^[0-9A-Fa-f]{3,6}$/.test(colorForVariations))
+      ? `#${colorForVariations}`
+      : colorForVariations
+  )
+
+  // For the swatch display, use the actual selected value
+  const normalizedSelectedValue = normalizeColorToHex(
     (value && !value.startsWith('#') && /^[0-9A-Fa-f]{3,6}$/.test(value))
       ? `#${value}`
       : value
   )
 
   // Check if we have a valid color entered (not empty, not just whitespace, and resolves to something other than white fallback)
-  const hasValidColor = value && value.trim().length > 0 && normalizedValue !== '#ffffff'
+  const hasValidColor = colorForVariations && colorForVariations.trim().length > 0 && normalizedValue !== '#ffffff'
 
-  // Generate variations based on the current color
+  // Generate variations based on the current color (from input or selected value)
   const colorVariations = useMemo(() => {
     if (!hasValidColor) return []
     return generateColorVariations(normalizedValue)
@@ -215,34 +251,56 @@ export default function ColorPicker({
         </label>
       )}
 
-      {/* Trigger Button */}
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation()
-          toggleOpen()
-        }}
-        disabled={disabled}
-        className={buttonClassName || `flex items-center justify-between w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-colors ${
-          disabled ? 'opacity-60 cursor-not-allowed bg-gray-100' : 'cursor-pointer'
-        }`}
-      >
-        {children ? children : (
+      {/* Input Field with Color Swatch Button */}
+      <div className="relative flex items-center">
+        {children ? (
+          <div className="w-full">{children}</div>
+        ) : (
           <>
-            <div className="flex items-center gap-3">
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={handleInputChange}
+              onFocus={() => {
+                if (!disabled) {
+                  setIsOpen(true)
+                  if (onTriggerClick) {
+                    onTriggerClick()
+                  }
+                }
+              }}
+              disabled={disabled}
+              className={buttonClassName || `flex-1 px-3 py-2 pr-10 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm ${
+                disabled ? 'opacity-60 cursor-not-allowed bg-gray-100' : ''
+              }`}
+              placeholder="Type your color (eg Burgundy) and select the right shade"
+            />
+            <button
+              ref={buttonRef}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (!disabled) {
+                  toggleOpen()
+                  // Focus the input when opening via button
+                  setTimeout(() => inputRef.current?.focus(), 0)
+                }
+              }}
+              disabled={disabled}
+              className={`absolute right-2 p-1 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-primary transition-colors ${
+                disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+              title="Open color picker"
+            >
               <div
-                className="w-6 h-6 rounded-full border border-gray-200 shadow-sm"
-                style={{ backgroundColor: normalizedValue }}
+                className="w-5 h-5 rounded border border-gray-300 shadow-sm"
+                style={{ backgroundColor: normalizedSelectedValue }}
               />
-              <span className="text-sm font-medium text-gray-900">
-                {value}
-              </span>
-            </div>
-            <ChevronDownIcon className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`} />
+            </button>
           </>
         )}
-      </button>
+      </div>
 
       {/* Dropdown Panel - rendered via portal to escape overflow constraints */}
       {isOpen && isMounted && createPortal(
@@ -258,31 +316,7 @@ export default function ColorPicker({
           onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="p-4 space-y-4">
-            {/* Text Input at the top */}
-            <div>
-              <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider font-semibold">
-                {t('colorValue', { default: 'Color' })}
-              </label>
-              <input
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                onMouseDown={(e) => e.stopPropagation()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    setIsOpen(false)
-                  }
-                }}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-brand-primary focus:border-brand-primary text-sm font-mono"
-                placeholder="#FFFFFF or burgundy"
-              />
-              <p className="mt-1 text-xs text-gray-400">
-                {t('colorHint', { default: 'Hex code or color name' })}
-              </p>
-            </div>
-
-            {/* Color variations grid - only show when there's a valid color */}
+            {/* Color variations grid - show when there's a valid color */}
             {hasValidColor && colorVariations.length > 0 && (
               <div>
                 <label className="block text-xs text-gray-500 mb-2 uppercase tracking-wider font-semibold">
@@ -292,10 +326,10 @@ export default function ColorPicker({
                   {colorVariations.map((color, index) => (
                     <button
                       type="button"
-                      key={`${color}-${index}`}
+                      key={`variation-${index}-${color}`}
                       onClick={() => handleColorSelect(color)}
                       className={`w-10 h-10 rounded-lg border transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary ${
-                        normalizedValue.toLowerCase() === color.toLowerCase()
+                        normalizedSelectedValue.toLowerCase() === color.toLowerCase()
                           ? 'border-brand-primary shadow-md ring-2 ring-brand-primary ring-opacity-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
@@ -307,19 +341,26 @@ export default function ColorPicker({
               </div>
             )}
 
-            {/* Presets - show when no valid color is entered */}
-            {!hasValidColor && presets.length > 0 && (
+            {/* Presets - show when no valid color is entered, or always show below variations */}
+            {presets.length > 0 && (
               <div>
                 <label className="block text-xs text-gray-500 mb-2 uppercase tracking-wider font-semibold">
-                  {t('presets', { default: 'Choose a color' })}
+                  {hasValidColor 
+                    ? t('presets', { default: 'Presets' })
+                    : t('presets', { default: 'Choose a color' })
+                  }
                 </label>
                 <div className="grid grid-cols-5 gap-1.5 max-h-48 overflow-y-auto">
-                  {presets.map((color) => (
+                  {presets.map((color, index) => (
                     <button
                       type="button"
-                      key={color}
+                      key={`preset-${index}-${color}`}
                       onClick={() => handleColorSelect(color)}
-                      className="w-10 h-10 rounded-lg border border-gray-200 hover:border-gray-300 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary"
+                      className={`w-10 h-10 rounded-lg border transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-brand-primary ${
+                        normalizedSelectedValue.toLowerCase() === color.toLowerCase()
+                          ? 'border-brand-primary shadow-md ring-2 ring-brand-primary ring-opacity-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
                       style={{ backgroundColor: color }}
                       title={color}
                     />

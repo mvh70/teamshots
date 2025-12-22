@@ -10,6 +10,7 @@ import { getUserEffectiveRoles, getUserWithRoles } from '@/domain/access/roles'
 import { getUserSubscription } from '@/domain/subscription/subscription'
 import { findFileOwnership, validateInviteToken, isFileAuthorized } from '@/lib/file-ownership'
 import { validateMobileHandoffToken } from '@/lib/mobile-handoff'
+import { prisma } from '@/lib/prisma'
 
 
 export const runtime = 'nodejs'
@@ -228,6 +229,17 @@ export async function GET(req: NextRequest) {
     let allowAccessWithoutOwnership = false
     const effectivePersonId = invitePersonId || handoffPersonId
     
+    // Special case: Allow access to files from freepackage context for all logged-in users
+    // Freepackage is a shared context that all free plan users should be able to access
+    let isFreepackageContext = false
+    if (ownership?.type === 'context' && ownership.contextId && session?.user?.id) {
+      const freePackageStyleSetting = await prisma.appSetting.findUnique({
+        where: { key: 'freePackageStyleId' }
+      })
+      if (freePackageStyleSetting?.value === ownership.contextId) {
+        isFreepackageContext = true
+      }
+    }
     
     if (!ownership) {
       if (effectivePersonId && (key.startsWith(`backgrounds/${effectivePersonId}/`) || key.startsWith(`logos/${effectivePersonId}/`) || key.startsWith(`outfits/${effectivePersonId}/`))) {
@@ -242,7 +254,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const authorized = ownership ? isFileAuthorized(ownership, userWithRoles, roles, invitePersonId, inviteTeamId, inviteContextId, key, handoffPersonId) : allowAccessWithoutOwnership
+    // Allow access if it's the freepackage context, otherwise check normal authorization
+    const authorized = isFreepackageContext || (ownership ? isFileAuthorized(ownership, userWithRoles, roles, invitePersonId, inviteTeamId, inviteContextId, key, handoffPersonId) : allowAccessWithoutOwnership)
 
     if (!authorized) {
       if (session?.user?.id) {

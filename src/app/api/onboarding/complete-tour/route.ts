@@ -95,13 +95,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log('[complete-tour API] Processing tour completion:', {
+      tourName,
+      personId,
+      hasToken: !!token,
+      currentCompletedTours: completedTours,
+      currentPendingTours: pendingTours
+    })
+
     // Add the tour to completed tours if not already there
     if (!completedTours.includes(tourName)) {
       completedTours.push(tourName)
+      console.log('[complete-tour API] Added tour to completedTours:', tourName)
+    } else {
+      console.log('[complete-tour API] Tour already in completedTours:', tourName)
     }
 
     // Remove the tour from pending tours if it was pending
+    const wasPending = pendingTours.includes(tourName)
     pendingTours = pendingTours.filter(tour => tour !== tourName)
+    if (wasPending) {
+      console.log('[complete-tour API] Removed tour from pendingTours:', tourName)
+    }
 
     // Update overall state based on tour completion
     if (overallState === 'not_started' && completedTours.length > 0) {
@@ -121,6 +136,14 @@ export async function POST(request: NextRequest) {
     await prisma.person.update({
       where: { id: person.id },
       data: { onboardingState: updatedState },
+    })
+
+    console.log('[complete-tour API] Tour completion saved successfully:', {
+      tourName,
+      personId,
+      completedTours,
+      pendingTours,
+      state: overallState
     })
 
     return NextResponse.json({ success: true, completedTours, pendingTours, state: overallState })

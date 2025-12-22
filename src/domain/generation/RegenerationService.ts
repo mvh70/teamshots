@@ -43,8 +43,8 @@ export class RegenerationService {
       }
     })
 
-    if (!sourceGeneration || !sourceGeneration.selfieId) {
-      throw new Error('Generation or selfie not found')
+    if (!sourceGeneration) {
+      throw new Error('Generation not found')
     }
 
     // Find the original generation in the group to check remaining regenerations
@@ -110,9 +110,7 @@ export class RegenerationService {
     const generation = await prisma.generation.create({
       data: {
         personId: personId,
-        uploadedPhotoKey: sourceGeneration.uploadedPhotoKey,
         contextId: sourceGeneration.contextId,
-        selfieId: sourceGeneration.selfieId,
         status: 'pending',
         maxRegenerations: 0, // Regenerations cannot be regenerated
         remainingRegenerations: 0,
@@ -134,9 +132,10 @@ export class RegenerationService {
     })
     
     // Queue the generation job
-    const jobSelfieS3Keys = Array.isArray(storedSelfieKeys) && storedSelfieKeys.length > 0 
-      ? storedSelfieKeys 
-      : [sourceGeneration.uploadedPhotoKey]
+    if (!Array.isArray(storedSelfieKeys) || storedSelfieKeys.length === 0) {
+      throw new Error('No selfie keys found in source generation settings')
+    }
+    const jobSelfieS3Keys = storedSelfieKeys
 
     const job = await enqueueGenerationJob({
       generationId: generation.id,

@@ -145,7 +145,7 @@ export default function FAQ({ variant, supportEmail }: FAQProps) {
   });
 
   return (
-    <section className="py-20 sm:py-24 lg:py-32 bg-bg-gray-50 relative grain-texture">
+    <section className="py-20 sm:py-24 lg:py-32 bg-bg-white relative grain-texture">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6 leading-tight">

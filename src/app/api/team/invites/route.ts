@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
     
     const emailResult = await sendTeamInviteEmail({
       email: teamInvite.email,
-      teamName: team.name,
+      teamName: team.name || 'Team',
       inviteLink,
       creditsAllocated: teamInvite.creditsAllocated,
       firstName,

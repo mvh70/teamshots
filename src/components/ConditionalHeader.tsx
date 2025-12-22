@@ -91,21 +91,6 @@ export default function ConditionalHeader({ brandName, brandLogo }: ConditionalH
               {t('signin')}
             </Link>
           )}
-          {!session && (
-            <Link
-              href="/auth/signup"
-              onClick={() =>
-                track('cta_clicked', {
-                  placement: 'header',
-                  action: 'signup',
-                  viewport: 'desktop',
-                })
-              }
-              className="px-6 py-3 bg-brand-cta text-white rounded-xl hover:bg-brand-cta-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2"
-            >
-              {t('getStarted')}
-            </Link>
-          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -170,22 +155,6 @@ export default function ConditionalHeader({ brandName, brandLogo }: ConditionalH
                 className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
               >
                 {t('signin')}
-              </Link>
-            )}
-            {!session && (
-              <Link
-                href="/auth/signup"
-                onClick={() => {
-                  toggleMobileMenu()
-                  track('cta_clicked', {
-                    placement: 'header',
-                    action: 'signup',
-                    viewport: 'mobile',
-                  })
-                }}
-                className="block w-full text-center px-6 py-3 bg-brand-cta text-white rounded-xl hover:bg-brand-cta-hover transition-all duration-300 font-bold shadow-depth-md hover:shadow-depth-lg transform hover:-translate-y-0.5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2"
-              >
-                {t('getStarted')}
               </Link>
             )}
           </div>

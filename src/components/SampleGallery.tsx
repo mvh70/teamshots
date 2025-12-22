@@ -285,7 +285,7 @@ export default function SampleGallery({ variant }: SampleGalleryProps) {
               }
               className="inline-flex items-center justify-center bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white px-12 py-6 rounded-2xl font-bold text-lg lg:text-xl hover:shadow-depth-2xl hover:shadow-brand-cta-shadow/50 transition-all duration-300 shadow-depth-xl transform hover:-translate-y-2 hover:scale-[1.03] active:scale-[0.97] focus:outline-none focus:ring-4 focus:ring-brand-cta-ring focus:ring-offset-2 ring-offset-bg-white"
             >
-              {tHero('getStarted')}
+              {tLanding('cta')}
             </Link>
             {/* Subtext reinforcing free offer below CTA */}
             <div className="mt-4">

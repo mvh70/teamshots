@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc'
       },
       include: {
-        selfie: true,
         context: true,
         person: {
           select: {
@@ -117,12 +116,13 @@ export async function GET(request: NextRequest) {
         // ignore malformed style settings
       }
 
+      const primarySelfieKey = inputSelfieKeys[0] || ''
       const inputSelfieUrls = inputSelfieKeys.map(key => `/api/files/get?key=${encodeURIComponent(key)}&${tokenParam}`)
 
       return {
         id: generation.id,
-        selfieKey: generation.selfie?.key || '',
-        selfieUrl: generation.selfie?.key ? `/api/files/get?key=${encodeURIComponent(generation.selfie.key)}&${tokenParam}` : '',
+        selfieKey: primarySelfieKey,
+        selfieUrl: primarySelfieKey ? `/api/files/get?key=${encodeURIComponent(primarySelfieKey)}&${tokenParam}` : '',
         inputSelfieUrls,
         generatedPhotos: generation.generatedPhotoKeys.map((key, index) => ({
           id: `${generation.id}-${index}`,

@@ -75,8 +75,6 @@ export default function PhotoUpload({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       previewUrls.forEach(url => URL.revokeObjectURL(url));
       if (stream) stream.getTracks().forEach((t) => t.stop());
-      // Reset auto-open ref on unmount so camera can reopen on remount
-      hasAutoOpenedRef.current = false;
     };
   }, [previewUrl, previewUrls, stream]);
 
@@ -121,7 +119,7 @@ export default function PhotoUpload({
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           resolve(false);
-          return;
+          return false;
         }
         
         canvas.width = img.width;
@@ -187,7 +185,7 @@ export default function PhotoUpload({
     []
   )
 
-  const handleFile = async (file: File, overrides?: Partial<UploadMetadata>) => {
+  const handleFile = async (file: File, overrides?: Partial<UploadMetadata>): Promise<boolean> => {
     setError(null);
     setErrorType(null);
     const err = validateFile(file);
@@ -201,7 +199,7 @@ export default function PhotoUpload({
       } else {
         setErrorType('error-message');
       }
-      return;
+      return false;
     }
     
     // Check for face detection
@@ -214,7 +212,7 @@ export default function PhotoUpload({
         setError("No face detected in the image. Please upload a photo with a clear face.");
         setErrorType('face-detection-error');
       }
-      return;
+      return false;
     }
     
     const preview = URL.createObjectURL(file);
@@ -250,14 +248,19 @@ export default function PhotoUpload({
           const finalResult: UploadResult = {
             key: result.key,
             url: result.url || preview,
-            source: metadata.source
+            source: result.source || metadata.source  // Use result.source first, fallback to metadata.source
+          }
+          // Ensure URL is always set for camera sources to show approval flow
+          if ((finalResult.source === 'camera' || finalResult.source === 'ios-camera') && !finalResult.url) {
+            finalResult.url = preview
           }
           onUploaded?.(finalResult, metadata);
           resetUploadState();
-          return;
+          return true;
         } else {
           // No result - reset state
           resetUploadState();
+          return false;
         }
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Upload failed";
@@ -268,6 +271,7 @@ export default function PhotoUpload({
         }
         setIsUploading(false);
         setUploadingFileCount(0);
+        return false;
       }
     } else {
       setIsUploading(true);
@@ -280,9 +284,11 @@ export default function PhotoUpload({
           const finalResult: UploadResult = { key: result.key, url: preview, source: metadata.source }
           onUploaded?.(finalResult, metadata);
           resetUploadState();
+          return true;
         } else {
           // No result - reset state
           resetUploadState();
+          return false;
         }
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Upload failed";
@@ -293,6 +299,7 @@ export default function PhotoUpload({
         }
         setIsUploading(false);
         setUploadingFileCount(0);
+        return false;
       }
     }
   };
@@ -345,7 +352,7 @@ export default function PhotoUpload({
       if (validFiles.length === 0) {
         setIsUploading(false);
         setUploadingFileCount(0);
-        return;
+        return false;
       }
       // If there are valid files, continue processing them
     }
@@ -520,13 +527,13 @@ export default function PhotoUpload({
       } else {
         inputRef.current?.click();
       }
-      return;
+      return false;
     }
     
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         reportCameraError("Camera not supported in this browser", 'camera-not-supported');
-        return;
+        return false;
       }
       
       try {
@@ -568,7 +575,7 @@ export default function PhotoUpload({
             setStream(s);
             setCameraOpen(true);
             setCameraReady(false);
-            return;
+            return false;
           } catch {
             reportCameraError("Camera access failed even with basic settings.", 'camera-error');
           }
@@ -689,8 +696,11 @@ export default function PhotoUpload({
     canvas.toBlob(async (blob) => {
       if (!blob) return;
       const file = new File([blob], `capture-${Date.now()}.jpg`, { type: "image/jpeg" });
-      await handleFile(file, { source: 'camera' });
-      closeCamera();
+      const success = await handleFile(file, { source: 'camera' });
+      // Only close camera if upload was successful
+      if (success) {
+        closeCamera();
+      }
     }, "image/jpeg", 0.92);
   };
 
@@ -730,9 +740,15 @@ export default function PhotoUpload({
           } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
           data-testid="dropzone"
         >
+          {/* Title - shown on desktop when QR code is also visible */}
+          {!isMobile && (
+            <h3 className="text-base font-semibold text-gray-900 text-center mb-3">
+              {tMobileHandoff('useYourComputer')}
+            </h3>
+          )}
           <div className={`w-full flex flex-col ${hidePlusIcon ? '' : 'items-center'}`}>
-            {/* Plus icon - hidden when hidePlusIcon is true */}
-            {!hidePlusIcon && (
+            {/* Plus icon - hidden when hidePlusIcon is true or on desktop */}
+            {!hidePlusIcon && isMobile && (
               <div className="mb-2 flex items-center justify-center">
                 <PlusIcon className="w-12 h-12 md:w-16 md:h-16 text-gray-400" />
               </div>
@@ -769,12 +785,6 @@ export default function PhotoUpload({
               </button>
             </div>
           </div>
-          {/* Show "Use on computer" text on desktop when QR code is also visible - positioned to align with QR code text */}
-          {!isMobile && (
-            <p className="mt-2 text-xs text-gray-500 font-medium text-center">
-              {tMobileHandoff('useHere')}
-            </p>
-          )}
           <input
             ref={inputRef}
             type="file"
@@ -838,12 +848,22 @@ export default function PhotoUpload({
                 style={{ display: 'block' }}
               />
               <canvas ref={canvasRef} className="hidden" />
+              {/* Error overlay for mobile */}
+              {error && (
+                <div className="absolute top-4 left-4 right-4 z-20">
+                  <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm border border-red-200 shadow-md flex items-center justify-between">
+                    <span>{error}</span>
+                    <button onClick={() => setError(null)} className="ml-2 text-red-800 font-bold">&times;</button>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="p-4 pb-4 bg-white border-t border-gray-200 flex items-center justify-between">
               <button
                 type="button"
-                className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
+                className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={closeCamera}
+                disabled={isUploading}
               >
                 Cancel
               </button>
@@ -851,9 +871,16 @@ export default function PhotoUpload({
                 type="button"
                 className={`px-4 py-2 text-sm rounded-md ${cameraReady ? 'bg-brand-primary text-white hover:bg-brand-primary-hover' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
                 onClick={capturePhoto}
-                disabled={!cameraReady}
+                disabled={!cameraReady || isUploading}
               >
-                Capture
+                {isUploading ? (
+                  <span className="flex items-center gap-2">
+                    <LoadingSpinner size="sm" className="border-white/30 border-t-white" />
+                    Processing...
+                  </span>
+                ) : (
+                  'Capture'
+                )}
               </button>
             </div>
           </div>
@@ -871,12 +898,22 @@ export default function PhotoUpload({
                   style={{ display: 'block' }}
                 />
                 <canvas ref={canvasRef} className="hidden" />
+                {/* Error overlay for desktop */}
+                {error && (
+                  <div className="absolute top-2 left-2 right-2 z-10">
+                    <div className="bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm border border-red-200 shadow-sm flex items-center justify-between">
+                      <span>{error}</span>
+                      <button onClick={() => setError(null)} className="ml-2 text-red-800 font-bold">&times;</button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="mt-3 flex items-center justify-between">
                 <button
                   type="button"
-                  className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
+                  className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={closeCamera}
+                  disabled={isUploading}
                 >
                   Cancel
                 </button>
@@ -884,9 +921,16 @@ export default function PhotoUpload({
                   type="button"
                   className={`px-3 py-2 text-sm rounded-md ${cameraReady ? 'bg-brand-primary text-white hover:bg-brand-primary-hover' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
                   onClick={capturePhoto}
-                  disabled={!cameraReady}
+                  disabled={!cameraReady || isUploading}
                 >
-                  Capture
+                  {isUploading ? (
+                    <span className="flex items-center gap-2">
+                      <LoadingSpinner size="sm" className="border-white/30 border-t-white" />
+                      Processing...
+                    </span>
+                  ) : (
+                    'Capture'
+                  )}
                 </button>
               </div>
             </div>

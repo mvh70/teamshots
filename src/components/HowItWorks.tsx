@@ -1,14 +1,16 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import type { LandingVariant } from '@/config/landing-content';
 
 interface Step {
   id: number;
   icon: React.ReactNode;
+  image?: string;
   title: string;
   description: string;
   duration: string;
@@ -17,33 +19,48 @@ interface Step {
 // Step icons - reusable across variants
 const STEP_ICONS = {
   upload: (
-    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
     </svg>
   ),
   team: (
-    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
     </svg>
   ),
   customize: (
-    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  ),
+  sliders: (
+    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110 4m0-4v2m0-6V4" />
+    </svg>
+  ),
+  paperPlane: (
+    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+    </svg>
+  ),
+  mobilePhone: (
+    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+    </svg>
+  ),
+  downloadFolder: (
+    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>
   ),
   check: (
-    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  download: (
-    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   sparkle: (
-    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
     </svg>
   ),
 };
@@ -51,11 +68,10 @@ const STEP_ICONS = {
 // Icon mapping per variant and step
 const VARIANT_ICONS: Record<LandingVariant, Record<number, React.ReactNode>> = {
   teamshotspro: {
-    1: STEP_ICONS.upload,
-    2: STEP_ICONS.team,
-    3: STEP_ICONS.customize,
-    4: STEP_ICONS.check,
-    5: STEP_ICONS.download,
+    1: STEP_ICONS.sliders,
+    2: STEP_ICONS.paperPlane,
+    3: STEP_ICONS.mobilePhone,
+    4: STEP_ICONS.downloadFolder,
   },
   photoshotspro: {
     1: STEP_ICONS.upload,
@@ -67,6 +83,18 @@ const VARIANT_ICONS: Record<LandingVariant, Record<number, React.ReactNode>> = {
     2: STEP_ICONS.customize,
     3: STEP_ICONS.sparkle,
   },
+};
+
+// Step images for TeamShotsPro
+const VARIANT_IMAGES: Record<LandingVariant, Record<number, string>> = {
+  teamshotspro: {
+    1: '/images/how-it-works/step-1-v2.png',
+    2: '/images/how-it-works/step-2-v3.png',
+    3: '/images/how-it-works/step-3-v2.png',
+    4: '/images/how-it-works/step-4-v2.png',
+  },
+  photoshotspro: {},
+  coupleshotspro: {},
 };
 
 interface HowItWorksProps {
@@ -84,13 +112,15 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
   // Build steps dynamically based on variant
   const STEPS: Step[] = useMemo(() => {
     const icons = VARIANT_ICONS[variant] || VARIANT_ICONS.teamshotspro;
-    const stepCount = variant === 'teamshotspro' ? 5 : 3;
-    
+    const images = VARIANT_IMAGES[variant] || {};
+    const stepCount = variant === 'teamshotspro' ? 4 : 3;
+
     return Array.from({ length: stepCount }, (_, i) => {
       const stepNum = i + 1;
       return {
         id: stepNum,
         icon: icons[stepNum] || STEP_ICONS.check,
+        image: images[stepNum],
         title: t(`steps.${stepNum}.title`),
         description: t(`steps.${stepNum}.description`),
         duration: t(`steps.${stepNum}.duration`),
@@ -98,8 +128,7 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
     });
   }, [variant, t]);
 
-  // Intersection observer for visibility animation - intentional client-only pattern
-  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
+  // Intersection observer for visibility animation
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -117,193 +146,173 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
 
     return () => observer.disconnect();
   }, []);
-  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
+
+  // Determine grid columns class based on step count
+  // Using explicit class strings so Tailwind detects them
+  const gridColsClass = STEPS.length === 4 ? 'md:grid-cols-4' : 'md:grid-cols-3';
 
   return (
-    <section id="how-it-works" className="py-20 sm:py-24 lg:py-32 bg-bg-gray-50 relative grain-texture">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-24 lg:mb-32">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
+    <section id="how-it-works" className="py-24 sm:py-32 bg-bg-gray-50 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-primary/5 rounded-full blur-3xl -translate-y-1/2" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-brand-secondary/5 rounded-full blur-3xl translate-y-1/3" />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
+        {/* Header Section */}
+        <div className={`text-center mb-20 md:mb-28 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          }`}>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6 leading-[1.1]">
             {t('title')}
           </h2>
-          <p className="text-lg sm:text-xl md:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-text-body max-w-2xl mx-auto leading-relaxed">
             {t('subtitle')}
           </p>
         </div>
 
-        {/* Steps Grid - 3 columns on desktop, wrapping naturally */}
-        <div className="max-w-6xl mx-auto">
-          {/* First row: up to 3 steps */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 ${STEPS.length > 3 ? 'mb-8' : ''}`}>
-            {STEPS.slice(0, 3).map((step, index) => (
-              <div
-                key={step.id}
-                className={`group transform transition-all duration-700 delay-${index * 150} ${
-                  isVisible 
-                    ? 'opacity-100 translate-y-0' 
-                    : 'opacity-0 translate-y-16'
-                }`}
-                onMouseEnter={() => setActiveStep(step.id)}
-              >
-                {/* Card with Enhanced Styling */}
-                <div className={`
-                  relative h-full bg-bg-white rounded-3xl p-8 
-                  transition-all duration-500 cursor-pointer
+        {/* Dynamic Timeline Steps */}
+        <div className="relative">
+
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-6">
+            {STEPS.map((step, index) => (
+              <Fragment key={step.id}>
+                <div
+                  className={`group relative flex flex-col items-center text-center transition-all duration-700 flex-1 max-w-sm ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                    }`}
+                  style={{ transitionDelay: `${index * 150}ms` }}
+                  onMouseEnter={() => setActiveStep(step.id)}
+                >
+
+                  {/* Card Container */}
+                  <div className={`
+                  w-full bg-bg-white rounded-2xl relative overflow-hidden
+                  border border-gray-100
+                  transition-all duration-500 ease-out flex flex-col
                   ${activeStep === step.id
-                    ? 'shadow-depth-2xl shadow-brand-primary/30 border-2 border-brand-primary transform scale-105 ring-4 ring-brand-primary/10'
-                    : 'shadow-depth-lg border-2 border-brand-primary-lighter/30 hover:shadow-depth-2xl hover:border-brand-primary-lighter hover:-translate-y-3 hover:ring-2 hover:ring-brand-primary/5'
-                  }
+                      ? 'shadow-depth-xl -translate-y-2 ring-1 ring-brand-primary/20'
+                      : 'shadow-depth-md hover:shadow-depth-lg hover:-translate-y-1'
+                    }
                 `}>
-                  {/* Icon Circle with Enhanced Styling */}
-                  <div className="flex justify-center mb-6">
-                    <div className={`
-                      w-20 h-20 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center
+                    {step.image ? (
+                      <div className="w-full aspect-[4/3] relative overflow-hidden bg-gray-50 border-b border-gray-100">
+                        <Image
+                          src={step.image}
+                          alt={step.title}
+                          fill
+                          className={`object-cover transition-transform duration-700 ${activeStep === step.id ? 'scale-105' : 'scale-100 group-hover:scale-105'
+                            }`}
+                        />
+                        {/* Interaction Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-bg-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      </div>
+                    ) : (
+                      /* Icon Area for non-image variants */
+                      <div className={`
+                      w-16 h-16 mx-auto mt-8 mb-2 rounded-2xl flex items-center justify-center p-3.5
                       transition-all duration-500
                       ${activeStep === step.id
-                        ? 'bg-gradient-to-br from-brand-primary to-brand-primary-hover text-bg-white scale-110 shadow-depth-xl shadow-brand-primary/40'
-                        : 'bg-brand-primary-light text-brand-primary group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-brand-primary group-hover:to-brand-primary-hover group-hover:text-bg-white group-hover:shadow-depth-xl group-hover:shadow-brand-primary/20 shadow-depth-md'
-                      }
+                          ? 'bg-gradient-to-br from-brand-primary to-brand-primary-hover text-bg-white shadow-depth-lg shadow-brand-primary/25 rotate-3'
+                          : 'bg-bg-gray-50 text-text-muted group-hover:bg-brand-primary/5 group-hover:text-brand-primary group-hover:-rotate-3'
+                        }
                     `}>
-                      <div className="w-8 h-8 lg:w-10 lg:h-10">
                         {step.icon}
+                      </div>
+                    )}
+
+                    {/* Text Content */}
+                    <div className="p-6 xl:p-8 pt-6 flex-grow flex flex-col items-center">
+                      <h3 className={`text-xl font-bold mb-3 font-display transition-colors duration-300 ${activeStep === step.id ? 'text-text-dark' : 'text-text-body'}`}>
+                        {step.title}
+                      </h3>
+
+                      <p className="text-text-muted leading-relaxed text-sm md:text-base mb-6">
+                        {step.description}
+                      </p>
+
+                      {/* Duration Capsule */}
+                      <div className={`
+                      mt-auto inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide
+                      transition-colors duration-300
+                      ${activeStep === step.id
+                          ? 'bg-brand-secondary/10 text-brand-secondary-text'
+                          : 'bg-gray-100 text-text-muted'
+                        }
+                    `}>
+                        <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {step.duration}
                       </div>
                     </div>
                   </div>
-
-                  {/* Content */}
-                  <h3 className={`
-                    text-xl lg:text-2xl xl:text-3xl font-bold mb-5 text-center font-display leading-tight
-                    transition-colors duration-300
-                    ${activeStep === step.id ? 'text-brand-primary' : 'text-text-dark'}
-                  `}>
-                    {step.title}
-                  </h3>
-                  
-                  <p className="text-base lg:text-lg text-text-body text-center leading-relaxed mb-6">
-                    {step.description}
-                  </p>
-
-                  {/* Duration Badge - at bottom */}
-                  <div className="flex justify-center mt-auto">
-                    <span className={`
-                      inline-flex items-center text-sm font-bold px-5 py-2.5 rounded-full
-                      transition-all duration-300
-                      ${activeStep === step.id
-                        ? 'bg-gradient-to-r from-brand-cta to-brand-cta-hover text-bg-white shadow-depth-lg shadow-brand-cta-shadow/50 scale-105'
-                        : 'bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-bg-white shadow-depth-md'
-                      }
-                    `}>
-                      {step.duration}
-                    </span>
-                  </div>
                 </div>
-              </div>
+                {/* Arrow between steps - hidden on mobile, shown on desktop */}
+                {index < STEPS.length - 1 && (
+                  <div className={`hidden md:flex items-center justify-center transition-all duration-700 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
+                    }`}
+                    style={{ transitionDelay: `${(index + 1) * 150}ms` }}
+                  >
+                    <svg
+                      className="w-12 h-12 text-brand-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </Fragment>
             ))}
           </div>
-
-          {/* Second row - centered 2 columns (only for 5-step flows) */}
-          {STEPS.length > 3 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10 max-w-4xl mx-auto">
-            {STEPS.slice(3, 5).map((step, index) => (
-              <div
-                key={step.id}
-                className={`group transform transition-all duration-700 delay-${(index + 3) * 150} ${
-                  isVisible 
-                    ? 'opacity-100 translate-y-0' 
-                    : 'opacity-0 translate-y-16'
-                }`}
-                onMouseEnter={() => setActiveStep(step.id)}
-              >
-                {/* Card with Enhanced Styling */}
-                <div className={`
-                  relative h-full bg-bg-white rounded-3xl p-8 
-                  transition-all duration-500 cursor-pointer
-                  ${activeStep === step.id
-                    ? 'shadow-depth-2xl shadow-brand-primary/30 border-2 border-brand-primary transform scale-105 ring-4 ring-brand-primary/10'
-                    : 'shadow-depth-lg border-2 border-brand-primary-lighter/30 hover:shadow-depth-2xl hover:border-brand-primary-lighter hover:-translate-y-3 hover:ring-2 hover:ring-brand-primary/5'
-                  }
-                `}>
-                  {/* Icon Circle with Enhanced Styling */}
-                  <div className="flex justify-center mb-6">
-                    <div className={`
-                      w-20 h-20 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center
-                      transition-all duration-500
-                      ${activeStep === step.id
-                        ? 'bg-gradient-to-br from-brand-primary to-brand-primary-hover text-bg-white scale-110 shadow-depth-xl shadow-brand-primary/40'
-                        : 'bg-brand-primary-light text-brand-primary group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-brand-primary group-hover:to-brand-primary-hover group-hover:text-bg-white group-hover:shadow-depth-xl group-hover:shadow-brand-primary/20 shadow-depth-md'
-                      }
-                    `}>
-                      <div className="w-8 h-8 lg:w-10 lg:h-10">
-                        {step.icon}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <h3 className={`
-                    text-xl lg:text-2xl xl:text-3xl font-bold mb-5 text-center font-display leading-tight
-                    transition-colors duration-300
-                    ${activeStep === step.id ? 'text-brand-primary' : 'text-text-dark'}
-                  `}>
-                    {step.title}
-                  </h3>
-                  
-                  <p className="text-base lg:text-lg text-text-body text-center leading-relaxed mb-6">
-                    {step.description}
-                  </p>
-
-                  {/* Duration Badge - at bottom */}
-                  <div className="flex justify-center mt-auto">
-                    <span className={`
-                      inline-flex items-center text-sm font-bold px-5 py-2.5 rounded-full
-                      transition-all duration-300
-                      ${activeStep === step.id
-                        ? 'bg-gradient-to-r from-brand-cta to-brand-cta-hover text-bg-white shadow-depth-lg shadow-brand-cta-shadow/50 scale-105'
-                        : 'bg-gradient-to-r from-brand-secondary to-brand-secondary-hover text-bg-white shadow-depth-md'
-                      }
-                    `}>
-                      {step.duration}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          )}
         </div>
 
         {/* CTA Section */}
-        <div className="text-center mt-20">
-          {/* Total Time Badge */}
-          <div className="inline-flex items-center bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary text-bg-white px-10 py-5 rounded-full shadow-depth-2xl shadow-brand-primary/30 mb-10 ring-4 ring-brand-primary/10">
-            <svg className="w-7 h-7 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-lg font-semibold">
-              {t('totalTime')} <span className="text-3xl font-bold ml-3">{t('totalTimeValue')}</span>
-            </span>
-          </div>
-          
-          {/* CTA Button */}
-          <div className="space-y-6">
-            <Link
-              href="/auth/signup"
-              onClick={() =>
-                track('cta_clicked', {
-                  placement: 'how_it_works',
-                  action: 'signup',
-                })
-              }
-              className="inline-block bg-gradient-to-r from-brand-cta to-brand-cta-hover text-bg-white px-16 py-7 rounded-2xl font-bold text-xl hover:shadow-depth-2xl hover:shadow-brand-cta-shadow/50 transition-all duration-300 shadow-depth-xl transform hover:-translate-y-2 hover:scale-[1.03] active:scale-[0.97] focus:outline-none focus:ring-4 focus:ring-brand-cta-ring focus:ring-offset-2 ring-offset-bg-gray-50"
-            >
-              {t('cta')}
-            </Link>
-            <p className="text-base lg:text-lg text-text-muted max-w-2xl mx-auto font-medium">
-              {t('guarantee')}
-            </p>
+        <div className={`mt-20 md:mt-24 text-center transition-all duration-1000 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          }`}>
+          <div className="bg-bg-white p-1 rounded-2xl inline-block shadow-depth-xl shadow-gray-200/50">
+            <div className="bg-bg-gray-50 rounded-xl px-8 py-10 sm:px-12 sm:py-12 border border-gray-100/50">
+              <div className="flex flex-col md:flex-row items-center gap-8 justify-center">
+
+                {/* Total Time */}
+                <div className="flex flex-col items-center md:items-end">
+                  <span className="text-text-muted text-sm font-medium uppercase tracking-wider mb-1">{t('totalTime')}</span>
+                  <span className="text-3xl font-display font-bold text-text-dark">{t('totalTimeValue')}</span>
+                </div>
+
+                <div className="hidden md:block w-px h-16 bg-gray-200"></div>
+
+                {/* Primary Action */}
+                <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                  <Link
+                    href="/auth/signup"
+                    onClick={() =>
+                      track('cta_clicked', {
+                        placement: 'how_it_works',
+                        action: 'signup',
+                      })
+                    }
+                    className="inline-flex items-center justify-center px-8 py-4 bg-brand-cta text-bg-white font-bold text-lg rounded-xl hover:bg-brand-cta-hover transition-all duration-300 shadow-depth-lg hover:shadow-depth-xl hover:-translate-y-1 focus:ring-4 focus:ring-brand-cta/20"
+                  >
+                    <span>{t('cta')}</span>
+                    <svg className="w-5 h-5 ml-2 -mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </Link>
+                </div>
+
+              </div>
+            </div>
           </div>
         </div>
+
       </div>
     </section>
   );

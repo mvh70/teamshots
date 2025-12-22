@@ -32,12 +32,13 @@
         "cta": "Obtén retratos profesionales para tu equipo",
         "ctaSubtext": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
         "ctaAria": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso.",
-        "noCreditCard": "No se requiere tarjeta de crédito",
+        "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
         "badge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos"
       },
       "gallery": {
         "title": "De selfies normales a retratos profesionales",
-        "subtitle": "Mira cómo transformamos fotos ordinarias en retratos profesionales que realmente impresionan a clientes y reclutadores. Sin cámara profesional ni fotógrafo."
+        "subtitle": "Mira cómo transformamos fotos ordinarias en retratos profesionales que realmente impresionan a clientes y reclutadores. Sin cámara profesional ni fotógrafo.",
+        "cta": "Haz que tu equipo se vea así hoy"
       },
       "trust": {
         "title": "¿Por qué equipos eligen TeamShotsPro sobre todos los demás?",
@@ -58,8 +59,8 @@
         }
       },
       "howItWorks": {
-        "title": "De caos de fotos de equipo a 'listo' en 5 minutos",
-        "subtitle": "Sin dolores de cabeza de coordinación. Sin proveedores externos. Solo cinco pasos simples y listo.",
+        "title": "Estandariza el look de tu equipo sin la pesadilla logística",
+        "subtitle": "Configuras un estilo acorde a tu marca una vez (por ejemplo, fondo, logo) e invitas a los miembros de tu equipo. Eso es todo. Los miembros de tu equipo recibirán una invitación y podrán generar sus propias fotos, sin fricción y sin registro. Ves todas las fotos en el panel de administración y seleccionas la mejor.",
         "totalTime": "Tiempo total:",
         "totalTimeValue": "5 minutos",
         "cta": "¡Obtén retratos profesionales para tu equipo!",
@@ -67,13 +68,13 @@
         "steps": {
           "1": {
             "title": "Configura tu estilo de marca",
-            "description": "Elige el fondo y sube tu logo en 30 segundos.",
-            "duration": "30s"
+            "description": "Fondos, logo, estilo de ropa. Tú decides qué está fijo y qué pueden cambiar los miembros del equipo (por ejemplo, expresión o colores de ropa).",
+            "duration": "1 min"
           },
           "2": {
             "title": "Invita a tu equipo",
-            "description": "Envía enlaces personalizados. Cada persona sube su selfie desde cualquier dispositivo.",
-            "duration": "1 min"
+            "description": "Invita a tu equipo (carga masiva disponible). Recibirán un enlace mágico. Sin cuadrículas de programación, sin Tetris de calendario. Sigue el progreso en tu panel de control.",
+            "duration": "30s"
           },
           "3": {
             "title": "Retratos individuales generados",
@@ -116,12 +117,13 @@
         "cta": "Obtén tus retratos profesionales",
         "ctaSubtext": "Obtén tus retratos profesionales en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
         "ctaAria": "Obtén tus retratos profesionales en un estilo predefinido al registrarte. Sin compromiso.",
-        "noCreditCard": "No se requiere tarjeta de crédito",
+        "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
         "badge": "Retratos profesionales sin la molestia del estudio"
       },
       "gallery": {
         "title": "De selfies casuales a retratos profesionales",
-        "subtitle": "Mira cómo transformamos fotos cotidianas en retratos impresionantes perfectos para LinkedIn, apps de citas y perfiles profesionales."
+        "subtitle": "Mira cómo transformamos fotos cotidianas en retratos impresionantes perfectos para LinkedIn, apps de citas y perfiles profesionales.",
+        "cta": "Haz que tu equipo se vea así hoy"
       },
       "trust": {
         "title": "¿Por qué la gente elige PhotoShotsPro?",
@@ -186,7 +188,7 @@
     "joinWaitlist": "Obtén retratos profesionales para tu equipo",
     "freeCtaSubtext": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Lo entendemos, quieres probar antes de comprometerte.",
     "freeCtaAria": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso.",
-    "noCreditCard": "No se requiere tarjeta de crédito",
+    "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
     "joinedBadge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos",
     "freeOffer": "Obtén 1 generación gratis al registrarte"
   },
@@ -196,7 +198,8 @@
     "before": "Antes",
     "after": "Después",
     "dragToCompare": "Arrastra para comparar",
-    "generatedIn": "Generado en 45 segundos"
+    "generatedIn": "Generado en 45 segundos",
+    "cta": "Haz que tu equipo se vea así hoy"
   },
   "trust": {
     "title": "¿Por qué equipos eligen TeamShotsPro sobre todos los demás?",
@@ -817,7 +820,7 @@
         },
         "nextSteps": "Siguiente paso",
         "howItWorks": {
-          "title": "Cómo funciona",
+          "title": "Estandariza el look de tu equipo sin la pesadilla logística",
           "organizer": {
             "step1": {
               "title": "Estás en un plan pagado",
@@ -1319,6 +1322,7 @@
       "viewOnly": "Solo visualización - trabajo aprobado de miembros del equipo"
     },
     "generating": "Generando...",
+    "finalizing": "Finalizando...",
     "actions": {
       "download": "Descargar",
       "regenerate": "Reintentar",
@@ -1408,8 +1412,8 @@
       "title": "Elige Tu Selfie",
       "subtitle": "Selecciona una selfie para usar en la generación, o sube una nueva.",
       "qrTip": {
-        "title": "Sube desde tu móvil",
-        "description": "Escanea este código QR con tu móvil para subir selfies directamente desde tu galería."
+        "title": "Toma o sube desde tu computadora o móvil",
+        "description": "Puedes usar el código QR para tomar o subir selfies desde tu móvil."
       }
     }
   },
@@ -1417,8 +1421,10 @@
     "title": "Sube desde tu móvil",
     "description": "Escanea este código QR para subir selfies desde tu dispositivo móvil.",
     "scanToUpload": "Escanea para subir",
+    "scanToUsePhone": "Escanea para usar tu móvil",
     "scanForMobile": "Escanea para selfies móvil",
     "scanForSelfies": "Cambiar a móvil",
+    "useYourComputer": "Usa este dispositivo",
     "useHere": "Usar en computadora",
     "phoneConnected": "Móvil conectado",
     "expiresIn": "Expira en {time}",
@@ -1638,20 +1644,21 @@
         },
         "swipeHint": "Desliza o toca Siguiente para continuar",
         "intro": {
-          "kicker": "Antes de generar",
-          "title": "Personaliza tus fotos profesionales",
+          "kicker": "",
+          "title": "Ahora, personaliza tu foto",
           "subtitle": "Estás a punto de personalizar cómo se verán tus fotos.",
-          "body": "Estás a punto de personalizar cómo se verán tus fotos. Cada tarjeta controla una parte de la sesión. Desliza y ajusta según tus preferencias.",
-          "bodyDesktop": "Estás a punto de personalizar cómo se verán tus fotos. Cada sección a continuación controla un aspecto diferente de tu foto profesional.",
+          "body": "Puedes cambiar el fondo, la pose, la expresión, etc. En la siguiente página, puedes personalizar cada uno de ellos, excepto los establecidos por el administrador de tu equipo.",
+          "bodyDesktop": "Puedes cambiar cómo se ve tu foto, el fondo, la pose, la expresión, etc. En la siguiente página, puedes personalizar cada uno de ellos, excepto los establecidos por el administrador de tu equipo",
           "swipe": "Desliza a la derecha para avanzar, a la izquierda para volver. También puedes usar los botones de navegación a continuación.",
           "scrollDesktop": "Desplázate hacia abajo para ver todas las opciones de personalización. Ajusta cada configuración según tus preferencias.",
-          "editable": "La insignia con destellos significa que puedes editar esta configuración. Ajusta hasta que coincida con tus preferencias.",
-          "locked": "La insignia con candado significa que el administrador de tu equipo estableció esto. Puedes verla pero no cambiarla para mantener la consistencia.",
-          "skip": "No volver a mostrar"
+          "editable": "El icono de estrellas significa que puedes editar esta configuración. Ajusta hasta que coincida con tus preferencias.",
+          "locked": "El icono de candado significa que el administrador de tu equipo fijó estos. Puedes verlos pero no cambiar para mantener la consistencia.",
+          "skip": "No volver a mostrar",
+          "continueButton": "Continuar para personalizar"
         },
         "selfieTips": {
           "kicker": "Obtén los mejores resultados",
-          "title": "Consejos para selfies increíbles",
+          "title": "Primero, toma o sube tus selfies",
           "body": "Las fotos geniales empiezan con buenas selfies. Sigue estos consejos para obtener los mejores resultados.",
           "skip": "No volver a mostrar",
           "angles": {
@@ -1667,8 +1674,8 @@
             "desc": "Esto muestra a la IA tus proporciones corporales para que no tenga que adivinar."
           },
           "minimum": {
-            "title": "Sube al menos 2",
-            "desc": "Más variedad significa mejores resultados. Lo ideal son 3-5 selfies."
+            "title": "Lo ideal son 3-4 selfies. El mínimo es 2.",
+            "desc": "Cuanta más información le des sobre tu rostro y tu cuerpo, menos tiene que adivinar."
           }
         }
       },
@@ -1695,7 +1702,7 @@
         "userStyle": "Configuración de Estilo de Usuario",
         "userStyleDesc": "Preferencias de ropa, expresión e iluminación",
         "customizable": "Personaliza tu foto",
-        "customizableDesc": "Hazla tu mejor y más hermosa versión",
+        "customizableDesc": "Selecciona tu elección para cada parte editable",
         "preset": "Preajustes del equipo",
         "presetDesc": "Estos están fijos para tu equipo"
       },
@@ -1706,15 +1713,15 @@
         },
         "branding": {
           "title": "Marca",
-          "description": "Opciones de logo y marca"
+          "description": "Establece las opciones de logo y marca"
         },
         "clothing": {
           "title": "Ropa",
-          "description": "Estilo de ropa y accesorios"
+          "description": "Elige tu estilo de ropa y accesorios"
         },
         "clothingColors": {
           "title": "Colores de Ropa",
-          "description": "Colores para artículos de ropa"
+          "description": "Elige tus colores para artículos de ropa"
         },
         "customClothing": {
           "title": "Ropa Personalizada",
@@ -1730,7 +1737,7 @@
         },
         "expression": {
           "title": "Expresión",
-          "description": "Expresión facial y estado de ánimo"
+          "description": "Elige tu expresión facial y estado de ánimo"
         },
         "lighting": {
           "title": "Iluminación",
@@ -1738,7 +1745,7 @@
         },
         "pose": {
           "title": "Pose",
-          "description": "Pose corporal y posicionamiento"
+          "description": "Elige tu pose corporal y posicionamiento"
         }
       },
       "background": {
@@ -1747,8 +1754,10 @@
         "predefined": "Predefinido",
         "officePrompt": "Descripción de Oficina",
         "officePromptPlaceholder": "Describe el ambiente de oficina...",
-        "neutralColor": "Color de Fondo",
+        "neutralColor": "Color Neutral",
+        "neutralColorDesc": "Elige tu color de fondo neutral",
         "gradientColor": "Color de Gradiente",
+        "gradientColorDesc": "Elige tu color base de gradiente",
         "customUpload": "Subir Fondo",
         "uploadPrompt": "Haz clic para subir o arrastra y suelta",
         "chooseFile": "Elegir Archivo",
@@ -2263,8 +2272,8 @@
     "selfieSelection": {
       "title": "Elige selfies para usar",
       "qrTip": {
-        "title": "Sube desde tu móvil",
-        "description": "Escanea este código QR con tu móvil para subir selfies directamente desde tu galería."
+        "title": "Toma o sube desde tu computadora o móvil",
+        "description": "Puedes usar el código QR para tomar o subir selfies desde tu móvil"
       },
       "mobile": {
         "bannerTitle": "Selecciona tus selfies",

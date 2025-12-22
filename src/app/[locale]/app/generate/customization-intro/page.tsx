@@ -129,7 +129,7 @@ export default function CustomizationIntroPage() {
         topHeader={<Header standalone showBackToDashboard />}
         flowHeader={{
           // Only show flow header content on mobile - desktop shows it in the main content area
-          kicker: isMobile ? tIntro('kicker', { default: 'Before you generate' }) : undefined,
+          kicker: undefined,
           title: isMobile ? tIntro('title', { default: 'Customize your professional headshots' }) : '',
           subtitle: isMobile ? tIntro('subtitle', { default: "You're about to customize how your photos look." }) : undefined,
           showBack: isMobile,

@@ -2,13 +2,12 @@
 
 import { ReactNode, useRef, useEffect, useState, useMemo } from 'react'
 import { OnbordaProvider as OnbordaProviderLib, Onborda, useOnborda } from 'onborda'
-import { createTranslatedTours, OnboardingContext } from '@/lib/onborda/config'
+import { createTranslatedTours, OnboardingContext, getTour } from '@/lib/onborda/config'
 import { OnbordaCard } from '@/components/onboarding/OnbordaCard'
 import { useTranslations } from 'next-intl'
 import { useOnbordaTours } from '@/lib/onborda/hooks'
 import { useOnboardingState } from '@/contexts/OnboardingContext'
 import { usePathname } from 'next/navigation'
-import { getTour } from '@/lib/onborda/config'
 
 interface OnbordaProviderProps {
   children: ReactNode
@@ -125,35 +124,68 @@ function TourStarter() {
     
     // Only process pendingTour if it's different from what we last checked
     if (pendingTour && pendingTour !== lastCheckedTourRef.current && onborda?.startOnborda && !onborda.isOnbordaVisible) {
+      // FIRST: Always check if tour is already completed before doing anything else
+      // This prevents restarting tours that have already been completed
+      const completedTours = context.completedTours || []
+      const hasCompleted = completedTours.includes(pendingTour)
+      
+      if (hasCompleted) {
+        console.log('[TourStarter] Tour already completed, clearing pending tour:', {
+          pendingTour,
+          completedTours
+        })
+        clearPendingTour()
+        lastCheckedTourRef.current = null
+        return
+      }
+      
       lastCheckedTourRef.current = pendingTour
       
-      const tour = getTour(pendingTour, t, context)
+      // Get tour - some tours like 'generation-detail' have triggerCondition: false
+      // so getTour may return undefined, but we can still access the tour directly
+      const translatedTours = createTranslatedTours(t)
+      const tour = translatedTours[pendingTour] || getTour(pendingTour, t, context)
+      
+      console.log('[TourStarter] Processing pending tour:', {
+        pendingTour,
+        tourFound: !!tour,
+        pathname,
+        isOnbordaVisible: onborda.isOnbordaVisible,
+        hasCompleted: false // Already checked above
+      })
       
       // Add path check - allow matching if pathname starts with startingPath (for sub-paths)
       // Special handling for generation-detail tour: also allow invite-dashboard paths
+      const isGenerationDetailTour = pendingTour === 'generation-detail'
       if (tour?.startingPath) {
-        const isGenerationDetailTour = pendingTour === 'generation-detail'
         const matchesStartingPath = pathname.startsWith(tour.startingPath)
         const matchesInvitePath = isGenerationDetailTour && pathname.includes('/invite-dashboard') && pathname.includes('/generations')
         
         if (!matchesStartingPath && !matchesInvitePath) {
+          console.log('[TourStarter] Path check failed, clearing pending tour:', {
+            startingPath: tour.startingPath,
+            pathname,
+            matchesStartingPath,
+            matchesInvitePath
+          })
           clearPendingTour()
           lastCheckedTourRef.current = null
           return
         }
-      }
-      
-      // Double-check database before starting (defense in depth)
-      // BUT: If pendingTour is set (via startTour), it means the tour was explicitly started
-      // and should be shown regardless of completion status (may be force-started or user wants to see it again)
-      // Only check completion for tours that are in the database pendingTours array (auto-triggered)
-      const isInDatabasePending = context.pendingTours?.includes(pendingTour)
-      if (isInDatabasePending) {
-        // Tour is in database pendingTours (auto-triggered), check if already completed
-        const completedTours = context.completedTours || []
-        const hasCompleted = completedTours.includes(pendingTour)
-        if (hasCompleted) {
+      } else if (isGenerationDetailTour) {
+        // For generation-detail tour, allow invite-dashboard paths even if tour.startingPath is not set
+        // This handles the case where getTour returns undefined due to triggerCondition: false
+        const matchesInvitePath = pathname.includes('/invite-dashboard') && pathname.includes('/generations')
+        const matchesAppPath = pathname.includes('/app/generations')
+        
+        if (!matchesInvitePath && !matchesAppPath) {
+          console.log('[TourStarter] Path check failed for generation-detail tour, clearing pending tour:', {
+            pathname,
+            matchesInvitePath,
+            matchesAppPath
+          })
           clearPendingTour()
+          lastCheckedTourRef.current = null
           return
         }
       }
@@ -181,7 +213,9 @@ function TourStarter() {
           return
         }
         try {
+          console.log('[TourStarter] Starting Onborda tour:', pendingTour)
           onborda.startOnborda(pendingTour)
+          console.log('[TourStarter] Onborda tour started successfully')
         } catch (error) {
           console.error('[TourStarter Debug] Error calling startOnborda:', error)
         }
