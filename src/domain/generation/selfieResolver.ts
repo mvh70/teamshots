@@ -2,8 +2,6 @@ import { prisma } from '@/lib/prisma'
 
 export interface ResolveSelfiesInput {
   personId: string
-  selfieId?: string
-  selfieKey?: string
   selfieIds?: string[]
   selfieKeys?: string[]
 }
@@ -13,13 +11,11 @@ export interface ResolvedSelfies {
   selfieS3Keys: string[]
 }
 
-export async function resolveSelfies({ personId, selfieId, selfieKey, selfieIds, selfieKeys }: ResolveSelfiesInput): Promise<ResolvedSelfies> {
+export async function resolveSelfies({ personId, selfieIds, selfieKeys }: ResolveSelfiesInput): Promise<ResolvedSelfies> {
   const ids: string[] = []
   const keys: string[] = []
   if (Array.isArray(selfieIds)) ids.push(...selfieIds)
-  if (selfieId) ids.push(selfieId)
   if (Array.isArray(selfieKeys)) keys.push(...selfieKeys)
-  if (selfieKey) keys.push(selfieKey)
 
   const uniqueIds = Array.from(new Set(ids))
   const uniqueKeys = Array.from(new Set(keys))

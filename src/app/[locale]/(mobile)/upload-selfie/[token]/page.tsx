@@ -329,7 +329,7 @@ export default function UploadSelfiePage() {
         {/* Approval component */}
         <div className="flex-1 flex items-center justify-center p-4">
           <SelfieApproval
-            uploadedPhotoKey={pendingApproval.key}
+            photoKey={pendingApproval.key}
             previewUrl={pendingApproval.previewUrl}
             onApprove={approvePending}
             onRetake={handleRetake}

@@ -71,12 +71,8 @@ export const fileUploadSchema = z.object({
 
 // Generation request validation
 export const generationRequestSchema = z.object({
-  selfieId: idSchema.optional(),
-  selfieKey: s3KeySchema.optional(),
   contextId: idSchema.optional(),
   style: z.string().min(1).max(100),
   prompt: z.string().min(1).max(1000),
   originalGenerationId: idSchema.optional(),
-}).refine(data => data.selfieId || data.selfieKey, {
-  message: "Either selfieId or selfieKey must be provided"
 })

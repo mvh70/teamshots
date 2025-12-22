@@ -115,7 +115,6 @@ export class GenerationService {
           id: generationId,
           personId,
           contextId: contextId || undefined,
-          uploadedPhotoKey: primarySelfieKey,
           generatedPhotoKeys: [],
           // generationType removed - now derived from person.teamId (single source of truth)
           creditSource: generationType === 'team' ? 'team' : 'individual',

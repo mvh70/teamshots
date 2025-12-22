@@ -151,8 +151,19 @@ export async function GET(
 
     // Generate authorized URL for uploaded photo
     let uploadedPhotoUrl: string | null = null
-    if (generation.uploadedPhotoKey) {
-      uploadedPhotoUrl = `/api/files/get?key=${encodeURIComponent(generation.uploadedPhotoKey)}`
+    try {
+      const styles = generation.styleSettings as unknown as Record<string, unknown> | null
+      const inputSelfies = styles && typeof styles === 'object' ? (styles['inputSelfies'] as Record<string, unknown> | undefined) : undefined
+      const keys = inputSelfies && typeof inputSelfies === 'object' ? (inputSelfies['keys'] as unknown) : undefined
+      
+      if (Array.isArray(keys)) {
+        const validKeys = keys.filter((k): k is string => typeof k === 'string')
+        if (validKeys.length > 0) {
+          uploadedPhotoUrl = `/api/files/get?key=${encodeURIComponent(validKeys[0])}`
+        }
+      }
+    } catch {
+      // ignore malformed style settings
     }
 
     // Derive generationType from person.teamId (single source of truth)

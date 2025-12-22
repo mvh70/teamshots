@@ -110,7 +110,6 @@ export class RegenerationService {
     const generation = await prisma.generation.create({
       data: {
         personId: personId,
-        uploadedPhotoKey: sourceGeneration.uploadedPhotoKey,
         contextId: sourceGeneration.contextId,
         status: 'pending',
         maxRegenerations: 0, // Regenerations cannot be regenerated
@@ -133,9 +132,10 @@ export class RegenerationService {
     })
     
     // Queue the generation job
-    const jobSelfieS3Keys = Array.isArray(storedSelfieKeys) && storedSelfieKeys.length > 0 
-      ? storedSelfieKeys 
-      : [sourceGeneration.uploadedPhotoKey]
+    if (!Array.isArray(storedSelfieKeys) || storedSelfieKeys.length === 0) {
+      throw new Error('No selfie keys found in source generation settings')
+    }
+    const jobSelfieS3Keys = storedSelfieKeys
 
     const job = await enqueueGenerationJob({
       generationId: generation.id,

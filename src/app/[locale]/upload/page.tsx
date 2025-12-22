@@ -163,14 +163,14 @@ export default function UploadPage() {
             </div>
           ) : !isApproved ? (
         <SelfieApproval
-          uploadedPhotoKey={key}
+          photoKey={key}
           onApprove={onApprove}
           onRetake={onRetake}
           onCancel={onCancel}
         />
           ) : !generationType ? (
             <GenerationTypeSelector
-              uploadedPhotoKey={key}
+              photoKey={key}
               onTypeSelected={onTypeSelected}
               userCredits={userCredits}
               hasTeamAccess={hasTeamAccess}

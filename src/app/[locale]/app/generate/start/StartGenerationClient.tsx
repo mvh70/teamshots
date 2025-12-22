@@ -532,7 +532,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
         </div>
       ) : skipUpload && shouldShowGenerationTypeSelector && !generationType ? (
         <GenerationTypeSelector
-          uploadedPhotoKey={keyFromQuery || ''}
+          photoKey={keyFromQuery || ''}
           onTypeSelected={onTypeSelected}
           userCredits={userCredits}
           hasTeamAccess={hasTeamAccess}

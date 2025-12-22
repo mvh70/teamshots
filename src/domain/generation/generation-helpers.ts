@@ -98,8 +98,6 @@ export function determineWorkflowVersion(
  * Resolve selfie S3 keys from various input formats
  */
 export async function resolveSelfieKeys(
-  selfieId?: string,
-  selfieKey?: string,
   selfieIds?: string[],
   selfieKeys?: string[]
 ): Promise<{ primaryKey: string; allKeys: string[] }> {
@@ -126,31 +124,6 @@ export async function resolveSelfieKeys(
     return {
       primaryKey: keys[0],
       allKeys: keys,
-    }
-  }
-
-  // Priority 3: Single selfie key
-  if (selfieKey) {
-    return {
-      primaryKey: selfieKey,
-      allKeys: [selfieKey],
-    }
-  }
-
-  // Priority 4: Single selfie ID
-  if (selfieId) {
-    const selfie = await prisma.selfie.findUnique({
-      where: { id: selfieId },
-      select: { key: true },
-    })
-
-    if (!selfie) {
-      throw new Error('Selfie not found')
-    }
-
-    return {
-      primaryKey: selfie.key,
-      allKeys: [selfie.key],
     }
   }
 
@@ -202,8 +175,6 @@ export async function validatePersonTeamMembership(
  */
 export async function createGenerationRecord(data: {
   personId: string
-  selfieId: string
-  uploadedPhotoKey: string
   styleSettings: PhotoStyleSettings | Record<string, unknown>
   creditSource: 'individual' | 'team'
   creditsUsed: number
@@ -215,8 +186,6 @@ export async function createGenerationRecord(data: {
   return await prisma.generation.create({
     data: {
       personId: data.personId,
-      selfieId: data.selfieId,
-      uploadedPhotoKey: data.uploadedPhotoKey,
       generatedPhotoKeys: [],
       styleSettings: data.styleSettings as unknown as Prisma.InputJsonValue,
       creditSource: data.creditSource,

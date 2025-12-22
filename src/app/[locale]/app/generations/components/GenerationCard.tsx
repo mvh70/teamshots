@@ -12,10 +12,8 @@ import { DeleteConfirmationDialog } from '@/components/generation/DeleteConfirma
 
 export type GenerationListItem = {
   id: string
-  selfieId?: string
   uploadedKey: string
   acceptedKey?: string
-  selfieKey?: string
   generatedKey?: string
   inputSelfieUrls?: string[]
   status: 'pending' | 'processing' | 'completed' | 'failed'
@@ -67,7 +65,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const [loadedGenerated, setLoadedGenerated] = useState(false)
   const [failedGenerationHidden, setFailedGenerationHidden] = useState(false)
   const failedGenerationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const beforeKey = item.selfieKey || item.uploadedKey
+  const beforeKey = item.uploadedKey
   const normalizedBeforeKey = beforeKey && beforeKey !== 'undefined' ? beforeKey : null
 
   // Use real-time status polling only for incomplete generations
@@ -393,7 +391,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
                 return
               }
               setBeforeImageError(true)
-              console.warn('Selfie image failed to load, may not be migrated to Backblaze yet:', item.selfieKey || item.uploadedKey)
+              console.warn('Selfie image failed to load, may not be migrated to Backblaze yet:', item.uploadedKey)
             }}
             onLoadingComplete={() => {
               if (beforeRetryCount !== 0) {

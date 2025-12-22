@@ -116,12 +116,13 @@ export async function GET(request: NextRequest) {
         // ignore malformed style settings
       }
 
+      const primarySelfieKey = inputSelfieKeys[0] || ''
       const inputSelfieUrls = inputSelfieKeys.map(key => `/api/files/get?key=${encodeURIComponent(key)}&${tokenParam}`)
 
       return {
         id: generation.id,
-        selfieKey: generation.uploadedPhotoKey || '',
-        selfieUrl: generation.uploadedPhotoKey ? `/api/files/get?key=${encodeURIComponent(generation.uploadedPhotoKey)}&${tokenParam}` : '',
+        selfieKey: primarySelfieKey,
+        selfieUrl: primarySelfieKey ? `/api/files/get?key=${encodeURIComponent(primarySelfieKey)}&${tokenParam}` : '',
         inputSelfieUrls,
         generatedPhotos: generation.generatedPhotoKeys.map((key, index) => ({
           id: `${generation.id}-${index}`,

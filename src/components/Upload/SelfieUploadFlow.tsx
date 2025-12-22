@@ -156,7 +156,7 @@ export default function SelfieUploadFlow({
     return (
       <div data-testid="approval-flow" className="md:static fixed inset-x-0 bottom-0 z-50 md:z-auto bg-white md:bg-transparent" style={{ transform: 'translateZ(0)' }}>
         <SelfieApproval
-          uploadedPhotoKey={pendingApproval.key}
+          photoKey={pendingApproval.key}
           previewUrl={pendingApproval.previewUrl}
           onApprove={handleApprove}
           onRetake={handleRetake}

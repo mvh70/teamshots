@@ -177,7 +177,7 @@ export default function SelectableGrid({
   if (pendingApproval) {
     return (
       <SelfieApproval
-        uploadedPhotoKey={pendingApproval.key}
+        photoKey={pendingApproval.key}
         previewUrl={pendingApproval.previewUrl}
         onApprove={approvePending}
         onRetake={handleRetake}

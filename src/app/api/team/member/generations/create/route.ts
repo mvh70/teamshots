@@ -22,7 +22,6 @@ import { extendInviteExpiry } from '@/lib/invite-utils'
 
 // Minimal validation schema aligned with /api/generations/create (now supports arrays)
 const createSchema = z.object({
-  selfieKey: z.string().min(1).optional(),
   selfieKeys: z.array(z.string()).optional(),
   selfieIds: z.array(z.string()).optional(),
   contextId: z.string().optional(),
@@ -67,7 +66,7 @@ export async function POST(request: NextRequest) {
     })
 
     const body = await request.json()
-    const { selfieKey, selfieKeys, selfieIds, contextId, styleSettings, prompt, workflowVersion, debugMode } = createSchema.parse(body)
+    const { selfieKeys, selfieIds, contextId, styleSettings, prompt, workflowVersion, debugMode } = createSchema.parse(body)
     
     // Determine workflow version
     const finalWorkflowVersion = determineWorkflowVersion(workflowVersion)
@@ -91,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // OPTIMIZATION: Run independent queries in parallel
     const [resolved, teamUser] = await Promise.all([
-      resolveSelfies({ personId: invite.person.id, selfieKey, selfieKeys, selfieIds }),
+      resolveSelfies({ personId: invite.person.id, selfieKeys, selfieIds }),
       // Check team credits (invitees may have personal allocation tracked separately)
       prisma.user.findFirst({
         where: { person: { teamId } },
@@ -204,8 +203,6 @@ export async function POST(request: NextRequest) {
 
     const generation = await createGenerationRecord({
       personId: invite.person.id,
-      selfieId: primarySelfie.id,
-      uploadedPhotoKey: primarySelfie.key,
       styleSettings: serializedStyleSettings,
       creditSource: 'team',
       creditsUsed: PRICING_CONFIG.credits.perGeneration,

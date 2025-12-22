@@ -131,7 +131,6 @@ model Generation {
   contextId              String?
   generatedPhotoKeys     String[]
   personId               String
-  uploadedPhotoKey       String
   adminApproved          Boolean   @default(false)
   moderationDate         DateTime?
   moderationPassed       Boolean   @default(false)

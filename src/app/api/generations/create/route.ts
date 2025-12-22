@@ -37,8 +37,6 @@ import {
 
 // Request validation schema
 const createGenerationSchema = z.object({
-  selfieId: z.string().optional(), // Database ID for selfie (single)
-  selfieKey: z.string().optional(), // Alternative: S3 key for selfie (single)
   selfieIds: z.array(z.string()).optional(), // NEW: multiple selfies by ID
   selfieKeys: z.array(z.string()).optional(), // NEW: multiple selfies by S3 key
   contextId: z.string().optional(),
@@ -90,14 +88,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createGenerationSchema.parse(body)
     
-    const { selfieId, selfieKey, selfieIds, selfieKeys, contextId, styleSettings, prompt, isRegeneration, originalGenerationId, workflowVersion, debugMode, stopAfterStep } = validatedData
+    const { selfieIds, selfieKeys, contextId, styleSettings, prompt, isRegeneration, originalGenerationId, workflowVersion, debugMode, stopAfterStep } = validatedData
     
     // Determine workflow version
     const finalWorkflowVersion = determineWorkflowVersion(workflowVersion)
 
     // Determine requested selfies (multiple preferred)
-    const requestedIds = Array.isArray(selfieIds) ? selfieIds : (selfieId ? [selfieId] : [])
-    const requestedKeys = Array.isArray(selfieKeys) ? selfieKeys : (selfieKey ? [selfieKey] : [])
+    const requestedIds = selfieIds || []
+    const requestedKeys = selfieKeys || []
 
     // Handle regeneration early - no selfies needed, get person from original generation
     if (isRegeneration && originalGenerationId) {
@@ -641,7 +639,6 @@ export async function POST(request: NextRequest) {
       data: {
         personId: primarySelfie.personId,
         contextId: resolvedContextId,
-        uploadedPhotoKey: primarySelfie.key,
         generatedPhotoKeys: [], // Will be populated by worker
         // generationType removed - now derived from person.teamId (single source of truth)
         creditSource: enforcedCreditSource,

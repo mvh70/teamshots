@@ -6,7 +6,7 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import { Grid } from '@/components/ui'
 
 interface GenerationTypeSelectorProps {
-  uploadedPhotoKey: string
+  photoKey: string
   onTypeSelected: (type: 'personal' | 'team') => void
   userCredits: {
     individual: number
@@ -17,7 +17,7 @@ interface GenerationTypeSelectorProps {
 }
 
 export default function GenerationTypeSelector({
-  uploadedPhotoKey,
+  photoKey,
   onTypeSelected,
   userCredits,
   hasTeamAccess,
@@ -53,7 +53,7 @@ export default function GenerationTypeSelector({
           </div>
           <div>
             <p className="text-sm font-medium text-gray-900">Photo uploaded</p>
-            <p className="text-xs text-gray-500 font-mono">{uploadedPhotoKey}</p>
+            <p className="text-xs text-gray-500 font-mono">{photoKey}</p>
           </div>
         </div>
       </div>
