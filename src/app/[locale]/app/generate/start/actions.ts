@@ -139,7 +139,7 @@ export async function getGenerationPageData(keyFromQuery?: string): Promise<Gene
   ])
 
   // Process owned packages
-  const ownedPackages = userPackages.map(up => {
+  const ownedPackages = userPackages.map((up: { packageId: string }) => {
     const packageConfig = getPackageConfig(up.packageId)
     const packageMetadata = PACKAGES_CONFIG.active[up.packageId as keyof typeof PACKAGES_CONFIG.active]
     
