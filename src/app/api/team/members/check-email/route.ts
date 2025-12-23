@@ -65,13 +65,15 @@ export async function POST(request: NextRequest) {
     const emailLower = email.toLowerCase()
 
     // Check if email is already a team member (active or revoked)
+    type TeamMember = typeof team.teamMembers[number];
     const isMember = team.teamMembers.some(
-      member => member.email?.toLowerCase() === emailLower
+      (member: TeamMember) => member.email?.toLowerCase() === emailLower
     )
 
     // Check if there's a pending invite for this email (non-expired, not used)
+    type TeamInvite = typeof team.teamInvites[number];
     const hasPendingInvite = team.teamInvites.length > 0 && team.teamInvites.some(
-      invite => !invite.usedAt
+      (invite: TeamInvite) => !invite.usedAt
     )
 
     // Check if there's a used invite for this email (revoked members)
