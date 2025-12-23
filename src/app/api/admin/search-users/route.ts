@@ -87,7 +87,8 @@ export async function GET(request: NextRequest) {
     })
 
     // Format the results
-    const formattedUsers = users.map(user => ({
+    type UserResult = typeof users[number];
+    const formattedUsers = users.map((user: UserResult) => ({
       id: user.id,
       email: user.email,
       firstName: user.person?.firstName || '',
