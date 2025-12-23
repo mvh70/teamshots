@@ -37,8 +37,9 @@ export async function getGenerationGroupInfo(generationId: string) {
   }
 
   const group = await getGenerationGroup(generation.generationGroupId)
-  const original = group.find(g => g.isOriginal)
-  const regenerations = group.filter(g => !g.isOriginal)
+  type GroupGeneration = typeof group[number];
+  const original = group.find((g: GroupGeneration) => g.isOriginal)
+  const regenerations = group.filter((g: GroupGeneration) => !g.isOriginal)
 
   return {
     original,
