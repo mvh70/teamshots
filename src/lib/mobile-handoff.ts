@@ -75,8 +75,9 @@ export async function createMobileHandoffToken(
           select: { id: true }
         })
         
+        type TokenId = typeof oldestTokens[number];
         await prisma.mobileHandoffToken.deleteMany({
-          where: { id: { in: oldestTokens.map(t => t.id) } }
+          where: { id: { in: oldestTokens.map((t: TokenId) => t.id) } }
         })
       }
     }
