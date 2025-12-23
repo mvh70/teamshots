@@ -4,7 +4,6 @@ import { getRequestHeader } from '@/lib/server-headers';
 import { Env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
 import { PRICING_CONFIG, getPricingConfigKey } from '@/config/pricing';
-import { PrismaClient } from '@prisma/client';
 import { Logger } from '@/lib/logger';
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils';
 import { generatePasswordSetupToken } from '@/domain/auth/password-setup';
@@ -27,8 +26,8 @@ const isProduction = Env.string('NODE_ENV', 'development') === 'production';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Type for Prisma transaction client
-type PrismaTransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>;
+// Type for Prisma transaction client - inferred from prisma instance
+type PrismaTransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 export async function POST(request: NextRequest) {
   try {

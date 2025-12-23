@@ -236,10 +236,11 @@ export async function POST(request: NextRequest) {
           select: { id: true, key: true }
         })
         if (moreSelected.length > 1) {
-          const existingIds = new Set(selfies.map(s => s.id))
+          const existingIds = new Set(selfies.map((s: { id: string }) => s.id))
+          type SelectedSelfie = typeof moreSelected[number];
           const additionalSelfies = moreSelected
-            .filter(s => !existingIds.has(s.id))
-            .map(s => ({ id: s.id, key: s.key, personId: selfies[0].personId, person: selfies[0].person }))
+            .filter((s: SelectedSelfie) => !existingIds.has(s.id))
+            .map((s: SelectedSelfie) => ({ id: s.id, key: s.key, personId: selfies[0].personId, person: selfies[0].person }))
           selfies.push(...additionalSelfies)
         }
       } catch {}
@@ -284,7 +285,8 @@ export async function POST(request: NextRequest) {
 
     // Choose primary selfie (first) for legacy fields and relations
     const primarySelfie = selfies[0]
-    const selfieS3Keys = selfies.map(s => s.key)
+    type SelfieType = typeof selfies[number];
+    const selfieS3Keys = selfies.map((s: SelfieType) => s.key)
 
     // Debug logging removed for production security
 
