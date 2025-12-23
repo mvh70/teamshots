@@ -5,7 +5,7 @@
  * Consolidates logic previously duplicated across session-based and token-based endpoints.
  */
 
-import { prisma } from '@/lib/prisma'
+import { prisma, Prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { getPackageConfig } from '@/domain/style/packages'
 import { extractPackageId } from '@/domain/style/settings-resolver'
@@ -119,7 +119,7 @@ export class RegenerationService {
         groupIndex: nextGroupIndex,
         creditsUsed: 0, // Regenerations don't cost credits
         creditSource: creditSource,
-        styleSettings: serializedStyleSettings as unknown as Parameters<typeof prisma.generation.create>[0]['data']['styleSettings'],
+        styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
       },
     })
 

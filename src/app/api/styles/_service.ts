@@ -24,7 +24,7 @@ export async function createOrUpdateStyleServer(params: {
       data: {
         name: effectiveName,
         packageName: params.packageId,
-        settings: params.settings as unknown as Parameters<typeof prisma.context.update>[0]['data']['settings']
+        settings: params.settings as Prisma.InputJsonValue
       },
       select: { id: true }
     })
@@ -34,7 +34,7 @@ export async function createOrUpdateStyleServer(params: {
   const baseData = {
     name: effectiveName,
     packageName: params.packageId,
-    settings: params.settings as unknown as Parameters<typeof prisma.context.create>[0]['data']['settings']
+    settings: params.settings as Prisma.InputJsonValue
   }
   let dataToCreate: Parameters<typeof prisma.context.create>[0]['data'] = baseData
   if (params.scope === 'individual') {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma, Prisma } from '@/lib/prisma'
 import { sendTeamInviteEmail } from '@/lib/email'
 import { randomBytes } from 'crypto'
 import { withTeamPermission } from '@/domain/access/permissions'
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
           const newContext = await prisma.context.create({
             data: {
               name: 'Free Package Style',
-              settings: serializedSettings as unknown as Parameters<typeof prisma.context.create>[0]['data']['settings'],
+              settings: serializedSettings as Prisma.InputJsonValue,
             },
             select: { id: true },
           })

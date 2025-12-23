@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
+import { prisma, Prisma } from '@/lib/prisma'
 import { getPackageConfig } from '@/domain/style/packages'
 import type { PhotoStyleSettings, BackgroundSettings, PoseSettings } from '@/types/photo-style'
 
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
           where: { id: ctxId },
           data: {
             name: 'Free Package Style',
-            settings: serializedSettings as unknown as Parameters<typeof prisma.context.update>[0]['data']['settings'],
+            settings: serializedSettings as Prisma.InputJsonValue,
           },
         })
       } else {
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       const ctx = await prisma.context.create({
         data: {
           name: 'Free Package Style',
-          settings: serializedSettings as unknown as Parameters<typeof prisma.context.create>[0]['data']['settings'],
+          settings: serializedSettings as Prisma.InputJsonValue,
         },
         select: { id: true },
       })

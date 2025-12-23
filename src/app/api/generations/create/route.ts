@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { type Session } from 'next-auth'
+import { Prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 import { prisma } from '@/lib/prisma'
@@ -652,7 +653,7 @@ export async function POST(request: NextRequest) {
         generationGroupId,
         isOriginal,
         groupIndex,
-        styleSettings: serializedStyleSettings as unknown as Parameters<typeof prisma.generation.create>[0]['data']['styleSettings'],
+        styleSettings: serializedStyleSettings as Prisma.InputJsonValue,
       }
     })
 
