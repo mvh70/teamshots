@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Build response for all active team members
-    const usersWithCredits = team.teamMembers.map((p) => {
+    const usersWithCredits = team.teamMembers.map((p: TeamMember) => {
       let individualCredits = 0
       let teamCredits = 0
       
