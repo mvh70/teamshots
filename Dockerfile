@@ -17,7 +17,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma Client
-RUN npx prisma generate
+RUN npx prisma generate && echo "✅ Prisma client generated successfully" || (echo "❌ Prisma generate failed" && exit 1)
 
 # Build Next.js application
 RUN npm run build
