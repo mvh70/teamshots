@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       const u = new URL(url);
       // Strip existing query params to avoid stale flags (e.g., canceled=true)
       u.search = ''
-      Object.entries(params).forEach(([k, v]) => {
+      Object.entries(params).forEach(([k, v]: [string, string | undefined]) => {
         if (typeof v === 'string' && v.length) {
           u.searchParams.set(k, v);
         }

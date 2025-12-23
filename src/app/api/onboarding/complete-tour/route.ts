@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Remove the tour from pending tours if it was pending
-    pendingTours = pendingTours.filter(tour => tour !== tourName)
+    pendingTours = pendingTours.filter((tour: string) => tour !== tourName)
 
     // Update overall state based on tour completion
     if (overallState === 'not_started' && completedTours.length > 0) {

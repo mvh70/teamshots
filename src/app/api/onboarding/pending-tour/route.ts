@@ -163,7 +163,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Remove the tour from pending tours
-    pendingTours = pendingTours.filter(tour => tour !== tourName)
+    pendingTours = pendingTours.filter((tour: string) => tour !== tourName)
 
     // Store as JSON string
     const updatedState = JSON.stringify({

@@ -47,8 +47,9 @@ export async function GET(request: NextRequest) {
 
     // Calculate remaining and allocated credits for each invite
     // Uses CreditTransaction records as single source of truth for accepted invites
+    type TeamInvite = typeof user.person.team.teamInvites[number];
     const invitesWithCredits = await Promise.all(
-      user.person.team.teamInvites.map(async (invite) => {
+      user.person.team.teamInvites.map(async (invite: TeamInvite) => {
         const [remainingCredits, totalAllocated] = await Promise.all([
           getTeamInviteRemainingCredits(invite.id),
           getTeamInviteTotalAllocated(invite.id)

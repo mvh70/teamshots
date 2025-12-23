@@ -101,7 +101,7 @@ function validateS3Key(key: string): { valid: boolean; reason?: string } {
   }
 
   // Whitelist: must start with allowed prefix
-  const hasAllowedPrefix = ALLOWED_PREFIXES.some(prefix => normalizedPath.startsWith(prefix))
+  const hasAllowedPrefix = ALLOWED_PREFIXES.some((prefix: string) => normalizedPath.startsWith(prefix))
   if (!hasAllowedPrefix) {
     return { valid: false, reason: 'Path not in allowed directories' }
   }

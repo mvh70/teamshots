@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       .filter((id): id is string => Boolean(id))
     
     // Add revoked person IDs to the list for credit/generation queries
-    revokedPersonIds.forEach(id => {
+    revokedPersonIds.forEach((id: string) => {
       if (!allPersonIds.includes(id)) {
         allPersonIds.push(id)
       }
@@ -169,20 +169,23 @@ export async function GET(request: NextRequest) {
 
     // Count generations per personId in memory
     const generationCounts = new Map<string, number>()
-    allGenerations.forEach(gen => {
+    type Generation = typeof allGenerations[number];
+    allGenerations.forEach((gen: Generation) => {
       generationCounts.set(gen.personId, (generationCounts.get(gen.personId) || 0) + 1)
     })
 
     // Create maps for quick lookup
     const userCreditsMap = new Map<string, number>()
-    userCreditTransactions.forEach(tx => {
+    type UserCreditTransaction = typeof userCreditTransactions[number];
+    userCreditTransactions.forEach((tx: UserCreditTransaction) => {
       if (tx.userId) {
         userCreditsMap.set(tx.userId, (userCreditsMap.get(tx.userId) || 0) + tx.credits)
       }
     })
 
     const teamInvitesMap = new Map<string, typeof teamInvites[0]>()
-    teamInvites.forEach(invite => {
+    type TeamInvite = typeof teamInvites[number];
+    teamInvites.forEach((invite: TeamInvite) => {
       if (invite.personId) {
         teamInvitesMap.set(invite.personId, invite)
       }
@@ -204,7 +207,7 @@ export async function GET(request: NextRequest) {
     })
 
     // For persons without invites, calculate from transactions
-    personCreditTransactions.forEach(tx => {
+    personCreditTransactions.forEach((tx: PersonCreditTransaction) => {
       if (tx.personId && !personCreditsMap.has(tx.personId)) {
         personCreditsMap.set(tx.personId, (personCreditsMap.get(tx.personId) || 0) + tx.credits)
       }
