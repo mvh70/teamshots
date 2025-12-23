@@ -120,7 +120,8 @@ export async function resolveSelfieKeys(
       throw new Error('No selfies found for provided IDs')
     }
 
-    const keys = selfies.map((s) => s.key)
+    type Selfie = typeof selfies[number];
+    const keys = selfies.map((s: Selfie) => s.key)
     return {
       primaryKey: keys[0],
       allKeys: keys,
