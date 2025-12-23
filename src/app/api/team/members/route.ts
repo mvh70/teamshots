@@ -195,7 +195,7 @@ export async function GET(request: NextRequest) {
     // Credits are tracked per person, so we look at person transactions, not invite transactions
     type PersonCreditTransaction = typeof personCreditTransactions[number];
     const personCreditsMap = new Map<string, number>()
-    teamInvitesMap.forEach((invite, personId) => {
+    teamInvitesMap.forEach((invite: TeamInvite, personId: string) => {
       // If person has invite, calculate remaining allocation from person transactions
       // Get generation transactions for this person
       const personGenTransactions = personCreditTransactions.filter((tx: PersonCreditTransaction) => 
@@ -246,7 +246,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Add revoked members to the list
-    revokedInvites.forEach((invite) => {
+    revokedInvites.forEach((invite: RevokedInvite) => {
       if (!invite.person) return
       
       const p = invite.person
