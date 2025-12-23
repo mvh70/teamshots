@@ -70,7 +70,7 @@ export async function findFileOwnership(key: string): Promise<OwnershipRecord | 
         OR ("settings"->'branding'->>'logoKey') = ${trimmedKey}
         OR ("settings"->'background'->>'key') = ${trimmedKey}
       LIMIT 1
-    `.then(results => results[0] || null),
+    `.then((results: Array<{ id: string; userId: string | null; teamId: string | null }>) => results[0] || null),
   ])
 
   // Return results in priority order: selfie > generation > context
