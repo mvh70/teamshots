@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { Link } from '@/i18n/routing'
 import { useCredits } from '@/contexts/CreditsContext'
-import { PlusIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
 import { useBuyCreditsLink } from '@/hooks/useBuyCreditsLink'
 import StyleSettingsSection from '@/components/customization/StyleSettingsSection'
@@ -135,24 +135,17 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     }
   }, [skipUpload, keyFromQuery, router, isSuccess, session, markGenerationFlow, hydrated, selectedSelfies.length])
 
+  // Clear pendingGeneration flag when returning from selfie flow
   useEffect(() => {
-    // Don't run this effect if we're starting a fresh flow (will be redirected by first useEffect)
-    // This prevents stale pendingGeneration flags from setting skipUpload before redirect happens
+    // Don't run if we're starting a fresh flow (will be redirected by first useEffect)
     if (!skipUpload && !keyFromQuery && !isSuccess && session) {
       return
     }
     
-    if (!flowFlags.pendingGeneration) return
-    
-    clearGenerationFlow()
-    
-    if (!skipUpload && hasEnoughSelfies(selectedSelfies.length)) {
-      const params = new URLSearchParams(searchParamsString)
-      params.set('skipUpload', '1')
-      const query = params.toString()
-      router.replace(query ? `${pathname}?${query}` : pathname)
+    if (flowFlags.pendingGeneration) {
+      clearGenerationFlow()
     }
-  }, [flowFlags.pendingGeneration, skipUpload, keyFromQuery, isSuccess, session, selectedSelfies.length, router, pathname, searchParamsString, clearGenerationFlow])
+  }, [flowFlags.pendingGeneration, skipUpload, keyFromQuery, isSuccess, session, clearGenerationFlow])
 
   // Track if we've loaded saved colors to avoid overwriting user changes
   const hasLoadedSavedColorsRef = React.useRef(false)
@@ -256,6 +249,11 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const handleStepMetaChange = useCallback((meta: { editableSteps: number; allSteps: number; lockedSteps: number[] }) => {
     setCustomizationStepsMeta(meta)
   }, [setCustomizationStepsMeta])
+
+  const handleBackToSelfies = useCallback(() => {
+    // Navigate to the selfie selection page
+    router.push('/app/generate/selfie')
+  }, [router])
 
   const onProceed = async () => {
     if (!hasEnoughSelfies(selectedSelfies.length) || !effectiveGenerationType) {
@@ -446,7 +444,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     <>
       {/* Floating Generate Button - Top Right (Desktop) - Outside main container */}
       {skipUpload && (
-        <div className="hidden md:block fixed top-19 right-8 z-[100] pointer-events-auto">
+        <div className="hidden md:flex fixed top-19 right-8 z-[100] pointer-events-auto">
+          {/* Generate Button Area */}
           <div className="relative">
             {!hasEnoughCredits ? (
               <Link
@@ -494,15 +493,44 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                     </p>
                   </div>
                 )}
-                <GenerateButton
-                  onClick={onProceed}
-                  disabled={!canGenerate || isPending}
-                  isGenerating={isGenerating || isPending}
-                  size="md"
-                  className="!w-auto min-w-[140px]"
-                >
-                  Generate photo
-                </GenerateButton>
+                
+                {/* Buttons Container */}
+                <div className="flex gap-2">
+                  {/* Back to Selfies Button */}
+                  <button
+                    onClick={handleBackToSelfies}
+                    className="flex items-center justify-center px-4 py-3 text-base font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl border border-green-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <ChevronLeftIcon className="h-5 w-5 mr-1.5" />
+                    {t('backToSelfies')}
+                  </button>
+
+                  {/* Generate Button */}
+                  <button
+                    onClick={onProceed}
+                    disabled={!canGenerate || isPending || isGenerating}
+                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold rounded-xl transition-all duration-200 ${
+                      canGenerate && !isPending && !isGenerating
+                        ? 'bg-gradient-to-r from-brand-primary to-indigo-600 text-white hover:from-brand-primary-hover hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {isGenerating || isPending ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Starting generation...
+                      </>
+                    ) : (
+                      <>
+                        Generate photo
+                        <ChevronRightIcon className="h-5 w-5" />
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -817,7 +845,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             )}
               <GenerateButton
                 onClick={onProceed}
-                disabled={!canGenerate || isPending}
+                disabled={!canGenerate || isPending || isGenerating}
                 isGenerating={isGenerating || isPending}
                 size="md"
                 disabledReason={

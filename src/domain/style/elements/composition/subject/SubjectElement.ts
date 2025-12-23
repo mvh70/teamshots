@@ -39,57 +39,26 @@ export class SubjectElement extends StyleElement {
     if (selfieCount > 0) {
       instructions.push(
         'Attached is a composite of selfies labeled with clear labels (SUBJECT1-SELFIE1, SUBJECT1-SELFIE2, etc.)',
-        'Synthesize a single, photorealistic, and coherent identity from these images',
-        'Use the selfie that most resembles the requested pose as a basis',
-        'Use other selfies to reinforce 3D structure and facial detail'
+        'Choose the face that best matches the requested pose as the primary likeness',
+        'Use remaining selfies to reinforce 3D facial structure, hair, glasses, and fine details',
+        'Stay as close as possible to the original selfies - do not invent details unless specified',
+        'Preserve all facial features: eyes, nose, mouth, ears, eyebrows, cheeks, chin',
+        'Preserve colors: eye color, skin tone, hair color',
+        'Preserve unique details: moles, scars, freckles, hairstyle',
+        'Preserve accessories exactly as shown: glasses, earrings, watches'
       )
 
+      // Note: Specific feature descriptions (eyes, nose, mouth, skin, hair, accessories) are in instructions above
+      // Only add critical quality rules that aren't obvious from the instructions
       mustFollow.push(
         'Do NOT average or blend features in a way that creates a new person',
         'Do NOT alter the fundamental facial structure',
-        'Identity must match the selfie references exactly'
+        'Do NOT add accessories that are not visible in selfies',
+        'Do NOT remove accessories that are visible in selfies',
+        'The person must be instantly recognizable as the same individual from the selfies',
+        'No beautification or idealization - maintain authentic appearance'
       )
     }
-
-    // Face feature preservation
-    instructions.push(
-      'Carefully preserve all facial features from the source selfies:',
-      '- Form of eyes, nose, mouth, ears, eyebrows, cheeks, and chin',
-      '- Color of eyes, skin tone, and hair color',
-      '- Unique skin details like moles, scars, or freckles',
-      '- Hair style and any other unique features visible in selfies'
-    )
-
-    mustFollow.push(
-      'Eyes must match shape, color, and expression from selfies',
-      'Nose structure must be identical to source selfies',
-      'Mouth shape and size must match selfies exactly',
-      'Skin tone and texture must match source selfies',
-      'Hair color, style, and texture must match selfies',
-      'All moles, freckles, scars, and unique features must be preserved',
-      'Facial proportions must match the original person'
-    )
-
-    // Accessory preservation
-    instructions.push(
-      'If the person wears glasses in the selfies, add exactly the same glasses to the resulting image',
-      'If the person has earrings or a watch in the selfies, add exactly the same accessories'
-    )
-
-    mustFollow.push(
-      'Glasses must match the exact style from selfies (if present)',
-      'All visible accessories must be included and matched exactly',
-      'Do NOT add accessories that are not visible in selfies',
-      'Do NOT remove accessories that are visible in selfies'
-    )
-
-    // General identity rules
-    mustFollow.push(
-      'The person must be instantly recognizable as the same individual from the selfies',
-      'No beautification or idealization - maintain authentic appearance',
-      'Facial features must appear natural and not artificially enhanced',
-      'The generated person must look like they could be in a real photograph with the same individual'
-    )
 
     return {
       instructions,

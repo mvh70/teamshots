@@ -24,12 +24,12 @@ export function buildCustomClothingPrompt(settings: CustomClothingSettings): str
     // Otherwise, build description from colors
     const colorParts: string[] = []
 
-    if (settings.colors.topBase) {
-      colorParts.push(`a ${settings.colors.topBase} colored shirt/top`)
+    if (settings.colors.topLayer) {
+      colorParts.push(`a ${settings.colors.topLayer} colored outer garment (jacket/blazer/shirt)`)
     }
 
-    if (settings.colors.topCover) {
-      colorParts.push(`with a ${settings.colors.topCover} colored jacket/blazer over it`)
+    if (settings.colors.baseLayer) {
+      colorParts.push(`with a ${settings.colors.baseLayer} colored shirt underneath`)
     }
 
     if (settings.colors.bottom) {

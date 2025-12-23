@@ -49,39 +49,87 @@ const BRANDING_CONFIGS: Record<string, ClothingBrandingConfig> = {
     ]
   },
   'business-casual': {
-    placement: 'center chest area of the base layer (t-shirt, knit top, or blouse). The logo should not spill over the edge of the garment. For more realistic effect, part of the logo can be hidden behind the top layer.',
+    placement: 'Place the logo on the center chest area of the base shirt layer ONLY, positioning it as if the outer jacket were not there. The logo must be rendered as part of the base shirt fabric itself. Let the outer jacket naturally obscure portions of the logo for realistic partial visibility. CRITICAL: The logo must NOT spill over or extend onto the jacket fabric - it should exist exclusively on the base shirt layer beneath.',
     rules: [
-      'Place the provided brand logo exactly once on the center chest area of the base garment.',
+      'Render the logo as an integral part of the base shirt fabric, not as a separate overlay.',
+      'The logo belongs to the base layer only - any parts that would be covered by the jacket should simply be hidden behind it.',
+      'Do not let any portion of the logo appear on the jacket lapels, collar, or sleeves.',
+      'Partial logo visibility is expected and realistic - do not attempt to show the complete logo.',
       ...CLOTHING_BRANDING_RULES_BASE
     ]
   },
 
   // Startup style configurations
   'startup-t-shirt': {
-    placement: 'center chest area of the base garment (t-shirt, hoodie, polo, button-down)',
+    placement: 'center chest area of the t-shirt',
     rules: [
-      'Place the provided brand logo exactly once on the center chest area of the base garment.',
+      'Place the provided brand logo exactly once on the center chest area of the t-shirt.',
+      'Position the logo centered horizontally and slightly below the neckline.',
       ...CLOTHING_BRANDING_RULES_BASE
     ]
   },
   'startup-hoodie': {
-    placement: 'center chest area of the base garment (t-shirt, hoodie, polo, button-down)',
+    placement: 'center chest area of the hoodie',
     rules: [
-      'Place the provided brand logo exactly once on the center chest area of the base garment.',
+      'Place the provided brand logo exactly once on the center chest area of the hoodie.',
+      'Position the logo centered horizontally and slightly below the neckline.',
+      'Ensure the logo sits on the main body of the hoodie, not on the hood or sleeves.',
       ...CLOTHING_BRANDING_RULES_BASE
     ]
   },
   'startup-polo': {
-    placement: 'center chest area of the base garment (t-shirt, hoodie, polo, button-down)',
+    placement: 'left chest area of the polo shirt, positioned where a traditional polo logo would be',
     rules: [
-      'Place the provided brand logo exactly once on the center chest area of the base garment.',
+      'Place the provided brand logo exactly once on the left chest area of the polo shirt.',
+      'Position the logo on the upper left chest, similar to where a traditional polo emblem would be placed.',
+      'The logo should be small to medium sized, proportional to a typical polo shirt logo.',
+      'Keep the logo above the horizontal midline of the chest and to the left of the placket buttons.',
       ...CLOTHING_BRANDING_RULES_BASE
     ]
   },
   'startup-button-down': {
-    placement: 'center chest area of the base garment (t-shirt, hoodie, polo, button-down)',
+    placement: 'center chest area of the t-shirt underneath the button-down shirt',
     rules: [
-      'Place the provided brand logo exactly once on the center chest area of the base garment.',
+      'Place the provided brand logo exactly once on the center chest area of the t-shirt that is worn under the button-down shirt.',
+      'The logo should NOT be placed on the button-down shirt itself.',
+      'Ensure the logo does not spill over onto the button-down shirt.',
+      'It is perfectly acceptable for the logo to be only partially visible, with part of it hidden behind the button-down shirt for a more realistic look.',
+      'Position the logo on the t-shirt as if the button-down shirt were not there, then let the button-down naturally cover part of it.',
+      ...CLOTHING_BRANDING_RULES_BASE
+    ]
+  },
+  'startup-blouse': {
+    placement: 'center chest area of the blouse',
+    rules: [
+      'Place the provided brand logo exactly once on the center chest area of the blouse.',
+      'Position the logo centered horizontally and slightly below the neckline.',
+      ...CLOTHING_BRANDING_RULES_BASE
+    ]
+  },
+  'startup-cardigan': {
+    placement: 'center chest area of the base garment underneath the cardigan',
+    rules: [
+      'Place the provided brand logo exactly once on the center chest area of the t-shirt or dress worn under the cardigan.',
+      'The logo should NOT be placed on the cardigan itself.',
+      'It is perfectly acceptable for the logo to be only partially visible, with part of it hidden behind the cardigan for a more realistic look.',
+      'The cardigan should remain naturally open or draped, allowing the logo on the base garment to be visible.',
+      ...CLOTHING_BRANDING_RULES_BASE
+    ]
+  },
+  'startup-dress': {
+    placement: 'center chest area of the dress bodice',
+    rules: [
+      'Place the provided brand logo exactly once on the center chest area of the dress bodice.',
+      'Position the logo centered horizontally and slightly below the neckline.',
+      'Ensure the logo integrates naturally with the dress fabric.',
+      ...CLOTHING_BRANDING_RULES_BASE
+    ]
+  },
+  'startup-jumpsuit': {
+    placement: 'center chest area of the jumpsuit bodice',
+    rules: [
+      'Place the provided brand logo exactly once on the center chest area of the jumpsuit bodice.',
+      'Position the logo centered horizontally and slightly below the neckline.',
       ...CLOTHING_BRANDING_RULES_BASE
     ]
   },

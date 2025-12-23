@@ -31,7 +31,7 @@ function fileNotFoundResponse() {
 
 // SECURITY: Allowed file extensions to prevent arbitrary file access
 const ALLOWED_EXTENSIONS = new Set([
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', // Images
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', // Images
   '.mp4', '.mov', '.avi', // Videos (if supported)
   '.pdf', // Documents (if supported)
 ])

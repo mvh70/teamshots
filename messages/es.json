@@ -431,7 +431,6 @@
         "cta": "Pruébalo gratis"
       }
     },
-    "perPhotoVariation": "por foto",
     "perPhoto": "por foto",
     "chooseTheBest": "Elige la mejor.",
     "redirectingToCheckout": "Redirigiendo al checkout...",
@@ -647,7 +646,7 @@
       "brand": "TeamShotsPro",
       "nav": {
         "dashboard": "Panel",
-        "team": "Invitaciones",
+        "team": "Gestionar tu equipo",
         "personalGenerations": "Generaciones Personales",
         "teamGenerations": "Fotos generadas",
         "selfies": "Mis selfies",
@@ -721,7 +720,8 @@
         "noTeamCreditsTitle": "Sin créditos de equipo disponibles",
         "noTeamCreditsMessage": "Tu equipo no tiene créditos disponibles para generaciones de equipo. Contacta al administrador del equipo para solicitar créditos o usa tus créditos personales.",
         "requestCredits": "Solicitar créditos",
-        "usePersonalCredits": "Usar créditos personales"
+        "usePersonalCredits": "Usar créditos personales",
+        "backToSelfies": "Volver a selfies"
       },
       "profile": {
         "pro": "PRO",
@@ -1414,6 +1414,11 @@
       "qrTip": {
         "title": "Toma o sube desde tu computadora o móvil",
         "description": "Puedes usar el código QR para tomar o subir selfies desde tu móvil."
+      },
+      "floatingButton": {
+        "photoCustomization": "Personalización de foto",
+        "needMoreSelfies": "Agrega al menos 2 selfies",
+        "readyToCustomize": "Listo para personalizar"
       }
     }
   },
@@ -1662,20 +1667,21 @@
           "body": "Las fotos geniales empiezan con buenas selfies. Sigue estos consejos para obtener los mejores resultados.",
           "skip": "No volver a mostrar",
           "angles": {
-            "title": "Varía los ángulos",
-            "desc": "Diferentes posiciones ayudan a nuestra IA a entender mejor tu rostro."
+            "title": "Varía los ángulos. Incluye una de más lejos.",
+            "desc": "Diferentes posiciones ayudan a nuestra IA a entender mejor tu rostro. Agregar una selfie de más lejos ayuda a entender mejor tus proporciones corporales, con mejores resultados."
           },
           "lighting": {
             "title": "Busca buena iluminación",
             "desc": "La luz natural funciona mejor. Evita sombras fuertes en tu cara."
           },
-          "distance": {
-            "title": "Incluye una de más lejos",
-            "desc": "Esto muestra a la IA tus proporciones corporales para que no tenga que adivinar."
-          },
+          
           "minimum": {
             "title": "Lo ideal son 3-4 selfies. El mínimo es 2.",
             "desc": "Cuanta más información le des sobre tu rostro y tu cuerpo, menos tiene que adivinar."
+          },
+          "accessories": {
+            "title": "Quita accesorios no deseados",
+            "desc": "Los retratos replicarán exactamente tus selfies, incluyendo aretes, piercings, relojes y pulseras. Quítalos o cámbialos ahora si no los quieres en tus fotos."
           }
         }
       },
@@ -1797,14 +1803,19 @@
         "title": "Colores de Ropa",
         "subtitle": "Elige colores para artículos de ropa",
         "predefined": "Predefinido",
-        "outerLayer": "Capa Externa",
-        "outerLayerDesc": "Blazer, chaqueta, cárdigan",
-        "shirtBlouse": "Camisa/Blusa",
-        "shirtBlouseDesc": "Camisa de vestir, blusa, polo",
+        "outerLayer": "Capa superior",
+        "outerLayerDesc": "Blazer, chaqueta, cárdigan, camisa abotonada, sudadera, polo",
+        "topLayer": "Capa superior",
+        "topLayerDesc": "La prenda exterior visible: chaqueta, blazer, sudadera, polo, camiseta, vestido",
+        "baseLayer": "Capa base",
+        "baseLayerDesc": "Camisa o camiseta debajo de la capa superior",
+        "shirtBlouse": "Capa base",
+        "shirtBlouseDesc": "Camisa de vestir, blusa, camiseta bajo camisa abotonada",
         "pantsSkirt": "Pantalones/Falda",
         "pantsSkirtDesc": "Pantalones, slacks, falda",
         "shoes": "Zapatos",
-        "shoesDesc": "Zapatos de vestir, zapatos casuales"
+        "shoesDesc": "Zapatos de vestir, zapatos casuales",
+        "noVisibleColors": "No hay colores de ropa aplicables para este tipo de foto y estilo."
       },
       "shotType": {
         "title": "Tipo de Toma",
@@ -1821,6 +1832,26 @@
         "subtitle": "Elige una pose corporal y posicionamiento",
         "predefined": "Predefinido",
         "poses": {
+          "classic_corporate": {
+            "label": "Corporativo Clásico",
+            "description": "Retrato corporativo estándar, directo y confiable"
+          },
+          "slimming_three_quarter": {
+            "label": "Giro 3/4 Estilizador",
+            "description": "Ángulo dinámico y estilizador en tres cuartos para LinkedIn y perfiles"
+          },
+          "power_cross": {
+            "label": "Cruce de Poder",
+            "description": "Postura con brazos cruzados que transmite autoridad"
+          },
+          "approachable_lean": {
+            "label": "Inclinación Cercana",
+            "description": "Ligera inclinación hacia adelante, cercana y abierta para roles de atención al cliente"
+          },
+          "candid_over_shoulder": {
+            "label": "Cándida sobre el Hombro",
+            "description": "Estilo moderno y relajado mirando por encima del hombro"
+          },
           "power_classic": {
             "label": "Pose de Poder",
             "description": "Ejecutivo, fundador, liderazgo"
@@ -1844,6 +1875,10 @@
           "sitting_engaged": {
             "label": "Sentado Hacia Adelante - Comprometido",
             "description": "Coach, consultor, empático"
+          },
+          "seated_engagement": {
+            "label": "El Compromiso Sentado",
+            "description": "Pose sentada cálida y atenta, que implica escucha activa a través de un escritorio"
           },
           "executive_seated": {
             "label": "Ejecutivo Sentado",

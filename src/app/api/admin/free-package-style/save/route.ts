@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
     backgroundPrompt?: string
     branding?: { type: 'include' | 'exclude' | 'user-choice'; logoKey?: string; position?: 'background' | 'clothing' | 'elements' }
     backgroundSettings?: { type: 'office' | 'neutral' | 'gradient' | 'custom' | 'user-choice' | 'tropical-beach' | 'busy-city'; key?: string; prompt?: string; color?: string }
-    clothingSettings?: { type?: 'business' | 'startup' | 'black-tie' | 'user-choice'; style: 'business' | 'startup' | 'black-tie' | 'user-choice'; details?: string; colors?: { topCover?: string; topBase?: string; bottom?: string }; accessories?: string[] }
-    clothingColorsSettings?: { type: 'predefined' | 'user-choice'; colors?: { topCover?: string; topBase?: string; bottom?: string; shoes?: string } }
+    clothingSettings?: { type?: 'business' | 'startup' | 'black-tie' | 'user-choice'; style: 'business' | 'startup' | 'black-tie' | 'user-choice'; details?: string; colors?: { topLayer?: string; baseLayer?: string; bottom?: string }; accessories?: string[] }
+    clothingColorsSettings?: { type: 'predefined' | 'user-choice'; colors?: { topLayer?: string; baseLayer?: string; bottom?: string; shoes?: string } }
     shotTypeSettings?: { type: 'headshot' | 'midchest' | 'full-body' | 'user-choice' }
     expressionSettings?: { type: 'genuine_smile' | 'soft_smile' | 'neutral_serious' | 'laugh_joy' | 'contemplative' | 'confident' | 'sad' | 'user-choice' }
     poseSettings?: PoseSettings

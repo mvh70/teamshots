@@ -51,70 +51,44 @@ export class CameraSettingsElement extends StyleElement {
     // Describe lens character based on focal length
     const lensCharacter = this.describeLensCharacter(derived.focalLength)
 
-    // Common camera instructions for all phases
-    instructions.push(
-      `Camera lens: ${derived.focalLength}mm focal length (${lensCharacter})`,
-      `Camera aperture: f/${derived.aperture.toFixed(1)} (${this.describeDepthOfField(derived.aperture)})`,
-      `Camera position: ${derived.cameraDistance}ft from subject, ${this.describeCameraHeight(derived.cameraHeight)}`,
-      `Subject separation: ${derived.backgroundDistance}ft from background`
-    )
+    // Build payload structure for generation
+    const payload = {
+      camera: {
+        lens: {
+          focal_length_mm: derived.focalLength,
+          character: lensCharacter,
+        },
+        settings: {
+          aperture: `f/${derived.aperture.toFixed(1)}`,
+          iso: derived.iso,
+        },
+        positioning: {
+          distance_from_subject_ft: derived.cameraDistance,
+          subject_to_background_ft: derived.backgroundDistance,
+          height: this.describeCameraHeight(derived.cameraHeight),
+        },
+        color: {
+          white_balance_kelvin: derived.whiteBalance,
+        },
+      },
+    }
 
-    // Phase-specific instructions
+    // Note: Specific camera settings (focal length, aperture, positioning) are in the JSON payload
+    // Only add critical quality rules that aren't obvious from the JSON structure
+
+    // Phase-specific quality constraints
     if (phase === 'person-generation') {
-      instructions.push(
-        'Apply lens compression and perspective appropriate for the focal length',
-        'Consider depth of field when rendering foreground and subject sharpness',
-        `ISO ${derived.iso}: Render with appropriate noise/grain characteristics`,
-        `White balance ${derived.whiteBalance}K: Color temperature must match this setting`
-      )
       mustFollow.push(
-        `Lens compression must match ${derived.focalLength}mm perspective`,
-        `Depth of field must match f/${derived.aperture.toFixed(1)} aperture`,
         'Subject must be in sharp focus',
-        `Camera height perspective must be ${this.describeCameraHeight(derived.cameraHeight)}`
+        'Apply lens compression and perspective appropriate for the focal length',
+        'Depth of field rendering must match aperture specification'
       )
-
-      // Add focal length specific rules
-      if (derived.focalLength <= 35) {
-        mustFollow.push('Wide-angle lens distortion is acceptable but should be subtle')
-      } else if (derived.focalLength >= 85) {
-        mustFollow.push('Portrait lens compression should flatten features slightly')
-      }
-
-      // Add aperture-specific rules
-      if (derived.aperture <= 2.8) {
-        instructions.push('Very shallow depth of field - background should be strongly blurred')
-        mustFollow.push('Background bokeh must be pronounced with smooth blur')
-      } else if (derived.aperture >= 8.0) {
-        instructions.push('Deep depth of field - more elements should be in focus')
-        mustFollow.push('Greater depth of field with less background separation')
-      }
     } else if (phase === 'background-generation') {
-      instructions.push(
-        'Background should reflect the specified camera distance and depth of field',
-        `Apply appropriate blur based on ${derived.backgroundDistance}ft separation and f/${derived.aperture.toFixed(1)} aperture`,
-        `Render background with ISO ${derived.iso} noise characteristics`,
-        `White balance ${derived.whiteBalance}K must be consistent with lighting`
-      )
       mustFollow.push(
-        'Background blur must be consistent with the aperture setting',
-        `Background must be positioned ${derived.backgroundDistance}ft behind subject position`,
-        'Camera perspective and height must match the specified position'
+        'Background blur must be consistent with aperture setting',
+        'Camera perspective and height must match specified position'
       )
-
-      // Depth of field guidance for background
-      if (derived.aperture <= 2.8) {
-        mustFollow.push('Background must be significantly out of focus with smooth bokeh')
-      } else if (derived.aperture >= 5.6) {
-        instructions.push('Background shows more detail with moderate sharpness')
-      }
     } else if (phase === 'composition') {
-      instructions.push(
-        'Ensure consistent depth of field between person and background layers',
-        'Match lens compression and perspective across all elements',
-        `Maintain ${derived.whiteBalance}K white balance throughout the composition`,
-        'Verify camera positioning and height perspective is consistent'
-      )
       mustFollow.push(
         'Depth of field must be consistent across composition',
         'Lens character and compression must be uniform',
@@ -125,16 +99,15 @@ export class CameraSettingsElement extends StyleElement {
 
     // Add ISO-specific guidance
     if (derived.iso >= 1600) {
-      instructions.push('Higher ISO - render with subtle film grain or digital noise')
       metadata.highISO = true
     } else if (derived.iso <= 200) {
-      instructions.push('Low ISO - image should be clean with minimal noise')
       metadata.lowISO = true
     }
 
     return {
       instructions,
       mustFollow,
+      payload,
       metadata,
     }
   }

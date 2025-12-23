@@ -86,20 +86,17 @@ const buildColorPalette = (
   if (!colors) return undefined
   const palette: string[] = []
 
-  // Always add base layer color if provided
-  if (colors.topBase) {
-    palette.push(`base layer (e.g., shirt under hoodie, dress shirt under blazer): ${colors.topBase} color`)
+  // Detect if this is a single-layer or multi-layer garment
+  const isSingleLayer = !descriptor.outerLayer
+
+  // Top layer - the visible outer garment (always present)
+  if (colors.topLayer) {
+    palette.push(`top_layer (${detailKey}): ${colors.topLayer} color`)
   }
 
-  // Handle topCover color based on garment type
-  if (colors.topCover) {
-    if (NO_TOP_COVER_DETAILS.has(detailKey)) {
-      // For items like hoodie, t-shirt, dress - topCover is the main garment color
-      palette.push(`${detailKey} (the main visible garment): ${colors.topCover} color`)
-    } else if (descriptor.outerLayer) {
-      // For items with separate outer layer (jacket, blazer, etc.)
-      palette.push(`outer layer (e.g., suit jacket, blazer, cardigan): ${colors.topCover} color`)
-    }
+  // Base layer - shirt underneath (ONLY for multi-layer garments)
+  if (colors.baseLayer && !isSingleLayer) {
+    palette.push(`base_layer (shirt underneath): ${colors.baseLayer} color`)
   }
 
   if (colors.bottom && isBottomVisible(shotType)) {
@@ -126,12 +123,16 @@ export function generateWardrobePrompt({
     style: clothing?.style ?? styleKey,
     style_key: styleKey, // Store normalized style for branding lookup
     detail_key: detailKey, // Store detail key for branding lookup
-    details: descriptor.details,
-    base_layer: descriptor.baseLayer
+    details: descriptor.details
   }
 
+  // For single-layer garments (no outerLayer), the baseLayer is semantically the top layer
+  // For multi-layer garments (has outerLayer), keep both layers
   if (descriptor.outerLayer) {
-    wardrobe.outer_layer = descriptor.outerLayer
+    wardrobe.top_layer = descriptor.outerLayer
+    wardrobe.base_layer = descriptor.baseLayer
+  } else {
+    wardrobe.top_layer = descriptor.baseLayer
   }
   if (descriptor.notes) {
     wardrobe.notes = descriptor.notes

@@ -18,7 +18,7 @@ export const clothingColorsElementConfig: ElementConfig<PhotoStyleSettings['clot
     }
     return {
       type: 'predefined',
-      colors: { topCover: 'navy', topBase: 'white', bottom: 'gray' }
+      colors: { topLayer: 'navy', baseLayer: 'white', bottom: 'gray' }
     }
   },
   getDefaultUserChoice: () => ({ type: 'user-choice' }),

@@ -186,13 +186,26 @@ export async function executeV3Step1aEval(
       '   - Does the logo follow the contours of the clothing/surface it\'s placed on?',
       '',
       '12. clothing_logo_no_overflow (CRITICAL CHECK FOR CLOTHING LOGOS)',
-      '   - **This is a STRICT rejection criterion**: The logo MUST be confined to the BASE LAYER ONLY',
-      '   - Check if the person is wearing OUTER LAYERS such as: jackets, blazers, coats, cardigans, hoodies, vests, or any open outerwear',
-      '   - If outer layers are present: Is the logo COMPLETELY HIDDEN beneath the outer layer, or ONLY visible on the base layer (shirt/polo) in the exposed area?',
-      '   - Answer NO (REJECT) if: The logo overflows, bleeds through, or appears ON TOP of any outer layer (jacket, blazer, etc.)',
-      '   - Answer NO (REJECT) if: The logo is partially visible on both the base layer AND the outer layer simultaneously',
-      '   - Answer YES (APPROVE) if: No outer layers are present, OR the logo is fully confined to the visible base layer area with no overflow',
-      '   - This check ensures the logo respects clothing layer hierarchy and doesn\'t create unrealistic compositing artifacts'
+      '   - **STRICT REJECTION CRITERION**: The logo MUST exist ONLY on the BASE LAYER and must NOT spill over onto outer garments',
+      '   - **IMPORTANT**: It is PERFECTLY ACCEPTABLE and EXPECTED for the logo to be PARTIALLY VISIBLE - this is realistic and desired',
+      '   - **WHAT TO CHECK**:',
+      '     1. Identify if outer layers are present: jackets, blazers, coats, cardigans, open button-downs, vests, or any open outerwear',
+      '     2. If outer layers exist, examine the logo carefully:',
+      '        a) Is the logo confined to the base shirt/polo layer only?',
+      '        b) Is the logo naturally obscured/hidden by the outer layer where they overlap?',
+      '        c) Does ANY part of the logo appear ON or BLEEDING ONTO the outer layer fabric?',
+      '   - **REJECT (Answer NO) if ANY of these are true**:',
+      '     • The logo appears ON TOP of the outer layer (jacket lapels, collar, sleeves)',
+      '     • The logo bleeds through or spills over from the base layer onto the outer layer',
+      '     • The logo is visible on BOTH the base shirt AND the jacket/outer layer simultaneously',
+      '     • The logo appears to be printed across layer boundaries (spanning both base and outer garments)',
+      '   - **APPROVE (Answer YES) if**:',
+      '     • No outer layers are present (single-layer clothing like t-shirt, polo, hoodie, dress)',
+      '     • Logo is fully confined to the visible base layer area with NO spillover onto outer garments',
+      '     • The logo is PARTIALLY visible (some parts hidden by the outer layer) - this is CORRECT and REALISTIC',
+      '     • The outer layer naturally covers/obscures portions of the logo - this is EXPECTED behavior',
+      '   - **KEY DISTINCTION**: Partial logo visibility (logo cut off by outer layer) = GOOD ✓ | Logo spillover (logo appearing on outer layer) = BAD ✗',
+      '   - This check ensures realistic layer hierarchy and prevents compositing artifacts'
     )
   } else {
     baseInstructions.push(
@@ -244,6 +257,7 @@ export async function executeV3Step1aEval(
 - IGNORE any logo instructions for background/element placement - those are handled in Step 1b/Step 3.
 - Only evaluate: person quality, clothing logos (if present), and grey background.
 - The generation prompt is provided for context about shot type and subject details only.
+${clothingLogoReference ? '\n**CRITICAL**: Check the generation prompt for clothing style (business, business-casual, startup, etc.). If the style involves LAYERED CLOTHING (jackets, blazers, cardigans over shirts), be EXTRA VIGILANT about logo overflow. The logo should ONLY appear on the base layer visible beneath the outer garment.' : ''}
 
 Generation prompt used:\n${generationPrompt}`
   })

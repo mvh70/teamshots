@@ -231,10 +231,10 @@ export default function PhotoStyleSettings({
     }
 
     // Map outfit colors to clothing colors:
-    // outfit.topBase -> clothing.topBase (shirt), outfit.topCover -> clothing.topCover (jacket), etc.
+    // outfit.baseLayer -> clothing.baseLayer (shirt), outfit.topLayer -> clothing.topLayer (jacket), etc.
     const newClothingColors: Record<string, string> = {}
-    if (outfitColors.topBase) newClothingColors.topBase = outfitColors.topBase
-    if (outfitColors.topCover) newClothingColors.topCover = outfitColors.topCover
+    if (outfitColors.baseLayer) newClothingColors.baseLayer = outfitColors.baseLayer
+    if (outfitColors.topLayer) newClothingColors.topLayer = outfitColors.topLayer
     if (outfitColors.bottom) newClothingColors.bottom = outfitColors.bottom
     if (outfitColors.shoes) newClothingColors.shoes = outfitColors.shoes
 

@@ -635,7 +635,7 @@
       "brand": "TeamShotsPro",
       "nav": {
         "dashboard": "Dashboard",
-        "team": "Invites",
+        "team": "Manage your team",
         "personalGenerations": "Personal generations",
         "teamGenerations": "Generated photos",
         "selfies": "My selfies",
@@ -709,7 +709,8 @@
         "noTeamCreditsTitle": "No team credits available",
         "noTeamCreditsMessage": "Your team has no credits available for team generations. Contact your team admin to request credits or use your personal credits instead.",
         "requestCredits": "Request credits",
-        "usePersonalCredits": "Use personal credits"
+        "usePersonalCredits": "Use personal credits",
+        "backToSelfies": "Go back to selfies"
       },
       "profile": {
         "pro": "PRO",
@@ -1400,6 +1401,11 @@
       "qrTip": {
         "title": "Take or upload from your computer or phone",
         "description": "You can use the QR code to take or upload selfies from your phone."
+      },
+      "floatingButton": {
+        "photoCustomization": "Photo customization",
+        "needMoreSelfies": "Add at least 2 selfies",
+        "readyToCustomize": "Ready to customize"
       }
     }
   },
@@ -1646,20 +1652,21 @@
           "body": "Great photos start with great selfies. Follow these tips to get the best results.",
           "skip": "Don't show again",
           "angles": {
-            "title": "Mix up your angles",
-            "desc": "Different positions help our AI understand your face better."
+            "title": "Mix up your angles. Include one from further away.",
+            "desc": "Different positions help our AI understand your face better. Adding a selfie from further away, helps understand more of your body proportions, with better results."
           },
           "lighting": {
             "title": "Find good lighting",
             "desc": "Natural light works best. Avoid harsh shadows on your face."
           },
-          "distance": {
-            "title": "Include one further away",
-            "desc": "This shows the AI your body proportions so it doesn't have to guess."
-          },
+         
           "minimum": {
             "title": "3-4 selfies is ideal. Minimum is 2.",
             "desc": "The more information you give it about your face and your body, the less it has to guess."
+          },
+          "accessories": {
+            "title": "Remove unwanted accessories",
+            "desc": "Headshots will replicate your selfies exactly, including earrings, piercings, watches, and bracelets. Remove or change them now if you don't want them in your photos."
           }
         }
       },
@@ -1781,14 +1788,19 @@
         "title": "Clothing Colors",
         "subtitle": "Choose colors for clothing items",
         "predefined": "Predefined",
-        "outerLayer": "Outer Layer",
-        "outerLayerDesc": "Blazer, jacket, cardigan",
-        "shirtBlouse": "Shirt/Blouse",
-        "shirtBlouseDesc": "Dress shirt, blouse, polo",
+        "outerLayer": "Top layer",
+        "outerLayerDesc": "Blazer, jacket, cardigan, button down shirt, hoodie, polo",
+        "topLayer": "Top layer",
+        "topLayerDesc": "The visible outer garment: jacket, blazer, hoodie, polo, t-shirt, dress",
+        "baseLayer": "Base layer",
+        "baseLayerDesc": "Shirt or t-shirt underneath the top layer",
+        "shirtBlouse": "Base layer",
+        "shirtBlouseDesc": "Dress shirt, blouse, t-shirt under button-down",
         "pantsSkirt": "Pants/Skirt",
         "pantsSkirtDesc": "Trousers, slacks, skirt",
         "shoes": "Shoes",
-        "shoesDesc": "Dress shoes, casual shoes"
+        "shoesDesc": "Dress shoes, casual shoes",
+        "noVisibleColors": "No clothing colors applicable for this shot type and style."
       },
       "shotType": {
         "title": "Shot Type",
@@ -1805,6 +1817,26 @@
         "subtitle": "Choose a body pose and positioning",
         "predefined": "Predefined",
         "poses": {
+          "classic_corporate": {
+            "label": "Classic Corporate",
+            "description": "Trustworthy, direct, standard corporate headshot"
+          },
+          "slimming_three_quarter": {
+            "label": "3/4 Slimming Turn",
+            "description": "Dynamic, slimming three-quarter angle for LinkedIn and profiles"
+          },
+          "power_cross": {
+            "label": "Power Cross",
+            "description": "Assertive arms-crossed stance showing authority"
+          },
+          "approachable_lean": {
+            "label": "Approachable Lean",
+            "description": "Forward-leaning, engaging pose for client-facing roles"
+          },
+          "candid_over_shoulder": {
+            "label": "Candid Over-Shoulder",
+            "description": "Modern, relaxed look glancing back over the shoulder"
+          },
           "power_classic": {
             "label": "Power Pose",
             "description": "Executive, founder, leadership"
@@ -1828,6 +1860,10 @@
           "sitting_engaged": {
             "label": "Sitting Forward - Engaged",
             "description": "Coach, consultant, empathetic"
+          },
+          "seated_engagement": {
+            "label": "The Seated Engagement",
+            "description": "Warm and attentive seated pose, implying active listening across a desk"
           },
           "executive_seated": {
             "label": "Seated Executive",

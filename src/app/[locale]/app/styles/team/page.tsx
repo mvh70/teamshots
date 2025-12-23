@@ -30,8 +30,8 @@ interface Context {
       details?: string
       accessories?: string[]
       colors?: {
-        topCover?: string
-        topBase?: string
+        topLayer?: string
+        baseLayer?: string
         bottom?: string
       }
     }

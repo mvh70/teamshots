@@ -69,23 +69,13 @@ export function OnbordaCard({
       const completedTours = onboardingContext.completedTours || []
       const hasCompleted = completedTours.includes(tourToComplete)
       
-      console.log('[OnbordaCard] Tour closed, checking completion:', {
-        tour: tourToComplete,
-        hasCompleted,
-        completedTours,
-        isCompleting: isCompletingRef.current,
-        personId: onboardingContext.personId
-      })
-      
       if (!hasCompleted) {
-        console.log('[OnbordaCard] Completing tour:', tourToComplete)
         // Mark as completing to prevent duplicate calls
         isCompletingRef.current = true
         
         // Complete the tour
         completeTour(tourToComplete)
           .then(() => {
-            console.log('[OnbordaCard] Tour completed successfully:', tourToComplete)
             // Clear the ref after successful completion
             previousTourRef.current = null
           })
@@ -95,7 +85,6 @@ export function OnbordaCard({
             isCompletingRef.current = false
             // Try to complete it again after a short delay in case of transient errors
             setTimeout(() => {
-              console.log('[OnbordaCard] Retrying tour completion:', tourToComplete)
               isCompletingRef.current = true
               completeTour(tourToComplete)
                 .then(() => {
@@ -108,7 +97,6 @@ export function OnbordaCard({
             }, 1000)
           })
       } else {
-        console.log('[OnbordaCard] Tour already completed, skipping')
         previousTourRef.current = null
       }
     }
@@ -125,11 +113,7 @@ export function OnbordaCard({
         // Mark that we're completing to prevent useEffect from running
         isCompletingRef.current = true
         // Mark tour as completed in database (not localStorage)
-        console.log('[OnbordaCard] Completing tour via handleNext (last step):', onbordaCurrentTour)
         completeTour(onbordaCurrentTour)
-          .then(() => {
-            console.log('[OnbordaCard] Tour completed successfully via handleNext:', onbordaCurrentTour)
-          })
           .catch((error) => {
             console.error('[OnbordaCard] Error completing tour via handleNext:', error)
           })
@@ -181,11 +165,7 @@ export function OnbordaCard({
       // Mark that we're completing to prevent useEffect from running
       isCompletingRef.current = true
       // Mark tour as completed in database (not localStorage)
-      console.log('[OnbordaCard] Completing tour via handleContinue:', onbordaCurrentTour)
       completeTour(onbordaCurrentTour)
-        .then(() => {
-          console.log('[OnbordaCard] Tour completed successfully via handleContinue:', onbordaCurrentTour)
-        })
         .catch((error) => {
           console.error('[OnbordaCard] Error completing tour via handleContinue:', error)
         })

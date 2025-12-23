@@ -426,29 +426,40 @@ async function generateBackgroundWithRetry({
   preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
 }): Promise<{ backgroundBuffer: Buffer; backgroundBase64: string; assetId?: string; backgroundLogoReference: BaseReferenceImage; evaluatorComments: string[]; compositeReference?: BaseReferenceImage; reused?: boolean } | undefined> {
   // Check if Step 1b should run
-  const shouldRunStep1b = styleSettings.branding?.type === 'include' && 
-                          styleSettings.branding?.position &&
-                          ['background', 'elements'].includes(styleSettings.branding.position)
+  // NEW: Step 1b now ONLY runs for custom backgrounds
+  // Logo branding is now handled in Step 2 via element composition for better 3D integration
+  const hasCustomBackground = styleSettings.background?.type === 'custom' && styleSettings.background.key
+  const shouldRunStep1b = hasCustomBackground
 
   if (!shouldRunStep1b) {
-    Logger.info('V3 Step 1b: Skipping background generation (no branding in background/elements)')
+    Logger.info('V3 Step 1b: Skipping background generation (no custom background)', {
+      hasCustomBackground,
+      brandingPosition: styleSettings.branding?.position,
+      note: 'Logo branding now handled in Step 2 for better 3D integration'
+    })
     return undefined
   }
 
-  // Load logo for branding
+  // Load logo for branding - use prepared asset from Step 0
   let brandingLogoReference: BaseReferenceImage | undefined
-  if (styleSettings.branding?.logoKey) {
-    try {
-      const logoAsset = await downloadAsset(styleSettings.branding.logoKey)
-      if (logoAsset) {
-        brandingLogoReference = {
-          description: `Company logo for ${styleSettings.branding.position} placement`,
-          base64: logoAsset.base64,
-          mimeType: logoAsset.mimeType
-        }
+  if (styleSettings.branding?.type === 'include') {
+    const preparedLogo = preparedAssets?.get('branding-logo')
+    if (preparedLogo?.data.base64) {
+      brandingLogoReference = {
+        description: `Company logo for ${styleSettings.branding.position} placement`,
+        base64: preparedLogo.data.base64,
+        mimeType: preparedLogo.data.mimeType || 'image/png'
       }
-    } catch (error) {
-      Logger.warn('Failed to load logo for Step 1b', { error })
+      Logger.debug('V3 Step 1b: Using prepared logo asset (SVG already converted)', {
+        generationId,
+        mimeType: preparedLogo.data.mimeType,
+        position: styleSettings.branding.position
+      })
+    } else {
+      Logger.warn('V3 Step 1b: Prepared logo asset not found', {
+        generationId,
+        preparedAssetKeys: Array.from(preparedAssets?.keys() || [])
+      })
       return undefined
     }
   }
@@ -1151,11 +1162,20 @@ export async function executeV3Workflow({
 
   Logger.debug('V3 Step 2: Compositing and refining')
 
+  // Determine background buffer for step 2
+  // For simple backgrounds (gradient, neutral) without step 1b, pass undefined so AI generates from scene specs
+  const isSimpleBackground = styleSettings.background?.type === 'gradient' || styleSettings.background?.type === 'neutral'
+  const backgroundBufferForStep2 = step1bOutput?.backgroundBuffer
+    ? step1bOutput.backgroundBuffer  // Use step 1b output if available
+    : isSimpleBackground
+      ? undefined  // For simple backgrounds, let AI generate from scene specs (don't use grey background)
+      : step1aOutput.backgroundBuffer  // For other cases, use step 1a background
+
   const step2Output = await executeWithRateLimitRetry(
     () => executeV3Step2(
       {
         personBuffer: step1aOutput.imageBuffer,
-        backgroundBuffer: step1bOutput?.backgroundBuffer || step1aOutput.backgroundBuffer, // Use Step 1b output or user's custom background
+        backgroundBuffer: backgroundBufferForStep2,
         styleSettings: styleSettings as unknown as Record<string, unknown>,
         faceCompositeReference,
         evaluatorComments: allEvaluatorComments.length > 0 ? allEvaluatorComments : undefined,
@@ -1166,6 +1186,7 @@ export async function executeV3Workflow({
         personId,
         teamId,
         onCostTracking,
+        preparedAssets, // Pass prepared assets for element composition (logo, etc.)
       },
       debugMode
     ),

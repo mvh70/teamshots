@@ -8,6 +8,7 @@ import { InlineError, LoadingSpinner } from "@/components/ui";
 import { useDeviceCapabilities } from "@/hooks/useDeviceCapabilities";
 import CameraPermissionError from "@/components/Upload/CameraPermissionError";
 import type { UploadMetadata, UploadResult } from "@/hooks/useUploadFlow";
+import { validateSelfieFace } from "@/lib/face-detection";
 
 type PhotoUploadProps = {
   disabled?: boolean;
@@ -29,7 +30,7 @@ type PhotoUploadProps = {
 
 export default function PhotoUpload({
   disabled,
-  maxFileSizeMb = 25,
+  maxFileSizeMb = 50,
   accept = "image/*",
   multiple = false,
   onSelect,
@@ -96,62 +97,8 @@ export default function PhotoUpload({
     return null;
   };
 
-  const detectFace = async (file: File): Promise<boolean> => {
-    // For testing purposes, check file name to simulate face detection
-    if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
-      // If the file name contains "no-face" or "noFace", simulate no face detected
-      if (file.name.toLowerCase().includes('no-face') || file.name.toLowerCase().includes('noface')) {
-        return Promise.resolve(false);
-      }
-      // If the file name contains "multiple", simulate multiple faces
-      if (file.name.toLowerCase().includes('multiple')) {
-        return Promise.resolve(false);
-      }
-      // Otherwise, assume face is detected
-      return Promise.resolve(true);
-    }
-    
-    // Simple face detection using canvas and basic image analysis
-    return new Promise((resolve) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(false);
-          return false;
-        }
-        
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        
-        // Simple face detection - look for skin tone colors
-        let skinPixels = 0;
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          
-          // Basic skin tone detection
-          if (r > 95 && g > 40 && b > 20 && 
-              Math.max(r, g, b) - Math.min(r, g, b) > 15 && 
-              Math.abs(r - g) > 15 && r > g && r > b) {
-            skinPixels++;
-          }
-        }
-        
-        // If we have enough skin pixels, assume there's a face
-        const skinRatio = skinPixels / (data.length / 4);
-        resolve(skinRatio > 0.1);
-      };
-      img.onerror = () => resolve(false);
-      img.src = URL.createObjectURL(file);
-    });
-  };
+  // Face detection is now handled by validateSelfieFace from face-detection utility
+  // This uses BlazeFace model for accurate detection across all skin tones
 
   const reportCameraError = useCallback(
     (message: string, type?: string) => {
@@ -202,16 +149,13 @@ export default function PhotoUpload({
       return false;
     }
     
-    // Check for face detection
-    const hasFace = await detectFace(file);
-    if (!hasFace) {
-      if (file.name.toLowerCase().includes('multiple')) {
-        setError("Multiple faces detected in the image. Please upload a photo with only one face.");
-        setErrorType('face-detection-error');
-      } else {
-        setError("No face detected in the image. Please upload a photo with a clear face.");
-        setErrorType('face-detection-error');
-      }
+    // Check for face detection using BlazeFace model
+    console.log('[PhotoUpload] Starting face validation for file:', file.name)
+    const faceValidation = await validateSelfieFace(file);
+    console.log('[PhotoUpload] Face validation result:', faceValidation)
+    if (!faceValidation.isValid) {
+      setError(faceValidation.error || "Face validation failed. Please upload a photo with one clear face.");
+      setErrorType('face-detection-error');
       return false;
     }
     
@@ -327,14 +271,12 @@ export default function PhotoUpload({
         continue;
       }
       
-      // Check for face detection
-      const hasFace = await detectFace(file);
-      if (!hasFace) {
-        if (file.name.toLowerCase().includes('multiple')) {
-          errors.push(`${file.name}: Multiple faces detected. Please upload a photo with only one face.`);
-        } else {
-          errors.push(`${file.name}: No face detected. Please upload a photo with a clear face.`);
-        }
+      // Check for face detection using BlazeFace model
+      console.log('[PhotoUpload] Starting face validation for file (multiple):', file.name)
+      const faceValidation = await validateSelfieFace(file);
+      console.log('[PhotoUpload] Face validation result (multiple):', faceValidation)
+      if (!faceValidation.isValid) {
+        errors.push(`${file.name}: ${faceValidation.error || "Face validation failed"}`);
         continue;
       }
       

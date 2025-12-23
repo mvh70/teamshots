@@ -8,20 +8,10 @@ import { ensureServerDefaults, mergeUserSettings } from '../shared/utils'
 import { resolvePackageAspectRatio } from '../shared/aspect-ratio-resolver'
 import { downloadAssetAsBase64 } from '@/queue/workers/generate-image/s3-utils'
 import { getS3BucketName, createS3Client } from '@/lib/s3-client'
-import { PutObjectCommand } from '@aws-sdk/client-s3'
-import { buildStandardPrompt } from '../../prompt-builders/context'
-import * as shotTypeElement from '../../elements/shot-type'
-import * as cameraSettings from '../../elements/camera-settings'
-import * as lighting from '../../elements/lighting'
-import * as pose from '../../elements/pose'
-import * as backgroundElement from '../../elements/background'
-import * as customClothing from '../../elements/custom-clothing'
-import * as subjectElement from '../../elements/subject'
-import * as branding from '../../elements/branding'
+import { compositionRegistry } from '../../elements/composition'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
+import { isFeatureEnabled } from '@/config/feature-flags'
 import { CostTrackingService } from '@/domain/services/CostTrackingService'
-import { AssetService } from '@/domain/services/AssetService'
-import { prisma } from '@/lib/prisma'
 
 import type { ServerStylePackage, PackageMetadata, PackageCapabilities } from '../types'
 
@@ -81,6 +71,7 @@ export const outfit1Server: Outfit1ServerPackage = {
 
   buildGenerationPayload: async ({
     generationId,
+    personId,
     styleSettings,
     selfieKeys,
     processedSelfies,
@@ -179,299 +170,33 @@ export const outfit1Server: Outfit1ServerPackage = {
     const labelInstruction = payload.labelInstruction
 
     // Build context to get rules (same logic as buildPrompt but we need the context)
-    const context = buildStandardPrompt({
-      settings: effectiveSettings,
-      defaultPresetId: outfit1Base.defaultPresetId,
-      presets: outfit1Base.presets || {}
-    })
-
-    // Apply elements in dependency order (same as buildPrompt)
-    shotTypeElement.applyToPayload(context)
-    cameraSettings.applyToPayload(context)
-    lighting.applyToPayload(context)
-    pose.applyToPayload(context)
-    backgroundElement.applyToPayload(context)
-
-    // Apply custom clothing if outfit is set (either user-choice or predefined with outfit)
-    // DEBUG: Log custom clothing data before processing
-    Logger.info('[DEBUG] Custom clothing check', {
-      generationId,
-      hasCustomClothingObject: !!effectiveSettings.customClothing,
-      customClothingType: effectiveSettings.customClothing?.type,
-      hasOutfitS3Key: !!effectiveSettings.customClothing?.outfitS3Key,
-      hasAssetId: !!effectiveSettings.customClothing?.assetId,
-      outfitS3Key: effectiveSettings.customClothing?.outfitS3Key,
-      assetId: effectiveSettings.customClothing?.assetId,
-      hasCachedCollage: !!effectiveSettings.customClothing?.collageS3Key,
-      fullCustomClothingObject: JSON.stringify(effectiveSettings.customClothing)
-    })
-
-    const hasCustomOutfit = effectiveSettings.customClothing &&
-      (effectiveSettings.customClothing.outfitS3Key || effectiveSettings.customClothing.assetId)
-
-    Logger.info('[DEBUG] hasCustomOutfit result', { generationId, hasCustomOutfit })
-
-    // Skip legacy custom clothing handling for v3 workflow - it's now handled by CustomClothingElement.prepare() in step 0
-    if (hasCustomOutfit && effectiveSettings.customClothing && options.workflowVersion !== 'v3') {
-      Logger.info('[DEBUG] Entering custom clothing block (legacy workflow)', { generationId, workflowVersion: options.workflowVersion })
-
-      // Add color specifications if provided (user-adjustable)
-      // Colors are sent as structured data to complement the garment collage visual reference
-      if (effectiveSettings.customClothing.colors) {
-        if (typeof context.payload.subject !== 'object' || context.payload.subject === null) {
-          context.payload.subject = {}
-        }
-
-        const colorSpec: Record<string, string> = {}
-        const colors = effectiveSettings.customClothing.colors as Record<string, string>
-
-        if (colors.topBase) colorSpec.top_color = colors.topBase
-        if (colors.bottom) colorSpec.bottom_color = colors.bottom
-        if (colors.topAccent) colorSpec.accent_color = colors.topAccent
-
-        if (Object.keys(colorSpec).length > 0) {
-          (context.payload.subject as Record<string, unknown>).clothing_colors = colorSpec
-          Logger.info('[DEBUG] Added clothing colors to context.payload.subject', {
-            generationId,
-            colors: colorSpec
-          })
-        }
-      }
-
-      // Add garment reference to referenceImages
-      let outfitKey = effectiveSettings.customClothing.outfitS3Key
-      const cachedCollageKey = effectiveSettings.customClothing.collageS3Key
-
-      // If no outfitS3Key but assetId is provided, resolve assetId to get S3 key
-      if (!outfitKey && effectiveSettings.customClothing.assetId) {
-        try {
-          const asset = await AssetService.getAsset(effectiveSettings.customClothing.assetId)
-          if (asset) {
-            outfitKey = asset.s3Key
-            Logger.info('[DEBUG] Resolved assetId to S3 key', {
-              generationId,
-              assetId: effectiveSettings.customClothing.assetId,
-              s3Key: outfitKey
-            })
-          } else {
-            Logger.warn('[DEBUG] Asset not found for assetId', {
-              generationId,
-              assetId: effectiveSettings.customClothing.assetId
-            })
-          }
-        } catch (error) {
-          Logger.error('[DEBUG] Failed to resolve assetId to S3 key', {
-            generationId,
-            assetId: effectiveSettings.customClothing.assetId,
-            error: error instanceof Error ? error.message : String(error)
-          })
-        }
-      }
-
-      if (outfitKey) {
-        try {
-          let collageBase64: string | null = null
-          let shouldSaveCollage = false
-
-          // Check if we have a cached collage
-          if (cachedCollageKey) {
-            Logger.info('Using cached garment collage', { cachedCollageKey, generationId })
-            const cachedCollage = await downloadAssetAsBase64({ bucketName, s3Client, key: cachedCollageKey })
-            if (cachedCollage) {
-              collageBase64 = cachedCollage.base64
-            } else {
-              Logger.warn('Cached collage not found, will regenerate', { cachedCollageKey, generationId })
-              shouldSaveCollage = true
-            }
-          } else {
-            shouldSaveCollage = true
-          }
-
-          // If no cached collage, generate a new one
-          if (!collageBase64) {
-            // Download the original outfit image
-            const outfitImage = await downloadAssetAsBase64({ bucketName, s3Client, key: outfitKey })
-            if (!outfitImage) {
-              Logger.warn('Outfit image download returned null', { outfitKey, generationId })
-            } else {
-            // Download logo ONLY if branding is on clothing (not background or elements)
-            let logoImage: { base64: string; mimeType: string } | null = null
-            if (effectiveSettings.branding?.type !== 'exclude' &&
-                effectiveSettings.branding?.logoKey &&
-                effectiveSettings.branding?.position === 'clothing') {
-              try {
-                logoImage = await downloadAssetAsBase64({ bucketName, s3Client, key: effectiveSettings.branding.logoKey })
-                if (!logoImage) {
-                  Logger.warn('Logo image download returned null, proceeding without logo', {
-                    logoKey: effectiveSettings.branding.logoKey,
-                    generationId
-                  })
-                } else {
-                  Logger.info('[DEBUG] Logo downloaded for clothing branding in collage', {
-                    generationId,
-                    position: effectiveSettings.branding.position
-                  })
-                }
-              } catch (error) {
-                Logger.warn('Failed to download logo image, proceeding without logo', {
-                  logoKey: effectiveSettings.branding.logoKey,
-                  generationId,
-                  error: error instanceof Error ? error.message : String(error)
-                })
-              }
-            } else if (effectiveSettings.branding?.logoKey) {
-              Logger.info('[DEBUG] Logo present but not for clothing - skipping in collage', {
-                generationId,
-                brandingType: effectiveSettings.branding.type,
-                brandingPosition: effectiveSettings.branding.position
-              })
-            }
-
-            // Generate garment collage using Gemini
-            const collageResult = await createGarmentCollage(
-              outfitImage.base64,
-              outfitImage.mimeType,
-              logoImage,
-              generationId
-            )
-
-            if (!payload.referenceImages) {
-              payload.referenceImages = []
-            }
-
-            if (collageResult.success) {
-              collageBase64 = collageResult.data.base64
-
-              // Save collage to S3 if needed
-              if (shouldSaveCollage) {
-                try {
-                  const collageBuffer = Buffer.from(collageBase64, 'base64')
-                  const collageKey = `collages/${generationId}-${Date.now()}.png`
-
-                  await s3Client.send(
-                    new PutObjectCommand({
-                      Bucket: bucketName,
-                      Key: collageKey,
-                      Body: collageBuffer,
-                      ContentType: 'image/png'
-                    })
-                  )
-
-                  Logger.info('Saved garment collage to S3', { collageKey, generationId })
-
-                  // Update context with cached collage key (separate try-catch to not block tmp save)
-                  // Get contextId from generation record
-                  const generation = await prisma.generation.findUnique({
-                    where: { id: generationId },
-                    select: { contextId: true }
-                  })
-
-                  if (generation?.contextId) {
-                    try {
-                      await prisma.context.update({
-                        where: { id: generation.contextId },
-                        data: {
-                          settings: {
-                            ...effectiveSettings,
-                            customClothing: {
-                              ...effectiveSettings.customClothing,
-                              collageS3Key: collageKey
-                            }
-                          } as unknown as Parameters<typeof prisma.context.update>[0]['data']['settings']
-                        }
-                      })
-                      Logger.info('Updated context with collage S3 key', { contextId: generation.contextId, collageKey })
-                    } catch (contextError) {
-                      Logger.warn('Failed to update context with collage key', {
-                        contextId: generation.contextId,
-                        error: contextError instanceof Error ? contextError.message : String(contextError)
-                      })
-                    }
-                  }
-
-                  // Save to tmp folder in development
-                  if (process.env.NODE_ENV === 'development') {
-                    try {
-                      const fs = await import('fs/promises')
-                      const path = await import('path')
-
-                      const tmpDir = path.join(process.cwd(), 'tmp', 'collages')
-                      await fs.mkdir(tmpDir, { recursive: true })
-
-                      await fs.writeFile(
-                        path.join(tmpDir, `${generationId}-collage.png`),
-                        collageBuffer
-                      )
-
-                      Logger.info('Saved collage to tmp folder', {
-                        path: `tmp/collages/${generationId}-collage.png`
-                      })
-                    } catch (tmpError) {
-                      Logger.warn('Failed to save collage to tmp folder', {
-                        error: tmpError instanceof Error ? tmpError.message : String(tmpError)
-                      })
-                    }
-                  }
-                } catch (uploadError) {
-                  Logger.error('Failed to save collage to S3', {
-                    generationId,
-                    error: uploadError instanceof Error ? uploadError.message : String(uploadError)
-                  })
-                }
-              }
-            } else {
-              // Fallback to original outfit photo
-              payload.referenceImages.push({
-                base64: outfitImage.base64,
-                mimeType: outfitImage.mimeType,
-                description: 'Reference outfit - match the clothing style shown in this image'
-              })
-
-              Logger.warn('Garment collage generation failed, using original outfit photo', {
-                generationId,
-                error: collageResult.error,
-                code: collageResult.code
-              })
-            }
-            }
-          }
-
-          // Add collage to reference images (whether cached or newly generated)
-          if (collageBase64) {
-            if (!payload.referenceImages) {
-              payload.referenceImages = []
-            }
-
-            payload.referenceImages.push({
-              base64: collageBase64,
-              mimeType: 'image/png',
-              description: 'GARMENT COLLAGE - Dress the person in these exact clothing items. Match the style, fit, and details shown in each garment precisely. Use the specified clothing_colors from the subject JSON for accurate color rendering (user may have adjusted colors). This is professional business attire - ensure proper fit and styling.'
-            })
-
-            Logger.info('Added garment collage to reference images', {
-              generationId,
-              fromCache: !!cachedCollageKey
-            })
-          }
-        } catch (error) {
-          Logger.error('Failed to process outfit image', {
-            outfitKey,
-            generationId,
-            error: error instanceof Error ? error.message : String(error)
-          })
-        }
-      }
+    // Use element composition system to build payload
+    if (!isFeatureEnabled('elementComposition')) {
+      throw new Error('Element composition system is required but not enabled')
     }
 
-    subjectElement.applyToPayload(context)
-    branding.applyToPayload(context)
+    const elementContext = {
+      phase: 'person-generation' as const,
+      settings: effectiveSettings,
+      generationContext: {
+        selfieS3Keys: selfieKeys,
+        userId: personId,
+        generationId,
+      },
+      existingContributions: [],
+    }
 
-    const promptString = JSON.stringify(context.payload, null, 2)
+    const contributions = await compositionRegistry.composeContributions(elementContext)
+
+    // V3 workflow: All custom clothing handling moved to CustomClothingElement.prepare() in step 0
+    // V2 legacy code removed
+
+    const promptString = JSON.stringify(contributions.payload, null, 2)
 
     return {
       prompt: promptString,
-      mustFollowRules: context.mustFollowRules,
-      freedomRules: context.freedomRules,
+      mustFollowRules: contributions.mustFollow || [],
+      freedomRules: contributions.freedom || [],
       referenceImages,
       labelInstruction,
       aspectRatio,

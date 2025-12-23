@@ -58,7 +58,7 @@ export function hasUneditedEditableFields(
         ...currentColors
       }
       
-      const hasColors = !!(resolvedColors.topCover || resolvedColors.topBase || resolvedColors.bottom || resolvedColors.shoes)
+      const hasColors = !!(resolvedColors.topLayer || resolvedColors.baseLayer || resolvedColors.bottom || resolvedColors.shoes)
       
       // If resolved colors exist (from defaults or current), consider it as finished
       if (hasColors) {
@@ -92,7 +92,7 @@ export function hasUneditedEditableFields(
     if (normalize(currentType) === 'user-choice') {
       // Check if colors are present (for clothingColors or similar)
       const currentColors = (currentRecord.colors as Record<string, unknown>) || {}
-      const hasCurrentColors = !!(currentColors.topCover || currentColors.topBase || currentColors.bottom || currentColors.shoes)
+      const hasCurrentColors = !!(currentColors.topLayer || currentColors.baseLayer || currentColors.bottom || currentColors.shoes)
       
       if (hasCurrentColors) {
         return false // Not unedited - has colors so it's considered finished
@@ -201,7 +201,7 @@ export function areAllCustomizableSectionsCustomized(
       }
       
       // Check if resolved colors have any values set
-      const hasColors = !!(resolvedColors.topCover || resolvedColors.topBase || resolvedColors.bottom || resolvedColors.shoes)
+      const hasColors = !!(resolvedColors.topLayer || resolvedColors.baseLayer || resolvedColors.bottom || resolvedColors.shoes)
       
       // If no colors are set (neither in current nor defaults), it's not customized
       if (!hasColors) {

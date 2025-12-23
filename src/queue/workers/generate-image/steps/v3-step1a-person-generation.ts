@@ -61,13 +61,15 @@ async function prepareAllReferences({
   selfieComposite,
   styleSettings,
   downloadAsset,
-  generationId
+  generationId,
+  preparedAssets
 }: {
   selfieReferences: ReferenceImage[]
   selfieComposite: ReferenceImage
   styleSettings: PhotoStyleSettings
   downloadAsset: DownloadAssetFn
   generationId?: string
+  preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
 }): Promise<{
   referenceImages: BaseReferenceImage[]
   logoReference?: BaseReferenceImage
@@ -82,34 +84,51 @@ async function prepareAllReferences({
     compositeBase64Length: selfieComposite.base64.length
   })
 
-  // 2. Load logo ONLY if branding is on clothing (for Step 1 person generation)
+  // 2. Check if clothing overlay is being used (from ClothingOverlayElement)
+  // If overlay exists, skip logo loading as the overlay already has the logo correctly placed
+  const hasClothingOverlay = preparedAssets?.has('clothing-overlay-overlay')
+
+  // 3. Load logo ONLY if branding is on clothing AND no clothing overlay is being used
   let logoReference: BaseReferenceImage | undefined
   if (
     styleSettings.branding?.type === 'include' &&
-    styleSettings.branding.logoKey &&
-    styleSettings.branding.position === 'clothing'
+    styleSettings.branding.position === 'clothing' &&
+    !hasClothingOverlay  // CRITICAL: Skip if overlay is handling the logo
   ) {
-    try {
-      const logoAsset = await downloadAsset(styleSettings.branding.logoKey)
-      if (logoAsset) {
-        logoReference = {
-          description: 'Company logo for clothing branding - apply according to branding rules',
-          base64: logoAsset.base64,
-          mimeType: logoAsset.mimeType
-        }
+    // Use prepared logo from BrandingElement (Step 0) - already has SVG conversion
+    const preparedLogo = preparedAssets?.get('branding-logo')
+    if (preparedLogo?.data.base64) {
+      logoReference = {
+        description: 'Company logo for clothing branding - apply according to branding rules',
+        base64: preparedLogo.data.base64,
+        mimeType: preparedLogo.data.mimeType || 'image/png'
       }
-    } catch (error) {
-      Logger.warn('Failed to load logo for V3 Step 1 clothing branding', { error })
+      Logger.debug('V3 Step 1a: Using prepared logo asset for clothing branding', {
+        generationId,
+        mimeType: preparedLogo.data.mimeType,
+        s3Key: preparedLogo.data.s3Key
+      })
+    } else {
+      Logger.warn('V3 Step 1a: Prepared logo asset not found, branding may not appear', {
+        generationId,
+        hasPreparedAssets: !!preparedAssets,
+        preparedAssetKeys: Array.from(preparedAssets?.keys() || [])
+      })
     }
+  } else if (hasClothingOverlay) {
+    Logger.info('V3 Step 1a: Skipping logo reference - clothing overlay is handling it', {
+      generationId,
+      overlayKey: 'clothing-overlay-overlay'
+    })
   }
 
-  // 3. REMOVED: Outfit reference loading (now handled by outfit1/server.ts)
+  // 4. REMOVED: Outfit reference loading (now handled by outfit1/server.ts)
   // Custom clothing (outfit transfer) is package-specific (outfit1 only).
   // The outfit1 package creates a garment collage during buildGenerationPayload()
   // and passes it via input.referenceImages to avoid duplicate loading.
   // This keeps prepareAllReferences() generic for all packages.
 
-  // 4. Assemble reference array - selfies and optional logo
+  // 5. Assemble reference array - selfies and optional logo
   // Format frame removed from Step 1a to avoid AI reproducing borders
   // Step 2 will handle final framing
   const referenceImages: BaseReferenceImage[] = [selfieComposite]
@@ -203,7 +222,8 @@ export async function executeV3Step1a(
     selfieAssetIds,
     personId,
     generationId,
-    onCostTracking
+    onCostTracking,
+    preparedAssets
   } = input
 
   Logger.debug('V3 Step 1a: Generating person on grey background')
@@ -291,7 +311,8 @@ export async function executeV3Step1a(
     selfieComposite,
     styleSettings,
     downloadAsset,
-    generationId: `v3-step1-${Date.now()}`
+    generationId: `v3-step1-${Date.now()}`,
+    preparedAssets  // Pass prepared assets to check for clothing overlay
   })
 
   // Merge pre-built references (e.g., garment collage from outfit1) with prepared references
@@ -333,14 +354,14 @@ export async function executeV3Step1a(
         generationId,
         personId,
         teamId: input.teamId,
-        preparedAssets: input.preparedAssets, // Pass prepared assets from step 0
+        preparedAssets, // Pass prepared assets from step 0
       })
       Logger.debug('[ElementComposition] Element contributions composed successfully', {
         generationId,
         hasInstructions: elementContributions.instructions.length > 0,
         hasMustFollow: elementContributions.mustFollow.length > 0,
         hasFreedom: elementContributions.freedom.length > 0,
-        preparedAssets: input.preparedAssets?.size || 0,
+        preparedAssets: preparedAssets?.size || 0,
       })
     } catch (error) {
       Logger.error('[ElementComposition] Failed to compose element contributions, falling back to provided rules', {
@@ -397,37 +418,7 @@ export async function executeV3Step1a(
     '- Lighting: The subject is currently on a neutral grey background, but treat this as a "studio cycling wall" illuminated by the lighting specified in the JSON. The lighting on the person MUST match the intended final scene.',
     
     `- Output Dimensions: Generate the image at ${aspectRatioConfig.width}x${aspectRatioConfig.height} pixels (${aspectRatioConfig.id || aspectRatio}). Fill the entire canvas edge-to-edge with no borders, frames, letterboxing, or black bars.`,
-    ...(shotDescription === 'medium-shot' ? [
-      '- Shot Type (ABSOLUTE REQUIREMENT): MEDIUM SHOT - frame from top of head to bottom of ribcage/top of belt area.',
-      '- The bottom edge of the image MUST crop at the waist/belt level. DO NOT show hips, legs, knees, or feet.',
-      '- If you include legs or hips, the image will be rejected.'
-    ] : shotDescription === 'medium-close-up' ? [
-      '- Shot Type (ABSOLUTE REQUIREMENT): MEDIUM CLOSE-UP - frame from top of head to mid-chest (armpit level).',
-      '- The bottom edge of the image MUST crop across the chest. DO NOT show the stomach, waist, belt, hips, or legs.',
-      '- This is a head-and-shoulders portrait. If you show the torso below the chest, the image will be rejected.'
-    ] : shotDescription === 'close-up' ? [
-      '- Shot Type (ABSOLUTE REQUIREMENT): CLOSE-UP - frame from top of head to just below the chin/neck.',
-      '- The bottom edge of the image MUST crop at the neck/collarbone level. DO NOT show shoulders or chest.',
-      '- Focus intensely on the face.'
-    ] : shotDescription === 'extreme-close-up' ? [
-      '- Shot Type (ABSOLUTE REQUIREMENT): EXTREME CLOSE-UP - tight framing on the face/eyes.',
-      '- The frame should cut off part of the forehead and chin to focus purely on facial features.',
-      '- DO NOT show neck or shoulders.'
-    ] : shotDescription === 'full-length' ? [
-      '- Shot Type (ABSOLUTE REQUIREMENT): FULL SHOT - frame from top of head to feet, showing entire body.',
-      '- You MUST show the subject\'s feet. Do not crop the legs.',
-      '- Ensure the entire person fits within the frame with a small amount of headroom and footroom.'
-    ] : shotDescription === 'three-quarter' ? [
-      '- Shot Type (ABSOLUTE REQUIREMENT): THREE-QUARTER SHOT - frame from top of head to mid-thigh.',
-      '- The bottom edge of the image MUST crop at the mid-thigh level (knees not visible).',
-      '- DO NOT show knees, calves, or feet.'
-    ] : shotDescription === 'wide-shot' ? [
-      '- Shot Type (ABSOLUTE REQUIREMENT): WIDE SHOT - show the full person with ample space around them.',
-      '- The subject should be fully visible from head to toe, occupying a smaller portion of the frame to allow for environmental context (even if currently on grey).',
-      '- DO NOT crop any part of the body.'
-    ] : [
-      `- Shot Type: Respect the requested shot type (${shotDescription}) and ensure proper framing.`
-    ])
+    '- Framing: Follow the shot_type and crop_points exactly as specified in the JSON framing section. DO NOT deviate from the specified framing or show body parts outside the crop boundaries.'
   ]
 
   // Add element-specific must follow rules (using effective rules from element composition or fallback)
@@ -453,7 +444,7 @@ export async function executeV3Step1a(
   // Add explicit reference instructions focused on person/face only
   const instructionLines: string[] = [
     '\n\nReference images are supplied with clear labels. Follow each resource precisely:',
-    '- **Subject Selfies:** Inside the stacked selfie reference, choose the face that best matches the requested pose as the primary likeness. Use the remaining selfies to reinforce 3D facial structure, hair, glasses, and fine details. Stay as close as possible to the original selfies. Do not invent details, unless indicated specifically. Eg if the selfies do not show glasses, do not add glasses. Keep the hairstyle as much as possible as in the selfies. Do not show the original selfies in the final image.',
+    '- **Subject Selfies:** Use the stacked selfie reference to recreate the person. Do not show the original selfies in the final image.',
     '- **Neutral Background:** Isolated on a solid flat neutral grey background (#808080). No shadows, gradients, or other background elements. Use neutral, even lighting. Camera and lighting specifications will be applied in the next step.',
     '- **Focus on Person:** Your primary goal is to accurately recreate the person from the selfies - face, body, pose, and clothing. The background, lighting, and camera effects will be added later.'
   ]
@@ -647,21 +638,28 @@ export async function executeV3Step1a(
   // 3. Load logo ONLY if branding is for background/elements (NOT clothing) - for Step 3
   let backgroundLogoRef: BaseReferenceImage | undefined
   if (
-    styleSettings.branding?.type === 'include' && 
-    styleSettings.branding.logoKey &&
+    styleSettings.branding?.type === 'include' &&
     (styleSettings.branding.position === 'background' || styleSettings.branding.position === 'elements')
   ) {
-    try {
-      const logoAsset = await downloadAsset(styleSettings.branding.logoKey)
-      if (logoAsset) {
-        backgroundLogoRef = {
-          description: `Company logo for ${styleSettings.branding.position} placement`,
-          base64: logoAsset.base64,
-          mimeType: logoAsset.mimeType
-        }
+    // Use prepared logo from BrandingElement (Step 0) - already has SVG conversion
+    const preparedLogo = preparedAssets?.get('branding-logo')
+    if (preparedLogo?.data.base64) {
+      backgroundLogoRef = {
+        description: `Company logo for ${styleSettings.branding.position} placement`,
+        base64: preparedLogo.data.base64,
+        mimeType: preparedLogo.data.mimeType || 'image/png'
       }
-    } catch (error) {
-      Logger.warn(`Failed to load logo for Step 3 ${styleSettings.branding.position} branding`, { error })
+      Logger.debug('V3 Step 1a: Using prepared logo asset for background/elements branding', {
+        generationId,
+        mimeType: preparedLogo.data.mimeType,
+        position: styleSettings.branding.position
+      })
+    } else {
+      Logger.warn('V3 Step 1a: Prepared logo asset not found for background/elements branding', {
+        generationId,
+        position: styleSettings.branding.position,
+        preparedAssetKeys: Array.from(preparedAssets?.keys() || [])
+      })
     }
   }
 

@@ -11,7 +11,7 @@ import {
 /**
  * Reason for the AI call
  */
-export type CostReason = 'generation' | 'evaluation' | 'refinement' | 'outfit_color_analysis' | 'outfit_collage_creation'
+export type CostReason = 'generation' | 'evaluation' | 'refinement' | 'outfit_color_analysis' | 'outfit_collage_creation' | 'clothing_overlay_creation'
 
 /**
  * Result of the AI call

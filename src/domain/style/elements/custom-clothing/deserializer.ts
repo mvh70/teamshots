@@ -24,6 +24,19 @@ export function deserializeCustomClothing(json: string | null | undefined): Cust
       return DEFAULT_CUSTOM_CLOTHING
     }
 
+    // Migrate old field names to new field names (topBase → baseLayer, topCover → topLayer)
+    if (parsed.colors) {
+      const colors = parsed.colors
+      if ('topBase' in colors && !('baseLayer' in colors)) {
+        colors.baseLayer = colors.topBase
+        delete colors.topBase
+      }
+      if ('topCover' in colors && !('topLayer' in colors)) {
+        colors.topLayer = colors.topCover
+        delete colors.topCover
+      }
+    }
+
     // Validate the parsed object
     if (!customClothingConfig.validate(parsed)) {
       Logger.warn('Invalid custom clothing settings, using default', { parsed })

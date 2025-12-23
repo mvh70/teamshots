@@ -109,7 +109,7 @@ export default function IntroScreenContent({
         <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-4 lg:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
           {/* Images side */}
           <div className="space-y-4 lg:flex lg:flex-col lg:items-end">
-            <div className="rounded-2xl overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 w-[300px]">
+            <div className="overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 w-[300px] p-[5px]">
               <Image
                 src={images.good.src}
                 alt={images.good.alt}
@@ -119,7 +119,7 @@ export default function IntroScreenContent({
                 priority={images.good.priority}
               />
             </div>
-            <div className="rounded-2xl overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 w-[300px]">
+            <div className="overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 w-[300px] p-[5px]">
               <Image
                 src={images.bad.src}
                 alt={images.bad.alt}
@@ -132,18 +132,18 @@ export default function IntroScreenContent({
           </div>
 
           {/* Tips side */}
-          
+          <div className="space-y-3 lg:space-y-4">
             {tips.map((tip, index) => (
-              <div 
-                key={tip.key} 
+              <div
+                key={tip.key}
                 className="animate-in fade-in slide-in-from-bottom-4 duration-700"
                 style={{ animationDelay: `${(index + 1) * 100}ms` }}
               >
                 <div className="flex items-start gap-5 md:gap-6 p-5 md:p-6 rounded-2xl bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-sm">
-                  <div className={`flex h-10 w-10 md:h-12 md:w-12 flex-shrink-0 items-center justify-center rounded-xl border-2 border-white/90 ${tip.bgColor}`}>
-                    <div className={tip.textColor}>
-                      {tip.icon}
-                    </div>
+                  <div
+                    className={`flex h-10 w-10 md:h-12 md:w-12 flex-shrink-0 items-center justify-center rounded-xl border-2 border-white/90 ${tip.bgColor}`}
+                  >
+                    <div className={tip.textColor}>{tip.icon}</div>
                   </div>
                   <div className="flex-1 pt-1 md:pt-2.5">
                     {tip.content.type === 'titled' ? (
@@ -164,12 +164,13 @@ export default function IntroScreenContent({
                 </div>
               </div>
             ))}
+          </div>
         </div>
       ) : (
         <>
           {/* Optional Image */}
           {image && (
-            <div className="rounded-2xl overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 hover:shadow-3xl transition-shadow max-w-2xl">
+          <div className="rounded-2xl overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 hover:shadow-3xl transition-shadow max-w-2xl p-[5px]">
               <Image
                 src={image.src}
                 alt={image.alt}

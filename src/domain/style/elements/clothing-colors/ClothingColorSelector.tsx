@@ -54,16 +54,20 @@ export default function ClothingColorSelector({
 
   const isExcluded = (colorKey: ClothingColorKey) => excludeColors.includes(colorKey)
 
+  // Multi-layer garments show both topLayer and baseLayer
+  // Single-layer garments only show topLayer (baseLayer is excluded)
+  const isMultiLayer = !isExcluded('baseLayer')
+
   const handleColorChange = (colorType: ClothingColorKey, color: string) => {
     if (isPredefined) return
-    
-    onChange({ 
+
+    onChange({
       // Preserve the existing type (user-choice or predefined)
       type: value.type || 'user-choice',
-      colors: { 
-        ...value.colors, 
-        [colorType]: color 
-      } 
+      colors: {
+        ...value.colors,
+        [colorType]: color
+      }
     })
   }
 
@@ -95,46 +99,46 @@ export default function ClothingColorSelector({
         </p>
       ) : (
         <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
-          {/* Outer Layer */}
-          {!isExcluded('topCover') && (
+          {/* Top Layer - always shown (the visible outer garment) */}
+          {!isExcluded('topLayer') && (
             <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg" role="img" aria-label="jacket">🧥</span>
+                <span className="text-lg" role="img" aria-label="outer garment">🧥</span>
                 <div>
                   <label className="block text-sm font-medium text-gray-900">
-                    {t('outerLayer', { default: 'Outer Layer' })}
+                    {t('topLayer', { default: 'Top layer' })}
                   </label>
                   <p className="text-xs text-gray-500">
-                    {t('outerLayerDesc', { default: 'Blazer, jacket, cardigan' })}
+                    {t('topLayerDesc', { default: 'The visible outer garment: jacket, blazer, hoodie, polo, t-shirt, dress' })}
                   </p>
                 </div>
               </div>
               <ColorPicker
-                value={value.colors?.topCover ?? ''}
-                onChange={(color) => handleColorChange('topCover', color)}
+                value={value.colors?.topLayer ?? ''}
+                onChange={(color) => handleColorChange('topLayer', color)}
                 presets={CLOTHING_COLOR_PRESETS}
                 disabled={isPredefined || isDisabled}
               />
             </div>
           )}
 
-          {/* Shirt/Blouse */}
-          {!isExcluded('topBase') && (
+          {/* Base Layer - only shown for multi-layer garments */}
+          {!isExcluded('baseLayer') && (
             <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg" role="img" aria-label="shirt">👔</span>
                 <div>
                   <label className="block text-sm font-medium text-gray-900">
-                    {t('shirtBlouse', { default: 'Shirt/Blouse' })}
+                    {t('baseLayer', { default: 'Base layer' })}
                   </label>
                   <p className="text-xs text-gray-500">
-                    {t('shirtBlouseDesc', { default: 'Dress shirt, blouse, polo' })}
+                    {t('baseLayerDesc', { default: 'Shirt or t-shirt underneath the top layer' })}
                   </p>
                 </div>
               </div>
               <ColorPicker
-                value={value.colors?.topBase ?? ''}
-                onChange={(color) => handleColorChange('topBase', color)}
+                value={value.colors?.baseLayer ?? ''}
+                onChange={(color) => handleColorChange('baseLayer', color)}
                 presets={CLOTHING_COLOR_PRESETS}
                 disabled={isPredefined || isDisabled}
               />

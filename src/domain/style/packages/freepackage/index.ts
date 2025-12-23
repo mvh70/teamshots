@@ -1,6 +1,5 @@
 import { PhotoStyleSettings, CategoryType } from '@/types/photo-style'
 import type { ClientStylePackage } from '../index'
-import { buildStandardPrompt } from '../../prompt-builders'
 import { getDefaultPresetSettings } from '../standard-settings'
 import { getValueOrDefault } from '../shared/utils'
 import { CORPORATE_HEADSHOT } from '../defaults'
@@ -10,10 +9,6 @@ import * as clothing from '../../elements/clothing'
 import * as clothingColors from '../../elements/clothing-colors'
 import * as pose from '../../elements/pose'
 import * as expression from '../../elements/expression'
-import * as shotTypeElement from '../../elements/shot-type'
-import * as cameraSettings from '../../elements/camera-settings'
-import * as lighting from '../../elements/lighting'
-import * as subjectElement from '../../elements/subject'
 
 
 const VISIBLE_CATEGORIES: CategoryType[] = [
@@ -34,15 +29,12 @@ const AVAILABLE_BACKGROUNDS = [
 ]
 
 const AVAILABLE_POSES = [
-  'power_classic',
-  'power_crossed',
-  'casual_confident',
-  'approachable_cross',
-  'walking_confident',
-  'sitting_engaged',
-  'executive_seated',
-  'thinker',
-  'jacket_reveal'
+  'classic_corporate',
+  'slimming_three_quarter',
+  'power_cross',
+  'approachable_lean',
+  'candid_over_shoulder',
+  'seated_engagement'
 ]
 
 const AVAILABLE_EXPRESSIONS = [
@@ -65,8 +57,8 @@ const DEFAULTS = {
   clothingColors: {
     type: 'predefined' as const,
     colors: {
-      topBase: 'White',
-      topCover: 'Dark blue',
+      topLayer: 'Dark blue',
+      baseLayer: 'White',
       shoes: 'brown',
       bottom: 'Gray'
     }
@@ -75,29 +67,6 @@ const DEFAULTS = {
   shotType: { type: 'medium-shot' as const }, // Package standard (not in visibleCategories)
   subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts
 }
-
-function buildPrompt(settings: PhotoStyleSettings): string {
-  const context = buildStandardPrompt({
-    settings,
-    defaultPresetId: freepackage.defaultPresetId,
-    presets: freepackage.presets || { [FREE_PRESET.id]: FREE_PRESET }
-  })
-
-  // Apply elements in dependency order
-  shotTypeElement.applyToPayload(context)
-  cameraSettings.applyToPayload(context)
-  lighting.applyToPayload(context)
-  pose.applyToPayload(context)
-  backgroundElement.applyToPayload(context)
-  clothing.applyToPayload(context)
-  subjectElement.applyToPayload(context)
-  branding.applyToPayload(context)
-
-  // Build the final prompt with JSON only (no rules - rules are handled separately)
-  return JSON.stringify(context.payload, null, 2)
-}
-
-
 
 export const freepackage: ClientStylePackage = {
   id: 'freepackage',
@@ -112,26 +81,8 @@ export const freepackage: ClientStylePackage = {
   defaultSettings: DEFAULTS,
   defaultPresetId: FREE_PRESET.id,
   presets: { [FREE_PRESET.id]: FREE_PRESET },
-  promptBuilder: (settings, _ctx) => {
-    void _ctx
-
-    // Merge user settings with package defaults
-    const resolvedSettings: PhotoStyleSettings = {
-      presetId: settings.presetId || freepackage.defaultPresetId,
-      background: getValueOrDefault(settings.background, DEFAULTS.background),
-      branding: getValueOrDefault(settings.branding, DEFAULTS.branding),
-      clothing: getValueOrDefault(settings.clothing, DEFAULTS.clothing),
-      clothingColors: getValueOrDefault(settings.clothingColors, DEFAULTS.clothingColors),
-      pose: getValueOrDefault(settings.pose, DEFAULTS.pose),
-      expression: getValueOrDefault(settings.expression, DEFAULTS.expression),
-      shotType: DEFAULTS.shotType, // Fixed to medium-shot for freepackage
-      // Runtime context (passed in by caller, not from persisted settings)
-      aspectRatio: settings.aspectRatio,
-      subjectCount: settings.subjectCount,
-      usageContext: settings.usageContext
-    }
-
-    return buildPrompt(resolvedSettings)
+  promptBuilder: () => {
+    throw new Error('promptBuilder is deprecated - use server-side buildGenerationPayload instead')
   },
   extractUiSettings: (rawStyleSettings) => {
     // Extract UI settings from request for visible categories only

@@ -6,6 +6,7 @@
  */
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
+import { generateWardrobePrompt } from '../../clothing/prompt'
 
 export class ClothingElement extends StyleElement {
   readonly id = 'clothing'
@@ -41,81 +42,29 @@ export class ClothingElement extends StyleElement {
       details: clothing.details,
     }
 
-    // Normalize style
+    // Generate wardrobe prompt result for payload
+    const wardrobeResult = generateWardrobePrompt({
+      clothing: settings.clothing,
+      clothingColors: settings.clothingColors,
+      shotType: settings.shotType?.type,
+    })
+
+    // Build payload structure with wardrobe data
+    // IMPORTANT: This includes style_key and detail_key that BrandingElement depends on!
+    const payload = {
+      subject: {
+        wardrobe: wardrobeResult.wardrobe,
+      },
+    }
+
+    // Note: Specific clothing details (style, base_layer, outer_layer, details) are in the JSON payload
+    // Only add critical quality rules that aren't obvious from the JSON structure
+
+    // Normalize style for metadata
     const style = clothing.style?.toLowerCase() || 'startup'
+    metadata.style = style
 
-    // Generate style-specific instructions
-    if (style === 'business') {
-      instructions.push(
-        'Dress the person in polished business attire',
-        'Clothing should be corporate-appropriate and professional',
-        'Base layer should be a crisp dress shirt'
-      )
-      mustFollow.push(
-        'Attire must be suitable for a corporate business environment',
-        'Clothing must appear neat, pressed, and well-maintained'
-      )
-
-      // Add detail-specific guidance
-      if (clothing.details) {
-        const detail = clothing.details.toLowerCase()
-        if (detail.includes('blazer') || detail.includes('suit')) {
-          instructions.push('Include a tailored blazer or suit jacket worn neatly')
-          metadata.outerLayer = 'blazer'
-        }
-        if (detail.includes('tie')) {
-          instructions.push('Include a professional necktie')
-          metadata.accessories = ['tie']
-        }
-      }
-    } else if (style === 'startup') {
-      instructions.push(
-        'Dress the person in relaxed startup-style wardrobe',
-        'Clothing should be casual but professional',
-        'Base should be clean and suitable for logo placement'
-      )
-      mustFollow.push(
-        'Attire must balance casual comfort with professional presentation',
-        'Clothing should look modern and tech-appropriate'
-      )
-
-      // Add detail-specific guidance
-      if (clothing.details) {
-        const detail = clothing.details.toLowerCase()
-        if (detail.includes('hoodie')) {
-          instructions.push('Dress in a modern hoodie as the main garment')
-          metadata.topGarment = 'hoodie'
-        }
-        if (detail.includes('polo')) {
-          instructions.push('Dress in a polo shirt')
-          metadata.topGarment = 'polo'
-        }
-      }
-    } else if (style === 'black-tie') {
-      instructions.push(
-        'Dress the person in refined black-tie formalwear',
-        'Clothing should be elegant and suitable for upscale evening events',
-        'Garments should have a sophisticated, formal aesthetic'
-      )
-      mustFollow.push(
-        'Attire must be appropriate for black-tie/formal evening events',
-        'Clothing must appear elegant and high-end'
-      )
-    }
-
-    // Handle accessories if specified
-    if (clothing.accessories && Array.isArray(clothing.accessories) && clothing.accessories.length > 0) {
-      instructions.push(
-        `Include the following accessories: ${clothing.accessories.join(', ')}`
-      )
-      mustFollow.push(
-        'All specified accessories must be present and visible',
-        'Accessories should complement the overall outfit'
-      )
-      metadata.accessories = clothing.accessories
-    }
-
-    // Add general clothing rules
+    // Add general clothing quality rules (not specific to any style)
     mustFollow.push(
       'Clothing must fit the person naturally and appropriately',
       'All garments must be worn correctly and neatly',
@@ -125,6 +74,7 @@ export class ClothingElement extends StyleElement {
     return {
       instructions,
       mustFollow,
+      payload,
       metadata,
     }
   }

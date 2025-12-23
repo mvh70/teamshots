@@ -60,21 +60,6 @@ export default function SelfieTipsContent({
       }
     },
     {
-      key: 'distance',
-      icon: (
-        <svg className="h-6 w-6 md:h-7 md:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-        </svg>
-      ),
-      bgColor: 'bg-blue-100',
-      textColor: 'text-blue-700',
-      content: {
-        type: 'titled',
-        title: t('distance.title'),
-        description: t('distance.desc')
-      }
-    },
-    {
       key: 'minimum',
       icon: (
         <svg className="h-6 w-6 md:h-7 md:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,6 +72,22 @@ export default function SelfieTipsContent({
         type: 'titled',
         title: t('minimum.title'),
         description: t('minimum.desc')
+      }
+    },
+    {
+      key: 'accessories',
+      icon: (
+        <svg className="h-6 w-6 md:h-7 md:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      ),
+      bgColor: 'bg-purple-100',
+      textColor: 'text-purple-700',
+      content: {
+        type: 'titled',
+        title: t('accessories.title'),
+        description: t('accessories.desc')
       }
     }
   ]

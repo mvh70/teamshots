@@ -117,8 +117,12 @@ export function useGenerationStatus({
         // Only stop polling if we have the generated images
         // This prevents the race condition where status is completed but keys aren't available yet
         if (data.generatedImageUrls && data.generatedImageUrls.length > 0) {
-          setShouldPoll(false)
-          setLoading(false)
+          // Double-check that we have actual URLs with keys, not empty strings
+          const hasValidUrls = data.generatedImageUrls.some(url => url && url.length > 0)
+          if (hasValidUrls) {
+            setShouldPoll(false)
+            setLoading(false)
+          }
         }
         // If completed but no images, continue polling to get the final data
       }

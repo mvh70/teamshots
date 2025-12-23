@@ -328,15 +328,7 @@ export function useOnbordaTours() {
       if (!force) {
         const completedTours = context.completedTours || []
         const hasCompleted = completedTours.includes(tourName)
-        console.log('[startTour] Checking completion status:', {
-          tourName,
-          force,
-          completedTours,
-          hasCompleted,
-          personId: context.personId
-        })
         if (hasCompleted) {
-          console.log('[startTour] Tour already completed, skipping:', tourName)
           return
         }
       } else {
@@ -356,7 +348,6 @@ export function useOnbordaTours() {
       const tour = translatedTours[tourName]
       
       if (tour) {
-        console.log('[startTour] Setting pending tour:', tourName, { force, tourExists: !!tour })
         setPendingTour(tourName)
         trackTourStarted(tourName, context)
       } else {
@@ -369,8 +360,6 @@ export function useOnbordaTours() {
 
   // Complete a tour and update context
   const completeTour = async (tourName: string) => {
-    console.log('[completeTour] Starting completion process:', tourName, { personId: context.personId })
-    
     // Check if tour exists - bypass triggerCondition check for explicit completion
     // Some tours like 'generation-detail' have triggerCondition: false but should still be completable
     const translatedTours = createTranslatedTours(t)
@@ -383,9 +372,6 @@ export function useOnbordaTours() {
         availableTours: Object.keys(translatedTours)
       })
     }
-    
-    // Always proceed with completion, even if tour config is missing
-    console.log('[completeTour] Completing tour:', tourName, { personId: context.personId, tourFound: !!tour })
     
     // Track completion before updating context (only if tour exists)
     if (tour) {
@@ -413,8 +399,6 @@ export function useOnbordaTours() {
           requestBody.token = inviteToken
         }
         
-        console.log('[completeTour] Saving completion to database:', { tourName, inviteToken: !!inviteToken, personId: context.personId })
-        
         const response = await fetch('/api/onboarding/complete-tour', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -427,8 +411,7 @@ export function useOnbordaTours() {
           throw new Error(`API returned ${response.status}: ${JSON.stringify(errorData)}`)
         }
 
-        const result = await response.json()
-        console.log('[completeTour] Tour completion saved to database:', result)
+        await response.json()
 
         // Refresh onboarding context from database to ensure we have the latest state
         try {
@@ -444,11 +427,6 @@ export function useOnbordaTours() {
           const contextResponse = await fetch(contextApiUrl)
           if (contextResponse.ok) {
             const freshContext = await contextResponse.json()
-            console.log('[completeTour] Refreshed context after completion:', {
-              tourName,
-              completedTours: freshContext.completedTours || [],
-              pendingTours: freshContext.pendingTours || []
-            })
             // Update context with fresh data from database
             updateContext({
               completedTours: freshContext.completedTours || [],
@@ -482,7 +460,6 @@ export function useOnbordaTours() {
     } else {
       // If no personId, still update local context optimistically
       // Note: This won't persist across refreshes, but at least the tour won't restart in the same session
-      console.warn('[completeTour] No personId found, tour completion will not persist across refreshes:', tourName)
       const currentCompletedTours = context.completedTours || []
       if (!currentCompletedTours.includes(tourName)) {
         updateContext({ completedTours: [...currentCompletedTours, tourName] })
@@ -508,7 +485,6 @@ export function useOnbordaTours() {
 
   // Skip a tour
   const skipTour = (tourName: string) => {
-    console.log('[skipTour] Skipping tour:', tourName)
     trackTourSkipped(tourName, context)
     // Clear pendingTour to prevent restart
     setPendingTour(null)

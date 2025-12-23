@@ -115,6 +115,10 @@ export const AI_COST_CONFIG = {
       inputTokens: 5000,  // Outfit image + optional logo + instructions
       outputTokens: 2000, // Image generation output
     } satisfies TokenEstimate,
+    clothing_overlay_creation: {
+      inputTokens: 4500,  // Logo image + clothing template instructions
+      outputTokens: 1800, // Clothing overlay with logo generation
+    } satisfies TokenEstimate,
   },
 } as const
 

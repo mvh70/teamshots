@@ -35,6 +35,57 @@ export interface ContributionValidationResult {
 }
 
 /**
+ * Deep merge utility for payload contributions
+ *
+ * Merges source object into target, recursively handling nested objects.
+ * Returns array of conflict paths where values differ.
+ */
+function deepMergePayload(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+  pathPrefix = ''
+): string[] {
+  const conflicts: string[] = []
+
+  for (const key in source) {
+    if (!Object.prototype.hasOwnProperty.call(source, key)) continue
+
+    const sourcePath = pathPrefix ? `${pathPrefix}.${key}` : key
+    const sourceValue = source[key]
+    const targetValue = target[key]
+
+    // If target doesn't have this key, just assign
+    if (!(key in target)) {
+      target[key] = sourceValue
+      continue
+    }
+
+    // Both values exist - check for merge or conflict
+    const sourceIsObject = sourceValue !== null && typeof sourceValue === 'object' && !Array.isArray(sourceValue)
+    const targetIsObject = targetValue !== null && typeof targetValue === 'object' && !Array.isArray(targetValue)
+
+    if (sourceIsObject && targetIsObject) {
+      // Both are objects - recurse
+      const nestedConflicts = deepMergePayload(
+        targetValue as Record<string, unknown>,
+        sourceValue as Record<string, unknown>,
+        sourcePath
+      )
+      conflicts.push(...nestedConflicts)
+    } else {
+      // Not both objects - check for conflict
+      if (JSON.stringify(targetValue) !== JSON.stringify(sourceValue)) {
+        conflicts.push(sourcePath)
+      }
+      // Override with source value
+      target[key] = sourceValue
+    }
+  }
+
+  return conflicts
+}
+
+/**
  * Registry for managing and composing style elements
  */
 class ElementCompositionRegistry {
@@ -392,6 +443,7 @@ class ElementCompositionRegistry {
     const allFreedom: string[] = []
     const allReferenceImages: ReferenceImage[] = []
     const allMetadata: Record<string, unknown> = {}
+    const accumulatedPayload: Record<string, unknown> = {}
 
     for (const element of relevantElements) {
       try {
@@ -437,6 +489,21 @@ class ElementCompositionRegistry {
           allMetadata[element.id] = contribution.metadata
         }
 
+        // Merge payload if present
+        if (contribution.payload && Object.keys(contribution.payload).length > 0) {
+          const conflicts = deepMergePayload(accumulatedPayload, contribution.payload)
+
+          if (conflicts.length > 0) {
+            console.warn(
+              `[ElementComposition] Element ${element.id} payload conflicts at paths:`,
+              conflicts.join(', ')
+            )
+          }
+
+          // Update context so next elements can read accumulated payload
+          context.accumulatedPayload = accumulatedPayload
+        }
+
         // Update context with cumulative contributions for next element
         context.existingContributions.push(contribution)
 
@@ -444,7 +511,8 @@ class ElementCompositionRegistry {
           `[ElementComposition] ${element.id} contributed:`,
           `${contribution.instructions?.length || 0} instructions,`,
           `${contribution.mustFollow?.length || 0} rules,`,
-          `${contribution.referenceImages?.length || 0} images`
+          `${contribution.referenceImages?.length || 0} images,`,
+          `${contribution.payload ? 'payload' : 'no payload'}`
         )
       } catch (error) {
         console.error(
@@ -461,6 +529,7 @@ class ElementCompositionRegistry {
       freedom: allFreedom.length > 0 ? allFreedom : undefined,
       referenceImages: allReferenceImages.length > 0 ? allReferenceImages : undefined,
       metadata: Object.keys(allMetadata).length > 0 ? allMetadata : undefined,
+      payload: Object.keys(accumulatedPayload).length > 0 ? accumulatedPayload : undefined,
     }
   }
 

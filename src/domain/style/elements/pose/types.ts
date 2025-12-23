@@ -24,13 +24,19 @@ export interface PoseDetails {
 export interface PoseSettings extends PoseDetails {
   type:
     | 'power_classic'
+    | 'classic_corporate'
     | 'power_crossed'
+    | 'power_cross'
     | 'casual_confident'
     | 'approachable_cross'
+    | 'approachable_lean'
     | 'walking_confident'
     | 'sitting_engaged'
     | 'executive_seated'
     | 'thinker'
+    | 'slimming_three_quarter'
+    | 'candid_over_shoulder'
+    | 'seated_engagement'
     | 'jacket_reveal'
     | 'user-choice'
 }

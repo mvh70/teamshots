@@ -213,13 +213,15 @@ export async function executeV3Step3(
       '',
       '6. branding_placement',
       `   - Is the logo placed in the ${brandingInfo.position === 'background' ? 'background' : 'scene elements'}?`,
+      `   - CRITICAL HEIGHT REQUIREMENT: If the logo is on the background, it must appear BEHIND THE HEAD OR SHOULDERS (upper body), NOT behind the torso, waist, or lower body.`,
+      `   - The logo should be visible at HEAD/SHOULDER level in the UPPER portion of the frame for professional appearance.`,
       `   - CRITICAL: Occlusion by the foreground subject (person) is DESIRABLE and creates professional depth.`,
       `   - If the person naturally occludes part of the logo (hiding text, covering portions), this is EXCELLENT composition.`,
       `   - Example: If logo is "TeamShots Pro" and the person covers "Pro", leaving only "TeamShot" visible - this is CORRECT and should be YES.`,
       `   - The VISIBLE portions of the logo should match the reference (colors, font, design where visible).`,
-      `   - Answer YES if: any recognizable part of the logo is visible AND matches the reference in visible areas.`,
-      `   - Answer YES even if: large portions of the logo are hidden behind the person (this adds depth).`,
-      `   - Answer NO only if: the logo is COMPLETELY invisible (0% visible), OR the visible parts don't match the reference, OR placement looks unnaturally pasted.`,
+      `   - Answer YES if: any recognizable part of the logo is visible at head/shoulder height AND matches the reference in visible areas.`,
+      `   - Answer YES even if: large portions of the logo are hidden behind the person (this adds depth) - as long as it's at the correct height.`,
+      `   - Answer NO if: the logo is COMPLETELY invisible (0% visible), OR positioned too LOW (behind torso/waist instead of head/shoulders), OR the visible parts don't match the reference, OR placement looks unnaturally pasted.`,
       `   - Placement specification: ${brandingInfo.placement || 'as specified'} (partial occlusion still counts as correctly placed).`,
       `   - Does it look natural and properly integrated into the scene?`
     )

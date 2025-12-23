@@ -130,10 +130,6 @@ function TourStarter() {
       const hasCompleted = completedTours.includes(pendingTour)
       
       if (hasCompleted) {
-        console.log('[TourStarter] Tour already completed, clearing pending tour:', {
-          pendingTour,
-          completedTours
-        })
         clearPendingTour()
         lastCheckedTourRef.current = null
         return
@@ -146,14 +142,6 @@ function TourStarter() {
       const translatedTours = createTranslatedTours(t)
       const tour = translatedTours[pendingTour] || getTour(pendingTour, t, context)
       
-      console.log('[TourStarter] Processing pending tour:', {
-        pendingTour,
-        tourFound: !!tour,
-        pathname,
-        isOnbordaVisible: onborda.isOnbordaVisible,
-        hasCompleted: false // Already checked above
-      })
-      
       // Add path check - allow matching if pathname starts with startingPath (for sub-paths)
       // Special handling for generation-detail tour: also allow invite-dashboard paths
       const isGenerationDetailTour = pendingTour === 'generation-detail'
@@ -162,12 +150,6 @@ function TourStarter() {
         const matchesInvitePath = isGenerationDetailTour && pathname.includes('/invite-dashboard') && pathname.includes('/generations')
         
         if (!matchesStartingPath && !matchesInvitePath) {
-          console.log('[TourStarter] Path check failed, clearing pending tour:', {
-            startingPath: tour.startingPath,
-            pathname,
-            matchesStartingPath,
-            matchesInvitePath
-          })
           clearPendingTour()
           lastCheckedTourRef.current = null
           return
@@ -179,11 +161,6 @@ function TourStarter() {
         const matchesAppPath = pathname.includes('/app/generations')
         
         if (!matchesInvitePath && !matchesAppPath) {
-          console.log('[TourStarter] Path check failed for generation-detail tour, clearing pending tour:', {
-            pathname,
-            matchesInvitePath,
-            matchesAppPath
-          })
           clearPendingTour()
           lastCheckedTourRef.current = null
           return
@@ -213,9 +190,7 @@ function TourStarter() {
           return
         }
         try {
-          console.log('[TourStarter] Starting Onborda tour:', pendingTour)
           onborda.startOnborda(pendingTour)
-          console.log('[TourStarter] Onborda tour started successfully')
         } catch (error) {
           console.error('[TourStarter Debug] Error calling startOnborda:', error)
         }

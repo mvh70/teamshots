@@ -19,12 +19,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [pendingTour, setPendingTourState] = useState<string | null>(null)
   
   const setPendingTour = useCallback((tour: string | null) => {
-    console.log('[OnboardingContext] Setting pendingTour to:', tour)
     setPendingTourState(tour)
   }, [])
   
   const clearPendingTour = useCallback(() => {
-    console.log('[OnboardingContext] Clearing pendingTour')
     setPendingTourState(null)
   }, [])
   

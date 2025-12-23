@@ -26,8 +26,8 @@ const analyzeColorsSchema = z.object({
 
 // Response type
 interface OutfitColors {
-  topBase: string // Hex color
-  topCover?: string // Hex color (optional for layers like blazer)
+  topLayer: string // Hex color for visible outer garment
+  baseLayer?: string // Hex color (optional for shirt underneath)
   bottom: string // Hex color
   shoes?: string // Hex color (optional)
 }
@@ -200,8 +200,8 @@ async function analyzeOutfitColors(
 Return a JSON object with this EXACT structure:
 {
   "colors": {
-    "topBase": "#HEXCODE",
-    "topCover": "#HEXCODE",
+    "topLayer": "#HEXCODE",
+    "baseLayer": "#HEXCODE",
     "bottom": "#HEXCODE",
     "shoes": "#HEXCODE"
   },
@@ -209,8 +209,8 @@ Return a JSON object with this EXACT structure:
 }
 
 Rules:
-1. "topBase" is the base shirt/top color (REQUIRED)
-2. "topCover" is the jacket/blazer/cardigan color if present (optional)
+1. "topLayer" is the visible outer garment color (jacket/blazer/shirt - REQUIRED)
+2. "baseLayer" is the shirt underneath if there's a jacket/blazer (optional)
 3. "bottom" is the pants/skirt/shorts color (REQUIRED)
 4. "shoes" is the shoe color if visible (optional)
 5. Use 6-digit hex codes (e.g., #1F2937, not #000)
@@ -220,12 +220,12 @@ Rules:
 Example valid response:
 {
   "colors": {
-    "topBase": "#F3F4F6",
-    "topCover": "#1F2937",
+    "topLayer": "#1F2937",
+    "baseLayer": "#F3F4F6",
     "bottom": "#111827",
     "shoes": "#8B5A2B"
   },
-  "description": "Light gray dress shirt under a charcoal blazer with dark navy trousers and brown leather shoes."
+  "description": "Charcoal blazer over a light gray dress shirt with dark navy trousers and brown leather shoes."
 }`
 
     const result = await model.generateContent({

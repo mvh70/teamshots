@@ -16,6 +16,7 @@ import {
   compositionRegistry,
   type ElementContext,
   type PreparedAsset,
+  type StyleElement,
 } from '@/domain/style/elements/composition'
 
 export interface V3Step0Input {
@@ -32,6 +33,78 @@ export interface V3Step0Input {
 export interface V3Step0Output {
   preparedAssets: Map<string, PreparedAsset>
   preparationErrors: Array<{ elementId: string; error: string }>
+}
+
+/**
+ * Build dependency batches for element preparation
+ *
+ * This function analyzes element dependencies and organizes elements into batches
+ * that can be executed in order. Elements within a batch can run in parallel,
+ * but batches must run sequentially to respect dependencies.
+ *
+ * @param elements - Elements that need preparation
+ * @returns Batches of elements and any dependency errors
+ */
+function buildDependencyBatches(elements: StyleElement[]) {
+  const batches: StyleElement[][] = []
+  const errors: Array<{ elementId: string; error: string }> = []
+  const processed = new Set<string>()
+  const elementMap = new Map(elements.map((e) => [e.id, e]))
+
+  // Keep building batches until all elements are processed or we detect a deadlock
+  let remainingElements = [...elements]
+  let previousCount = remainingElements.length
+
+  while (remainingElements.length > 0) {
+    // Find elements whose dependencies are satisfied
+    const currentBatch = remainingElements.filter((element) => {
+      const deps = element.dependsOn || []
+
+      // Check if all dependencies are satisfied
+      const allDepsProcessed = deps.every((depId) => {
+        // Dependency must either be processed or not in the preparation list
+        return processed.has(depId) || !elementMap.has(depId)
+      })
+
+      return allDepsProcessed
+    })
+
+    // If no elements can be processed, we have a circular dependency or missing dependency
+    if (currentBatch.length === 0) {
+      remainingElements.forEach((element) => {
+        const deps = element.dependsOn || []
+        const unsatisfiedDeps = deps.filter(
+          (depId) => !processed.has(depId) && elementMap.has(depId)
+        )
+        errors.push({
+          elementId: element.id,
+          error: `Circular or unsatisfied dependencies: ${unsatisfiedDeps.join(', ')}`,
+        })
+      })
+      break
+    }
+
+    // Add batch and mark elements as processed
+    batches.push(currentBatch)
+    currentBatch.forEach((element) => processed.add(element.id))
+
+    // Remove processed elements from remaining
+    remainingElements = remainingElements.filter((e) => !processed.has(e.id))
+
+    // Detect infinite loop (should not happen with correct logic)
+    if (remainingElements.length === previousCount) {
+      remainingElements.forEach((element) => {
+        errors.push({
+          elementId: element.id,
+          error: 'Failed to resolve dependencies (infinite loop detected)',
+        })
+      })
+      break
+    }
+    previousCount = remainingElements.length
+  }
+
+  return { batches, errors }
 }
 
 /**
@@ -108,67 +181,97 @@ export async function executeStep0Preparation(
     generationId,
   })
 
-  // Prepare assets in parallel
+  // Prepare assets respecting dependencies
   const preparedAssets = new Map<string, PreparedAsset>()
   const preparationErrors: Array<{ elementId: string; error: string }> = []
 
   if (elementsNeedingPrep.length > 0) {
-    const prepPromises = elementsNeedingPrep.map(async (element) => {
-      try {
-        Logger.debug(`V3 Step 0: Preparing assets for ${element.id}`, {
-          generationId,
-        })
+    // Build dependency graph and execute in topological order
+    const { batches, errors: graphErrors } = buildDependencyBatches(elementsNeedingPrep)
 
-        const startTime = Date.now()
-        const asset = await element.prepare!(prepContext)
-        const duration = Date.now() - startTime
-
-        Logger.info(`V3 Step 0: Asset prepared for ${element.id}`, {
-          elementId: element.id,
-          assetType: asset.assetType,
-          durationMs: duration,
-          generationId,
-        })
-
-        return { success: true as const, elementId: element.id, asset }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        Logger.error(`V3 Step 0: Failed to prepare asset for ${element.id}`, {
-          error: errorMessage,
-          elementId: element.id,
-          generationId,
-        })
-        return {
-          success: false as const,
-          elementId: element.id,
-          error: errorMessage,
-        }
-      }
+    // Add any dependency errors
+    graphErrors.forEach((error) => {
+      preparationErrors.push(error)
+      Logger.error('V3 Step 0: Dependency graph error', {
+        error: error.error,
+        elementId: error.elementId,
+        generationId,
+      })
     })
 
-    // Wait for all preparations to complete
-    const results = await Promise.all(prepPromises)
+    // Execute batches sequentially (elements within a batch run in parallel)
+    for (const [batchIndex, batch] of batches.entries()) {
+      Logger.info(`V3 Step 0: Executing batch ${batchIndex + 1}/${batches.length}`, {
+        elementIds: batch.map((e) => e.id),
+        generationId,
+      })
 
-    // Process results
-    results.forEach((result) => {
-      if (result.success) {
-        const key = `${result.elementId}-${result.asset.assetType}`
-        preparedAssets.set(key, result.asset)
-        if (debugMode) {
-          Logger.debug(`V3 Step 0: Stored prepared asset`, {
-            key,
-            elementId: result.elementId,
-            assetType: result.asset.assetType,
+      // Update context with accumulated prepared assets
+      const currentContext: ElementContext = {
+        ...prepContext,
+        generationContext: {
+          ...prepContext.generationContext,
+          preparedAssets,
+        },
+      }
+
+      const batchPromises = batch.map(async (element) => {
+        try {
+          Logger.debug(`V3 Step 0: Preparing assets for ${element.id}`, {
             generationId,
           })
+
+          const startTime = Date.now()
+          const asset = await element.prepare!(currentContext)
+          const duration = Date.now() - startTime
+
+          Logger.info(`V3 Step 0: Asset prepared for ${element.id}`, {
+            elementId: element.id,
+            assetType: asset.assetType,
+            durationMs: duration,
+            generationId,
+          })
+
+          return { success: true as const, elementId: element.id, asset }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          Logger.error(`V3 Step 0: Failed to prepare asset for ${element.id}`, {
+            error: errorMessage,
+            elementId: element.id,
+            generationId,
+          })
+          return {
+            success: false as const,
+            elementId: element.id,
+            error: errorMessage,
+          }
         }
-      } else {
-        preparationErrors.push({
-          elementId: result.elementId,
-          error: result.error,
-        })
-      }
-    })
+      })
+
+      // Wait for all elements in this batch to complete
+      const batchResults = await Promise.all(batchPromises)
+
+      // Process batch results and add to prepared assets
+      batchResults.forEach((result) => {
+        if (result.success) {
+          const key = `${result.elementId}-${result.asset.assetType}`
+          preparedAssets.set(key, result.asset)
+          if (debugMode) {
+            Logger.debug(`V3 Step 0: Stored prepared asset`, {
+              key,
+              elementId: result.elementId,
+              assetType: result.asset.assetType,
+              generationId,
+            })
+          }
+        } else {
+          preparationErrors.push({
+            elementId: result.elementId,
+            error: result.error,
+          })
+        }
+      })
+    }
   }
 
   Logger.info('V3 Step 0: Asset preparation complete', {

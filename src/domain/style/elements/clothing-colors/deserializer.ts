@@ -8,12 +8,17 @@ export function deserialize(
 
   // Fallback default colors if defaults is not provided or doesn't have the expected structure
   const fallbackColors = {
-    topBase: defaults?.type === 'predefined' && defaults.colors?.topBase ? defaults.colors.topBase : 'white',
-    topCover: defaults?.type === 'predefined' && defaults.colors?.topCover ? defaults.colors.topCover : 'navy'
+    baseLayer: defaults?.type === 'predefined' && defaults.colors?.baseLayer ? defaults.colors.baseLayer : 'white',
+    topLayer: defaults?.type === 'predefined' && defaults.colors?.topLayer ? defaults.colors.topLayer : 'navy'
   }
 
   if (rawClothingColors === null || rawClothingColors === undefined || !('clothingColors' in raw)) {
     return { type: 'user-choice' }
+  }
+
+  // Helper to get color with backward compatibility for old field names
+  const getColorValue = (colors: any, newField: string, oldField?: string): string | undefined => {
+    return colors?.[newField] || (oldField ? colors?.[oldField] : undefined)
   }
 
   if (rawClothingColors.type === 'user-choice') {
@@ -21,8 +26,9 @@ export function deserialize(
       return {
         type: 'user-choice',
         colors: {
-          topBase: rawClothingColors.colors.topBase,
-          topCover: rawClothingColors.colors.topCover,
+          // Try new field names first, fall back to old field names (topBase → baseLayer, topCover → topLayer)
+          baseLayer: getColorValue(rawClothingColors.colors, 'baseLayer', 'topBase'),
+          topLayer: getColorValue(rawClothingColors.colors, 'topLayer', 'topCover'),
           bottom: rawClothingColors.colors.bottom,
           shoes: rawClothingColors.colors.shoes
         }
@@ -31,8 +37,8 @@ export function deserialize(
     return {
       type: 'user-choice',
       colors: {
-        topBase: fallbackColors.topBase,
-        topCover: fallbackColors.topCover
+        baseLayer: fallbackColors.baseLayer,
+        topLayer: fallbackColors.topLayer
       }
     }
   }
@@ -41,8 +47,9 @@ export function deserialize(
     return {
       type: 'predefined',
       colors: {
-        topBase: rawClothingColors.colors?.topBase || fallbackColors.topBase,
-        topCover: rawClothingColors.colors?.topCover || fallbackColors.topCover,
+        // Try new field names first, fall back to old field names
+        baseLayer: getColorValue(rawClothingColors.colors, 'baseLayer', 'topBase') || fallbackColors.baseLayer,
+        topLayer: getColorValue(rawClothingColors.colors, 'topLayer', 'topCover') || fallbackColors.topLayer,
         bottom: rawClothingColors.colors?.bottom,
         shoes: rawClothingColors.colors?.shoes
       }
@@ -53,8 +60,9 @@ export function deserialize(
     return {
       type: 'user-choice',
       colors: {
-        topBase: rawClothingColors.colors.topBase || fallbackColors.topBase,
-        topCover: rawClothingColors.colors.topCover || fallbackColors.topCover,
+        // Try new field names first, fall back to old field names
+        baseLayer: getColorValue(rawClothingColors.colors, 'baseLayer', 'topBase') || fallbackColors.baseLayer,
+        topLayer: getColorValue(rawClothingColors.colors, 'topLayer', 'topCover') || fallbackColors.topLayer,
         bottom: rawClothingColors.colors.bottom,
         shoes: rawClothingColors.colors.shoes
       }

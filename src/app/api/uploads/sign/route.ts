@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       },
       Expires: 60,
       Conditions: [
-        ['content-length-range', 0, 25 * 1024 * 1024], // 25MB max
+        ['content-length-range', 0, 50 * 1024 * 1024], // 50MB max
         ['eq', '$key', s3Key]
       ]
     })

@@ -239,12 +239,14 @@ export async function executeV3Step1b(
     }
   }
 
-  // Use element contributions if available
+  // Use element contributions if available (both instructions and rules)
+  const effectiveBrandingInstructions = elementContributions?.instructions || []
   const effectiveBrandingRules = elementContributions?.mustFollow || []
 
-  Logger.debug('[ElementComposition] Using branding rules', {
+  Logger.debug('[ElementComposition] Using branding instructions and rules', {
     generationId,
     source: elementContributions ? 'element-composition' : 'none',
+    instructionCount: effectiveBrandingInstructions.length,
     ruleCount: effectiveBrandingRules.length,
   })
 
@@ -274,16 +276,23 @@ export async function executeV3Step1b(
     '',
     'Key Requirements:',
     '- Generate ONLY the background/environment - NO people, NO subjects.',
+    '- CRITICAL: The camera must be positioned DIRECTLY FACING the background (straight-on/frontal perspective).',
+    '- The background must be photographed HEAD-ON, perpendicular to the wall/surface - NOT from an angle or side view.',
+    '- The center of the frame should be directly aligned with the center of the background - perfectly centered and frontal.',
     '- Leave the center area clear and uncluttered where the portrait subject will stand.',
     ...(customBackgroundReference
       ? ['- Use the reference image labeled "CUSTOM BACKGROUND" as the primary background source.',
          '- If the custom background contains watermarks or logos, remove them seamlessly.']
       : []),
     ...(promptObj.lighting?.direction ? [
-      `- Lighting must come from the specified direction: ${promptObj.lighting.direction}`
+      `- Lighting must come from the specified direction: ${promptObj.lighting.direction}`,
+      '- IMPORTANT: The lighting setup describes the LIGHT EFFECTS on the scene, NOT physical equipment to render.',
+      '- Do NOT show any physical lights, softboxes, reflectors, stands, or lighting equipment in the background.',
+      '- Only render the lighting EFFECTS (direction, quality, shadows, highlights) on the background surfaces.'
     ] : []),
     ...(hasUserCameraSettings
-      ? ['- Respect the camera settings in the JSON (aperture, focal length, etc.)']
+      ? ['- Respect the camera settings in the JSON (aperture, focal length, etc.)',
+         '- Camera positioning (distance, height) describes the relationship to where the subject will stand, but the view must remain FRONTAL to the background.']
       : []),
     ...(isPlainBackground
       ? ['- Create a clean professional wall with subtle depth through smooth lighting gradients only.',
@@ -293,12 +302,20 @@ export async function executeV3Step1b(
 
   structuredPrompt.push('')
 
-  // Add element composition rules if available (these are specific, targeted rules)
-  if (effectiveBrandingRules.length > 0) {
+  // Add element composition instructions and rules if available
+  if (effectiveBrandingInstructions.length > 0 || effectiveBrandingRules.length > 0) {
     structuredPrompt.push('Branding & Elements:')
+
+    // Add instructions first (logo source, placement description)
+    for (const instruction of effectiveBrandingInstructions) {
+      structuredPrompt.push(`- ${instruction}`)
+    }
+
+    // Then add rules (constraints and requirements)
     for (const rule of effectiveBrandingRules) {
       structuredPrompt.push(`- ${rule}`)
     }
+
     structuredPrompt.push('')
   }
 

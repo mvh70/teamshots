@@ -18,14 +18,28 @@ import {
   ELEMENT_BRANDING_PROMPT,
   CLOTHING_BRANDING_RULES_BASE,
 } from '../../branding/config'
+import { generateBrandingPrompt } from '../../branding/prompt'
+import type { KnownClothingStyle } from '../../clothing/config'
 import { Logger } from '@/lib/logger'
+import sharp from 'sharp'
 
 export class BrandingElement extends StyleElement {
   readonly id = 'branding'
   readonly name = 'Branding'
   readonly description = 'Logo and brand color management for backgrounds and composition'
 
-  // Branding only affects background generation and composition, not person generation
+  // Branding depends on clothing for style_key and detail_key
+  get dependsOn(): string[] | undefined {
+    return ['clothing']
+  }
+
+  get after(): string[] | undefined {
+    return ['clothing']
+  }
+
+  // Branding affects different phases based on position:
+  // - clothing: person-generation (step 1a)
+  // - background/elements: background-generation (step 1b) + composition (step 2)
   isRelevantForPhase(context: ElementContext): boolean {
     const { phase, settings } = context
 
@@ -39,8 +53,25 @@ export class BrandingElement extends StyleElement {
       return false
     }
 
-    // Only contribute to background and composition phases
-    return phase === 'background-generation' || phase === 'composition'
+    const position = settings.branding.position || 'background'
+
+    // Person generation: contribute for clothing branding only
+    if (phase === 'person-generation') {
+      return position === 'clothing'
+    }
+
+    // Background generation: contribute for background/elements branding only
+    if (phase === 'background-generation') {
+      return position === 'background' || position === 'elements'
+    }
+
+    // Composition phase: contribute for background/elements branding only
+    // (clothing branding was already applied in step 1a person generation)
+    if (phase === 'composition') {
+      return position === 'background' || position === 'elements'
+    }
+
+    return false
   }
 
   /**
@@ -101,13 +132,63 @@ export class BrandingElement extends StyleElement {
       mimeType: logoImage.mimeType,
     })
 
+    // Convert SVG to PNG if needed (Gemini doesn't support SVG)
+    let finalBase64 = logoImage.base64
+    let finalMimeType = logoImage.mimeType
+
+    // Check if file is SVG by EITHER mimeType OR file extension
+    // (downloadAsset sometimes misdetects SVG mimeType)
+    const isSvg =
+      logoImage.mimeType === 'image/svg+xml' ||
+      logoKey.toLowerCase().endsWith('.svg')
+
+    if (isSvg) {
+      Logger.info('[BrandingElement] Converting SVG logo to PNG for Gemini compatibility', {
+        generationId,
+        logoKey,
+      })
+
+      try {
+        // Convert base64 SVG to buffer
+        const svgBuffer = Buffer.from(logoImage.base64, 'base64')
+
+        // Convert SVG to PNG using sharp
+        // Set width to 1024px (high quality) and maintain aspect ratio
+        const pngBuffer = await sharp(svgBuffer)
+          .png({ compressionLevel: 6, quality: 100 })
+          .resize(1024, null, {
+            fit: 'inside',
+            withoutEnlargement: true,
+          })
+          .toBuffer()
+
+        // Convert PNG buffer back to base64
+        finalBase64 = pngBuffer.toString('base64')
+        finalMimeType = 'image/png'
+
+        Logger.info('[BrandingElement] SVG converted to PNG successfully', {
+          generationId,
+          logoKey,
+          originalSize: svgBuffer.length,
+          pngSize: pngBuffer.length,
+        })
+      } catch (error) {
+        Logger.error('[BrandingElement] Failed to convert SVG to PNG', {
+          generationId,
+          logoKey,
+          error: error instanceof Error ? error.message : String(error),
+        })
+        throw new Error(`BrandingElement.prepare(): Failed to convert SVG to PNG: ${error}`)
+      }
+    }
+
     // Return prepared asset
     return {
       elementId: this.id,
       assetType: 'logo',
       data: {
-        base64: logoImage.base64,
-        mimeType: logoImage.mimeType,
+        base64: finalBase64,
+        mimeType: finalMimeType,
         s3Key: logoKey,
         metadata: {
           position: branding.position,
@@ -120,15 +201,116 @@ export class BrandingElement extends StyleElement {
     const { phase, settings } = context
     const branding = settings.branding!
 
+    if (phase === 'person-generation') {
+      return this.contributeToPersonGeneration(branding, context)
+    }
+
     if (phase === 'background-generation') {
       return this.contributeToBackgroundGeneration(branding, context)
     }
 
     if (phase === 'composition') {
-      return this.contributeToComposition(branding)
+      return this.contributeToComposition(branding, context)
     }
 
     return {}
+  }
+
+  /**
+   * Person generation phase contribution
+   * Provides logo placement rules for clothing branding
+   */
+  private contributeToPersonGeneration(
+    branding: NonNullable<import('../../branding/types').BrandingSettings>,
+    context: ElementContext
+  ): ElementContribution {
+    // Only handle clothing branding in person generation
+    const position = branding.position || 'background'
+    if (position !== 'clothing') {
+      return {}
+    }
+
+    // Check if clothing overlay SUCCESSFULLY prepared an overlay
+    // (not just registered, but actually has a prepared asset)
+    const overlayAsset = context.generationContext.preparedAssets?.get('clothing-overlay-overlay')
+    const hasSuccessfulOverlay = !!overlayAsset?.data.base64
+
+    if (hasSuccessfulOverlay) {
+      Logger.info('[BrandingElement] Clothing overlay succeeded, skipping direct logo contribution', {
+        generationId: context.generationContext.generationId,
+        overlayS3Key: overlayAsset.data.s3Key,
+      })
+      return {
+        metadata: {
+          handledByOverlay: true,
+          position: 'clothing',
+        },
+      }
+    } else if (context.existingContributions.some((c) => c.metadata?.hasClothingOverlay === true)) {
+      // Overlay was attempted but failed - fall through to use direct logo
+      Logger.warn('[BrandingElement] Clothing overlay attempted but failed, using direct logo contribution', {
+        generationId: context.generationContext.generationId,
+      })
+    }
+
+    // Read clothing data from accumulated payload for branding placement logic
+    const subject = context.accumulatedPayload?.subject as Record<string, unknown> | undefined
+    const wardrobe = subject?.wardrobe as Record<string, unknown> | undefined
+    const styleKey = (wardrobe?.style_key as KnownClothingStyle | undefined) || 'startup'
+    const detailKey = (wardrobe?.detail_key as string | undefined) || 'dress_shirt'
+
+    // Generate branding prompt with clothing context
+    const brandingResult = generateBrandingPrompt({
+      branding: context.settings.branding,
+      styleKey,
+      detailKey,
+    })
+
+    // Build payload structure for clothing branding
+    const payload: Record<string, unknown> = {
+      subject: {
+        branding: brandingResult.branding,
+      },
+    }
+
+    // Get prepared logo from context
+    const preparedAssets = context.generationContext.preparedAssets
+    const logoAsset = preparedAssets?.get(`${this.id}-logo`)
+
+    // Add reference image if logo was prepared
+    const referenceImages = []
+    if (logoAsset?.data.base64) {
+      referenceImages.push({
+        url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
+        description: 'Company logo for clothing branding - apply according to position rules',
+        type: 'branding' as const,
+      })
+
+      Logger.info('[BrandingElement] Added logo to person generation contribution', {
+        generationId: context.generationContext.generationId,
+        position: 'clothing',
+        styleKey,
+        detailKey,
+      })
+    }
+
+    return {
+      instructions: [],
+
+      mustFollow: brandingResult.rules,
+
+      referenceImages,
+      payload,
+
+      metadata: {
+        position: 'clothing',
+        hasLogo: true,
+        logoKey: branding.logoKey,
+        logoAssetId: branding.logoAssetId,
+        styleKey,
+        detailKey,
+      },
+    }
   }
 
   /**
@@ -140,6 +322,32 @@ export class BrandingElement extends StyleElement {
     context: ElementContext
   ): ElementContribution {
     const position = branding.position || 'background'
+
+    // CRITICAL: Read clothing data from accumulated payload for branding placement logic
+    const subject = context.accumulatedPayload?.subject as Record<string, unknown> | undefined
+    const wardrobe = subject?.wardrobe as Record<string, unknown> | undefined
+    const styleKey = (wardrobe?.style_key as KnownClothingStyle | undefined) || 'startup'
+    const detailKey = (wardrobe?.detail_key as string | undefined) || 'dress_shirt'
+
+    // Generate branding prompt with clothing context
+    const brandingResult = generateBrandingPrompt({
+      branding: context.settings.branding,
+      styleKey,
+      detailKey,
+    })
+
+    // Build payload structure based on position
+    const payload: Record<string, unknown> = {}
+    if (position === 'background' || position === 'elements') {
+      payload.scene = {
+        branding: brandingResult.branding,
+      }
+    } else {
+      // Default to subject.branding for clothing or when position is not specified
+      payload.subject = {
+        branding: brandingResult.branding,
+      }
+    }
 
     // Select prompt based on position
     const promptConfig =
@@ -165,6 +373,8 @@ export class BrandingElement extends StyleElement {
       Logger.info('[BrandingElement] Added logo to background generation contribution', {
         generationId: context.generationContext.generationId,
         position,
+        styleKey,
+        detailKey,
       })
     }
 
@@ -178,6 +388,8 @@ export class BrandingElement extends StyleElement {
         ? promptConfig.rules.map((rule) => String(rule))
         : [],
 
+      payload,
+
       referenceImages,
 
       metadata: {
@@ -185,39 +397,118 @@ export class BrandingElement extends StyleElement {
         hasLogo: true,
         logoKey: branding.logoKey,
         logoAssetId: branding.logoAssetId,
+        styleKey,
+        detailKey,
       },
     }
   }
 
   /**
    * Composition phase contribution
-   * Ensures logo is preserved from background image
+   * Adds logo reference and placement instructions for background/elements branding
+   * (clothing branding is already on the person from Step 1a)
    */
   private contributeToComposition(
-    branding: NonNullable<import('../../branding/types').BrandingSettings>
+    branding: NonNullable<import('../../branding/types').BrandingSettings>,
+    context: ElementContext
   ): ElementContribution {
     const position = branding.position || 'background'
 
-    return {
-      mustFollow: [
-        'Preserve the logo from the background image exactly as it appears',
-        'Do not regenerate, redraw, or modify the logo in any way',
-        'Maintain logo position, size, colors, and clarity',
-        position === 'background'
-          ? 'Ensure logo on wall/background remains visible and unobstructed'
-          : position === 'elements'
-            ? 'Ensure flag/banner with logo remains visible and properly positioned'
-            : 'Ensure logo on clothing remains clear and unobstructed',
-      ],
+    // Skip if branding is on clothing (already applied in Step 1a)
+    if (position === 'clothing') {
+      return {}
+    }
 
-      freedom: [
-        'Adjust overall lighting to ensure logo is well-lit and clear',
-        'Fine-tune contrast if needed to make logo readable',
-      ],
+    // Get prepared logo from context
+    const preparedAssets = context.generationContext.preparedAssets
+    const logoAsset = preparedAssets?.get(`${this.id}-logo`)
 
-      metadata: {
-        preserveLogo: true,
+    if (!logoAsset?.data.base64) {
+      Logger.warn('[BrandingElement] No logo asset found for composition phase', {
+        generationId: context.generationContext.generationId,
         position,
+      })
+      return {}
+    }
+
+    // Get clothing context for branding placement logic
+    const subject = context.accumulatedPayload?.subject as Record<string, unknown> | undefined
+    const wardrobe = subject?.wardrobe as Record<string, unknown> | undefined
+    const styleKey = (wardrobe?.style_key as KnownClothingStyle | undefined) || 'startup'
+    const detailKey = (wardrobe?.detail_key as string | undefined) || 'dress_shirt'
+
+    // Generate branding prompt with clothing context
+    const brandingResult = generateBrandingPrompt({
+      branding: context.settings.branding,
+      styleKey,
+      detailKey,
+    })
+
+    // Build position-specific instructions
+    const instructions: string[] = []
+    const mustFollow: string[] = []
+
+    if (position === 'background') {
+      instructions.push(
+        'Place the provided logo on the background wall behind the person',
+        'Logo should be positioned at head/shoulder level for visibility',
+        'Logo can be partially occluded by the person to reinforce depth'
+      )
+      mustFollow.push(
+        'Logo must be on the background wall surface with proper perspective',
+        'Apply depth of field - logo should be slightly softer than the sharp person',
+        'Logo must match background wall lighting and color temperature',
+        'Logo should appear naturally integrated into the wall surface',
+        'Scale logo appropriately - visible but not dominating the person'
+      )
+    } else if (position === 'elements') {
+      instructions.push(
+        'Create a fabric flag or banner 6-8 feet behind the person',
+        'Apply the provided logo to the flag/banner surface',
+        'Flag should be grounded on the floor, not floating'
+      )
+      mustFollow.push(
+        'Flag must have natural fabric physics with folds and curves (not flat)',
+        'Flag should be slightly softer in focus than the person (depth of field)',
+        'Apply proper lighting and shadows to the flag',
+        'Flag must be positioned BEHIND the person with clear spatial separation',
+        'Logo on flag should follow fabric contours naturally',
+        'Scale flag appropriately - visible but subordinate to person'
+      )
+    }
+
+    // Add logo reference image
+    const referenceImages = [
+      {
+        url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
+        description: `LOGO for ${position} branding - Place according to position rules`,
+        type: 'branding' as const,
+      },
+    ]
+
+    Logger.info('[BrandingElement] Added logo reference for composition phase', {
+      generationId: context.generationContext.generationId,
+      position,
+      hasLogo: true,
+    })
+
+    // Build payload with branding configuration for JSON
+    const payload: Record<string, unknown> = {
+      scene: {
+        branding: brandingResult.branding,
+      },
+    }
+
+    return {
+      instructions,
+      mustFollow,
+      referenceImages,
+      payload,
+      metadata: {
+        hasBackgroundLogo: true,
+        position,
+        logoKey: branding.logoKey,
+        logoAssetId: branding.logoAssetId,
       },
     }
   }

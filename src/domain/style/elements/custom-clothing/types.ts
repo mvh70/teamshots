@@ -36,8 +36,8 @@ export interface CustomClothingSettings {
    * Dominant colors extracted from the outfit
    */
   colors?: {
-    topBase: string // Hex color for base shirt/top
-    topCover?: string // Hex color for jacket/blazer (optional)
+    topLayer: string // Hex color for visible outer garment (jacket/blazer/shirt)
+    baseLayer?: string // Hex color for shirt underneath (optional, for multi-layer)
     bottom: string // Hex color for pants/skirt
     shoes?: string // Hex color for shoes (optional)
   }

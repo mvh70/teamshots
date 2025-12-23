@@ -12,15 +12,16 @@
 import { compositionRegistry } from './registry'
 
 // Import all elements to trigger their self-registration
-// The order doesn't matter - elements declare dependencies and priorities
+// Import dependencies before elements that depend on them to avoid timing warnings
 import './camera/ShotTypeElement'
 import './camera/AspectRatioElement'
 import './camera/CameraSettingsElement'
-import './branding/BrandingElement'
-import './clothing/CustomClothingElement'
-import './background/BackgroundElement'
-import './clothing/ClothingElement'
+import './clothing/ClothingElement'        // Before branding (branding depends on clothing)
 import './clothing/ClothingColorsElement'
+import './clothing/ClothingOverlayElement'
+import './clothing/CustomClothingElement'
+import './branding/BrandingElement'        // After clothing
+import './background/BackgroundElement'
 import './subject/ExpressionElement'
 import './subject/PoseElement'
 import './subject/SubjectElement'

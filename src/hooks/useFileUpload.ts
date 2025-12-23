@@ -22,7 +22,7 @@ export interface FileUploadResult {
 }
 
 const DEFAULT_OPTIONS: Partial<FileUploadOptions> = {
-  maxFileSize: 25,
+  maxFileSize: 50,
   tempStorage: true,
   autoPromote: false
 }
@@ -52,7 +52,7 @@ export function useFileUpload(options: FileUploadOptions) {
 
   const validateFile = useCallback((file: File): string | null => {
     // Size validation
-    const maxSizeBytes = (config.maxFileSize || 25) * 1024 * 1024
+    const maxSizeBytes = (config.maxFileSize || 50) * 1024 * 1024
     if (file.size > maxSizeBytes) {
       return `File too large (max ${config.maxFileSize}MB)`
     }

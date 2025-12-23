@@ -49,16 +49,22 @@ export class ShotTypeElement extends StyleElement {
    * Provides framing and composition rules for the initial person image
    */
   private contributeToPersonGeneration(shotType: ShotTypeConfig): ElementContribution {
+    // Note: Specific framing details (shot type, crop points, composition) are in the JSON payload
+    // Only add critical quality rules that aren't obvious from the JSON structure
+
     return {
-      instructions: [
-        `Frame the person as a ${shotType.label.toLowerCase()}`,
-        shotType.framingDescription,
+      mustFollow: [
+        'Person must fill frame according to shot type specifications',
+        'Framing must be accurate and professional',
       ],
 
-      mustFollow: [
-        `Person must fill frame according to ${shotType.id} framing standards`,
-        shotType.compositionNotes || shotType.framingDescription,
-      ],
+      payload: {
+        framing: {
+          shot_type: shotType.id,
+          crop_points: shotType.framingDescription,
+          composition: shotType.compositionNotes ?? shotType.framingDescription,
+        },
+      },
 
       metadata: {
         shotTypeId: shotType.id,

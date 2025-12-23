@@ -14,6 +14,7 @@ import {
   type PreparedAsset,
 } from '../../base/StyleElement'
 import type { BackgroundSettings } from '@/types/photo-style'
+import { generateBackgroundPrompt } from '../../background/prompt'
 import { Logger } from '@/lib/logger'
 
 export class BackgroundElement extends StyleElement {
@@ -21,17 +22,26 @@ export class BackgroundElement extends StyleElement {
   readonly name = 'Background'
   readonly description = 'Background scene and environment settings'
 
-  // Background only affects background generation phase
+  // Background phase contribution depends on background type
   isRelevantForPhase(context: ElementContext): boolean {
     const { phase, settings } = context
+    const background = settings.background
 
     // Skip if no background configured or user-choice (handled elsewhere)
-    if (!settings.background || settings.background.type === 'user-choice') {
+    if (!background || background.type === 'user-choice') {
       return false
     }
 
-    // Only contribute to background generation
-    return phase === 'background-generation'
+    // Simple backgrounds (neutral, gradient) don't need step 1b generation
+    const isSimpleBackground = background.type === 'neutral' || background.type === 'gradient'
+
+    if (isSimpleBackground) {
+      // Simple backgrounds: contribute to person-generation (for originalPrompt) and composition (step 2)
+      return phase === 'person-generation' || phase === 'composition'
+    } else {
+      // Complex backgrounds (custom, office, beach, city): contribute to person-generation (for originalPrompt) and background-generation (step 1b)
+      return phase === 'person-generation' || phase === 'background-generation'
+    }
   }
 
   /**
@@ -112,86 +122,70 @@ export class BackgroundElement extends StyleElement {
       backgroundType: background.type,
     }
 
-    // Generate background-specific instructions based on type
+    // Generate background prompt for payload
+    const bgPrompt = generateBackgroundPrompt(background)
+
+    // Build payload structure
+    const payload: Record<string, unknown> = {
+      scene: {
+        environment: {},
+      },
+    }
+
+    // Add background properties to payload
+    const environment = (payload.scene as Record<string, unknown>).environment as Record<string, unknown>
+    if (bgPrompt.location_type) {
+      environment.location_type = bgPrompt.location_type
+    }
+    if (bgPrompt.description) {
+      environment.description = bgPrompt.description
+    }
+    if (bgPrompt.color_palette) {
+      environment.color_palette = bgPrompt.color_palette
+    }
+    if (bgPrompt.branding) {
+      environment.branding = bgPrompt.branding
+    }
+
+    // Note: Specific background details (location_type, description, color_palette) are in the JSON payload
+    // Only add critical quality rules that aren't obvious from the JSON structure
+
+    // Add background-specific quality constraints based on type
     switch (background.type) {
       case 'office':
-        instructions.push(
-          'Create a corporate office environment background',
-          'Background should be slightly blurred to keep focus on the subject',
-          'Include typical office elements: desks, computers, plants, windows'
-        )
+      case 'tropical-beach':
+      case 'busy-city':
+        // Complex backgrounds: ensure depth and natural integration
         mustFollow.push(
-          'Location must be clearly recognizable as a professional office',
-          'Background must be softer/blurrier than the subject for depth'
+          'Background must be softer/blurrier than the subject for depth',
+          'Subject must integrate naturally with the background environment'
         )
         if (background.prompt) {
           metadata.customPrompt = background.prompt
-          instructions.push(`Additional context: ${background.prompt}`)
         }
         break
 
-      case 'tropical-beach':
-        instructions.push(
-          'Create a tropical beach setting',
-          'Include palm trees and ocean in the background',
-          'Atmosphere should be soft and dreamy'
-        )
-        mustFollow.push(
-          'Must include recognizable tropical elements (palm trees, ocean, sand)',
-          'Background should have natural outdoor lighting'
-        )
-        break
-
-      case 'busy-city':
-        instructions.push(
-          'Create a busy urban city street background',
-          'Include buildings and people in the background',
-          'Background should be blurred for depth of field'
-        )
-        mustFollow.push(
-          'Must show urban environment with buildings',
-          'City elements should be clearly present but not distracting'
-        )
-        break
-
       case 'neutral':
-        instructions.push(
-          'Create a studio environment with a neutral solid color background',
-          'Background should be smooth and uniform'
-        )
         mustFollow.push(
-          'Background must be a solid, neutral color',
+          'Background must be smooth and uniform',
           'No patterns, textures, or additional elements'
         )
         if (background.color) {
           metadata.backgroundColor = background.color
-          instructions.push(`Use ${background.color} as the background color`)
-          mustFollow.push(`Background color must be ${background.color}`)
         }
         break
 
       case 'gradient':
-        instructions.push(
-          'Create a studio environment with a gradient background',
-          'Gradient should transition smoothly from light to dark'
-        )
         mustFollow.push(
-          'Background must show a clear gradient transition',
-          'Gradient should be smooth without banding'
+          'Gradient must be smooth without banding',
+          'Gradient transition must be natural and professional'
         )
         if (background.color) {
           metadata.gradientColor = background.color
-          instructions.push(`Base gradient on ${background.color} color`)
-          mustFollow.push(`Gradient must incorporate ${background.color}`)
         }
         break
 
       case 'custom':
-        instructions.push(
-          'Use the provided custom background image',
-          'Ensure the subject integrates naturally with the custom background',
-          'Maintain the composition and framing specified'
-        )
         mustFollow.push(
           'Custom background image must be used exactly as provided',
           'Do not modify or alter the custom background',
@@ -221,6 +215,7 @@ export class BackgroundElement extends StyleElement {
           return {
             instructions,
             mustFollow,
+            payload,
             metadata,
             referenceImages,
           }
@@ -229,12 +224,13 @@ export class BackgroundElement extends StyleElement {
 
       default:
         // Unknown background type - skip
-        return { instructions: [], mustFollow: [] }
+        return { instructions: [], mustFollow: [], payload: {} }
     }
 
     return {
       instructions,
       mustFollow,
+      payload,
       metadata,
     }
   }

@@ -6,17 +6,10 @@ import { ensureServerDefaults, mergeUserSettings } from '../shared/utils'
 import { resolvePackageAspectRatio } from '../shared/aspect-ratio-resolver'
 import { downloadAssetAsBase64 } from '@/queue/workers/generate-image/s3-utils'
 import { getS3BucketName, createS3Client } from '@/lib/s3-client'
-import { buildStandardPrompt } from '../../prompt-builders/context'
+import { compositionRegistry } from '../../elements/composition'
 import { Telemetry } from '@/lib/telemetry'
-import * as shotTypeElement from '../../elements/shot-type'
-import * as cameraSettings from '../../elements/camera-settings'
-import * as lighting from '../../elements/lighting'
-import * as pose from '../../elements/pose'
-import * as backgroundElement from '../../elements/background'
-import * as clothing from '../../elements/clothing'
-import * as subjectElement from '../../elements/subject'
-import * as branding from '../../elements/branding'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
+import { isFeatureEnabled } from '@/config/feature-flags'
 
 export type FreePackageServerPackage = typeof freepackageBase & {
   buildGenerationPayload: (context: GenerationContext) => Promise<GenerationPayload>
@@ -26,6 +19,7 @@ export const freepackageServer: FreePackageServerPackage = {
   ...freepackageBase,
   buildGenerationPayload: async ({
     generationId,
+    personId,
     styleSettings,
     selfieKeys,
     processedSelfies,
@@ -102,29 +96,30 @@ export const freepackageServer: FreePackageServerPackage = {
     const referenceImages = payload.referenceImages
     const labelInstruction = payload.labelInstruction
 
-    // Build context to get rules (same logic as buildPrompt but we need the context)
-    const context = buildStandardPrompt({
+    // Use element composition system to build payload
+    if (!isFeatureEnabled('elementComposition')) {
+      throw new Error('Element composition system is required but not enabled')
+    }
+
+    const elementContext = {
+      phase: 'person-generation' as const,
       settings: effectiveSettings,
-      defaultPresetId: freepackageBase.defaultPresetId,
-      presets: freepackageBase.presets || {}
-    })
+      generationContext: {
+        selfieS3Keys: selfieKeys,
+        userId: personId,
+        generationId,
+      },
+      existingContributions: [],
+    }
 
-    // Apply elements in dependency order (same as buildPrompt)
-    shotTypeElement.applyToPayload(context)
-    cameraSettings.applyToPayload(context)
-    lighting.applyToPayload(context)
-    pose.applyToPayload(context)
-    backgroundElement.applyToPayload(context)
-    clothing.applyToPayload(context)
-    subjectElement.applyToPayload(context)
-    branding.applyToPayload(context)
+    const contributions = await compositionRegistry.composeContributions(elementContext)
 
-    const promptString = JSON.stringify(context.payload, null, 2)
+    const promptString = JSON.stringify(contributions.payload, null, 2)
 
     return {
       prompt: promptString,
-      mustFollowRules: context.mustFollowRules,
-      freedomRules: context.freedomRules,
+      mustFollowRules: contributions.mustFollow || [],
+      freedomRules: contributions.freedom || [],
       referenceImages,
       labelInstruction,
       aspectRatio,

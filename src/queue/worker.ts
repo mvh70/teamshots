@@ -1,9 +1,10 @@
 /**
  * Queue Worker Entry Point
- * 
+ *
  * Starts all background workers for processing jobs
  */
 
+import 'dotenv/config'
 import { fileURLToPath } from 'url'
 import './workers/generateImage' // Import to register the worker
 import { initializeQueues } from './index'

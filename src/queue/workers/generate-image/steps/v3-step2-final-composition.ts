@@ -30,6 +30,7 @@ export interface V3Step2FinalInput {
   personId?: string // For cost tracking
   teamId?: string // For cost tracking
   onCostTracking?: CostTrackingHandler // For cost tracking
+  preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset> // Assets from step 0 preparation
 }
 
 /**
@@ -41,11 +42,14 @@ async function composeElementContributions(
     generationId?: string
     personId?: string
     teamId?: string
+    preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
   }
 ): Promise<{
   instructions: string[]
   mustFollow: string[]
   freedom: string[]
+  referenceImages: Array<{ url: string; description: string; type: string }>
+  payload?: Record<string, unknown>
 }> {
   const elementContext: ElementContext = {
     phase: 'composition',
@@ -62,7 +66,9 @@ async function composeElementContributions(
   return {
     instructions: contributions.instructions || [],
     mustFollow: contributions.mustFollow || [],
-    freedom: contributions.freedom || []
+    freedom: contributions.freedom || [],
+    referenceImages: (contributions.referenceImages || []) as Array<{ url: string; description: string; type: string }>,
+    payload: contributions.payload
   }
 }
 
@@ -107,7 +113,7 @@ export async function executeV3Step2(
   const shotDescription = framing?.crop_points || shotTypeConfig.framingDescription
 
   // Create background composition prompt WITHOUT subject (person is already generated)
-  const backgroundPrompt = {
+  let backgroundPrompt: Record<string, unknown> = {
     scene: promptObj.scene,
     camera: promptObj.camera,
     lighting: promptObj.lighting,
@@ -115,26 +121,63 @@ export async function executeV3Step2(
     framing: promptObj.framing // Keep framing for context
     // Explicitly exclude: subject (person already generated in Step 1)
   }
-  
+
   // Extract branding context from scene.branding (for understanding design intent only)
   // Clothing branding rules were already applied in Step 1
   const sceneBranding = promptObj.scene?.branding as Record<string, unknown> | undefined
 
   // Try to compose contributions from elements if feature flag is enabled
-  let elementContributions: { instructions: string[], mustFollow: string[], freedom: string[] } | null = null
+  let elementContributions: {
+    instructions: string[]
+    mustFollow: string[]
+    freedom: string[]
+    referenceImages: Array<{ url: string; description: string; type: string }>
+    payload?: Record<string, unknown>
+  } | null = null
   if (isFeatureEnabled('elementComposition') && styleSettings) {
     try {
       elementContributions = await composeElementContributions(styleSettings, {
         generationId: input.generationId,
         personId: input.personId,
-        teamId: input.teamId
+        teamId: input.teamId,
+        preparedAssets: input.preparedAssets
       })
       Logger.debug('V3 Step 2: Element composition succeeded', {
         hasInstructions: elementContributions.instructions.length > 0,
         hasMustFollow: elementContributions.mustFollow.length > 0,
         hasFreedom: elementContributions.freedom.length > 0,
+        hasReferenceImages: elementContributions.referenceImages.length > 0,
+        hasPayload: !!elementContributions.payload,
         rulesSource: 'element-composition'
       })
+
+      // Merge element contributions payload into backgroundPrompt
+      if (elementContributions.payload) {
+        Logger.debug('V3 Step 2: Merging element payload into backgroundPrompt', {
+          payloadKeys: Object.keys(elementContributions.payload),
+          generationId: input.generationId
+        })
+
+        // Merge payload - element payloads take precedence
+        // Handle nested merging for 'scene' object
+        for (const [key, value] of Object.entries(elementContributions.payload)) {
+          if (key === 'scene' && typeof value === 'object' && value !== null) {
+            // Merge scene objects
+            backgroundPrompt.scene = {
+              ...(backgroundPrompt.scene as Record<string, unknown> || {}),
+              ...(value as Record<string, unknown>)
+            }
+          } else {
+            // Direct assignment for other keys
+            backgroundPrompt[key] = value
+          }
+        }
+
+        Logger.info('V3 Step 2: Merged element payload into scene', {
+          sceneKeys: Object.keys(backgroundPrompt.scene as Record<string, unknown>),
+          generationId: input.generationId
+        })
+      }
     } catch (error) {
       Logger.error('V3 Step 2: Element composition failed, falling back to extracted rules', {
         error: error instanceof Error ? error.message : String(error)
@@ -177,9 +220,24 @@ export async function executeV3Step2(
 
   // Compose background composition prompt with branding rules, evaluator comments, and face refinement
   const jsonPrompt = JSON.stringify(backgroundPrompt, null, 2)
-  
+
   // Extract subject for reference (helps AI understand intended framing/scale)
-  const subjectReference = promptObj.subject ? JSON.stringify(promptObj.subject, null, 2) : null
+  // CRITICAL: Exclude branding if it's on clothing (already applied in Step 1a)
+  let subjectReference = null
+  if (promptObj.subject) {
+    const subjectCopy = { ...promptObj.subject }
+
+    // Remove branding from subject reference if position is 'clothing'
+    // The person already has the logo on their clothing from Step 1a
+    if (subjectCopy.branding?.position === 'clothing') {
+      delete subjectCopy.branding
+      Logger.debug('V3 Step 2: Removed clothing branding from subject reference', {
+        generationId: input.generationId
+      })
+    }
+
+    subjectReference = JSON.stringify(subjectCopy, null, 2)
+  }
     
   // Build the structured prompt for background composition
   const structuredPrompt = [
@@ -229,17 +287,43 @@ export async function executeV3Step2(
     '- If there\'s a logo on the background, the person can naturally OCCLUDE parts of it, reinforcing that they\'re in front of the background plane.',
     '- Apply subtle EDGE LIGHTING or rim light on the person\'s shoulders/hair to separate them from the background and enhance three-dimensionality.',
     '- Think: "subject standing naturally in a studio" not "subject pasted onto a backdrop".',
-    '',
+    ''
+  ]
+
+  // Add branding-specific instructions ONLY if branding is present on background/elements
+  const hasBrandingOnBackground = styleSettings?.branding?.type === 'include' &&
+    (styleSettings.branding.position === 'background' || styleSettings.branding.position === 'elements')
+
+  if (hasBrandingOnBackground && styleSettings.branding) {
+    structuredPrompt.push(
+      '**CRITICAL Background Logo Positioning (logo present on background):**',
+      '- The logo or branding element is present on the background wall, position the subject such that the logo appears BEHIND THE HEAD OR SHOULDERS.',
+      '- The logo should be visible in the UPPER portion of the frame, at head/shoulder level, NOT behind the torso, waist, or lower body.',
+      '- This ensures the logo is clearly visible and professionally positioned relative to the subject\'s face.',
+      '- Adjust the subject\'s vertical position in the frame as needed to achieve this head/shoulder-level logo placement.',
+      '- The person can partially occlude the logo (for depth), but the logo should remain at upper-body height.',
+      ''
+    )
+
+    if (styleSettings.branding.position === 'elements') {
+      structuredPrompt.push(
+        '**CRITICAL Element Branding (flags/banners):**',
+        '- Position the flag/banner 6-8 feet BEHIND the subject with proper depth of field.',
+        '- The flag should be slightly softer in focus, have natural three-dimensional curvature (not flat), and show fabric physics with folds and shadows.',
+        '- The flag must be grounded on the floor, not floating.',
+        '- Avoid placing the person directly adjacent to banner-like structures that could compete as a second subject. Maintain clear spatial separation and depth hierarchy.',
+        ''
+      )
+    }
+  }
+
+  structuredPrompt.push(
     '**CRITICAL Person Prominence Rules:**',
     '- The person must be the DOMINANT element in the frame - they should occupy 40-60% of the image height at minimum.',
-    '- The person should be LARGER and more visually prominent than any background elements like banners, flags, signs, or logos.',
-    '- Background elements (banners, flags, text, signs) must be VISUALLY SUBORDINATE. They should be less sharp, have lower contrast, or be partially obscured by the subject.',
-    '- Do NOT make the person small to fit background elements. Instead, let the person overlap or partially cover background elements to establish depth and hierarchy.',
+    '- The person should be LARGER and more visually prominent than any background elements.',
     '- The viewer\'s eye should immediately go to the person, not the background.',
-    '- For element branding (flags/banners): Position them 6-8 feet BEHIND the subject with proper depth of field. The flag should be slightly softer in focus, have natural three-dimensional curvature (not flat), and show fabric physics with folds and shadows. The flag must be grounded on the floor, not floating.',
-    '- Avoid placing the person directly adjacent to banner-like structures that could compete as a second subject. Maintain clear spatial separation and depth hierarchy.',
-    '',
-  ]
+    ''
+  )
 
   // Add background preservation rules for branding (if applicable)
   // Uses element composition rules when available, otherwise falls back to extracted rules
@@ -305,9 +389,54 @@ export async function executeV3Step2(
   
   // Add format frame reference
   referenceImages.push(formatFrame)
-  
+
+  // Add reference images from element contributions (e.g., logos for background branding)
+  if (elementContributions?.referenceImages && elementContributions.referenceImages.length > 0) {
+    for (const elementRef of elementContributions.referenceImages) {
+      // Convert data URL to base64 and mimeType
+      if (elementRef.url.startsWith('data:')) {
+        const matches = elementRef.url.match(/^data:([^;]+);base64,(.+)$/)
+        if (matches) {
+          const mimeType = matches[1]
+          const base64Data = matches[2].trim() // Remove any whitespace
+
+          // Validate base64 data isn't empty
+          if (!base64Data) {
+            Logger.warn('V3 Step 2: Skipping element reference - empty base64 data', {
+              description: elementRef.description.substring(0, 50),
+              type: elementRef.type,
+              generationId: input.generationId
+            })
+            continue
+          }
+
+          referenceImages.push({
+            description: elementRef.description,
+            base64: base64Data,
+            mimeType: mimeType
+          })
+
+          Logger.info('V3 Step 2: Added element reference image', {
+            description: elementRef.description.substring(0, 50),
+            type: elementRef.type,
+            mimeType: mimeType,
+            base64Length: base64Data.length,
+            generationId: input.generationId
+          })
+        } else {
+          Logger.warn('V3 Step 2: Failed to parse element reference data URL', {
+            urlPrefix: elementRef.url.substring(0, 50),
+            description: elementRef.description.substring(0, 50),
+            type: elementRef.type,
+            generationId: input.generationId
+          })
+        }
+      }
+    }
+  }
+
   // Add logo for background/environmental branding ONLY (clothing was done in Step 1)
-  /* TEMPORARILY DISABLED to reduce image load on model
+  /* LEGACY CODE - Now handled by element contributions above
   if (logoReference) {
     referenceImages.push({
       ...logoReference,

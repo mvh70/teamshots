@@ -139,7 +139,6 @@ export default function PersonalGenerationsPage() {
   useEffect(() => {
     const handleImageLoaded = () => {
       imageLoadedRef.current = true
-      console.log('[PersonalGenerationsPage Tour] Generation image loaded')
     }
 
     window.addEventListener('generationImageLoaded', handleImageLoaded)
@@ -165,7 +164,6 @@ export default function PersonalGenerationsPage() {
 
     // Wait for the image to be loaded before starting the tour
     if (!imageLoadedRef.current) {
-      console.log('[PersonalGenerationsPage Tour] Waiting for image to load...')
       return
     }
     
@@ -175,19 +173,8 @@ export default function PersonalGenerationsPage() {
     const hasSeenTour = completedTours.includes('generation-detail')
     const isPendingTour = pendingTours.includes('generation-detail')
 
-    console.log('[PersonalGenerationsPage Tour] Checking tour status:', {
-      hasSeenTour,
-      isPendingTour,
-      completedTours,
-      pendingTours,
-      personId: onboardingContext.personId,
-      completedGenerationsCount: completedGenerations.length,
-      imageLoaded: imageLoadedRef.current
-    })
-
     // If tour has already been seen, nothing to do (even if it's in pendingTours)
     if (hasSeenTour) {
-      console.log('[PersonalGenerationsPage Tour] Tour already completed, skipping')
       return
     }
 
@@ -211,7 +198,6 @@ export default function PersonalGenerationsPage() {
     // Trigger tour if it's pending (but only if not already completed) or if this is the first time we see completed generations
     if (isPendingTour && !hasSeenTour) {
       // Tour is already pending and not completed, just start it (with small delay for stability)
-      console.log('[PersonalGenerationsPage Tour] Tour is pending, starting tour...')
       tourTriggerAttemptedRef.current = true
       setTimeout(() => {
         startTour('generation-detail')

@@ -65,6 +65,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const [loadedGenerated, setLoadedGenerated] = useState(false)
   const [failedGenerationHidden, setFailedGenerationHidden] = useState(false)
   const failedGenerationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const waitingForKeysTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const beforeKey = item.uploadedKey
   const normalizedBeforeKey = beforeKey && beforeKey !== 'undefined' ? beforeKey : null
 
@@ -93,13 +94,29 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
         ? new URL(url)
         : new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
       const key = urlObj.searchParams.get('key')
-      if (key) return decodeURIComponent(key)
+      if (key) {
+        const decoded = decodeURIComponent(key)
+        // Validate that we got a meaningful key (not empty)
+        if (decoded && decoded.length > 0) {
+          return decoded
+        }
+      }
     } catch (error) {
       console.warn('Failed to parse URL, trying regex extraction:', url, error)
     }
     // If URL parsing fails, try to extract key directly from query string
     const match = url.match(/[?&]key=([^&]+)/)
-    return match ? decodeURIComponent(match[1]) : null
+    if (match && match[1]) {
+      try {
+        const decoded = decodeURIComponent(match[1])
+        if (decoded && decoded.length > 0) {
+          return decoded
+        }
+      } catch (e) {
+        console.warn('Failed to decode extracted key:', match[1], e)
+      }
+    }
+    return null
   }
   
   // Get generated key from live generation or fall back to item
@@ -115,6 +132,8 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   }
   
   // Use live keys when available, otherwise fall back to static item data
+  // Also check if we have URLs but extraction failed - in that case, we can still use the URL directly
+  const hasGeneratedImageUrl = liveGeneration?.generatedImageUrls?.[0] && !liveGeneratedKey
   const effectiveGeneratedKey = liveGeneratedKey || item.generatedKey
   const effectiveAcceptedKey = liveAcceptedKey || item.acceptedKey
   const afterKey = effectiveAcceptedKey || effectiveGeneratedKey || item.uploadedKey
@@ -125,8 +144,77 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   // A generation is incomplete if:
   // 1. Status is pending or processing, OR
   // 2. Status is completed but we don't have the generated keys yet (race condition during completion)
-  const isWaitingForKeys = currentStatus === 'completed' && !effectiveGeneratedKey && !effectiveAcceptedKey && !isFailed
+  //    However, if we have a generatedImageUrl (even if extraction failed), we're not waiting anymore
+  const isWaitingForKeys = currentStatus === 'completed' && !effectiveGeneratedKey && !effectiveAcceptedKey && !hasGeneratedImageUrl && !isFailed
   const isIncomplete = (currentStatus === 'pending' || currentStatus === 'processing') || isWaitingForKeys
+
+  // Debug logging for race condition investigation
+  useEffect(() => {
+    if (currentStatus === 'completed') {
+      console.log('[GenerationCard] Completed generation state:', {
+        generationId: item.id,
+        currentStatus,
+        hasLiveGeneration: !!liveGeneration,
+        liveGeneratedImageUrls: liveGeneration?.generatedImageUrls,
+        itemGeneratedKey: item.generatedKey,
+        itemAcceptedKey: item.acceptedKey,
+        effectiveGeneratedKey,
+        effectiveAcceptedKey,
+        hasGeneratedImageUrl,
+        isWaitingForKeys,
+        jobProgress: currentJobStatus?.progress
+      })
+    }
+  }, [currentStatus, liveGeneration, item.id, item.generatedKey, item.acceptedKey, effectiveGeneratedKey, effectiveAcceptedKey, hasGeneratedImageUrl, isWaitingForKeys, currentJobStatus?.progress])
+
+  // Force re-render when keys or URLs become available to fix race condition
+  // This ensures the component detects when data arrives even if polling has stopped
+  useEffect(() => {
+    if (currentStatus === 'completed' && (effectiveGeneratedKey || effectiveAcceptedKey || hasGeneratedImageUrl)) {
+      // Data just became available - ensure we're not stuck in waiting state
+      // Reset loaded state to trigger proper rendering
+      if (isWaitingForKeys) {
+        setLoadedGenerated(false)
+      }
+    }
+  }, [currentStatus, effectiveGeneratedKey, effectiveAcceptedKey, hasGeneratedImageUrl, isWaitingForKeys])
+
+  // Add timeout for waiting for keys to prevent infinite spinner
+  // If we've been waiting for more than 5 seconds, force a page reload to get fresh data
+  // This handles edge cases where polling stopped but data is available
+  useEffect(() => {
+    if (isWaitingForKeys) {
+      console.log('[GenerationCard] Started waiting for keys, setting 5s timeout', { generationId: item.id })
+      // Clear any existing timeout
+      if (waitingForKeysTimeoutRef.current) {
+        clearTimeout(waitingForKeysTimeoutRef.current)
+      }
+      // Set a timeout to force refresh after 5 seconds
+      // This prevents infinite spinner if polling stopped prematurely
+      waitingForKeysTimeoutRef.current = setTimeout(() => {
+        console.warn('[GenerationCard] Timeout waiting for keys, forcing page reload', { 
+          generationId: item.id,
+          currentStatus,
+          hasLiveGeneration: !!liveGeneration,
+          liveUrls: liveGeneration?.generatedImageUrls
+        })
+        // Force a full page reload to get fresh data from the server
+        window.location.reload()
+      }, 5000) // 5 seconds timeout
+
+      return () => {
+        if (waitingForKeysTimeoutRef.current) {
+          clearTimeout(waitingForKeysTimeoutRef.current)
+        }
+      }
+    } else {
+      // Clear timeout if we're no longer waiting
+      if (waitingForKeysTimeoutRef.current) {
+        clearTimeout(waitingForKeysTimeoutRef.current)
+        waitingForKeysTimeoutRef.current = null
+      }
+    }
+  }, [isWaitingForKeys, item.id, currentStatus, liveGeneration])
 
   // Update pos when live generation status changes
   useEffect(() => {
@@ -168,14 +256,17 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
     setAfterImageError(false)
     setAfterRetryCount(0)
     setLoadedGenerated(false)
-  }, [normalizedAfterKey])
+  }, [normalizedAfterKey, hasGeneratedImageUrl, liveGeneration?.generatedImageUrls])
 
   const beforeSrc = normalizedBeforeKey && !beforeImageError
     ? buildImageUrl(normalizedBeforeKey, beforeRetryCount, token)
     : '/placeholder-image.png'
-  const afterSrc = normalizedAfterKey && !afterImageError
+  // If we have a generatedImageUrl but key extraction failed, use the URL directly
+  const afterSrc = (normalizedAfterKey && !afterImageError)
     ? buildImageUrl(normalizedAfterKey, afterRetryCount, token)
-    : '/placeholder-image.png'
+    : (hasGeneratedImageUrl && liveGeneration?.generatedImageUrls?.[0])
+      ? liveGeneration.generatedImageUrls[0] + (token ? `&token=${encodeURIComponent(token)}` : '')
+      : '/placeholder-image.png'
 
   // Check if image is already loaded (cached) after render
   useEffect(() => {

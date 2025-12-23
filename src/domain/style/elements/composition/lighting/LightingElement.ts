@@ -62,89 +62,36 @@ export class LightingElement extends StyleElement {
     metadata.colorTemp = derived.colorTemp
     metadata.description = derived.description
 
-    // Add detailed lighting instructions
-    instructions.push(
-      `Lighting quality: ${derived.quality}`,
-      `Light direction: ${derived.direction}`,
-      `Color temperature: ${derived.colorTemp}K`,
-      derived.description
-    )
-
-    // Add setup details
-    if (derived.setup.length > 0) {
-      instructions.push('Lighting setup:')
-      derived.setup.forEach((item) => {
-        instructions.push(`  - ${item}`)
-      })
+    // Build payload structure for generation
+    const payload = {
+      lighting: {
+        quality: derived.quality,
+        direction: derived.direction,
+        setup: derived.setup,
+        color_temperature: `${derived.colorTemp}K`,
+        description: derived.description,
+      },
     }
 
-    // Phase-specific instructions
+    // Note: Specific lighting details (quality, direction, color temperature, setup) are in the JSON payload
+    // Only add critical quality rules that aren't obvious from the JSON structure
+
+    // Phase-specific quality constraints
     if (phase === 'person-generation') {
-      instructions.push(
-        'Apply lighting direction and quality to subject facial features',
-        'Ensure proper catchlights in eyes from main light source',
-        'Shadow falloff should match the lighting quality',
-        'Skin tones must reflect the color temperature accurately'
-      )
       mustFollow.push(
-        'Lighting must originate from the specified direction',
-        'Shadow quality must match the lighting type (soft/hard)',
-        `Color temperature must be consistent at ${derived.colorTemp}K`,
-        'Catchlights in eyes must be present and realistic'
+        'Lighting must be professional and flattering',
+        'Catchlights in eyes must be present and realistic',
+        'Shadow falloff must match lighting quality specification'
       )
-
-      // Quality-specific rules
-      if (derived.quality.includes('Soft') || derived.quality.includes('Diffused')) {
-        mustFollow.push('Shadow transitions must be gradual and soft')
-      } else if (derived.quality.includes('Dramatic')) {
-        instructions.push('Strong shadows and highlights for dramatic effect')
-        mustFollow.push('High contrast between lit and shadow areas')
-      }
-
-      // Direction-specific guidance
-      if (derived.direction.includes('Rembrandt')) {
-        instructions.push('Create characteristic Rembrandt triangle on shadow-side cheek')
-      } else if (derived.direction.includes('Loop')) {
-        instructions.push('Small shadow from nose angling down toward mouth corner')
-      } else if (derived.direction.includes('Frontal')) {
-        instructions.push('Minimize facial shadows with even frontal illumination')
-      }
     } else if (phase === 'background-generation') {
-      instructions.push(
-        'Background lighting must match the primary lighting setup',
-        'Ambient light quality should be consistent with the scene',
-        `Background color temperature must match ${derived.colorTemp}K`,
-        'Background illumination should support the main subject lighting'
-      )
       mustFollow.push(
         'Background lighting must be coherent with subject lighting direction',
-        'Lighting quality must be consistent across the scene',
-        `Color temperature ${derived.colorTemp}K must be maintained`,
-        'Ambient light should enhance rather than conflict with main lighting'
+        'Lighting quality must be consistent across the scene'
       )
-
-      // Environment-specific guidance
-      if (input.backgroundEnvironment === 'studio') {
-        instructions.push('Studio background with controlled gradient lighting')
-        mustFollow.push('Background must show studio lighting characteristics')
-      } else if (input.backgroundEnvironment === 'outdoor') {
-        instructions.push('Natural outdoor ambient light matching time of day')
-        if (input.timeOfDay === 'golden_hour' || input.timeOfDay === 'sunset') {
-          mustFollow.push('Warm golden tones in ambient light')
-        }
-      } else if (input.backgroundEnvironment === 'indoor') {
-        instructions.push('Indoor ambient light with natural falloff')
-      }
     } else if (phase === 'composition') {
-      instructions.push(
-        'Ensure lighting direction is consistent between person and background',
-        'Match color temperature across all compositional elements',
-        'Verify shadow direction and quality alignment',
-        'Maintain consistent ambient light levels'
-      )
       mustFollow.push(
         'Light direction must be coherent across composition',
-        `Color temperature ${derived.colorTemp}K must be uniform`,
+        'Color temperature must be uniform throughout',
         'Shadow characteristics must match between layers',
         'No lighting inconsistencies or mismatched light sources'
       )
@@ -152,16 +99,15 @@ export class LightingElement extends StyleElement {
 
     // Color temperature guidance
     if (derived.colorTemp <= 3500) {
-      instructions.push('Warm color cast - render with golden/orange tones')
       metadata.warmLighting = true
     } else if (derived.colorTemp >= 6500) {
-      instructions.push('Cool color cast - render with blue/cyan tones')
       metadata.coolLighting = true
     }
 
     return {
       instructions,
       mustFollow,
+      payload,
       metadata,
     }
   }

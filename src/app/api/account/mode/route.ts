@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getAccountMode } from '@/domain/account/accountMode'
+import { getAccountMode } from '@/domain/account/accountMode.server'
 import { Logger } from '@/lib/logger'
 
 

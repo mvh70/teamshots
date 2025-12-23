@@ -457,6 +457,11 @@ export async function buildCollectiveReferenceImages(
   return references
 }
 
+/**
+ * Build reference images for V3 workflow
+ * For V3: Asset downloads (logos, backgrounds) are handled by element preparation (step 0)
+ * This function only builds selfie composites and format references
+ */
 export async function buildDefaultReferencePayload({
   styleSettings,
   selfieKeys,
@@ -467,7 +472,7 @@ export async function buildDefaultReferencePayload({
   shotDescription,
   aspectRatioDescription,
   aspectRatioSize,
-  workflowVersion // Workflow version to determine if labelInstruction should be generated
+  workflowVersion // Maintained for backward compatibility, but v3 is now required
 }: {
   styleSettings: PhotoStyleSettings
   selfieKeys: string[]
@@ -480,61 +485,38 @@ export async function buildDefaultReferencePayload({
   aspectRatioSize: { width: number; height: number }
   workflowVersion?: 'v1' | 'v2' | 'v3'
 }): Promise<{ referenceImages: ReferenceImage[]; labelInstruction?: string }> {
+  // V3 workflow is now required (v1/v2 support removed)
+  if (workflowVersion && workflowVersion !== 'v3') {
+    throw new Error(`buildDefaultReferencePayload: Only v3 workflow is supported (received: ${workflowVersion})`)
+  }
   if (!selfieKeys.length) {
     throw new Error('At least one selfie key is required to build references')
   }
 
   const referenceImages: ReferenceImage[] = []
-  let labelInstruction: string | undefined = undefined
 
-  // V3 builds its own prompt structure, so skip labelInstruction generation
-  const shouldGenerateLabelInstruction = workflowVersion !== 'v3'
+  // V3 builds its own prompt structure via element composition
+  // labelInstruction is no longer generated (kept in return type for backward compatibility)
 
   if (useCompositeReference) {
-    const additionalAssets: Array<{ label: string; buffer: Buffer }> = []
-
-    // Add logo to composite if branding is enabled and positioned on clothing
-    // Skip for v3 workflow - handled by BrandingElement.prepare() in step 0
-    if (
-      workflowVersion !== 'v3' &&
-      styleSettings.branding?.type !== 'exclude' &&
-      styleSettings.branding?.logoKey &&
-      styleSettings.branding?.position === 'clothing'
-    ) {
-      const logoAsset = await downloadAsset(styleSettings.branding.logoKey)
-      if (logoAsset) {
-        const logoBuffer = await sharp(Buffer.from(logoAsset.base64, 'base64')).png().toBuffer()
-        additionalAssets.push({
-          label: 'LOGO (apply according to branding rules)',
-          buffer: logoBuffer
-        })
-      }
-    }
+    // V3: Asset downloads (logos, backgrounds) are handled by element preparation (step 0)
+    // This only builds selfie composite - no additional assets
 
     const composite = await buildVerticalSelfieComposite({
       selfieKeys,
       getSelfieBuffer,
       generationId,
-      additionalAssets
+      additionalAssets: [] // No additional assets for v3
     })
 
     referenceImages.push({
       mimeType: composite.mimeType,
       base64: composite.base64,
       description:
-        'REFERENCE: Composite image containing vertically stacked subject selfies and labeled brand assets.'
+        'REFERENCE: Composite image containing vertically stacked subject selfies.'
     })
 
-    // Skip custom background download for v3 workflow - handled by BackgroundElement.prepare() in step 0
-    if (workflowVersion !== 'v3' && styleSettings.background?.type === 'custom' && styleSettings.background.key) {
-      const backgroundReference = await buildBackgroundReference(
-        styleSettings.background.key,
-        downloadAsset
-      )
-      if (backgroundReference) {
-        referenceImages.push(backgroundReference)
-      }
-    }
+    // V3: Custom backgrounds are handled by BackgroundElement.prepare() in step 0
 
     const formatReference = await buildAspectRatioFormatReference({
       width: aspectRatioSize.width,
@@ -543,34 +525,7 @@ export async function buildDefaultReferencePayload({
     })
     referenceImages.push(formatReference)
 
-    if (shouldGenerateLabelInstruction) {
-      const instructionLines: string[] = [
-        'Reference images are supplied with clear labels. Follow each resource precisely:',
-        '- **Composite Selfies & Branding:** Inside the stacked selfie reference, choose the face that best matches the requested pose and lighting as the primary likeness. Use the remaining selfies to reinforce 3D facial structure, hair, glasses, and fine details. Stay as close as possible to the original selfies. Do not invent details, unless indicated specifically. Eg if the selfies do not show glasses, do not add glasses. Keep the hairstyle as much as possible as in the selfies. Apply the branded logo exactly as indicated—no extra placements—and do not show the original selfies in the final image.'
-      ]
-
-      if (styleSettings.background?.type === 'custom' && styleSettings.background.key) {
-        instructionLines.push(
-          '- **Custom Background:** Use the provided custom background image and match the background to the final aspect ratio determined by the FORMAT frame.'
-        )
-      }
-
-      if (styleSettings.branding?.type !== 'exclude') {
-        instructionLines.push(
-          '- **Branding:** Place the logo exactly once following the BRANDING guidance from the reference assets. Recreate the placement faithfully and ensure the composite reference itself is not visible in the final image.'
-        )
-      }
-
-      instructionLines.push(
-        `- **Format Frame (${aspectRatioDescription}):** This empty frame defines the exact output bounds. Compose the final ${shotDescription.toLowerCase()} image so all important content stays inside this frame without cropping.`
-      )
-
-      instructionLines.push(
-        `\nRespect the requested shot type (${shotDescription}) and match the ${aspectRatioDescription} aspect ratio exactly by following the FORMAT frame.`
-      )
-
-      labelInstruction = instructionLines.join('\n')
-    }
+    // V3: labelInstruction not generated - prompt structure built by element composition
 
     Logger.debug('Prepared composite reference payload', {
       referenceCount: referenceImages.length,
@@ -588,31 +543,12 @@ export async function buildDefaultReferencePayload({
     )
     referenceImages.push(...references)
 
-    if (shouldGenerateLabelInstruction) {
-      const selfieLabels = selfieKeys.map((_, index) => `SUBJECT1-SELFIE${index + 1}`)
-      
-      const instructionLines: string[] = [
-        `Reference selfies are provided individually and labeled (${selfieLabels.join(', ')}). Follow each resource precisely:`,
-        `- **Subject Selfies:** Choose the face that best matches the requested pose and lighting as the primary likeness. Use the remaining selfies to reinforce 3D facial structure, hair, glasses, and fine details. Stay as close as possible to the original selfies. Do not invent details, unless indicated specifically. Eg if the selfies do not show glasses, do not add glasses. Keep the hairstyle as much as possible as in the selfies. Do not show the original selfies in the final image.`
-      ]
-
-      if (styleSettings.branding?.type !== 'exclude') {
-        instructionLines.push(
-          '- **Branding:** Place the logo exactly once following the BRANDING guidance from the reference assets.'
-        )
-      }
-
-      instructionLines.push(
-        `\n**CRITICAL ORIENTATION REQUIREMENT:** The final output image MUST be vertical (portrait orientation) with height significantly greater than width. Respect the requested shot type (${shotDescription}) and aspect ratio (${aspectRatioDescription}).`
-      )
-
-      labelInstruction = instructionLines.join('\n')
-    }
+    // V3: labelInstruction not generated - prompt structure built by element composition
   }
 
   return {
     referenceImages,
-    labelInstruction
+    labelInstruction: undefined // Always undefined for v3
   }
 }
 

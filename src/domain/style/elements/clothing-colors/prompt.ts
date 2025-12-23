@@ -19,20 +19,14 @@ export const buildColorPalette = (
   if (!colors) return undefined
   const palette: string[] = []
 
-  // Always add base layer color if provided
-  if (colors.topBase) {
-    palette.push(`base layer (e.g., shirt under hoodie, dress shirt under blazer): ${colors.topBase} color`)
+  // Top layer - the visible outer garment (always present)
+  if (colors.topLayer) {
+    palette.push(`top_layer (${detailKey}): ${colors.topLayer} color`)
   }
 
-  // Handle topCover color based on garment type
-  if (colors.topCover) {
-    if (NO_TOP_COVER_DETAILS.has(detailKey)) {
-      // For items like hoodie, t-shirt, dress - topCover is the main garment color
-      palette.push(`${detailKey} (the main visible garment): ${colors.topCover} color`)
-    } else if (descriptor.outerLayer) {
-      // For items with separate outer layer (jacket, blazer, etc.)
-      palette.push(`outer layer (e.g., suit jacket, blazer, cardigan): ${colors.topCover} color`)
-    }
+  // Base layer - shirt underneath (only for multi-layer garments)
+  if (colors.baseLayer) {
+    palette.push(`base_layer (shirt underneath): ${colors.baseLayer} color`)
   }
 
   if (colors.bottom && isBottomVisible(shotType)) {

@@ -46,16 +46,16 @@ export const customClothingConfig: StyleElementConfig<CustomClothingSettings> = 
       // assetId/outfitS3Key are optional - user may set type to user-choice before uploading
       // If colors are provided, validate structure
       if (settings.colors) {
-        const { topBase, bottom } = settings.colors
-        if (!topBase || !bottom) {
+        const { topLayer, bottom } = settings.colors
+        if (!topLayer || !bottom) {
           return false
         }
         // Validate hex color format
         const hexRegex = /^#[0-9A-Fa-f]{6}$/
-        if (!hexRegex.test(topBase) || !hexRegex.test(bottom)) {
+        if (!hexRegex.test(topLayer) || !hexRegex.test(bottom)) {
           return false
         }
-        if (settings.colors.topCover && !hexRegex.test(settings.colors.topCover)) {
+        if (settings.colors.baseLayer && !hexRegex.test(settings.colors.baseLayer)) {
           return false
         }
         if (settings.colors.shoes && !hexRegex.test(settings.colors.shoes)) {

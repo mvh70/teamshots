@@ -308,90 +308,14 @@ class PackageRegistry {
   /**
    * Discover and register packages from filesystem
    *
-   * Scans the packages directory for package.ts files and auto-registers them
+   * Note: Auto-discovery is not implemented. Packages must be manually registered
+   * using the register() method or registerPackages() helper.
    *
-   * @returns Array of discovered package IDs
+   * @returns Empty array (discovery not implemented)
    */
   async discover(): Promise<string[]> {
-    Logger.info('[PackageRegistry] Starting package discovery')
-
-    const discoveredPackages: string[] = []
-
-    try {
-      // In Node.js environment, we can use dynamic imports
-      if (typeof window === 'undefined') {
-        // Import all packages from the packages directory
-        // Note: This requires build-time configuration for dynamic imports
-        // For now, we'll use a conventional approach
-
-        const packageModules = await this.scanPackageDirectory()
-
-        for (const modulePath of packageModules) {
-          try {
-            const module = await import(modulePath)
-
-            // Look for default export or named exports
-            const pkg = module.default || module.package || module[Object.keys(module)[0]]
-
-            if (pkg && this.isValidPackage(pkg)) {
-              await this.register(pkg)
-              discoveredPackages.push(pkg.id)
-            } else {
-              Logger.warn('[PackageRegistry] Invalid package module', { modulePath })
-            }
-          } catch (error) {
-            Logger.error('[PackageRegistry] Failed to import package module', {
-              modulePath,
-              error: error instanceof Error ? error.message : String(error),
-            })
-          }
-        }
-      }
-    } catch (error) {
-      Logger.error('[PackageRegistry] Package discovery failed', {
-        error: error instanceof Error ? error.message : String(error),
-      })
-    }
-
-    Logger.info('[PackageRegistry] Package discovery complete', {
-      discovered: discoveredPackages.length,
-      packages: discoveredPackages,
-    })
-
-    return discoveredPackages
-  }
-
-  /**
-   * Scan packages directory for package modules
-   *
-   * This is a placeholder - actual implementation depends on build system
-   * Options:
-   * 1. Webpack require.context
-   * 2. Filesystem scanning with glob
-   * 3. Build-time code generation
-   */
-  private async scanPackageDirectory(): Promise<string[]> {
-    // For now, return empty array - this will be implemented based on build system
-    // In a real implementation, this would use:
-    // - fs.readdirSync in Node.js
-    // - require.context in webpack
-    // - import.meta.glob in Vite
-    Logger.debug('[PackageRegistry] Package directory scanning not yet implemented')
+    Logger.debug('[PackageRegistry] Auto-discovery not implemented - use manual registration')
     return []
-  }
-
-  /**
-   * Type guard to check if object is a valid package
-   */
-  private isValidPackage(obj: unknown): obj is ServerStylePackage {
-    return (
-      typeof obj === 'object' &&
-      obj !== null &&
-      'id' in obj &&
-      'label' in obj &&
-      'version' in obj &&
-      'buildGenerationPayload' in obj
-    )
   }
 
   /**

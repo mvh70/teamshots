@@ -71,6 +71,32 @@ export interface ElementContribution {
 
   // Structured data for the AI model
   metadata?: Record<string, unknown>
+
+  /**
+   * JSON payload fragment to contribute to the generation prompt
+   *
+   * This payload will be deep-merged with other elements' payloads in priority order.
+   * Elements should use clear paths to avoid conflicts (e.g., 'subject.wardrobe', 'scene.environment').
+   *
+   * Example contribution from ClothingElement:
+   * ```typescript
+   * {
+   *   subject: {
+   *     wardrobe: {
+   *       style: 'business-casual',
+   *       style_key: 'business_casual',
+   *       colors: ['navy', 'white']
+   *     }
+   *   }
+   * }
+   * ```
+   *
+   * Merging behavior:
+   * - Deep merge preserves nested structures
+   * - Later elements can override specific fields
+   * - Elements can read accumulated payload via context.accumulatedPayload
+   */
+  payload?: Record<string, unknown>
 }
 
 /**
@@ -103,6 +129,29 @@ export interface ElementContext {
 
   // Other elements' contributions so far (for coordination)
   existingContributions: ElementContribution[]
+
+  /**
+   * Accumulated payload from all elements processed so far
+   *
+   * This allows elements to coordinate with previous contributions.
+   * The registry updates this field after each element contributes.
+   *
+   * Example: BrandingElement reading clothing data
+   * ```typescript
+   * const styleKey = context.accumulatedPayload?.subject?.wardrobe?.style_key
+   * if (styleKey === 'business_casual') {
+   *   // Place branding differently for business attire
+   * }
+   * ```
+   *
+   * Use cases:
+   * - Cross-element dependencies (branding needs clothing style)
+   * - Conditional logic based on previous contributions
+   * - Avoiding duplicate or conflicting specifications
+   *
+   * Note: Only available during element contribution phase, not during preparation
+   */
+  accumulatedPayload?: Record<string, unknown>
 }
 
 /**

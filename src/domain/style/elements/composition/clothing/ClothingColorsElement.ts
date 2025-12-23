@@ -2,7 +2,7 @@
  * Clothing Colors Element
  *
  * Contributes color palette specifications for clothing layers to person generation.
- * Handles topBase, topCover, bottom, and shoes colors with shot-type awareness.
+ * Handles topLayer, baseLayer, bottom, and shoes colors with shot-type awareness.
  */
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
@@ -43,41 +43,38 @@ export class ClothingColorsElement extends StyleElement {
     const isFullBody = this.isFullBodyVisible(shotType)
     const isBottomVisible = this.isBottomVisible(shotType)
 
-    // Base layer (shirt under hoodie, dress shirt under blazer)
-    if (colors.topBase) {
-      colorPalette.push(`base layer (e.g., shirt under hoodie, dress shirt under blazer): ${colors.topBase} color`)
-      instructions.push(`Base layer garment should be ${colors.topBase} in color`)
-      mustFollow.push(`Base layer must be ${colors.topBase}`)
-    }
+    // Determine garment structure
+    const clothing = settings.clothing
+    const detail = clothing?.details?.toLowerCase() || ''
 
-    // Top cover/outer layer (depends on clothing type)
-    if (colors.topCover) {
-      const clothing = settings.clothing
-      const detail = clothing?.details?.toLowerCase() || ''
+    // Check if this is a single-layer garment (polo, hoodie, t-shirt, dress, gown, jumpsuit)
+    // These garments are worn alone without a visible base layer underneath
+    // NOTE: button-down is NOT included because it's worn open with a t-shirt base layer
+    const isSingleLayer = detail.includes('polo') ||
+                         detail.includes('hoodie') ||
+                         detail.includes('t-shirt') ||
+                         detail.includes('dress') ||
+                         detail.includes('gown') ||
+                         detail.includes('jumpsuit')
 
-      // Check if this is a single-layer garment (hoodie, t-shirt, etc.)
-      const isSingleLayer = detail.includes('hoodie') ||
-                           detail.includes('t-shirt') ||
-                           detail.includes('polo') ||
-                           detail.includes('dress')
-
-      if (isSingleLayer) {
-        colorPalette.push(`${detail || 'main garment'} (the main visible garment): ${colors.topCover} color`)
-        instructions.push(`Main visible garment should be ${colors.topCover} in color`)
-        mustFollow.push(`Main garment must be ${colors.topCover}`)
-      } else {
-        // Multi-layer outfit (jacket, blazer, etc.)
-        colorPalette.push(`outer layer (e.g., suit jacket, blazer, cardigan): ${colors.topCover} color`)
-        instructions.push(`Outer layer should be ${colors.topCover} in color`)
-        mustFollow.push(`Outer layer must be ${colors.topCover}`)
+    if (isSingleLayer) {
+      // Single-layer garments: the garment itself is the top layer
+      if (colors.topLayer) {
+        colorPalette.push(`${detail || 'main garment'} (the main visible garment): ${colors.topLayer} color`)
+      }
+    } else {
+      // Multi-layer garments: topLayer is the outer garment (jacket, blazer), baseLayer is the shirt underneath
+      if (colors.topLayer) {
+        colorPalette.push(`top layer (e.g., suit jacket, blazer, cardigan): ${colors.topLayer} color`)
+      }
+      if (colors.baseLayer) {
+        colorPalette.push(`base layer (e.g., shirt under jacket, dress shirt under blazer): ${colors.baseLayer} color`)
       }
     }
 
     // Bottom garment (only if visible in shot)
     if (colors.bottom && isBottomVisible) {
       colorPalette.push(`bottom garment (trousers, skirt, dress pants): ${colors.bottom} color`)
-      instructions.push(`Bottom garment should be ${colors.bottom} in color`)
-      mustFollow.push(`Bottom garment must be ${colors.bottom}`)
     } else if (colors.bottom && !isBottomVisible) {
       // Log that bottom color is specified but won't be visible
       metadata.bottomColorNotVisible = true
@@ -86,12 +83,13 @@ export class ClothingColorsElement extends StyleElement {
     // Shoes (only if visible in full-body shot)
     if (colors.shoes && isFullBody) {
       colorPalette.push(`shoes (dress shoes, loafers, heels): ${colors.shoes} color`)
-      instructions.push(`Shoes should be ${colors.shoes} in color`)
-      mustFollow.push(`Shoes must be ${colors.shoes}`)
     } else if (colors.shoes && !isFullBody) {
       // Log that shoes color is specified but won't be visible
       metadata.shoesColorNotVisible = true
     }
+
+    // Note: Specific color values are in the JSON payload color_palette
+    // No need to repeat them in instructions or mustFollow
 
     // Add general color matching instructions
     if (colorPalette.length > 0) {
@@ -146,7 +144,7 @@ export class ClothingColorsElement extends StyleElement {
     const colors = clothingColors.colors
 
     // At least one color should be specified
-    if (!colors.topBase && !colors.topCover && !colors.bottom && !colors.shoes) {
+    if (!colors.topLayer && !colors.baseLayer && !colors.bottom && !colors.shoes) {
       errors.push('At least one clothing color must be specified')
     }
 
@@ -161,8 +159,8 @@ export class ClothingColorsElement extends StyleElement {
       }
     }
 
-    validateColor(colors.topBase!, 'topBase')
-    validateColor(colors.topCover!, 'topCover')
+    validateColor(colors.topLayer!, 'topLayer')
+    validateColor(colors.baseLayer!, 'baseLayer')
     validateColor(colors.bottom!, 'bottom')
     validateColor(colors.shoes!, 'shoes')
 

@@ -91,7 +91,7 @@ function addSecurityHeaders(response: NextResponse) {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.googletagmanager.com", // Allow GTM & Google Fonts styles
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts
-    `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com ${posthogDomains} ws: wss:`,
+    `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://storage.googleapis.com https://cdn.jsdelivr.net https://unpkg.com https://tfhub.dev https://www.kaggle.com ${posthogDomains} ws: wss:`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

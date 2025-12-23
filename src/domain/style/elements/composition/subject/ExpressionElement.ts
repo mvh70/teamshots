@@ -40,104 +40,54 @@ export class ExpressionElement extends StyleElement {
       expressionType: expression.type,
     }
 
-    // Generate expression-specific instructions
+    // Build payload structure for expression
+    const payload: Record<string, unknown> = {
+      subject: {
+        expression: {
+          type: expression.type,
+        },
+      },
+    }
+
+    // Generate expression-specific instructions and payload details
+    const expressionPayload = (payload.subject as Record<string, unknown>).expression as Record<string, unknown>
+
     switch (expression.type) {
       case 'genuine_smile':
-        instructions.push(
-          'The person should have a genuine smile showing teeth',
-          'Expression should appear natural, approachable, and friendly',
-          'Eyes should show warmth and engagement (smile with eyes)'
-        )
-        mustFollow.push(
-          'Smile must show teeth clearly',
-          'Expression must appear natural and authentic, not forced',
-          'Eyes must reflect the smile (crows feet, lifted cheeks)'
-        )
+        expressionPayload.description = 'Genuine smile showing teeth, natural and approachable'
         break
 
       case 'soft_smile':
-        instructions.push(
-          'The person should have a soft professional smile without showing teeth',
-          'Expression should be subtle, professional, and polished',
-          'Mouth should be gently curved upward'
-        )
-        mustFollow.push(
-          'Smile must be closed-mouth (no teeth showing)',
-          'Expression must appear professional and controlled',
-          'Face should show subtle warmth without being too casual'
-        )
+        expressionPayload.description = 'Soft professional smile without teeth, subtle and polished'
         break
 
       case 'neutral_serious':
-        instructions.push(
-          'The person should have a neutral, relaxed expression',
-          'Face should be calm and composed',
-          'Expression should convey professionalism and confidence'
-        )
-        mustFollow.push(
-          'Face must be neutral without smiling',
-          'Expression must appear natural and relaxed, not tense',
-          'Eyes should be engaged and focused'
-        )
+        expressionPayload.description = 'Neutral, relaxed expression with calm composure'
         break
 
       case 'laugh_joy':
-        instructions.push(
-          'The person should be laughing with a bright, joyful smile',
-          'Expression should appear authentic and full of life',
-          'Face should show genuine happiness and energy'
-        )
-        mustFollow.push(
-          'Expression must show clear joy and laughter',
-          'Smile must be wide and teeth visible',
-          'Face must appear animated and energetic'
-        )
+        expressionPayload.description = 'Bright, joyful laughter with wide smile and energy'
         break
 
       case 'contemplative':
-        instructions.push(
-          'The person should have a thoughtful, engaged expression',
-          'Face should show intelligence and introspection',
-          'Expression should be subtle and artistic'
-        )
-        mustFollow.push(
-          'Expression must appear thoughtful and engaged',
-          'Face should show subtle emotion and depth',
-          'Eyes should appear focused and contemplative'
-        )
+        expressionPayload.description = 'Thoughtful, engaged expression with intelligence and introspection'
         break
 
       case 'confident':
-        instructions.push(
-          'The person should have a confident, poised expression',
-          'Face should show self-assurance and professionalism',
-          'Expression should be strong but approachable'
-        )
-        mustFollow.push(
-          'Expression must convey confidence and poise',
-          'Face should appear professional and assured',
-          'Eyes should show focus and self-assurance'
-        )
+        expressionPayload.description = 'Confident, poised expression with self-assurance'
         break
 
       case 'sad':
-        instructions.push(
-          'The person should have a subtle contemplative expression',
-          'Face should show gentle emotion',
-          'Expression should be artistic and editorial'
-        )
-        mustFollow.push(
-          'Expression must show subtle sadness or contemplation',
-          'Face should appear natural, not overly dramatic',
-          'Eyes should reflect the emotional tone'
-        )
+        expressionPayload.description = 'Subtle contemplative expression with gentle emotion'
         break
 
       default:
         // Unknown expression - use neutral
-        instructions.push('The person should have a natural, relaxed expression')
-        mustFollow.push('Expression must appear natural and authentic')
+        expressionPayload.description = 'Natural, relaxed expression'
     }
+
+    // Note: Specific expression details are in the JSON payload
+    // Only add critical quality rules that aren't obvious from the JSON
 
     // Add general expression rules
     mustFollow.push(
@@ -149,6 +99,7 @@ export class ExpressionElement extends StyleElement {
     return {
       instructions,
       mustFollow,
+      payload,
       metadata,
     }
   }

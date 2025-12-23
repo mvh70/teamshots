@@ -36,8 +36,8 @@ interface UploadResponse {
 
 interface AnalysisResponse {
   colors: {
-    topBase: string
-    topCover?: string
+    topLayer: string
+    baseLayer?: string
     bottom: string
     shoes?: string
   }
@@ -371,19 +371,19 @@ export function CustomClothingSelector({
               <div className="flex items-center gap-1">
                 <div
                   className="w-6 h-6 rounded border border-gray-300"
-                  style={{ backgroundColor: value.colors.topBase }}
-                  title="Top base color"
+                  style={{ backgroundColor: value.colors.topLayer }}
+                  title="Top layer color"
                 />
                 <span className="text-xs text-gray-500">Top</span>
               </div>
-              {value.colors.topCover && (
+              {value.colors.baseLayer && (
                 <div className="flex items-center gap-1">
                   <div
                     className="w-6 h-6 rounded border border-gray-300"
-                    style={{ backgroundColor: value.colors.topCover }}
-                    title="Top cover color"
+                    style={{ backgroundColor: value.colors.baseLayer }}
+                    title="Base layer color"
                   />
-                  <span className="text-xs text-gray-500">Jacket</span>
+                  <span className="text-xs text-gray-500">Base</span>
                 </div>
               )}
               <div className="flex items-center gap-1">

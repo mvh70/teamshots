@@ -17,24 +17,24 @@ export function ClothingColorsSummary({ settings }: ElementSummaryProps<Clothing
       <div className="flex items-center gap-2">
         <span className="underline decoration-2 underline-offset-2 font-semibold text-gray-800">Colors</span>
       </div>
-      {(colors && (colors.topCover || colors.topBase || colors.bottom || ("shoes" in colors && colors.shoes))) ? (
+      {(colors && (colors.topLayer || colors.baseLayer || colors.bottom || ("shoes" in colors && colors.shoes))) ? (
         <div className="ml-6 flex flex-wrap items-center gap-4">
-          {colors.topCover && (
+          {colors.topLayer && (
             <div className="flex flex-col items-center gap-1">
-              {isHexColor(colors.topCover) ? (
-                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: colors.topCover }} />
+              {isHexColor(colors.topLayer) ? (
+                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: colors.topLayer }} />
               ) : (
-                <span className="text-gray-400 text-xs">{colors.topCover}</span>
+                <span className="text-gray-400 text-xs">{colors.topLayer}</span>
               )}
-              <span className="text-xs font-medium text-gray-600">Cover</span>
+              <span className="text-xs font-medium text-gray-600">Top</span>
             </div>
           )}
-          {colors.topBase && (
+          {colors.baseLayer && (
             <div className="flex flex-col items-center gap-1">
-              {isHexColor(colors.topBase) ? (
-                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: colors.topBase }} />
+              {isHexColor(colors.baseLayer) ? (
+                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: colors.baseLayer }} />
               ) : (
-                <span className="text-gray-400 text-xs">{colors.topBase}</span>
+                <span className="text-gray-400 text-xs">{colors.baseLayer}</span>
               )}
               <span className="text-xs font-medium text-gray-600">Base</span>
             </div>
