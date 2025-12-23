@@ -410,7 +410,7 @@ async function fetchStyleData(params: {
   ])
 
   const userWithContexts = user ? { ...user, contexts: rawContexts } : null
-  const contexts: ContextOption[] = rawContexts.map((ctx, index) => ({
+  const contexts: ContextOption[] = rawContexts.map((ctx: { id: string; name: string | null; settings: unknown }, index: number) => ({
     id: ctx.id,
     name: ctx.name || `Personal Style ${rawContexts.length - index}`,
     customPrompt: (ctx.settings as Record<string, unknown>)?.customPrompt as string | null,
