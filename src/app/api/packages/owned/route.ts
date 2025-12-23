@@ -34,7 +34,8 @@ export async function GET(_request: NextRequest) {
     })
 
     // Enrich with package metadata
-    const packagesWithMetadata = userPackages.map((up) => {
+    type UserPackage = typeof userPackages[number];
+    const packagesWithMetadata = userPackages.map((up: UserPackage) => {
       const packageConfig = getPackageConfig(up.packageId)
       const packageMetadata = PACKAGES_CONFIG.active[up.packageId as keyof typeof PACKAGES_CONFIG.active]
       
