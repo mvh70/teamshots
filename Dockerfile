@@ -16,8 +16,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma Client
-RUN npx prisma generate && echo "✅ Prisma client generated successfully" || (echo "❌ Prisma generate failed" && exit 1)
+# Validate schema and generate Prisma Client
+RUN echo "📋 Checking Prisma schema..." && \
+    npx prisma validate && \
+    echo "✅ Schema valid" && \
+    echo "🔧 Generating Prisma client..." && \
+    npx prisma generate && \
+    echo "✅ Prisma generate completed" && \
+    ls -la node_modules/.prisma/client/index.d.ts && \
+    echo "✅ PrismaClient types exist"
 
 # Build Next.js application
 RUN npm run build
