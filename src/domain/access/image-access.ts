@@ -42,13 +42,15 @@ export async function getGenerationBySequence(
 
 export async function getSelfieSequence(personId: string, selfieId: string): Promise<number | null> {
   const selfies = await getUserSelfies(personId)
-  const index = selfies.findIndex(s => s.id === selfieId)
+  type Selfie = typeof selfies[number];
+  const index = selfies.findIndex((s: Selfie) => s.id === selfieId)
   return index >= 0 ? index + 1 : null
 }
 
 export async function getGenerationSequence(personId: string, generationId: string): Promise<number | null> {
   const generations = await getUserGenerations(personId)
-  const index = generations.findIndex(g => g.id === generationId)
+  type Generation = typeof generations[number];
+  const index = generations.findIndex((g: Generation) => g.id === generationId)
   return index >= 0 ? index + 1 : null
 }
 
