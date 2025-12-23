@@ -41,6 +41,7 @@
   "exclude": [
     "node_modules",
     "todelete/**",
+    "scripts/**",
     "**/*.example.ts",
     "**/*.example.tsx"
   ]
