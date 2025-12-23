@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
           return acc
         }, {} as Record<string, number>)
       },
-      transactions: allTransactions.map(tx => ({
+      transactions: allTransactions.map((tx: Transaction) => ({
         id: tx.id,
         credits: tx.credits,
         type: tx.type,
