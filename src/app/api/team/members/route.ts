@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     type RevokedInvite = typeof revokedInvites[number];
     const revokedPersonIds = revokedInvites
       .map((invite: RevokedInvite) => invite.person?.id)
-      .filter((id): id is string => Boolean(id))
+      .filter((id: string | undefined): id is string => Boolean(id))
     
     // Add revoked person IDs to the list for credit/generation queries
     revokedPersonIds.forEach((id: string) => {
