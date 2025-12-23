@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client'
+import { Prisma } from '@/lib/prisma'
 
 /**
  * Prisma query helper utilities
