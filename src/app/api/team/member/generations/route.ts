@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
         selfieKey: primarySelfieKey,
         selfieUrl: primarySelfieKey ? `/api/files/get?key=${encodeURIComponent(primarySelfieKey)}&${tokenParam}` : '',
         inputSelfieUrls,
-        generatedPhotos: generation.generatedPhotoKeys.map((key, index) => ({
+        generatedPhotos: generation.generatedPhotoKeys.map((key: string, index: number) => ({
           id: `${generation.id}-${index}`,
           url: `/api/files/get?key=${encodeURIComponent(key)}&${tokenParam}`,
           style: generation.context?.name || 'Freestyle'
