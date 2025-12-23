@@ -30,7 +30,8 @@ export async function GET() {
     // Use shared function to fetch pending invites
     const pendingInvites = await fetchPendingInvites(teamId)
 
-    const formattedInvites = pendingInvites.map(invite => ({
+    type PendingInvite = typeof pendingInvites[number];
+    const formattedInvites = pendingInvites.map((invite: PendingInvite) => ({
       id: invite.id,
       email: invite.email,
       name: invite.name,

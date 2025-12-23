@@ -51,7 +51,8 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const activities = generations.map(generation => {
+    type Generation = typeof generations[number];
+    const activities = generations.map((generation: Generation) => {
       // Derive generationType from person.teamId (single source of truth)
       const derivedGenerationType = deriveGenerationType(generation.person.teamId)
       

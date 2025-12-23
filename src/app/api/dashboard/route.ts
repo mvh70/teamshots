@@ -202,7 +202,8 @@ export async function GET() {
       if (teamId) {
         const pendingTeamInvites = await fetchPendingInvites(teamId)
         pendingTeamInvitesCount = pendingTeamInvites.length
-        pendingInvites = pendingTeamInvites.map(invite => ({
+        type PendingInvite = typeof pendingTeamInvites[number];
+        pendingInvites = pendingTeamInvites.map((invite: PendingInvite) => ({
           ...invite,
           sent: formatTimeAgo(invite.expiresAt) // Format using shared utility
         }))

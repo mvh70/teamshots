@@ -66,7 +66,8 @@ export async function GET(request: NextRequest) {
     const { usedSelfieIds, usedSelfieKeys } = await getUsedSelfiesForPerson(result.context.personId)
 
     // Transform selfies to include URLs and usage info
-    const transformedSelfies = selfies.map(selfie => {
+    type Selfie = typeof selfies[number];
+    const transformedSelfies = selfies.map((selfie: Selfie) => {
       // Check if selfie is used: either by ID or by key
       const used = usedSelfieIds.has(selfie.id) || usedSelfieKeys.has(selfie.key)
       return {

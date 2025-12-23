@@ -62,7 +62,8 @@ export async function GET(request: NextRequest) {
     }
 
     const team = user.person.team
-    const allPersonIds = team.teamMembers.map(p => p.id)
+    type TeamMember = typeof team.teamMembers[number];
+    const allPersonIds = team.teamMembers.map((p: TeamMember) => p.id)
     // Include current user's personId if not in team members
     if (user.person.id && !allPersonIds.includes(user.person.id)) {
       allPersonIds.push(user.person.id)
@@ -96,8 +97,9 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    type RevokedInvite = typeof revokedInvites[number];
     const revokedPersonIds = revokedInvites
-      .map(invite => invite.person?.id)
+      .map((invite: RevokedInvite) => invite.person?.id)
       .filter((id): id is string => Boolean(id))
     
     // Add revoked person IDs to the list for credit/generation queries
@@ -108,7 +110,7 @@ export async function GET(request: NextRequest) {
     })
 
     // OPTIMIZATION: Batch fetch all credit transactions for all users and persons
-    const userIds = team.teamMembers.filter(p => p.userId).map(p => p.userId as string)
+    const userIds = team.teamMembers.filter((p: TeamMember) => p.userId).map((p: TeamMember) => p.userId as string)
     // Include current user's userId
     if (session.user.id && !userIds.includes(session.user.id)) {
       userIds.push(session.user.id)
@@ -192,7 +194,8 @@ export async function GET(request: NextRequest) {
     teamInvitesMap.forEach((invite, personId) => {
       // If person has invite, calculate remaining allocation from person transactions
       // Get generation transactions for this person
-      const personGenTransactions = personCreditTransactions.filter(tx => 
+      type PersonCreditTransaction = typeof personCreditTransactions[number];
+      const personGenTransactions = personCreditTransactions.filter((tx: PersonCreditTransaction) => 
         tx.personId === personId && tx.type === 'generation'
       )
       const usedCredits = personGenTransactions.reduce((sum, tx) => sum + Math.abs(tx.credits), 0)
@@ -273,7 +276,8 @@ export async function GET(request: NextRequest) {
     })
 
     // Ensure current admin is included
-    if (!usersWithCredits.find(u => u.id === (user.person?.id || ''))) {
+    type UserWithCredits = typeof usersWithCredits[number];
+    if (!usersWithCredits.find((u: UserWithCredits) => u.id === (user.person?.id || ''))) {
       const adminCredits = userCreditsMap.get(session.user.id) || 0
       const adminActiveGenerations = generationCounts.get(user.person.id) || 0
       

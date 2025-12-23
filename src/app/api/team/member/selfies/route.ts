@@ -61,7 +61,8 @@ export async function GET(request: NextRequest) {
     // Transform selfies to include URLs and proper field names
     const tokenParam = `token=${encodeURIComponent(token)}`
 
-    const transformedSelfies = selfies.map(selfie => {
+    type Selfie = typeof selfies[number];
+    const transformedSelfies = selfies.map((selfie: Selfie) => {
       const url = `/api/files/get?key=${encodeURIComponent(selfie.key)}&${tokenParam}`
       Logger.info('Generated selfie URL', { url, key: selfie.key })
       // Check if selfie is used: either by ID or by key

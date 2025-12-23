@@ -106,7 +106,8 @@ export async function POST(request: NextRequest) {
           where: { personId: invite.person.id, selected: true },
           select: { key: true }
         })
-        const unique = Array.from(new Set([...(selfieKeysForJob || []), ...moreSelected.map(s => s.key)]))
+        type MoreSelected = typeof moreSelected[number];
+        const unique = Array.from(new Set([...(selfieKeysForJob || []), ...moreSelected.map((s: MoreSelected) => s.key)]))
         if (unique.length > 1) selfieKeysForJob = unique
       } catch {}
     }

@@ -247,8 +247,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Enforce same person and ownership/team authorization
+    type SelfieType = typeof selfies[number];
     const firstPersonId = selfies[0].personId
-    const allSamePerson = selfies.every(s => s.personId === firstPersonId)
+    const allSamePerson = selfies.every((s: SelfieType) => s.personId === firstPersonId)
     if (!allSamePerson) {
       return NextResponse.json({ error: 'All selected selfies must belong to the same person' }, { status: 400 })
     }
@@ -285,7 +286,6 @@ export async function POST(request: NextRequest) {
 
     // Choose primary selfie (first) for legacy fields and relations
     const primarySelfie = selfies[0]
-    type SelfieType = typeof selfies[number];
     const selfieS3Keys = selfies.map((s: SelfieType) => s.key)
 
     // Debug logging removed for production security
@@ -718,7 +718,7 @@ export async function POST(request: NextRequest) {
         selfieAssetIds.push(asset.id)
         
         // Link selfie to asset if not already linked
-        const selfie = selfies.find(s => s.key === key)
+        const selfie = selfies.find((s: SelfieType) => s.key === key)
         if (selfie) {
           const selfieRecord = await prisma.selfie.findUnique({
             where: { id: selfie.id },

@@ -206,10 +206,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get job status for processing generations in parallel
-    const processingGenerations = generations.filter(g => g.status === 'pending' || g.status === 'processing')
-    const jobStatusPromises = processingGenerations.map(g => getJobStatus(g.id, g.status))
+    type Generation = typeof generations[number];
+    const processingGenerations = generations.filter((g: Generation) => g.status === 'pending' || g.status === 'processing')
+    const jobStatusPromises = processingGenerations.map((g: Generation) => getJobStatus(g.id, g.status))
     const jobStatuses = await Promise.all(jobStatusPromises)
-    const jobStatusMap = new Map(processingGenerations.map((g, i) => [g.id, jobStatuses[i]]))
+    const jobStatusMap = new Map(processingGenerations.map((g: Generation, i: number) => [g.id, jobStatuses[i]]))
 
     // Transform generations for response
     const transformedGenerations = generations.map((generation: GenerationWithRelations) => {
@@ -224,7 +225,7 @@ export async function GET(request: NextRequest) {
           const validKeys = keys.filter((k): k is string => typeof k === 'string')
           if (validKeys.length > 0) {
             primarySelfieKey = validKeys[0]
-            inputSelfieUrls = validKeys.map(key => `/api/files/get?key=${encodeURIComponent(key)}`)
+            inputSelfieUrls = validKeys.map((key: string) => `/api/files/get?key=${encodeURIComponent(key)}`)
           }
         }
       } catch {

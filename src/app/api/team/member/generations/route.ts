@@ -94,15 +94,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Get job status for processing generations in parallel
-    const processingGenerations = generations.filter(g => g.status === 'pending' || g.status === 'processing')
-    const jobStatusPromises = processingGenerations.map(g => getJobStatus(g.id, g.status))
+    type Generation = typeof generations[number];
+    const processingGenerations = generations.filter((g: Generation) => g.status === 'pending' || g.status === 'processing')
+    const jobStatusPromises = processingGenerations.map((g: Generation) => getJobStatus(g.id, g.status))
     const jobStatuses = await Promise.all(jobStatusPromises)
-    const jobStatusMap = new Map(processingGenerations.map((g, i) => [g.id, jobStatuses[i]]))
+    const jobStatusMap = new Map(processingGenerations.map((g: Generation, i: number) => [g.id, jobStatuses[i]]))
 
     // Transform the data for the frontend
     const tokenParam = `token=${encodeURIComponent(token)}`
 
-    const transformedGenerations = generations.map(generation => {
+    const transformedGenerations = generations.map((generation: Generation) => {
       // Attempt to read input selfie keys from persisted style settings
       let inputSelfieKeys: string[] = []
       try {
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
       }
 
       const primarySelfieKey = inputSelfieKeys[0] || ''
-      const inputSelfieUrls = inputSelfieKeys.map(key => `/api/files/get?key=${encodeURIComponent(key)}&${tokenParam}`)
+      const inputSelfieUrls = inputSelfieKeys.map((key: string) => `/api/files/get?key=${encodeURIComponent(key)}&${tokenParam}`)
 
       return {
         id: generation.id,
