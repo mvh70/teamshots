@@ -86,9 +86,10 @@ export async function GET() {
     const teamTimeToFirstInvite = calculateAverageMinutes(teamInviteTimes);
 
     // Time to first team generation for each admin
+    type TeamAdmin = typeof teamAdmins[number];
     const teamGenTimes = teamAdmins
-      .filter(admin => (admin.person?.generations?.length ?? 0) > 0)
-      .map(admin => admin.person!.generations[0].createdAt.getTime() - admin.createdAt.getTime());
+      .filter((admin: TeamAdmin) => (admin.person?.generations?.length ?? 0) > 0)
+      .map((admin: TeamAdmin) => admin.person!.generations[0].createdAt.getTime() - admin.createdAt.getTime());
 
     const teamTimeToFirstGen = calculateAverageMinutes(teamGenTimes);
 

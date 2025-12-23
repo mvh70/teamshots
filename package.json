@@ -38,7 +38,7 @@
     "test:integration:ui": "playwright test tests/integration/ --ui",
     "test:setup": "npx playwright install --with-deps",
     "test:report": "npx playwright show-report",
-    "type-check": "tsc --noEmit",
+    "type-check": "rm -f tsconfig.tsbuildinfo && tsc --noEmit",
     "db:reset": "node scripts/reset-dev-db.js",
     "db:test:reset": "node tests/cleanup-test-db.js",
     "db:test:setup": "node tests/setup-test-db.js",
