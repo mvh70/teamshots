@@ -9,8 +9,9 @@ import { prisma, Prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { getPackageConfig } from '@/domain/style/packages'
 import { extractPackageId } from '@/domain/style/settings-resolver'
-import type { Generation } from '@prisma/client'
 import { enqueueGenerationJob, determineWorkflowVersion } from './generation-helpers'
+
+type Generation = Prisma.GenerationGetPayload<{}>
 
 export interface RegenerateOptions {
   sourceGenerationId: string
