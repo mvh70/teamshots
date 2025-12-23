@@ -273,12 +273,13 @@ export async function migrateProCreditsToTeam(userId: string, teamId: string): P
   }
 
   // Calculate total credits to migrate
-  const totalCredits = userProCredits.reduce((sum, tx) => sum + tx.credits, 0)
+  type CreditTransaction = typeof userProCredits[number];
+  const totalCredits = userProCredits.reduce((sum: number, tx: CreditTransaction) => sum + tx.credits, 0)
 
   // Migrate each transaction by updating teamId
   // We keep the userId for audit trail, but add teamId
   await prisma.$transaction(
-    userProCredits.map(tx =>
+    userProCredits.map((tx: CreditTransaction) =>
       prisma.creditTransaction.update({
         where: { id: tx.id },
         data: { teamId: teamId }
@@ -434,7 +435,8 @@ export async function reserveCreditsForGeneration(
           },
           select: { credits: true }
         })
-        const netCreditsUsed = usageTransactions.reduce((sum, t) => sum - t.credits, 0)
+        type UsageTransaction = typeof usageTransactions[number];
+        const netCreditsUsed = usageTransactions.reduce((sum: number, t: UsageTransaction) => sum - t.credits, 0)
 
         balance = Math.max(0, totalAllocated - netCreditsUsed)
       } else {
