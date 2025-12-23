@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { internal, badRequest } from '@/lib/api-response'
 import { Logger } from '@/lib/logger'
 import { getRequestDomain, getSignupTypeFromDomain } from '@/lib/domain'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 
-// Type for Prisma transaction client
-type PrismaTransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
+// Type for Prisma transaction client - inferred from prisma instance
+type PrismaTransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 
 // Force this route to be dynamic (skip static generation)
 export const dynamic = 'force-dynamic'

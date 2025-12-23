@@ -2,10 +2,9 @@ import { prisma } from '@/lib/prisma'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { Logger } from '@/lib/logger'
 import { getUserSubscription } from '@/domain/subscription/subscription'
-import { PrismaClient } from '@prisma/client'
 
-// Type for Prisma transaction client
-type PrismaTransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
+// Type for Prisma transaction client - inferred from prisma instance
+type PrismaTransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 
 export type CreditTransactionType =
   | 'purchase'
