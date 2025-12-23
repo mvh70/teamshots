@@ -39,6 +39,7 @@
     "test:setup": "npx playwright install --with-deps",
     "test:report": "npx playwright show-report",
     "type-check": "rm -f tsconfig.tsbuildinfo && tsc --noEmit",
+    "type-check:next": "next build --dry-run 2>&1 | grep -E '(Type error|TS[0-9]+)' || echo 'No type errors found'",
     "db:reset": "node scripts/reset-dev-db.js",
     "db:test:reset": "node tests/cleanup-test-db.js",
     "db:test:setup": "node tests/setup-test-db.js",

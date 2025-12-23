@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     }, {} as Record<string, Transaction[]>)
 
     // Calculate sums by type
-    const sumsByType = Object.entries(transactionsByType).reduce((acc: Record<string, number>, [key, txs]: [string, Transaction[]]) => {
+    const sumsByType = (Object.entries(transactionsByType) as [string, Transaction[]][]).reduce((acc: Record<string, number>, [key, txs]) => {
       acc[key] = txs.reduce((sum: number, tx: Transaction) => sum + tx.credits, 0)
       return acc
     }, {} as Record<string, number>)
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       transactionSummary: {
         totalTransactions: allTransactions.length,
         sumsByType,
-        transactionsByType: Object.entries(transactionsByType).reduce((acc: Record<string, number>, [key, txs]: [string, Transaction[]]) => {
+        transactionsByType: (Object.entries(transactionsByType) as [string, Transaction[]][]).reduce((acc: Record<string, number>, [key, txs]) => {
           acc[key] = txs.length
           return acc
         }, {} as Record<string, number>)
