@@ -281,7 +281,7 @@ async function fetchStyleData(params: {
     })
 
     const rawContexts = team?.contexts || []
-    const contexts: ContextOption[] = rawContexts.map((ctx, index) => ({
+    const contexts: ContextOption[] = rawContexts.map((ctx: { id: string; name: string | null; settings: unknown }, index) => ({
       id: ctx.id,
       name: ctx.name || `Team Style ${rawContexts.length - index}`,
       customPrompt: (ctx.settings as Record<string, unknown>)?.customPrompt as string | null,
