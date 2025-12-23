@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
       const personGenTransactions = personCreditTransactions.filter((tx: PersonCreditTransaction) => 
         tx.personId === personId && tx.type === 'generation'
       )
-      const usedCredits = personGenTransactions.reduce((sum, tx) => sum + Math.abs(tx.credits), 0)
+      const usedCredits = personGenTransactions.reduce((sum: number, tx: PersonCreditTransaction) => sum + Math.abs(tx.credits), 0)
       const remaining = Math.max(0, (invite.creditsAllocated ?? 0) - usedCredits)
       personCreditsMap.set(personId, remaining)
     })
