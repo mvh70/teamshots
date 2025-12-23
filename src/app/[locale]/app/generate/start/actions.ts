@@ -425,7 +425,7 @@ async function fetchStyleData(params: {
   }
 
   if (activeContextId) {
-    const activeCtx = rawContexts.find(c => c.id === activeContextId)
+    const activeCtx = rawContexts.find((c: { id: string; name: string | null; settings: unknown }) => c.id === activeContextId)
     
     if (activeCtx) {
       // Deserialize the context settings directly
