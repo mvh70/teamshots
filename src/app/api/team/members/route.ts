@@ -193,11 +193,11 @@ export async function GET(request: NextRequest) {
 
     // Calculate person credits (handling invite allocation logic)
     // Credits are tracked per person, so we look at person transactions, not invite transactions
+    type PersonCreditTransaction = typeof personCreditTransactions[number];
     const personCreditsMap = new Map<string, number>()
     teamInvitesMap.forEach((invite, personId) => {
       // If person has invite, calculate remaining allocation from person transactions
       // Get generation transactions for this person
-      type PersonCreditTransaction = typeof personCreditTransactions[number];
       const personGenTransactions = personCreditTransactions.filter((tx: PersonCreditTransaction) => 
         tx.personId === personId && tx.type === 'generation'
       )
