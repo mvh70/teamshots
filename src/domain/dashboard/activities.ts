@@ -204,7 +204,8 @@ export async function fetchPendingInvites(teamId: string): Promise<Array<Pending
     }
   })
 
-  return pendingTeamInvites.map(invite => ({
+  type PendingTeamInvite = typeof pendingTeamInvites[number];
+  return pendingTeamInvites.map((invite: PendingTeamInvite) => ({
     id: invite.id,
     email: invite.email,
     name: invite.email.split('@')[0], // Use email prefix as name
