@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Env } from './env';
 
@@ -18,3 +18,6 @@ export const prisma =
   });
 
 if (Env.string('NODE_ENV', 'development') !== 'production') globalForPrisma.prisma = prisma;
+
+// Re-export Prisma namespace for use throughout the app
+export { Prisma };

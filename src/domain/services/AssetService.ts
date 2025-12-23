@@ -1,7 +1,6 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
+import { prisma, Prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { s3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 

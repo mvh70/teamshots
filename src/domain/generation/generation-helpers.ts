@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import type { PhotoStyleSettings } from '@/types/photo-style'
-import type { Prisma } from '@prisma/client'
+import { Prisma } from '@/lib/prisma'
 
 export interface JobEnqueueOptions {
   generationId: string
@@ -187,7 +187,7 @@ export async function createGenerationRecord(data: {
     data: {
       personId: data.personId,
       generatedPhotoKeys: [],
-      styleSettings: data.styleSettings as unknown as Prisma.InputJsonValue,
+      styleSettings: data.styleSettings as Prisma.InputJsonValue,
       creditSource: data.creditSource,
       creditsUsed: data.creditsUsed,
       status: 'pending',

@@ -1,5 +1,4 @@
-import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
+import { prisma, Prisma } from '@/lib/prisma'
 
 export type Scope = 'individual' | 'pro' | 'freePackage'
 

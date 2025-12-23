@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { prisma } from '@/lib/prisma'
+import { prisma, Prisma } from '@/lib/prisma'
 import { OnboardingContext } from '@/lib/onborda/config'
 import { UserService } from '@/domain/services/UserService'
 import { isFreePlan, type PlanPeriod } from '@/domain/subscription/utils'
-import type { Prisma } from '@prisma/client'
 import { extendInviteExpiry } from '@/lib/invite-utils'
 
 const isJsonObject = (value: unknown): value is Prisma.JsonObject =>
