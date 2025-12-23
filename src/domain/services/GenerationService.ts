@@ -213,7 +213,8 @@ export class GenerationService {
       }
     })
 
-    const statusMap = statusStats.reduce((acc, stat) => {
+    type StatusStat = typeof statusStats[number];
+    const statusMap = statusStats.reduce((acc: Record<string, number>, stat: StatusStat) => {
       acc[stat.status] = stat._count.id
       return acc
     }, {} as Record<string, number>)
