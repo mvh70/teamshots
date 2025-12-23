@@ -66,12 +66,13 @@ export async function GET(request: NextRequest) {
       : 0
 
     // Group transactions by type
-    const transactionsByType = allTransactions.reduce((acc, tx) => {
+    type Transaction = typeof allTransactions[number];
+    const transactionsByType = allTransactions.reduce((acc: Record<string, Transaction[]>, tx: Transaction) => {
       const key = `${tx.type}_${tx.userId ? 'user' : tx.teamId ? 'team' : 'person'}`
       if (!acc[key]) acc[key] = []
       acc[key].push(tx)
       return acc
-    }, {} as Record<string, typeof allTransactions>)
+    }, {} as Record<string, Transaction[]>)
 
     // Calculate sums by type
     const sumsByType = Object.entries(transactionsByType).reduce((acc, [key, txs]) => {
