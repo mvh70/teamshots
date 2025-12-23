@@ -16,18 +16,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Validate schema and generate Prisma Client
+# Generate Client AND Build in one layer to ensure consistency
 RUN echo "📋 Checking Prisma schema..." && \
     npx prisma validate && \
-    echo "✅ Schema valid" && \
     echo "🔧 Generating Prisma client..." && \
     npx prisma generate && \
     echo "✅ Prisma generate completed" && \
     ls -la node_modules/.prisma/client/index.d.ts && \
-    echo "✅ PrismaClient types exist"
-
-# Build Next.js application
-RUN npm run build
+    echo "🚀 Building Next.js app..." && \
+    npm run build
 
 # Install production dependencies only
 FROM base AS prod-deps
