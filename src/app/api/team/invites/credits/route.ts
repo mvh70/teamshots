@@ -64,14 +64,15 @@ export async function GET(request: NextRequest) {
       })
     )
 
+    type InviteWithCredits = typeof invitesWithCredits[number];
     const totalRemainingCredits = invitesWithCredits.reduce(
-      (sum, invite) => sum + invite.remainingCredits,
+      (sum: number, invite: InviteWithCredits) => sum + invite.remainingCredits,
       0
     )
 
     // Calculate total allocated credits from CreditTransaction (single source of truth)
     const totalAllocatedCredits = invitesWithCredits.reduce(
-      (sum, invite) => sum + invite.creditsAllocated,
+      (sum: number, invite: InviteWithCredits) => sum + invite.creditsAllocated,
       0
     )
 
