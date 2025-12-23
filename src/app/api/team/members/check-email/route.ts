@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Check if there's a used invite for this email (revoked members)
     const hasUsedInvite = team.teamInvites.length > 0 && team.teamInvites.some(
-      invite => invite.usedAt !== null
+      (invite: TeamInvite) => invite.usedAt !== null
     )
 
     return NextResponse.json({
