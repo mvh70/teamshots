@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { internal, badRequest } from '@/lib/api-response'
 import { Logger } from '@/lib/logger'
 import { getRequestDomain, getSignupTypeFromDomain } from '@/lib/domain'
-import { Prisma } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
+
+// Type for Prisma transaction client
+type PrismaTransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
 
 // Force this route to be dynamic (skip static generation)
 export const dynamic = 'force-dynamic'
@@ -190,7 +193,7 @@ export async function POST(request: NextRequest) {
     const signupDomain = domain ? domain.replace(/^www\./, '') : null
 
     // Transaction ensures atomicity: check existence + create/update happens atomically
-    const { user, existingPerson } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const { user, existingPerson } = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       // Batch existence check for user and person
       Logger.info('15. Checking existing user and person (within transaction)...')
       const existingRecords = await tx.$queryRaw`
@@ -289,7 +292,7 @@ export async function POST(request: NextRequest) {
     } else if (existingPerson && !existingPerson.userId) {
       Logger.info('20. Linking existing person...')
       // Link existing person (from invite) to new user and convert invite in single transaction
-      const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const result = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
         // Initialize onboardingState if it's still in old format (plain string) or null
         let onboardingState = existingPerson.onboardingState
         if (!onboardingState || (onboardingState === 'not_started' || onboardingState === 'in_progress' || onboardingState === 'completed')) {
@@ -389,7 +392,7 @@ export async function POST(request: NextRequest) {
 
     // Consolidated signup grants (free trial + default package) in single transaction
     try {
-      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await prisma.$transaction(async (tx: PrismaTransactionClient) => {
         const { PRICING_CONFIG } = await import('@/config/pricing')
         const { getDefaultPackage } = await import('@/config/landing-content')
         // Use tryitforfree package if period is tryItForFree, otherwise use domain-specific default

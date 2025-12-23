@@ -2,6 +2,10 @@ import { prisma } from '@/lib/prisma'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { Logger } from '@/lib/logger'
 import { getUserSubscription } from '@/domain/subscription/subscription'
+import { PrismaClient } from '@prisma/client'
+
+// Type for Prisma transaction client
+type PrismaTransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'>
 
 export type CreditTransactionType =
   | 'purchase'
@@ -335,7 +339,7 @@ export async function reserveCreditsForGeneration(
 
   // SECURITY: Use transaction with Serializable isolation to prevent race conditions
   // This ensures balance check + deduction happens atomically
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx: PrismaTransactionClient) => {
     // For team members (personId exists), deduct from team AND track person usage
     if (personId && teamId) {
       // Fetch user ID for balance check if not provided
