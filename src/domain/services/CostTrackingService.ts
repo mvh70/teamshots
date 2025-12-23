@@ -215,12 +215,13 @@ export class CostTrackingService {
       orderBy: { createdAt: 'asc' },
     })
 
-    const totalCost = costs.reduce((sum, c) => sum + c.estimatedCost, 0)
-    const totalSaved = costs.reduce((sum, c) => sum + (c.costSaved ?? 0), 0)
-    const callCount = costs.filter((c) => !c.reusedAssetId).length
-    const reuseCount = costs.filter((c) => c.reusedAssetId).length
+    type CostRecord = typeof costs[number];
+    const totalCost = costs.reduce((sum: number, c: CostRecord) => sum + c.estimatedCost, 0)
+    const totalSaved = costs.reduce((sum: number, c: CostRecord) => sum + (c.costSaved ?? 0), 0)
+    const callCount = costs.filter((c: CostRecord) => !c.reusedAssetId).length
+    const reuseCount = costs.filter((c: CostRecord) => c.reusedAssetId).length
 
-    const breakdown = costs.map((c) => ({
+    const breakdown = costs.map((c: CostRecord) => ({
       stepName: c.stepName,
       reason: c.reason,
       cost: c.estimatedCost,
@@ -276,9 +277,10 @@ export class CostTrackingService {
       },
     })
 
-    const totalCost = costs.reduce((sum, c) => sum + c.estimatedCost, 0)
-    const totalSaved = costs.reduce((sum, c) => sum + (c.costSaved ?? 0), 0)
-    const generationIds = new Set(costs.map((c) => c.generationId).filter(Boolean))
+    type UserCostRecord = typeof costs[number];
+    const totalCost = costs.reduce((sum: number, c: UserCostRecord) => sum + c.estimatedCost, 0)
+    const totalSaved = costs.reduce((sum: number, c: UserCostRecord) => sum + (c.costSaved ?? 0), 0)
+    const generationIds = new Set(costs.map((c: UserCostRecord) => c.generationId).filter(Boolean))
 
     const byModel: Record<string, { cost: number; calls: number }> = {}
     const byReason: Record<string, { cost: number; calls: number }> = {}
@@ -344,9 +346,10 @@ export class CostTrackingService {
       },
     })
 
-    const totalCost = costs.reduce((sum, c) => sum + c.estimatedCost, 0)
-    const totalSaved = costs.reduce((sum, c) => sum + (c.costSaved ?? 0), 0)
-    const generationIds = new Set(costs.map((c) => c.generationId).filter(Boolean))
+    type TeamCostRecord = typeof costs[number];
+    const totalCost = costs.reduce((sum: number, c: TeamCostRecord) => sum + c.estimatedCost, 0)
+    const totalSaved = costs.reduce((sum: number, c: TeamCostRecord) => sum + (c.costSaved ?? 0), 0)
+    const generationIds = new Set(costs.map((c: TeamCostRecord) => c.generationId).filter(Boolean))
 
     return {
       totalCost,
@@ -385,13 +388,14 @@ export class CostTrackingService {
       },
     })
 
-    const totalCost = costs.reduce((sum, c) => sum + c.estimatedCost, 0)
-    const totalSaved = costs.reduce((sum, c) => sum + (c.costSaved ?? 0), 0)
+    type StatsCostRecord = typeof costs[number];
+    const totalCost = costs.reduce((sum: number, c: StatsCostRecord) => sum + c.estimatedCost, 0)
+    const totalSaved = costs.reduce((sum: number, c: StatsCostRecord) => sum + (c.costSaved ?? 0), 0)
     const totalCalls = costs.length
-    const successCalls = costs.filter((c) => c.result === 'success').length
+    const successCalls = costs.filter((c: StatsCostRecord) => c.result === 'success').length
     const successRate = totalCalls > 0 ? successCalls / totalCalls : 0
 
-    const generationIds = new Set(costs.map((c) => c.generationId).filter(Boolean))
+    const generationIds = new Set(costs.map((c: StatsCostRecord) => c.generationId).filter(Boolean))
     const avgCostPerGeneration =
       generationIds.size > 0 ? totalCost / generationIds.size : 0
 
