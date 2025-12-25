@@ -65,7 +65,7 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
     const pricePerSeat = getVolumePrice(seats)
     const total = calculateTotal(seats)
     const savings = getSavings(seats)
-    const totalPhotos = seats * PRICING_CONFIG.seats.creditsPerSeat
+    const totalPhotos = seats * PRICING_CONFIG.seats.photosPerSeat
 
     return (
       <section className="py-20 sm:py-24 lg:py-32 bg-bg-gray-50">
@@ -145,7 +145,7 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
                   </div>
                 )}
                 <div className="text-sm text-brand-primary font-semibold mt-2">
-                  {totalPhotos} total photos
+                  {totalPhotos} photos in total
                 </div>
               </div>
 

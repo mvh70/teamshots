@@ -181,7 +181,7 @@ export default function PricingContent({ variant }: PricingContentProps) {
                   </div>
                 )}
                 <div className="text-sm text-brand-primary font-semibold mt-2">
-                  {totalPhotos} total photos
+                  {totalPhotos} photos in total
                 </div>
               </div>
 
