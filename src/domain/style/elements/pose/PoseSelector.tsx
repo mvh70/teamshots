@@ -1,8 +1,10 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { PoseSettings } from '@/types/photo-style'
 import { getPoseUIInfo } from './config'
+import { ImagePreview } from '@/components/ui/ImagePreview'
 
 interface PoseSelectorProps {
   value: PoseSettings
@@ -21,6 +23,18 @@ const POSES = getPoseUIInfo().map(pose => ({
   color: 'from-gray-500 to-gray-600'
 }))
 
+const POSES_WITH_IMAGES = [
+  'candid_over_shoulder',
+  'classic_corporate',
+  'power_cross',
+  'seated_engagement',
+  'slimming_three_quarter'
+] as const
+
+function hasPoseImage(poseId: string): boolean {
+  return POSES_WITH_IMAGES.includes(poseId as typeof POSES_WITH_IMAGES[number])
+}
+
 export default function PoseSelector({
   value,
   onChange,
@@ -32,18 +46,29 @@ export default function PoseSelector({
 }: PoseSelectorProps) {
   const t = useTranslations('customization.photoStyle.pose')
 
+  // Show all poses enabled in the active package (respects availablePoses prop)
+  // Do NOT filter by image availability
   const visiblePoses = availablePoses 
     ? POSES.filter(p => availablePoses.includes(p.value))
     : POSES
 
-  const handleChange = (pose: PoseSettings['type'], event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
+  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (isPredefined) return
-    onChange({ type: pose })
+    onChange({ type: event.target.value as PoseSettings['type'] })
   }
+
+  const [hasMounted, setHasMounted] = useState(false)
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  // Find the currently selected pose to show its description
+  const selectedPose = visiblePoses.find(p => p.value === value.type)
+
+  // Use effective value to handle initial load - if value.type is user-choice, it might not have an image
+  // but if it's a specific pose, we want to show it.
+  const effectivePoseType = value.type
 
   return (
     <div className={`${className}`}>
@@ -66,57 +91,52 @@ export default function PoseSelector({
       )}
 
       <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
-        {visiblePoses.map((pose) => {
-          const isSelected = value.type === pose.value
-          // On mobile, hide unselected options when predefined
-          const shouldHide = isPredefined && !isSelected
-          
-          return (
-            <button
-              type="button"
-              key={pose.value}
-              onClick={(e) =>
-                !(isPredefined || isDisabled) &&
-                handleChange(pose.value as PoseSettings['type'], e)
-              }
-              disabled={isPredefined || isDisabled}
-              className={`w-full bg-gray-50 rounded-lg p-4 border-2 transition-all ${
-                isSelected
-                  ? 'border-brand-primary bg-brand-primary-light shadow-sm'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-white hover:shadow-sm'
-              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
-                shouldHide ? 'hidden md:block' : ''
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl ${
-                  isSelected 
-                    ? `bg-gradient-to-br ${pose.color}` 
-                    : 'bg-gray-200'
-                }`}>
-                  {pose.icon}
-                </div>
-                <div className="flex-1 text-left">
-                  <div className={`text-sm font-semibold ${isSelected ? 'text-brand-primary' : 'text-gray-900'}`}>
-                    {t(`poses.${pose.value}.label`)}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-0.5">
-                    {t(`poses.${pose.value}.description`)}
-                  </div>
-                </div>
-                {isSelected && (
-                  <div className="w-5 h-5 bg-brand-primary rounded-full flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-            </button>
-          )
-        })}
+        <div className="relative">
+          <select
+            value={value.type}
+            onChange={handleChange}
+            disabled={isPredefined || isDisabled}
+            className={`block w-full rounded-lg border-2 border-gray-200 p-3 pr-10 text-base focus:border-brand-primary focus:outline-none focus:ring-brand-primary sm:text-sm ${
+              (isPredefined || isDisabled) ? 'cursor-not-allowed bg-gray-50' : 'cursor-pointer bg-white'
+            }`}
+          >
+            {value.type === 'user-choice' && (
+              <option value="user-choice" disabled>
+                {t('selectPlaceholder', { default: 'Choose your pose' })}
+              </option>
+            )}
+            {visiblePoses.map((pose) => (
+              <option key={pose.value} value={pose.value}>
+                {t(`poses.${pose.value}.label`)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Selected Pose Description */}
+        {selectedPose && (
+          <p className="text-sm text-gray-600 px-1">
+            {t(`poses.${selectedPose.value}.description`)}
+          </p>
+        )}
+
+        {/* Conditional Image Preview */}
+        {hasPoseImage(effectivePoseType) && (
+          <div className="mt-4">
+            <ImagePreview
+              key={effectivePoseType} // Force re-render on value change
+              src={`/images/poses/${effectivePoseType}.png`}
+              alt={t(`poses.${effectivePoseType}.label`)}
+              width={400}
+              height={300}
+              variant="preview"
+              className="w-full h-auto object-cover rounded-lg shadow-sm border border-gray-200"
+              priority={true} // Add priority to ensure it loads immediately
+              unoptimized={true} // Ensure we bypass optimization to avoid stale cache or loading issues
+            />
+          </div>
+        )}
       </div>
     </div>
   )
 }
-

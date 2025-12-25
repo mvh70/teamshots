@@ -1816,6 +1816,7 @@
         "title": "Pose",
         "subtitle": "Choose a body pose and positioning",
         "predefined": "Predefined",
+        "selectPlaceholder": "Choose your pose",
         "poses": {
           "classic_corporate": {
             "label": "Classic Corporate",
