@@ -6,8 +6,71 @@ import PricingCard from '@/components/pricing/PricingCard'
 import { CheckoutButton } from '@/components/ui'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
-import { getVolumePrice, calculateTotal, getSavings, getVolumeTier } from '@/domain/pricing/seats'
 import type { LandingVariant } from '@/config/landing-content'
+
+// Client-side volume pricing calculation (duplicated from seats.ts to avoid server imports)
+const VOLUME_TIERS = [
+  { min: 25, max: Infinity, pricePerSeat: 15.96 },
+  { min: 10, max: 24, pricePerSeat: 19.90 },
+  { min: 1, max: 9, pricePerSeat: 29.00 }
+] as const
+
+function getVolumePrice(seatCount: number): number {
+  if (seatCount < 1) return 0
+  for (const tier of VOLUME_TIERS) {
+    if (seatCount >= tier.min && seatCount <= tier.max) {
+      return tier.pricePerSeat
+    }
+  }
+  return VOLUME_TIERS[0].pricePerSeat
+}
+
+function calculateTotal(seats: number): number {
+  if (seats < 1) return 0
+  return seats * getVolumePrice(seats)
+}
+
+function getSavings(seats: number): number {
+  if (seats < 1) return 0
+  const baseTierPrice = VOLUME_TIERS[2].pricePerSeat
+  const actualTotal = calculateTotal(seats)
+  const baseTotal = seats * baseTierPrice
+  return baseTotal - actualTotal
+}
+
+function getVolumeTier(seats: number): {
+  tier: 'base' | 'medium' | 'large'
+  pricePerSeat: number
+  nextTierAt: number | null
+  nextTierPrice: number | null
+} {
+  const pricePerSeat = getVolumePrice(seats)
+
+  if (seats >= 25) {
+    return {
+      tier: 'large',
+      pricePerSeat,
+      nextTierAt: null,
+      nextTierPrice: null
+    }
+  }
+
+  if (seats >= 10) {
+    return {
+      tier: 'medium',
+      pricePerSeat,
+      nextTierAt: 25,
+      nextTierPrice: VOLUME_TIERS[0].pricePerSeat
+    }
+  }
+
+  return {
+    tier: 'base',
+    pricePerSeat,
+    nextTierAt: 10,
+    nextTierPrice: VOLUME_TIERS[1].pricePerSeat
+  }
+}
 
 // Helper to calculate total photos (styles × variations)
 function getTotalPhotos(credits: number, regenerations: number): number {
