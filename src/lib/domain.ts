@@ -20,21 +20,60 @@ function getSignupTypeForDomain(domain: string): 'individual' | 'team' | null {
 
 /**
  * Get the domain from a Next.js request
+ * 
+ * Priority order:
+ * 1. x-forwarded-host (original client request when behind proxy)
+ * 2. host header (direct request or proxy hostname)
+ * 3. request.nextUrl.hostname (fallback)
+ * 
+ * Handles:
+ * - Multiple proxy values in x-forwarded-host (takes first/leftmost)
+ * - Port removal
+ * - www. prefix normalization
+ * - localhost with NEXT_PUBLIC_FORCE_DOMAIN override
  */
 export function getRequestDomain(request: NextRequest): string | null {
   try {
-    // Try to get hostname from the request URL
-    const hostname = request.nextUrl.hostname
-    if (hostname) {
-      return hostname.toLowerCase()
+    // Prioritize x-forwarded-host (original client request) over host (proxy hostname)
+    // x-forwarded-host can contain comma-separated values when there are multiple proxies
+    // Take the first (leftmost) value as it's the original client request
+    let host = request.headers.get('x-forwarded-host')
+    if (host) {
+      // Handle comma-separated values (take first one)
+      host = host.split(',')[0].trim()
+    } else {
+      // Fallback to host header
+      host = request.headers.get('host')
+    }
+    
+    if (host) {
+      // Remove port if present and normalize
+      const hostname = host.split(':')[0].toLowerCase().trim()
+      
+      // On localhost, use forced domain if set (for development/testing)
+      if (hostname === 'localhost') {
+        const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
+        if (forcedDomain) {
+          return forcedDomain.replace(/^www\./, '').toLowerCase()
+        }
+      }
+      
+      // Normalize: remove www. prefix for consistency
+      return hostname.replace(/^www\./, '')
     }
 
-    // Fallback to host header
-    const host = request.headers.get('host')
-    if (host) {
-      // Remove port if present
-      const hostname = host.split(':')[0]
-      return hostname.toLowerCase()
+    // Fallback to hostname from the request URL
+    const hostname = request.nextUrl.hostname
+    if (hostname && hostname !== 'localhost') {
+      return hostname.toLowerCase().replace(/^www\./, '')
+    }
+
+    // If still localhost, check for forced domain
+    if (hostname === 'localhost') {
+      const forcedDomain = process.env.NEXT_PUBLIC_FORCE_DOMAIN
+      if (forcedDomain) {
+        return forcedDomain.replace(/^www\./, '').toLowerCase()
+      }
     }
 
     return null

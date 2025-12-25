@@ -256,6 +256,25 @@ export default function VerifyPage() {
       return
     }
 
+    // Check if user should be redirected to their signup domain
+    const signupDomain = session.user?.signupDomain
+    if (signupDomain) {
+      const currentDomain = window.location.hostname.replace(/^www\./, '').toLowerCase()
+      const normalizedSignupDomain = signupDomain.replace(/^www\./, '').toLowerCase()
+      
+      // Redirect if on different domain and signup domain is valid
+      const shouldRedirect = currentDomain !== normalizedSignupDomain &&
+        ['teamshotspro.com', 'photoshotspro.com'].includes(normalizedSignupDomain) &&
+        (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
+      
+      if (shouldRedirect) {
+        const protocol = window.location.protocol
+        const redirectUrl = `${protocol}//${normalizedSignupDomain}/app/dashboard`
+        window.location.href = redirectUrl
+        return
+      }
+    }
+
     // Show welcome message now that sign-in is confirmed
     setShowGuestWelcome(true)
 

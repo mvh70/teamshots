@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {useTranslations} from 'next-intl'
 import { signIn, getSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -35,6 +35,31 @@ export default function SignInPage() {
   const [useMagicLink, setUseMagicLink] = useState(false)
 
   const router = useRouter()
+
+  // Check if user is already authenticated and should be redirected to their signup domain
+  useEffect(() => {
+    const checkAndRedirect = async () => {
+      const session = await getSession()
+      if (session?.user?.signupDomain) {
+        const currentDomain = window.location.hostname.replace(/^www\./, '').toLowerCase()
+        const normalizedSignupDomain = session.user.signupDomain.replace(/^www\./, '').toLowerCase()
+        
+        // Redirect if on different domain and signup domain is valid
+        const shouldRedirect = currentDomain !== normalizedSignupDomain &&
+          ['teamshotspro.com', 'photoshotspro.com'].includes(normalizedSignupDomain) &&
+          (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
+        
+        if (shouldRedirect) {
+          const protocol = window.location.protocol
+          const currentPath = window.location.pathname + window.location.search
+          const redirectUrl = `${protocol}//${normalizedSignupDomain}${currentPath}`
+          window.location.href = redirectUrl
+        }
+      }
+    }
+    
+    checkAndRedirect()
+  }, [])
 
   // Helper function to safely redirect to callbackUrl if present
   const redirectToCallbackOrDefault = (defaultPath: string) => {
@@ -139,6 +164,27 @@ export default function SignInPage() {
           // Fetch all initial data in one consolidated call
           const session = await getSession()
           if (session?.user) {
+            // Check if user should be redirected to their signup domain
+            const signupDomain = session.user.signupDomain
+            if (signupDomain) {
+              const currentDomain = window.location.hostname.replace(/^www\./, '').toLowerCase()
+              const normalizedSignupDomain = signupDomain.replace(/^www\./, '').toLowerCase()
+              
+              // Redirect if on different domain and signup domain is valid
+              // Only redirect in production or if explicitly enabled for testing
+              const shouldRedirect = currentDomain !== normalizedSignupDomain &&
+                ['teamshotspro.com', 'photoshotspro.com'].includes(normalizedSignupDomain) &&
+                (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
+              
+              if (shouldRedirect) {
+                const protocol = window.location.protocol
+                const currentPath = window.location.pathname + window.location.search
+                const redirectUrl = `${protocol}//${normalizedSignupDomain}${currentPath}`
+                window.location.href = redirectUrl
+                return
+              }
+            }
+            
             try {
               const response = await fetch('/api/user/initial-data')
               if (response.ok) {
