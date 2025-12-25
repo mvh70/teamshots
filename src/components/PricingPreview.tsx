@@ -133,6 +133,9 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
 
               {/* Pricing Display */}
               <div className="text-center mb-6 pb-6 border-b border-bg-gray-100">
+                <div className="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold mb-3">
+                  One-time payment • No subscription
+                </div>
                 <div className="text-4xl font-bold text-text-dark font-display mb-2">
                   ${total.toFixed(2)}
                 </div>
