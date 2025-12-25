@@ -52,148 +52,210 @@ function readPricingConfigTs() {
   }
 }
 
+/**
+ * Find existing product by metadata type, or create if not found
+ */
+async function findOrCreateProduct(name, description, metadata) {
+  // Search for existing product by metadata
+  const existingProducts = await stripe.products.list({
+    limit: 100,
+  });
+
+  const existing = existingProducts.data.find(p =>
+    p.metadata?.type === metadata.type &&
+    (metadata.tier ? p.metadata?.tier === metadata.tier : true)
+  );
+
+  if (existing) {
+    console.log(`   Found existing product: ${existing.id}`);
+    return existing;
+  }
+
+  console.log(`   Creating new product...`);
+  return await stripe.products.create({
+    name,
+    description,
+    metadata
+  });
+}
+
+/**
+ * Find existing price for product with matching amount, or create if not found
+ */
+async function findOrCreatePrice(product, unitAmount, metadata) {
+  // List prices for this product
+  const prices = await stripe.prices.list({
+    product: product.id,
+    limit: 100,
+  });
+
+  const existing = prices.data.find(p =>
+    p.unit_amount === unitAmount &&
+    p.currency === 'usd' &&
+    !p.recurring
+  );
+
+  if (existing) {
+    console.log(`   Found existing price: ${existing.id}`);
+    return existing;
+  }
+
+  console.log(`   Creating new price...`);
+  return await stripe.prices.create({
+    product: product.id,
+    unit_amount: unitAmount,
+    currency: 'usd',
+    metadata
+  });
+}
+
 async function createProducts() {
-  console.log('🚀 Creating Stripe products and prices (one-time transactional)...');
+  console.log('🚀 Checking and creating Stripe products and prices (one-time transactional)...');
 
   try {
     // Read pricing from src/config/pricing.ts to avoid drift
     const read = readPricingConfigTs()
 
     // 1. Individual Product (one-time)
-    console.log('📦 Creating Individual product...');
-    const individualProduct = await stripe.products.create({
-      name: 'Individual Plan - 4 customized photos, generated 2x',
-      description: 'One-time purchase for personal photo generation (8 photos, 4 customizations)',
-      metadata: {
+    console.log('📦 Individual product...');
+    const individualProduct = await findOrCreateProduct(
+      'Individual Plan - 4 customized photos, generated 2x',
+      'One-time purchase for personal photo generation (8 photos, 4 customizations)',
+      {
         type: 'individual',
         credits: '40'
       }
-    });
+    );
 
-    const individualPrice = await stripe.prices.create({
-      product: individualProduct.id,
-      unit_amount: toCents(read.prices.individual?.price ?? 19.99),
-      currency: 'usd',
-      metadata: {
+    const individualPrice = await findOrCreatePrice(
+      individualProduct,
+      toCents(read.prices.individual?.price ?? 19.99),
+      {
         type: 'individual',
         credits: '40'
       }
-    });
+    );
 
     console.log(`✅ Individual - Price ID: ${individualPrice.id}`);
 
     // 2. Pro Small Product (up to 5 team members - one-time)
-    console.log('📦 Creating Pro Small product...');
-    const proSmallProduct = await stripe.products.create({
-      name: 'Pro Small Plan - 4 customized photos, generated 2x',
-      description: 'One-time purchase for teams up to 5 members (8 photos, 4 customizations)',
-      metadata: {
+    console.log('📦 Pro Small product...');
+    const proSmallProduct = await findOrCreateProduct(
+      'Pro Small Plan - 4 customized photos, generated 2x',
+      'One-time purchase for teams up to 5 members (8 photos, 4 customizations)',
+      {
         type: 'pro_small',
         credits: '40',
         maxTeamMembers: '5'
       }
-    });
+    );
 
-    const proSmallPrice = await stripe.prices.create({
-      product: proSmallProduct.id,
-      unit_amount: toCents(read.prices.proSmall?.price ?? 19.99),
-      currency: 'usd',
-      metadata: {
+    const proSmallPrice = await findOrCreatePrice(
+      proSmallProduct,
+      toCents(read.prices.proSmall?.price ?? 19.99),
+      {
         type: 'pro_small',
         credits: '40',
         maxTeamMembers: '5'
       }
-    });
+    );
 
     console.log(`✅ Pro Small - Price ID: ${proSmallPrice.id}`);
 
     // 3. Pro Large Product (more than 5 team members - one-time)
-    console.log('📦 Creating Pro Large product...');
-    const proLargeProduct = await stripe.products.create({
-      name: 'Pro Large Plan - 10 customized photos, generated 3x',
-      description: 'One-time purchase for teams with more than 5 members (30 photos, 10 customizations)',
-      metadata: {
+    console.log('📦 Pro Large product...');
+    const proLargeProduct = await findOrCreateProduct(
+      'Pro Large Plan - 10 customized photos, generated 3x',
+      'One-time purchase for teams with more than 5 members (30 photos, 10 customizations)',
+      {
         type: 'pro_large',
         credits: '100',
         maxTeamMembers: 'unlimited'
       }
-    });
+    );
 
-    const proLargePrice = await stripe.prices.create({
-      product: proLargeProduct.id,
-      unit_amount: toCents(read.prices.proLarge?.price ?? 59.99),
-      currency: 'usd',
-      metadata: {
+    const proLargePrice = await findOrCreatePrice(
+      proLargeProduct,
+      toCents(read.prices.proLarge?.price ?? 59.99),
+      {
         type: 'pro_large',
         credits: '100'
       }
-    });
+    );
 
     console.log(`✅ Pro Large - Price ID: ${proLargePrice.id}`);
 
     // 4. VIP Product (one-time - Individual domain anchor)
-    console.log('📦 Creating VIP product...');
-    const vipProduct = await stripe.products.create({
-      name: 'VIP Plan - 25 customized photos, generated 4x',
-      description: 'Premium individual plan for personal branding (100 photos, 25 customizations)',
-      metadata: {
+    console.log('📦 VIP product...');
+    const vipProduct = await findOrCreateProduct(
+      'VIP Plan - 25 customized photos, generated 4x',
+      'Premium individual plan for personal branding (100 photos, 25 customizations)',
+      {
         type: 'vip',
         credits: '250',
         maxTeamMembers: 'unlimited'
       }
-    });
+    );
 
-    const vipPrice = await stripe.prices.create({
-      product: vipProduct.id,
-      unit_amount: toCents(read.prices.vip?.price ?? 199.99),
-      currency: 'usd',
-      metadata: {
+    const vipPrice = await findOrCreatePrice(
+      vipProduct,
+      toCents(read.prices.vip?.price ?? 199.99),
+      {
         type: 'vip',
         credits: '250',
         maxTeamMembers: 'unlimited'
       }
-    });
+    );
 
     console.log(`✅ VIP - Price ID: ${vipPrice.id}`);
 
     // 5. Enterprise Product (one-time - Team domain anchor)
-    console.log('📦 Creating Enterprise product...');
-    const enterpriseProduct = await stripe.products.create({
-      name: 'Enterprise Plan - 60 customized photos, generated 4x',
-      description: 'Enterprise team plan for professional branding (240 photos, 60 customizations)',
-      metadata: {
+    console.log('📦 Enterprise product...');
+    const enterpriseProduct = await findOrCreateProduct(
+      'Enterprise Plan - 60 customized photos, generated 4x',
+      'Enterprise team plan for professional branding (240 photos, 60 customizations)',
+      {
         type: 'enterprise',
         credits: '600',
         maxTeamMembers: 'unlimited'
       }
-    });
+    );
 
-    const enterprisePrice = await stripe.prices.create({
-      product: enterpriseProduct.id,
-      unit_amount: toCents(read.prices.enterprise?.price ?? 399.99),
-      currency: 'usd',
-      metadata: {
+    const enterprisePrice = await findOrCreatePrice(
+      enterpriseProduct,
+      toCents(read.prices.enterprise?.price ?? 399.99),
+      {
         type: 'enterprise',
         credits: '600',
         maxTeamMembers: 'unlimited'
       }
-    });
+    );
 
     console.log(`✅ Enterprise - Price ID: ${enterprisePrice.id}`);
 
     // 6. Team Seats Product (one-time with volume pricing)
-    console.log('📦 Creating Team Seats product...');
-    const teamSeatsProduct = await stripe.products.create({
-      name: 'TeamShots - Team Seats',
-      description: 'Professional headshots for your team with volume discounts (10 photos per seat)',
-      metadata: {
+    console.log('📦 Team Seats product...');
+    const teamSeatsProduct = await findOrCreateProduct(
+      'TeamShots - Team Seats',
+      'Professional headshots for your team with volume discounts (10 photos per seat)',
+      {
         type: 'team_seats',
         credits_per_seat: '100',
         photos_per_seat: '10'
       }
-    });
+    );
 
-    const teamSeatsPrice = await stripe.prices.create({
+    // Check for existing tiered price
+    const existingSeatsPrice = (await stripe.prices.list({
+      product: teamSeatsProduct.id,
+      limit: 100,
+    })).data.find(p =>
+      p.currency === 'usd' &&
+      p.billing_scheme === 'tiered' &&
+      p.tiers_mode === 'volume'
+    );
+
+    const teamSeatsPrice = existingSeatsPrice || await stripe.prices.create({
       product: teamSeatsProduct.id,
       currency: 'usd',
       billing_scheme: 'tiered',
@@ -219,70 +281,76 @@ async function createProducts() {
       }
     });
 
+    if (existingSeatsPrice) {
+      console.log(`   Found existing tiered price: ${teamSeatsPrice.id}`);
+    } else {
+      console.log(`   Created new tiered price: ${teamSeatsPrice.id}`);
+    }
+
     console.log(`✅ Team Seats - Price ID: ${teamSeatsPrice.id}`);
 
     // 7. Top-up products (one-time)
-    console.log('📦 Creating Top-Up products...')
+    console.log('📦 Top-Up products...')
 
-    const individualTopUpProduct = await stripe.products.create({
-      name: 'Individual Top-Up - 4 photos',
-      description: 'One-time purchase of 4 photos (individual)',
-      metadata: { type: 'top_up', tier: 'individual' }
-    })
-    const individualTopUpPrice = await stripe.prices.create({
-      product: individualTopUpProduct.id,
-      unit_amount: toCents(read.prices.individualTopUp?.price ?? 19.99),
-      currency: 'usd',
-      metadata: { type: 'top_up', tier: 'individual', credits: '40' }
-    })
+    console.log('   Individual Top-Up...');
+    const individualTopUpProduct = await findOrCreateProduct(
+      'Individual Top-Up - 4 photos',
+      'One-time purchase of 4 photos (individual)',
+      { type: 'top_up', tier: 'individual' }
+    );
+    const individualTopUpPrice = await findOrCreatePrice(
+      individualTopUpProduct,
+      toCents(read.prices.individualTopUp?.price ?? 19.99),
+      { type: 'top_up', tier: 'individual', credits: '40' }
+    );
 
-    const proSmallTopUpProduct = await stripe.products.create({
-      name: 'Pro Small Top-Up - 5 photos',
-      description: 'One-time purchase of 5 photos (pro small)',
-      metadata: { type: 'top_up', tier: 'pro_small' }
-    })
-    const proSmallTopUpPrice = await stripe.prices.create({
-      product: proSmallTopUpProduct.id,
-      unit_amount: toCents(read.prices.proSmallTopUp?.price ?? 22.49),
-      currency: 'usd',
-      metadata: { type: 'top_up', tier: 'pro_small', credits: '50' }
-    })
+    console.log('   Pro Small Top-Up...');
+    const proSmallTopUpProduct = await findOrCreateProduct(
+      'Pro Small Top-Up - 5 photos',
+      'One-time purchase of 5 photos (pro small)',
+      { type: 'top_up', tier: 'pro_small' }
+    );
+    const proSmallTopUpPrice = await findOrCreatePrice(
+      proSmallTopUpProduct,
+      toCents(read.prices.proSmallTopUp?.price ?? 22.49),
+      { type: 'top_up', tier: 'pro_small', credits: '50' }
+    );
 
-    const proLargeTopUpProduct = await stripe.products.create({
-      name: 'Pro Large Top-Up - 7 Photos',
-      description: 'One-time purchase of 7 photos for Pro Large users',
-      metadata: { type: 'top_up', tier: 'pro_large' }
-    })
-    const proLargeTopUpPrice = await stripe.prices.create({
-      product: proLargeTopUpProduct.id,
-      unit_amount: toCents(read.prices.proLargeTopUp?.price ?? 36.99),
-      currency: 'usd',
-      metadata: { type: 'top_up', tier: 'pro_large', credits: '70' }
-    })
+    console.log('   Pro Large Top-Up...');
+    const proLargeTopUpProduct = await findOrCreateProduct(
+      'Pro Large Top-Up - 7 Photos',
+      'One-time purchase of 7 photos for Pro Large users',
+      { type: 'top_up', tier: 'pro_large' }
+    );
+    const proLargeTopUpPrice = await findOrCreatePrice(
+      proLargeTopUpProduct,
+      toCents(read.prices.proLargeTopUp?.price ?? 36.99),
+      { type: 'top_up', tier: 'pro_large', credits: '70' }
+    );
 
-    const vipTopUpProduct = await stripe.products.create({
-      name: 'VIP Top-Up - 10 photos',
-      description: 'One-time purchase of 10 photos for VIP users',
-      metadata: { type: 'top_up', tier: 'vip' }
-    })
-    const vipTopUpPrice = await stripe.prices.create({
-      product: vipTopUpProduct.id,
-      unit_amount: toCents(read.prices.vipTopUp?.price ?? 69.99),
-      currency: 'usd',
-      metadata: { type: 'top_up', tier: 'vip', credits: '100' }
-    })
+    console.log('   VIP Top-Up...');
+    const vipTopUpProduct = await findOrCreateProduct(
+      'VIP Top-Up - 10 photos',
+      'One-time purchase of 10 photos for VIP users',
+      { type: 'top_up', tier: 'vip' }
+    );
+    const vipTopUpPrice = await findOrCreatePrice(
+      vipTopUpProduct,
+      toCents(read.prices.vipTopUp?.price ?? 69.99),
+      { type: 'top_up', tier: 'vip', credits: '100' }
+    );
 
-    const enterpriseTopUpProduct = await stripe.products.create({
-      name: 'Enterprise Top-Up - 25 photos',
-      description: 'One-time purchase of 25 photos for Enterprise users',
-      metadata: { type: 'top_up', tier: 'enterprise' }
-    })
-    const enterpriseTopUpPrice = await stripe.prices.create({
-      product: enterpriseTopUpProduct.id,
-      unit_amount: toCents(read.prices.enterpriseTopUp?.price ?? 149.99),
-      currency: 'usd',
-      metadata: { type: 'top_up', tier: 'enterprise', credits: '250' }
-    })
+    console.log('   Enterprise Top-Up...');
+    const enterpriseTopUpProduct = await findOrCreateProduct(
+      'Enterprise Top-Up - 25 photos',
+      'One-time purchase of 25 photos for Enterprise users',
+      { type: 'top_up', tier: 'enterprise' }
+    );
+    const enterpriseTopUpPrice = await findOrCreatePrice(
+      enterpriseTopUpProduct,
+      toCents(read.prices.enterpriseTopUp?.price ?? 149.99),
+      { type: 'top_up', tier: 'enterprise', credits: '250' }
+    );
 
     // Output config snippet for PRICE_IDS in src/config/pricing.ts
     console.log('\n📋 Add these IDs to TEST_STRIPE_PRICE_IDS and PROD_STRIPE_PRICE_IDS in src/config/pricing.ts:');
@@ -298,7 +366,7 @@ async function createProducts() {
     console.log('VIP_TOP_UP:', `"${vipTopUpPrice.id}"`);
     console.log('ENTERPRISE_TOP_UP:', `"${enterpriseTopUpPrice.id}"`);
 
-    console.log('\n✅ All products and prices created successfully!');
+    console.log('\n✅ All products and prices checked/created successfully!');
 
   } catch (error) {
     console.error('❌ Error creating products:', error);
