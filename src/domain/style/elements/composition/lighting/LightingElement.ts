@@ -95,6 +95,12 @@ export class LightingElement extends StyleElement {
         'Shadow characteristics must match between layers',
         'No lighting inconsistencies or mismatched light sources'
       )
+
+      // Detailed composition lighting instructions
+      instructions.push(
+        'Ensure LIGHTING WRAP: The key light should illuminate the person brightly while creating natural falloff on the background',
+        'Apply subtle EDGE LIGHTING or rim light on the person\'s shoulders/hair to separate them from the background and enhance three-dimensionality'
+      )
     }
 
     // Color temperature guidance

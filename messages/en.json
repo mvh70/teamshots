@@ -638,7 +638,7 @@
         "team": "Manage your team",
         "personalGenerations": "Personal generations",
         "teamGenerations": "Generated photos",
-        "selfies": "My selfies",
+        "selfies": "Your selfies",
         "contexts": "Photo styles",
         "personalPhotoStyles": "Personal photo styles",
         "teamPhotoStyles": "Your photo style settings",
@@ -686,9 +686,13 @@
         "fallbackPersonalStyle": "Personal Style",
         "fallbackTeamStyle": "Team Style",
         "predefinedStyle": "Predefined style with preset settings",
+        "predefinedTeamStyle": "Predefined team style settings are applied. You can customize user-choice settings for this generation.",
+        "freestyleTeamDescription": "Create a custom team photo style for this generation.",
+        "freestyleTeamOnlyDescription": "No team styles available. Create a custom team photo style for this generation.",
         "insufficientPhotos": "Insufficient photos",
         "insufficientPhotosMessage": "You need {required} photos to generate a photo. You currently have {current} photos. Time to top up!",
         "generatePhoto": "Generate photo",
+        "startingGeneration": "Starting generation...",
         "customizeFirstTooltip": "Customize your photo with the editable sections below",
         "customizeFirstTooltipMobile": "Customize your photo with the editable sections above",
         "buyMorePhotos": "Buy more photos",
@@ -1292,19 +1296,32 @@
     },
     "personal": {
       "title": "Personal generations",
+      "newGeneration": "New generation",
       "empty": {
         "title": "No personal generations yet",
         "subtitle": "When you generate personal photos, your results will appear here. Ready to make some magic?"
+      },
+      "filters": {
+        "allTime": "All time",
+        "last7Days": "Last 7 days",
+        "last30Days": "Last 30 days",
+        "allPhotoStyles": "All photo styles"
       }
     },
     "team": {
       "title": "Team generations",
+      "description": "Manage and view your team's generated professional photos",
+      "newGeneration": "New generation",
       "empty": {
         "title": "No team generations yet",
         "subtitle": "When you or your team generate photos, your results will appear here. Teamwork makes the dream work!"
       },
       "filters": {
-        "allUsers": "All users"
+        "allUsers": "All users",
+        "allTime": "All time",
+        "last7Days": "Last 7 days",
+        "last30Days": "Last 30 days",
+        "allPhotoStyles": "All photo styles"
       },
       "viewOnly": "View only - team member's approved work"
     },
@@ -1754,8 +1771,17 @@
         "chooseFile": "Choose file",
         "colorValue": "Color",
         "colorHint": "Hex code or color name",
+        "colorPlaceholder": "Type your color (eg Burgundy) and select the right shade",
         "variations": "Variations",
-        "presets": "Choose a color"
+        "presets": "Choose a color",
+        "types": {
+          "office": "Office Environment",
+          "tropical-beach": "Tropical Beach",
+          "busy-city": "Busy City",
+          "neutral": "Neutral Background",
+          "gradient": "Gradient Background",
+          "custom": "Custom Upload"
+        }
       },
       "branding": {
         "title": "Branding",
@@ -1782,6 +1808,31 @@
         },
         "accessories": {
           "label": "Accessories"
+        },
+        "styles": {
+          "business": {
+            "label": "Business",
+            "description": "Professional attire"
+          },
+          "startup": {
+            "label": "Startup",
+            "description": "Casual & creative"
+          },
+          "black-tie": {
+            "label": "Black Tie",
+            "description": "Formal elegance"
+          }
+        },
+        "details_options": {
+          "formal": "Formal",
+          "casual": "Casual",
+          "t-shirt": "T-Shirt",
+          "hoodie": "Hoodie",
+          "polo": "Polo",
+          "button-down": "Button Down",
+          "tuxedo": "Tuxedo",
+          "suit": "Suit",
+          "dress": "Dress"
         }
       },
       "clothingColors": {
@@ -1802,15 +1853,83 @@
         "shoesDesc": "Dress shoes, casual shoes",
         "noVisibleColors": "No clothing colors applicable for this shot type and style."
       },
+      "customClothing": {
+        "title": "Custom Clothing",
+        "subtitle": "Upload your own outfit for the AI to match",
+        "predefined": "Predefined",
+        "uploadPrompt": "Click to upload or drag and drop",
+        "chooseFile": "Choose file"
+      },
       "shotType": {
         "title": "Shot Type",
         "subtitle": "Choose the framing for your photo",
-        "predefined": "Predefined"
+        "predefined": "Predefined",
+        "types": {
+          "extreme-close-up": {
+            "label": "Extreme Close-Up",
+            "description": "Extreme close-up focusing on the subject's eyes or a key facial feature. Keep the frame tight with no background distractions."
+          },
+          "close-up": {
+            "label": "Close-Up (Tight Headshot)",
+            "description": "Close-up headshot framing from the top of the head to just below the chin, minimal neck visible."
+          },
+          "medium-close-up": {
+            "label": "Medium Close-Up (Standard Headshot)",
+            "description": "Standard professional headshot framing from the top of the head down to mid-chest."
+          },
+          "medium-shot": {
+            "label": "Medium Shot (Bust)",
+            "description": "Portrait framing from the top of the head down to the natural waistline (belly button level). Frame cuts at the waist, NOT at hips, thighs, or knees. The legs should NOT be visible."
+          },
+          "three-quarter": {
+            "label": "3/4 Shot (American)",
+            "description": "Three-quarter portrait framing from the top of the head to mid-thigh, full arms included. The feet must NOT be visible."
+          },
+          "full-length": {
+            "label": "Full-Length",
+            "description": "Full-length portrait showing the entire body from head to toe with a touch of floor visible."
+          },
+          "wide-shot": {
+            "label": "Wide Shot",
+            "description": "Wide shot that places the subject within their environment. Maintain awareness of background balance."
+          }
+        }
       },
       "expression": {
         "title": "Expression",
         "subtitle": "Choose a facial expression",
-        "predefined": "Predefined"
+        "predefined": "Predefined",
+        "selectPlaceholder": "Choose your expression",
+        "expressions": {
+          "genuine_smile": {
+            "label": "Genuine smile (teeth)",
+            "description": "Approachable, friendly"
+          },
+          "soft_smile": {
+            "label": "Soft smile (no teeth)",
+            "description": "Professional, subtle"
+          },
+          "neutral_serious": {
+            "label": "Neutral / serious",
+            "description": "Executive, dramatic"
+          },
+          "laugh_joy": {
+            "label": "Laugh / joy",
+            "description": "Lifestyle, authentic"
+          },
+          "contemplative": {
+            "label": "Contemplative",
+            "description": "Editorial, artistic"
+          },
+          "confident": {
+            "label": "Confident",
+            "description": "Confident, poised"
+          },
+          "sad": {
+            "label": "Sad / melancholic",
+            "description": "Somber, melancholic"
+          }
+        }
       },
       "pose": {
         "title": "Pose",
@@ -2233,6 +2352,7 @@
   },
   "inviteDashboard": {
     "loading": "Loading dashboard...",
+    "newGeneration": "New generation",
     "insufficientCredits": {
       "title": "Insufficient credits",
       "messageWithName": "You don't have enough credits to generate photos. Please contact {adminName} ({adminEmail}) to request more credits.",

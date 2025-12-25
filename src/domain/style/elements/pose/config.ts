@@ -12,7 +12,7 @@ import type {
   PhotoStyleSettings
 } from '@/types/photo-style'
 import type { ElementConfig } from '../registry'
-import { getExpressionLabel } from '../expression/config'
+import { getExpressionLabel } from '../expression/prompt'
 
 export { getExpressionLabel }
 

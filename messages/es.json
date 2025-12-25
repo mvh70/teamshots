@@ -649,7 +649,7 @@
         "team": "Gestionar tu equipo",
         "personalGenerations": "Generaciones Personales",
         "teamGenerations": "Fotos generadas",
-        "selfies": "Mis selfies",
+        "selfies": "Tus selfies",
         "contexts": "Estilos Fotos",
         "personalPhotoStyles": "Estilos Personales",
         "teamPhotoStyles": "Configuración de tu estilo de foto",
@@ -697,9 +697,13 @@
         "fallbackPersonalStyle": "Estilo personal",
         "fallbackTeamStyle": "Estilo de equipo",
         "predefinedStyle": "Estilo predefinido con preajustes",
+        "predefinedTeamStyle": "La configuración de estilo de equipo predefinido está aplicada. Puedes personalizar las configuraciones de elección del usuario para esta generación.",
+        "freestyleTeamDescription": "Crea un estilo de foto de equipo personalizado para esta generación.",
+        "freestyleTeamOnlyDescription": "No hay estilos de equipo disponibles. Crea un estilo de foto de equipo personalizado para esta generación.",
         "insufficientPhotos": "Fotos insuficientes",
         "insufficientPhotosMessage": "Necesitas {required} fotos para generar. Tienes {current}. ¡Recarga!",
         "generatePhoto": "Generar foto",
+        "startingGeneration": "Iniciando generación...",
         "customizeFirstTooltip": "Personaliza tu foto con las secciones editables a continuación",
         "customizeFirstTooltipMobile": "Personaliza tu foto con las secciones editables arriba",
         "buyMorePhotos": "Comprar más fotos",
@@ -1305,19 +1309,32 @@
     },
     "personal": {
       "title": "Generaciones personales",
+      "newGeneration": "Nueva generación",
       "empty": {
         "title": "Aún no hay generaciones personales",
         "subtitle": "Cuando generes fotos personales, tus resultados aparecerán aquí. ¿Listo para hacer algo de magia?"
+      },
+      "filters": {
+        "allTime": "Todo el tiempo",
+        "last7Days": "Últimos 7 días",
+        "last30Days": "Últimos 30 días",
+        "allPhotoStyles": "Todos los estilos de foto"
       }
     },
     "team": {
       "title": "Generaciones del equipo",
+      "description": "Administra y visualiza las fotos profesionales generadas por tu equipo",
+      "newGeneration": "Nueva generación",
       "empty": {
         "title": "Aún no hay generaciones del equipo",
         "subtitle": "Cuando tú o tu equipo generen fotos, los resultados aparecerán aquí. ¡El trabajo en equipo hace que el sueño funcione!"
       },
       "filters": {
-        "allUsers": "Todos los usuarios"
+        "allUsers": "Todos los usuarios",
+        "allTime": "Todo el tiempo",
+        "last7Days": "Últimos 7 días",
+        "last30Days": "Últimos 30 días",
+        "allPhotoStyles": "Todos los estilos de foto"
       },
       "viewOnly": "Solo visualización - trabajo aprobado de miembros del equipo"
     },
@@ -1769,8 +1786,17 @@
         "chooseFile": "Elegir Archivo",
         "colorValue": "Color",
         "colorHint": "Código hex o nombre de color",
+        "colorPlaceholder": "Escribe tu color (ej. Borgoña) y selecciona el tono correcto",
         "variations": "Variaciones",
-        "presets": "Elige un color"
+        "presets": "Elige un color",
+        "types": {
+          "office": "Entorno de Oficina",
+          "tropical-beach": "Playa Tropical",
+          "busy-city": "Ciudad Ocupada",
+          "neutral": "Fondo Neutral",
+          "gradient": "Fondo Degradado",
+          "custom": "Subir Personalizado"
+        }
       },
       "branding": {
         "title": "Marca",
@@ -1797,6 +1823,31 @@
         },
         "accessories": {
           "label": "Accesorios"
+        },
+        "styles": {
+          "business": {
+            "label": "Negocios",
+            "description": "Vestimenta profesional"
+          },
+          "startup": {
+            "label": "Startup",
+            "description": "Casual y creativo"
+          },
+          "black-tie": {
+            "label": "Etiqueta",
+            "description": "Elegancia formal"
+          }
+        },
+        "details_options": {
+          "formal": "Formal",
+          "casual": "Casual",
+          "t-shirt": "Camiseta",
+          "hoodie": "Sudadera",
+          "polo": "Polo",
+          "button-down": "Camisa",
+          "tuxedo": "Esmoquin",
+          "suit": "Traje",
+          "dress": "Vestido"
         }
       },
       "clothingColors": {
@@ -1817,15 +1868,83 @@
         "shoesDesc": "Zapatos de vestir, zapatos casuales",
         "noVisibleColors": "No hay colores de ropa aplicables para este tipo de foto y estilo."
       },
+      "customClothing": {
+        "title": "Ropa Personalizada",
+        "subtitle": "Sube tu propio outfit para que la IA lo coincida",
+        "predefined": "Predefinido",
+        "uploadPrompt": "Haz clic para subir o arrastra y suelta",
+        "chooseFile": "Elegir archivo"
+      },
       "shotType": {
         "title": "Tipo de Toma",
         "subtitle": "Elige el encuadre para tu foto",
-        "predefined": "Predefinido"
+        "predefined": "Predefinido",
+        "types": {
+          "extreme-close-up": {
+            "label": "Primer Plano Extremo",
+            "description": "Primer plano extremo enfocado en los ojos del sujeto o un rasgo facial clave. Mantén el encuadre ajustado sin distracciones de fondo."
+          },
+          "close-up": {
+            "label": "Primer Plano (Retrato Ajustado)",
+            "description": "Retrato en primer plano desde la parte superior de la cabeza hasta justo debajo del mentón, cuello mínimo visible."
+          },
+          "medium-close-up": {
+            "label": "Plano Medio Corto (Retrato Estándar)",
+            "description": "Encuadre de retrato profesional estándar desde la parte superior de la cabeza hasta la mitad del pecho."
+          },
+          "medium-shot": {
+            "label": "Plano Medio (Busto)",
+            "description": "Encuadre de retrato desde la parte superior de la cabeza hasta la cintura natural (nivel del ombligo). El corte es en la cintura, NO en las caderas, muslos o rodillas. Las piernas NO deben ser visibles."
+          },
+          "three-quarter": {
+            "label": "Plano 3/4 (Americano)",
+            "description": "Encuadre de retrato de tres cuartos desde la parte superior de la cabeza hasta la mitad del muslo, brazos completos incluidos. Los pies NO deben ser visibles."
+          },
+          "full-length": {
+            "label": "Cuerpo Completo",
+            "description": "Retrato de cuerpo completo mostrando todo el cuerpo de la cabeza a los pies con un toque de suelo visible."
+          },
+          "wide-shot": {
+            "label": "Plano General",
+            "description": "Plano general que coloca al sujeto dentro de su entorno. Mantén conciencia del equilibrio del fondo."
+          }
+        }
       },
       "expression": {
         "title": "Expresión",
         "subtitle": "Elige una expresión facial",
-        "predefined": "Predefinido"
+        "predefined": "Predefinido",
+        "selectPlaceholder": "Elige tu expresión",
+        "expressions": {
+          "genuine_smile": {
+            "label": "Sonrisa genuina (dientes)",
+            "description": "Accesible, amigable"
+          },
+          "soft_smile": {
+            "label": "Sonrisa suave (sin dientes)",
+            "description": "Profesional, sutil"
+          },
+          "neutral_serious": {
+            "label": "Neutral / serio",
+            "description": "Ejecutivo, dramático"
+          },
+          "laugh_joy": {
+            "label": "Risa / alegría",
+            "description": "Auténtico, estilo de vida"
+          },
+          "contemplative": {
+            "label": "Contemplativo",
+            "description": "Editorial, artístico"
+          },
+          "confident": {
+            "label": "Confiado",
+            "description": "Confiado, equilibrado"
+          },
+          "sad": {
+            "label": "Triste / melancólico",
+            "description": "Sombrío, melancólico"
+          }
+        }
       },
       "pose": {
         "title": "Pose",
@@ -2260,6 +2379,7 @@
   },
   "inviteDashboard": {
     "loading": "Cargando panel...",
+    "newGeneration": "Nueva generación",
     "insufficientCredits": {
       "title": "Créditos insuficientes",
       "messageWithName": "No tienes suficientes créditos para generar fotos. Por favor, contacta a {adminName} ({adminEmail}) para solicitar más créditos.",

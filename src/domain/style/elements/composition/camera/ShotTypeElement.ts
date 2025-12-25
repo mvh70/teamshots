@@ -52,11 +52,32 @@ export class ShotTypeElement extends StyleElement {
     // Note: Specific framing details (shot type, crop points, composition) are in the JSON payload
     // Only add critical quality rules that aren't obvious from the JSON structure
 
+    const mustFollow: string[] = [
+      'Person must fill frame according to shot type specifications',
+      'Framing must be accurate and professional',
+      `Frame MUST match the specified crop points exactly: ${shotType.framingDescription}`,
+    ]
+
+    // Add explicit negative constraints for tighter shots to prevent over-showing
+    if (shotType.id === 'medium-shot') {
+      mustFollow.push(
+        'CRITICAL: Cut the frame at waist level (belly button). Do NOT show hips, thighs, knees, or legs.',
+        'The lower frame edge should be at the natural waistline, NOT lower'
+      )
+    } else if (shotType.id === 'medium-close-up') {
+      mustFollow.push(
+        'CRITICAL: Frame from top of head to mid-chest. Do NOT show below the chest.',
+        'Torso and arms should be minimal - this is a headshot, not a bust portrait'
+      )
+    } else if (shotType.id === 'three-quarter') {
+      mustFollow.push(
+        'CRITICAL: Frame to mid-thigh level. Feet must NOT be visible.',
+        'Show from head to mid-thigh, full arms included'
+      )
+    }
+
     return {
-      mustFollow: [
-        'Person must fill frame according to shot type specifications',
-        'Framing must be accurate and professional',
-      ],
+      mustFollow,
 
       payload: {
         framing: {
@@ -80,12 +101,26 @@ export class ShotTypeElement extends StyleElement {
    * Ensures framing is maintained when composing person with background
    */
   private contributeToComposition(shotType: ShotTypeConfig): ElementContribution {
+    const mustFollow: string[] = [
+      `Maintain ${shotType.label.toLowerCase()} framing from person image`,
+      'Do not reframe, zoom in/out, or crop the person',
+      'Person scale and framing must remain exactly as provided',
+      `The person was generated with specific crop points: ${shotType.framingDescription}. These MUST be preserved.`,
+    ]
+
+    // Add explicit reminders for specific shot types to prevent frame creep
+    if (shotType.id === 'medium-shot') {
+      mustFollow.push(
+        'The person is framed from head to waist (belly button level). Do NOT extend the frame to show hips, thighs, or legs.'
+      )
+    } else if (shotType.id === 'medium-close-up') {
+      mustFollow.push(
+        'The person is framed from head to mid-chest. Do NOT extend the frame to show waist or torso.'
+      )
+    }
+
     return {
-      mustFollow: [
-        `Maintain ${shotType.label.toLowerCase()} framing from person image`,
-        'Do not reframe, zoom in/out, or crop the person',
-        'Person scale and framing must remain exactly as provided',
-      ],
+      mustFollow,
 
       freedom: [
         'Adjust background scale or positioning to complement framing',

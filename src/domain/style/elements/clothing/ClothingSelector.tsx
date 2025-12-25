@@ -115,10 +115,10 @@ export default function ClothingSelector({
                 </div>
                 <div className="flex-1 text-left">
                   <div className={`text-sm font-semibold ${isSelected ? 'text-brand-primary' : 'text-gray-900'}`}>
-                    {style.label}
+                    {t(`styles.${style.value}.label`)}
                   </div>
                   <div className="text-xs text-gray-600 mt-0.5">
-                    {style.description}
+                    {t(`styles.${style.value}.description`)}
                   </div>
                 </div>
                 {isSelected && (
@@ -144,19 +144,19 @@ export default function ClothingSelector({
             </label>
             <Grid cols={{ mobile: 2 }} gap="sm">
               {CLOTHING_DETAILS[value.style]?.map((detail) => {
-                const isSelected = value.details === detail.value
+                const isSelected = value.details === detail
                 return (
                   <button
                     type="button"
-                    key={detail.value}
-                    onClick={(e) => handleDetailChange(detail.value, e)}
+                    key={detail}
+                    onClick={(e) => handleDetailChange(detail, e)}
                     className={`p-2 text-sm rounded border transition-colors ${
                       isSelected
                         ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
                         : 'border-gray-300 hover:border-gray-400 text-gray-700'
                     }`}
                   >
-                    {detail.label}
+                    {t(`details_options.${detail}`)}
                   </button>
                 )
               })}

@@ -283,7 +283,7 @@ export default function BrandingSelector({
                         shouldHide ? 'hidden md:block' : ''
                       }`}
                   >
-                    {opt.label}
+                    {t(`position.${opt.key}`)}
                   </button>
                   )
                 })}

@@ -272,50 +272,15 @@ export async function executeV3Step2(
     // Section 3: Composition Rules
     '',
     'Composition Rules:',
-    `- The final image must respect the **${shotType}** framing (${shotDescription}). Ensure the person is scaled correctly for this shot type, satisfying the framing constraints mentioned in the json.`,
-    '- Do NOT shrink the person to make space for background elements or logos. The person is the primary subject and they must blend naturally with the background.',
     '- Match lighting, shadows, perspective, and scale.',
-    `- **Output Dimensions (${aspectRatioConfig.id})**: Generate the image at exactly ${aspectRatioConfig.width}x${aspectRatioConfig.height} pixels. Fill the entire canvas edge-to-edge with the composition. Do NOT add any borders, frames, letterboxing, or black bars. The image content should extend to all edges.`,
     '',
     '**CRITICAL Depth and Spatial Composition:**',
     '- Create CLEAR SPATIAL SEPARATION using optical depth cues rather than moving the camera.',
-    '- Apply DEPTH OF FIELD based on the camera aperture (f/2.0) - the person should be TACK SHARP while the background is SLIGHTLY SOFTER (not blurred, just gentler focus).',
-    '- Add NATURAL SHADOWS: The person should cast a very subtle, soft shadow on the background wall behind them - positioned appropriately based on the lighting direction.',
     '- Create ATMOSPHERIC PERSPECTIVE: The background should be slightly less saturated and have lower contrast than the sharp, vibrant subject in the foreground.',
-    '- Ensure LIGHTING WRAP: The key light (45° from camera left) should illuminate the person brightly while creating natural falloff on the background.',
     '- Ensure VISIBLE AIR/SPACE between the subject and background through lighting falloff and bokeh.',
-    '- If there\'s a logo on the background, the person can naturally OCCLUDE parts of it, reinforcing that they\'re in front of the background plane.',
-    '- Apply subtle EDGE LIGHTING or rim light on the person\'s shoulders/hair to separate them from the background and enhance three-dimensionality.',
     '- Think: "subject standing naturally in a studio" not "subject pasted onto a backdrop".',
     ''
   ]
-
-  // Add branding-specific instructions ONLY if branding is present on background/elements
-  const hasBrandingOnBackground = styleSettings?.branding?.type === 'include' &&
-    (styleSettings.branding.position === 'background' || styleSettings.branding.position === 'elements')
-
-  if (hasBrandingOnBackground && styleSettings.branding) {
-    structuredPrompt.push(
-      '**CRITICAL Background Logo Positioning (logo present on background):**',
-      '- The logo or branding element is present on the background wall, position the subject such that the logo appears BEHIND THE HEAD OR SHOULDERS.',
-      '- The logo should be visible in the UPPER portion of the frame, at head/shoulder level, NOT behind the torso, waist, or lower body.',
-      '- This ensures the logo is clearly visible and professionally positioned relative to the subject\'s face.',
-      '- Adjust the subject\'s vertical position in the frame as needed to achieve this head/shoulder-level logo placement.',
-      '- The person can partially occlude the logo (for depth), but the logo should remain at upper-body height.',
-      ''
-    )
-
-    if (styleSettings.branding.position === 'elements') {
-      structuredPrompt.push(
-        '**CRITICAL Element Branding (flags/banners):**',
-        '- Position the flag/banner 6-8 feet BEHIND the subject with proper depth of field.',
-        '- The flag should be slightly softer in focus, have natural three-dimensional curvature (not flat), and show fabric physics with folds and shadows.',
-        '- The flag must be grounded on the floor, not floating.',
-        '- Avoid placing the person directly adjacent to banner-like structures that could compete as a second subject. Maintain clear spatial separation and depth hierarchy.',
-        ''
-      )
-    }
-  }
 
   structuredPrompt.push(
     '**CRITICAL Person Prominence Rules:**',
@@ -331,6 +296,38 @@ export async function executeV3Step2(
     structuredPrompt.push('')
     for (const rule of effectiveBackgroundPreservationRules) {
       structuredPrompt.push(`- ${rule}`)
+    }
+  }
+
+  // Add element-specific composition instructions (e.g., logo positioning, flag placement)
+  if (elementContributions?.instructions && elementContributions.instructions.length > 0) {
+    structuredPrompt.push('')
+    for (const instruction of elementContributions.instructions) {
+      structuredPrompt.push(`- ${instruction}`)
+    }
+  }
+
+  // Add mustFollow rules from elements (technical/quality requirements)
+  // Note: Background preservation mustFollow rules are handled separately above
+  if (elementContributions?.mustFollow && elementContributions.mustFollow.length > 0) {
+    const nonBackgroundMustFollow = elementContributions.mustFollow.filter(
+      rule => !effectiveBackgroundPreservationRules?.includes(rule)
+    )
+    if (nonBackgroundMustFollow.length > 0) {
+      structuredPrompt.push('')
+      structuredPrompt.push('**Technical Requirements (from elements):**')
+      for (const rule of nonBackgroundMustFollow) {
+        structuredPrompt.push(`- ${rule}`)
+      }
+    }
+  }
+
+  // Add freedom rules (creative latitude)
+  if (elementContributions?.freedom && elementContributions.freedom.length > 0) {
+    structuredPrompt.push('')
+    structuredPrompt.push('**Creative Freedom (Recommended Guidelines):**')
+    for (const freedom of elementContributions.freedom) {
+      structuredPrompt.push(`- ${freedom}`)
     }
   }
   

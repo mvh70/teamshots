@@ -4,13 +4,17 @@ import type { ElementConfig } from '../registry'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import { deserialize } from './deserializer'
 
+/**
+ * UI metadata for background type selector
+ * Icons and colors only - labels come from i18n
+ */
 export const BACKGROUND_TYPES = [
-  { value: 'office', label: 'Office Environment', icon: '🏢', color: 'from-blue-500 to-indigo-500' },
-  { value: 'tropical-beach', label: 'Tropical Beach', icon: '🏝️', color: 'from-cyan-500 to-teal-500' },
-  { value: 'busy-city', label: 'Busy City', icon: '🌆', color: 'from-purple-500 to-pink-500' },
-  { value: 'neutral', label: 'Neutral Background', icon: '⬜', color: 'from-gray-400 to-gray-500' },
-  { value: 'gradient', label: 'Gradient Background', icon: '🎨', color: 'from-orange-500 to-red-500' },
-  { value: 'custom', label: 'Custom Upload', icon: '📤', color: 'from-green-500 to-emerald-500' }
+  { value: 'office', icon: '🏢', color: 'from-blue-500 to-indigo-500' },
+  { value: 'tropical-beach', icon: '🏝️', color: 'from-cyan-500 to-teal-500' },
+  { value: 'busy-city', icon: '🌆', color: 'from-purple-500 to-pink-500' },
+  { value: 'neutral', icon: '⬜', color: 'from-gray-400 to-gray-500' },
+  { value: 'gradient', icon: '🎨', color: 'from-orange-500 to-red-500' },
+  { value: 'custom', icon: '📤', color: 'from-green-500 to-emerald-500' }
 ] as const
 
 /**

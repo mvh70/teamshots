@@ -341,7 +341,7 @@ export default function TeamGenerationsPage() {
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">{tg('title')}</h1>
-        <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed">Manage and view your team&apos;s generated professional photos</p>
+        <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed">{tg('description')}</p>
       </div>
 
       {/* Filters and Generate Button Row */}
@@ -376,7 +376,7 @@ export default function TeamGenerationsPage() {
                 onChange={(e) => setSelectedUserId(e.target.value)} 
                 className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[140px]"
               >
-                <option value="all">All users</option>
+                <option value="all">{tg('filters.allUsers')}</option>
                 {teamUsers.map(u => (
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
@@ -396,9 +396,9 @@ export default function TeamGenerationsPage() {
               onChange={(e) => setTimeframe(e.target.value as 'all'|'7d'|'30d')} 
               className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[140px]"
             >
-              <option value="all">All time</option>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
+              <option value="all">{tg('filters.allTime')}</option>
+              <option value="7d">{tg('filters.last7Days')}</option>
+              <option value="30d">{tg('filters.last30Days')}</option>
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -415,7 +415,7 @@ export default function TeamGenerationsPage() {
                 onChange={(e) => setContext(e.target.value)} 
                 className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[160px]"
               >
-                <option value="all">All photo styles</option>
+                <option value="all">{tg('filters.allPhotoStyles')}</option>
                 {styleOptions.map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
@@ -448,7 +448,7 @@ export default function TeamGenerationsPage() {
                 d="M12 4.5v15m7.5-7.5h-15"
               />
             </svg>
-            New generation
+            {tg('newGeneration')}
           </Link>
           
           {/* Cost information - Enhanced card style */}
@@ -508,7 +508,7 @@ export default function TeamGenerationsPage() {
           <div className="text-center py-16 bg-white rounded-lg border">
             <p className="text-gray-700 mb-2">{tg('empty.title')}</p>
             <p className="text-gray-500 text-sm mb-4">{tg('empty.subtitle')}</p>
-                <Link href="/app/generate/start?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">New generation</Link>
+                <Link href="/app/generate/start?type=team" className="px-4 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover text-sm">{tg('newGeneration')}</Link>
           </div>
         )}
       {failureToast && (

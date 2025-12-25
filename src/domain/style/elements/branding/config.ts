@@ -7,20 +7,27 @@ export { BrandingSettings }
 
 export interface BrandingTypeConfig {
   value: BrandingSettings['type']
-  label: string
   icon: string
   color: string
 }
 
+/**
+ * Branding type options
+ * Labels come from i18n: branding.include, branding.exclude
+ */
 export const BRANDING_TYPES: BrandingTypeConfig[] = [
-  { value: 'include', label: 'Include Logo', icon: '✨', color: 'from-blue-500 to-indigo-500' },
-  { value: 'exclude', label: 'No Logo', icon: '🚫', color: 'from-gray-400 to-gray-500' }
+  { value: 'include', icon: '✨', color: 'from-blue-500 to-indigo-500' },
+  { value: 'exclude', icon: '🚫', color: 'from-gray-400 to-gray-500' }
 ]
 
+/**
+ * Branding position options
+ * Labels come from i18n: branding.position.background, branding.position.clothing, branding.position.elements
+ */
 export const BRANDING_POSITIONS = [
-  { key: 'background', label: 'Background' },
-  { key: 'clothing', label: 'Clothing' },
-  { key: 'elements', label: 'Other elements' }
+  { key: 'background' },
+  { key: 'clothing' },
+  { key: 'elements' }
 ] as const
 
 export const BACKGROUND_BRANDING_PROMPT: Record<string, unknown> = {
