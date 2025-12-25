@@ -4,7 +4,8 @@ const TEST_STRIPE_PRICE_IDS = {
   PRO_SMALL: "price_1SajfyENr8odIuXarx9DdGVK",
   PRO_LARGE: "price_1SajfyENr8odIuXaTfKDskg1",
   VIP: "price_1SajfzENr8odIuXavTftq5Dy",
-  ENTERPRISE: "price_1Sajg0ENr8odIuXamVNsCXxf", 
+  ENTERPRISE: "price_1Sajg0ENr8odIuXamVNsCXxf",
+  TEAM_SEATS: "", // Run scripts/import-stripe-products.js to generate
   INDIVIDUAL_TOP_UP: "price_1Sajg0ENr8odIuXa6kcQpNKs",
   PRO_SMALL_TOP_UP: "price_1Sajg1ENr8odIuXaKsxvILky",
   PRO_LARGE_TOP_UP: "price_1Sajg2ENr8odIuXavC8jcq9y",
@@ -18,6 +19,7 @@ const PROD_STRIPE_PRICE_IDS = {
   PRO_LARGE: "price_1SajhHENr8odIuXasPp4Fmcv",
   VIP: "price_1SajhIENr8odIuXaeponRjAR",
   ENTERPRISE: "price_1SajhJENr8odIuXa2q4TdXtf",
+  TEAM_SEATS: "", // Run scripts/import-stripe-products.js to generate
   INDIVIDUAL_TOP_UP: "price_1SajhJENr8odIuXaVePSTFSd",
   PRO_SMALL_TOP_UP: "price_1SajhKENr8odIuXaoMvaAYf3",
   PRO_LARGE_TOP_UP: "price_1SajhLENr8odIuXanjNp9Ixs",
@@ -35,6 +37,7 @@ type StripePriceIds = {
   readonly PRO_LARGE: string;
   readonly VIP: string;
   readonly ENTERPRISE: string;
+  readonly TEAM_SEATS: string;
   readonly INDIVIDUAL_TOP_UP: string;
   readonly PRO_SMALL_TOP_UP: string;
   readonly PRO_LARGE_TOP_UP: string;
@@ -126,6 +129,26 @@ export const PRICING_CONFIG = {
       credits: 250, // 25 photos at 10 credits each
       stripePriceId: STRIPE_PRICE_IDS.ENTERPRISE_TOP_UP || '',
     },
+  },
+
+  // Seats-based pricing (TeamShotsPro domain)
+  seats: {
+    creditsPerSeat: 100, // 10 photos per seat
+    photosPerSeat: 10,
+    stripePriceId: STRIPE_PRICE_IDS.TEAM_SEATS || '',
+    volumeTiers: [
+      { min: 25, max: Infinity, pricePerSeat: 15.96 },
+      { min: 10, max: 24, pricePerSeat: 19.90 },
+      { min: 1, max: 9, pricePerSeat: 29.00 }
+    ],
+    // Helper to calculate total price based on seat count
+    calculateTotal: (seats: number): number => {
+      if (seats < 1) return 0
+      const tier = PRICING_CONFIG.seats.volumeTiers.find(
+        t => seats >= t.min && seats <= t.max
+      )
+      return seats * (tier?.pricePerSeat ?? 29.00)
+    }
   },
 
   // Cost tracking

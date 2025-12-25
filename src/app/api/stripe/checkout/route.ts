@@ -152,6 +152,8 @@ export async function POST(request: NextRequest) {
       }
     } else if (type === 'top_up') {
       successMessage = 'top_up_success'
+    } else if (type === 'seats') {
+      successMessage = 'seats_success'
     }
     
     // Use successTier (determined from priceId) for success URL, not metadata.tier
@@ -322,6 +324,26 @@ export async function POST(request: NextRequest) {
         credit_topup: 'true',
         tier: tier || 'individual',
         credits: String(totalCredits),
+      };
+    } else if (type === 'seats') {
+      // Seats-based pricing with volume discounts
+      // quantity represents the number of seats to purchase
+      if (!priceId || priceId !== PRICING_CONFIG.seats.stripePriceId) {
+        throw new Error('Invalid price ID for seats checkout');
+      }
+
+      sessionParams.line_items = [
+        {
+          price: priceId,
+          quantity, // Number of seats
+        },
+      ];
+
+      sessionParams.metadata = {
+        ...sessionParams.metadata,
+        seats: String(quantity),
+        planTier: 'pro',
+        planPeriod: 'seats',
       };
     }
 

@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import PricingCard from '@/components/pricing/PricingCard'
 import { CheckoutButton } from '@/components/ui'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
+import { getVolumePrice, calculateTotal, getSavings, getVolumeTier } from '@/domain/pricing/seats'
 import type { LandingVariant } from '@/config/landing-content'
 
 // Helper to calculate total photos (styles × variations)
@@ -21,12 +23,181 @@ interface PricingContentProps {
 
 export default function PricingContent({ variant }: PricingContentProps) {
   const t = useTranslations('pricing');
+  const [seats, setSeats] = useState(10);
 
   // Derive signup type from server-provided variant (no client-side detection)
-  const domainSignupType: 'individual' | 'team' | null = 
-    variant === 'photoshotspro' ? 'individual' : 
-    variant === 'teamshotspro' ? 'team' : 
+  const domainSignupType: 'individual' | 'team' | null =
+    variant === 'photoshotspro' ? 'individual' :
+    variant === 'teamshotspro' ? 'team' :
     null;
+
+  // Seats-based pricing for TeamShotsPro
+  if (variant === 'teamshotspro') {
+    const pricePerSeat = getVolumePrice(seats);
+    const total = calculateTotal(seats);
+    const savings = getSavings(seats);
+    const tierInfo = getVolumeTier(seats);
+    const totalPhotos = seats * PRICING_CONFIG.seats.photosPerSeat;
+
+    return (
+      <div className="min-h-screen bg-bg-gray-50 py-20 lg:py-32 relative grain-texture">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="text-center mb-12 sm:mb-16">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
+              {t('seats.title')}
+            </h1>
+            <p className="text-xl text-text-body max-w-3xl mx-auto leading-relaxed">
+              {t('seats.subtitle')}
+            </p>
+          </div>
+
+          {/* Pricing Calculator Card */}
+          <div className="bg-bg-white rounded-3xl p-8 lg:p-12 shadow-depth-lg mb-12">
+            {/* Seats Selector */}
+            <div className="mb-8">
+              <div className="flex items-baseline justify-between mb-4">
+                <label className="text-lg font-bold text-text-dark font-display">
+                  {t('seats.selectSeats')}
+                </label>
+                <div className="text-4xl font-bold text-brand-primary font-display">
+                  {seats} {seats === 1 ? t('seats.seat') : t('seats.seats')}
+                </div>
+              </div>
+
+              {/* Slider */}
+              <input
+                type="range"
+                min="1"
+                max="50"
+                step="1"
+                value={seats}
+                onChange={(e) => setSeats(Number(e.target.value))}
+                className="w-full h-3 bg-brand-primary-lighter rounded-lg appearance-none cursor-pointer slider-thumb"
+                style={{
+                  background: `linear-gradient(to right, #4F46E5 0%, #4F46E5 ${((seats - 1) / 49) * 100}%, #E0E7FF ${((seats - 1) / 49) * 100}%, #E0E7FF 100%)`
+                }}
+              />
+
+              {/* Quick select buttons */}
+              <div className="flex gap-2 mt-4 flex-wrap">
+                {[1, 5, 10, 25, 50].map((count) => (
+                  <button
+                    key={count}
+                    onClick={() => setSeats(count)}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                      seats === count
+                        ? 'bg-brand-primary text-white shadow-depth-md'
+                        : 'bg-bg-gray-50 text-text-body hover:bg-brand-primary-lighter hover:text-brand-primary'
+                    }`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Volume Tier Indicator */}
+            {tierInfo.nextTierAt && (
+              <div className="mb-6 p-4 bg-brand-primary-lighter/30 rounded-xl border border-brand-primary-lighter">
+                <p className="text-sm text-brand-primary font-semibold">
+                  💡 {t('seats.volumeHint', {
+                    seatsNeeded: tierInfo.nextTierAt - seats,
+                    nextPrice: formatPrice(tierInfo.nextTierPrice ?? 0),
+                    savingsPerSeat: formatPrice(pricePerSeat - (tierInfo.nextTierPrice ?? 0))
+                  })}
+                </p>
+              </div>
+            )}
+
+            {/* Pricing Summary */}
+            <div className="border-t border-bg-gray-100 pt-6 space-y-4">
+              <div className="flex justify-between items-baseline">
+                <span className="text-text-body">{t('seats.pricePerSeat')}</span>
+                <span className="text-2xl font-bold text-text-dark font-display">
+                  ${pricePerSeat.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-baseline">
+                <span className="text-text-body">{t('seats.totalPhotos')}</span>
+                <span className="text-xl font-semibold text-brand-primary">
+                  {totalPhotos} {t('seats.photos')}
+                </span>
+              </div>
+
+              {savings > 0 && (
+                <div className="flex justify-between items-baseline text-green-600">
+                  <span className="font-semibold">{t('seats.savings')}</span>
+                  <span className="text-xl font-bold">-${savings.toFixed(2)}</span>
+                </div>
+              )}
+
+              <div className="border-t border-bg-gray-200 pt-4 mt-4">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-xl font-bold text-text-dark font-display">
+                    {t('seats.total')}
+                  </span>
+                  <span className="text-4xl font-bold text-brand-primary font-display">
+                    ${total.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA Button */}
+            <div className="mt-8">
+              <CheckoutButton
+                type="seats"
+                priceId={PRICING_CONFIG.seats.stripePriceId}
+                quantity={seats}
+                unauth={true}
+                metadata={{
+                  planTier: 'pro',
+                  planPeriod: 'seats',
+                  seats: seats.toString(),
+                }}
+                useBrandCtaColors={true}
+                className="w-full !rounded-xl !px-6 !py-4 min-h-[4rem] !font-bold !text-lg"
+              >
+                {t('seats.cta', { seats, total: `$${total.toFixed(2)}` })}
+              </CheckoutButton>
+            </div>
+
+            {/* Features List */}
+            <div className="mt-8 pt-8 border-t border-bg-gray-100">
+              <h3 className="text-lg font-bold text-text-dark mb-4 font-display">
+                {t('seats.whatsIncluded')}
+              </h3>
+              <ul className="space-y-3">
+                {['photosPerSeat', 'professionalQuality', 'teamManagement', 'fastDelivery', 'support'].map((feature) => (
+                  <li key={feature} className="flex items-start gap-3">
+                    <svg className="w-6 h-6 text-brand-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-text-body">{t(`seats.features.${feature}`)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Try It For Free Card */}
+          <div className="max-w-2xl mx-auto">
+            <PricingCard
+              id="tryItForFree"
+              price="Free"
+              credits={PRICING_CONFIG.freeTrial.pro}
+              regenerations={PRICING_CONFIG.regenerations.tryItForFree}
+              pricePerPhoto={formatPrice(getPricePerPhoto('tryItForFree'))}
+              ctaMode="link"
+              href="/auth/signup?period=tryItForFree"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Calculate pricing values for FAQ interpolation
   const individualPhotos = calculatePhotosFromCredits(PRICING_CONFIG.individual.credits)

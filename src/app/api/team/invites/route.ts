@@ -9,6 +9,7 @@ import { Logger } from '@/lib/logger'
 import { getTranslation } from '@/lib/translations'
 import { getPackageConfig } from '@/domain/style/packages'
 import { getBaseUrl } from '@/lib/url'
+import { isSeatsBasedTeam, canAddTeamMember } from '@/domain/pricing/seats'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +25,8 @@ export async function POST(request: NextRequest) {
     
     const { session } = permissionCheck
 
-    const { email, firstName, creditsAllocated = PRICING_CONFIG.team.defaultInviteCredits } = await request.json()
+    const body = await request.json()
+    const { email, firstName } = body
 
     // Get user locale from session for translations
     const locale = (session.user.locale || 'en') as 'en' | 'es'
@@ -35,20 +37,6 @@ export async function POST(request: NextRequest) {
 
     if (!firstName) {
       return NextResponse.json({ error: getTranslation('api.errors.teamInvites.firstNameRequired', locale) }, { status: 400 })
-    }
-
-    // Validate credits allocation
-    const creditsPerGeneration = PRICING_CONFIG.credits.perGeneration
-    if (creditsAllocated % creditsPerGeneration !== 0) {
-      const error = getTranslation('api.errors.teamInvites.invalidCreditAllocation', locale, { 
-        credits: creditsPerGeneration.toString(),
-        credits2: (creditsPerGeneration * 2).toString(),
-        credits3: (creditsPerGeneration * 3).toString()
-      })
-      return NextResponse.json({ 
-        error,
-        errorCode: 'INVALID_CREDIT_ALLOCATION'
-      }, { status: 400 })
     }
 
     // Get user's team
@@ -70,6 +58,48 @@ export async function POST(request: NextRequest) {
     }
 
     const team = user.person.team
+
+    // Determine pricing model for this team
+    const useSeatsModel = await isSeatsBasedTeam(team.id)
+
+    // Determine credits to allocate based on pricing model
+    let creditsAllocated: number
+
+    if (useSeatsModel) {
+      // Seats model: Auto-assign fixed credits per seat
+      creditsAllocated = PRICING_CONFIG.seats.creditsPerSeat
+
+      // Check if team has available seats
+      const seatCheck = await canAddTeamMember(team.id)
+      if (!seatCheck.canAdd) {
+        return NextResponse.json({
+          error: getTranslation('api.errors.teamInvites.noAvailableSeats', locale, {
+            current: seatCheck.currentSeats?.toString() || '0',
+            total: seatCheck.totalSeats?.toString() || '0'
+          }),
+          errorCode: 'NO_AVAILABLE_SEATS',
+          currentSeats: seatCheck.currentSeats,
+          totalSeats: seatCheck.totalSeats
+        }, { status: 400 })
+      }
+    } else {
+      // Credits model: Use client-provided value with validation
+      creditsAllocated = body.creditsAllocated || PRICING_CONFIG.team.defaultInviteCredits
+
+      // Validate credits allocation (credits model only)
+      const creditsPerGeneration = PRICING_CONFIG.credits.perGeneration
+      if (creditsAllocated % creditsPerGeneration !== 0) {
+        const error = getTranslation('api.errors.teamInvites.invalidCreditAllocation', locale, {
+          credits: creditsPerGeneration.toString(),
+          credits2: (creditsPerGeneration * 2).toString(),
+          credits3: (creditsPerGeneration * 3).toString()
+        })
+        return NextResponse.json({
+          error,
+          errorCode: 'INVALID_CREDIT_ALLOCATION'
+        }, { status: 400 })
+      }
+    }
 
     // Check if team admin is on free plan
     const rawAdminPlanPeriod = (team?.admin as unknown as { planPeriod?: string | null })?.planPeriod ?? null
@@ -167,19 +197,21 @@ export async function POST(request: NextRequest) {
     }
     // proLarge has no team size limit
 
-    // Check if team has sufficient credits (uses centralized function)
-    const teamCredits = await getEffectiveTeamCreditBalance(user.id, team.id)
-    
-    if (teamCredits < creditsAllocated) {
-      return NextResponse.json({ 
-        error: getTranslation('api.errors.teamInvites.insufficientTeamCredits', locale, { 
-          available: teamCredits.toString(), 
-          required: creditsAllocated.toString() 
-        }),
-        errorCode: 'INSUFFICIENT_TEAM_CREDITS',
-        availableCredits: teamCredits,
-        requiredCredits: creditsAllocated
-      }, { status: 400 })
+    // Check if team has sufficient credits (skip for seats model)
+    if (!useSeatsModel) {
+      const teamCredits = await getEffectiveTeamCreditBalance(user.id, team.id)
+
+      if (teamCredits < creditsAllocated) {
+        return NextResponse.json({
+          error: getTranslation('api.errors.teamInvites.insufficientTeamCredits', locale, {
+            available: teamCredits.toString(),
+            required: creditsAllocated.toString()
+          }),
+          errorCode: 'INSUFFICIENT_TEAM_CREDITS',
+          availableCredits: teamCredits,
+          requiredCredits: creditsAllocated
+        }, { status: 400 })
+      }
     }
 
     // Generate secure token

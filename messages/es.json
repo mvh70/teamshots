@@ -498,6 +498,28 @@
       "continueToGenerate": "Empezar a Generar Fotos",
       "continueToDashboard": "Ir al Panel",
       "continueToGeneration": "Continuar Generando"
+    },
+    "seats": {
+      "title": "Fotos de Equipo - Pago por Asiento",
+      "subtitle": "Precios simples y transparentes. Paga una vez por miembro del equipo, obtén 10 fotos profesionales cada uno.",
+      "selectSeats": "¿Cuántos miembros del equipo?",
+      "seat": "asiento",
+      "seats": "asientos",
+      "pricePerSeat": "Precio por asiento",
+      "totalPhotos": "Total de fotos",
+      "photos": "fotos",
+      "savings": "Ahorras",
+      "total": "Total",
+      "cta": "Obtener {seats} asientos por {total}",
+      "whatsIncluded": "Qué está incluido",
+      "volumeHint": "Añade {seatsNeeded} asientos más para desbloquear {nextPrice}/asiento (ahorra {savingsPerSeat}/asiento)",
+      "features": {
+        "photosPerSeat": "10 fotos profesionales por miembro del equipo",
+        "professionalQuality": "Fotos de calidad profesional con IA",
+        "teamManagement": "Panel de gestión centralizado del equipo",
+        "fastDelivery": "Tiempo de generación de 60 segundos",
+        "support": "Soporte por correo y garantía de satisfacción"
+      }
     }
   },
   "auth": {
@@ -1674,7 +1696,6 @@
             "title": "Busca buena iluminación",
             "desc": "La luz natural funciona mejor. Evita sombras fuertes en tu cara."
           },
-          
           "minimum": {
             "title": "Lo ideal son 3-4 selfies. El mínimo es 2.",
             "desc": "Cuanta más información le des sobre tu rostro y tu cuerpo, menos tiene que adivinar."
@@ -2084,7 +2105,8 @@
         "noActiveContext": "Necesitas crear y establecer un estilo de foto activo antes de invitar miembros del equipo. Configúralo primero, ¡luego vuelve!",
         "insufficientTeamCredits": "No hay suficientes créditos del equipo. Tienes {available} disponibles, pero necesitas {required}. ¡Es hora de recargar!",
         "invalidCreditAllocation": "Los créditos deben asignarse en múltiplos de {credits} (el costo por generación de foto). Por ejemplo: {credits}, {credits2}, {credits3}, etc.",
-        "teamSizeLimitReached": "Tu plan Pro Small permite hasta {limit} miembros del equipo. Actualiza a Pro Large para miembros ilimitados."
+        "teamSizeLimitReached": "Tu plan Pro Small permite hasta {limit} miembros del equipo. Actualiza a Pro Large para miembros ilimitados.",
+        "noAvailableSeats": "No hay asientos disponibles. Tienes {current} de {total} asientos ocupados. Por favor compra más asientos para invitar miembros adicionales al equipo."
       },
       "credits": {
         "invalidType": "Parámetro de tipo inválido"

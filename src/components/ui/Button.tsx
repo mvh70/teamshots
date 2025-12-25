@@ -162,14 +162,16 @@ export function CheckoutButton({
   // Checkout-specific props
   type,
   priceId,
+  quantity,
   metadata,
   returnUrl,
   onError,
   unauth = false,
   ...props
 }: Omit<ButtonProps, 'variant' | 'type'> & {
-  type?: 'subscription' | 'top_up' | 'plan'
+  type?: 'subscription' | 'top_up' | 'plan' | 'seats'
   priceId?: string
+  quantity?: number
   metadata?: Record<string, unknown>
   returnUrl?: string
   onError?: (message: string) => void
@@ -200,6 +202,7 @@ export function CheckoutButton({
         body: JSON.stringify({
           type,
           priceId,
+          quantity,
           metadata,
           returnUrl: returnUrl || (typeof window !== 'undefined' ? window.location.href : undefined),
           unauth

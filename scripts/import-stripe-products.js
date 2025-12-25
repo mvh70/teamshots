@@ -181,7 +181,47 @@ async function createProducts() {
 
     console.log(`✅ Enterprise - Price ID: ${enterprisePrice.id}`);
 
-    // 6. Top-up products (one-time)
+    // 6. Team Seats Product (one-time with volume pricing)
+    console.log('📦 Creating Team Seats product...');
+    const teamSeatsProduct = await stripe.products.create({
+      name: 'TeamShots - Team Seats',
+      description: 'Professional headshots for your team with volume discounts (10 photos per seat)',
+      metadata: {
+        type: 'team_seats',
+        credits_per_seat: '100',
+        photos_per_seat: '10'
+      }
+    });
+
+    const teamSeatsPrice = await stripe.prices.create({
+      product: teamSeatsProduct.id,
+      currency: 'usd',
+      billing_scheme: 'tiered',
+      tiers_mode: 'volume', // CRITICAL: Tier price applies to ALL units
+      tiers: [
+        {
+          up_to: 9,
+          unit_amount: 2900 // $29.00 per seat for 1-9 seats
+        },
+        {
+          up_to: 24,
+          unit_amount: 1990 // $19.90 per seat for 10-24 seats
+        },
+        {
+          up_to: null, // null = infinity
+          unit_amount: 1596 // $15.96 per seat for 25+ seats
+        }
+      ],
+      metadata: {
+        type: 'team_seats',
+        credits_per_seat: '100',
+        photos_per_seat: '10'
+      }
+    });
+
+    console.log(`✅ Team Seats - Price ID: ${teamSeatsPrice.id}`);
+
+    // 7. Top-up products (one-time)
     console.log('📦 Creating Top-Up products...')
 
     const individualTopUpProduct = await stripe.products.create({
@@ -251,6 +291,7 @@ async function createProducts() {
     console.log('PRO_LARGE:', `"${proLargePrice.id}"`);
     console.log('VIP:', `"${vipPrice.id}"`);
     console.log('ENTERPRISE:', `"${enterprisePrice.id}"`);
+    console.log('TEAM_SEATS:', `"${teamSeatsPrice.id}"`);
     console.log('INDIVIDUAL_TOP_UP:', `"${individualTopUpPrice.id}"`);
     console.log('PRO_SMALL_TOP_UP:', `"${proSmallTopUpPrice.id}"`);
     console.log('PRO_LARGE_TOP_UP:', `"${proLargeTopUpPrice.id}"`);

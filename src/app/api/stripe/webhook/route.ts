@@ -360,8 +360,108 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           },
         });
       });
+    } else if (purchaseType === 'seats') {
+      // Handle seats purchase
+      const seats = parseInt(session.metadata?.seats || '0');
+      const priceId = checkoutSession.line_items?.data[0]?.price?.id;
+
+      if (!seats || seats < 1) {
+        Logger.error('Invalid seats count in metadata', { sessionId: session.id, seats });
+        throw new Error('Invalid seats count');
+      }
+
+      if (priceId !== PRICING_CONFIG.seats.stripePriceId) {
+        Logger.error('Invalid price ID for seats purchase', { sessionId: session.id, priceId });
+        throw new Error('Invalid price ID for seats purchase');
+      }
+
+      await prisma.$transaction(async (tx: PrismaTransactionClient) => {
+        // Get or create team for the user
+        let person = await tx.person.findUnique({
+          where: { userId: userId || '' },
+          include: { team: true }
+        });
+
+        let teamId: string;
+
+        if (!person?.teamId) {
+          // Create team if user doesn't have one yet
+          const user = await tx.user.findUnique({ where: { id: userId || '' } });
+          const team = await tx.team.create({
+            data: {
+              name: `${user?.email}'s Team`,
+              adminId: userId || '',
+              creditsPerSeat: PRICING_CONFIG.seats.creditsPerSeat,
+              totalSeats: seats,
+              activeSeats: 1, // Admin occupies one seat
+              isLegacyCredits: false,
+            }
+          });
+
+          // Link person to team
+          await tx.person.update({
+            where: { userId: userId || '' },
+            data: { teamId: team.id }
+          });
+
+          teamId = team.id;
+          Logger.info('Created team for seats purchase', { userId, teamId: team.id, seats });
+        } else {
+          // Add seats to existing team
+          teamId = person.teamId;
+          await tx.team.update({
+            where: { id: teamId },
+            data: {
+              totalSeats: { increment: seats },
+              creditsPerSeat: PRICING_CONFIG.seats.creditsPerSeat,
+              isLegacyCredits: false,
+            }
+          });
+          Logger.info('Added seats to existing team', { userId, teamId, seats });
+        }
+
+        // Update user to pro tier
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            subscriptionStatus: 'active',
+            planTier: 'pro',
+            planPeriod: 'seats',
+            role: 'team_admin',
+          },
+        });
+
+        // Record seat purchase
+        await tx.seatPurchase.create({
+          data: {
+            teamId,
+            seatsPurchased: seats,
+            pricePerSeat: (session.amount_total || 0) / 100 / seats,
+            totalPaid: (session.amount_total || 0) / 100,
+            stripePaymentId: (session.payment_intent as string) || session.id,
+            stripePriceId: priceId || '',
+          }
+        });
+
+        // Record subscription change
+        type PrismaWithSubscriptionChange = typeof prisma & { subscriptionChange: { create: (args: unknown) => Promise<unknown> } }
+        const txEx = tx as unknown as PrismaWithSubscriptionChange;
+        await txEx.subscriptionChange.create({
+          data: {
+            userId,
+            teamId,
+            planTier: 'pro',
+            planPeriod: 'seats',
+            action: 'start',
+            metadata: {
+              checkoutSessionId: session.id,
+              seats,
+            },
+          }
+        });
+      });
     }
-    
+
     // Send order notification to support
     try {
       const customerName = session.customer_details?.name || '';
@@ -370,12 +470,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       let orderCredits = 0;
       let orderTier: string | null = null;
       let orderPeriod: string | null = null;
-      
+
       if (purchaseType === 'plan') {
         orderTier = session.metadata?.planTier || null;
         orderPeriod = session.metadata?.planPeriod || null;
         const configKey = getPricingConfigKey(
-          (orderTier as PlanTier) || 'individual', 
+          (orderTier as PlanTier) || 'individual',
           (orderPeriod as PlanPeriod) || 'small'
         );
         if (configKey) {
@@ -384,6 +484,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       } else if (purchaseType === 'top_up') {
         orderCredits = parseInt(session.metadata?.credits || '0');
         orderTier = session.metadata?.tier || null;
+      } else if (purchaseType === 'seats') {
+        const seats = parseInt(session.metadata?.seats || '0');
+        orderCredits = seats * PRICING_CONFIG.seats.creditsPerSeat;
+        orderTier = 'seats';
+        orderPeriod = 'seats';
       }
       
       await sendOrderNotificationEmail({
@@ -431,6 +536,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           }
         } else if (purchaseType === 'top_up') {
           purchasedCredits = parseInt(session.metadata?.credits || '0');
+        } else if (purchaseType === 'seats') {
+          const seats = parseInt(session.metadata?.seats || '0');
+          purchasedCredits = seats * PRICING_CONFIG.seats.creditsPerSeat;
         }
         
         // Convert credits to photos for display

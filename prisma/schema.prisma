@@ -83,6 +83,13 @@ model Team {
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
   activeContextId      String?              @unique
+
+  // Seats-based pricing
+  totalSeats           Int                  @default(0)
+  activeSeats          Int                  @default(0)
+  creditsPerSeat       Int                  @default(100)
+  isLegacyCredits      Boolean              @default(false)
+
   activeContext        Context?             @relation("ActiveContext", fields: [activeContextId], references: [id])
   admin                User                 @relation("TeamAdmin", fields: [adminId], references: [id], onDelete: Cascade)
   contexts             Context[]
@@ -91,6 +98,7 @@ model Team {
   teamInvites          TeamInvite[]
   subscriptionChanges  SubscriptionChange[]
   assets               Asset[]
+  seatPurchases        SeatPurchase[]
 
   @@index([adminId])
   @@index([domain])
@@ -553,4 +561,20 @@ model GenerationCost {
   @@index([teamId])
   @@index([createdAt])
   @@index([evaluationStatus])
+}
+
+model SeatPurchase {
+  id              String   @id @default(cuid())
+  teamId          String
+  seatsPurchased  Int
+  pricePerSeat    Float
+  totalPaid       Float
+  stripePaymentId String   @unique
+  stripePriceId   String
+  purchasedAt     DateTime @default(now())
+
+  team            Team     @relation(fields: [teamId], references: [id])
+
+  @@index([teamId])
+  @@index([purchasedAt])
 }

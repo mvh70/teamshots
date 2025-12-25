@@ -487,6 +487,28 @@
       "continueToGenerate": "Start Generating Photos",
       "continueToDashboard": "Go to Dashboard",
       "continueToGeneration": "Continue Generating"
+    },
+    "seats": {
+      "title": "Team Headshots - Pay Per Seat",
+      "subtitle": "Simple, transparent pricing. Pay once per team member, get 10 professional photos each.",
+      "selectSeats": "How many team members?",
+      "seat": "seat",
+      "seats": "seats",
+      "pricePerSeat": "Price per seat",
+      "totalPhotos": "Total photos",
+      "photos": "photos",
+      "savings": "You save",
+      "total": "Total",
+      "cta": "Get {seats} seats for {total}",
+      "whatsIncluded": "What's Included",
+      "volumeHint": "Add {seatsNeeded} more seats to unlock {nextPrice}/seat (save {savingsPerSeat}/seat)",
+      "features": {
+        "photosPerSeat": "10 professional photos per team member",
+        "professionalQuality": "AI-powered professional quality headshots",
+        "teamManagement": "Central team management dashboard",
+        "fastDelivery": "60-second generation time",
+        "support": "Email support and satisfaction guarantee"
+      }
     }
   },
   "auth": {
@@ -1659,7 +1681,6 @@
             "title": "Find good lighting",
             "desc": "Natural light works best. Avoid harsh shadows on your face."
           },
-         
           "minimum": {
             "title": "3-4 selfies is ideal. Minimum is 2.",
             "desc": "The more information you give it about your face and your body, the less it has to guess."
@@ -2060,7 +2081,8 @@
         "userNotInTeam": "Looks like you're not part of a team yet. Ask your team admin to send you an invite.",
         "noActiveContext": "You need to create and set an active photo style before inviting team members. Set it up first, then come back!",
         "invalidCreditAllocation": "Photos must be allocated in multiples of {credits} credits (the cost per photo generation). For example: {credits2} credits ({credits} credits × 2), {credits3} credits ({credits} credits × 3), etc.",
-        "teamSizeLimitReached": "Your Pro Small plan allows up to {limit} team members. Upgrade to Pro Large for unlimited team members."
+        "teamSizeLimitReached": "Your Pro Small plan allows up to {limit} team members. Upgrade to Pro Large for unlimited team members.",
+        "noAvailableSeats": "No available seats. You have {current} of {total} seats occupied. Please purchase more seats to invite additional team members."
       }
     }
   },
