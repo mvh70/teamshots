@@ -27,7 +27,7 @@ const createSchema = z.object({
   contextId: z.string().optional(),
   styleSettings: z.record(z.string(), z.unknown()).optional(),
   prompt: z.string().min(1),
-  workflowVersion: z.enum(['v1', 'v2', 'v3']).optional(), // Workflow version: v1 (legacy), v2 (8-step), v3 (4-step). Defaults to GENERATION_WORKFLOW_VERSION env var or 'v3'
+  workflowVersion: z.enum(['v3']).optional(), // Workflow version: v3 (4-step). Defaults to 'v3'
   debugMode: z.boolean().optional().default(false), // Enable debug mode
 })
 

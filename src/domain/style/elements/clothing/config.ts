@@ -58,7 +58,7 @@ export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, Wardrob
     },
     casual: {
       details: 'High-end business-casual ensemble with modern styling. Do NOT add a tie or other accessories by default, only add them when specifically specified in the accessories section.',
-      baseLayer: '"Luxe" T-Shirt. Substantial and refined, like Mercerized cotton, Pima cotton, or modal blends, with a tight crew neck',
+      baseLayer: 'A deluxe T-Shirt. Substantial and refined, like Mercerized cotton, Pima cotton, or modal blends, with a tight crew neck',
       outerLayer: ' A single-breasted jacket with a subtle herringbone weave, adding a classic and refined touch to the overall look.',
       notes: 'Maintain relaxed but refined posture.'
     },

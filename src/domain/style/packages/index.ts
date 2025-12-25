@@ -2,7 +2,6 @@ import { headshot1 } from './headshot1'
 import { outfit1 } from './outfit1'
 import { freepackage } from './freepackage'
 import { tryitforfree } from './tryitforfree'
-import { isFeatureEnabled } from '@/config/feature-flags'
 import { validateAllPackages } from './validation'
 
 // Load element metadata registry
@@ -27,23 +26,13 @@ export type { PackageRegistrationOptions } from './registry'
 // For backward compatibility, still export from old location
 import type { ClientStylePackage } from './types'
 
-// Build CLIENT_PACKAGES dynamically based on feature flags
-function buildClientPackages(): Record<string, ClientStylePackage> {
-  const packages: Record<string, ClientStylePackage> = {
-    [headshot1.id]: headshot1,
-    [freepackage.id]: freepackage,
-    [tryitforfree.id]: tryitforfree
-  }
-
-  // Add outfit1 only if feature flag is enabled
-  if (isFeatureEnabled('outfitTransfer')) {
-    packages[outfit1.id] = outfit1
-  }
-
-  return packages
+// CLIENT_PACKAGES - All client-side packages
+export const CLIENT_PACKAGES: Record<string, ClientStylePackage> = {
+  [headshot1.id]: headshot1,
+  [freepackage.id]: freepackage,
+  [tryitforfree.id]: tryitforfree,
+  [outfit1.id]: outfit1,
 }
-
-export const CLIENT_PACKAGES = buildClientPackages()
 
 // Validate all packages at module load time (only in Node.js environment)
 if (typeof window === 'undefined') {

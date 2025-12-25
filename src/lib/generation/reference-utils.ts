@@ -400,7 +400,7 @@ export async function buildCollectiveReferenceImages(
   selfieKeys: string[],
   getSelfieBuffer: SelfieBufferProvider,
   downloadAsset: DownloadAssetFn,
-  workflowVersion?: 'v1' | 'v2' | 'v3'
+  workflowVersion?: 'v3'
 ): Promise<ReferenceImage[]> {
   const references: ReferenceImage[] = []
 
@@ -467,7 +467,6 @@ export async function buildDefaultReferencePayload({
   selfieKeys,
   getSelfieBuffer,
   downloadAsset,
-  useCompositeReference,
   generationId,
   shotDescription,
   aspectRatioDescription,
@@ -478,14 +477,13 @@ export async function buildDefaultReferencePayload({
   selfieKeys: string[]
   getSelfieBuffer: SelfieBufferProvider
   downloadAsset: DownloadAssetFn
-  useCompositeReference: boolean
   generationId: string
   shotDescription: string
   aspectRatioDescription: string
   aspectRatioSize: { width: number; height: number }
-  workflowVersion?: 'v1' | 'v2' | 'v3'
+  workflowVersion?: 'v3'
 }): Promise<{ referenceImages: ReferenceImage[]; labelInstruction?: string }> {
-  // V3 workflow is now required (v1/v2 support removed)
+  // V3 workflow is required
   if (workflowVersion && workflowVersion !== 'v3') {
     throw new Error(`buildDefaultReferencePayload: Only v3 workflow is supported (received: ${workflowVersion})`)
   }
@@ -497,54 +495,42 @@ export async function buildDefaultReferencePayload({
 
   // V3 builds its own prompt structure via element composition
   // labelInstruction is no longer generated (kept in return type for backward compatibility)
+  // V3 always uses composite reference
 
-  if (useCompositeReference) {
-    // V3: Asset downloads (logos, backgrounds) are handled by element preparation (step 0)
-    // This only builds selfie composite - no additional assets
+  // V3: Asset downloads (logos, backgrounds) are handled by element preparation (step 0)
+  // This only builds selfie composite - no additional assets
 
-    const composite = await buildVerticalSelfieComposite({
-      selfieKeys,
-      getSelfieBuffer,
-      generationId,
-      additionalAssets: [] // No additional assets for v3
-    })
+  const composite = await buildVerticalSelfieComposite({
+    selfieKeys,
+    getSelfieBuffer,
+    generationId,
+    additionalAssets: [] // No additional assets for v3
+  })
 
-    referenceImages.push({
-      mimeType: composite.mimeType,
-      base64: composite.base64,
-      description:
-        'REFERENCE: Composite image containing vertically stacked subject selfies.'
-    })
+  referenceImages.push({
+    mimeType: composite.mimeType,
+    base64: composite.base64,
+    description:
+      'REFERENCE: Composite image containing vertically stacked subject selfies.'
+  })
 
-    // V3: Custom backgrounds are handled by BackgroundElement.prepare() in step 0
+  // V3: Custom backgrounds are handled by BackgroundElement.prepare() in step 0
 
-    const formatReference = await buildAspectRatioFormatReference({
-      width: aspectRatioSize.width,
-      height: aspectRatioSize.height,
-      aspectRatioDescription
-    })
-    referenceImages.push(formatReference)
+  const formatReference = await buildAspectRatioFormatReference({
+    width: aspectRatioSize.width,
+    height: aspectRatioSize.height,
+    aspectRatioDescription
+  })
+  referenceImages.push(formatReference)
 
-    // V3: labelInstruction not generated - prompt structure built by element composition
+  // V3: labelInstruction not generated - prompt structure built by element composition
 
-    Logger.debug('Prepared composite reference payload', {
-      referenceCount: referenceImages.length,
-      referenceDescriptions: referenceImages.map(
-        (reference) => reference.description ?? 'image reference'
-      )
-    })
-  } else {
-    const references = await buildCollectiveReferenceImages(
-      styleSettings,
-      selfieKeys,
-      getSelfieBuffer,
-      downloadAsset,
-      workflowVersion
+  Logger.debug('Prepared composite reference payload', {
+    referenceCount: referenceImages.length,
+    referenceDescriptions: referenceImages.map(
+      (reference) => reference.description ?? 'image reference'
     )
-    referenceImages.push(...references)
-
-    // V3: labelInstruction not generated - prompt structure built by element composition
-  }
+  })
 
   return {
     referenceImages,

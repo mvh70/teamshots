@@ -395,7 +395,11 @@ export async function POST(request: NextRequest) {
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
         const { PRICING_CONFIG } = await import('@/config/pricing')
         const { getDefaultPackage } = await import('@/config/landing-content')
-        // Use tryitforfree package if period is tryItForFree, otherwise use domain-specific default
+        // Package ownership model:
+        // - Users are granted their target package on signup (e.g., headshot1)
+        // - Runtime access control enforces freepackage during free trial (see fetchStyleData in actions.ts)
+        // - When users pay, they already "own" the package - runtime override is lifted
+        // - "tryItForFree" period → special tryitforfree package (different teaser)
         const requestedPeriod = body.period as string | undefined
         const packageId = requestedPeriod === 'tryItForFree'
           ? 'tryitforfree'

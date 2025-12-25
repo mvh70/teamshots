@@ -202,9 +202,11 @@ async function fetchStyleData(params: {
   generationType: 'personal' | 'team'
   teamId: string | null
 }): Promise<GenerationPageData['styleData']> {
-  // CRITICAL: Free plan users ALWAYS use the freepackage style, regardless of any
-  // personal/team contexts they may have created when testing plan tiers.
-  // This ensures free plan users cannot bypass the freepackage restrictions.
+  // RUNTIME ACCESS CONTROL: Free plan users are restricted to freepackage style
+  // Note: Users may "own" headshot1 in UserPackage table (granted on signup), but
+  // we enforce freepackage during their free trial period as a teaser/demo.
+  // When they upgrade to paid, this override is lifted and they get their owned packages.
+  // This prevents free users from bypassing restrictions via custom contexts.
   if (params.isFreePlan) {
     // Query database directly instead of using fetch (Server Actions requirement)
     const setting = await prisma.appSetting.findUnique({ 

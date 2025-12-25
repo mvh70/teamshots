@@ -8,7 +8,11 @@ import { httpFetch } from '@/lib/http'
 import { getS3Key, sanitizeNameForS3 } from '@/lib/s3-client'
 
 import sharp from 'sharp'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
 import type { SelfieReference } from './evaluator'
+
+const execFileAsync = promisify(execFile)
 
 interface DownloadParams {
   bucketName: string
@@ -152,19 +156,87 @@ export async function prepareSelfies({
     key: string
   ): Promise<{ reference: SelfieReference; buffer: Buffer }> => {
     const selfieData = await downloadSelfieAsBase64({ bucketName, s3Client, key })
-    const selfieBuffer = Buffer.from(selfieData.base64, 'base64')
+    let selfieBuffer = Buffer.from(selfieData.base64, 'base64')
 
-    // Rotate based on EXIF orientation (Sharp's .rotate() auto-applies EXIF orientation)
-    const rotatedBuffer = await sharp(selfieBuffer).rotate().toBuffer()
-    const pngBuffer = await sharp(rotatedBuffer).png().toBuffer()
+    // Try sharp first (fast path)
+    try {
+      const rotatedBuffer = await sharp(selfieBuffer)
+        .rotate()
+        .png()
+        .toBuffer()
 
-    return {
-      reference: {
-        // No label: labels are only rendered on the composite image, not individual selfies
-        base64: pngBuffer.toString('base64'),
-        mimeType: 'image/png'
-      },
-      buffer: pngBuffer // Use PNG buffer for consistency
+      return {
+        reference: {
+          base64: rotatedBuffer.toString('base64'),
+          mimeType: 'image/png'
+        },
+        buffer: rotatedBuffer
+      }
+    } catch (sharpError) {
+      // Sharp failed - likely corrupted metadata
+      // Fall back to ImageMagick which handles corrupt files better
+      Logger.warn('Sharp failed to process selfie, using ImageMagick fallback', {
+        key,
+        error: sharpError instanceof Error ? sharpError.message : String(sharpError)
+      })
+
+      try {
+        // Use ImageMagick to clean the image
+        // -auto-orient: fix rotation
+        // -strip: remove all metadata
+        // -colorspace sRGB: force valid colorspace
+        // Note: Use 'magick' for IMv7, falls back to 'convert' for IMv6
+        const magickCommand = 'magick'
+        const stdout = await new Promise<Buffer>((resolve, reject) => {
+          const child = execFile(magickCommand, [
+            '-',  // Read from stdin
+            '-auto-orient',
+            '-strip',
+            '-colorspace', 'sRGB',
+            'png:-'  // Output PNG to stdout
+          ], {
+            encoding: 'buffer',
+            maxBuffer: 50 * 1024 * 1024  // 50MB max
+          }, (error, stdout) => {
+            if (error) {
+              reject(error)
+            } else {
+              resolve(stdout as unknown as Buffer)
+            }
+          })
+
+          if (child.stdin) {
+            child.stdin.write(selfieBuffer)
+            child.stdin.end()
+          } else {
+            reject(new Error('Failed to write to ImageMagick stdin'))
+          }
+        })
+
+        const cleanedBuffer = stdout as Buffer
+
+        Logger.info('Successfully processed selfie with ImageMagick fallback', {
+          key,
+          originalSize: selfieBuffer.length,
+          cleanedSize: cleanedBuffer.length
+        })
+
+        return {
+          reference: {
+            base64: cleanedBuffer.toString('base64'),
+            mimeType: 'image/png'
+          },
+          buffer: cleanedBuffer
+        }
+      } catch (magickError) {
+        Logger.error('ImageMagick also failed - image may be corrupted beyond recovery', {
+          key,
+          sharpError: sharpError instanceof Error ? sharpError.message : String(sharpError),
+          magickError: magickError instanceof Error ? magickError.message : String(magickError)
+        })
+
+        throw new Error(`Failed to process selfie ${key}: ${magickError instanceof Error ? magickError.message : String(magickError)}`)
+      }
     }
   }
 

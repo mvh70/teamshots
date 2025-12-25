@@ -2,7 +2,7 @@
  * Tests for Dynamic Progress Tracking System
  */
 
-import { ProgressTracker, V3_WORKFLOW_STEPS, V1_WORKFLOW_STEPS } from './progress-tracker'
+import { ProgressTracker, V3_WORKFLOW_STEPS } from './progress-tracker'
 
 describe('ProgressTracker', () => {
   describe('Basic Sequential Flow', () => {
@@ -277,29 +277,6 @@ describe('ProgressTracker', () => {
     })
   })
 
-  describe('V1 Workflow Support', () => {
-    it('supports V1 workflow', () => {
-      const tracker = new ProgressTracker('v1')
-      
-      const progress = tracker.getProgress()
-      
-      expect(progress.totalSteps).toBe(V1_WORKFLOW_STEPS.length)
-    })
-
-    it('progresses through V1 steps', () => {
-      const tracker = new ProgressTracker('v1')
-      
-      tracker.startStep('v1-init')
-      tracker.completeStep('v1-init')
-      tracker.startStep('v1-preprocessing')
-      tracker.completeStep('v1-preprocessing')
-      
-      const progress = tracker.getProgress()
-      
-      expect(progress.completedSteps).toBe(2)
-      expect(progress.percentage).toBeGreaterThan(0)
-    })
-  })
 
   describe('Status Messages', () => {
     it('shows step name in status', () => {
@@ -412,11 +389,11 @@ describe('ProgressTracker', () => {
     })
 
     it('distributes progress fairly across equal-weight steps', () => {
-      const tracker = new ProgressTracker('v1') // V1 has more uniform weights
+      const tracker = new ProgressTracker('v3')
       
       const progressPerStep: number[] = []
       
-      for (const step of V1_WORKFLOW_STEPS) {
+      for (const step of V3_WORKFLOW_STEPS) {
         tracker.startStep(step.id)
         tracker.completeStep(step.id)
         progressPerStep.push(tracker.getProgress().percentage)

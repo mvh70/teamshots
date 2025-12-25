@@ -81,8 +81,9 @@ export const PACKAGES_CONFIG = {
     // } as PackageMetadata,
   },
   
-  // Default package for paid plans (free plans always use 'freepackage')
+  // Default package granted on signup (users "own" this but may be restricted to freepackage during trial)
   // Note: Domain-specific defaults are in landing-content.ts
+  // Runtime access control in actions.ts enforces freepackage for users on free trial
   defaultPlanPackage: 'headshot1' as const,
   
   // Package purchase prices (for future purchases)

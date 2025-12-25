@@ -18,7 +18,7 @@ export interface RegenerateOptions {
   personId: string
   userId?: string
   creditSource: 'individual' | 'team'
-  workflowVersion?: 'v1' | 'v2' | 'v3' // Workflow version to use (defaults to v3)
+  workflowVersion?: 'v3' // Workflow version to use (defaults to v3)
 }
 
 export interface RegenerationResult {

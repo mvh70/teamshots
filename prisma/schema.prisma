@@ -517,21 +517,6 @@ model Asset {
   @@index([expiresAt])
 }
 
-// ClothingOverlayCache: Cache pre-generated clothing overlays with logos
-model ClothingOverlayCache {
-  id        String   @id @default(cuid())
-  cacheKey  String   @unique
-  s3Key     String
-  logoKey   String?
-  style     String
-  detail    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([cacheKey])
-  @@index([logoKey, style, detail])
-}
-
 // GenerationCost: Track every AI API call for cost analysis and optimization
 model GenerationCost {
   id              String  @id @default(cuid())

@@ -5,9 +5,15 @@
  * Creates flat-lay product photography of garments with logos correctly positioned,
  * then uses these as visual templates during person generation.
  *
+ * Uses the Asset system for caching overlays:
+ * - Stores overlays as Asset records with type='intermediate', subType='clothing_overlay'
+ * - Uses StyleFingerprintService for deterministic cache keys
+ * - Tracks parent-child relationships via parentAssetIds (links to prepared logo Asset)
+ * - Enables cost tracking and reuse analytics
+ *
  * This element:
  * 1. Checks if clothing overlay is needed (branding on clothing enabled)
- * 2. Generates overlay in Step 0 (or loads from cache)
+ * 2. Generates overlay in Step 0 (or loads from Asset cache)
  * 3. Provides overlay as reference image in person-generation phase
  * 4. Coordinates with BrandingElement to avoid duplicate logo placement
  */
@@ -24,11 +30,12 @@ import { CostTrackingService } from '@/domain/services/CostTrackingService'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
 import { getS3BucketName } from '@/lib/s3-client'
-import { prisma } from '@/lib/prisma'
 import type { ClothingSettings, BrandingSettings } from '@/types/photo-style'
-import { createHash } from 'crypto'
 import { WARDROBE_DETAILS } from '../../clothing/config'
 import type { KnownClothingStyle } from '../../clothing/config'
+import { AssetService } from '@/domain/services/AssetService'
+import { StyleFingerprintService } from '@/domain/services/StyleFingerprintService'
+import type { Asset } from '@prisma/client'
 
 interface ClothingTemplate {
   description: string
@@ -94,14 +101,15 @@ export class ClothingOverlayElement extends StyleElement {
    * Prepare clothing overlay in Step 0
    *
    * This method:
-   * 1. Generates cache key from clothing + branding settings
-   * 2. Checks database for cached overlay
-   * 3. Downloads logo if needed
+   * 1. Generates fingerprint from clothing + branding settings + logo Asset ID
+   * 2. Checks Asset table for cached overlay using fingerprint
+   * 3. Gets prepared logo from BrandingElement
    * 4. Generates clothing overlay using Gemini (or loads from cache)
-   * 5. Saves overlay to S3 and database
+   * 5. Uploads overlay to S3 and creates Asset record
    * 6. Returns prepared asset for use in contribute()
    */
   async prepare(context: ElementContext): Promise<PreparedAsset> {
+    const startTime = Date.now()
     const { settings, generationContext } = context
     const clothing = settings.clothing!
     const branding = settings.branding!
@@ -117,6 +125,15 @@ export class ClothingOverlayElement extends StyleElement {
       throw new Error('ClothingOverlayElement.prepare(): downloadAsset and s3Client must be provided in generationContext')
     }
 
+    // Extract owner context for Asset creation
+    const teamId = generationContext.teamId as string | undefined
+    const personId = generationContext.personId as string | undefined
+    const ownerContext = { teamId, personId }
+
+    if (!teamId && !personId) {
+      throw new Error('ClothingOverlayElement.prepare(): Either teamId or personId must be provided in generationContext')
+    }
+
     const bucketName = getS3BucketName()
 
     Logger.info('[ClothingOverlayElement] Starting clothing overlay preparation', {
@@ -126,48 +143,77 @@ export class ClothingOverlayElement extends StyleElement {
       brandingPosition: branding.position,
     })
 
-    // 1. Generate cache key
-    const cacheKey = this.getCacheKey(clothing, branding)
-    Logger.debug('[ClothingOverlayElement] Generated cache key', {
-      cacheKey,
+    // Get prepared logo from BrandingElement (Step 0) - already has SVG conversion
+    const preparedLogo = generationContext.preparedAssets?.get('branding-logo')
+    if (!preparedLogo?.data.base64) {
+      throw new Error(
+        'ClothingOverlayElement.prepare(): Prepared logo asset not found. ' +
+        'BrandingElement must run before ClothingOverlayElement in Step 0.'
+      )
+    }
+
+    // Extract logo Asset ID from prepared branding metadata
+    const logoAssetId = preparedLogo.data.metadata?.assetId as string | undefined
+
+    // 1. Generate fingerprint using Asset-based approach
+    const clothingColors = settings.clothingColors?.colors
+    const fingerprint = this.getFingerprint(clothing, branding, logoAssetId, clothingColors)
+    Logger.debug('[ClothingOverlayElement] Generated fingerprint', {
+      fingerprint,
       generationId,
+      logoAssetId,
+      clothingColors,
     })
 
-    // 2. Check database cache
+    // 2. Check Asset table for cached overlay
     let overlayBase64: string | null = null
     let s3Key: string | null = null
     let fromCache = false
+    let reusedAsset: Asset | null = null
 
-    const cached = await this.loadCachedOverlay(cacheKey)
-    if (cached) {
-      Logger.info('[ClothingOverlayElement] Found cached overlay', {
-        cacheKey,
-        s3Key: cached.s3Key,
+    const cachedAsset = await this.findCachedOverlay(fingerprint, ownerContext)
+    if (cachedAsset) {
+      Logger.info('[ClothingOverlayElement] Found cached overlay Asset', {
+        fingerprint,
+        assetId: cachedAsset.id,
+        s3Key: cachedAsset.s3Key,
         generationId,
       })
 
       // Try to download cached overlay
       try {
-        const cachedAsset = await downloadAsset(cached.s3Key)
-        if (cachedAsset) {
-          overlayBase64 = cachedAsset.base64
-          s3Key = cached.s3Key
+        const downloadedOverlay = await downloadAsset(cachedAsset.s3Key)
+        if (downloadedOverlay) {
+          overlayBase64 = downloadedOverlay.base64
+          s3Key = cachedAsset.s3Key
           fromCache = true
+          reusedAsset = cachedAsset
+
           Logger.info('[ClothingOverlayElement] Using cached clothing overlay', {
-            cacheKey,
-            s3Key: cached.s3Key,
+            fingerprint,
+            assetId: cachedAsset.id,
+            s3Key: cachedAsset.s3Key,
             generationId,
+          })
+
+          // Track cost savings from reuse
+          await CostTrackingService.trackReuse({
+            generationId,
+            model: 'gemini-2.5-flash-image',
+            reason: 'clothing_overlay_creation',
+            reusedAssetId: cachedAsset.id,
           })
         } else {
           Logger.warn('[ClothingOverlayElement] Cached overlay not found in S3, will regenerate', {
-            cacheKey,
-            s3Key: cached.s3Key,
+            fingerprint,
+            assetId: cachedAsset.id,
+            s3Key: cachedAsset.s3Key,
             generationId,
           })
         }
       } catch (error) {
         Logger.warn('[ClothingOverlayElement] Failed to load cached overlay', {
-          cacheKey,
+          fingerprint,
           generationId,
           error: error instanceof Error ? error.message : String(error),
         })
@@ -176,15 +222,6 @@ export class ClothingOverlayElement extends StyleElement {
 
     // 3. Generate overlay if no cache
     if (!overlayBase64) {
-      // Get prepared logo from BrandingElement (Step 0) - already has SVG conversion
-      const preparedLogo = generationContext.preparedAssets?.get('branding-logo')
-      if (!preparedLogo?.data.base64) {
-        throw new Error(
-          'ClothingOverlayElement.prepare(): Prepared logo asset not found. ' +
-          'BrandingElement must run before ClothingOverlayElement in Step 0.'
-        )
-      }
-
       const logoData = {
         base64: preparedLogo.data.base64,
         mimeType: preparedLogo.data.mimeType || 'image/png'
@@ -193,6 +230,7 @@ export class ClothingOverlayElement extends StyleElement {
       Logger.info('[ClothingOverlayElement] Using prepared logo for overlay generation', {
         generationId,
         logoKey: preparedLogo.data.s3Key,
+        logoAssetId,
         mimeType: logoData.mimeType,
       })
 
@@ -202,22 +240,33 @@ export class ClothingOverlayElement extends StyleElement {
         branding,
         logoData,
         generationId,
+        clothingColors,
       })
 
       if (overlayResult.success) {
         overlayBase64 = overlayResult.data.base64
 
         // 4.5. Save to tmp for debugging
-        await this.saveTmpOverlay(overlayBase64, cacheKey, generationId)
+        await this.saveTmpOverlay(overlayBase64, fingerprint, generationId)
 
         // 5. Upload to S3
-        s3Key = await this.uploadOverlay(overlayBase64, cacheKey, s3Client, bucketName, generationId)
+        s3Key = await this.uploadOverlay(overlayBase64, fingerprint, s3Client, bucketName, generationId)
 
-        // 6. Save cache reference
-        await this.saveCacheReference(cacheKey, s3Key, clothing, branding)
+        // 6. Create Asset record
+        const overlayAsset = await this.createOverlayAsset({
+          s3Key,
+          fingerprint,
+          clothing,
+          branding,
+          logoAssetId,
+          ownerContext,
+          generationId,
+          clothingColors,
+        })
 
         Logger.info('[ClothingOverlayElement] Generated and cached new clothing overlay', {
-          cacheKey,
+          fingerprint,
+          assetId: overlayAsset.id,
           s3Key,
           generationId,
         })
@@ -227,6 +276,16 @@ export class ClothingOverlayElement extends StyleElement {
     }
 
     // 7. Return prepared asset
+    const expectedKey = `${this.id}-overlay`
+    Logger.info('[ClothingOverlayElement] Returning prepared overlay asset', {
+      generationId,
+      elementId: this.id,
+      assetType: 'overlay',
+      expectedKey,
+      fromCache,
+      s3Key,
+    })
+
     return {
       elementId: this.id,
       assetType: 'overlay',
@@ -237,8 +296,9 @@ export class ClothingOverlayElement extends StyleElement {
         metadata: {
           clothingStyle: `${clothing.style}-${clothing.details}`,
           brandingPosition: branding.position,
-          cacheKey,
+          fingerprint,
           fromCache,
+          reusedAssetId: reusedAsset?.id,
         },
       },
     }
@@ -252,60 +312,62 @@ export class ClothingOverlayElement extends StyleElement {
     const preparedAssets = context.generationContext.preparedAssets
     const overlay = preparedAssets?.get(`${this.id}-overlay`)
 
-    if (!overlay) {
-      Logger.error('[ClothingOverlayElement] No prepared overlay found - this should not happen!', {
+    // Always provide instructions/mustFollow (like CustomClothingElement does)
+    // Reference image is only added if overlay was successfully prepared
+    const mustFollow = [
+      'Use the clothing overlay as the PRIMARY reference for all garment styling and details.',
+      'Replicate the EXACT appearance of the clothing shown in the overlay - colors, patterns, logos, and all visible details are already correctly applied.',
+      'CRITICAL: The base layer garment in the overlay has a logo on it - preserve this logo exactly as shown when dressing the person.',
+      'When layering outer garments (jackets, blazers) over the base layer, it is NATURAL and EXPECTED for the outer layer to partially cover or obscure parts of the logo.',
+      'DO NOT attempt to move, relocate, or "save" the logo from being covered - realistic fabric layering means logos can be partially hidden by outer garments.',
+      'The logo belongs to the base layer fabric - let outer layers fall naturally over it as they would in real clothing.',
+      'Maintain the layering relationship shown in the overlay (base layer with logo underneath, outer layer on top with natural overlap).',
+      'The clothing in the overlay is complete and final - do not modify, reinterpret, or add any elements.',
+      'DO NOT use any other reference images for clothing, branding, or logo information - the overlay contains everything needed.',
+    ]
+
+    const freedom = [
+      'The clothing overlay shows ONLY the core garments in a flat-lay arrangement - it does NOT show the person.',
+      'All facial features and personal accessories (glasses, earrings, watches, jewelry) come from the SELFIE references, NOT from the clothing overlay.',
+      'If the selfies show the person wearing glasses, you MUST include those same glasses in the generated image.',
+    ]
+
+    const metadata: Record<string, unknown> = {
+      hasClothingOverlay: true,
+      suppressWardrobeBranding: true, // Don't add branding from wardrobe
+      suppressLogoReference: true, // Don't add separate logo reference
+    }
+
+    // Add reference image if overlay was successfully prepared (following CustomClothingElement pattern)
+    const referenceImages = []
+    if (overlay?.data.base64) {
+      referenceImages.push({
+        url: `data:${overlay.data.mimeType};base64,${overlay.data.base64}`,
+        description: 'CLOTHING TEMPLATE - Complete clothing reference showing all garments with accurate colors, patterns, branding, and styling. Use this as the definitive source for how the person should be dressed.',
+        type: 'clothing' as const,
+      })
+
+      metadata.overlayS3Key = overlay.data.s3Key
+      metadata.clothingStyle = overlay.data.metadata?.clothingStyle
+
+      Logger.info('[ClothingOverlayElement] Added clothing overlay to contribution', {
+        generationId: context.generationContext.generationId,
+        fromCache: overlay.data.metadata?.fromCache,
+      })
+    } else {
+      Logger.warn('[ClothingOverlayElement] No prepared overlay found, providing instructions without reference image', {
         generationId: context.generationContext.generationId,
         availableKeys: Array.from(preparedAssets?.keys() || []),
         expectedKey: `${this.id}-overlay`,
       })
-
-      // CRITICAL: Still set metadata to suppress branding even without overlay
-      // This prevents logo duplication if overlay preparation failed
-      return {
-        metadata: {
-          hasClothingOverlay: true, // Mark as handled to suppress BrandingElement
-          overlayMissing: true,     // Flag for debugging
-        },
-      }
+      metadata.overlayMissing = true
     }
 
-    Logger.info('[ClothingOverlayElement] Adding clothing overlay to contribution', {
-      generationId: context.generationContext.generationId,
-      fromCache: overlay.data.metadata?.fromCache,
-    })
-
-    // Add overlay as reference image
     return {
-      referenceImages: [
-        {
-          url: `data:${overlay.data.mimeType};base64,${overlay.data.base64}`,
-          description: 'CLOTHING OVERLAY - Use this as a visual template for clothing and logo placement. The logo is already correctly positioned on the base layer with proper layering shown.',
-          type: 'clothing' as const,
-        },
-      ],
-
-      mustFollow: [
-        'Use the clothing overlay as the PRIMARY reference for garment styling and logo placement.',
-        'The overlay shows the exact logo position on the base layer - replicate this on the person.',
-        'Maintain the layering relationship shown in the overlay (base layer with logo, outer layer on top).',
-        'The logo placement in the overlay is definitive - do not reinterpret or relocate it.',
-        'DO NOT apply the logo again from other reference images - the overlay already has the logo correctly placed.',
-        'Ignore any additional logo reference images or branding instructions - use ONLY the overlay for clothing and logo.',
-      ],
-
-      freedom: [
-        'The clothing overlay shows ONLY the core garments in a flat-lay arrangement - it does NOT show the person.',
-        'All facial features and personal accessories (glasses, earrings, watches, jewelry) come from the SELFIE references, NOT from the clothing overlay.',
-        'If the selfies show the person wearing glasses, you MUST include those same glasses in the generated image.',
-      ],
-
-      metadata: {
-        hasClothingOverlay: true,
-        overlayS3Key: overlay.data.s3Key,
-        clothingStyle: overlay.data.metadata?.clothingStyle,
-        suppressWardrobeBranding: true, // Don't add branding from wardrobe
-        suppressLogoReference: true, // Don't add separate logo reference
-      },
+      mustFollow,
+      freedom,
+      referenceImages,
+      metadata,
     }
   }
 
@@ -317,11 +379,12 @@ export class ClothingOverlayElement extends StyleElement {
     branding: BrandingSettings
     logoData: { base64: string; mimeType: string }
     generationId?: string
+    clothingColors?: { baseLayer?: string; topLayer?: string; bottom?: string; shoes?: string }
   }): Promise<
     | { success: true; data: { base64: string }; usage?: { inputTokens: number; outputTokens: number } }
     | { success: false; error: string; code?: string }
   > {
-    const { clothing, branding, logoData, generationId } = params
+    const { clothing, branding, logoData, generationId, clothingColors } = params
     const startTime = Date.now()
 
     try {
@@ -330,7 +393,7 @@ export class ClothingOverlayElement extends StyleElement {
       // Build prompt for clothing overlay generation
       // Get shot type from settings if available
       const shotType = (clothing as any).shotType || 'medium-shot'
-      const prompt = this.buildOverlayPrompt(clothing, branding, shotType)
+      const prompt = this.buildOverlayPrompt(clothing, branding, shotType, clothingColors)
 
       // Generate with Gemini
       const result = await generateWithGemini(
@@ -419,7 +482,12 @@ export class ClothingOverlayElement extends StyleElement {
   /**
    * Build prompt for overlay generation
    */
-  private buildOverlayPrompt(clothing: ClothingSettings, branding: BrandingSettings, shotType: string = 'medium-shot'): string {
+  private buildOverlayPrompt(
+    clothing: ClothingSettings,
+    branding: BrandingSettings,
+    shotType: string = 'medium-shot',
+    clothingColors?: { baseLayer?: string; topLayer?: string; bottom?: string; shoes?: string }
+  ): string {
     const styleKey = clothing.style as KnownClothingStyle
     const detailKey = clothing.details || 'default'
 
@@ -433,10 +501,12 @@ export class ClothingOverlayElement extends StyleElement {
     // Get clothing-specific template for logo placement
     const template = this.getClothingTemplate(`${styleKey}-${detailKey}`)
 
-    // Extract colors from clothing settings
-    const colors = clothing.colors || {}
+    // Extract colors from clothingColors parameter
+    const colors = clothingColors || {}
     const baseLayerColor = colors.baseLayer || '#FFFFFF'
     const topLayerColor = colors.topLayer || '#000000'
+    const bottomColor = colors.bottom || 'coordinating neutral color'
+    const shoesColor = colors.shoes
 
     // Determine what items to show based on shot type
     const showPants = shotType === 'medium-shot' || shotType === 'full-body'
@@ -459,64 +529,94 @@ export class ClothingOverlayElement extends StyleElement {
 
     if (showPants) {
       layerDescriptions.push(
-        `Pants: Professional ${styleKey === 'business' ? 'dress pants or trousers' : 'casual pants or chinos'} in coordinating neutral color`
+        `Pants: Professional ${styleKey === 'business' ? 'dress pants or trousers' : 'casual pants or chinos'} in ${bottomColor} color`
       )
     }
 
     if (showShoes) {
-      layerDescriptions.push(
-        `Shoes: ${styleKey === 'business' ? 'Professional dress shoes' : 'Clean casual shoes'}`
-      )
+      const shoesType = styleKey === 'business' ? 'Professional dress shoes' : 'Clean casual shoes'
+      const shoesDescription = shoesColor ? `${shoesType} in ${shoesColor} color` : shoesType
+      layerDescriptions.push(`Shoes: ${shoesDescription}`)
     }
 
     return `
-CREATE A CLOTHING OVERLAY WITH LOGO PLACEMENT:
+CREATE A PROFESSIONAL CLOTHING TEMPLATE WITH LOGO:
 
-You are creating a flat-lay product photograph showing SEPARATE clothing items arranged for a professional headshot.
+You are creating a standardized flat-lay photograph showing clothing items with a company logo.
 
-CLOTHING ITEMS TO SHOW (SEPARATELY, NOT WORN):
+CLOTHING ITEMS TO SHOW:
 ${layerDescriptions.map((layer, i) => `${i + 1}. ${layer}`).join('\n')}
 
-LAYOUT INSTRUCTIONS:
-- Disassemble the clothing into individual components
-- Arrange items in a clean, organized GRID or KNOLLING pattern on a neutral background (white or light gray)
-- Ensure even spacing and no overlaps between items
-- Each item must be clearly separated and laid flat
-- Add a subtle drop shadow to give depth
-- Label each item with a clean, sans-serif text label next to it (e.g., "Base Layer", "Outer Layer", "Pants")
-- Use professional product photography styling
-${showPants ? '- Include pants as a separate labeled item' : ''}
-${showShoes ? '- Include shoes as a separate labeled item' : ''}
+STANDARDIZED LAYOUT REQUIREMENTS:
+- Arrange items in a GRID layout on a clean white background with ALL items FULLY SEPARATED
+- CRITICAL: NO overlapping - each garment must be completely visible with clear space between items
+- Base layer garment in its own space, 100% visible with no obstructions
+- Outer layer (if present) in its own separate space, NOT touching or overlapping the base layer
+${showPants ? '- Pants in their own separate space below, NOT touching upper garments' : ''}
+${showShoes ? '- Shoes in their own separate space at the bottom, NOT touching other items' : ''}
+- Minimum 5cm spacing between ALL items - no parts of any garment should touch
+- All items laid perfectly flat, facing forward, symmetrical, fully spread out
+- Professional product catalog photography style showing each item individually
+- Soft, even studio lighting with minimal shadows
+- Each garment should be photographed as if it's a standalone product listing
 
-LOGO PLACEMENT:
-- Place the logo on: ${template.logoLayer}
-- Position: ${template.logoPosition}
-- The logo should look ${template.logoStyle} (embroidered/printed)
-- Logo must be centered and proportional on the specified garment
-- Logo is applied to the BASE LAYER garment only
+LOGO PLACEMENT - CRITICAL REQUIREMENTS:
+TARGET GARMENT: ${template.logoLayer}
+POSITION: ${template.logoPosition}
+STYLE: ${template.logoStyle}
+
+LOGO REPRODUCTION RULES (MUST FOLLOW EXACTLY):
+1. COPY the logo from the reference image with PERFECT ACCURACY - every letter, icon, and element must be included
+2. CRITICAL: Include EVERY letter and character visible in the logo - DO NOT skip or omit any text
+3. If the logo contains text, reproduce each letter individually and completely - check that all letters are present
+4. If the logo contains icons or graphics, reproduce every line, shape, and detail exactly
+5. DO NOT modify, stylize, or reinterpret the logo design in any way
+6. DO NOT alter logo colors - use the EXACT colors from the reference for each element
+7. DO NOT change logo proportions or aspect ratio
+8. The logo should appear ${template.logoStyle} on the fabric with all elements intact
+9. Size: The logo should be proportional (approx 8-12cm width on the garment)
+10. ONLY place the logo on the base layer garment - NEVER on outer layers
+11. The logo must be clearly visible and sharp with ALL text/graphics legible
+12. Before finalizing, verify that EVERY letter and element from the reference logo is present in your output
 
 COLOR ACCURACY:
-- Base layer MUST be ${baseLayerColor} color
-- Outer layer MUST be ${topLayerColor} color
-- Match the specified hex colors accurately
-- Maintain color consistency across the entire garment
+- Base layer: EXACTLY ${baseLayerColor} (match this hex code precisely)
+- Outer layer: EXACTLY ${topLayerColor} (match this hex code precisely)
+- DO NOT adjust or interpret these colors - use them as specified
+- Ensure color consistency across the entire garment surface
 
-CRITICAL REQUIREMENTS:
-- Clean product photography on neutral background (white or light grey)
-- Each garment shown separately and clearly
-- Logo integrated into the base layer garment only
-- Realistic fabric rendering with proper texture and depth
-- NO person wearing the clothes - just the clothing items laid flat
-- High contrast and sharp details
-- Professional studio lighting with soft shadows
+CRITICAL QUALITY STANDARDS:
+- Photorealistic fabric textures (cotton weave, wool texture, etc.)
+- Sharp focus on all garments, especially the logo area
+- Consistent, neutral white background (RGB 255,255,255)
+- No shadows or gradients on the background
+- Professional lighting that shows fabric detail without harsh shadows
+- The logo must be the EXACT same as the reference image
 
-OUTPUT:
-- PNG image showing clothing items laid out separately
-- Each item clearly visible and properly colored
-- Logo correctly positioned on base layer garment
-- Ready to use as visual reference for AI generation
+FORBIDDEN:
+- DO NOT add creative styling or artistic interpretation
+- DO NOT modify the logo design in any way
+- DO NOT add text labels or annotations
+- DO NOT show a person wearing the clothes
+- DO NOT use colored or patterned backgrounds
+- DO NOT overlap or layer garments on top of each other
+- DO NOT arrange items in a way that hides any part of any garment
+- DO NOT create an artistic composition - this is a technical product reference
 
-Use the attached logo reference image for exact logo colors and design.
+OUTPUT SPECIFICATIONS:
+- PNG image with white background
+- All items clearly visible and properly colored
+- Logo EXACTLY matching the reference image with ALL letters and elements present, correctly positioned on base layer
+- Ready for use as a template in AI generation
+
+LOGO REFERENCE: Use the attached logo image as your ONLY source for logo design, colors, and proportions. Copy it EXACTLY with every single letter, character, icon, and graphic element included.
+
+FINAL VERIFICATION BEFORE OUTPUT:
+1. Compare your generated logo against the reference image
+2. Count the letters/characters in the reference and verify your output has the same count
+3. Check that every icon, line, and graphic element from the reference is present
+4. Confirm all colors match the reference exactly
+5. Only output the image once you've verified 100% accuracy
 `.trim()
   }
 
@@ -685,54 +785,55 @@ Use the attached logo reference image for exact logo colors and design.
   }
 
   /**
-   * Generate cache key from clothing and branding settings
-   * Version 2: Now includes colors and uses wardrobe config
+   * Generate fingerprint from clothing and branding settings
+   * Uses StyleFingerprintService for deterministic hashing
    */
-  private getCacheKey(clothing: ClothingSettings, branding: BrandingSettings): string {
-    const logoHash = this.hashLogoKey(branding.logoKey || '')
+  private getFingerprint(
+    clothing: ClothingSettings,
+    branding: BrandingSettings,
+    logoAssetId?: string,
+    clothingColors?: { baseLayer?: string; topLayer?: string; bottom?: string; shoes?: string }
+  ): string {
+    const colors = clothingColors || {}
+    const baseColor = (colors.baseLayer || '#FFFFFF').toLowerCase()
+    const topColor = (colors.topLayer || '#000000').toLowerCase()
+    const bottomColor = (colors.bottom || 'neutral').toLowerCase()
+    const shoesColor = (colors.shoes || 'default').toLowerCase()
 
-    // Include colors in cache key
-    const colors = clothing.colors || {}
-    const baseColor = (colors.baseLayer || '#FFFFFF').replace('#', '')
-    const topColor = (colors.topLayer || '#000000').replace('#', '')
+    const styleParams = {
+      clothingStyle: clothing.style,
+      clothingDetails: clothing.details || 'default',
+      brandingPosition: branding.position,
+      baseLayerColor: baseColor,
+      topLayerColor: topColor,
+      bottomColor: bottomColor,
+      shoesColor: shoesColor,
+    }
 
-    const parts = [
-      'clothing-overlay',
-      'v2', // Version bump for new prompt format
-      clothing.style,
-      clothing.details,
-      branding.position,
-      logoHash,
-      baseColor,
-      topColor,
-    ]
+    const parentIds = logoAssetId ? [logoAssetId] : []
 
-    return parts.join('-')
+    return StyleFingerprintService.createFingerprint(
+      parentIds,
+      styleParams,
+      'clothing_overlay'
+    )
   }
 
   /**
-   * Hash logo key for cache key generation
+   * Find cached overlay from Asset table
    */
-  private hashLogoKey(logoKey: string): string {
-    if (!logoKey) return 'no-logo'
-    // Use first 8 characters of SHA256 hash for consistency
-    return createHash('sha256').update(logoKey).digest('hex').substring(0, 8)
-  }
-
-  /**
-   * Load cached overlay from database
-   */
-  private async loadCachedOverlay(cacheKey: string): Promise<{ s3Key: string } | null> {
+  private async findCachedOverlay(
+    fingerprint: string,
+    ownerContext: { teamId?: string; personId?: string }
+  ): Promise<Asset | null> {
     try {
-      const cached = await prisma.clothingOverlayCache.findUnique({
-        where: { cacheKey },
-        select: { s3Key: true },
-      })
-
-      return cached
+      const result = await AssetService.findReusableAsset(fingerprint, ownerContext)
+      if (!result) return null
+      
+      return result as unknown as Asset
     } catch (error) {
-      Logger.warn('[ClothingOverlayElement] Failed to load cached overlay', {
-        cacheKey,
+      Logger.warn('[ClothingOverlayElement] Failed to find cached overlay', {
+        fingerprint,
         error: error instanceof Error ? error.message : String(error),
       })
       return null
@@ -744,7 +845,7 @@ Use the attached logo reference image for exact logo colors and design.
    */
   private async saveTmpOverlay(
     overlayBase64: string,
-    cacheKey: string,
+    fingerprint: string,
     generationId: string
   ): Promise<void> {
     try {
@@ -755,13 +856,15 @@ Use the attached logo reference image for exact logo colors and design.
       await fs.mkdir(tmpDir, { recursive: true })
 
       const overlayBuffer = Buffer.from(overlayBase64, 'base64')
-      const filename = `${generationId}-overlay-${cacheKey}.png`
+      // Use first 8 chars of fingerprint for filename brevity
+      const fingerprintShort = fingerprint.substring(0, 8)
+      const filename = `${generationId}-overlay-${fingerprintShort}.png`
       await fs.writeFile(path.join(tmpDir, filename), overlayBuffer)
 
       Logger.info('[ClothingOverlayElement] Saved overlay to tmp folder', {
         path: `tmp/collages/${filename}`,
         generationId,
-        cacheKey,
+        fingerprint,
       })
     } catch (error) {
       Logger.warn('[ClothingOverlayElement] Failed to save overlay to tmp folder', {
@@ -777,14 +880,16 @@ Use the attached logo reference image for exact logo colors and design.
    */
   private async uploadOverlay(
     overlayBase64: string,
-    cacheKey: string,
+    fingerprint: string,
     s3Client: S3Client,
     bucketName: string,
     generationId: string
   ): Promise<string> {
     try {
       const overlayBuffer = Buffer.from(overlayBase64, 'base64')
-      const s3Key = `clothing-overlays/${cacheKey}-${Date.now()}.png`
+      // Use first 12 chars of fingerprint for S3 key
+      const fingerprintShort = fingerprint.substring(0, 12)
+      const s3Key = `clothing-overlays/${fingerprintShort}-${Date.now()}.png`
 
       await s3Client.send(
         new PutObjectCommand({
@@ -798,6 +903,7 @@ Use the attached logo reference image for exact logo colors and design.
       Logger.info('[ClothingOverlayElement] Uploaded overlay to S3', {
         s3Key,
         generationId,
+        fingerprint,
       })
 
       return s3Key
@@ -811,40 +917,57 @@ Use the attached logo reference image for exact logo colors and design.
   }
 
   /**
-   * Save cache reference to database
+   * Create overlay Asset record
    */
-  private async saveCacheReference(
-    cacheKey: string,
-    s3Key: string,
-    clothing: ClothingSettings,
+  private async createOverlayAsset(params: {
+    s3Key: string
+    fingerprint: string
+    clothing: ClothingSettings
     branding: BrandingSettings
-  ): Promise<void> {
-    try {
-      await prisma.clothingOverlayCache.upsert({
-        where: { cacheKey },
-        update: {
-          s3Key,
-          updatedAt: new Date(),
-        },
-        create: {
-          cacheKey,
-          s3Key,
-          logoKey: branding.logoKey || null,
-          style: clothing.style,
-          detail: clothing.details || 'default',
-        },
-      })
+    logoAssetId?: string
+    ownerContext: { teamId?: string; personId?: string }
+    generationId?: string
+    clothingColors?: { baseLayer?: string; topLayer?: string; bottom?: string; shoes?: string }
+  }): Promise<Asset> {
+    const { s3Key, fingerprint, clothing, branding, logoAssetId, ownerContext, generationId, clothingColors } = params
 
-      Logger.info('[ClothingOverlayElement] Saved cache reference to database', {
-        cacheKey,
-        s3Key,
-      })
-    } catch (error) {
-      Logger.warn('[ClothingOverlayElement] Failed to save cache reference', {
-        cacheKey,
-        error: error instanceof Error ? error.message : String(error),
-      })
+    const colors = clothingColors || {}
+    const styleContext = {
+      clothingStyle: clothing.style,
+      clothingDetails: clothing.details || 'default',
+      brandingPosition: branding.position,
+      baseLayerColor: colors.baseLayer || '#FFFFFF',
+      topLayerColor: colors.topLayer || '#000000',
+      bottomColor: colors.bottom || 'neutral',
+      shoesColor: colors.shoes || 'default',
+      logoKey: branding.logoKey,
+      step: 'clothing_overlay',
+      generationId,
     }
+
+    const asset = await AssetService.createAsset({
+      s3Key,
+      type: 'intermediate',
+      subType: 'clothing_overlay',
+      mimeType: 'image/png',
+      ownerType: ownerContext.teamId ? 'team' : 'person',
+      teamId: ownerContext.teamId,
+      personId: ownerContext.personId,
+      parentAssetIds: logoAssetId ? [logoAssetId] : [],
+      styleFingerprint: fingerprint,
+      styleContext,
+      temporary: false,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    })
+
+    Logger.info('[ClothingOverlayElement] Created overlay Asset record', {
+      assetId: asset.id,
+      fingerprint,
+      s3Key,
+      generationId,
+    })
+
+    return asset as unknown as Asset
   }
 
   /**

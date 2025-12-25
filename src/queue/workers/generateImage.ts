@@ -35,10 +35,7 @@ import type { AspectRatioId } from '@/domain/style/elements/aspect-ratio/config'
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import { extractPackageId } from '@/domain/style/settings-resolver'
 import { getServerPackageConfig } from '@/domain/style/packages/server'
-import { generateWithGemini } from './generate-image/gemini'
-import { evaluateGeneratedImage } from './generate-image/evaluator'
 import type { ImageEvaluationResult } from './generate-image/evaluator'
-import { executeV2Workflow } from './generate-image/workflow-v2'
 import { executeV3Workflow } from './generate-image/workflow-v3'
 import { EvaluationFailedError } from './generate-image/errors'
 import {
@@ -48,9 +45,6 @@ import {
 } from './generate-image/s3-utils'
 import type { V3WorkflowState, PersistedImageReference } from '@/types/workflow'
 import { getWorkflowState, setWorkflowState } from './generate-image/utils/workflow-state'
-
-const USE_COMPOSITE_REFERENCE = Env.boolean('USE_COMPOSITE_REFERENCE', true)
-const SKIP_GEMINI_PROMPT = Env.boolean('SKIP_GEMINI_PROMPT', false)
 
 const s3Client = createS3Client({ forcePathStyle: false })
 const BUCKET_NAME = getS3BucketName()
@@ -323,8 +317,8 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         throw new Error('At least one selfieS3Key is required')
       }
 
-      // Determine workflow version (defaults to v3)
-      const workflowVersion = (providerOptions?.workflowVersion as 'v1' | 'v2' | 'v3' | undefined) || 'v3'
+      // V3 is the only supported workflow version
+      const workflowVersion = 'v3'
 
       // Centralized selfie preparation (download, rotate, normalize)
       const { selfieReferences, processedSelfies } = await prepareSelfies({
@@ -388,7 +382,6 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           selfieKeys: providedKeys,
           processedSelfies,
           options: {
-            useCompositeReference: USE_COMPOSITE_REFERENCE,
             workflowVersion
           }
         })
@@ -449,8 +442,8 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
 
       let approvedImageBuffers: Buffer[] | undefined
 
-      if (workflowVersion === 'v3') {
-        try {
+      // V3 is the only supported workflow
+      try {
           const v3SelfieReferences = selfieReferences.map((ref, index) => ({
             label: ref.label || `SELFIE${index + 1}`,
             base64: ref.base64,
@@ -542,345 +535,6 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           })
           throw error
         }
-      } else if (workflowVersion === 'v2') {
-        Logger.info('Using V2 workflow for image generation', { generationId })
-
-        try {
-          // For V2 workflow, we need to modify the selfie references to exclude logos
-          // The V2 workflow handles logos separately in Step 2
-          const v2SelfieReferences = selfieReferences.map((ref, index) => ({
-            label: ref.label || `SELFIE${index + 1}`, // Provide default label if missing
-            base64: ref.base64,
-            mimeType: ref.mimeType
-          }))
-
-          const v2Result = await executeV2Workflow({
-            job,
-            generationId,
-            personId,
-            userId,
-            selfieReferences: v2SelfieReferences,
-            styleSettings: mergedStyleSettings,
-            prompt: basePrompt, // Use base prompt without label instructions for V2
-            aspectRatio: aspectRatioFromPayload,
-            resolution: undefined, // V2 workflow handles resolution internally
-            downloadAsset: (key) => downloadAssetAsBase64({ bucketName: BUCKET_NAME, s3Client, key }),
-            currentAttempt,
-            maxAttempts,
-            debugMode: providerOptions?.debugMode === true
-          })
-
-          approvedImageBuffers = v2Result.approvedImageBuffers
-
-        } catch (error) {
-          Logger.error('V2 workflow failed', {
-            generationId,
-            error: error instanceof Error ? error.message : String(error)
-          })
-          throw error
-        }
-
-      } else {
-        // Original V1 workflow
-        if (SKIP_GEMINI_PROMPT) {
-        Logger.warn('SKIP_GEMINI_PROMPT enabled – skipping Gemini call and returning prompt only')
-
-        await prisma.generation.update({
-          where: { id: generationId },
-          data: {
-            status: 'completed',
-            generatedPhotoKeys: [],
-            provider: 'debug-skip',
-            completedAt: new Date(),
-            updatedAt: new Date()
-          }
-        })
-
-        await job.updateProgress({
-          progress: 100,
-          message: formatProgress({
-            message: 'Prompt logged for inspection',
-            emoji: '📝'
-          }, 100)
-        })
-
-        return {
-          success: true,
-          generationId,
-          imageKeys: [],
-          cost: undefined
-        }
-      }
-
-      const resolvedAspectRatioId =
-        (aspectRatioFromPayload as AspectRatioId | undefined) ?? (DEFAULT_ASPECT_RATIO.id as AspectRatioId)
-      const aspectRatioConfig =
-        ASPECT_RATIOS[resolvedAspectRatioId] ?? DEFAULT_ASPECT_RATIO
-
-      // Extract resolution from providerOptions or environment variable
-      const resolution = (providerOptions?.resolution as '1K' | '2K' | '4K' | undefined) ||
-        (Env.string('GEMINI_IMAGE_RESOLUTION', '') as '1K' | '2K' | '4K' | undefined) ||
-        undefined
-
-      const MAX_LOCAL_GENERATION_ATTEMPTS = 2
-      let localAttempt = 0
-      let approvedImageBuffers: Buffer[] | null = null
-      const compositeReference = referenceImages.find((reference) =>
-        reference.description?.toLowerCase().includes('composite')
-      )
-      const logoReference = referenceImages.find((reference) =>
-        reference.description?.toLowerCase().includes('logo')
-      )
-      const backgroundReference = referenceImages.find((reference) =>
-        reference.description?.toLowerCase().includes('background')
-      )
-
-      while (localAttempt < MAX_LOCAL_GENERATION_ATTEMPTS) {
-        // Use shared retry handler for rate limit retries
-        const generatedBuffers = await executeWithRateLimitRetry(
-          async () => {
-            const buffers = await generateWithGemini(finalPrompt, referenceImages, aspectRatioFromPayload, resolution)
-            
-            // Check for model not found error after generation
-            if (!buffers || !buffers.images || buffers.images.length === 0) {
-              throw new Error('AI generation returned no images')
-            }
-            
-            return buffers.images
-          },
-          {
-            maxRetries: MAX_RATE_LIMIT_RETRIES,
-            sleepMs: RATE_LIMIT_SLEEP_MS,
-            operationName: 'V1 Gemini generation'
-          },
-          createProgressRetryCallback(job, 55)
-        ).catch((error) => {
-          // Handle model not found error specifically
-          if (isModelNotFoundError(error)) {
-            Logger.error('Gemini model not found for generation', {
-              generationId,
-              model: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
-            })
-            job.updateProgress({
-              progress: 55,
-              message: formatProgress({
-                message: 'Gemini model configuration error. Please verify GEMINI_IMAGE_MODEL or Vertex AI access.',
-                emoji: '⚠️'
-              }, 55)
-            }).catch(() => {}) // Ignore progress update errors
-          }
-          throw error
-        })
-
-        await job.updateProgress({
-          progress: 60,
-          message: formatProgress(getProgressMessage(), 60)
-        })
-
-        const processedVariants = await Promise.all(
-          generatedBuffers.map(async (buffer) => {
-            const metadata = await sharp(buffer).metadata()
-            const pngBuffer = await sharp(buffer).png().toBuffer()
-            return {
-              buffer: pngBuffer,
-              base64: pngBuffer.toString('base64'),
-              width: metadata.width ?? null,
-              height: metadata.height ?? null
-            }
-          })
-        )
-
-        const attemptIndex = localAttempt + 1
-        const evaluations: ImageEvaluationResult[] = []
-        let allApproved = true
-
-        await job.updateProgress({
-          progress: 65,
-          message: formatProgress({
-            message: 'Running automated quality check',
-            emoji: '🔍'
-          }, 65)
-        })
-
-        for (let index = 0; index < processedVariants.length; index += 1) {
-          const variant = processedVariants[index]
-          const evaluation = await evaluateGeneratedImage({
-            imageBase64: variant.base64,
-            imageIndex: index,
-            actualWidth: variant.width,
-            actualHeight: variant.height,
-            expectedWidth: aspectRatioConfig.width,
-            expectedHeight: aspectRatioConfig.height,
-            aspectRatioId: aspectRatioConfig.id,
-            aspectRatioDescription,
-            shotLabel,
-            shotDescription,
-            generationPrompt: finalPrompt,
-            labelInstruction,
-            selfieReferences,
-            compositeReference: compositeReference
-              ? {
-                  base64: compositeReference.base64,
-                  mimeType: compositeReference.mimeType,
-                  description: compositeReference.description
-                }
-              : undefined,
-            logoReference: logoReference
-              ? {
-                  base64: logoReference.base64,
-                  mimeType: logoReference.mimeType,
-                  description: logoReference.description
-                }
-              : undefined,
-            backgroundReference: backgroundReference
-              ? {
-                  base64: backgroundReference.base64,
-                  mimeType: backgroundReference.mimeType,
-                  description: backgroundReference.description
-                }
-              : undefined
-          })
-          evaluations.push(evaluation)
-          if (evaluation.status !== 'Approved') {
-            allApproved = false
-          }
-        }
-
-        Logger.info('Gemini evaluation results', {
-          generationId,
-          attempt: attemptIndex,
-          evaluations: evaluations.map((result, idx) => ({
-            variation: idx + 1,
-            status: result.status,
-            reasonPreview: result.reason.slice(0, 200),
-            details: result.details
-          }))
-        })
-
-        if (allApproved) {
-          await job.updateProgress({
-            progress: 70,
-            message: formatProgress({
-              message: 'Image approved! Finalizing delivery',
-              emoji: '✅'
-            }, 70)
-          })
-          approvedImageBuffers = processedVariants.map((item) => item.buffer)
-          break
-        }
-
-        await notifyEvaluationFailure({
-          generationId,
-          personId,
-          userId,
-          jobId: job.id,
-          attempt: attemptIndex,
-          evaluations,
-          aspectRatioDescription,
-          shotLabel,
-          imageBase64: processedVariants.map((item) => item.base64)
-        })
-
-        localAttempt += 1
-        if (localAttempt >= MAX_LOCAL_GENERATION_ATTEMPTS) {
-          throw new Error('Generated images failed automated evaluation')
-        }
-
-        await job.updateProgress({
-          progress: 60,
-          message: formatProgress({
-            message: 'Image not approved. Regenerating another version for free...',
-            emoji: '♻️'
-          }, 60)
-        })
-
-        Logger.warn('Retrying Gemini image generation after QA rejection', {
-          generationId,
-          nextAttempt: localAttempt + 1
-        })
-      }
-
-      if (!approvedImageBuffers || approvedImageBuffers.length === 0) {
-        throw new Error('Generated images could not be approved after evaluation retries')
-      }
-      } // End of original V1 workflow
-
-      // Run final evaluation on V2 output if using V2 workflow
-      // Note: V3 has its own evaluation in Step 4, so we skip this for V3
-      if (workflowVersion === 'v2' && approvedImageBuffers && approvedImageBuffers.length > 0) {
-        const resolvedAspectRatioId =
-          (aspectRatioFromPayload as AspectRatioId | undefined) ?? (DEFAULT_ASPECT_RATIO.id as AspectRatioId)
-        const aspectRatioConfig =
-          ASPECT_RATIOS[resolvedAspectRatioId] ?? DEFAULT_ASPECT_RATIO
-
-        const processedVariants = await Promise.all(
-          approvedImageBuffers.map(async (buffer: Buffer, index: number) => {
-            const metadata = await sharp(buffer).metadata()
-            const pngBuffer = await sharp(buffer).png().toBuffer()
-            return {
-              buffer: pngBuffer,
-              base64: pngBuffer.toString('base64'),
-              width: metadata.width ?? null,
-              height: metadata.height ?? null,
-              index
-            }
-          })
-        )
-
-        // Use simplified evaluation for V2 (no complex references needed)
-        const evaluations: ImageEvaluationResult[] = []
-        let allApproved = true
-
-        await job.updateProgress({
-          progress: 95,
-          message: formatProgress({
-            message: 'Running final quality check',
-            emoji: '🔍'
-          }, 95)
-        })
-
-        for (let index = 0; index < processedVariants.length; index += 1) {
-          const variant = processedVariants[index]
-          const evaluation = await evaluateGeneratedImage({
-            imageBase64: variant.base64,
-            imageIndex: index,
-            actualWidth: variant.width,
-            actualHeight: variant.height,
-            expectedWidth: aspectRatioConfig.width,
-            expectedHeight: aspectRatioConfig.height,
-            aspectRatioId: aspectRatioConfig.id,
-            aspectRatioDescription,
-            shotLabel,
-            shotDescription,
-            generationPrompt: finalPrompt,
-            labelInstruction,
-            selfieReferences,
-            compositeReference: undefined, // V2 doesn't use composite references
-            logoReference: undefined, // V2 handles branding separately
-            backgroundReference: undefined // V2 handles background separately
-          })
-          evaluations.push(evaluation)
-          if (evaluation.status !== 'Approved') {
-            allApproved = false
-          }
-        }
-
-        if (!allApproved) {
-          Logger.warn('V2 final output failed evaluation', {
-            generationId,
-            evaluations: evaluations.map((result, idx) => ({
-              variation: idx + 1,
-              status: result.status,
-              reasonPreview: result.reason.slice(0, 200)
-            }))
-          })
-          // For V2, if final evaluation fails, we still proceed but log the issue
-          // This maintains backward compatibility while allowing V2 workflow to complete
-          Logger.info('V2 workflow completed despite evaluation concerns', { generationId })
-        } else {
-          Logger.info('V2 final evaluation passed', { generationId })
-        }
-      }
 
       // Upload generated images to S3
       const generatedImageKeys = await uploadGeneratedImagesToS3({

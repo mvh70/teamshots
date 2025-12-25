@@ -45,7 +45,7 @@ import type { Job } from 'bullmq'
 import type { PhotoStyleSettings } from './photo-style'
 
 // Workflow Version
-export type WorkflowVersion = 'v1' | 'v2' | 'v3'
+export type WorkflowVersion = 'v3'
 
 // Unified Reference Image Type
 export interface ReferenceImage {

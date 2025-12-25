@@ -22,6 +22,10 @@ import { generateBrandingPrompt } from '../../branding/prompt'
 import type { KnownClothingStyle } from '../../clothing/config'
 import { Logger } from '@/lib/logger'
 import sharp from 'sharp'
+import { AssetService } from '@/domain/services/AssetService'
+import { PutObjectCommand } from '@aws-sdk/client-s3'
+import type { S3Client } from '@aws-sdk/client-s3'
+import { getS3BucketName } from '@/lib/s3-client'
 
 export class BrandingElement extends StyleElement {
   readonly id = 'branding'
@@ -109,6 +113,19 @@ export class BrandingElement extends StyleElement {
       throw new Error('BrandingElement.prepare(): downloadAsset must be provided in generationContext')
     }
 
+    // Extract s3Client and owner context for Asset creation
+    const s3Client = generationContext.s3Client as S3Client | undefined
+    const teamId = generationContext.teamId as string | undefined
+    const personId = generationContext.personId as string | undefined
+
+    if (!s3Client) {
+      throw new Error('BrandingElement.prepare(): s3Client must be provided in generationContext')
+    }
+
+    if (!teamId && !personId) {
+      throw new Error('BrandingElement.prepare(): Either teamId or personId must be provided in generationContext')
+    }
+
     const logoKey = branding.logoKey || branding.logoAssetId
     if (!logoKey) {
       throw new Error('BrandingElement.prepare(): No logo key or asset ID provided')
@@ -182,18 +199,81 @@ export class BrandingElement extends StyleElement {
       }
     }
 
-    // Return prepared asset
-    return {
-      elementId: this.id,
-      assetType: 'logo',
-      data: {
-        base64: finalBase64,
+    // Upload prepared logo to S3 and create Asset record
+    const bucketName = getS3BucketName()
+    const preparedLogoS3Key = `prepared-logos/${generationId}-${Date.now()}.png`
+
+    Logger.info('[BrandingElement] Uploading prepared logo to S3', {
+      generationId,
+      s3Key: preparedLogoS3Key,
+      originalLogoKey: logoKey,
+    })
+
+    try {
+      // Upload to S3
+      const preparedLogoBuffer = Buffer.from(finalBase64, 'base64')
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: bucketName,
+          Key: preparedLogoS3Key,
+          Body: preparedLogoBuffer,
+          ContentType: finalMimeType,
+        })
+      )
+
+      Logger.info('[BrandingElement] Prepared logo uploaded to S3 successfully', {
+        generationId,
+        s3Key: preparedLogoS3Key,
+      })
+
+      // Create Asset record
+      const logoAsset = await AssetService.createAsset({
+        s3Key: preparedLogoS3Key,
+        type: 'intermediate',
+        subType: 'prepared_logo',
         mimeType: finalMimeType,
-        s3Key: logoKey,
-        metadata: {
-          position: branding.position,
+        ownerType: teamId ? 'team' : 'person',
+        teamId,
+        personId,
+        parentAssetIds: [], // Original logo might not be in Asset table
+        styleFingerprint: undefined, // No fingerprint needed for prepared logos
+        styleContext: {
+          originalLogoKey: logoKey,
+          brandingPosition: branding.position,
+          generationId,
+          step: 'logo_preparation',
         },
-      },
+        temporary: false, // Keep for potential reuse
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      })
+
+      Logger.info('[BrandingElement] Created Asset record for prepared logo', {
+        generationId,
+        assetId: logoAsset.id,
+        s3Key: preparedLogoS3Key,
+      })
+
+      // Return prepared asset with Asset ID in metadata
+      return {
+        elementId: this.id,
+        assetType: 'logo',
+        data: {
+          base64: finalBase64,
+          mimeType: finalMimeType,
+          s3Key: logoKey, // Keep original logo key for reference
+          metadata: {
+            position: branding.position,
+            assetId: logoAsset.id, // Include Asset ID for ClothingOverlayElement
+            preparedLogoS3Key, // Include prepared logo S3 key
+          },
+        },
+      }
+    } catch (error) {
+      Logger.error('[BrandingElement] Failed to upload prepared logo or create Asset', {
+        generationId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw new Error(`BrandingElement.prepare(): Failed to persist prepared logo: ${error}`)
     }
   }
 
@@ -230,15 +310,16 @@ export class BrandingElement extends StyleElement {
       return {}
     }
 
-    // Check if clothing overlay SUCCESSFULLY prepared an overlay
-    // (not just registered, but actually has a prepared asset)
-    const overlayAsset = context.generationContext.preparedAssets?.get('clothing-overlay-overlay')
-    const hasSuccessfulOverlay = !!overlayAsset?.data.base64
+    // CRITICAL: Check if ClothingOverlayElement is handling branding
+    // If overlay exists in contributions, it means clothing overlay is active and handling logo
+    const hasClothingOverlay = context.existingContributions.some(
+      (c) => c.metadata?.hasClothingOverlay === true
+    )
 
-    if (hasSuccessfulOverlay) {
-      Logger.info('[BrandingElement] Clothing overlay succeeded, skipping direct logo contribution', {
+    if (hasClothingOverlay) {
+      // ClothingOverlayElement is handling branding - skip all branding instructions
+      Logger.info('[BrandingElement] Clothing overlay is handling branding, skipping all direct logo contributions and instructions', {
         generationId: context.generationContext.generationId,
-        overlayS3Key: overlayAsset.data.s3Key,
       })
       return {
         metadata: {
@@ -246,11 +327,6 @@ export class BrandingElement extends StyleElement {
           position: 'clothing',
         },
       }
-    } else if (context.existingContributions.some((c) => c.metadata?.hasClothingOverlay === true)) {
-      // Overlay was attempted but failed - fall through to use direct logo
-      Logger.warn('[BrandingElement] Clothing overlay attempted but failed, using direct logo contribution', {
-        generationId: context.generationContext.generationId,
-      })
     }
 
     // Read clothing data from accumulated payload for branding placement logic

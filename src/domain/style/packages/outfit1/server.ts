@@ -10,7 +10,6 @@ import { downloadAssetAsBase64 } from '@/queue/workers/generate-image/s3-utils'
 import { getS3BucketName, createS3Client } from '@/lib/s3-client'
 import { compositionRegistry } from '../../elements/composition'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
-import { isFeatureEnabled } from '@/config/feature-flags'
 import { CostTrackingService } from '@/domain/services/CostTrackingService'
 
 import type { ServerStylePackage, PackageMetadata, PackageCapabilities } from '../types'
@@ -30,7 +29,7 @@ const outfit1Metadata: PackageMetadata = {
     supportsCustomClothing: true,
     supportsBranding: true,
     supportsCustomBackgrounds: true,
-    supportedWorkflowVersions: ['v2', 'v3'],
+    supportedWorkflowVersions: ['v3'],
     supportsPose: true,
     supportsExpression: true,
     supportsAspectRatio: true,
@@ -145,21 +144,15 @@ export const outfit1Server: Outfit1ServerPackage = {
       return buffer
     }
 
-    const shouldUseComposite: boolean =
-      options.workflowVersion === 'v3' ||
-      (options.useCompositeReference &&
-        (styleSettings.background?.type === 'custom' ||
-          (styleSettings.branding?.type !== 'exclude' && Boolean(styleSettings.branding?.logoKey))))
-
+    // V3 workflow always uses composite reference
     const bucketName = getS3BucketName()
     const s3Client = createS3Client({ forcePathStyle: false })
-
+    
     const payload = await buildDefaultReferencePayload({
       styleSettings: effectiveSettings,
       selfieKeys,
       getSelfieBuffer,
       downloadAsset: (key) => downloadAssetAsBase64({ bucketName, s3Client, key }),
-      useCompositeReference: shouldUseComposite,
       generationId,
       shotDescription: shotText,
       aspectRatioDescription,
@@ -171,9 +164,6 @@ export const outfit1Server: Outfit1ServerPackage = {
 
     // Build context to get rules (same logic as buildPrompt but we need the context)
     // Use element composition system to build payload
-    if (!isFeatureEnabled('elementComposition')) {
-      throw new Error('Element composition system is required but not enabled')
-    }
 
     const elementContext = {
       phase: 'person-generation' as const,
@@ -208,8 +198,8 @@ export const outfit1Server: Outfit1ServerPackage = {
 /**
  * Create garment collage using Gemini
  *
- * LEGACY: For v2 and earlier workflows only.
- * v3 workflow uses CustomClothingElement.prepare() in step 0 preparation phase.
+ * LEGACY: This function is no longer used.
+ * V3 workflow uses CustomClothingElement.prepare() in step 0 preparation phase.
  */
 async function createGarmentCollage(
   outfitImageBase64: string,

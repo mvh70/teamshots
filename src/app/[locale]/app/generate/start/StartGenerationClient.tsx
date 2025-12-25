@@ -290,7 +290,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
         styleSettings: { ...photoStyleSettings, packageId },
         prompt: activeContext?.customPrompt || 'Professional headshot',
         selfieIds: selectedSelfies.map(s => s.id),
-        // Debug flags (workflow version is controlled by GENERATION_WORKFLOW_VERSION env var on server)
+        // Debug flags
         debugMode: process.env.NODE_ENV !== 'production', // Enable debug mode only in development (logs prompts, saves intermediate files)
         // stopAfterStep removed - full flow will now execute
       }

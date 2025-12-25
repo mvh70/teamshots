@@ -22,8 +22,7 @@ export interface GenerationContext {
   selfieKeys: string[]
   processedSelfies: Record<string, Buffer>
   options: {
-    useCompositeReference: boolean
-    workflowVersion?: 'v1' | 'v2' | 'v3' // Workflow version to determine labelInstruction generation
+    workflowVersion?: 'v3' // Workflow version to determine labelInstruction generation
   }
 }
 

@@ -1,7 +1,6 @@
 import { headshot1Server } from './headshot1/server'
 import { outfit1Server } from './outfit1/server'
 import { freepackageServer } from './freepackage/server'
-import { isFeatureEnabled } from '@/config/feature-flags'
 import { Logger } from '@/lib/logger'
 
 // Import new registry and types
@@ -38,15 +37,13 @@ async function registerCorePackages(): Promise<void> {
     })
   }
 
-  // Register outfit1 only if feature flag is enabled
-  if (isFeatureEnabled('outfitTransfer')) {
-    try {
-      await packageRegistry.register(outfit1Server, { skipValidation: false })
-    } catch (error) {
-      Logger.error('[ServerPackages] Failed to register outfit1', {
-        error: error instanceof Error ? error.message : String(error),
-      })
-    }
+  // Register outfit1 (always available)
+  try {
+    await packageRegistry.register(outfit1Server, { skipValidation: false })
+  } catch (error) {
+    Logger.error('[ServerPackages] Failed to register outfit1', {
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 
   Logger.info('[ServerPackages] Core packages registered', {
@@ -55,24 +52,12 @@ async function registerCorePackages(): Promise<void> {
   })
 }
 
-// Build SERVER_PACKAGES dynamically based on feature flags (LEGACY)
-// This maintains backward compatibility with existing code
-function buildServerPackages(): Record<string, ServerStylePackage> {
-  const packages: Record<string, ServerStylePackage> = {
-    [headshot1Server.id]: headshot1Server,
-    [freepackageServer.id]: freepackageServer
-  }
-
-  // Add outfit1 only if feature flag is enabled
-  if (isFeatureEnabled('outfitTransfer')) {
-    packages[outfit1Server.id] = outfit1Server
-  }
-
-  return packages
+// LEGACY: Maintain backward compatibility with existing code
+export const SERVER_PACKAGES: Record<string, ServerStylePackage> = {
+  [headshot1Server.id]: headshot1Server,
+  [freepackageServer.id]: freepackageServer,
+  [outfit1Server.id]: outfit1Server,
 }
-
-// LEGACY: Maintain backward compatibility
-export const SERVER_PACKAGES = buildServerPackages()
 
 /**
  * Get server package configuration

@@ -57,7 +57,7 @@ const createGenerationSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),
   isRegeneration: z.boolean().optional().default(false), // Flag to indicate this is a regeneration
   originalGenerationId: z.string().optional(), // ID of the original generation being regenerated
-  workflowVersion: z.enum(['v1', 'v2', 'v3']).optional(), // Workflow version: v1 (legacy), v2 (8-step), v3 (4-step). Defaults to GENERATION_WORKFLOW_VERSION env var or 'v3'
+  workflowVersion: z.enum(['v3']).optional(), // Workflow version: v3 (4-step). Defaults to 'v3'
   debugMode: z.boolean().optional().default(false), // Enable debug mode (logs prompts, saves intermediate files)
   stopAfterStep: z.number().int().min(1).max(4).optional(), // Stop workflow after this step (1-4). Useful for testing intermediate results.
 })

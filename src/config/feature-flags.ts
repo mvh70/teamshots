@@ -4,71 +4,29 @@
  * Central configuration for feature flags to enable/disable features
  * across the application without code deployments.
  *
- * NOTE: We use runtime checks for server-side and build-time for client-side.
- * This allows toggling features without rebuilds on the server.
+ * NOTE: All legacy feature flags have been removed. The following features
+ * are now permanently enabled:
+ * - V3 Workflow (4-step generation)
+ * - Element Composition System
+ * - Outfit Transfer
  */
 
-// Helper to check if we're on the server
-const isServer = typeof window === 'undefined'
-
-/**
- * Get outfit transfer feature flag (runtime on server, build-time on client)
- */
-function getOutfitTransferEnabled(): boolean {
-  if (isServer) {
-    // Server-side: Check both NEXT_PUBLIC and regular env var (runtime)
-    return process.env.FEATURE_OUTFIT_TRANSFER === 'true' ||
-           process.env.NEXT_PUBLIC_FEATURE_OUTFIT_TRANSFER === 'true'
-  }
-  // Client-side: Build-time check
-  return process.env.NEXT_PUBLIC_FEATURE_OUTFIT_TRANSFER === 'true'
-}
-
-export const FEATURE_FLAGS = {
-  /**
-   * Outfit Transfer Feature
-   * Controls whether users can access the outfit1 package and upload outfit images
-   */
-  outfitTransfer: {
-    get enabled() {
-      return getOutfitTransferEnabled()
-    },
-    description: 'Enable outfit transfer feature for generating headshots with custom clothing',
-  },
-
-  /**
-   * V3 Workflow
-   * Controls whether to use the new V3 4-step workflow
-   */
-  v3Workflow: {
-    enabled: process.env.NEXT_PUBLIC_FEATURE_V3_WORKFLOW !== 'false', // Enabled by default
-    description: 'Enable V3 4-step generation workflow',
-  },
-
-  /**
-   * Element Composition System
-   * Controls whether to use the new element-level prompt composition system
-   * When enabled, prompts are built by composing contributions from independent elements
-   * instead of monolithic package-level prompt building
-   */
-  elementComposition: {
-    enabled: process.env.FEATURE_ELEMENT_COMPOSITION === 'true', // Disabled by default
-    description: 'Enable element-level prompt composition system for modular, phase-aware prompt building',
-  },
-} as const
+export const FEATURE_FLAGS = {} as const
 
 export type FeatureFlagKey = keyof typeof FEATURE_FLAGS
 
 /**
  * Check if a feature is enabled
+ * @deprecated All features are now permanently enabled. This function always returns true for backward compatibility.
  */
-export function isFeatureEnabled(flag: FeatureFlagKey): boolean {
-  return FEATURE_FLAGS[flag].enabled
+export function isFeatureEnabled(flag: string): boolean {
+  return true  // All features permanently enabled
 }
 
 /**
  * Get feature flag metadata
+ * @deprecated All features are now permanently enabled. This function is kept for backward compatibility.
  */
-export function getFeatureFlag(flag: FeatureFlagKey) {
-  return FEATURE_FLAGS[flag]
+export function getFeatureFlag(flag: never) {
+  return undefined
 }

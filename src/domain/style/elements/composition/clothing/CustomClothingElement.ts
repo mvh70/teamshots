@@ -283,13 +283,17 @@ export class CustomClothingElement extends StyleElement {
       'Ensure all garments are worn appropriately and naturally',
     ]
 
-    // Strict rules for clothing matching
+    // Strict rules for clothing matching (aligned with ClothingOverlayElement)
     const mustFollow = [
-      'All garments from the collage must be present and visible on the person',
-      'Clothing must fit naturally on the person\'s body',
-      'No duplicate accessories - only include items from collage once',
-      'Maintain clothing colors as specified in the reference',
-      'Do not add clothing items that are not in the reference',
+      'Use the garment collage as the PRIMARY reference for all garment styling and details.',
+      'Replicate the EXACT appearance of the clothing shown in the collage - colors, patterns, logos, and all visible details are already correctly applied.',
+      'CRITICAL: If garments in the collage have a logo on them, preserve this logo exactly as shown when dressing the person.',
+      'When layering outer garments (jackets, blazers) over base layers, it is NATURAL and EXPECTED for the outer layer to partially cover or obscure parts of any logo.',
+      'DO NOT attempt to move, relocate, or "save" the logo from being covered - realistic fabric layering means logos can be partially hidden by outer garments.',
+      'The logo belongs to the base layer fabric - let outer layers fall naturally over it as they would in real clothing.',
+      'The clothing in the collage is complete and final - do not modify, reinterpret, or add any elements.',
+      'No duplicate accessories - only include items from collage once.',
+      'DO NOT use any other reference images for clothing, branding, or logo information - the collage contains everything needed.',
     ]
 
     // Build metadata with clothing information
@@ -321,7 +325,7 @@ export class CustomClothingElement extends StyleElement {
     if (collageAsset?.data.base64) {
       referenceImages.push({
         url: `data:${collageAsset.data.mimeType || 'image/png'};base64,${collageAsset.data.base64}`,
-        description: 'GARMENT COLLAGE - Dress the person in these exact clothing items. Match the style, fit, and details shown in each garment precisely. Use the specified clothing_colors from metadata for accurate color rendering. This is professional attire - ensure proper fit and styling.',
+        description: 'GARMENT COLLAGE - Complete clothing reference showing all garments with accurate colors, patterns, branding, and styling. Use this as the definitive source for how the person should be dressed.',
         type: 'clothing' as const,
       })
 

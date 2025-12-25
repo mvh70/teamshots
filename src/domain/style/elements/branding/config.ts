@@ -45,7 +45,7 @@ export const ELEMENT_BRANDING_PROMPT: Record<string, unknown> = {
     'CRITICAL SPATIAL POSITIONING IN FRAME: Position the flag pole OFF-CENTER in the composition - either on the LEFT or RIGHT side of the frame. The person will be centered, so the flag MUST be to the side to remain visible and not blocked by the person. The flag should be clearly visible next to or behind the person, not hidden.',
     'CRITICAL PERSPECTIVE: Position the flag pole 6-8 feet BEHIND the subject. Apply proper depth of field - the flag should be slightly softer/gentler in focus than the tack-sharp subject.',
     'CRITICAL GROUNDING: The flag pole must be clearly planted on the floor with a weighted base or stand visible at ground level. The flag should appear naturally grounded, not floating.',
-    'CRITICAL LOGO CENTERING ON FLAG: The logo must be CENTERED both vertically and horizontally on the flag fabric itself. Vertically: equal distance from top and bottom edges of the flag. Horizontally: the logo center must align with the flag pole\'s vertical axis. Think of the pole as the centerline - the logo should be balanced equally on both sides of it.',
+    'CRITICAL LOGO CENTERING ON FLAG: The logo must be CENTERED on the flag fabric itself, following the flag\'s vertical axis.',
     'LIGHTING & SHADOWS: The flag should receive the same scene lighting as the background. Add natural shadows cast by the flag onto the background wall/floor to reinforce depth.',
     'FABRIC PHYSICS: Show subtle wind movement or natural fabric draping. The flag should look like real fabric material, not a stiff board.',
     'LOGO INTEGRATION: The logo follows the natural curve of the fabric surface, slightly distorted by the flag\'s perspective and curvature.',

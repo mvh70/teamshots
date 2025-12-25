@@ -65,7 +65,7 @@ export interface PackageCapabilities {
   supportsBranding?: boolean
 
   /** Supported workflow versions */
-  supportedWorkflowVersions?: Array<'v1' | 'v2' | 'v3'>
+  supportedWorkflowVersions?: Array<'v3'>
 
   /** Supports aspect ratio customization */
   supportsAspectRatio?: boolean

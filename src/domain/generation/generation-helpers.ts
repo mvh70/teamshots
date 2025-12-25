@@ -17,7 +17,7 @@ export interface JobEnqueueOptions {
   selfieS3Keys: string[]
   selfieAssetIds?: string[] // Asset IDs for fingerprinting and cost tracking
   prompt: string
-  workflowVersion: 'v1' | 'v2' | 'v3'
+  workflowVersion: 'v3'
   debugMode: boolean
   stopAfterStep?: string | number
   creditSource: 'individual' | 'team'
@@ -81,17 +81,13 @@ export async function enqueueGenerationJob(options: JobEnqueueOptions) {
 }
 
 /**
- * Determine the final workflow version from request or environment
- * Defaults to 'v3' (current recommended version)
+ * Determine the final workflow version from request
+ * Defaults to 'v3' (current standard version)
  */
 export function determineWorkflowVersion(
-  requestVersion?: 'v1' | 'v2' | 'v3'
-): 'v1' | 'v2' | 'v3' {
-  return (
-    requestVersion ||
-    (process.env.GENERATION_WORKFLOW_VERSION as 'v1' | 'v2' | 'v3' | undefined) ||
-    'v3'
-  )
+  requestVersion?: 'v3'
+): 'v3' {
+  return requestVersion || 'v3'
 }
 
 /**

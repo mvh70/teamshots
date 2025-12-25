@@ -10,7 +10,6 @@
  */
 
 import { Logger } from '@/lib/logger'
-import { isFeatureEnabled } from '@/config/feature-flags'
 import type { ServerStylePackage, PackageMetadata, PackageCapabilities } from './types'
 import { compositionRegistry } from '../elements/composition/registry'
 
@@ -64,18 +63,6 @@ class PackageRegistry {
       }
     }
 
-    // Check feature flag
-    if (pkg.featureFlag && !isFeatureEnabled(pkg.featureFlag as 'outfitTransfer' | 'v3Workflow' | 'elementComposition')) {
-      Logger.info('[PackageRegistry] Package disabled by feature flag', {
-        packageId: pkg.id,
-        featureFlag: pkg.featureFlag,
-      })
-      return {
-        valid: false,
-        errors: [`Feature flag ${pkg.featureFlag} is not enabled`],
-        warnings: [],
-      }
-    }
 
     // Register package
     this.packages.set(pkg.id, pkg)

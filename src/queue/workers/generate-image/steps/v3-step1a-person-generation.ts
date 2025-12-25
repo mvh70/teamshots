@@ -165,6 +165,7 @@ async function composeElementContributions(
   instructions: string[]
   mustFollow: string[]
   freedom: string[]
+  referenceImages: BaseReferenceImage[]
 }> {
   // Create element context for person-generation phase
   const elementContext: ElementContext = {
@@ -196,6 +197,7 @@ async function composeElementContributions(
     instructions: contributions.instructions || [],
     mustFollow: contributions.mustFollow || [],
     freedom: contributions.freedom || [],
+    referenceImages: (contributions.referenceImages as unknown as BaseReferenceImage[]) || [],
   }
 }
 
@@ -344,6 +346,7 @@ export async function executeV3Step1a(
     instructions: string[]
     mustFollow: string[]
     freedom: string[]
+    referenceImages: BaseReferenceImage[]
   } | null = null
 
   if (isFeatureEnabled('elementComposition')) {
@@ -361,8 +364,43 @@ export async function executeV3Step1a(
         hasInstructions: elementContributions.instructions.length > 0,
         hasMustFollow: elementContributions.mustFollow.length > 0,
         hasFreedom: elementContributions.freedom.length > 0,
+        hasReferenceImages: elementContributions.referenceImages.length > 0,
         preparedAssets: preparedAssets?.size || 0,
       })
+
+      // Add element contribution reference images (e.g., clothing overlay)
+      // Convert from element contribution format to BaseReferenceImage format
+      if (elementContributions.referenceImages.length > 0) {
+        for (const ref of elementContributions.referenceImages) {
+          // Element contributions use url/type format, convert to base64/mimeType format
+          if ('url' in ref && typeof ref.url === 'string') {
+            // Parse data URL: data:image/png;base64,<base64data>
+            const dataUrlMatch = ref.url.match(/^data:([^;]+);base64,(.+)$/)
+            if (dataUrlMatch) {
+              const [, mimeType, base64] = dataUrlMatch
+              referenceImages.push({
+                description: ref.description,
+                base64,
+                mimeType,
+              })
+            } else {
+              Logger.warn('[ElementComposition] Could not parse data URL from element contribution', {
+                generationId,
+                url: ref.url?.substring(0, 100)
+              })
+            }
+          } else if ('base64' in ref && 'mimeType' in ref) {
+            // Already in correct format
+            referenceImages.push(ref as BaseReferenceImage)
+          }
+        }
+        Logger.info('[ElementComposition] Added element contribution reference images', {
+          generationId,
+          addedCount: elementContributions.referenceImages.length,
+          totalReferenceCount: referenceImages.length,
+          descriptions: elementContributions.referenceImages.map((r: any) => r.description?.substring(0, 60))
+        })
+      }
     } catch (error) {
       Logger.error('[ElementComposition] Failed to compose element contributions, falling back to provided rules', {
         error: error instanceof Error ? error.message : String(error),

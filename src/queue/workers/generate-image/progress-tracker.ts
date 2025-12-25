@@ -147,60 +147,6 @@ export const V3_WORKFLOW_STEPS: WorkflowStep[] = [
 ]
 
 /**
- * V1 Workflow Steps Definition (legacy)
- */
-export const V1_WORKFLOW_STEPS: WorkflowStep[] = [
-  {
-    id: 'v1-init',
-    name: 'Initializing',
-    weight: 5,
-    category: 'init'
-  },
-  {
-    id: 'v1-preprocessing',
-    name: 'Preprocessing photo',
-    weight: 10,
-    category: 'init'
-  },
-  {
-    id: 'v1-prompt-ready',
-    name: 'Preparing generation',
-    weight: 5,
-    category: 'init'
-  },
-  {
-    id: 'v1-generating',
-    name: 'Generating image',
-    weight: 40,
-    category: 'composition'
-  },
-  {
-    id: 'v1-generated',
-    name: 'Image generated',
-    weight: 5,
-    category: 'composition'
-  },
-  {
-    id: 'v1-evaluating',
-    name: 'Evaluating quality',
-    weight: 10,
-    category: 'finalization'
-  },
-  {
-    id: 'v1-approved',
-    name: 'Quality approved',
-    weight: 5,
-    category: 'finalization'
-  },
-  {
-    id: 'v1-uploading',
-    name: 'Uploading result',
-    weight: 10,
-    category: 'finalization'
-  }
-]
-
-/**
  * Progress Tracker Class
  * 
  * Manages workflow progress tracking with support for:
@@ -212,11 +158,11 @@ export const V1_WORKFLOW_STEPS: WorkflowStep[] = [
 export class ProgressTracker {
   private steps: Map<string, WorkflowStep>
   private state: Map<string, StepState>
-  private workflow: 'v1' | 'v3'
-  
-  constructor(workflow: 'v1' | 'v3' = 'v3') {
+  private workflow: 'v3'
+
+  constructor(workflow: 'v3' = 'v3') {
     this.workflow = workflow
-    const workflowSteps = workflow === 'v3' ? V3_WORKFLOW_STEPS : V1_WORKFLOW_STEPS
+    const workflowSteps = V3_WORKFLOW_STEPS
     
     this.steps = new Map(workflowSteps.map(step => [step.id, step]))
     this.state = new Map(

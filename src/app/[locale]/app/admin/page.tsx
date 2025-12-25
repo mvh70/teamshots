@@ -16,6 +16,7 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 import FreePackageStyleAdminPanel from '../settings/FreePackageStyleAdminPanel'
+import UserManagement from '@/components/admin/UserManagement'
 import { jsonFetcher } from '@/lib/fetcher'
 
 interface SummaryData {
@@ -202,7 +203,7 @@ export default function AdminPage() {
   const t = useTranslations('admin')
   const [summary, setSummary] = useState<SummaryData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeSection, setActiveSection] = useState<'overview' | 'freeStyle' | 'tools'>('overview')
+  const [activeSection, setActiveSection] = useState<'overview' | 'freeStyle' | 'users'>('overview')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -421,8 +422,8 @@ export default function AdminPage() {
             <button
               onClick={() => setActiveSection('overview')}
               className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
-                activeSection === 'overview' 
-                  ? 'bg-red-600 text-white' 
+                activeSection === 'overview'
+                  ? 'bg-red-600 text-white'
                   : 'text-red-700 hover:bg-red-50'
               }`}
             >
@@ -430,10 +431,21 @@ export default function AdminPage() {
               {t('sections.adminTools')}
             </button>
             <button
+              onClick={() => setActiveSection('users')}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-all border-l border-gray-200 ${
+                activeSection === 'users'
+                  ? 'bg-red-600 text-white'
+                  : 'text-red-700 hover:bg-red-50'
+              }`}
+            >
+              <UsersIcon className="h-4 w-4 inline mr-2" />
+              Users
+            </button>
+            <button
               onClick={() => setActiveSection('freeStyle')}
               className={`flex-1 px-4 py-3 text-sm font-medium transition-all border-l border-gray-200 ${
-                activeSection === 'freeStyle' 
-                  ? 'bg-red-600 text-white' 
+                activeSection === 'freeStyle'
+                  ? 'bg-red-600 text-white'
                   : 'text-red-700 hover:bg-red-50'
               }`}
             >
@@ -595,6 +607,11 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Users Section */}
+      {activeSection === 'users' && (
+        <UserManagement />
       )}
 
       {/* Free Style Section */}

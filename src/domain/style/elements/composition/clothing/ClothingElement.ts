@@ -28,11 +28,24 @@ export class ClothingElement extends StyleElement {
     }
 
     // Only contribute to person generation
-    return phase === 'person-generation'
+    if (phase !== 'person-generation') {
+      return false
+    }
+
+    // CRITICAL: Skip if ClothingOverlayElement is handling clothing
+    // (branding on clothing means overlay is active)
+    if (
+      settings.branding?.type === 'include' &&
+      settings.branding?.position === 'clothing'
+    ) {
+      return false // ClothingOverlayElement will handle wardrobe
+    }
+
+    return true
   }
 
   async contribute(context: ElementContext): Promise<ElementContribution> {
-    const { settings } = context
+    const { settings, existingContributions } = context
     const clothing = settings.clothing!
 
     const instructions: string[] = []
@@ -42,6 +55,27 @@ export class ClothingElement extends StyleElement {
       details: clothing.details,
     }
 
+    // CRITICAL: Check if ClothingOverlayElement is handling clothing
+    // If overlay exists, it already has wardrobe and colors baked in
+    const hasClothingOverlay = existingContributions.some(
+      c => c.metadata?.hasClothingOverlay === true
+    )
+
+    if (hasClothingOverlay) {
+      // ClothingOverlayElement is handling everything - skip wardrobe payload
+      // Only add minimal metadata for other elements that might need style info
+      return {
+        instructions: [],
+        mustFollow: [
+          'Use the clothing shown in the clothing overlay reference image',
+          'The overlay shows the exact garments with correct styling and logo placement'
+        ],
+        payload: {}, // No wardrobe data - overlay has it all
+        metadata,
+      }
+    }
+
+    // Normal flow: no overlay, provide wardrobe data
     // Generate wardrobe prompt result for payload
     const wardrobeResult = generateWardrobePrompt({
       clothing: settings.clothing,

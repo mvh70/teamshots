@@ -9,7 +9,6 @@ import { getS3BucketName, createS3Client } from '@/lib/s3-client'
 import { compositionRegistry } from '../../elements/composition'
 import { Telemetry } from '@/lib/telemetry'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
-import { isFeatureEnabled } from '@/config/feature-flags'
 
 export type FreePackageServerPackage = typeof freepackageBase & {
   buildGenerationPayload: (context: GenerationContext) => Promise<GenerationPayload>
@@ -72,12 +71,7 @@ export const freepackageServer: FreePackageServerPackage = {
       return buffer
     }
 
-    const shouldUseComposite: boolean =
-      options.workflowVersion === 'v3' ||
-      (options.useCompositeReference &&
-        (styleSettings.background?.type === 'custom' ||
-          (styleSettings.branding?.type !== 'exclude' && Boolean(styleSettings.branding?.logoKey))))
-
+    // V3 workflow always uses composite reference
     const bucketName = getS3BucketName()
     const s3Client = createS3Client({ forcePathStyle: false })
     
@@ -86,7 +80,6 @@ export const freepackageServer: FreePackageServerPackage = {
       selfieKeys,
       getSelfieBuffer,
       downloadAsset: (key) => downloadAssetAsBase64({ bucketName, s3Client, key }),
-      useCompositeReference: shouldUseComposite,
       generationId,
       shotDescription: shotText,
       aspectRatioDescription,
@@ -97,9 +90,6 @@ export const freepackageServer: FreePackageServerPackage = {
     const labelInstruction = payload.labelInstruction
 
     // Use element composition system to build payload
-    if (!isFeatureEnabled('elementComposition')) {
-      throw new Error('Element composition system is required but not enabled')
-    }
 
     const elementContext = {
       phase: 'person-generation' as const,

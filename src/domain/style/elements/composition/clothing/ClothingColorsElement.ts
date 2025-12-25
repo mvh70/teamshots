@@ -23,11 +23,24 @@ export class ClothingColorsElement extends StyleElement {
     }
 
     // Only contribute to person generation
-    return phase === 'person-generation'
+    if (phase !== 'person-generation') {
+      return false
+    }
+
+    // CRITICAL: Skip if ClothingOverlayElement is handling clothing
+    // (branding on clothing means overlay with colors is active)
+    if (
+      settings.branding?.type === 'include' &&
+      settings.branding?.position === 'clothing'
+    ) {
+      return false // ClothingOverlayElement has colors baked in
+    }
+
+    return true
   }
 
   async contribute(context: ElementContext): Promise<ElementContribution> {
-    const { settings } = context
+    const { settings, existingContributions } = context
     const colors = settings.clothingColors!.colors!
     const shotType = settings.shotType?.type as ShotTypeValue
 
@@ -39,6 +52,25 @@ export class ClothingColorsElement extends StyleElement {
       colors: { ...colors },
     }
 
+    // CRITICAL: Check if ClothingOverlayElement is handling clothing
+    // If overlay exists, it already has colors baked in
+    const hasClothingOverlay = existingContributions.some(
+      c => c.metadata?.hasClothingOverlay === true
+    )
+
+    if (hasClothingOverlay) {
+      // ClothingOverlayElement has colors already applied - skip color specifications
+      return {
+        instructions: [],
+        mustFollow: [
+          'Use the exact clothing colors shown in the clothing overlay reference image',
+          'Do not modify or reinterpret the colors - they are already correct'
+        ],
+        metadata,
+      }
+    }
+
+    // Normal flow: no overlay, provide color specifications
     // Determine visibility based on shot type
     const isFullBody = this.isFullBodyVisible(shotType)
     const isBottomVisible = this.isBottomVisible(shotType)
