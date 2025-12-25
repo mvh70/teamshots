@@ -104,7 +104,7 @@ export default function PricingContent({ variant }: PricingContentProps) {
 
     return (
       <div className="min-h-screen bg-bg-gray-50 py-20 lg:py-32 relative grain-texture">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center mb-12 sm:mb-16">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-dark mb-6">
@@ -115,101 +115,98 @@ export default function PricingContent({ variant }: PricingContentProps) {
             </p>
           </div>
 
-          {/* Pricing Calculator Card */}
-          <div className="bg-bg-white rounded-3xl p-8 lg:p-12 shadow-depth-lg mb-12">
-            {/* Seats Selector */}
-            <div className="mb-8">
-              <div className="flex items-baseline justify-between mb-4">
-                <label className="text-lg font-bold text-text-dark font-display">
-                  {t('seats.selectSeats')}
-                </label>
-                <div className="text-4xl font-bold text-brand-primary font-display">
-                  {seats} {seats === 1 ? t('seats.seat') : t('seats.seats')}
+          {/* Pricing Cards Grid */}
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
+            {/* Seats Pricing Card */}
+            <div className="bg-bg-white rounded-3xl p-8 shadow-depth-lg hover:shadow-depth-xl transition-all duration-300 border-4 border-brand-primary relative">
+              {/* Popular Badge */}
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span className="bg-brand-primary text-white px-6 py-2 rounded-full text-sm font-bold shadow-depth-md">
+                  {t('mostPopular')}
+                </span>
+              </div>
+
+              {/* Seats Selector */}
+              <div className="mb-6 pt-4">
+                <div className="text-center mb-6">
+                  <div className="text-5xl font-bold text-brand-primary font-display mb-2">
+                    {seats} {seats === 1 ? t('seats.seat') : t('seats.seats')}
+                  </div>
+                  <div className="text-sm text-text-body">{t('seats.selectSeats')}</div>
+                </div>
+
+                {/* Slider */}
+                <input
+                  type="range"
+                  min="1"
+                  max="50"
+                  step="1"
+                  value={seats}
+                  onChange={(e) => setSeats(Number(e.target.value))}
+                  className="w-full h-3 bg-brand-primary-lighter rounded-lg appearance-none cursor-pointer slider-thumb mb-3"
+                  style={{
+                    background: `linear-gradient(to right, #4F46E5 0%, #4F46E5 ${((seats - 1) / 49) * 100}%, #E0E7FF ${((seats - 1) / 49) * 100}%, #E0E7FF 100%)`
+                  }}
+                />
+
+                {/* Quick select buttons */}
+                <div className="flex gap-2 flex-wrap justify-center">
+                  {[1, 5, 10, 25, 50].map((count) => (
+                    <button
+                      key={count}
+                      onClick={() => setSeats(count)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        seats === count
+                          ? 'bg-brand-primary text-white'
+                          : 'bg-bg-gray-50 text-text-body hover:bg-brand-primary-lighter'
+                      }`}
+                    >
+                      {count}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Slider */}
-              <input
-                type="range"
-                min="1"
-                max="50"
-                step="1"
-                value={seats}
-                onChange={(e) => setSeats(Number(e.target.value))}
-                className="w-full h-3 bg-brand-primary-lighter rounded-lg appearance-none cursor-pointer slider-thumb"
-                style={{
-                  background: `linear-gradient(to right, #4F46E5 0%, #4F46E5 ${((seats - 1) / 49) * 100}%, #E0E7FF ${((seats - 1) / 49) * 100}%, #E0E7FF 100%)`
-                }}
-              />
-
-              {/* Quick select buttons */}
-              <div className="flex gap-2 mt-4 flex-wrap">
-                {[1, 5, 10, 25, 50].map((count) => (
-                  <button
-                    key={count}
-                    onClick={() => setSeats(count)}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                      seats === count
-                        ? 'bg-brand-primary text-white shadow-depth-md'
-                        : 'bg-bg-gray-50 text-text-body hover:bg-brand-primary-lighter hover:text-brand-primary'
-                    }`}
-                  >
-                    {count}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Volume Tier Indicator */}
-            {tierInfo.nextTierAt && (
-              <div className="mb-6 p-4 bg-brand-primary-lighter/30 rounded-xl border border-brand-primary-lighter">
-                <p className="text-sm text-brand-primary font-semibold">
-                  💡 {t('seats.volumeHint', {
-                    seatsNeeded: tierInfo.nextTierAt - seats,
-                    nextPrice: formatPrice(tierInfo.nextTierPrice ?? 0),
-                    savingsPerSeat: formatPrice(pricePerSeat - (tierInfo.nextTierPrice ?? 0))
-                  })}
-                </p>
-              </div>
-            )}
-
-            {/* Pricing Summary */}
-            <div className="border-t border-bg-gray-100 pt-6 space-y-4">
-              <div className="flex justify-between items-baseline">
-                <span className="text-text-body">{t('seats.pricePerSeat')}</span>
-                <span className="text-2xl font-bold text-text-dark font-display">
-                  ${pricePerSeat.toFixed(2)}
-                </span>
+              {/* Pricing Display */}
+              <div className="text-center mb-6 pb-6 border-b border-bg-gray-100">
+                <div className="text-4xl font-bold text-text-dark font-display mb-2">
+                  ${total.toFixed(2)}
+                </div>
+                <div className="text-sm text-text-body mb-2">
+                  ${pricePerSeat.toFixed(2)} {t('seats.perSeat')}
+                </div>
+                {savings > 0 && (
+                  <div className="text-sm font-semibold text-green-600">
+                    Save ${savings.toFixed(2)}
+                  </div>
+                )}
+                <div className="text-sm text-brand-primary font-semibold mt-2">
+                  {totalPhotos} total photos
+                </div>
               </div>
 
-              <div className="flex justify-between items-baseline">
-                <span className="text-text-body">{t('seats.totalPhotos')}</span>
-                <span className="text-xl font-semibold text-brand-primary">
-                  {totalPhotos} {t('seats.photos')}
-                </span>
-              </div>
-
-              {savings > 0 && (
-                <div className="flex justify-between items-baseline text-green-600">
-                  <span className="font-semibold">{t('seats.savings')}</span>
-                  <span className="text-xl font-bold">-${savings.toFixed(2)}</span>
+              {/* Volume Tier Hint */}
+              {tierInfo.nextTierAt && (
+                <div className="mb-6 p-3 bg-brand-primary-lighter/20 rounded-lg border border-brand-primary-lighter/50">
+                  <p className="text-xs text-brand-primary font-semibold text-center">
+                    💡 Add {tierInfo.nextTierAt - seats} more to unlock ${tierInfo.nextTierPrice?.toFixed(2)}/seat
+                  </p>
                 </div>
               )}
 
-              <div className="border-t border-bg-gray-200 pt-4 mt-4">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-xl font-bold text-text-dark font-display">
-                    {t('seats.total')}
-                  </span>
-                  <span className="text-4xl font-bold text-brand-primary font-display">
-                    ${total.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
+              {/* Features */}
+              <ul className="space-y-3 mb-8">
+                {['photosPerSeat', 'professionalQuality', 'teamManagement', 'fastDelivery'].map((feature) => (
+                  <li key={feature} className="flex items-start gap-2 text-sm">
+                    <svg className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-text-body">{t(`seats.features.${feature}`)}</span>
+                  </li>
+                ))}
+              </ul>
 
-            {/* CTA Button */}
-            <div className="mt-8">
+              {/* CTA Button */}
               <CheckoutButton
                 type="seats"
                 priceId={PRICING_CONFIG.seats.stripePriceId}
@@ -221,32 +218,13 @@ export default function PricingContent({ variant }: PricingContentProps) {
                   seats: seats.toString(),
                 }}
                 useBrandCtaColors={true}
-                className="w-full !rounded-xl !px-6 !py-4 min-h-[4rem] !font-bold !text-lg"
+                className="w-full !rounded-xl !px-6 !py-4 !font-bold"
               >
-                {t('seats.cta', { seats, total: `$${total.toFixed(2)}` })}
+                Get Started
               </CheckoutButton>
             </div>
 
-            {/* Features List */}
-            <div className="mt-8 pt-8 border-t border-bg-gray-100">
-              <h3 className="text-lg font-bold text-text-dark mb-4 font-display">
-                {t('seats.whatsIncluded')}
-              </h3>
-              <ul className="space-y-3">
-                {['photosPerSeat', 'professionalQuality', 'teamManagement', 'fastDelivery', 'support'].map((feature) => (
-                  <li key={feature} className="flex items-start gap-3">
-                    <svg className="w-6 h-6 text-brand-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-text-body">{t(`seats.features.${feature}`)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Try It For Free Card */}
-          <div className="max-w-2xl mx-auto">
+            {/* Try It For Free Card */}
             <PricingCard
               id="tryItForFree"
               price="Free"

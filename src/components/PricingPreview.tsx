@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import PricingCard from '@/components/pricing/PricingCard'
 import { CheckoutButton } from '@/components/ui'
 import { PRICING_CONFIG } from '@/config/pricing'
@@ -14,6 +15,36 @@ function getTotalPhotos(credits: number, regenerations: number): number {
   return styles * variations
 }
 
+// Client-side volume pricing calculation (duplicated from seats.ts to avoid server imports)
+const VOLUME_TIERS = [
+  { min: 25, max: Infinity, pricePerSeat: 15.96 },
+  { min: 10, max: 24, pricePerSeat: 19.90 },
+  { min: 1, max: 9, pricePerSeat: 29.00 }
+] as const
+
+function getVolumePrice(seatCount: number): number {
+  if (seatCount < 1) return 0
+  for (const tier of VOLUME_TIERS) {
+    if (seatCount >= tier.min && seatCount <= tier.max) {
+      return tier.pricePerSeat
+    }
+  }
+  return VOLUME_TIERS[0].pricePerSeat
+}
+
+function calculateTotal(seats: number): number {
+  if (seats < 1) return 0
+  return seats * getVolumePrice(seats)
+}
+
+function getSavings(seats: number): number {
+  if (seats < 1) return 0
+  const baseTierPrice = VOLUME_TIERS[2].pricePerSeat
+  const actualTotal = calculateTotal(seats)
+  const baseTotal = seats * baseTierPrice
+  return baseTotal - actualTotal
+}
+
 interface PricingPreviewProps {
   /** Variant from server-side for domain-specific pricing (no client-side detection) */
   variant?: LandingVariant;
@@ -21,12 +52,148 @@ interface PricingPreviewProps {
 
 export default function PricingPreview({ variant }: PricingPreviewProps) {
   const t = useTranslations('pricing');
+  const [seats, setSeats] = useState(10);
 
   // Derive signup type from server-provided variant (no client-side detection)
-  const domainSignupType: 'individual' | 'team' | null = 
-    variant === 'photoshotspro' ? 'individual' : 
-    variant === 'teamshotspro' ? 'team' : 
+  const domainSignupType: 'individual' | 'team' | null =
+    variant === 'photoshotspro' ? 'individual' :
+    variant === 'teamshotspro' ? 'team' :
     null;
+
+  // Seats-based pricing for TeamShotsPro
+  if (variant === 'teamshotspro') {
+    const pricePerSeat = getVolumePrice(seats)
+    const total = calculateTotal(seats)
+    const savings = getSavings(seats)
+    const totalPhotos = seats * PRICING_CONFIG.seats.creditsPerSeat
+
+    return (
+      <section className="py-20 sm:py-24 lg:py-32 bg-bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 sm:mb-16 lg:mb-20 xl:mb-24">
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
+              {t('seats.title')}
+            </h2>
+            <p className="text-lg sm:text-xl lg:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed">
+              {t('seats.subtitle')}
+            </p>
+          </div>
+
+          {/* Pricing Cards Grid */}
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
+            {/* Seats Pricing Card */}
+            <div className="bg-bg-white rounded-3xl p-8 shadow-depth-lg hover:shadow-depth-xl transition-all duration-300 border-4 border-brand-primary relative">
+              {/* Popular Badge */}
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span className="bg-brand-primary text-white px-6 py-2 rounded-full text-sm font-bold shadow-depth-md">
+                  {t('mostPopular')}
+                </span>
+              </div>
+
+              {/* Seats Selector */}
+              <div className="mb-6 pt-4">
+                <div className="text-center mb-6">
+                  <div className="text-5xl font-bold text-brand-primary font-display mb-2">
+                    {seats} {seats === 1 ? t('seats.seat') : t('seats.seats')}
+                  </div>
+                  <div className="text-sm text-text-body">{t('seats.selectSeats')}</div>
+                </div>
+
+                {/* Slider */}
+                <input
+                  type="range"
+                  min="1"
+                  max="50"
+                  step="1"
+                  value={seats}
+                  onChange={(e) => setSeats(Number(e.target.value))}
+                  className="w-full h-3 bg-brand-primary-lighter rounded-lg appearance-none cursor-pointer slider-thumb mb-3"
+                  style={{
+                    background: `linear-gradient(to right, #4F46E5 0%, #4F46E5 ${((seats - 1) / 49) * 100}%, #E0E7FF ${((seats - 1) / 49) * 100}%, #E0E7FF 100%)`
+                  }}
+                />
+
+                {/* Quick select buttons */}
+                <div className="flex gap-2 flex-wrap justify-center">
+                  {[1, 5, 10, 25, 50].map((count) => (
+                    <button
+                      key={count}
+                      onClick={() => setSeats(count)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        seats === count
+                          ? 'bg-brand-primary text-white'
+                          : 'bg-bg-gray-50 text-text-body hover:bg-brand-primary-lighter'
+                      }`}
+                    >
+                      {count}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pricing Display */}
+              <div className="text-center mb-6 pb-6 border-b border-bg-gray-100">
+                <div className="text-4xl font-bold text-text-dark font-display mb-2">
+                  ${total.toFixed(2)}
+                </div>
+                <div className="text-sm text-text-body mb-2">
+                  ${pricePerSeat.toFixed(2)} {t('seats.perSeat')}
+                </div>
+                {savings > 0 && (
+                  <div className="text-sm font-semibold text-green-600">
+                    {t('seats.savings')}: ${savings.toFixed(2)}
+                  </div>
+                )}
+                <div className="text-sm text-brand-primary font-semibold mt-2">
+                  {totalPhotos} total photos
+                </div>
+              </div>
+
+              {/* Features */}
+              <ul className="space-y-3 mb-8">
+                {['photosPerSeat', 'professionalQuality', 'teamManagement', 'fastDelivery'].map((feature) => (
+                  <li key={feature} className="flex items-start gap-2 text-sm">
+                    <svg className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-text-body">{t(`seats.features.${feature}`)}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* CTA Button */}
+              <CheckoutButton
+                type="seats"
+                priceId={PRICING_CONFIG.seats.stripePriceId}
+                quantity={seats}
+                unauth={true}
+                metadata={{
+                  planTier: 'pro',
+                  planPeriod: 'seats',
+                  seats: seats.toString(),
+                }}
+                useBrandCtaColors={true}
+                className="w-full !rounded-xl !px-6 !py-4 !font-bold"
+              >
+                Get Started
+              </CheckoutButton>
+            </div>
+
+            {/* Try It For Free Card */}
+            <PricingCard
+              id="tryItForFree"
+              price="Free"
+              credits={PRICING_CONFIG.freeTrial.pro}
+              regenerations={PRICING_CONFIG.regenerations.tryItForFree}
+              pricePerPhoto={formatPrice(getPricePerPhoto('tryItForFree'))}
+              ctaMode="link"
+              href="/auth/signup?period=tryItForFree"
+            />
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   // VIP plan - high price anchor for individual domain
   const vipPlan = {
