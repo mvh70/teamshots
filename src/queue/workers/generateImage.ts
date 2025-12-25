@@ -308,7 +308,7 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           ? mergedStyleSettings.shotType.type
           : undefined
       const shotTypeConfig = resolveShotType(shotTypeInput)
-      const shotLabel = shotTypeConfig.label
+      const shotLabel = shotTypeConfig.id.replace(/-/g, ' ')
       const shotDescription = shotTypeConfig.framingDescription
       
       const providedKeys = selfieS3Keys

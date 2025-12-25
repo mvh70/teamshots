@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { ExpressionSettings } from '@/types/photo-style'
-import { EXPRESSION_CONFIGS, ExpressionType } from './config'
+import { EXPRESSION_CONFIGS } from './config'
+import type { ExpressionType } from './types'
 import { ImagePreview } from '@/components/ui/ImagePreview'
 
 interface ExpressionSelectorProps {

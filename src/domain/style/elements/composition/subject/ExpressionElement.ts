@@ -6,7 +6,7 @@
  */
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
-import { EXPRESSION_LABELS } from '../../../expression/prompt'
+import { EXPRESSION_LABELS } from '../../expression/prompt'
 
 export class ExpressionElement extends StyleElement {
   readonly id = 'expression'

@@ -54,7 +54,7 @@ export const headshot1Server: Headshot1ServerPackage = {
     const packageShotType = headshot1Base.defaultSettings.shotType?.type || 'medium-shot'
     effectiveSettings.shotType = { type: packageShotType }
     const shotTypeConfig = resolveShotType(packageShotType)
-    const shotText = shotTypeConfig.label
+    const shotText = shotTypeConfig.id.replace(/-/g, ' ')
 
     // Resolve aspect ratio using shared logic
     const { ratioConfig, aspectRatio, aspectRatioDescription } = resolvePackageAspectRatio(

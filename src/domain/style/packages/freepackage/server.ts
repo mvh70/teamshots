@@ -54,7 +54,7 @@ export const freepackageServer: FreePackageServerPackage = {
     const packageShotType = freepackageBase.defaultSettings.shotType?.type || 'medium-shot'
     effectiveSettings.shotType = { type: packageShotType }
     const shotTypeConfig = resolveShotType(packageShotType)
-    const shotText = shotTypeConfig.label
+    const shotText = shotTypeConfig.id.replace(/-/g, ' ')
 
     // Resolve aspect ratio using shared logic
     const { ratioConfig, aspectRatio, aspectRatioDescription } = resolvePackageAspectRatio(

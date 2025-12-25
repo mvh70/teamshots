@@ -89,7 +89,6 @@ export class ShotTypeElement extends StyleElement {
 
       metadata: {
         shotTypeId: shotType.id,
-        shotTypeLabel: shotType.label,
         framingDescription: shotType.framingDescription,
         compositionNotes: shotType.compositionNotes,
       },
@@ -101,8 +100,9 @@ export class ShotTypeElement extends StyleElement {
    * Ensures framing is maintained when composing person with background
    */
   private contributeToComposition(shotType: ShotTypeConfig): ElementContribution {
+    const shotTypeLabel = shotType.id.replace(/-/g, ' ')
     const mustFollow: string[] = [
-      `Maintain ${shotType.label.toLowerCase()} framing from person image`,
+      `Maintain ${shotTypeLabel} framing from person image`,
       'Do not reframe, zoom in/out, or crop the person',
       'Person scale and framing must remain exactly as provided',
       `The person was generated with specific crop points: ${shotType.framingDescription}. These MUST be preserved.`,

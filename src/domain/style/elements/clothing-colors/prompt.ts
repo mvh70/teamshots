@@ -2,7 +2,8 @@ import type {
   ClothingColorSettings,
   ShotTypeValue
 } from '@/types/photo-style'
-import { WardrobeDetailConfig, NO_TOP_COVER_DETAILS } from '../clothing/config'
+import type { WardrobeDetailConfig } from '../clothing/config'
+import { NO_TOP_COVER_DETAILS } from '../clothing/prompt'
 
 const isFullBodyVisible = (shotType?: ShotTypeValue | null) =>
   shotType === 'full-body' || shotType === 'full-length' || shotType === 'wide-shot'

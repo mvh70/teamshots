@@ -109,7 +109,7 @@ export async function executeV3Step2(
   const framing = promptObj.framing as { shot_type?: string; crop_points?: string } | undefined
   const shotTypeId = framing?.shot_type || 'medium-shot'
   const shotTypeConfig = resolveShotType(shotTypeId)
-  const shotType = shotTypeConfig.label
+  const shotType = shotTypeConfig.id.replace(/-/g, ' ')
   const shotDescription = framing?.crop_points || shotTypeConfig.framingDescription
 
   // Create background composition prompt WITHOUT subject (person is already generated)
