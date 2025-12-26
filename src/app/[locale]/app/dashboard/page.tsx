@@ -121,13 +121,10 @@ export default function DashboardPage() {
     switch (messageType) {
       case 'individual_success':
         return t('successMessages.individual', { credits: PRICING_CONFIG.individual.credits })
-      case 'pro_success':
-      case 'pro_small_success':
-        return t('successMessages.starter', { photos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits) })
-      case 'pro_large_success':
-        return t('successMessages.business', { photos: calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits) })
-      case 'enterprise_success':
-        return t('successMessages.enterprise', { photos: calculatePhotosFromCredits(PRICING_CONFIG.enterprise.credits) })
+      case 'vip_success':
+        return t('successMessages.vip', { credits: PRICING_CONFIG.vip.credits })
+      case 'seats_success':
+        return t('successMessages.seats')
       case 'top_up_success':
         return t('successMessages.topUp')
       default:

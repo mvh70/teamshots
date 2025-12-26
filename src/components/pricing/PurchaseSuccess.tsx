@@ -19,7 +19,7 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { refetch: refetchCredits, loading: creditsLoading } = useCredits()
-  const [planType, setPlanType] = useState<'individual' | 'proSmall' | 'proLarge' | 'enterprise' | 'topUp' | null>(null)
+  const [planType, setPlanType] = useState<'individual' | 'vip' | 'topUp' | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
@@ -27,14 +27,12 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
     // Map success types from checkout to plan types
     if (successType === 'individual_success') {
       setPlanType('individual')
-    } else if (successType === 'pro_small_success') {
-      setPlanType('proSmall')
-    } else if (successType === 'pro_large_success') {
-      setPlanType('proLarge')
-    } else if (successType === 'enterprise_success') {
-      setPlanType('enterprise')
+    } else if (successType === 'vip_success') {
+      setPlanType('vip')
     } else if (successType === 'top_up_success') {
       setPlanType('topUp')
+    } else if (successType === 'seats_success') {
+      setPlanType('individual') // Seats use individual for success display
     }
   }, [searchParams])
 
@@ -83,54 +81,19 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
           ]
         }
       }
-      case 'proSmall': {
-        const credits = PRICING_CONFIG.proSmall.credits
-        const regenerations = PRICING_CONFIG.regenerations.proSmall
-        const uniquePhotos = credits / creditsPerGeneration // 20 unique photos
-        const variationsPerPhoto = regenerations + 1 // 1 original + retries = 5 variations
-        const totalVariations = uniquePhotos * variationsPerPhoto // 20 × 5 = 100
-
-        return {
-          title: t('starter.title'),
-          features: [
-            t('starter.credits', { uniquePhotos }),
-            t('starter.retriesAndVariations', { retries: regenerations, totalVariations }),
-            t('starter.styles'),
-            t('starter.team')
-          ]
-        }
-      }
-      case 'proLarge': {
-        const credits = PRICING_CONFIG.proLarge.credits
-        const regenerations = PRICING_CONFIG.regenerations.proLarge
-        const uniquePhotos = credits / creditsPerGeneration // 200 credits / 10 per generation = 20 photos
-        const variationsPerPhoto = regenerations + 1 // 1 original + retries = 5 variations
-        const totalVariations = uniquePhotos * variationsPerPhoto // 20 × 5 = 100
-
-        return {
-          title: t('business.title'),
-          features: [
-            t('business.credits', { uniquePhotos }),
-            t('business.retriesAndVariations', { retries: regenerations, totalVariations }),
-            t('business.styles'),
-            t('business.team')
-          ]
-        }
-      }
-      case 'enterprise': {
-        const credits = PRICING_CONFIG.enterprise.credits
-        const regenerations = PRICING_CONFIG.regenerations.enterprise
+      case 'vip': {
+        const credits = PRICING_CONFIG.vip.credits
+        const regenerations = PRICING_CONFIG.regenerations.vip
         const uniquePhotos = credits / creditsPerGeneration
         const variationsPerPhoto = regenerations + 1
         const totalVariations = uniquePhotos * variationsPerPhoto
 
         return {
-          title: t('enterprise.title', { default: 'Enterprise' }),
+          title: t('vip.title', { default: 'VIP' }),
           features: [
-            t('enterprise.credits', { uniquePhotos, default: `${uniquePhotos} unique photos` }),
-            t('enterprise.retriesAndVariations', { retries: regenerations, totalVariations, default: `${regenerations} retries per photo, ${totalVariations} total variations` }),
-            t('enterprise.styles', { default: 'Full customization options' }),
-            t('enterprise.team', { default: 'Team management dashboard' })
+            t('vip.credits', { uniquePhotos, default: `${uniquePhotos} unique photos` }),
+            t('vip.retriesAndVariations', { retries: regenerations, totalVariations, default: `${regenerations} retries per photo, ${totalVariations} total variations` }),
+            t('vip.styles', { default: 'Full customization options' })
           ]
         }
       }

@@ -190,7 +190,9 @@ export async function POST(request: NextRequest) {
     Logger.debug('14. Password hashed')
 
     // Extract and normalize the signup domain for email links later
-    const signupDomain = domain ? domain.replace(/^www\./, '') : null
+    // Don't store localhost as signupDomain - use null instead (for development/testing)
+    const normalizedDomain = domain ? domain.replace(/^www\./, '').toLowerCase() : null
+    const signupDomain = normalizedDomain && normalizedDomain !== 'localhost' ? normalizedDomain : null
 
     // Transaction ensures atomicity: check existence + create/update happens atomically
     const { user, existingPerson } = await prisma.$transaction(async (tx: PrismaTransactionClient) => {

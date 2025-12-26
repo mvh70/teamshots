@@ -15,37 +15,53 @@ All features are included with each plan - no additional charges.
 
 ### Individual Plans (photoshotspro.com)
 
-#### Try Once (One-time Purchase)
+#### Try It For Free
 ```
-Price: $5
-Photos: 1 photo
-Purpose: Low-friction proof of concept
+Price: Free
+Credits: 10 credits (1 photo)
+Purpose: Low-friction trial to test the service
 ```
 
 #### Individual Package
 ```
 Price: $19.99
-Photos: 5 photos
+Credits: 40 credits (4 photos with regenerations)
+Photos: 5 unique styles, 1 regeneration each
 Purpose: Personal professional headshots
+```
+
+#### VIP Package
+```
+Price: $199.99
+Credits: 250 credits (25 photos with regenerations)
+Photos: 25 unique styles, 3 regenerations each
+Purpose: High-volume individual users and professionals
 ```
 
 ### Team Plans (teamshotspro.com)
 
-#### Team Small
+#### Try It For Free
 ```
-Price: $19.99
-Photos: 5 photos
-Team Size: Up to 5 team members
-Purpose: Small teams and startups
+Price: Free
+Credits: 30 credits (3 photos)
+Purpose: Test the service before purchasing seats
 ```
 
-#### Team Large
+#### Seats-Based Pricing (Volume Discounts)
 ```
-Price: $59.99
-Photos: 20 photos
-Team Size: Unlimited team members
-Purpose: Larger organizations and enterprises
+Price per seat (2-9 seats): $29.00
+Price per seat (10-24 seats): $19.90
+Price per seat (25+ seats): $15.96
+
+Credits per seat: 100 (10 photos with 2 regenerations each)
+Minimum purchase: 2 seats
+Purpose: Scalable team pricing with volume discounts
 ```
+
+**Example Pricing:**
+- 5 seats: 5 × $29.00 = $145.00 (50 total photos)
+- 15 seats: 15 × $19.90 = $298.50 (150 total photos)
+- 30 seats: 30 × $15.96 = $478.80 (300 total photos)
 
 ## Domain-Based Access Control
 
@@ -67,26 +83,36 @@ Purpose: Larger organizations and enterprises
 - Individual vs team use cases are fundamentally different
 - Prevents feature confusion and misuse
 
-**Why Photo-Based Pricing:**
-- Transparent and simple (5 photos = $19.99)
-- No complex credit systems or rollover confusion
-- Direct correlation between price and value
+**Why Credit-Based System:**
+- Flexible: 10 credits = 1 photo generation with variations
+- Regenerations cost additional credits (quality control)
+- Transparent tracking of usage and remaining balance
 
 **Package Strategy:**
-- Small packages encourage trying the service
-- Larger packages provide volume discounts
-- Team Large offers unlimited members for scale
+- Free trials for both individual and team users
+- Individual: VIP ($199.99) creates price anchoring effect for Individual ($19.99)
+- Team: Volume discounts incentivize larger seat purchases
+- Minimum 2 seats ensures team pricing is for actual teams
+
+**Volume Discount Benefits:**
+- Scales with team size naturally
+- Rewards larger commitments with lower per-seat costs
+- Simple, transparent pricing tiers
 
 ## Revenue Streams
 
 ### Primary
-1. **Photo Packages** - One-time purchases for photo generation
-2. **Try Once** - Acquisition funnel entry point
-3. **Team Plans** - B2B photo packages
+1. **Individual Packages** - One-time purchases for personal use
+   - Individual ($19.99) - Entry-level professional headshots
+   - VIP ($199.99) - High-volume users and professionals
+2. **Seats-Based Pricing** - Scalable team purchases with volume discounts
+3. **Free Trials** - Acquisition funnel (Try It For Free)
+4. **Top-Ups** - Additional credit purchases for existing customers
 
 ### Future (Post-MVP)
-- Enterprise pricing
+- Enterprise custom pricing
 - API access for developers
+- White-label solutions
 
 ## Unit Economics
 
@@ -96,31 +122,56 @@ Purpose: Larger organizations and enterprises
 
 | Item | Cost | Revenue | Margin |
 |------|------|---------|--------|
-| Gemini API (4 variations) | $0.10 | - | - |
+| Gemini API (1 generation) | $0.10 | - | - |
 | Infrastructure (monthly/user) | ~$0.50 | - | - |
-| **Try Once** | $0.10 | $5.00 | 98% |
-| **Individual (5 photos)** | $0.50 | $19.99 | 97% |
-| **Team Small (5 photos)** | $0.50 | $19.99 | 97% |
-| **Team Large (20 photos)** | $2.00 | $59.99 | 97% |
+| **Individual (4 photos)** | $0.40 | $19.99 | 98% |
+| **VIP (25 photos)** | $2.50 | $199.99 | 99% |
+| **Seats - 5 seats (50 photos)** | $5.00 | $145.00 | 97% |
+| **Seats - 15 seats (150 photos)** | $15.00 | $298.50 | 95% |
+| **Seats - 30 seats (300 photos)** | $30.00 | $478.80 | 94% |
 
-**All scenarios maintain 95%+ gross margins.**
+**All scenarios maintain 94%+ gross margins, with individual packages achieving 98%+ margins.**
+
+### Top-Up Economics
+- Individual tier: $19.99 for 40 credits (4 photos)
+- VIP tier: $69.99 for 100 credits (10 photos)
+- Cost: $0.10 per photo generation
+- Margin: 95%+ on all top-ups
 
 ## Conversion Funnel Strategy
 
+### Individual Domain (photoshotspro.com)
 ```
-Try Once ($5)
+Try It For Free (1 photo)
     ↓
 User sees quality, wants more photos
     ↓
-"Buy Individual Package - 5 photos for $19.99"
+Individual Package ($19.99 for 4 photos)
     ↓
-Small teams need team features
+High-volume users or professionals
     ↓
-"Buy Team Small - 5 photos for $19.99 + team features"
+VIP Package ($199.99 for 25 photos)
     ↓
-Growing teams need more photos
+Needs team features → Redirect to teamshotspro.com
+```
+
+### Team Domain (teamshotspro.com)
+```
+Try It For Free (3 photos)
     ↓
-"Upgrade to Team Large - 20 photos for $59.99"
+Team admin validates quality
+    ↓
+Purchase 2-9 seats ($29/seat)
+    ↓
+Team grows or needs volume discount
+    ↓
+Purchase 10-24 seats ($19.90/seat)
+    ↓
+Large team deployment
+    ↓
+Purchase 25+ seats ($15.96/seat)
+    ↓
+Need more photos → Top-up credits
 ```
 
 ## Pricing Configuration
@@ -129,39 +180,63 @@ All pricing stored in `config/pricing.ts`:
 
 ```typescript
 export const PRICING_CONFIG = {
-  // Photo-based system (changed from credits)
-  photos: {
-    perGeneration: 1, // Each generation uses 1 photo
+  // Credits system
+  credits: {
+    perGeneration: 10, // Each generation uses 10 credits
+    rollover: true,
+    rolloverLimit: null, // unlimited rollover
   },
 
-  // Try Once (one-time purchase)
-  tryOnce: {
-    price: 5.00,
-    photos: 1,
-    stripePriceId: STRIPE_PRICE_IDS.TRY_ONCE || '',
+  // Regeneration system
+  regenerations: {
+    tryItForFree: 1,
+    individual: 1,
+    vip: 3, // VIP gets most retries
+    seats: 2, // Seats-based pricing gets 2 regenerations
   },
 
   // Individual tier (Personal - one-time purchase)
   individual: {
     price: 19.99,
-    photos: 5,
+    credits: 40, // 4 photos at 10 credits each
     stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL || '',
+    topUp: {
+      price: 19.99,
+      credits: 40,
+      stripePriceId: STRIPE_PRICE_IDS.INDIVIDUAL_TOP_UP || '',
+    },
   },
 
-  // Team Small tier (Business - up to 5 team members)
-  teamSmall: {
-    price: 19.99,
-    photos: 5,
-    maxTeamMembers: 5,
-    stripePriceId: STRIPE_PRICE_IDS.PRO_SMALL || '',
-  },
-
-  // Team Large tier (Business - unlimited team members)
-  teamLarge: {
-    price: 59.99,
-    photos: 20,
+  // VIP tier (Individual domain anchor - one-time purchase)
+  vip: {
+    price: 199.99,
+    credits: 250, // 25 photos at 10 credits each
     maxTeamMembers: null, // unlimited
-    stripePriceId: STRIPE_PRICE_IDS.PRO_LARGE || '',
+    stripePriceId: STRIPE_PRICE_IDS.VIP || '',
+    topUp: {
+      price: 69.99,
+      credits: 100, // 10 photos at 10 credits each
+      stripePriceId: STRIPE_PRICE_IDS.VIP_TOP_UP || '',
+    },
+  },
+
+  // Seats-based pricing (TeamShotsPro domain)
+  seats: {
+    minSeats: 2, // Minimum 2 seats required
+    creditsPerSeat: 100, // 10 photos per seat
+    photosPerSeat: 10,
+    stripePriceId: STRIPE_PRICE_IDS.TEAM_SEATS || '',
+    volumeTiers: [
+      { min: 25, max: Infinity, pricePerSeat: 15.96 },
+      { min: 10, max: 24, pricePerSeat: 19.90 },
+      { min: 2, max: 9, pricePerSeat: 29.00 }
+    ],
+  },
+
+  // Free trial credits (granted on signup)
+  freeTrial: {
+    individual: 10,  // Credits for individual users on free plan
+    pro: 30,         // Credits for pro users (teams) on free plan
   },
 
   costs: {
@@ -174,22 +249,25 @@ export const PRICING_CONFIG = {
 
 **vs. Traditional Photography:**
 - 100x faster (60 seconds vs. weeks)
-- 20x cheaper ($4/photo vs. $50-200/person)
+- 10-50x cheaper ($2-5/photo vs. $50-200/person)
 - 100% remote
 
 **vs. Competitor AI Tools:**
-- Lower entry ($5 vs. $29)
-- Package model = clear value proposition
+- Lower entry (Free trial vs. $29+)
+- Scalable team pricing with volume discounts
 - Domain separation for individual vs team use cases
+- One-time payment model (no subscriptions)
 
 **vs. DIY Photoshop:**
 - No skills required
 - Instant results
-- Consistent quality
+- Consistent quality across entire team
 
 ## Open Questions
 
 - [ ] Validate Gemini API actual costs per generation
-- [ ] Test conversion rate from Try Once → Individual Package
-- [ ] Monitor average package utilization
+- [ ] Test conversion rate from Free Trial → Paid packages
+- [ ] Monitor seat purchase patterns and volume tier distribution
 - [ ] Test domain-based signup effectiveness
+- [ ] Measure top-up frequency and amounts
+- [ ] Track average seats per purchase and expansion patterns

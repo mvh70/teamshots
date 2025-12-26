@@ -198,21 +198,28 @@ export default async function proxy(request: NextRequest) {
         const currentDomain = getRequestDomain(request)
         const normalizedSignupDomain = signupDomain.replace(/^www\./, '').toLowerCase()
         
-        // Only redirect if domains differ and signup domain is valid
-        // Skip redirect in development unless explicitly testing cross-domain
-        const shouldRedirect = currentDomain && 
-          currentDomain !== normalizedSignupDomain && 
-          (ALLOWED_DOMAINS as readonly string[]).includes(normalizedSignupDomain) &&
-          (process.env.NODE_ENV === 'production' || process.env.ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
-        
-        if (shouldRedirect) {
-          const redirectUrl = new URL(request.url)
-          redirectUrl.hostname = normalizedSignupDomain
-          // Ensure we use https in production, http in development
-          redirectUrl.protocol = process.env.NODE_ENV === 'production' ? 'https:' : 'http:'
-          // Remove port for clean URL
-          redirectUrl.port = ''
-          return addSecurityHeaders(NextResponse.redirect(redirectUrl, 302))
+        // Skip redirect for localhost signupDomain (legacy development users)
+        // These users can access from any domain
+        if (normalizedSignupDomain === 'localhost') {
+          // No redirect - allow access from any domain
+          // This handles legacy users who signed up during development
+        } else {
+          // Only redirect if domains differ and signup domain is valid
+          // Skip redirect in development unless explicitly testing cross-domain
+          const shouldRedirect = currentDomain && 
+            currentDomain !== normalizedSignupDomain && 
+            (ALLOWED_DOMAINS as readonly string[]).includes(normalizedSignupDomain) &&
+            (process.env.NODE_ENV === 'production' || process.env.ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
+          
+          if (shouldRedirect) {
+            const redirectUrl = new URL(request.url)
+            redirectUrl.hostname = normalizedSignupDomain
+            // Ensure we use https in production, http in development
+            redirectUrl.protocol = process.env.NODE_ENV === 'production' ? 'https:' : 'http:'
+            // Remove port for clean URL
+            redirectUrl.port = ''
+            return addSecurityHeaders(NextResponse.redirect(redirectUrl, 302))
+          }
         }
       }
     }

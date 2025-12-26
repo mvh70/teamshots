@@ -39,6 +39,12 @@ interface TeamData {
     id: string
     name: string
   }
+  seatInfo?: {
+    totalSeats: number
+    activeSeats: number
+    availableSeats: number
+    isSeatsModel: boolean
+  } | null
 }
 
 interface TeamMember {
@@ -54,6 +60,8 @@ interface TeamMember {
     generations: number
     individualCredits: number
     teamCredits: number
+    teamCreditsAllocated?: number
+    teamCreditsUsed?: number
   }
 }
 
@@ -69,8 +77,8 @@ export default function TeamPage() {
       const pricingTier = getPricingTier(tier, period)
       return getRegenerationCount(pricingTier, period)
     }
-    // Fallback to proSmall as default team plan
-    return getRegenerationCount('proSmall')
+    // Fallback to tryItForFree as default
+    return getRegenerationCount('tryItForFree')
   }, [tier, period])
   const [teamData, setTeamData] = useState<TeamData | null>(null)
   const [invites, setInvites] = useState<TeamInvite[]>([])
@@ -148,10 +156,26 @@ export default function TeamPage() {
       setCheckingEmail(false)
     }
   }, [t])
-  // Convert between photos and credits (1 photo = 10 credits)
-  const defaultPhotos = PRICING_CONFIG.team.defaultInviteCredits / PRICING_CONFIG.credits.perGeneration
-  const [allocatedPhotos, setAllocatedPhotos] = useState<number>(defaultPhotos)
-  const [photosInputValue, setPhotosInputValue] = useState(defaultPhotos.toString())
+  
+  // Handle ESC key to close invite modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showInviteForm) {
+        setShowInviteForm(false)
+        setEmailValue('')
+        setFirstNameValue('')
+        setEmailError(null)
+        setInviteError(null)
+      }
+    }
+
+    if (showInviteForm) {
+      document.addEventListener('keydown', handleEscape)
+      return () => document.removeEventListener('keydown', handleEscape)
+    }
+  }, [showInviteForm])
+
+  // Seats-based pricing: fixed 10 photos per seat (100 credits)
   const [emailValue, setEmailValue] = useState('')
   const [firstNameValue, setFirstNameValue] = useState('')
   const [showWelcomePopup, setShowWelcomePopup] = useState(false)
@@ -297,22 +321,32 @@ export default function TeamPage() {
       // Reset form values
       setEmailValue('')
       setFirstNameValue('')
-      setPhotosInputValue(defaultPhotos.toString())
-      setAllocatedPhotos(defaultPhotos)
       setInviteError(null)
       setError(null)
     }
-  }, [loading, teamData, userRoles.isTeamAdmin, defaultPhotos])
+  }, [loading, teamData, userRoles.isTeamAdmin])
 
   const fetchTeamData = async () => {
     try {
       const [contextsData, invitesData, membersData] = await Promise.all([
         jsonFetcher<{ activeContext: { id: string; name: string } | undefined }>('/api/styles'),
         jsonFetcher<{ invites: TeamInvite[] }>('/api/team/invites'),
-        jsonFetcher<{ users: TeamMember[] }>('/api/team/members')
+        jsonFetcher<{ 
+          users: TeamMember[]
+          seatInfo?: {
+            totalSeats: number
+            activeSeats: number
+            availableSeats: number
+            isSeatsModel: boolean
+          } | null
+        }>('/api/team/members')
       ])
 
-      setTeamData(prevData => prevData ? { ...prevData, activeContext: contextsData.activeContext } : null)
+      setTeamData(prevData => prevData ? { 
+        ...prevData, 
+        activeContext: contextsData.activeContext,
+        seatInfo: membersData.seatInfo
+      } : null)
       setInvites(invitesData.invites || [])
       setTeamMembers(membersData.users || [])
     } catch (error) {
@@ -495,13 +529,11 @@ export default function TeamPage() {
       console.error('Error checking email before submit:', error)
     }
 
-    if (allocatedPhotos <= 0) {
-      setInviteError(t('inviteForm.photos.required'))
-      setInviting(false)
-      return
-    }
+    // Seats-based pricing: fixed 10 photos (100 credits) per member
+    const standardPhotos = 10
+    const creditsForInvite = standardPhotos * PRICING_CONFIG.credits.perGeneration
 
-    if (credits.team < allocatedPhotos * PRICING_CONFIG.credits.perGeneration) {
+    if (credits.team < creditsForInvite) {
       setInviteError(t('invites.insufficientCredits'))
       setInviting(false)
       return
@@ -514,7 +546,7 @@ export default function TeamPage() {
         body: JSON.stringify({
           email,
           firstName,
-          creditsAllocated: allocatedPhotos * PRICING_CONFIG.credits.perGeneration
+          creditsAllocated: creditsForInvite
         })
       })
 
@@ -528,8 +560,6 @@ export default function TeamPage() {
         // Clear form values on success
         setEmailValue('')
         setFirstNameValue('')
-        setPhotosInputValue(defaultPhotos.toString())
-        setAllocatedPhotos(defaultPhotos)
         setEmailError(null)
         setSuccessMessage(t('inviteForm.success', { email }))
         // Clear success message after 5 seconds
@@ -793,7 +823,7 @@ export default function TeamPage() {
       <>
         {/* Welcome Popup Modal */}
         {showWelcomePopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 animate-fade-in">
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-scale-in">
               <div className="text-center">
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-brand-primary/10 mb-4">
@@ -924,32 +954,40 @@ export default function TeamPage() {
       </div>
 
       {/* Team Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 lg:gap-6">
+      <div className={`grid grid-cols-1 gap-5 lg:gap-6 ${teamData?.seatInfo?.isSeatsModel ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
         <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
           <div className="flex items-center gap-5">
             <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-primary/10 group-hover:ring-brand-primary/30 transition-all">
               <Users className="h-8 w-8" style={{ color: BRAND_CONFIG.colors.primary }} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Team members</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                {teamData?.seatInfo?.isSeatsModel ? t('teamMembers.headers.seatUsage') : 'Team members'}
+              </p>
               <p className="text-4xl font-extrabold text-gray-900 leading-none">
-                {(teamMembers?.length || 0) + (invites?.filter(inv => !inv.usedAt).length || 0)}
+                {teamData?.seatInfo?.isSeatsModel 
+                  ? `${teamData.seatInfo.activeSeats} ${t('teamMembers.seatUsage.of')} ${teamData.seatInfo.totalSeats}`
+                  : (teamMembers?.length || 0) + (invites?.filter(inv => !inv.usedAt).length || 0)
+                }
               </p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
-          <div className="flex items-center gap-5">
-            <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-primary/10 group-hover:ring-brand-primary/30 transition-all">
-              <Camera className="h-8 w-8" style={{ color: BRAND_CONFIG.colors.primary }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Available photos</p>
-              <p className="text-4xl font-extrabold text-gray-900 leading-none">{calculatePhotosFromCredits(credits.team)}</p>
+        {/* Only show Available Photos for legacy credit-based teams */}
+        {!teamData?.seatInfo?.isSeatsModel && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
+            <div className="flex items-center gap-5">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-brand-primary-light to-brand-primary/20 rounded-2xl flex items-center justify-center ring-2 ring-brand-primary/10 group-hover:ring-brand-primary/30 transition-all">
+                <Camera className="h-8 w-8" style={{ color: BRAND_CONFIG.colors.primary }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Available photos</p>
+                <p className="text-4xl font-extrabold text-gray-900 leading-none">{calculatePhotosFromCredits(credits.team)}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
         
         <div className="bg-white border border-gray-200 rounded-2xl p-7 hover:shadow-lg hover:border-gray-300 transition-all duration-300 group">
           <div className="flex items-center gap-5">
@@ -1042,8 +1080,6 @@ export default function TeamPage() {
                       setError(null)
                       setEmailValue('')
                       setFirstNameValue('')
-                      setPhotosInputValue(defaultPhotos.toString())
-                      setAllocatedPhotos(defaultPhotos)
                       setShowInviteForm(true)
                     }}
                     disabled={credits.team === 0}
@@ -1115,14 +1151,16 @@ export default function TeamPage() {
                   <div 
                     className={`grid gap-6 text-xs font-bold text-gray-500 uppercase tracking-wider ${
                       userRoles.isTeamAdmin 
-                        ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
-                        : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                        ? 'grid-cols-[250px_repeat(6,minmax(80px,1fr))_140px]' 
+                        : 'grid-cols-[250px_repeat(6,minmax(80px,1fr))]'
                     }`}
                   >
                     <div>{t('teamMembers.headers.member')}</div>
                     <div className="flex justify-center">{t('teamMembers.headers.selfies')}</div>
                     <div className="flex justify-center">{t('teamMembers.headers.generations')}</div>
-                    <div className="flex justify-center">{t('teamMembers.headers.availablePhotos')}</div>
+                    <div className="flex justify-center">{t('teamMembers.headers.photosAllocated')}</div>
+                    <div className="flex justify-center">{t('teamMembers.headers.photosUsed')}</div>
+                    <div className="flex justify-center">{t('teamMembers.headers.remainingPhotos')}</div>
                     <div className="flex justify-center">{t('teamMembers.headers.status')}</div>
                     {userRoles.isTeamAdmin && (
                       <div className="flex justify-center">{t('teamMembers.headers.actions')}</div>
@@ -1134,10 +1172,9 @@ export default function TeamPage() {
                 {activeMembers.map((member) => {
                   // Find corresponding invite for this member
                   const memberInvite = member.email ? invitesByEmail.get(member.email.toLowerCase()) : null
-                  const creditsAllocated = memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
-                  // For team admins, don't show individual credits used (they use company credits)
-                  // For regular members, use invite credits used or 0
-                  const creditsUsed = member.isAdmin ? 0 : (memberInvite?.creditsUsed ?? 0)
+                  // Use stats from API (which includes admin allocations from invite_allocated transactions)
+                  const creditsAllocated = member.stats?.teamCreditsAllocated ?? memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
+                  const creditsUsed = member.stats?.teamCreditsUsed ?? memberInvite?.creditsUsed ?? 0
                   const photoStyle = memberInvite?.contextName ?? teamData?.activeContext?.name
                   
                   return (
@@ -1145,8 +1182,8 @@ export default function TeamPage() {
                   <div 
                     className={`grid gap-6 items-center ${
                       userRoles.isTeamAdmin 
-                        ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
-                        : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                        ? 'grid-cols-[250px_repeat(6,minmax(80px,1fr))_140px]' 
+                        : 'grid-cols-[250px_repeat(6,minmax(80px,1fr))]'
                     }`}
                   >
                     {/* Member Info */}
@@ -1183,18 +1220,15 @@ export default function TeamPage() {
                         {member.email && (
                           <p className="text-xs text-gray-500 truncate font-medium">{member.email}</p>
                         )}
-                        {!member.isAdmin && (
-                          <p className="text-xs text-gray-500 mt-1.5 font-medium">
-                            {t('teamInvites.photosAllocated', { count: calculatePhotosFromCredits(creditsAllocated) })}
-                            {creditsUsed > 0 && (
-                              <span className="ml-2 text-brand-cta font-semibold">
-                                • {t('teamInvites.photosUsed', { count: calculatePhotosFromCredits(creditsUsed) })}
-                              </span>
-                            )}
-                          </p>
-                        )}
-                        {/* Team admins don't show photo style or photos used - they use company photos */}
-                        {photoStyle && !member.isAdmin && (
+                        <p className="text-xs text-gray-500 mt-1.5 font-medium">
+                          {t('teamInvites.photosAllocated', { count: calculatePhotosFromCredits(creditsAllocated) })}
+                          {creditsUsed > 0 && (
+                            <span className="ml-2 text-brand-cta font-semibold">
+                              • {t('teamInvites.photosUsed', { count: calculatePhotosFromCredits(creditsUsed) })}
+                            </span>
+                          )}
+                        </p>
+                        {photoStyle && (
                           <p className="text-xs text-gray-500 mt-1.5 font-medium">
                             Photo style:{' '}
                             <Link 
@@ -1226,13 +1260,23 @@ export default function TeamPage() {
                       )}
                     </div>
                     
-                    {/* Photo Credits Left */}
+                    {/* Photos Allocated */}
+                    <div className="flex justify-center">
+                      <span className="text-base font-bold text-gray-900">
+                        {calculatePhotosFromCredits(creditsAllocated)}
+                      </span>
+                    </div>
+
+                    {/* Photos Used */}
+                    <div className="flex justify-center">
+                      <span className="text-base font-bold text-gray-900">
+                        {calculatePhotosFromCredits(creditsUsed)}
+                      </span>
+                    </div>
+                    
+                    {/* Remaining Photos */}
                     <div className="flex justify-center items-center gap-1.5">
-                      {member.isAdmin ? (
-                        <span className="text-base font-bold text-gray-900">
-                          {calculatePhotosFromCredits(credits.team)}
-                        </span>
-                      ) : memberInvite?.creditsRemaining !== undefined ? (
+                      {memberInvite?.creditsRemaining !== undefined ? (
                         <>
                           <span className="text-base font-bold text-gray-900">
                             {calculatePhotosFromCredits(memberInvite.creditsRemaining)}
@@ -1252,7 +1296,9 @@ export default function TeamPage() {
                           )}
                         </>
                       ) : (
-                        <span className="text-sm text-gray-400">-</span>
+                        <span className="text-base font-bold text-gray-900">
+                          {calculatePhotosFromCredits(creditsAllocated - creditsUsed)}
+                        </span>
                       )}
                     </div>
                     
@@ -1340,8 +1386,8 @@ export default function TeamPage() {
                           <div 
                             className={`grid gap-6 items-center ${
                               userRoles.isTeamAdmin 
-                                ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
-                                : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                                ? 'grid-cols-[250px_repeat(6,minmax(80px,1fr))_140px]' 
+                                : 'grid-cols-[250px_repeat(6,minmax(80px,1fr))]'
                             }`}
                           >
                             {/* Member Info */}
@@ -1405,7 +1451,29 @@ export default function TeamPage() {
                               )}
                             </div>
                             
-                            {/* Photo Credits Left */}
+                            {/* Photos Allocated */}
+                            <div className="flex justify-center">
+                              {member.isAdmin ? (
+                                <span className="text-sm text-gray-400">-</span>
+                              ) : (
+                                <span className="text-base font-bold text-gray-500">
+                                  {calculatePhotosFromCredits(creditsAllocated)}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Photos Used */}
+                            <div className="flex justify-center">
+                              {member.isAdmin ? (
+                                <span className="text-sm text-gray-400">-</span>
+                              ) : (
+                                <span className="text-base font-bold text-gray-500">
+                                  {calculatePhotosFromCredits(creditsUsed)}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Remaining Photos */}
                             <div className="flex justify-center">
                               {memberInvite?.creditsRemaining !== undefined ? (
                                 <span className="text-base font-bold text-gray-500">
@@ -1560,10 +1628,9 @@ export default function TeamPage() {
                 {activeMembers.map((member) => {
                   // Find corresponding invite for this member
                   const memberInvite = member.email ? invitesByEmail.get(member.email.toLowerCase()) : null
-                  const creditsAllocated = memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
-                  // For team admins, don't show individual credits used (they use company credits)
-                  // For regular members, use invite credits used or 0
-                  const creditsUsed = member.isAdmin ? 0 : (memberInvite?.creditsUsed ?? 0)
+                  // Use stats from API (which includes admin allocations from invite_allocated transactions)
+                  const creditsAllocated = member.stats?.teamCreditsAllocated ?? memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
+                  const creditsUsed = member.stats?.teamCreditsUsed ?? memberInvite?.creditsUsed ?? 0
                   const photoStyle = memberInvite?.contextName ?? teamData?.activeContext?.name
                   
                   return (
@@ -1638,7 +1705,19 @@ export default function TeamPage() {
                         <p className="text-lg font-bold text-gray-900">{member.stats.generations}</p>
                       </div>
                       <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">{t('teamMembers.headers.availablePhotos')}</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">{t('teamMembers.headers.photosAllocated')}</p>
+                        <p className="text-lg font-bold text-gray-900">
+                          {member.isAdmin ? '-' : calculatePhotosFromCredits(creditsAllocated)}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">{t('teamMembers.headers.photosUsed')}</p>
+                        <p className="text-lg font-bold text-gray-900">
+                          {member.isAdmin ? '-' : calculatePhotosFromCredits(creditsUsed)}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">{t('teamMembers.headers.remainingPhotos')}</p>
                         <div className="flex items-center gap-1.5">
                           <p className="text-lg font-bold text-gray-900">
                             {member.isAdmin ? calculatePhotosFromCredits(credits.team) : calculatePhotosFromCredits(memberInvite?.creditsRemaining ?? 0)}
@@ -1786,7 +1865,7 @@ export default function TeamPage() {
                           {/* Stats Grid */}
                           {member.stats && (
                             <div className="mb-5 pl-[64px]">
-                              <Grid cols={{ mobile: 3, tablet: 3, desktop: 3 }} gap="md">
+                              <Grid cols={{ mobile: 2, tablet: 2, desktop: 2 }} gap="md">
                                 <div>
                                   <p className="text-xs text-gray-400 mb-1">{t('teamMembers.headers.selfies')}</p>
                                   <p className="text-base font-bold text-gray-500">{member.stats.selfies}</p>
@@ -1796,7 +1875,19 @@ export default function TeamPage() {
                                   <p className="text-base font-bold text-gray-500">{member.stats.generations}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-gray-400 mb-1">{t('teamMembers.headers.availablePhotos')}</p>
+                                  <p className="text-xs text-gray-400 mb-1">{t('teamMembers.headers.photosAllocated')}</p>
+                                  <p className="text-base font-bold text-gray-500">
+                                    {member.isAdmin ? '-' : calculatePhotosFromCredits(creditsAllocated)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-400 mb-1">{t('teamMembers.headers.photosUsed')}</p>
+                                  <p className="text-base font-bold text-gray-500">
+                                    {member.isAdmin ? '-' : calculatePhotosFromCredits(creditsUsed)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-400 mb-1">{t('teamMembers.headers.remainingPhotos')}</p>
                                   <p className="text-base font-bold text-gray-500">
                                     {calculatePhotosFromCredits(memberInvite?.creditsRemaining ?? 0)}
                                   </p>
@@ -1932,7 +2023,7 @@ export default function TeamPage() {
 
       {/* Invite Form Modal */}
       {showInviteForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[110] overflow-y-auto animate-fade-in">
           <div className="bg-white rounded-2xl max-w-md w-full my-4 max-h-[calc(100vh-2rem)] overflow-y-auto shadow-2xl animate-scale-in border border-gray-200">
             <div className="p-7 sm:p-9">
               <h2 className="text-3xl font-bold text-gray-900 mb-8 tracking-tight">
@@ -2003,101 +2094,8 @@ export default function TeamPage() {
                   </p>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
-                    {t('inviteForm.photos.label')}
-                    <div className="relative group inline-flex">
-                      <div className="p-0.5 rounded-full hover:bg-gray-100 transition-colors cursor-help">
-                        <Info className="h-4 w-4 text-gray-400 group-hover:text-brand-primary transition-colors" />
-                      </div>
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 translate-y-1 transition-all duration-200 ease-out z-50 pointer-events-none">
-                        <div className="relative">
-                          <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white text-sm rounded-xl py-3 px-4 shadow-2xl w-72 whitespace-normal text-left border border-gray-700/50 backdrop-blur-sm">
-                            <div className="font-medium mb-1.5 text-white/90">
-                              Photo Credits Allocation
-                            </div>
-                            <div className="text-gray-300 text-xs leading-relaxed">
-                              {t('inviteForm.photos.tooltip', {
-                                count: invitedRegenerations,
-                                default: `This is the number of photos they can generate with customization. Each customization can be retried up to ${invitedRegenerations} times.`
-                              })}
-                            </div>
-                          </div>
-                          <div className="absolute left-1/2 -translate-x-1/2 top-full -mt-px">
-                            <div className="w-3 h-3 bg-gradient-to-br from-gray-900 to-gray-800 rotate-45 border-r border-b border-gray-700/50"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </label>
-                  <input
-                    type="number"
-                    name="photosAllocated"
-                    min="1"
-                    max={Math.floor(credits.team / PRICING_CONFIG.credits.perGeneration)}
-                    value={photosInputValue}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      setPhotosInputValue(value)
-                      // Clear error when user starts typing
-                      if (inviteError) {
-                        setInviteError(null)
-                      }
-                      
-                      if (value === '') {
-                        setAllocatedPhotos(0)
-                      } else {
-                        const numValue = parseInt(value)
-                        if (!isNaN(numValue) && numValue >= 0) {
-                          setAllocatedPhotos(numValue)
-                        }
-                      }
-                    }}
-                    onFocus={(e) => {
-                      e.target.select()
-                    }}
-                    className={`w-full px-5 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all shadow-sm hover:border-gray-300 ${
-                      inviteError ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-brand-primary focus:ring-brand-primary/20'
-                    }`}
-                  />
-                  {inviteError ? (
-                    <p className="text-red-600 text-sm mt-2 font-semibold">{inviteError}</p>
-                  ) : (
-                    <p className="text-xs text-gray-500 mt-2 font-medium">
-                      {t('inviteForm.photos.hint', {
-                        count: invitedRegenerations,
-                        default: `Each photo can be retried up to ${invitedRegenerations} times for free`
-                      })}
-                    </p>
-                  )}
-                  {allocatedPhotos <= 0 && (
-                    <div className="bg-gradient-to-r from-red-50 to-red-50/50 border-2 border-red-200 rounded-xl p-4 mt-3 shadow-sm">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-5 h-5 bg-red-100 rounded-lg flex items-center justify-center">
-                          <XCircle className="h-3.5 w-3.5 text-red-600" />
-                        </div>
-                        <p className="text-red-800 text-sm font-semibold leading-relaxed">
-                          {t('inviteForm.photos.required')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {allocatedPhotos > 0 && allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team && (
-                    <div className="bg-gradient-to-r from-red-50 to-red-50/50 border-2 border-red-200 rounded-xl p-4 mt-3 shadow-sm">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-5 h-5 bg-red-100 rounded-lg flex items-center justify-center">
-                          <XCircle className="h-3.5 w-3.5 text-red-600" />
-                        </div>
-                        <p className="text-red-800 text-sm font-semibold leading-relaxed">
-                          {t('inviteForm.insufficientCreditsModal', { 
-                            required: allocatedPhotos,
-                            available: calculatePhotosFromCredits(credits.team) 
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                {/* Hidden input for fixed 10 photos allocation */}
+                <input type="hidden" name="photosAllocated" value="10" />
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-4">
@@ -2186,19 +2184,11 @@ export default function TeamPage() {
                     </li>
                     <li className="flex gap-2">
                       <span className="text-brand-primary flex-shrink-0">•</span>
-                      <span>{t('inviteForm.whatHappensNext.step2')}</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="text-brand-primary flex-shrink-0">•</span>
                       <span>{t('inviteForm.whatHappensNext.step3')}</span>
                     </li>
                     <li className="flex gap-2">
                       <span className="text-brand-primary flex-shrink-0">•</span>
-                      <span>{t('inviteForm.whatHappensNext.step4', { 
-                        name: isFreePlan 
-                          ? 'Free Package Style' 
-                          : (teamData?.activeContext?.name || 'Active Style')
-                      })}</span>
+                      <span>Each team member gets 10 photos</span>
                     </li>
                   </ul>
                 </div>
@@ -2207,17 +2197,15 @@ export default function TeamPage() {
                   <button
                     type="submit"
                     disabled={
-                      inviting || 
+                      inviting ||
                       checkingEmail ||
-                      allocatedPhotos <= 0 || 
-                      allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team ||
+                      credits.team < 100 || // Need 100 credits for standard 10 photos
                       !emailValue.trim() ||
                       !firstNameValue.trim() ||
                       !!emailError
                     }
                     className={`flex-1 px-7 py-3.5 rounded-xl font-semibold text-base min-h-[48px] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
-                      allocatedPhotos <= 0 || 
-                      allocatedPhotos * PRICING_CONFIG.credits.perGeneration > credits.team ||
+                      credits.team < 100 ||
                       !emailValue.trim() ||
                       !firstNameValue.trim() ||
                       !!emailError ||
@@ -2235,8 +2223,6 @@ export default function TeamPage() {
                       // Clear form values when canceling
                       setEmailValue('')
                       setFirstNameValue('')
-                      setPhotosInputValue(defaultPhotos.toString())
-                      setAllocatedPhotos(defaultPhotos)
                       setEmailError(null)
                       setShowInviteForm(false)
                     }}
@@ -2253,7 +2239,7 @@ export default function TeamPage() {
 
       {/* Add Photos Modal */}
       {addPhotosInvite && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[110] overflow-y-auto animate-fade-in">
           <div className="bg-white rounded-2xl max-w-sm w-full my-4 shadow-2xl animate-scale-in border border-gray-200">
             <div className="p-6 sm:p-7">
               <h2 className="text-xl font-bold text-gray-900 mb-1 tracking-tight">

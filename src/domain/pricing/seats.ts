@@ -1,53 +1,47 @@
 import { prisma } from '@/lib/prisma'
 import { TEAM_DOMAIN } from '@/config/domain'
+import { PRICING_CONFIG } from '@/config/pricing'
 
 /**
  * Volume pricing tiers for seats
- * Must match Stripe product configuration
+ * Imported from PRICING_CONFIG to maintain single source of truth
  */
-export const VOLUME_TIERS = [
-  { min: 25, max: Infinity, pricePerSeat: 15.96 },
-  { min: 10, max: 24, pricePerSeat: 19.90 },
-  { min: 1, max: 9, pricePerSeat: 29.00 }
-] as const
+export const VOLUME_TIERS = PRICING_CONFIG.seats.volumeTiers
 
 /**
  * Credits allocated per seat (10 photos per seat)
  */
-export const CREDITS_PER_SEAT = 100
+export const CREDITS_PER_SEAT = PRICING_CONFIG.seats.creditsPerSeat
 
 /**
  * Get the price per seat based on volume tier
  * Uses volume pricing (tier applies to ALL units, not graduated)
  */
 export function getVolumePrice(seatCount: number): number {
-  if (seatCount < 1) return 0
+  if (seatCount < PRICING_CONFIG.seats.minSeats) return 0
 
-  for (const tier of VOLUME_TIERS) {
-    if (seatCount >= tier.min && seatCount <= tier.max) {
-      return tier.pricePerSeat
-    }
-  }
+  const tier = VOLUME_TIERS.find(
+    t => seatCount >= t.min && seatCount <= t.max
+  )
 
-  // Fallback to highest tier (25+)
-  return VOLUME_TIERS[0].pricePerSeat
+  // Fallback to most expensive tier (smallest volume)
+  return tier?.pricePerSeat ?? VOLUME_TIERS[VOLUME_TIERS.length - 1].pricePerSeat
 }
 
 /**
  * Calculate total price for given number of seats
  */
 export function calculateTotal(seats: number): number {
-  if (seats < 1) return 0
-  const pricePerSeat = getVolumePrice(seats)
-  return seats * pricePerSeat
+  return PRICING_CONFIG.seats.calculateTotal(seats)
 }
 
 /**
- * Calculate savings compared to base tier (1-9 seats)
+ * Calculate savings compared to base tier (smallest volume tier)
  */
 export function getSavings(seats: number): number {
-  if (seats < 1) return 0
-  const baseTierPrice = VOLUME_TIERS[2].pricePerSeat
+  if (seats < PRICING_CONFIG.seats.minSeats) return 0
+  // Base tier price is the most expensive (smallest volume tier)
+  const baseTierPrice = VOLUME_TIERS[VOLUME_TIERS.length - 1].pricePerSeat
   const actualTotal = calculateTotal(seats)
   const baseTotal = seats * baseTierPrice
   return baseTotal - actualTotal
@@ -63,30 +57,28 @@ export function getVolumeTier(seats: number): {
   nextTierPrice: number | null
 } {
   const pricePerSeat = getVolumePrice(seats)
-
-  if (seats >= 25) {
-    return {
-      tier: 'large',
-      pricePerSeat,
-      nextTierAt: null,
-      nextTierPrice: null
-    }
-  }
-
-  if (seats >= 10) {
-    return {
-      tier: 'medium',
-      pricePerSeat,
-      nextTierAt: 25,
-      nextTierPrice: VOLUME_TIERS[0].pricePerSeat
-    }
-  }
+  
+  // Find current tier index
+  const currentTierIndex = VOLUME_TIERS.findIndex(
+    t => seats >= t.min && seats <= t.max
+  )
+  
+  // Determine tier category based on position
+  const tierCategory: 'base' | 'medium' | 'large' = 
+    currentTierIndex === -1 ? 'base' :
+    currentTierIndex >= VOLUME_TIERS.length - 2 ? 'base' : // Last 2 tiers = base
+    currentTierIndex <= 1 ? 'large' : // First 2 tiers = large (best discount)
+    'medium'
+  
+  // Find next better tier (lower index = better discount)
+  const nextTierIndex = currentTierIndex > 0 ? currentTierIndex - 1 : -1
+  const nextTier = nextTierIndex >= 0 ? VOLUME_TIERS[nextTierIndex] : null
 
   return {
-    tier: 'base',
+    tier: tierCategory,
     pricePerSeat,
-    nextTierAt: 10,
-    nextTierPrice: VOLUME_TIERS[1].pricePerSeat
+    nextTierAt: nextTier?.min ?? null,
+    nextTierPrice: nextTier?.pricePerSeat ?? null
   }
 }
 

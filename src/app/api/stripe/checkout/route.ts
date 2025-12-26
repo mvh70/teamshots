@@ -140,15 +140,9 @@ export async function POST(request: NextRequest) {
       if (priceId === PRICING_CONFIG.individual.stripePriceId) {
         successMessage = 'individual_success'
         successTier = 'individual' // For metadata - actual tier will be 'individual', period 'small'
-      } else if (priceId === PRICING_CONFIG.proSmall.stripePriceId) {
-        successMessage = 'pro_small_success'
-        successTier = 'proSmall' // For metadata - actual tier will be 'pro', period 'small'
-      } else if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
-        successMessage = 'pro_large_success'
-        successTier = 'proLarge' // For metadata - actual tier will be 'pro', period 'large'
-      } else if (priceId === PRICING_CONFIG.enterprise.stripePriceId) {
-        successMessage = 'enterprise_success'
-        successTier = 'enterprise' // For metadata - actual tier will be 'pro', period 'large'
+      } else if (priceId === PRICING_CONFIG.vip.stripePriceId) {
+        successMessage = 'vip_success'
+        successTier = 'vip' // For metadata - actual tier will be 'individual', period 'large'
       }
     } else if (type === 'top_up') {
       successMessage = 'top_up_success'
@@ -156,8 +150,7 @@ export async function POST(request: NextRequest) {
       successMessage = 'seats_success'
     }
     
-    // Use successTier (determined from priceId) for success URL, not metadata.tier
-    // metadata.tier may be 'pro' (UI tier), but we need the actual tier ('proSmall'/'proLarge')
+    // Use successTier (determined from priceId) for success URL
     const queryExtras: Record<string, string> = {}
     
     if (type === 'plan' && successTier) {
@@ -168,14 +161,10 @@ export async function POST(request: NextRequest) {
     if (type === 'top_up') {
       const { tier, credits: requestedCredits } = metadata as { tier?: string; credits?: number };
       let creditsPerPackage = 0;
-      if (tier === 'individual') {
-        creditsPerPackage = PRICING_CONFIG.individual.topUp.credits;
-      } else if (tier === 'proSmall') {
-        creditsPerPackage = PRICING_CONFIG.proSmall.topUp.credits;
-      } else if (tier === 'proLarge') {
-        creditsPerPackage = PRICING_CONFIG.proLarge.topUp.credits;
+      if (tier === 'vip') {
+        creditsPerPackage = PRICING_CONFIG.vip.topUp.credits;
       } else {
-        // Fallback to individual top-up (tryOnce was replaced with tryItForFree which has no top-up)
+        // Default to individual top-up (covers individual tier and legacy tiers)
         creditsPerPackage = PRICING_CONFIG.individual.topUp.credits;
       }
       const totalCredits = typeof requestedCredits === 'number' 
@@ -265,11 +254,8 @@ export async function POST(request: NextRequest) {
         if (priceId === PRICING_CONFIG.individual.stripePriceId) {
           planTier = 'individual'
           planPeriod = 'small'
-        } else if (priceId === PRICING_CONFIG.proSmall.stripePriceId) {
-          planTier = 'pro'
-          planPeriod = 'small'
-        } else if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
-          planTier = 'pro'
+        } else if (priceId === PRICING_CONFIG.vip.stripePriceId) {
+          planTier = 'individual'
           planPeriod = 'large'
         }
 
@@ -282,22 +268,16 @@ export async function POST(request: NextRequest) {
         }
       }
     } else if (type === 'top_up') {
-      // For top-ups, create a one-time payment. Support tiers: 'individual' | 'proSmall' | 'proLarge'
+      // For top-ups, create a one-time payment. Support tiers: 'individual' | 'vip'
       const { tier, credits } = metadata as { tier?: string; credits?: number };
       // Allow repeat purchases of top-ups; no one-per-tier restriction
       let pricePerPackage = 0;
       let creditsPerPackage = 0;
-      if (tier === 'individual') {
-        pricePerPackage = PRICING_CONFIG.individual.topUp.price;
-        creditsPerPackage = PRICING_CONFIG.individual.topUp.credits;
-      } else if (tier === 'proSmall') {
-        pricePerPackage = PRICING_CONFIG.proSmall.topUp.price;
-        creditsPerPackage = PRICING_CONFIG.proSmall.topUp.credits;
-      } else if (tier === 'proLarge') {
-        pricePerPackage = PRICING_CONFIG.proLarge.topUp.price;
-        creditsPerPackage = PRICING_CONFIG.proLarge.topUp.credits;
+      if (tier === 'vip') {
+        pricePerPackage = PRICING_CONFIG.vip.topUp.price;
+        creditsPerPackage = PRICING_CONFIG.vip.topUp.credits;
       } else {
-        // Fallback to individual top-up (tryOnce was replaced with tryItForFree which has no top-up)
+        // Default to individual top-up (covers individual tier and legacy tiers)
         pricePerPackage = PRICING_CONFIG.individual.topUp.price;
         creditsPerPackage = PRICING_CONFIG.individual.topUp.credits;
       }
@@ -330,6 +310,11 @@ export async function POST(request: NextRequest) {
       // quantity represents the number of seats to purchase
       if (!priceId || priceId !== PRICING_CONFIG.seats.stripePriceId) {
         throw new Error('Invalid price ID for seats checkout');
+      }
+
+      // Validate minimum seats
+      if (quantity < PRICING_CONFIG.seats.minSeats) {
+        throw new Error(`Minimum ${PRICING_CONFIG.seats.minSeats} seats required`);
       }
 
       sessionParams.line_items = [

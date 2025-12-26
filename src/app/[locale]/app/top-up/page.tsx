@@ -42,20 +42,6 @@ export default function TopUpPage() {
   /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   const topUpDetails = useMemo(() => {
-    if (planTier === 'proSmall') {
-      return {
-        tier: 'proSmall' as const,
-        price: PRICING_CONFIG.proSmall.topUp.price,
-        credits: PRICING_CONFIG.proSmall.topUp.credits,
-      }
-    }
-    if (planTier === 'proLarge') {
-      return {
-        tier: 'proLarge' as const,
-        price: PRICING_CONFIG.proLarge.topUp.price,
-        credits: PRICING_CONFIG.proLarge.topUp.credits,
-      }
-    }
     if (planTier === 'individual') {
       return {
         tier: 'individual' as const,
@@ -63,16 +49,26 @@ export default function TopUpPage() {
         credits: PRICING_CONFIG.individual.topUp.credits,
       }
     }
+    if (planTier === 'vip') {
+      return {
+        tier: 'vip' as const,
+        price: PRICING_CONFIG.vip.topUp.price,
+        credits: PRICING_CONFIG.vip.topUp.credits,
+      }
+    }
     return null
   }, [planTier])
 
   // Price-per-photo display is computed inside `TopUpCard`
 
-  // Redirect free users away from the top-up page to the upgrade chooser
+  // Redirect users to appropriate pages
   /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
     if (planTier === 'free') {
       router.push('/app/upgrade')
+    } else if (planTier === 'team') {
+      // Team users should manage seats on the team page
+      router.push('/app/team')
     }
   }, [planTier, router])
   /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */

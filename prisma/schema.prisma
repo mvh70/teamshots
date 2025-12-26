@@ -98,7 +98,6 @@ model Team {
   teamInvites          TeamInvite[]
   subscriptionChanges  SubscriptionChange[]
   assets               Asset[]
-  seatPurchases        SeatPurchase[]
 
   @@index([adminId])
   @@index([domain])
@@ -303,6 +302,12 @@ model CreditTransaction {
   stripeInvoiceId      String?
   stripePaymentId      String?
   stripeSubscriptionId String?
+
+  // Seats-based pricing fields (optional, only for seat purchases)
+  seats                Int?                // Number of seats purchased
+  pricePerSeat         Float?              // Price per seat at time of purchase
+  stripePriceId        String?             // Stripe price ID used for purchase
+
   team                 Team?               @relation(fields: [teamId], references: [id], onDelete: Cascade)
   person               Person?             @relation(fields: [personId], references: [id], onDelete: Cascade)
   relatedTransaction   CreditTransaction?  @relation("TransferPair", fields: [relatedTransactionId], references: [id])
@@ -318,6 +323,7 @@ model CreditTransaction {
   @@index([stripePaymentId])
   @@index([stripeSubscriptionId])
   @@index([planTier])
+  @@index([seats])
 }
 
 model AppSetting {
@@ -563,18 +569,3 @@ model GenerationCost {
   @@index([evaluationStatus])
 }
 
-model SeatPurchase {
-  id              String   @id @default(cuid())
-  teamId          String
-  seatsPurchased  Int
-  pricePerSeat    Float
-  totalPaid       Float
-  stripePaymentId String   @unique
-  stripePriceId   String
-  purchasedAt     DateTime @default(now())
-
-  team            Team     @relation(fields: [teamId], references: [id])
-
-  @@index([teamId])
-  @@index([purchasedAt])
-}

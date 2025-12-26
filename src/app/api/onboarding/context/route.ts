@@ -102,12 +102,12 @@ export async function GET(request: NextRequest) {
 
     // Normalize period from subscription.ts format to utils.ts format
     const normalizePeriod = (period: unknown): PlanPeriod | null => {
-      if (period === 'free' || period === 'small' || period === 'large') {
+      if (period === 'free' || period === 'small' || period === 'large' || period === 'seats') {
         return period as PlanPeriod
       }
       // Map UIPlanTier values to PlanPeriod values
-      if (period === 'proLarge') return 'large'
-      if (period === 'individual' || period === 'proSmall') return 'small'
+      if (period === 'vip') return 'large'
+      if (period === 'individual') return 'small'
       // Legacy tryOnce/try_once periods are treated as free
       if (period === 'tryOnce' || period === 'try_once') return 'free'
       // Legacy subscription periods map to null (transactional pricing doesn't use monthly/annual)

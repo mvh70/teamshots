@@ -35,19 +35,37 @@ function readPricingConfigTs() {
     const m = content.match(re);
     return m ? Number(m[1]) : undefined;
   };
+
+  // Parse seats volume tiers from config
+  const seatsSection = content.match(/seats:\s*\{[\s\S]*?volumeTiers:\s*\[([\s\S]*?)\]/);
+  const volumeTiers = [];
+  if (seatsSection) {
+    const tiersStr = seatsSection[1];
+    const tierMatches = tiersStr.matchAll(/\{\s*min:\s*(\d+),\s*max:\s*(\w+),\s*pricePerSeat:\s*([0-9.]+)\s*\}/g);
+    for (const match of tierMatches) {
+      volumeTiers.push({
+        min: Number(match[1]),
+        max: match[2] === 'Infinity' ? null : Number(match[2]),
+        pricePerSeat: Number(match[3])
+      });
+    }
+  }
+
+  const creditsPerSeat = num(/creditsPerSeat:\s*([0-9]+)/);
+  const photosPerSeat = num(/photosPerSeat:\s*([0-9]+)/);
+
   return {
     ids,
     prices: {
       individual: { price: num(/individual:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/individual:[\s\S]*?credits:\s*([0-9]+)/) },
       individualTopUp: { price: num(/individual:[\s\S]*?topUp:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/individual:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
-      proSmall: { price: num(/proSmall:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/proSmall:[\s\S]*?credits:\s*([0-9]+)/) },
-      proSmallTopUp: { price: num(/proSmall:[\s\S]*?topUp:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/proSmall:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
-      proLarge: { price: num(/proLarge:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/proLarge:[\s\S]*?credits:\s*([0-9]+)/) },
-      proLargeTopUp: { price: num(/proLarge:[\s\S]*?topUp:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/proLarge:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
       vip: { price: num(/vip:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/vip:[\s\S]*?credits:\s*([0-9]+)/) },
       vipTopUp: { price: num(/vip:[\s\S]*?topUp:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/vip:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
-      enterprise: { price: num(/enterprise:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/enterprise:[\s\S]*?credits:\s*([0-9]+)/) },
-      enterpriseTopUp: { price: num(/enterprise:[\s\S]*?topUp:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/enterprise:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
+    },
+    seats: {
+      volumeTiers,
+      creditsPerSeat,
+      photosPerSeat
     }
   }
 }
@@ -138,54 +156,7 @@ async function createProducts() {
 
     console.log(`✅ Individual - Price ID: ${individualPrice.id}`);
 
-    // 2. Pro Small Product (up to 5 team members - one-time)
-    console.log('📦 Pro Small product...');
-    const proSmallProduct = await findOrCreateProduct(
-      'Pro Small Plan - 4 customized photos, generated 2x',
-      'One-time purchase for teams up to 5 members (8 photos, 4 customizations)',
-      {
-        type: 'pro_small',
-        credits: '40',
-        maxTeamMembers: '5'
-      }
-    );
-
-    const proSmallPrice = await findOrCreatePrice(
-      proSmallProduct,
-      toCents(read.prices.proSmall?.price ?? 19.99),
-      {
-        type: 'pro_small',
-        credits: '40',
-        maxTeamMembers: '5'
-      }
-    );
-
-    console.log(`✅ Pro Small - Price ID: ${proSmallPrice.id}`);
-
-    // 3. Pro Large Product (more than 5 team members - one-time)
-    console.log('📦 Pro Large product...');
-    const proLargeProduct = await findOrCreateProduct(
-      'Pro Large Plan - 10 customized photos, generated 3x',
-      'One-time purchase for teams with more than 5 members (30 photos, 10 customizations)',
-      {
-        type: 'pro_large',
-        credits: '100',
-        maxTeamMembers: 'unlimited'
-      }
-    );
-
-    const proLargePrice = await findOrCreatePrice(
-      proLargeProduct,
-      toCents(read.prices.proLarge?.price ?? 59.99),
-      {
-        type: 'pro_large',
-        credits: '100'
-      }
-    );
-
-    console.log(`✅ Pro Large - Price ID: ${proLargePrice.id}`);
-
-    // 4. VIP Product (one-time - Individual domain anchor)
+    // 2. VIP Product (one-time - Individual domain anchor)
     console.log('📦 VIP product...');
     const vipProduct = await findOrCreateProduct(
       'VIP Plan - 25 customized photos, generated 4x',
@@ -209,41 +180,28 @@ async function createProducts() {
 
     console.log(`✅ VIP - Price ID: ${vipPrice.id}`);
 
-    // 5. Enterprise Product (one-time - Team domain anchor)
-    console.log('📦 Enterprise product...');
-    const enterpriseProduct = await findOrCreateProduct(
-      'Enterprise Plan - 60 customized photos, generated 4x',
-      'Enterprise team plan for professional branding (240 photos, 60 customizations)',
-      {
-        type: 'enterprise',
-        credits: '600',
-        maxTeamMembers: 'unlimited'
-      }
-    );
-
-    const enterprisePrice = await findOrCreatePrice(
-      enterpriseProduct,
-      toCents(read.prices.enterprise?.price ?? 399.99),
-      {
-        type: 'enterprise',
-        credits: '600',
-        maxTeamMembers: 'unlimited'
-      }
-    );
-
-    console.log(`✅ Enterprise - Price ID: ${enterprisePrice.id}`);
-
-    // 6. Team Seats Product (one-time with volume pricing)
+    // 3. Team Seats Product (one-time with volume pricing)
     console.log('📦 Team Seats product...');
     const teamSeatsProduct = await findOrCreateProduct(
       'TeamShots - Team Seats',
-      'Professional headshots for your team with volume discounts (10 photos per seat)',
+      `Professional headshots for your team with volume discounts (${read.seats.photosPerSeat} photos per seat)`,
       {
         type: 'team_seats',
-        credits_per_seat: '100',
-        photos_per_seat: '10'
+        credits_per_seat: String(read.seats.creditsPerSeat),
+        photos_per_seat: String(read.seats.photosPerSeat)
       }
     );
+
+    // Convert config volumeTiers to Stripe tiers format
+    // Config tiers are sorted from highest to lowest tier (25+, 10-24, 1-9)
+    // Stripe tiers must be sorted from lowest to highest (1-9, 10-24, 25+)
+    const stripeTiers = read.seats.volumeTiers
+      .slice()
+      .reverse()
+      .map(tier => ({
+        up_to: tier.max,
+        unit_amount: toCents(tier.pricePerSeat)
+      }));
 
     // Check for existing tiered price
     const existingSeatsPrice = (await stripe.prices.list({
@@ -260,24 +218,11 @@ async function createProducts() {
       currency: 'usd',
       billing_scheme: 'tiered',
       tiers_mode: 'volume', // CRITICAL: Tier price applies to ALL units
-      tiers: [
-        {
-          up_to: 9,
-          unit_amount: 2900 // $29.00 per seat for 1-9 seats
-        },
-        {
-          up_to: 24,
-          unit_amount: 1990 // $19.90 per seat for 10-24 seats
-        },
-        {
-          up_to: null, // null = infinity
-          unit_amount: 1596 // $15.96 per seat for 25+ seats
-        }
-      ],
+      tiers: stripeTiers,
       metadata: {
         type: 'team_seats',
-        credits_per_seat: '100',
-        photos_per_seat: '10'
+        credits_per_seat: String(read.seats.creditsPerSeat),
+        photos_per_seat: String(read.seats.photosPerSeat)
       }
     });
 
@@ -289,7 +234,7 @@ async function createProducts() {
 
     console.log(`✅ Team Seats - Price ID: ${teamSeatsPrice.id}`);
 
-    // 7. Top-up products (one-time)
+    // 4. Top-up products (one-time)
     console.log('📦 Top-Up products...')
 
     console.log('   Individual Top-Up...');
@@ -304,30 +249,6 @@ async function createProducts() {
       { type: 'top_up', tier: 'individual', credits: '40' }
     );
 
-    console.log('   Pro Small Top-Up...');
-    const proSmallTopUpProduct = await findOrCreateProduct(
-      'Pro Small Top-Up - 5 photos',
-      'One-time purchase of 5 photos (pro small)',
-      { type: 'top_up', tier: 'pro_small' }
-    );
-    const proSmallTopUpPrice = await findOrCreatePrice(
-      proSmallTopUpProduct,
-      toCents(read.prices.proSmallTopUp?.price ?? 22.49),
-      { type: 'top_up', tier: 'pro_small', credits: '50' }
-    );
-
-    console.log('   Pro Large Top-Up...');
-    const proLargeTopUpProduct = await findOrCreateProduct(
-      'Pro Large Top-Up - 7 Photos',
-      'One-time purchase of 7 photos for Pro Large users',
-      { type: 'top_up', tier: 'pro_large' }
-    );
-    const proLargeTopUpPrice = await findOrCreatePrice(
-      proLargeTopUpProduct,
-      toCents(read.prices.proLargeTopUp?.price ?? 36.99),
-      { type: 'top_up', tier: 'pro_large', credits: '70' }
-    );
-
     console.log('   VIP Top-Up...');
     const vipTopUpProduct = await findOrCreateProduct(
       'VIP Top-Up - 10 photos',
@@ -340,31 +261,13 @@ async function createProducts() {
       { type: 'top_up', tier: 'vip', credits: '100' }
     );
 
-    console.log('   Enterprise Top-Up...');
-    const enterpriseTopUpProduct = await findOrCreateProduct(
-      'Enterprise Top-Up - 25 photos',
-      'One-time purchase of 25 photos for Enterprise users',
-      { type: 'top_up', tier: 'enterprise' }
-    );
-    const enterpriseTopUpPrice = await findOrCreatePrice(
-      enterpriseTopUpProduct,
-      toCents(read.prices.enterpriseTopUp?.price ?? 149.99),
-      { type: 'top_up', tier: 'enterprise', credits: '250' }
-    );
-
     // Output config snippet for PRICE_IDS in src/config/pricing.ts
     console.log('\n📋 Add these IDs to TEST_STRIPE_PRICE_IDS and PROD_STRIPE_PRICE_IDS in src/config/pricing.ts:');
     console.log('INDIVIDUAL:', `"${individualPrice.id}"`);
-    console.log('PRO_SMALL:', `"${proSmallPrice.id}"`);
-    console.log('PRO_LARGE:', `"${proLargePrice.id}"`);
     console.log('VIP:', `"${vipPrice.id}"`);
-    console.log('ENTERPRISE:', `"${enterprisePrice.id}"`);
     console.log('TEAM_SEATS:', `"${teamSeatsPrice.id}"`);
     console.log('INDIVIDUAL_TOP_UP:', `"${individualTopUpPrice.id}"`);
-    console.log('PRO_SMALL_TOP_UP:', `"${proSmallTopUpPrice.id}"`);
-    console.log('PRO_LARGE_TOP_UP:', `"${proLargeTopUpPrice.id}"`);
     console.log('VIP_TOP_UP:', `"${vipTopUpPrice.id}"`);
-    console.log('ENTERPRISE_TOP_UP:', `"${enterpriseTopUpPrice.id}"`);
 
     console.log('\n✅ All products and prices checked/created successfully!');
 
@@ -390,15 +293,9 @@ async function checkAlignment() {
   }
 
   await check('Individual', 'INDIVIDUAL', prices.individual.price)
-  await check('Pro Small', 'PRO_SMALL', prices.proSmall.price)
-  await check('Pro Large', 'PRO_LARGE', prices.proLarge.price)
   await check('VIP', 'VIP', prices.vip.price)
-  await check('Enterprise', 'ENTERPRISE', prices.enterprise.price)
   await check('Individual Top-Up', 'INDIVIDUAL_TOP_UP', prices.individualTopUp.price)
-  await check('Pro Small Top-Up', 'PRO_SMALL_TOP_UP', prices.proSmallTopUp.price)
-  await check('Pro Large Top-Up', 'PRO_LARGE_TOP_UP', prices.proLargeTopUp.price)
   await check('VIP Top-Up', 'VIP_TOP_UP', prices.vipTopUp.price)
-  await check('Enterprise Top-Up', 'ENTERPRISE_TOP_UP', prices.enterpriseTopUp.price)
 
   let ok = true
   for (const r of results) {

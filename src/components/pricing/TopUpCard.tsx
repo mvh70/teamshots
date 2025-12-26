@@ -6,7 +6,7 @@ import { CheckoutButton } from '@/components/ui'
 import { calculatePricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing'
 import { PRICING_CONFIG } from '@/config/pricing'
 
-type Tier = 'individual' | 'proSmall' | 'proLarge'
+type Tier = 'individual' | 'vip'
 
 interface TopUpCardProps {
   tier: Tier
@@ -21,29 +21,19 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
   const tAll = useTranslations()
 
   const details = useMemo(() => {
-    if (tier === 'proSmall') {
-      return { price: PRICING_CONFIG.proSmall.topUp.price, credits: PRICING_CONFIG.proSmall.topUp.credits }
+    if (tier === 'vip') {
+      return { price: PRICING_CONFIG.vip.topUp.price, credits: PRICING_CONFIG.vip.topUp.credits }
     }
-    if (tier === 'proLarge') {
-      return { price: PRICING_CONFIG.proLarge.topUp.price, credits: PRICING_CONFIG.proLarge.topUp.credits }
-    }
-    if (tier === 'individual') {
-      return { price: PRICING_CONFIG.individual.topUp.price, credits: PRICING_CONFIG.individual.topUp.credits }
-    }
-    // Default fallback
+    // Default to individual
     return { price: PRICING_CONFIG.individual.topUp.price, credits: PRICING_CONFIG.individual.topUp.credits }
   }, [tier])
 
   const displayPricePerPhoto = useMemo(() => {
     const regenerations = typeof regenerationsOverride === 'number'
       ? regenerationsOverride
-      : (tier === 'proSmall'
-          ? PRICING_CONFIG.regenerations.proSmall
-          : tier === 'proLarge'
-            ? PRICING_CONFIG.regenerations.proLarge
-          : tier === 'individual'
-              ? PRICING_CONFIG.regenerations.individual
-            : PRICING_CONFIG.regenerations.individual) // Default fallback
+      : (tier === 'vip'
+          ? PRICING_CONFIG.regenerations.vip
+          : PRICING_CONFIG.regenerations.individual)
     const ppf = calculatePricePerPhoto(details.price, details.credits, regenerations)
     return { value: formatPrice(ppf), regenerations }
   }, [details, tier, regenerationsOverride])
@@ -52,10 +42,8 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
     <div className={`relative bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-200 flex flex-col h-full ${className}`}>
       <div className="mb-6">
         <h3 className="text-2xl font-bold text-gray-900 mb-1">
-          {tier === 'proSmall'
-            ? t('proSmallTopUp', { defaultMessage: 'Pro Small top-up' })
-            : tier === 'proLarge'
-              ? t('proLargeTopUp', { defaultMessage: 'Pro Large top-up' })
+          {tier === 'vip'
+            ? t('vipTopUp', { defaultMessage: 'VIP top-up' })
             : t('individualTopUp', { defaultMessage: 'Individual top-up' })}
         </h3>
         <p className="text-gray-600 mb-4">
@@ -93,13 +81,9 @@ export default function TopUpCard({ tier, className = '', onError, regenerations
         {(() => {
           const regenerations = typeof regenerationsOverride === 'number'
             ? regenerationsOverride
-            : (tier === 'proSmall'
-                ? PRICING_CONFIG.regenerations.proSmall
-                : tier === 'proLarge'
-                  ? PRICING_CONFIG.regenerations.proLarge
-                : tier === 'individual'
-                    ? PRICING_CONFIG.regenerations.individual
-                  : PRICING_CONFIG.regenerations.individual) // Default fallback
+            : (tier === 'vip'
+                ? PRICING_CONFIG.regenerations.vip
+                : PRICING_CONFIG.regenerations.individual)
           const photos = calculatePhotosFromCredits(details.credits)
           const regenerationText = t('variationsBullet', { count: regenerations })
           return (

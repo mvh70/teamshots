@@ -15,8 +15,9 @@ Turn any selfie into professional headshots in under 60 seconds using AI.
 
 ### For Teams
 - Faster go‑live: keep your site, press kit, and org pages always up to date
-- Lower cost: replace $50–$200 per person shoots with on‑demand AI ($4/photo)
+- Lower cost: replace $50–$200 per person shoots with on‑demand AI ($2-5/photo with volume discounts)
 - Brand consistency: one look across the whole team, including new joiners
+- Scalable pricing: Volume discounts from $29/seat down to $15.96/seat for larger teams
 
 ### For Individuals
 - Professional headshots without expensive photo sessions

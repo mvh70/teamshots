@@ -60,9 +60,10 @@ function mapUITierToStateTier(uiTier: UIPlanTier): 'free' | 'individual' | 'pro'
       return 'free'
     case 'individual':
       return 'individual'
-    case 'proSmall':
-    case 'proLarge':
-      return 'pro'
+    case 'vip':
+      return 'individual' // VIP is still individual tier, just large period
+    case 'team':
+      return 'pro' // Team/seats plans are pro tier
     default:
       return 'free'
   }
@@ -122,6 +123,12 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
   const [navReady, setNavReady] = useState(Boolean(initialRole))
   const [planTier, setPlanTier] = useState<'free' | 'individual' | 'pro' | null>(null)
   const [planLabel, setPlanLabel] = useState<string | null>(null)
+  const [seatInfo, setSeatInfo] = useState<{
+    totalSeats: number
+    activeSeats: number
+    availableSeats: number
+    isSeatsModel: boolean
+  } | null>(null)
   const { credits } = useCredits()
   const [isMobile, setIsMobile] = useState(false)
 
@@ -155,19 +162,15 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
       // Compute human-readable label based on tier+period (transactional pricing)
       let label = 'Free package'
       if (isFreePlan(period)) {
-        label = tierRaw === 'pro' ? 'Pro Free' : 'Individual Free'
+        label = t('plan.free')
       } else if (tierRaw === 'individual' && period === 'small') {
         label = 'Individual'
-      } else if (tierRaw === 'pro' && period === 'small') {
-        label = 'Pro Small'
-      } else if (tierRaw === 'pro' && period === 'large') {
-        label = 'Pro Large'
+      } else if (tierRaw === 'pro' && period === 'seats') {
+        label = 'Team' // Seats-based pricing shows as "Team"
       } else {
-        // Backward compatibility: handle legacy period values (cast to string for comparison)
-        const periodStr = period ? String(period) : null
+        // Backward compatibility: handle legacy values
         if (tierRaw === 'individual') label = 'Individual'
-        else if (periodStr === 'proSmall') label = 'Pro Small'
-        else if (periodStr === 'proLarge') label = 'Pro Large'
+        else if (tierRaw === 'pro') label = 'Pro'
       }
       setPlanLabel(label)
     }
@@ -254,28 +257,44 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
     }
   }, [session?.user?.id, session?.user?.role, initialRole, initialAccountMode])
 
-  // Fetch allocated credits only for team admins - intentional data fetching on state change
+  // Fetch allocated credits and seat info for team admins - intentional data fetching on state change
   /* eslint-disable react-you-might-not-need-an-effect/no-event-handler */
   useEffect(() => {
-    const fetchAllocatedCredits = async () => {
+    const fetchTeamData = async () => {
       if (!isTeamAdmin) return
       try {
-        const data = await jsonFetcher<{ totalAllocatedCredits: number; totalRemainingCredits: number }>('/api/team/invites/credits')
+        const [creditsData, membersData] = await Promise.all([
+          jsonFetcher<{ totalAllocatedCredits: number; totalRemainingCredits: number }>('/api/team/invites/credits'),
+          jsonFetcher<{ 
+            users: unknown[]
+            seatInfo?: {
+              totalSeats: number
+              activeSeats: number
+              availableSeats: number
+              isSeatsModel: boolean
+            } | null
+          }>('/api/team/members')
+        ])
         // Show remaining credits across all invites (allocated minus used)
-        setAllocatedCredits(data.totalRemainingCredits ?? 0)
+        setAllocatedCredits(creditsData.totalRemainingCredits ?? 0)
+        // Store seat info if available
+        setSeatInfo(membersData.seatInfo || null)
       } catch (err) {
         setAllocatedCredits(0)
-        console.error('Failed to fetch allocated credits:', err)
+        setSeatInfo(null)
+        console.error('Failed to fetch team data:', err)
       }
     }
 
-    // Only fetch if user is a team admin with an active team
-    if (session?.user?.id && isTeamAdmin && !needsTeamSetup) {
-      void fetchAllocatedCredits()
-    } else if (!needsTeamSetup) {
+    // Fetch team data if user is a team admin (regardless of team setup status)
+    // Seat info and credit allocation are independent of onboarding state
+    if (session?.user?.id && isTeamAdmin) {
+      void fetchTeamData()
+    } else {
       setAllocatedCredits(0)
+      setSeatInfo(null)
     }
-  }, [session?.user?.id, isTeamAdmin, needsTeamSetup])
+  }, [session?.user?.id, isTeamAdmin])
   /* eslint-enable react-you-might-not-need-an-effect/no-event-handler */
 
 
@@ -304,21 +323,22 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
             // Compute human-readable label based on tier+period (transactional pricing)
             let label = 'Free package'
             if (isFreePlan(period)) {
-              label = tierRaw === 'pro' ? 'Pro Free' : 'Individual Free'
+              label = t('plan.free')
             } else if (tierRaw === 'individual' && period === 'small') {
               label = 'Individual'
             } else if (tierRaw === 'pro' && period === 'small') {
               label = 'Pro Small'
             } else if (tierRaw === 'pro' && period === 'large') {
               label = 'Pro Large'
+            } else if (tierRaw === 'pro' && period === 'seats') {
+              label = 'Team' // Seats-based pricing shows as "Team"
       } else {
-        // Backward compatibility: handle legacy period values (cast to string for comparison)
+        // Backward compatibility: handle legacy values
         if (tierRaw === 'individual') label = 'Individual'
-        else if (period && String(period) === 'proSmall') label = 'Pro Small'
-        else if (period && String(period) === 'proLarge') label = 'Pro Large'
+        else if (tierRaw === 'pro') label = 'Pro'
       }
             setPlanLabel(label)
-            
+
             // Only fetch fresh data if stale (>5 seconds)
             const dataAge = Date.now() - (initialData._timestamp || 0)
             if (dataAge > 5000) {
@@ -333,12 +353,12 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                   let label = 'Free package'
                   if (isFreePlan(freshPeriod)) {
                     label = 'Free package'
-                  } else if (freshTier === 'individual') {
+                  } else if (freshTier === 'individual' && freshPeriod === 'small') {
                     label = 'Individual'
-                  } else if (freshTier === 'proSmall') {
-                    label = 'Pro Small'
-                  } else if (freshTier === 'proLarge') {
-                    label = 'Pro Large'
+                  } else if (freshTier === 'individual' && freshPeriod === 'large') {
+                    label = 'VIP'
+                  } else if (freshTier === 'pro' && freshPeriod === 'seats') {
+                    label = 'Pro'
                   }
                   setPlanLabel(label)
                 })
@@ -368,10 +388,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
           label = 'Free package'
         } else if (tierRaw === 'individual') {
           label = 'Individual'
-        } else if (period && String(period) === 'proSmall') {
-          label = 'Pro Small'
-        } else if (period && String(period) === 'proLarge') {
-          label = 'Pro Large'
+        } else if (tierRaw === 'pro') {
+          label = 'Pro'
         }
         setPlanLabel(label)
       } catch {
@@ -518,23 +536,18 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
   }
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-[100] border-r border-gray-200/80 transition-all duration-300 transform shadow-[2px_0_8px_0_rgb(0_0_0_/0.04),0_1px_2px_0_rgb(0_0_0_/0.02)] ${
+    <div className={`fixed inset-y-0 left-0 z-[120] bg-white border-r border-gray-200/80 transition-all duration-300 transform shadow-[2px_0_8px_0_rgb(0_0_0_/0.04),0_1px_2px_0_rgb(0_0_0_/0.02)] ${
       // Width: always collapsed (w-20) on mobile, respect effectiveCollapsed on desktop
       (isMobile ? 'w-20' : (effectiveCollapsed ? 'w-20' : 'w-64')) + ' ' + 
       // Visibility: use collapsed prop (when false, sidebar is visible)
       (collapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0') + ' ' + 
-      // Background: solid on mobile when visible, gradient on desktop
-      (isMobile && !collapsed ? 'bg-white' : 'bg-gradient-to-b from-white via-gray-50/30 to-white') + ' ' +
       (effectiveCollapsed ? 'overflow-visible' : '')
-    }`} style={{
-      backgroundImage: isMobile && !collapsed ? 'none' : 'radial-gradient(circle at 1px 1px, rgba(99, 102, 241, 0.03) 1px, transparent 0)',
-      backgroundSize: '20px 20px'
-    }}>
+    }`}>
       <div className={`flex flex-col h-dvh max-h-screen ${effectiveCollapsed ? 'overflow-visible' : 'overflow-hidden'}`}>
         {/* Top Section - Header and Primary Action */}
         <div className="flex-shrink-0">
           {/* Header */}
-          <div className={`flex p-5 md:p-6 border-b border-gray-200/60 bg-gradient-to-r from-white via-brand-primary-light/5 to-white backdrop-blur-sm ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
+          <div className={`flex p-5 md:p-6 border-b border-gray-200/60 ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
             {!effectiveCollapsed && (
               <Link href="/" className="flex items-center space-x-2 group/logo">
                 <Image src={brandLogoLight} alt={brandName} width={112} height={28} className="h-7 transition-transform duration-200 group-hover/logo:scale-105" style={{ width: 'auto' }} priority />
@@ -598,7 +611,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
         </div>
 
         {/* Navigation - Takes up available space */}
-        <nav className={`flex-1 px-4 py-3 space-y-1.5 min-h-0 ${effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto overflow-x-visible'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
+        <nav className={`flex-1 px-4 py-3 space-y-1.5 min-h-0 bg-white ${effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto overflow-x-visible'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
           {!effectiveCollapsed ? (
             <div className="h-full overflow-x-visible">
               {!navReady ? null : navigation.map((item) => {
@@ -677,7 +690,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                   </span>
                 </div>
               )}
-              {!effectiveCollapsed && (
+              {/* Only show "AVAILABLE PHOTOS" heading for individual accounts or legacy credit-based teams */}
+              {!effectiveCollapsed && (accountMode === 'individual' || (seatInfo && !seatInfo.isSeatsModel)) && (
                 <h3 className="text-xs font-extrabold text-gray-800 mb-3 uppercase tracking-widest leading-tight">
                   {t('photos.title')}
                 </h3>
@@ -699,8 +713,35 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                   </div>
                 )}
 
-                {/* Team credits - hidden on individual-only domains (photoshotspro.com) */}
-                {accountMode === 'pro' && !isIndividualDomain && (
+                {/* Seats-based teams: Show seat usage (source of truth from backend) */}
+                {seatInfo?.isSeatsModel && (
+                  <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200 ${effectiveCollapsed ? 'flex-col space-y-0.5 text-center' : ''}`}>
+                    <div className={`flex items-center justify-between ${planTier === 'free' && !effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
+                      <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center' : ''}`}>
+                        {t('photos.seats')}
+                      </span>
+                      <span className={`text-lg md:text-xl font-extrabold tracking-tight leading-tight ${effectiveCollapsed ? 'text-xl' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
+                        {planTier === 'free' ? '1 / 1' : `${seatInfo.activeSeats} / ${seatInfo.totalSeats}`}
+                      </span>
+                    </div>
+                    {/* Show locked branding message for free plans inside the container */}
+                    {planTier === 'free' && !effectiveCollapsed && (
+                      <div className="text-center">
+                        <span className="text-xs text-gray-600 font-medium">
+                          {t('photos.lockedBranding')}
+                        </span>
+                      </div>
+                    )}
+                    {effectiveCollapsed && (
+                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
+                        {t('photos.seats')}: {planTier === 'free' ? '1 / 1' : `${seatInfo.activeSeats} / ${seatInfo.totalSeats}`}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Legacy credit-based Pro teams: Show team credits */}
+                {seatInfo && !seatInfo.isSeatsModel && (
                   <>
                     <div className={`relative group flex items-center justify-between bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200 ${effectiveCollapsed ? 'flex-col space-y-0.5' : ''}`}>
                       <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center' : ''}`}>
@@ -741,7 +782,11 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
               <div className={`mt-3 ${effectiveCollapsed ? 'relative group' : ''}`}>
                 {effectiveCollapsed ? (
                   <Link
-                    href={planTier === 'free' ? '/app/upgrade' : '/app/top-up'}
+                    href={
+                      planTier === 'free' ? '/app/upgrade' :
+                      planTier === 'pro' && accountMode === 'pro' ? '/app/upgrade' :
+                      '/app/top-up'
+                    }
                     onClick={onMenuItemClick}
                     className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs font-semibold text-white rounded-lg transition-all duration-200 bg-gradient-to-r from-brand-cta to-brand-cta-hover hover:from-brand-cta-hover hover:to-brand-cta shadow-md shadow-brand-cta/20 hover:shadow-lg hover:shadow-brand-cta/30 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2 min-h-[44px] md:min-h-0"
                   >
@@ -749,17 +794,21 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                   </Link>
                 ) : (
                   <Link
-                    href={planTier === 'free' ? '/app/upgrade' : '/app/top-up'}
+                    href={
+                      planTier === 'free' ? '/app/upgrade' :
+                      planTier === 'pro' && accountMode === 'pro' ? '/app/upgrade' :
+                      '/app/top-up'
+                    }
                     onClick={onMenuItemClick}
                     className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs md:text-xs font-semibold text-white rounded-lg transition-all duration-200 bg-gradient-to-r from-brand-cta to-brand-cta-hover hover:from-brand-cta-hover hover:to-brand-cta shadow-md shadow-brand-cta/20 hover:shadow-lg hover:shadow-brand-cta/30 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2 min-h-[44px] md:min-h-0"
                   >
                     <PlusIcon className="h-4 w-4 md:h-3 md:w-3 mr-1 transition-transform duration-200 group-hover:rotate-90" />
-                    {planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMore')}
+                    {planTier === 'free' && seatInfo?.isSeatsModel ? t('photos.buySeatsToUnlock') : planTier === 'free' ? t('photos.upgradeToPaid') : (accountMode === 'pro' ? t('photos.buyMoreSeats') : t('photos.buyMore'))}
                   </Link>
                 )}
                 {effectiveCollapsed && (
                   <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
-                    {planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMore')}
+                    {planTier === 'free' && seatInfo?.isSeatsModel ? t('photos.buySeatsToUnlock') : planTier === 'free' ? t('photos.upgradeToPaid') : (accountMode === 'pro' ? t('photos.buyMoreSeats') : t('photos.buyMore'))}
                   </span>
                 )}
               </div>
@@ -768,7 +817,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
 
           {/* User Profile w/ expandable menu (expands upwards) */}
           {session?.user && (
-            <div className="p-4 md:p-5 border-t border-gray-200/60 relative">
+            <div className="p-4 md:p-5 border-t border-gray-200/60 relative bg-white">
             <div
               className={`relative group flex items-center space-x-3 ${effectiveCollapsed ? 'justify-center' : ''} cursor-pointer hover:bg-gray-50/50 rounded-lg p-2 -mx-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2`}
               onClick={() => setMenuOpen(!menuOpen)}

@@ -113,15 +113,13 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
     }
     if (rawPeriod === 'year' || rawPeriod === 'annual') {
       // Legacy annual - map based on tier
-      if (storedTier === 'pro') return 'large'
+      if (storedTier === 'pro') return 'seats'
       return 'small'
     }
-    // Legacy individual/proSmall/proLarge periods
+    // Legacy individual period
     if (rawPeriod === 'individual') return 'small'
-    if (rawPeriod === 'proSmall') return 'small'
-    if (rawPeriod === 'proLarge') return 'large'
     // New structure
-    if (rawPeriod === 'free' || rawPeriod === 'small' || rawPeriod === 'large') {
+    if (rawPeriod === 'free' || rawPeriod === 'small' || rawPeriod === 'large' || rawPeriod === 'seats') {
       return rawPeriod as PlanPeriod
     }
     // Default to free
@@ -129,30 +127,8 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
   })()
 
   // Compute next renewal date when applicable
-  // Note: For transactional pricing, there's no recurring billing, so nextRenewal is null
+  // Note: For one-time purchases and seats-based pricing, there's no recurring billing, so nextRenewal is null
   let nextRenewal: Date | null = null
-  // Legacy monthly/annual subscriptions (shouldn't exist in new structure, but handle for backward compatibility)
-  if (user.subscriptionStatus === 'active' && (rawPeriod === 'monthly' || rawPeriod === 'annual' || rawPeriod === 'month' || rawPeriod === 'year')) {
-    // Use the latestEffective result from parallel query (already fetched above)
-    if (latestEffective?.effectiveDate) {
-      const base = new Date(latestEffective.effectiveDate)
-      if (rawPeriod === 'monthly' || rawPeriod === 'month') {
-        nextRenewal = new Date(base)
-        nextRenewal.setMonth(nextRenewal.getMonth() + 1)
-      } else if (rawPeriod === 'annual' || rawPeriod === 'year') {
-        nextRenewal = new Date(base)
-        nextRenewal.setFullYear(nextRenewal.getFullYear() + 1)
-      }
-      Logger.info('subscription.nextRenewal.computed', {
-        userId,
-        base: base.toISOString(),
-        period,
-        nextRenewal: nextRenewal?.toISOString?.() ?? null,
-      })
-    } else {
-      Logger.info('subscription.latestEffective.missing', { userId })
-    }
-  }
 
   const result = {
     tier: storedTier,
@@ -165,7 +141,7 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
       ? {
           action: upcoming.action,
           planTier: (upcoming.planTier === 'pro' ? 'pro' : 'individual') as PlanTier,
-          planPeriod: (upcoming.planPeriod === 'small' || upcoming.planPeriod === 'large' ? upcoming.planPeriod : 'free') as PlanPeriod,
+          planPeriod: (upcoming.planPeriod === 'small' || upcoming.planPeriod === 'large' || upcoming.planPeriod === 'seats' ? upcoming.planPeriod : 'free') as PlanPeriod,
           effectiveDate: new Date(upcoming.effectiveDate),
         }
       : null,
@@ -206,19 +182,15 @@ export function getCreditsForTier(tier: PlanTier, period: PlanPeriod | null | un
   if (tier === 'individual' && period === 'small') {
     return PRICING_CONFIG.individual.credits
   }
-  if (tier === 'pro' && period === 'small') {
-    return PRICING_CONFIG.proSmall.credits
-  }
-  if (tier === 'pro' && period === 'large') {
-    return PRICING_CONFIG.proLarge.credits
+
+  // Legacy pro tier - teams now use seats-based pricing
+  if (tier === 'pro') {
+    return 0
   }
 
   // Backward compatibility
   if (tier === 'individual') {
     return PRICING_CONFIG.individual.credits
-  }
-  if (tier === 'pro') {
-    return PRICING_CONFIG.proSmall.credits
   }
 
   return 0
@@ -278,13 +250,12 @@ export function formatTierName(tier: PlanTier, period?: PlanPeriod | null): stri
   }
 
   if (isFreePlan(period)) {
-    if (tier === 'pro') return 'Pro Free'
-    return 'Individual Free'
+    return 'plan.free'
   }
 
   if (tier === 'individual' && period === 'small') return 'Individual'
-  if (tier === 'pro' && period === 'small') return 'Pro Small'
-  if (tier === 'pro' && period === 'large') return 'Pro Large'
+  if (tier === 'individual' && period === 'large') return 'VIP'
+  if (tier === 'pro' && period === 'seats') return 'Pro'
 
   // Backward compatibility
   if (tier === 'individual') return 'Individual'
@@ -327,18 +298,14 @@ export function getTierFeatures(tier: PlanTier, period: PlanPeriod | null | unde
       topUpPrice: PRICING_CONFIG.individual.topUp.price,
     }
   }
-  if (tier === 'pro' && period === 'small') {
+
+  // Legacy pro tier - teams now use seats-based pricing
+  // Return zero credits as they should be using the seats model
+  if (tier === 'pro') {
     return {
-      credits: PRICING_CONFIG.proSmall.credits,
-      regenerations: PRICING_CONFIG.regenerations.proSmall,
-      topUpPrice: PRICING_CONFIG.proSmall.topUp.price,
-    }
-  }
-  if (tier === 'pro' && period === 'large') {
-    return {
-      credits: PRICING_CONFIG.proLarge.credits,
-      regenerations: PRICING_CONFIG.regenerations.proLarge,
-      topUpPrice: PRICING_CONFIG.proLarge.topUp.price,
+      credits: 0,
+      regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+      topUpPrice: 0,
     }
   }
 
@@ -348,13 +315,6 @@ export function getTierFeatures(tier: PlanTier, period: PlanPeriod | null | unde
       credits: PRICING_CONFIG.individual.credits,
       regenerations: PRICING_CONFIG.regenerations.individual,
       topUpPrice: PRICING_CONFIG.individual.topUp.price,
-    }
-  }
-  if (tier === 'pro') {
-    return {
-      credits: PRICING_CONFIG.proSmall.credits,
-      regenerations: PRICING_CONFIG.regenerations.proSmall,
-      topUpPrice: PRICING_CONFIG.proSmall.topUp.price,
     }
   }
 

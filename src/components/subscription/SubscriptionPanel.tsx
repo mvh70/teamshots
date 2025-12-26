@@ -74,41 +74,21 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
     popular: userMode === 'user',
   }
 
-  const proSmallPlan = {
-    id: 'proSmall' as const,
-    price: `$${PRICING_CONFIG.proSmall.price}`,
-    credits: PRICING_CONFIG.proSmall.credits,
-    regenerations: PRICING_CONFIG.regenerations.proSmall,
-    pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
-    totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits) * (1 + PRICING_CONFIG.regenerations.proSmall),
-    popular: false,
-  }
-
-  const proLargePlan = {
-    id: 'proLarge' as const,
-    price: `$${PRICING_CONFIG.proLarge.price}`,
-    credits: PRICING_CONFIG.proLarge.credits,
-    regenerations: PRICING_CONFIG.regenerations.proLarge,
-    pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
-    totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits) * (1 + PRICING_CONFIG.regenerations.proLarge),
-    popular: userMode === 'team',
-  }
-
-  const enterprisePlan = {
-    id: 'enterprise' as const,
-    price: `$${PRICING_CONFIG.enterprise.price}`,
-    credits: PRICING_CONFIG.enterprise.credits,
-    regenerations: PRICING_CONFIG.regenerations.enterprise,
-    pricePerPhoto: formatPrice(getPricePerPhoto('enterprise')),
-    totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.enterprise.credits) * (1 + PRICING_CONFIG.regenerations.enterprise),
+  const vipPlan = {
+    id: 'vip' as const,
+    price: `$${PRICING_CONFIG.vip.price}`,
+    credits: PRICING_CONFIG.vip.credits,
+    regenerations: PRICING_CONFIG.regenerations.vip,
+    pricePerPhoto: formatPrice(getPricePerPhoto('vip')),
+    totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.vip.credits) * (1 + PRICING_CONFIG.regenerations.vip),
     popular: false,
   }
 
   // Filter plans based on user mode
   const plansToShow = [
-    // Show Individual if user mode, Pro Small, Pro Large, and Enterprise if team mode
-    // tryItForFree is automatically granted on signup, not a purchasable option
-    ...(userMode === 'team' ? [proSmallPlan, proLargePlan, enterprisePlan] : [individualPlan]),
+    // Show Individual and VIP for all users
+    individualPlan,
+    vipPlan,
   ]
 
 
@@ -128,13 +108,9 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
           }`}>
             {plansToShow.map((plan) => {
               const checkoutType = 'plan'
-              const stripePriceId = plan.id === 'proSmall'
-                ? PRICING_CONFIG.proSmall.stripePriceId
-                : plan.id === 'proLarge'
-                  ? PRICING_CONFIG.proLarge.stripePriceId
-                  : plan.id === 'enterprise'
-                    ? PRICING_CONFIG.enterprise.stripePriceId
-                    : PRICING_CONFIG.individual.stripePriceId
+              const stripePriceId = plan.id === 'vip'
+                ? PRICING_CONFIG.vip.stripePriceId
+                : PRICING_CONFIG.individual.stripePriceId
 
               return (
                 <PricingCard
@@ -216,8 +192,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
           {(isCancelling || pendingPeriodChangeToMonthly) && (
             <div className="border border-gray-200 rounded-lg p-4">
               <TopUpCard tier={
-                currentTier === "pro" && currentPeriod === "large" ? "proLarge" :
-                currentTier === "pro" && currentPeriod === "small" ? "proSmall" :
+                currentTier === "individual" && currentPeriod === "large" ? "vip" :
                 currentTier === "individual" ? "individual" :
                 "individual" // Default fallback
               } onError={onCheckoutError} />
@@ -243,13 +218,9 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
           }`}>
             {plansToShow.map((plan) => {
               const checkoutType = 'plan'
-              const stripePriceId = plan.id === 'proSmall'
-                ? PRICING_CONFIG.proSmall.stripePriceId
-                : plan.id === 'proLarge'
-                  ? PRICING_CONFIG.proLarge.stripePriceId
-                  : plan.id === 'enterprise'
-                    ? PRICING_CONFIG.enterprise.stripePriceId
-                    : PRICING_CONFIG.individual.stripePriceId
+              const stripePriceId = plan.id === 'vip'
+                ? PRICING_CONFIG.vip.stripePriceId
+                : PRICING_CONFIG.individual.stripePriceId
 
               return (
                 <PricingCard

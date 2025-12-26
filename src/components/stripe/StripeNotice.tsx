@@ -72,29 +72,17 @@ export default function StripeNotice({ className, autoHideMs = 5000, clearParams
             photos: calculatePhotosFromCredits(PRICING_CONFIG.individual.credits)
           })
           break
-        case 'pro_small_success':
-          msg = tDashboard('successMessages.starter', { 
-            default: 'Starter plan activated successfully.', 
-            photos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits)
-          })
-          break
-        case 'pro_large_success':
-          msg = tDashboard('successMessages.business', { 
-            default: 'Business plan activated successfully.', 
-            photos: calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits)
-          })
-          break
-        case 'enterprise_success':
-          msg = tDashboard('successMessages.enterprise', { 
-            default: 'Enterprise plan activated successfully.', 
-            photos: calculatePhotosFromCredits(PRICING_CONFIG.enterprise.credits)
+        case 'vip_success':
+          msg = tDashboard('successMessages.vip', {
+            default: 'VIP plan activated successfully!',
+            photos: calculatePhotosFromCredits(PRICING_CONFIG.vip.credits)
           })
           break
         case 'pro_success':
-          // Legacy support - default to starter
-          msg = tDashboard('successMessages.starter', { 
-            default: 'Starter plan activated successfully.', 
-            photos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits)
+          // Pro tier (seats-based)
+          msg = tDashboard('successMessages.individual', {
+            default: 'Your purchase was successful! Credits added to your account.',
+            photos: calculatePhotosFromCredits(PRICING_CONFIG.individual.credits)
           })
           break
         case 'top_up_success':

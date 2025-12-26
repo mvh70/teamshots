@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 
-type PlanId = 'proSmall' | 'proLarge' | 'individual'
+type PlanId = 'individual' | 'vip'
 
 interface PlanCardProps {
   id: PlanId

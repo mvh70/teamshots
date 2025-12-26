@@ -32,8 +32,14 @@ export function useBuyCreditsLink() {
         // Normalize tier for UI (checks period first to determine free plan)
         const normalized = normalizePlanTierForUI(tierRaw, period)
         
-        // Free users go to upgrade, paid users go to top-up
-        setHref(normalized === 'free' ? '/app/upgrade' : '/app/top-up')
+        // Free users go to upgrade, team users go to upgrade (for seats top-up), others go to top-up
+        if (normalized === 'free') {
+          setHref('/app/upgrade')
+        } else if (normalized === 'team') {
+          setHref('/app/upgrade')
+        } else {
+          setHref('/app/top-up')
+        }
       } catch (error) {
         console.error('Failed to fetch subscription for buy credits link:', error)
         // Default to upgrade on error (safer than top-up)

@@ -39,25 +39,19 @@ export default function FAQ({ variant, supportEmail }: FAQProps) {
   const individualPhotos = calculatePhotosFromCredits(PRICING_CONFIG.individual.credits);
   const individualVariations = 1 + PRICING_CONFIG.regenerations.individual;
   const individualTotalPhotos = individualPhotos * individualVariations;
-  
-  const proSmallPhotos = calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits);
-  const proSmallVariations = 1 + PRICING_CONFIG.regenerations.proSmall;
-  const proSmallTotalPhotos = proSmallPhotos * proSmallVariations;
-  
-  const proLargePhotos = calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits);
-  const proLargeVariations = 1 + PRICING_CONFIG.regenerations.proLarge;
-  const proLargeTotalPhotos = proLargePhotos * proLargeVariations;
-  
-  const maxVariations = Math.max(individualVariations, proSmallVariations, proLargeVariations);
+
+  const vipPhotos = calculatePhotosFromCredits(PRICING_CONFIG.vip.credits);
+  const vipVariations = 1 + PRICING_CONFIG.regenerations.vip;
+  const vipTotalPhotos = vipPhotos * vipVariations;
+
+  const maxVariations = Math.max(individualVariations, vipVariations);
 
   // Prepare pricing values for interpolation
   const pricingValues = {
     individualPrice: formatPrice(PRICING_CONFIG.individual.price),
     individualPhotos: individualTotalPhotos.toString(),
-    proSmallPrice: formatPrice(PRICING_CONFIG.proSmall.price),
-    proSmallPhotos: proSmallTotalPhotos.toString(),
-    proLargePrice: formatPrice(PRICING_CONFIG.proLarge.price),
-    proLargePhotos: proLargeTotalPhotos.toString(),
+    vipPrice: formatPrice(PRICING_CONFIG.vip.price),
+    vipPhotos: vipTotalPhotos.toString(),
     maxVariations: maxVariations.toString(),
   };
 

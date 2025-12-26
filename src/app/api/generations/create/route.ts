@@ -453,9 +453,9 @@ export async function POST(request: NextRequest) {
 
     // Determine regeneration limits for new generations
     // Note: Regenerations are handled early with RegenerationService and return immediately
-    // 3 types: Individual, Team admin (proSmall/proLarge), Invited (not on a plan, credits assigned by team admin)
-    let maxRegenerations = 2 // Default for new generations
-      
+    // 3 types: Individual, VIP, Invited (not on a plan, credits assigned by team admin)
+    let maxRegenerations = 1 // Default for new generations (individual tier)
+
       // Check if person was invited (has inviteToken) - they're not on a plan
       if (ownerPerson.inviteToken && ownerPerson.teamId) {
         // Invited users get regeneration count from their team admin's plan
@@ -470,17 +470,17 @@ export async function POST(request: NextRequest) {
             }
           }
         })
-        
+
         if (team?.admin) {
           const adminPlanPeriod = (team.admin as unknown as { planPeriod?: string | null })?.planPeriod as PlanPeriod | null
           const adminPlanTier = (team.admin as unknown as { planTier?: string | null })?.planTier as PlanTier | null
-          
+
           // Determine team admin's PricingTier from tier+period to get regeneration count
           const adminPricingTier = getPricingTier(adminPlanTier, adminPlanPeriod)
           maxRegenerations = getRegenerationCount(adminPricingTier, adminPlanPeriod)
         } else {
-          // Fallback if team admin not found - use proSmall as default team plan
-          maxRegenerations = getRegenerationCount('proSmall')
+          // Fallback if team admin not found - use individual as default
+          maxRegenerations = getRegenerationCount('individual')
         }
       } else if (session.user.id) {
         // Check user's subscription to determine plan
@@ -489,22 +489,26 @@ export async function POST(request: NextRequest) {
         })
         const userPlanTier = (user as unknown as { planTier?: string | null })?.planTier
         const userPlanPeriod = (user as unknown as { planPeriod?: string | null })?.planPeriod
-        
+
         let pricingTier: PricingTier = 'tryItForFree' // Default fallback
-        
+
         if (userPlanTier === 'individual') {
-          // Individual user - 1 plan only
-          pricingTier = 'individual'
-        } else if (userPlanTier === 'pro' || userPlanPeriod === 'proSmall' || userPlanPeriod === 'proLarge') {
-          // Team admin - determine proSmall vs proLarge from planPeriod
-          if (userPlanPeriod === 'proLarge') {
-            pricingTier = 'proLarge'
+          // Individual user - check period for VIP vs regular
+          if (userPlanPeriod === 'large') {
+            pricingTier = 'vip'
           } else {
-            // Default to proSmall for 'pro' tier or proSmall period
-            pricingTier = 'proSmall'
+            pricingTier = 'individual'
           }
         }
-        
+        // Pro tier with seats-based pricing
+        else if (userPlanTier === 'pro' && userPlanPeriod === 'seats') {
+          pricingTier = 'individual' // Use individual regenerations for seats
+        }
+        // Default for other pro tiers
+        else if (userPlanTier === 'pro') {
+          pricingTier = 'individual'
+        }
+
         maxRegenerations = getRegenerationCount(pricingTier)
       } else {
         // No user session - default to tryItForFree

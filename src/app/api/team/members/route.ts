@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { withTeamPermission } from '@/domain/access/permissions'
 import { Logger } from '@/lib/logger'
+import { getTeamSeatInfo } from '@/domain/pricing/seats'
 
 export async function GET(request: NextRequest) {
   try {
@@ -195,20 +196,42 @@ export async function GET(request: NextRequest) {
     // Credits are tracked per person, so we look at person transactions, not invite transactions
     type PersonCreditTransaction = typeof personCreditTransactions[number];
     const personCreditsMap = new Map<string, number>()
+    const personCreditsAllocatedMap = new Map<string, number>()
+    const personCreditsUsedMap = new Map<string, number>()
+
     teamInvitesMap.forEach((invite: TeamInvite, personId: string) => {
       // If person has invite, calculate remaining allocation from person transactions
-      // Get generation transactions for this person
-      const personGenTransactions = personCreditTransactions.filter((tx: PersonCreditTransaction) => 
-        tx.personId === personId && tx.type === 'generation'
+      // Get generation and refund transactions for this person
+      const personUsageTransactions = personCreditTransactions.filter((tx: PersonCreditTransaction) =>
+        tx.personId === personId && (tx.type === 'generation' || tx.type === 'refund')
       )
-      const usedCredits = personGenTransactions.reduce((sum: number, tx: PersonCreditTransaction) => sum + Math.abs(tx.credits), 0)
+      // Net usage: generations (negative) + refunds (positive) = net credits used
+      const usedCredits = personUsageTransactions.reduce((sum: number, tx: PersonCreditTransaction) => {
+        return tx.type === 'generation' ? sum + Math.abs(tx.credits) : sum - tx.credits
+      }, 0)
       const remaining = Math.max(0, (invite.creditsAllocated ?? 0) - usedCredits)
       personCreditsMap.set(personId, remaining)
+      personCreditsAllocatedMap.set(personId, invite.creditsAllocated ?? 0)
+      personCreditsUsedMap.set(personId, Math.max(0, usedCredits))
     })
 
-    // For persons without invites, calculate from transactions
+    // For persons without invites (e.g., admin with direct allocation), calculate from transactions
     personCreditTransactions.forEach((tx: PersonCreditTransaction) => {
-      if (tx.personId && !personCreditsMap.has(tx.personId)) {
+      if (tx.personId && !teamInvitesMap.has(tx.personId)) {
+        // Calculate allocated credits (all positive credit additions: purchase, seat_purchase, invite_allocated, free_grant, etc.)
+        const isAllocation = tx.credits > 0 && !['generation', 'refund'].includes(tx.type)
+        if (isAllocation) {
+          personCreditsAllocatedMap.set(tx.personId, (personCreditsAllocatedMap.get(tx.personId) || 0) + tx.credits)
+        }
+        // Calculate net used credits (generations minus refunds)
+        // Allow negative temporarily to handle refunds that come before generations in array
+        if (tx.type === 'generation') {
+          personCreditsUsedMap.set(tx.personId, (personCreditsUsedMap.get(tx.personId) || 0) + Math.abs(tx.credits))
+        }
+        if (tx.type === 'refund') {
+          personCreditsUsedMap.set(tx.personId, (personCreditsUsedMap.get(tx.personId) || 0) - tx.credits)
+        }
+        // Calculate remaining (sum of all transactions)
         personCreditsMap.set(tx.personId, (personCreditsMap.get(tx.personId) || 0) + tx.credits)
       }
     })
@@ -240,7 +263,9 @@ export async function GET(request: NextRequest) {
           selfies: p._count.selfies,
           generations: activeGenerations,
           individualCredits,
-          teamCredits
+          teamCredits,
+          teamCreditsAllocated: personCreditsAllocatedMap.get(p.id) || 0,
+          teamCreditsUsed: Math.max(0, personCreditsUsedMap.get(p.id) || 0)
         }
       }
     })
@@ -273,7 +298,9 @@ export async function GET(request: NextRequest) {
           selfies: p._count.selfies,
           generations: activeGenerations,
           individualCredits,
-          teamCredits
+          teamCredits,
+          teamCreditsAllocated: personCreditsAllocatedMap.get(p.id) || 0,
+          teamCreditsUsed: Math.max(0, personCreditsUsedMap.get(p.id) || 0)
         }
       })
     })
@@ -281,10 +308,12 @@ export async function GET(request: NextRequest) {
     // Ensure current admin is included
     type UserWithCredits = typeof usersWithCredits[number];
     if (!usersWithCredits.find((u: UserWithCredits) => u.id === (user.person?.id || ''))) {
+      const adminPersonId = user.person?.id || ''
       const adminCredits = userCreditsMap.get(session.user.id) || 0
       const adminActiveGenerations = generationCounts.get(user.person.id) || 0
-      
-      usersWithCredits.unshift({ 
+      const adminTeamCredits = personCreditsMap.get(adminPersonId) || 0
+
+      usersWithCredits.unshift({
         id: user.person?.id || session.user.id, // prefer personId
         name: session.user.name || 'Me',
         email: session.user.email,
@@ -296,12 +325,25 @@ export async function GET(request: NextRequest) {
           selfies: user.person?._count.selfies || 0,
           generations: adminActiveGenerations,
           individualCredits: adminCredits,
-          teamCredits: 0
+          teamCredits: adminTeamCredits,
+          teamCreditsAllocated: personCreditsAllocatedMap.get(adminPersonId) || 0,
+          teamCreditsUsed: Math.max(0, personCreditsUsedMap.get(adminPersonId) || 0)
         }
       })
     }
 
-    return NextResponse.json({ users: usersWithCredits })
+    // Get team seats information if available
+    const seatInfo = await getTeamSeatInfo(team.id)
+
+    return NextResponse.json({ 
+      users: usersWithCredits,
+      seatInfo: seatInfo ? {
+        totalSeats: seatInfo.totalSeats,
+        activeSeats: seatInfo.activeSeats,
+        availableSeats: seatInfo.availableSeats,
+        isSeatsModel: seatInfo.isSeatsModel
+      } : null
+    })
   } catch (e) {
     Logger.error('[team/members] error', { error: e instanceof Error ? e.message : String(e) })
     return NextResponse.json({ error: 'Failed to load members' }, { status: 500 })

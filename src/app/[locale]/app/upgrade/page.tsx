@@ -9,8 +9,10 @@ import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/dom
 import { CheckoutButton } from '@/components/ui'
 import StripeNotice from '@/components/stripe/StripeNotice'
 import PricingCard from '@/components/pricing/PricingCard'
+import SeatsPricingCard from '@/components/pricing/SeatsPricingCard'
 import { normalizePlanTierForUI } from '@/domain/subscription/utils'
 import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
+import { fetchAccountMode, type AccountMode } from '@/domain/account/accountMode'
 
 type Tier = 'individual' | 'pro'
 
@@ -21,6 +23,8 @@ export default function UpgradePage() {
   const searchParams = useSearchParams()
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
   const [selectedTier, setSelectedTier] = useState<Tier>('individual')
+  const [accountMode, setAccountMode] = useState<AccountMode | null>(null)
+  const [currentSeats, setCurrentSeats] = useState<number>(0)
 
   // Check for success state
   const isSuccess = searchParams.get('success') === 'true'
@@ -43,10 +47,8 @@ export default function UpgradePage() {
           let priceId = ''
           if (planParam === 'individual' && periodParam === 'small') {
             priceId = PRICING_CONFIG.individual.stripePriceId
-          } else if (planParam === 'pro' && periodParam === 'small') {
-            priceId = PRICING_CONFIG.proSmall.stripePriceId
-          } else if (planParam === 'pro' && periodParam === 'large') {
-            priceId = PRICING_CONFIG.proLarge.stripePriceId
+          } else if (planParam === 'vip') {
+            priceId = PRICING_CONFIG.vip.stripePriceId
           }
 
           if (priceId) {
@@ -80,6 +82,28 @@ export default function UpgradePage() {
     }
   }, [autoCheckout, planParam, periodParam, isCheckingSubscription, isSuccess, isAutoCheckingOut, returnTo])
 
+  // Fetch account mode to determine which pricing to show
+  useEffect(() => {
+    const loadAccountMode = async () => {
+      try {
+        const result = await fetchAccountMode()
+        setAccountMode(result.mode)
+        // Set selectedTier based on accountMode
+        if (result.mode === 'pro') {
+          setSelectedTier('pro')
+        } else {
+          setSelectedTier('individual')
+        }
+      } catch (error) {
+        console.error('Failed to fetch account mode:', error)
+        setAccountMode('individual')
+        setSelectedTier('individual')
+      }
+    }
+
+    loadAccountMode()
+  }, [])
+
   // Check subscription and determine tier
   useEffect(() => {
     // Don't check subscription or redirect if we're showing the success screen
@@ -97,16 +121,23 @@ export default function UpgradePage() {
           if (subscription) {
             const uiTier = normalizePlanTierForUI(subscription.tier, subscription.period)
             
-            // If user has an active paid subscription, redirect to top-up
-            // But only if we're not showing the success screen
-            if (uiTier !== 'free' && !isSuccess) {
-              router.push('/app/top-up')
-              return
+            // Store current seats if available
+            if (data?.seatInfo?.totalSeats) {
+              setCurrentSeats(data.seatInfo.totalSeats)
             }
             
-            // For free users, use their chosen tier (individual or pro)
-            if (subscription.tier === 'pro' || subscription.tier === 'individual') {
-              setSelectedTier(subscription.tier)
+            // If user has an active paid subscription, show top-up instead
+            // But only if we're not showing the success screen
+            if (uiTier !== 'free' && !isSuccess) {
+              // For team/seats users, allow them to stay on this page to buy more seats
+              if (uiTier === 'team') {
+                // Don't redirect - let them use the seats top-up card
+                setIsCheckingSubscription(false)
+                return
+              }
+              // Individual/VIP users go to top-up for credit purchases
+              router.push('/app/top-up')
+              return
             }
           }
         }
@@ -122,7 +153,7 @@ export default function UpgradePage() {
 
   // Clear success params from URL after display (prevents showing on refresh)
   useEffect(() => {
-    if (isSuccess && (successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success' || successType === 'enterprise_success')) {
+    if (isSuccess && (successType === 'individual_success' || successType === 'vip_success' || successType === 'seats_success')) {
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('success')
       newUrl.searchParams.delete('type')
@@ -146,44 +177,25 @@ export default function UpgradePage() {
       totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.individual.credits) * (1 + PRICING_CONFIG.regenerations.individual),
     }
 
-    const proSmallPlan = {
-      id: 'proSmall' as const,
-      price: `$${PRICING_CONFIG.proSmall.price}`,
-      credits: PRICING_CONFIG.proSmall.credits,
-      regenerations: PRICING_CONFIG.regenerations.proSmall,
-      popular: true,
-      pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
-      totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.proSmall.credits) * (1 + PRICING_CONFIG.regenerations.proSmall),
-    }
-
-    const proLargePlan = {
-      id: 'proLarge' as const,
-      price: `$${PRICING_CONFIG.proLarge.price}`,
-      credits: PRICING_CONFIG.proLarge.credits,
-      regenerations: PRICING_CONFIG.regenerations.proLarge,
-      pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
-      totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.proLarge.credits) * (1 + PRICING_CONFIG.regenerations.proLarge),
-    }
-
-    const enterprisePlan = {
-      id: 'enterprise' as const,
-      price: `$${PRICING_CONFIG.enterprise.price}`,
-      credits: PRICING_CONFIG.enterprise.credits,
-      regenerations: PRICING_CONFIG.regenerations.enterprise,
-      pricePerPhoto: formatPrice(getPricePerPhoto('enterprise')),
+    const vipPlan = {
+      id: 'vip' as const,
+      price: `$${PRICING_CONFIG.vip.price}`,
+      credits: PRICING_CONFIG.vip.credits,
+      regenerations: PRICING_CONFIG.regenerations.vip,
+      pricePerPhoto: formatPrice(getPricePerPhoto('vip')),
       isVip: true,
-      totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.enterprise.credits) * (1 + PRICING_CONFIG.regenerations.enterprise),
+      totalPhotos: calculatePhotosFromCredits(PRICING_CONFIG.vip.credits) * (1 + PRICING_CONFIG.regenerations.vip),
     }
 
     if (selectedTier === 'individual') {
-      return [individualPlan]
+      return [individualPlan, vipPlan]
     }
-    // For 'pro' tier, show proSmall, proLarge, and enterprise
-    return [proSmallPlan, proLargePlan, enterprisePlan]
+    // For 'pro' tier, redirect to seats-based pricing
+    return []
   }, [selectedTier])
 
   // If success state, show purchase success screen (check this first to avoid redirects)
-  if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success' || successType === 'enterprise_success')) {
+  if (isSuccess && (successType === 'try_once_success' || successType === 'individual_success' || successType === 'vip_success' || successType === 'seats_success')) {
     return <PurchaseSuccess />
   }
 
@@ -209,43 +221,53 @@ export default function UpgradePage() {
         {/* <BillingToggle isYearly={isYearly} onChange={setIsYearly} className="mt-6" /> */}
       </div>
 
-      <div className={`grid gap-8 ${
-        plansToShow.length === 3 ? 'md:grid-cols-3' :
-        plansToShow.length === 2 ? 'md:grid-cols-2' :
-        'md:grid-cols-1'
-      }`}>
-        {plansToShow.map((plan) => (
-          <PricingCard
-            key={plan.id}
-            {...plan}
-            ctaSlot={
-              <CheckoutButton
-                loadingText={tAll('common.loading', { default: 'Loading...' })}
-                type="plan"
-                priceId={
-                  plan.id === 'individual'
-                    ? PRICING_CONFIG.individual.stripePriceId
-                    : plan.id === 'proSmall'
-                      ? PRICING_CONFIG.proSmall.stripePriceId
-                      : plan.id === 'proLarge'
-                        ? PRICING_CONFIG.proLarge.stripePriceId
-                        : PRICING_CONFIG.enterprise.stripePriceId
-                }
-                metadata={{
-                  planTier: plan.id === 'individual' ? 'individual' : 'pro',
-                  planPeriod: plan.id === 'proLarge' || plan.id === 'enterprise' ? 'large' : 'small'
-                }}
-                returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined}
-                useBrandCtaColors
-              >
-                {t('plans.' + plan.id + '.cta', { totalPhotos: plan.totalPhotos })}
-              </CheckoutButton>
-            }
-            popularLabelKey={(plan.id === 'individual' || plan.id === 'proSmall') ? "pricing.mostPopular" : undefined}
-            className="h-full"
+      {/* Individual plans grid */}
+      {plansToShow.length > 0 && (
+        <div className={`grid gap-8 ${
+          plansToShow.length === 3 ? 'md:grid-cols-3' :
+          plansToShow.length === 2 ? 'md:grid-cols-2' :
+          'md:grid-cols-1'
+        }`}>
+          {plansToShow.map((plan) => (
+            <PricingCard
+              key={plan.id}
+              {...plan}
+              ctaSlot={
+                <CheckoutButton
+                  loadingText={tAll('common.loading', { default: 'Loading...' })}
+                  type="plan"
+                  priceId={
+                    plan.id === 'individual'
+                      ? PRICING_CONFIG.individual.stripePriceId
+                      : PRICING_CONFIG.vip.stripePriceId
+                  }
+                  metadata={{
+                    planTier: plan.id === 'individual' ? 'individual' : 'vip',
+                    planPeriod: 'small'
+                  }}
+                  returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined}
+                  useBrandCtaColors
+                >
+                  {t('plans.' + plan.id + '.cta', { totalPhotos: plan.totalPhotos })}
+                </CheckoutButton>
+              }
+              popularLabelKey={(plan.id === 'individual') ? "pricing.mostPopular" : undefined}
+              className="h-full"
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Seats pricing for Pro tier */}
+      {selectedTier === 'pro' && (
+        <div className="max-w-2xl mx-auto">
+          <SeatsPricingCard
+            key={`seats-${currentSeats || 0}`}
+            returnUrl={returnTo ? decodeURIComponent(returnTo) : undefined}
+            currentSeats={currentSeats > 0 ? currentSeats : undefined}
           />
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

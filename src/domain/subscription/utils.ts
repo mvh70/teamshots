@@ -1,12 +1,12 @@
 export type PlanTier = 'individual' | 'pro'
-export type PlanPeriod = 'free' | 'small' | 'large'
+export type PlanPeriod = 'free' | 'small' | 'large' | 'seats'
 export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due' | 'unpaid' | null
 
 /**
  * Simplified tier type for UI purposes (routing, styling)
  * Computed from tier+period combination
  */
-export type UIPlanTier = 'free' | 'individual' | 'proSmall' | 'proLarge'
+export type UIPlanTier = 'free' | 'individual' | 'vip' | 'team'
 
 /**
  * Check if a user is on a free plan based on their period
@@ -21,13 +21,13 @@ export function isFreePlan(period: PlanPeriod | string | null | undefined): bool
 /**
  * Map tier+period to pricing config key
  * @param tier - Plan tier (individual or pro)
- * @param period - Plan period (free, small, or large)
+ * @param period - Plan period (free, small, large, or seats)
  * @returns Pricing config key or null
  */
 export function getPricingConfigKey(
   tier: PlanTier | string | null,
   period: PlanPeriod | string | null | undefined
-): 'individual' | 'proSmall' | 'proLarge' | null {
+): 'individual' | 'vip' | null {
   // Handle free plans
   if (isFreePlan(period)) {
     return null
@@ -37,21 +37,18 @@ export function getPricingConfigKey(
   if (tier === 'individual' && period === 'small') {
     return 'individual'
   }
-  if (tier === 'pro' && period === 'small') {
-    return 'proSmall'
+  if (tier === 'individual' && period === 'large') {
+    return 'vip'
   }
-  if (tier === 'pro' && period === 'large') {
-    return 'proLarge'
+
+  // Seats-based pricing doesn't use pricing config keys
+  if (tier === 'pro' && period === 'seats') {
+    return null
   }
 
   // Backward compatibility: handle legacy period values
   if (period === 'individual') return 'individual'
-  if (period === 'proSmall') return 'proSmall'
-  if (period === 'proLarge') return 'proLarge'
-
-  // Backward compatibility: handle legacy tier values
-  if (tier === 'proSmall') return 'proSmall'
-  if (tier === 'proLarge') return 'proLarge'
+  if (period === 'vip') return 'vip'
 
   return null
 }
@@ -59,7 +56,7 @@ export function getPricingConfigKey(
 /**
  * Normalize domain tier and period to simplified UI tier
  * @param tier - Domain tier (individual or pro)
- * @param period - Plan period (free, small, or large)
+ * @param period - Plan period (free, small, large, or seats)
  * @returns Simplified UI tier
  */
 export function normalizePlanTierForUI(
@@ -71,19 +68,19 @@ export function normalizePlanTierForUI(
     return 'free'
   }
 
+  // Handle seats-based pricing (TeamShotsPro)
+  if (tier === 'pro' && period === 'seats') {
+    return 'team'
+  }
+
   // Map tier+period to UI tier
   const configKey = getPricingConfigKey(tier, period)
   if (configKey === 'individual') return 'individual'
-  if (configKey === 'proSmall') return 'proSmall'
-  if (configKey === 'proLarge') return 'proLarge'
+  if (configKey === 'vip') return 'vip'
 
   // Backward compatibility: handle legacy values
   if (period === 'individual') return 'individual'
-  if (period === 'proSmall') return 'proSmall'
-  if (period === 'proLarge') return 'proLarge'
-  if (tier === 'pro') return 'proSmall'
-  if (tier === 'proSmall') return 'proSmall'
-  if (tier === 'proLarge') return 'proLarge'
+  if (period === 'vip') return 'vip'
   if (tier === 'individual') return 'individual'
 
   // Default to free if tier is unknown
@@ -98,13 +95,12 @@ export function normalizePlanTierForUI(
  */
 export function formatTierName(tier: PlanTier, period?: PlanPeriod | null): string {
   if (isFreePlan(period)) {
-    if (tier === 'pro') return 'Pro Free'
-    return 'Individual Free'
+    return 'plan.free'
   }
 
   if (tier === 'individual' && period === 'small') return 'Individual'
-  if (tier === 'pro' && period === 'small') return 'Pro Small'
-  if (tier === 'pro' && period === 'large') return 'Pro Large'
+  if (tier === 'individual' && period === 'large') return 'VIP'
+  if (tier === 'pro' && period === 'seats') return 'Pro'
 
   // Backward compatibility
   if (tier === 'individual') return 'Individual'
@@ -122,9 +118,8 @@ export async function getTierFeatures(tier: PlanTier, period: PlanPeriod | null 
   const { PRICING_CONFIG } = await import('@/config/pricing') as {
     PRICING_CONFIG: {
       individual: { credits: number }
-      proSmall: { credits: number }
-      proLarge: { credits: number }
-      regenerations: { individual: number; proSmall: number; proLarge: number; tryItForFree: number }
+      vip: { credits: number }
+      regenerations: { individual: number; vip: number; tryItForFree: number }
       freeTrial: { individual: number; pro: number }
     }
   }
@@ -149,18 +144,6 @@ export async function getTierFeatures(tier: PlanTier, period: PlanPeriod | null 
     return {
       credits: PRICING_CONFIG.individual.credits,
       regenerations: PRICING_CONFIG.regenerations.individual,
-    }
-  }
-  if (configKey === 'proSmall') {
-    return {
-      credits: PRICING_CONFIG.proSmall.credits,
-      regenerations: PRICING_CONFIG.regenerations.proSmall,
-    }
-  }
-  if (configKey === 'proLarge') {
-    return {
-      credits: PRICING_CONFIG.proLarge.credits,
-      regenerations: PRICING_CONFIG.regenerations.proLarge,
     }
   }
 

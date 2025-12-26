@@ -47,15 +47,15 @@ const normalizePeriod = (period: unknown): PlanPeriod => {
 }
 
 // Helper to normalize planPeriod for nextChange (must exclude null)
-// Returns 'free' | 'small' | 'large' (valid PlanPeriod values)
-const normalizeNextChangePeriod = (period: unknown): Exclude<PlanPeriod, null> => {
+// Returns 'free' | 'small' | 'large' | 'seats' (valid PlanPeriod values)
+const normalizeNextChangePeriod = (period: unknown): PlanPeriod => {
   // Valid PlanPeriod values (already correct)
-  if (period === 'free' || period === 'small' || period === 'large') {
-    return period as 'free' | 'small' | 'large'
+  if (period === 'free' || period === 'small' || period === 'large' || period === 'seats') {
+    return period as PlanPeriod
   }
   // Map UIPlanTier values to PlanPeriod values
-  if (period === 'proLarge') return 'large'
-  if (period === 'individual' || period === 'proSmall') return 'small'
+  if (period === 'vip') return 'large'
+  if (period === 'individual') return 'small'
   // Legacy periods: map monthly/annual to small/large
   // This is a best-effort mapping since transactional pricing doesn't have monthly/annual
   if (period === 'annual') return 'large'
@@ -124,7 +124,7 @@ export default function SubscriptionSection({
 
   const handleDowngrade = async (newTier: 'individual' | 'pro') => {
     const confirmed = confirm(
-      `Are you sure you want to downgrade to the ${formatTierName(formatSubscriptionTier(newTier))} plan? ` +
+      `Are you sure you want to downgrade to the ${t(formatTierName(formatSubscriptionTier(newTier)))} plan? ` +
       `Your current plan will remain active until the end of the billing period, ` +
       `then switch to the new plan.`
     )

@@ -49,22 +49,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check team size limits based on admin's plan tier
-    const team = invite.team
-    const adminTier = (team?.adminId ? await prisma.user.findUnique({ where: { id: team.adminId }, select: { planTier: true } }) : null)?.planTier ?? null
-    if (adminTier === 'proSmall') {
-      // Count current team members (including admin)
-      const currentMemberCount = await prisma.person.count({
-        where: { teamId: team.id }
-      })
-
-      if (currentMemberCount >= 5) {
-        return NextResponse.json({
-          error: 'Team size limit reached. This team has reached its maximum of 5 members.',
-          errorCode: 'TEAM_SIZE_LIMIT_REACHED'
-        }, { status: 400 })
-      }
-    }
-    // proLarge has no team size limit
+    // Note: With seats-based pricing, team size is managed by seat availability
+    // VIP tier has unlimited team members
 
     // Check if person already exists (from previous acceptance before token reset)
     let person

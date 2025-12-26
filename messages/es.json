@@ -278,8 +278,8 @@
       },
       "2": {
         "question": "¿Cuánto cuesta?",
-        "answer": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos), Pro Pequeño a {proSmallPrice} ({proSmallPhotos} fotos para equipos hasta 5 miembros), o Pro Grande a {proLargePrice} ({proLargePhotos} fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
-        "answerTeam": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: Pro Pequeño a {proSmallPrice} ({proSmallPhotos} fotos para equipos hasta 5 miembros), o Pro Grande a {proLargePrice} ({proLargePhotos} fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
+        "answer": "Cuando te registras, obtienes una generación de prueba gratis para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos), o plan VIP a {vipPrice} ({vipPhotos} fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
+        "answerTeam": "Cuando te registras, obtienes una generación de prueba gratis para ver la calidad. Después: Usa nuestro precio basado en asientos donde pagas por miembro del equipo. Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
         "answerIndividual": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones."
       },
       "3": {
@@ -338,8 +338,7 @@
     "credits": "créditos",
     "creditsPerMonth": "créditos mensuales",
     "individualTopUp": "Recarga individual",
-    "proSmallTopUp": "Recarga Pro Pequeño",
-    "proLargeTopUp": "Recarga Pro Grande",
+    "vipTopUp": "Recarga VIP",
     "topUpSubtitle": "Para uso ocasional",
     "confirmTopUp": "Recargar mis créditos",
     "photoGenerations": "generaciones de fotos",
@@ -358,50 +357,11 @@
       "vip": {
         "name": "VIP",
         "period": "pago único",
-        "description": "Para individuos que necesitan escala ilimitada. Soporte prioritario y gestión de cuenta dedicada incluidos.",
-        "features": [
-          "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
-          "Cola de procesamiento prioritario",
-          "Descarga en alta resolución (4K) incluida",
-          "Habla con el fundador para obtener tu estilo personalizado dolo para tí",
-          "Recarga disponible a {topUpPricePerPhoto} por foto"
-        ],
-        "cta": "Quiero VIP"
-      },
-      "enterprise": {
-        "name": "Empresa",
-        "period": "pago único",
-        "description": "Para agencias y empresas que necesitan escala ilimitada. Soporte prioritario y gestión de cuenta dedicada incluidos.",
-        "features": [
-          "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
-          "Cola de procesamiento prioritario",
-          "Descarga en alta resolución (4K) incluida",
-          "Habla con el fundador para obtener tu estilo personalizado dolo para tí",
-          "Recarga disponible a {topUpPricePerPhoto} por foto"
-        ],
-        "cta": "Quiero Empresa"
-      },
-      "proLarge": {
-        "name": "Negocio",
-        "period": "pago único",
-        "description": "¿Fotos de equipo inconsistentes? Arruinan tu marca. Arréglalo en minutos con fotos profesionales.",
+        "description": "Para usuarios avanzados que necesitan muchas fotos profesionales. Obtén el mejor valor con nuestro plan VIP.",
         "features": [
           "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
           "Personalización completa: pose, fondo, branding, colores",
-          "Panel de gestión de fotos de equipo",
-          "Descarga en baja resolución (1K) para sitios web, linkedin, redes sociales, etc incluida. Descargas en alta resolución (4K) con costo adicional",
-          "Recarga disponible a {topUpPricePerPhoto} por foto"
-        ],
-        "cta": "Obtén mis {totalPhotos} fotos"
-      },
-      "proSmall": {
-        "name": "Inicial",
-        "period": "pago único",
-        "description": "¿Fotos desiguales perjudicando a tu equipo? Arréglalo con fotos profesionales en minutos. Obtén resultados consistentes.",
-        "features": [
-          "{photos} fotos personalizables, cada una generada {variations}× para elegir la mejor",
-          "Personalización completa: pose, fondo, branding, colores",
-          "Panel de gestión de fotos de equipo",
+          "Miembros ilimitados del equipo",
           "Descarga en baja resolución (1K) para sitios web, linkedin, redes sociales, etc incluida. Descargas en alta resolución (4K) con costo adicional",
           "Recarga disponible a {topUpPricePerPhoto} por foto"
         ],
@@ -483,13 +443,6 @@
         "retriesAndVariations": "{retries} reintentos gratis por foto, así que {totalVariations} variaciones de fotos en total",
         "styles": "Fondos y estilos personalizados para equipos",
         "team": "Funciones de colaboración en equipo"
-      },
-      "enterprise": {
-        "title": "Plan Empresa",
-        "credits": "{uniquePhotos} fotos",
-        "retriesAndVariations": "{retries} reintentos gratis por foto, así que {totalVariations} variaciones de fotos en total",
-        "styles": "Opciones de personalización completas",
-        "team": "Panel de gestión de equipos"
       },
       "topUp": {
         "title": "Recarga de Créditos",
@@ -693,10 +646,14 @@
         "title": "Fotos disponibles",
         "individual": "Fotos personales",
         "team": "Créditos de foto del equipo",
+        "seats": "Plazas",
+        "lockedBranding": "con marca Teamshots bloqueada",
         "allocated": "de los cuales asignados a invitaciones",
         "monthlyReset": "Reinicio mensual",
         "progress": "{used}/{total}",
         "buyMore": "Comprar más fotos",
+        "buyMoreSeats": "Comprar más plazas",
+        "buySeatsToUnlock": "Comprar plazas para desbloquear personalización completa",
         "upgradeToPaid": "Actualizar para desbloquear personalización completa"
       },
       "generate": {
@@ -814,9 +771,8 @@
       "successMessages": {
         "tryItForFree": "¡Tu prueba gratis está lista! Se han agregado {photos} fotos a tu cuenta.",
         "individual": "¡Plan Individual activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
-        "starter": "¡Plan Inicial activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
-        "business": "¡Plan Negocio activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
-        "enterprise": "¡Plan Empresa activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
+        "vip": "¡Plan VIP activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
+        "seats": "¡Compra de asientos completada exitosamente! Se han agregado créditos a tu cuenta.",
         "topUp": "¡Recarga de créditos completada exitosamente! Se han agregado créditos a tu cuenta.",
         "default": "¡Compra completada exitosamente! Se han agregado créditos a tu cuenta.",
         "titleTryItForFree": "¡Bienvenido! 🎉",
@@ -1012,6 +968,7 @@
         "noSubscription": "Elige un plan para comenzar y comenzar a lucir increíble.",
         "upgradeOptions": "Opciones de Actualización",
         "plan": {
+          "free": "Plan gratuito",
           "individual": "Suscripción individual",
           "pro": "Suscripción Pro"
         },
@@ -1939,11 +1896,18 @@
         "member": "Miembro del equipo",
         "selfies": "Selfies",
         "generations": "Generaciones",
+        "photosAllocated": "Fotos asignadas",
+        "photosUsed": "Fotos usadas",
+        "remainingPhotos": "Fotos restantes",
         "personalCredits": "Créditos personales",
         "teamCredits": "Créditos del equipo",
         "availablePhotos": "Créditos de fotos restantes",
+        "seatUsage": "Uso de asientos",
         "status": "Estado",
         "actions": "Acciones"
+      },
+      "seatUsage": {
+        "of": "de"
       },
       "roles": {
         "teamAdmin": "Administrador del equipo",

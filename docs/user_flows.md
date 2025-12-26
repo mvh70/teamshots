@@ -284,7 +284,9 @@ Buy more credits
 
 ## 4. Credit Purchase Flows
 
-### Try Once Purchase
+### Individual Plans (photoshotspro.com)
+
+#### Try It For Free
 ```
 User needs to try the service
 â†"

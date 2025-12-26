@@ -44,16 +44,20 @@ export default function SignInPage() {
         const currentDomain = window.location.hostname.replace(/^www\./, '').toLowerCase()
         const normalizedSignupDomain = session.user.signupDomain.replace(/^www\./, '').toLowerCase()
         
-        // Redirect if on different domain and signup domain is valid
-        const shouldRedirect = currentDomain !== normalizedSignupDomain &&
-          ['teamshotspro.com', 'photoshotspro.com'].includes(normalizedSignupDomain) &&
-          (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
-        
-        if (shouldRedirect) {
-          const protocol = window.location.protocol
-          const currentPath = window.location.pathname + window.location.search
-          const redirectUrl = `${protocol}//${normalizedSignupDomain}${currentPath}`
-          window.location.href = redirectUrl
+        // Skip redirect for localhost signupDomain (legacy development users)
+        // These users can access from any domain
+        if (normalizedSignupDomain !== 'localhost') {
+          // Redirect if on different domain and signup domain is valid
+          const shouldRedirect = currentDomain !== normalizedSignupDomain &&
+            ['teamshotspro.com', 'photoshotspro.com'].includes(normalizedSignupDomain) &&
+            (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
+          
+          if (shouldRedirect) {
+            const protocol = window.location.protocol
+            const currentPath = window.location.pathname + window.location.search
+            const redirectUrl = `${protocol}//${normalizedSignupDomain}${currentPath}`
+            window.location.href = redirectUrl
+          }
         }
       }
     }
@@ -170,18 +174,22 @@ export default function SignInPage() {
               const currentDomain = window.location.hostname.replace(/^www\./, '').toLowerCase()
               const normalizedSignupDomain = signupDomain.replace(/^www\./, '').toLowerCase()
               
-              // Redirect if on different domain and signup domain is valid
-              // Only redirect in production or if explicitly enabled for testing
-              const shouldRedirect = currentDomain !== normalizedSignupDomain &&
-                ['teamshotspro.com', 'photoshotspro.com'].includes(normalizedSignupDomain) &&
-                (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
-              
-              if (shouldRedirect) {
-                const protocol = window.location.protocol
-                const currentPath = window.location.pathname + window.location.search
-                const redirectUrl = `${protocol}//${normalizedSignupDomain}${currentPath}`
-                window.location.href = redirectUrl
-                return
+              // Skip redirect for localhost signupDomain (legacy development users)
+              // These users can access from any domain
+              if (normalizedSignupDomain !== 'localhost') {
+                // Redirect if on different domain and signup domain is valid
+                // Only redirect in production or if explicitly enabled for testing
+                const shouldRedirect = currentDomain !== normalizedSignupDomain &&
+                  ['teamshotspro.com', 'photoshotspro.com'].includes(normalizedSignupDomain) &&
+                  (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_CROSS_DOMAIN_REDIRECT === 'true')
+                
+                if (shouldRedirect) {
+                  const protocol = window.location.protocol
+                  const currentPath = window.location.pathname + window.location.search
+                  const redirectUrl = `${protocol}//${normalizedSignupDomain}${currentPath}`
+                  window.location.href = redirectUrl
+                  return
+                }
               }
             }
             

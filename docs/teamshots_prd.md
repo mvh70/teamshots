@@ -30,7 +30,9 @@ Upload any photo â†’ Get professional team photos in 60 seconds using AI.
 - Automated team scraping from team website
 - 5 style presets + custom backgrounds
 - Domain-based pricing: photoshotspro.com (individual) / teamshotspro.com (team)
-- Photo packages: Try Once + Individual + Team Small + Team Large
+- Pricing tiers:
+  - Individual: Try It For Free + Individual ($19.99) + VIP ($199.99)
+  - Team: Try It For Free + Seats-based pricing (volume discounts)
 - **Photo retention policy:**
   - All plans: Photos retained indefinitely
 - Per-team-member photo allocation (5 default, admin adjustable)

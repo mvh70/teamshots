@@ -64,6 +64,7 @@
         "totalTime": "Your setup time:",
         "totalTimeValue": "2 minutes",
         "cta": "Start My Team Order",
+        "guarantee": "Risk-free: Try it free with your team to see the quality. No credit card, no commitment.",
         "steps": {
           "1": {
             "title": "Set Your Brand Identity",
@@ -271,8 +272,8 @@
       },
       "2": {
         "question": "How much does it cost?",
-        "answer": "When you sign up, you get a free test generation with TeamShotsPro branding so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos), Pro Small at {proSmallPrice} ({proSmallPhotos} photos for teams up to 5), or Pro Large at {proLargePrice} ({proLargePhotos} photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
-        "answerTeam": "When you sign up, you get a free test generation with TeamShotsPro branding so you can see the quality. After that: Pro Small at {proSmallPrice} ({proSmallPhotos} photos for teams up to 5), or Pro Large at {proLargePrice} ({proLargePhotos} photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
+        "answer": "When you sign up, you get a free test generation so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos), or VIP plan at {vipPrice} ({vipPhotos} photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
+        "answerTeam": "When you sign up, you get a free test generation so you can see the quality. After that: Use our seats-based pricing where you pay per team member. Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
         "answerIndividual": "When you sign up, you get a free test generation with PhotoShotsPro branding so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations."
       },
       "3": {
@@ -326,8 +327,7 @@
     "photo": "photo",
     "photoCount": "{count, plural, one {# photo} other {# photos}}",
     "individualTopUp": "Individual top-up",
-    "proSmallTopUp": "Pro Small top-up",
-    "proLargeTopUp": "Pro Large top-up",
+    "vipTopUp": "VIP top-up",
     "topUpSubtitle": "For occasional use",
     "confirmTopUp": "Refill my photos",
     "photoGenerations": "photo generations",
@@ -342,50 +342,11 @@
       "vip": {
         "name": "VIP",
         "period": "one-time",
-        "description": "For individuals who need unlimited scale. Priority support and dedicated account management included.",
-        "features": [
-          "{photos} customizable photos, each generated {variations}× so you can pick the best",
-          "Priority processing queue",
-          "High resolution download (4K) included",
-          "Speak with the founder to get your custom style package just for you",
-          "Top-up available at {topUpPricePerPhoto} per photo"
-        ],
-        "cta": "I want VIP"
-      },
-      "enterprise": {
-        "name": "Enterprise",
-        "period": "one-time",
-        "description": "For agencies and enterprises that need unlimited scale. Priority support and dedicated account management included.",
-        "features": [
-          "{photos} customizable photos, each generated {variations}× so you can pick the best",
-          "Priority processing queue",
-          "High resolution download (4K) included",
-          "Speak with the founder to get your custom style package just for you",
-          "Top-up available at {topUpPricePerPhoto} per photo"
-        ],
-        "cta": "I want Enterprise"
-      },
-      "proLarge": {
-        "name": "Business",
-        "period": "one-time",
-        "description": "Team photos looking inconsistent? It undermines your brand. Fix it in minutes with professional photos.",
+        "description": "For power users who need lots of professional photos. Get the best value with our VIP plan.",
         "features": [
           "{photos} customizable photos, each generated {variations}× so you can pick the best",
           "Full customization: pose, background, branding, colors",
-          "Team photo management dashboard",
-          "Low resolution download (1K) for websites, linkedin, social, etc included. High resolution downloads (4K) at a cost",
-          "Top-up available at {topUpPricePerPhoto} per photo"
-        ],
-        "cta": "Get my {totalPhotos} photos"
-      },
-      "proSmall": {
-        "name": "Starter",
-        "period": "one-time",
-        "description": "Mismatched headshots hurting your team? Fix it with professional photos in minutes. Get consistent results.",
-        "features": [
-          "{photos} customizable photos, each generated {variations}× so you can pick the best",
-          "Full customization: pose, background, branding, colors",
-          "Team photo management dashboard",
+          "Unlimited team members",
           "Low resolution download (1K) for websites, linkedin, social, etc included. High resolution downloads (4K) at a cost",
           "Top-up available at {topUpPricePerPhoto} per photo"
         ],
@@ -472,13 +433,6 @@
         "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
         "styles": "Custom backgrounds and team styles",
         "team": "Team collaboration features"
-      },
-      "enterprise": {
-        "title": "Enterprise Plan",
-        "credits": "{uniquePhotos} photos",
-        "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
-        "styles": "Full customization options",
-        "team": "Team management dashboard"
       },
       "topUp": {
         "title": "Credit Top-Up",
@@ -682,10 +636,14 @@
         "title": "Available photos",
         "individual": "Personal photos",
         "team": "Team photo credits",
+        "seats": "Seats",
+        "lockedBranding": "with locked Teamshots branding",
         "allocated": "of which allocated to invites",
         "monthlyReset": "Monthly reset",
         "progress": "{used}/{total}",
         "buyMore": "Buy more photos",
+        "buyMoreSeats": "Buy more seats",
+        "buySeatsToUnlock": "Buy seats to unlock full customization",
         "upgradeToPaid": "Upgrade to unlock full customization"
       },
       "generate": {
@@ -803,9 +761,8 @@
       "successMessages": {
         "tryItForFree": "Your free test is ready! {photos} photos have been added to your account.",
         "individual": "Individual plan activated successfully! {photos} photos have been added to your account.",
-        "starter": "Starter plan activated successfully! {photos} photos have been added to your account.",
-        "business": "Business plan activated successfully! {photos} photos have been added to your account.",
-        "enterprise": "Enterprise plan activated successfully! {photos} photos have been added to your account.",
+        "vip": "VIP plan activated successfully! {photos} photos have been added to your account.",
+        "seats": "Seats purchase completed successfully! Your credits have been added to your account.",
         "topUp": "Photo top-up completed successfully! Your photos have been added to your account.",
         "default": "Purchase completed successfully! Your photos have been added to your account.",
         "titleTryItForFree": "Welcome! 🎉",
@@ -1001,6 +958,7 @@
         "noSubscription": "Choose a plan to get started and start looking amazing!",
         "upgradeOptions": "Upgrade options",
         "plan": {
+          "free": "Free plan",
           "individual": "Individual subscription",
           "pro": "Pro subscription"
         },
@@ -1924,9 +1882,16 @@
         "member": "Team member",
         "selfies": "Selfies",
         "generations": "Generations",
+        "photosAllocated": "Photos allocated",
+        "photosUsed": "Photos used",
+        "remainingPhotos": "Remaining photos",
         "availablePhotos": "Photo credits left",
+        "seatUsage": "Seat usage",
         "status": "Status",
         "actions": "Actions"
+      },
+      "seatUsage": {
+        "of": "of"
       },
       "roles": {
         "teamAdmin": "Team admin",

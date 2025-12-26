@@ -370,7 +370,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     }
   }, [hydrated, skipUpload, hasSeenCustomizationIntro, router])
 
-  if (isSuccess && (successType === 'individual_success' || successType === 'pro_small_success' || successType === 'pro_large_success' || successType === 'enterprise_success')) {
+  if (isSuccess && (successType === 'individual_success' || successType === 'vip_success' || successType === 'seats_success')) {
     return <PurchaseSuccess />
   }
 

@@ -6,7 +6,7 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { TrackedLink } from '@/components/TrackedLink'
 
-type PlanId = 'pro' | 'proSmall' | 'proLarge' | 'individual' | 'tryItForFree' | 'vip' | 'enterprise'
+type PlanId = 'individual' | 'tryItForFree' | 'vip'
 
 interface PricingCardProps {
   id: PlanId
@@ -64,26 +64,14 @@ export default function PricingCard({
   // Calculate top-up price per photo
   let topUpPricePerPhoto = ''
   if (id !== 'tryItForFree') {
-    const topUpConfig = id === 'individual' 
-      ? PRICING_CONFIG.individual.topUp
-      : id === 'proSmall'
-        ? PRICING_CONFIG.proSmall.topUp
-        : id === 'proLarge'
-          ? PRICING_CONFIG.proLarge.topUp
-          : id === 'vip'
-            ? PRICING_CONFIG.vip.topUp
-            : PRICING_CONFIG.enterprise.topUp
-    
-    const topUpRegenerations = id === 'individual'
-      ? PRICING_CONFIG.regenerations.individual
-      : id === 'proSmall'
-        ? PRICING_CONFIG.regenerations.proSmall
-        : id === 'proLarge'
-          ? PRICING_CONFIG.regenerations.proLarge
-          : id === 'vip'
-            ? PRICING_CONFIG.regenerations.vip
-            : PRICING_CONFIG.regenerations.enterprise
-    
+    const topUpConfig = id === 'vip'
+      ? PRICING_CONFIG.vip.topUp
+      : PRICING_CONFIG.individual.topUp
+
+    const topUpRegenerations = id === 'vip'
+      ? PRICING_CONFIG.regenerations.vip
+      : PRICING_CONFIG.regenerations.individual
+
     const topUpPricePerPhotoValue = calculatePricePerPhoto(
       topUpConfig.price,
       topUpConfig.credits,
@@ -122,7 +110,7 @@ export default function PricingCard({
     : featuresWithPhotos
 
   const isFree = id === 'tryItForFree'
-  const isVipTier = isVip || id === 'vip' || id === 'enterprise'
+  const isVipTier = isVip || id === 'vip'
   const borderColor = popular
     ? 'ring-4 ring-brand-cta-ring/40 border-[3px] border-brand-cta-ring scale-105 shadow-depth-2xl shadow-brand-cta-shadow/60'
     : 'ring-2 ring-brand-premium-ring/30 border-2 border-brand-premium-ring'

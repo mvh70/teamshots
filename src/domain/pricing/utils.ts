@@ -51,17 +51,11 @@ export function getPricePerPhoto(tier: PricingTier): number {
     return 0
   }
 
-  // VIP and Enterprise are contact sales, calculate for display purposes
+  // VIP tier
   if (tier === 'vip') {
     const vipConfig = PRICING_CONFIG.vip
     const regenerations = PRICING_CONFIG.regenerations.vip
     return calculatePricePerPhoto(vipConfig.price, vipConfig.credits, regenerations)
-  }
-
-  if (tier === 'enterprise') {
-    const enterpriseConfig = PRICING_CONFIG.enterprise
-    const regenerations = PRICING_CONFIG.regenerations.enterprise
-    return calculatePricePerPhoto(enterpriseConfig.price, enterpriseConfig.credits, regenerations)
   }
 
   const tierConfig = PRICING_CONFIG[tier as PricedTier]
@@ -76,15 +70,9 @@ export function getPricePerPhoto(tier: PricingTier): number {
 
 export function getPricingDisplay() {
   return {
-    freeTrialIndividual: {
+    freeTrial: {
       price: 'Free',
       credits: PRICING_CONFIG.freeTrial.individual,
-      pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
-      regenerations: PRICING_CONFIG.regenerations.tryItForFree,
-    },
-    freeTrialTeam: {
-      price: 'Free',
-      credits: PRICING_CONFIG.freeTrial.pro,
       pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
       regenerations: PRICING_CONFIG.regenerations.tryItForFree,
     },
@@ -94,29 +82,11 @@ export function getPricingDisplay() {
       pricePerPhoto: formatPrice(getPricePerPhoto('individual')),
       regenerations: PRICING_CONFIG.regenerations.individual,
     },
-    proSmall: {
-      price: formatPrice(PRICING_CONFIG.proSmall.price),
-      credits: PRICING_CONFIG.proSmall.credits,
-      pricePerPhoto: formatPrice(getPricePerPhoto('proSmall')),
-      regenerations: PRICING_CONFIG.regenerations.proSmall,
-    },
-    proLarge: {
-      price: formatPrice(PRICING_CONFIG.proLarge.price),
-      credits: PRICING_CONFIG.proLarge.credits,
-      pricePerPhoto: formatPrice(getPricePerPhoto('proLarge')),
-      regenerations: PRICING_CONFIG.regenerations.proLarge,
-    },
     vip: {
       price: formatPrice(PRICING_CONFIG.vip.price),
       credits: PRICING_CONFIG.vip.credits,
       pricePerPhoto: formatPrice(getPricePerPhoto('vip')),
       regenerations: PRICING_CONFIG.regenerations.vip,
-    },
-    enterprise: {
-      price: formatPrice(PRICING_CONFIG.enterprise.price),
-      credits: PRICING_CONFIG.enterprise.credits,
-      pricePerPhoto: formatPrice(getPricePerPhoto('enterprise')),
-      regenerations: PRICING_CONFIG.regenerations.enterprise,
     },
   }
 }

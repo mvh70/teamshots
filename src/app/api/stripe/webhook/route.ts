@@ -227,40 +227,32 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         if (priceId === PRICING_CONFIG.individual.stripePriceId) {
           finalTier = 'individual'
           finalPeriod = 'small'
-        } else if (priceId === PRICING_CONFIG.proSmall.stripePriceId) {
-          finalTier = 'pro'
-          finalPeriod = 'small'
-        } else if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
-          finalTier = 'pro'
-          finalPeriod = 'large'
-        } else if (priceId === PRICING_CONFIG.enterprise.stripePriceId) {
-          finalTier = 'pro'
+        } else if (priceId === PRICING_CONFIG.vip.stripePriceId) {
+          finalTier = 'individual'
           finalPeriod = 'large'
         }
       }
-      
+
       if (!finalTier || !finalPeriod) {
-        Logger.error('Could not determine tier/period for plan purchase', { 
+        Logger.error('Could not determine tier/period for plan purchase', {
           planTier,
           planPeriod,
-          priceId, 
+          priceId,
           sessionId: session.id,
-          lineItems: checkoutSession.line_items?.data 
+          lineItems: checkoutSession.line_items?.data
         });
         throw new Error(`Unable to determine tier/period for price ID: ${priceId}`);
       }
-      
+
       // Get pricing config key to determine credits
-      // Enterprise uses pro/large tier/period but enterprise credits
-      const isEnterprise = priceId === PRICING_CONFIG.enterprise.stripePriceId
-      const configKey = isEnterprise ? 'enterprise' as const : getPricingConfigKey(finalTier, finalPeriod)
+      const configKey = getPricingConfigKey(finalTier, finalPeriod)
       if (!configKey) {
         Logger.error('Invalid tier/period combination', { tier: finalTier, period: finalPeriod });
         throw new Error(`Invalid tier/period combination: ${finalTier}/${finalPeriod}`);
       }
-      
-      // Type-safe access to pricing tiers (not other config keys)
-      type PricingTierKey = 'individual' | 'proSmall' | 'proLarge' | 'vip' | 'enterprise'
+
+      // Type-safe access to pricing tiers
+      type PricingTierKey = 'individual' | 'vip'
       const credits = PRICING_CONFIG[configKey as PricingTierKey].credits
       
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
@@ -315,29 +307,28 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     } else if (purchaseType === 'top_up') {
       // Handle credit top-up
       const credits = parseInt(session.metadata?.credits || '0');
-      const tier = session.metadata?.tier as 'individual' | 'proSmall' | 'proLarge' | undefined;
-      
+      const tier = session.metadata?.tier as 'individual' | 'vip' | undefined;
+
       let price = 0;
-      if (tier === 'individual') {
+      if (tier === 'vip') {
+        price = PRICING_CONFIG.vip.topUp.price;
+      } else {
+        // Default to individual (covers individual tier and legacy tiers)
         price = PRICING_CONFIG.individual.topUp.price;
-      } else if (tier === 'proSmall') {
-        price = PRICING_CONFIG.proSmall.topUp.price;
-      } else if (tier === 'proLarge') {
-        price = PRICING_CONFIG.proLarge.topUp.price;
       }
-      
+
       // Allow repeat top-ups; do not block subsequent purchases
 
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
         const person = await tx.person.findUnique({ where: { userId: userId || '' } })
-        const teamId = (tier === 'proSmall' || tier === 'proLarge') ? person?.teamId || null : null
-        
+        const teamId = person?.teamId || null
+
         // Get user's current planPeriod for top-up transaction
         const user = await tx.user.findUnique({ where: { id: userId || '' }, select: { planPeriod: true } })
-        const planPeriod = (user?.planPeriod && user.planPeriod !== 'free' && user.planPeriod !== 'tryOnce' && user.planPeriod !== 'try_once') 
-          ? user.planPeriod 
-          : (tier === 'proLarge' ? 'large' : 'small')
-        
+        const planPeriod = (user?.planPeriod && user.planPeriod !== 'free' && user.planPeriod !== 'tryOnce' && user.planPeriod !== 'try_once')
+          ? user.planPeriod
+          : (tier === 'vip' ? 'large' : 'small')
+
         await tx.creditTransaction.create({
           data: {
             userId,
@@ -345,17 +336,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             credits: credits,
             type: 'purchase',
             description: `Credit top-up - ${credits} credits`,
-            amount: price * Math.ceil(credits / (tier === 'individual' ? PRICING_CONFIG.individual.topUp.credits :
-              tier === 'proSmall' ? PRICING_CONFIG.proSmall.topUp.credits :
-              tier === 'proLarge' ? PRICING_CONFIG.proLarge.topUp.credits : 50)),
+            amount: price * Math.ceil(credits / (tier === 'vip' ? PRICING_CONFIG.vip.topUp.credits : PRICING_CONFIG.individual.topUp.credits)),
             currency: 'USD',
             stripePaymentId: session.payment_intent as string,
-            planTier: tier,
+            planTier: tier || 'individual',
             planPeriod: planPeriod,
             metadata: {
               stripeSessionId: session.id,
               topUpCredits: credits,
-              tier: tier,
+              tier: tier || 'individual',
             },
           },
         });
@@ -406,6 +395,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
           teamId = team.id;
           Logger.info('Created team for seats purchase', { userId, teamId: team.id, seats });
+
+          // Allocate credits to admin (same as invited members)
+          await tx.creditTransaction.create({
+            data: {
+              teamId: team.id,
+              personId: person!.id,
+              type: 'invite_allocated',
+              credits: PRICING_CONFIG.seats.creditsPerSeat,
+              description: 'Credits allocated to team admin',
+            }
+          });
+          Logger.info('Allocated credits to team admin', { userId, personId: person!.id, credits: PRICING_CONFIG.seats.creditsPerSeat });
         } else {
           // Add seats to existing team
           teamId = person.teamId;
@@ -431,15 +432,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           },
         });
 
-        // Record seat purchase
-        await tx.seatPurchase.create({
+        // Record seat purchase as a credit transaction
+        const totalCredits = seats * PRICING_CONFIG.seats.creditsPerSeat;
+        await tx.creditTransaction.create({
           data: {
             teamId,
-            seatsPurchased: seats,
-            pricePerSeat: (session.amount_total || 0) / 100 / seats,
-            totalPaid: (session.amount_total || 0) / 100,
+            userId,
+            type: 'seat_purchase',
+            credits: totalCredits,
+            amount: (session.amount_total || 0) / 100,
+            currency: session.currency?.toUpperCase() || 'USD',
             stripePaymentId: (session.payment_intent as string) || session.id,
+            description: `Purchased ${seats} seat${seats > 1 ? 's' : ''} (${totalCredits} credits)`,
+            // Seats-specific fields
+            seats,
+            pricePerSeat: (session.amount_total || 0) / 100 / seats,
             stripePriceId: priceId || '',
+            metadata: {
+              checkoutSessionId: session.id,
+              creditsPerSeat: PRICING_CONFIG.seats.creditsPerSeat,
+              photosPerSeat: PRICING_CONFIG.seats.creditsPerSeat / PRICING_CONFIG.credits.perGeneration,
+            }
           }
         });
 
@@ -522,17 +535,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         // Determine photos from purchase for the email (convert credits to photos)
         let purchasedCredits = 0;
         if (purchaseType === 'plan') {
-          const priceId = checkoutSession.line_items?.data[0]?.price?.id;
-          const isEnterprise = priceId === PRICING_CONFIG.enterprise.stripePriceId;
-          if (isEnterprise) {
-            purchasedCredits = PRICING_CONFIG.enterprise.credits;
-          } else {
-            const planTier = session.metadata?.planTier as PlanTier | undefined;
-            const planPeriod = session.metadata?.planPeriod as PlanPeriod | undefined;
-            const configKey = getPricingConfigKey(planTier || 'individual', planPeriod || 'small');
-            if (configKey) {
-              purchasedCredits = PRICING_CONFIG[configKey].credits;
-            }
+          const planTier = session.metadata?.planTier as PlanTier | undefined;
+          const planPeriod = session.metadata?.planPeriod as PlanPeriod | undefined;
+          const configKey = getPricingConfigKey(planTier || 'individual', planPeriod || 'small');
+          if (configKey) {
+            purchasedCredits = PRICING_CONFIG[configKey].credits;
           }
         } else if (purchaseType === 'top_up') {
           purchasedCredits = parseInt(session.metadata?.credits || '0');
@@ -636,26 +643,22 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     // Map to strict PlanTier/PlanPeriod
     let finalTier: PlanTier = 'individual';
     let finalPeriod: PlanPeriod = 'small';
-    
-    if (tierStr === 'proSmall') {
-        finalTier = 'pro';
-        finalPeriod = 'small';
-    } else if (tierStr === 'proLarge') {
-        finalTier = 'pro';
+
+    if (tierStr === 'vip') {
+        finalTier = 'individual';
         finalPeriod = 'large';
     } else {
         finalTier = 'individual';
         finalPeriod = 'small';
     }
-    
+
     // Get credits for this tier
     let credits = 0;
-    if (tierStr === 'individual') {
+    if (tierStr === 'vip') {
+      credits = PRICING_CONFIG.vip.credits;
+    } else {
+      // Default to individual (covers individual tier and legacy tiers)
       credits = PRICING_CONFIG.individual.credits;
-    } else if (tierStr === 'proSmall') {
-      credits = PRICING_CONFIG.proSmall.credits;
-    } else if (tierStr === 'proLarge') {
-      credits = PRICING_CONFIG.proLarge.credits;
     }
     
     // Add credits to user account
@@ -706,10 +709,10 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
 
     const credits = parseInt(invoice.metadata?.credits || '0');
     const tierStr = invoice.metadata?.tier || 'individual';
-    
-    // Map legacy/metadata tier strings to strict PlanTier
+
+    // Map metadata tier strings to strict PlanTier
     let finalTier: PlanTier = 'individual';
-    if (tierStr === 'proSmall' || tierStr === 'proLarge') {
+    if (tierStr === 'pro') {
       finalTier = 'pro';
     }
 
@@ -740,9 +743,9 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
 
       // Get user's current planPeriod for top-up transaction
       const userWithPeriod = await tx.user.findUnique({ where: { id: user.id }, select: { planPeriod: true } })
-      const planPeriod = (userWithPeriod?.planPeriod && userWithPeriod.planPeriod !== 'free' && userWithPeriod.planPeriod !== 'tryOnce' && userWithPeriod.planPeriod !== 'try_once') 
+      const planPeriod = (userWithPeriod?.planPeriod && userWithPeriod.planPeriod !== 'free' && userWithPeriod.planPeriod !== 'tryOnce' && userWithPeriod.planPeriod !== 'try_once')
         ? userWithPeriod.planPeriod as PlanPeriod
-        : (tierStr === 'proLarge' ? 'large' : 'small')
+        : (tierStr === 'vip' ? 'large' : 'small')
 
       await tx.creditTransaction.create({
         data: {
@@ -785,16 +788,10 @@ function determineTier(priceId: string | undefined): string | null {
     return 'individual';
   }
   
-  if (priceId === PRICING_CONFIG.proSmall.stripePriceId) {
-    return 'proSmall';
+  if (priceId === PRICING_CONFIG.vip.stripePriceId) {
+    return 'vip';
   }
 
-  if (priceId === PRICING_CONFIG.proLarge.stripePriceId) {
-    return 'proLarge';
-  }
-
-  // tryOnce was replaced with tryItForFree (free tier, no stripePriceId)
-  // Legacy tryOnce priceIds will return null
-  
+  // Legacy pro tiers and tryOnce no longer supported
   return null;
 }

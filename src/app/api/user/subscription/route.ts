@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { getUserSubscription } from '@/domain/subscription/subscription'
+import { getTeamSeatInfo } from '@/domain/pricing/seats'
+import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 
 
@@ -14,7 +16,37 @@ export async function GET() {
 
   try {
     const subscription = await getUserSubscription(session.user.id)
-    return NextResponse.json({ subscription })
+    
+    // Fetch seat info - User owns teams via the teams relation (as admin)
+    let seatInfo = null
+    
+    // Check if user owns a team (is admin)
+    const ownedTeam = await prisma.team.findFirst({
+      where: { adminId: session.user.id },
+      select: {
+        id: true,
+        totalSeats: true,
+        activeSeats: true,
+        creditsPerSeat: true,
+        isLegacyCredits: true,
+        admin: {
+          select: { signupDomain: true }
+        }
+      }
+    })
+    
+    if (ownedTeam) {
+      const TEAM_DOMAIN = 'teamshotspro.com'
+      const isSeatsModel = !ownedTeam.isLegacyCredits && ownedTeam.admin.signupDomain === TEAM_DOMAIN
+      seatInfo = {
+        totalSeats: ownedTeam.totalSeats,
+        activeSeats: ownedTeam.activeSeats,
+        availableSeats: Math.max(0, ownedTeam.totalSeats - ownedTeam.activeSeats),
+        isSeatsModel
+      }
+    }
+    
+    return NextResponse.json({ subscription, seatInfo })
   } catch (error) {
     Logger.error('Error fetching subscription', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ error: 'Failed to fetch subscription' }, { status: 500 })
