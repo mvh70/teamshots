@@ -3,10 +3,11 @@ import { TEAM_DOMAIN } from '@/config/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 
 /**
- * Volume pricing tiers for seats
+ * Graduated pricing tiers for seats
+ * Each tier is charged separately and summed (more intuitive than volume pricing)
  * Imported from PRICING_CONFIG to maintain single source of truth
  */
-export const VOLUME_TIERS = PRICING_CONFIG.seats.volumeTiers
+export const GRADUATED_TIERS = PRICING_CONFIG.seats.graduatedTiers
 
 /**
  * Credits allocated per seat (10 photos per seat)
@@ -14,18 +15,19 @@ export const VOLUME_TIERS = PRICING_CONFIG.seats.volumeTiers
 export const CREDITS_PER_SEAT = PRICING_CONFIG.seats.creditsPerSeat
 
 /**
- * Get the price per seat based on volume tier
- * Uses volume pricing (tier applies to ALL units, not graduated)
+ * Get the price per seat for a specific tier
+ * Note: With graduated pricing, different seats can have different prices
+ * This returns the tier price for the given seat count range
  */
-export function getVolumePrice(seatCount: number): number {
+export function getTierPrice(seatCount: number): number {
   if (seatCount < PRICING_CONFIG.seats.minSeats) return 0
 
-  const tier = VOLUME_TIERS.find(
+  const tier = GRADUATED_TIERS.find(
     t => seatCount >= t.min && seatCount <= t.max
   )
 
-  // Fallback to most expensive tier (smallest volume)
-  return tier?.pricePerSeat ?? VOLUME_TIERS[VOLUME_TIERS.length - 1].pricePerSeat
+  // Fallback to most expensive tier (smallest tier: 2-4 seats)
+  return tier?.pricePerSeat ?? GRADUATED_TIERS[GRADUATED_TIERS.length - 1].pricePerSeat
 }
 
 /**
@@ -36,43 +38,45 @@ export function calculateTotal(seats: number): number {
 }
 
 /**
- * Calculate savings compared to base tier (smallest volume tier)
+ * Calculate savings compared to base tier (smallest tier: 2-4 seats)
+ * With graduated pricing, savings come from having seats in lower-priced tiers
  */
 export function getSavings(seats: number): number {
   if (seats < PRICING_CONFIG.seats.minSeats) return 0
-  // Base tier price is the most expensive (smallest volume tier)
-  const baseTierPrice = VOLUME_TIERS[VOLUME_TIERS.length - 1].pricePerSeat
+  // Base tier price is the most expensive (smallest tier: 2-4 seats)
+  const baseTierPrice = GRADUATED_TIERS[GRADUATED_TIERS.length - 1].pricePerSeat
   const actualTotal = calculateTotal(seats)
   const baseTotal = seats * baseTierPrice
   return baseTotal - actualTotal
 }
 
 /**
- * Get volume tier information for display
+ * Get pricing tier information for display
+ * Returns the tier that the last seat falls into
  */
-export function getVolumeTier(seats: number): {
+export function getPricingTier(seats: number): {
   tier: 'base' | 'medium' | 'large'
   pricePerSeat: number
   nextTierAt: number | null
   nextTierPrice: number | null
 } {
-  const pricePerSeat = getVolumePrice(seats)
-  
+  const pricePerSeat = getTierPrice(seats)
+
   // Find current tier index
-  const currentTierIndex = VOLUME_TIERS.findIndex(
+  const currentTierIndex = GRADUATED_TIERS.findIndex(
     t => seats >= t.min && seats <= t.max
   )
-  
+
   // Determine tier category based on position
-  const tierCategory: 'base' | 'medium' | 'large' = 
+  const tierCategory: 'base' | 'medium' | 'large' =
     currentTierIndex === -1 ? 'base' :
-    currentTierIndex >= VOLUME_TIERS.length - 2 ? 'base' : // Last 2 tiers = base
-    currentTierIndex <= 1 ? 'large' : // First 2 tiers = large (best discount)
+    currentTierIndex >= GRADUATED_TIERS.length - 2 ? 'base' : // Last 2 tiers = base (2-4, 5-24)
+    currentTierIndex <= 1 ? 'large' : // First 2 tiers = large (500-999, 1000+)
     'medium'
-  
+
   // Find next better tier (lower index = better discount)
   const nextTierIndex = currentTierIndex > 0 ? currentTierIndex - 1 : -1
-  const nextTier = nextTierIndex >= 0 ? VOLUME_TIERS[nextTierIndex] : null
+  const nextTier = nextTierIndex >= 0 ? GRADUATED_TIERS[nextTierIndex] : null
 
   return {
     tier: tierCategory,
@@ -80,6 +84,70 @@ export function getVolumeTier(seats: number): {
     nextTierAt: nextTier?.min ?? null,
     nextTierPrice: nextTier?.pricePerSeat ?? null
   }
+}
+
+/**
+ * Get graduated pricing breakdown showing cost per tier
+ * Useful for displaying transparent pricing to customers
+ *
+ * @param seats - Total number of seats to calculate breakdown for
+ * @returns Array of tier breakdowns with seat count and costs per tier
+ *
+ * @example
+ * ```typescript
+ * const breakdown = getGraduatedBreakdown(12)
+ * // Returns:
+ * // [
+ * //   { tierRange: "2-4", seatsInTier: 3, pricePerSeat: 29.99, subtotal: 89.97 },
+ * //   { tierRange: "5-24", seatsInTier: 9, pricePerSeat: 23.99, subtotal: 215.91 }
+ * // ]
+ * ```
+ */
+export function getGraduatedBreakdown(seats: number): Array<{
+  tierRange: string
+  seatsInTier: number
+  pricePerSeat: number
+  subtotal: number
+}> {
+  if (seats < PRICING_CONFIG.seats.minSeats) return []
+
+  const breakdown: Array<{
+    tierRange: string
+    seatsInTier: number
+    pricePerSeat: number
+    subtotal: number
+  }> = []
+
+  let remaining = seats
+
+  // Process tiers from smallest to largest (reverse config order)
+  const tiersAscending = [...GRADUATED_TIERS].reverse()
+
+  for (const tier of tiersAscending) {
+    if (remaining <= 0) break
+
+    // Calculate tier capacity
+    const tierCapacity = tier.max === Infinity
+      ? Infinity
+      : tier.max - tier.min + 1
+
+    // Determine how many seats fall in this tier
+    const seatsInTier = Math.min(remaining, tierCapacity)
+
+    if (seatsInTier > 0) {
+      breakdown.push({
+        tierRange: tier.max === Infinity
+          ? `${tier.min}+`
+          : `${tier.min}-${tier.max}`,
+        seatsInTier,
+        pricePerSeat: tier.pricePerSeat,
+        subtotal: seatsInTier * tier.pricePerSeat
+      })
+      remaining -= seatsInTier
+    }
+  }
+
+  return breakdown
 }
 
 /**

@@ -5,15 +5,15 @@ import { useTranslations } from 'next-intl';
 import { CheckoutButton } from '@/components/ui';
 import { PRICING_CONFIG } from '@/config/pricing';
 
-// Use volume pricing from config
+// Use graduated pricing from config
 const MIN_SEATS = PRICING_CONFIG.seats.minSeats;
 
-function getVolumePrice(seatCount: number): number {
+function getTierPrice(seatCount: number): number {
   if (seatCount < MIN_SEATS) return 0;
-  const tier = PRICING_CONFIG.seats.volumeTiers.find(
+  const tier = PRICING_CONFIG.seats.graduatedTiers.find(
     t => seatCount >= t.min && seatCount <= t.max
   );
-  return tier?.pricePerSeat ?? PRICING_CONFIG.seats.volumeTiers[PRICING_CONFIG.seats.volumeTiers.length - 1].pricePerSeat;
+  return tier?.pricePerSeat ?? PRICING_CONFIG.seats.graduatedTiers[PRICING_CONFIG.seats.graduatedTiers.length - 1].pricePerSeat;
 }
 
 function calculateTotal(seats: number): number {
@@ -22,7 +22,7 @@ function calculateTotal(seats: number): number {
 
 function getSavings(seats: number): number {
   if (seats < MIN_SEATS) return 0;
-  const baseTierPrice = PRICING_CONFIG.seats.volumeTiers[PRICING_CONFIG.seats.volumeTiers.length - 1].pricePerSeat;
+  const baseTierPrice = PRICING_CONFIG.seats.graduatedTiers[PRICING_CONFIG.seats.graduatedTiers.length - 1].pricePerSeat;
   const actualTotal = calculateTotal(seats);
   const baseTotal = seats * baseTierPrice;
   return baseTotal - actualTotal;
@@ -71,7 +71,7 @@ export default function SeatsPricingCard({
   // Calculate values - ensure seats never goes below minimum
   const validatedSeats = Math.max(seats, minSeats);
   const additionalSeats = isTopUpMode ? validatedSeats - currentSeats : validatedSeats;
-  const pricePerSeat = getVolumePrice(validatedSeats);
+  const pricePerSeat = getTierPrice(validatedSeats);
   const total = calculateTotal(validatedSeats);
   const savings = getSavings(validatedSeats);
   const totalPhotos = validatedSeats * (PRICING_CONFIG.seats.creditsPerSeat / PRICING_CONFIG.credits.perGeneration);

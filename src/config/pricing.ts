@@ -75,7 +75,9 @@ export const PRICING_CONFIG = {
     minSeats: 2, // Minimum 2 seats required
     creditsPerSeat: 100, // 10 photos per seat
     stripePriceId: STRIPE_PRICE_IDS.TEAM_SEATS || '',
-    volumeTiers: [
+    // Graduated pricing tiers (each tier charged separately and summed)
+    // Stored in descending order for consistent config structure
+    graduatedTiers: [
       { min: 1000, max: Infinity, pricePerSeat: 17.99 },
       { min: 500, max: 999, pricePerSeat: 19.49 },
       { min: 100, max: 499, pricePerSeat: 20.99 },
@@ -83,13 +85,34 @@ export const PRICING_CONFIG = {
       { min: 5, max: 24, pricePerSeat: 23.99 },
       { min: 2, max: 4, pricePerSeat: 29.99 },
     ],
-    // Helper to calculate total price based on seat count
+    // Helper to calculate total price using graduated pricing
+    // Each tier is charged separately: (tier1 seats × tier1 price) + (tier2 seats × tier2 price) + ...
     calculateTotal: (seats: number): number => {
       if (seats < 2) return 0
-      const tier = PRICING_CONFIG.seats.volumeTiers.find(
-        t => seats >= t.min && seats <= t.max
-      )
-      return seats * (tier?.pricePerSeat ?? 29.00)
+
+      let total = 0
+      let remaining = seats
+
+      // Process tiers from smallest to largest (reverse the config order)
+      const tiersAscending = [...PRICING_CONFIG.seats.graduatedTiers].reverse()
+
+      for (const tier of tiersAscending) {
+        if (remaining <= 0) break
+
+        // Calculate tier capacity
+        const tierCapacity = tier.max === Infinity
+          ? Infinity
+          : tier.max - tier.min + 1
+
+        // Determine how many seats fall in this tier
+        const seatsInTier = Math.min(remaining, tierCapacity)
+
+        // Add this tier's cost to total
+        total += seatsInTier * tier.pricePerSeat
+        remaining -= seatsInTier
+      }
+
+      return total
     }
   },
 

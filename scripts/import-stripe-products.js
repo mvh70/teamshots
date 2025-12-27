@@ -36,14 +36,14 @@ function readPricingConfigTs() {
     return m ? Number(m[1]) : undefined;
   };
 
-  // Parse seats volume tiers from config
-  const seatsSection = content.match(/seats:\s*\{[\s\S]*?volumeTiers:\s*\[([\s\S]*?)\]/);
-  const volumeTiers = [];
+  // Parse seats graduated tiers from config
+  const seatsSection = content.match(/seats:\s*\{[\s\S]*?graduatedTiers:\s*\[([\s\S]*?)\]/);
+  const graduatedTiers = [];
   if (seatsSection) {
     const tiersStr = seatsSection[1];
     const tierMatches = tiersStr.matchAll(/\{\s*min:\s*(\d+),\s*max:\s*(\w+),\s*pricePerSeat:\s*([0-9.]+)\s*\}/g);
     for (const match of tierMatches) {
-      volumeTiers.push({
+      graduatedTiers.push({
         min: Number(match[1]),
         max: match[2] === 'Infinity' ? null : Number(match[2]),
         pricePerSeat: Number(match[3])
@@ -63,7 +63,7 @@ function readPricingConfigTs() {
       vipTopUp: { price: num(/vip:[\s\S]*?topUp:\s*\{\s*price:\s*([0-9.]+)/), credits: num(/vip:[\s\S]*?topUp:[\s\S]*?credits:\s*([0-9]+)/) },
     },
     seats: {
-      volumeTiers,
+      graduatedTiers,
       creditsPerSeat,
       photosPerSeat
     }
@@ -192,10 +192,10 @@ async function createProducts() {
       }
     );
 
-    // Convert config volumeTiers to Stripe tiers format
-    // Config tiers are sorted from highest to lowest tier (25+, 10-24, 1-9)
-    // Stripe tiers must be sorted from lowest to highest (1-9, 10-24, 25+)
-    const stripeTiers = read.seats.volumeTiers
+    // Convert config graduatedTiers to Stripe tiers format
+    // Config tiers are sorted from highest to lowest tier (1000+, 500-999, ..., 2-4)
+    // Stripe tiers must be sorted from lowest to highest (2-4, 5-24, ..., 1000+)
+    const stripeTiers = read.seats.graduatedTiers
       .slice()
       .reverse()
       .map(tier => ({
@@ -210,14 +210,14 @@ async function createProducts() {
     })).data.find(p =>
       p.currency === 'usd' &&
       p.billing_scheme === 'tiered' &&
-      p.tiers_mode === 'volume'
+      p.tiers_mode === 'graduated'
     );
 
     const teamSeatsPrice = existingSeatsPrice || await stripe.prices.create({
       product: teamSeatsProduct.id,
       currency: 'usd',
       billing_scheme: 'tiered',
-      tiers_mode: 'volume', // CRITICAL: Tier price applies to ALL units
+      tiers_mode: 'graduated', // Each tier charged separately and summed (more intuitive)
       tiers: stripeTiers,
       metadata: {
         type: 'team_seats',
