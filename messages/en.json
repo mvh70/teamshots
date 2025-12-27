@@ -514,7 +514,7 @@
       }
     },
     "signup": {
-      "freeBadge": "Includes 1 free test generation in a predefined style",
+      "freeBadge": "You're signing up for the free plan with {photoCount} free {photoCount, plural, one {photo} other {photos}} and fixed {brandName} branding",
       "title": "Create your account",
       "welcome": "Create your account",
       "welcomeSubtitle": "Built for teams and startup founders. Join in seconds. No photoshoot, no photographer, no vendor management. Just professional team photos.",
@@ -558,6 +558,55 @@
       "resendIn": "Resend in {seconds}s",
       "otpHelp": "Code expires in 10 min",
       "newCodeSent": "Invalid or expired code. A new verification code was sent."
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link",
+      "welcomeTitle": "Reset Password",
+      "welcomeSubtitle": "Don't worry, we'll help you get back into your account.",
+      "emailLabel": "Email address",
+      "sendResetLink": "Send reset link",
+      "sending": "Sending...",
+      "backToSignIn": "Back to sign in",
+      "checkEmail": "Check your email",
+      "successTitle": "Reset link sent",
+      "successDescription": "We've sent you an email with instructions to reset your password.",
+      "emailSent": "We've sent a password reset link to {email}",
+      "checkSpam": "If you don't see it, check your spam folder",
+      "genericError": "An error occurred. Please try again."
+    },
+    "resetPassword": {
+      "title": "Reset your password",
+      "subtitle": "Choose a new password for your account",
+      "welcomeTitle": "Create New Password",
+      "welcomeSubtitle": "Choose a strong password to secure your account.",
+      "forEmail": "Resetting password for {email}",
+      "passwordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "resetPassword": "Reset password",
+      "resetting": "Resetting password...",
+      "verifying": "Verifying link...",
+      "success": "Password reset successfully",
+      "successTitle": "Password Updated",
+      "successDescription": "Your password has been changed. Signing you in...",
+      "redirecting": "Signing you in...",
+      "passwordMismatch": "Passwords don't match",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "genericError": "Something went wrong. Please try again.",
+      "linkProblem": "There's a problem with this link",
+      "linkExpired": "This link has expired",
+      "linkExpiredDescription": "Password reset links expire after 1 hour for security.",
+      "linkExpiredHelp": "You can request a new password reset link below.",
+      "linkInvalid": "Invalid link",
+      "linkInvalidDescription": "This link doesn't appear to be valid. It may have been corrupted or already used.",
+      "linkInvalidHelp": "Please request a new password reset link.",
+      "requestNewLink": "Request new reset link",
+      "goToSignIn": "Back to sign in",
+      "alreadySet": "Password already reset",
+      "alreadySetTitle": "Link Already Used",
+      "alreadySetDescription": "This password reset link has already been used.",
+      "alreadySetHelp": "If you need to reset your password again, please request a new link.",
+      "signIn": "Sign in"
     },
     "setPassword": {
       "title": "Set your password",
@@ -1540,12 +1589,12 @@
       "default": "Default"
     },
     "freePlan": {
-      "title": "Free Plan Bonus",
+      "title": "You're on the free plan.",
       "stamp": "Test Drive",
       "cta": "Upgrade",
-      "bodyPersonal": "Try before you buy. Generate a preview to see yourself in professional styles without spending a dime.",
-      "bodyTeam": "Standardize your team's look. Generate previews to see how consistent professional photos elevate your brand.",
-      "bodyGeneric": "Curious about the results? Generate a free preview to see the quality of our AI headshots firsthand."
+      "bodyPersonal": "On the free plan you get {photoCount} {photoCount, plural, one {photo} other {photos}} and a fixed {brandName} branding. Upgrade your plan to get full customization and more photos.",
+      "bodyTeam": "On the free plan you get {photoCount} {photoCount, plural, one {photo} other {photos}} (that you can share with your team) and a fixed {brandName} branding. Upgrade your plan to get full customization and more photos.",
+      "bodyGeneric": "On the free plan you get {photoCount} {photoCount, plural, one {photo} other {photos}} and a fixed {brandName} branding. Upgrade your plan to get full customization and more photos."
     }
   },
   "emails": {
@@ -1564,6 +1613,18 @@
       "expires": "This link expires in 24 hours for security reasons.",
       "linkFallback": "If the button doesn't work, copy and paste this link into your browser:",
       "footer": "If you didn't request this sign-in link, you can safely ignore this email."
+    },
+    "passwordReset": {
+      "subject": "Reset your password",
+      "preview": "Reset your password for your account",
+      "title": "Reset your password",
+      "greeting": "We received a request to reset your password.",
+      "instructions": "Click the button below to choose a new password. This link will expire in 1 hour.",
+      "button": "Reset password",
+      "expires": "For security, this link expires in 1 hour.",
+      "notRequested": "If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.",
+      "linkFallback": "If the button doesn't work, copy and paste this link into your browser:",
+      "footer": "This password reset link was requested for your account. If you didn't make this request, please contact support."
     },
     "teamInvite": {
       "subject": "Team invitation from {teamName}",
@@ -2129,7 +2190,9 @@
       }
     },
     "buttons": {
-      "inviteTeamMember": "Invite team member"
+      "inviteTeamMember": "Invite team member",
+      "upgrade": "Upgrade",
+      "buyCredits": "Buy credits"
     },
     "adminOnly": {
       "title": "Admin access required",

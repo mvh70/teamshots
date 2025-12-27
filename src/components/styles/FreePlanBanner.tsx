@@ -3,6 +3,8 @@
 
 import { useTranslations } from 'next-intl'
 import { SparklesIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
+import { PRICING_CONFIG } from '@/config/pricing'
 
 interface FreePlanBannerProps {
   variant: 'personal' | 'team' | 'generic'
@@ -17,6 +19,27 @@ export function FreePlanBanner({ variant, className }: FreePlanBannerProps) {
       : variant === 'team'
       ? 'freePlan.bodyTeam'
       : 'freePlan.bodyGeneric'
+
+  // Determine brand name and free photo count based on current domain
+  const getBrandInfo = () => {
+    if (typeof window === 'undefined') {
+      return {
+        brandName: 'TeamShotsPro',
+        photoCount: Math.floor(PRICING_CONFIG.freeTrial.pro / PRICING_CONFIG.credits.perGeneration)
+      }
+    }
+    const hostname = window.location.hostname.replace(/^www\./, '')
+    if (hostname === INDIVIDUAL_DOMAIN) {
+      return {
+        brandName: 'PhotoShotsPro',
+        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
+      }
+    }
+    return {
+      brandName: 'TeamShotsPro',
+      photoCount: Math.floor(PRICING_CONFIG.freeTrial.pro / PRICING_CONFIG.credits.perGeneration)
+    }
+  }
 
   function handleUpgrade() {
     // Navigate to the prepared checkout/sign-up flow where the user can
@@ -58,7 +81,7 @@ export function FreePlanBanner({ variant, className }: FreePlanBannerProps) {
               {t('freePlan.title')}
             </h3>
             <p className="text-base text-gray-700 leading-relaxed max-w-2xl">
-              {t(bodyKey)}
+              {t(bodyKey, getBrandInfo())}
             </p>
           </div>
         </div>

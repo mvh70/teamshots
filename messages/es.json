@@ -525,7 +525,7 @@
       }
     },
     "signup": {
-      "freeBadge": "Incluye 1 generación de prueba gratis en estilo predefinido",
+      "freeBadge": "Te estás registrando en el plan gratuito con {photoCount} {photoCount, plural, one {foto gratis} other {fotos gratis}} y marca fija de {brandName}",
       "title": "Crea tu cuenta",
       "welcome": "Crea tu cuenta",
       "welcomeSubtitle": "Diseñado para equipos y fundadores. Únete en segundos. Sin fotógrafo ni gestión—solo fotos profesionales.",
@@ -569,6 +569,55 @@
       "resendIn": "Reenviar en {seconds}s",
       "otpHelp": "Código caduca en 10 min",
       "newCodeSent": "Código inválido o caducado. Enviamos uno nuevo."
+    },
+    "forgotPassword": {
+      "title": "Restablece tu contraseña",
+      "subtitle": "Ingresa tu correo y te enviaremos un enlace de restablecimiento",
+      "welcomeTitle": "Restablecer Contraseña",
+      "welcomeSubtitle": "No te preocupes, te ayudaremos a recuperar el acceso a tu cuenta.",
+      "emailLabel": "Correo electrónico",
+      "sendResetLink": "Enviar enlace de restablecimiento",
+      "sending": "Enviando...",
+      "backToSignIn": "Volver a iniciar sesión",
+      "checkEmail": "Revisa tu correo",
+      "successTitle": "Enlace enviado",
+      "successDescription": "Te hemos enviado un correo con instrucciones para restablecer tu contraseña.",
+      "emailSent": "Hemos enviado un enlace de restablecimiento a {email}",
+      "checkSpam": "Si no lo ves, revisa tu carpeta de spam",
+      "genericError": "Ocurrió un error. Por favor, inténtalo de nuevo."
+    },
+    "resetPassword": {
+      "title": "Restablece tu contraseña",
+      "subtitle": "Elige una nueva contraseña para tu cuenta",
+      "welcomeTitle": "Crear Nueva Contraseña",
+      "welcomeSubtitle": "Elige una contraseña segura para proteger tu cuenta.",
+      "forEmail": "Restableciendo contraseña para {email}",
+      "passwordLabel": "Nueva contraseña",
+      "confirmPasswordLabel": "Confirmar nueva contraseña",
+      "resetPassword": "Restablecer contraseña",
+      "resetting": "Restableciendo contraseña...",
+      "verifying": "Verificando enlace...",
+      "success": "Contraseña restablecida exitosamente",
+      "successTitle": "Contraseña Actualizada",
+      "successDescription": "Tu contraseña ha sido cambiada. Iniciando sesión...",
+      "redirecting": "Iniciando sesión...",
+      "passwordMismatch": "Las contraseñas no coinciden",
+      "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
+      "genericError": "Algo salió mal. Por favor, inténtalo de nuevo.",
+      "linkProblem": "Hay un problema con este enlace",
+      "linkExpired": "Este enlace ha caducado",
+      "linkExpiredDescription": "Los enlaces de restablecimiento de contraseña caducan después de 1 hora por seguridad.",
+      "linkExpiredHelp": "Puedes solicitar un nuevo enlace de restablecimiento a continuación.",
+      "linkInvalid": "Enlace inválido",
+      "linkInvalidDescription": "Este enlace no parece ser válido. Puede estar corrupto o ya haber sido usado.",
+      "linkInvalidHelp": "Por favor, solicita un nuevo enlace de restablecimiento de contraseña.",
+      "requestNewLink": "Solicitar nuevo enlace",
+      "goToSignIn": "Volver a iniciar sesión",
+      "alreadySet": "Contraseña ya restablecida",
+      "alreadySetTitle": "Enlace Ya Usado",
+      "alreadySetDescription": "Este enlace de restablecimiento de contraseña ya ha sido usado.",
+      "alreadySetHelp": "Si necesitas restablecer tu contraseña nuevamente, por favor solicita un nuevo enlace.",
+      "signIn": "Iniciar sesión"
     },
     "setPassword": {
       "title": "Establece tu contraseña",
@@ -1555,12 +1604,12 @@
       "default": "Predeterminado"
     },
     "freePlan": {
-      "title": "Bono del Plan Gratuito",
+      "title": "Estás en el plan gratuito.",
       "stamp": "Prueba de Manejo",
       "cta": "Mejorar plan",
-      "bodyPersonal": "Prueba antes de comprar. Genera una vista previa para verte con estilos profesionales sin gastar un centavo.",
-      "bodyTeam": "Estandariza la imagen de tu equipo. Genera vistas previas para ver cómo las fotos profesionales consistentes elevan tu marca.",
-      "bodyGeneric": "¿Curioso por los resultados? Genera una vista previa gratuita para ver la calidad de nuestros retratos con IA de primera mano."
+      "bodyPersonal": "En el plan gratuito obtienes {photoCount} {photoCount, plural, one {foto} other {fotos}} y marca fija de {brandName}. Mejora tu plan para obtener personalización completa y más fotos.",
+      "bodyTeam": "En el plan gratuito obtienes {photoCount} {photoCount, plural, one {foto} other {fotos}} (que puedes compartir con tu equipo) y marca fija de {brandName}. Mejora tu plan para obtener personalización completa y más fotos.",
+      "bodyGeneric": "En el plan gratuito obtienes {photoCount} {photoCount, plural, one {foto} other {fotos}} y marca fija de {brandName}. Mejora tu plan para obtener personalización completa y más fotos."
     }
   },
   "emails": {
@@ -1579,6 +1628,18 @@
       "expires": "Este enlace expira en 24 horas por razones de seguridad.",
       "linkFallback": "Si el botón no funciona, copia y pega este enlace en tu navegador:",
       "footer": "Si no solicitaste este enlace de inicio de sesión, puedes ignorar este correo electrónico de forma segura."
+    },
+    "passwordReset": {
+      "subject": "Restablece tu contraseña",
+      "preview": "Restablece tu contraseña para tu cuenta",
+      "title": "Restablece tu contraseña",
+      "greeting": "Recibimos una solicitud para restablecer tu contraseña.",
+      "instructions": "Haz clic en el botón a continuación para elegir una nueva contraseña. Este enlace expirará en 1 hora.",
+      "button": "Restablecer contraseña",
+      "expires": "Por seguridad, este enlace expira en 1 hora.",
+      "notRequested": "Si no solicitaste restablecer tu contraseña, puedes ignorar este correo de forma segura. Tu contraseña permanecerá sin cambios.",
+      "linkFallback": "Si el botón no funciona, copia y pega este enlace en tu navegador:",
+      "footer": "Este enlace de restablecimiento de contraseña fue solicitado para tu cuenta. Si no hiciste esta solicitud, por favor contacta a soporte."
     },
     "teamInvite": {
       "subject": "Invitación al equipo de {teamName}",
@@ -2152,7 +2213,9 @@
       "insufficientCredits": "No hay suficientes créditos del equipo. Disponibles: {available}, Requeridos: {required}"
     },
     "buttons": {
-      "inviteTeamMember": "Invitar Miembro del Equipo"
+      "inviteTeamMember": "Invitar Miembro del Equipo",
+      "upgrade": "Mejorar",
+      "buyCredits": "Comprar créditos"
     },
     "adminOnly": {
       "title": "Acceso de Administrador Requerido",
