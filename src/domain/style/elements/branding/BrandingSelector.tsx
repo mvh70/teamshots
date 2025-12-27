@@ -6,6 +6,7 @@ import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import { BrandingSettings } from '@/types/photo-style'
 import { Grid } from '@/components/ui'
 import { BRANDING_POSITIONS } from './config'
+import Image from 'next/image'
 
 interface BrandingSelectorProps {
   value: BrandingSettings
@@ -269,6 +270,7 @@ export default function BrandingSelector({
                   const isSelected = value.position === opt.key
                   // On mobile, hide unselected options when predefined
                   const shouldHide = isPredefined && !isSelected
+                  
                   return (
                   <button
                     type="button"
@@ -288,6 +290,28 @@ export default function BrandingSelector({
                   )
                 })}
               </Grid>
+              
+              {/* Show preview image for selected position */}
+              {value.position && (() => {
+                const imageMap: Record<string, string> = {
+                  'background': 'branding-background.png',
+                  'clothing': 'branding-clothing.png',
+                  'elements': 'branding-other.png'
+                }
+                const imageSrc = `/images/branding/${imageMap[value.position]}`
+                
+                return (
+                  <div className="mt-4 rounded-md overflow-hidden border border-gray-200">
+                    <Image
+                      src={imageSrc}
+                      alt={t(`position.${value.position}`)}
+                      width={600}
+                      height={400}
+                      className="w-full h-auto object-cover"
+                    />
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>

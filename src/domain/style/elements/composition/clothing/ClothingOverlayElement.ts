@@ -395,6 +395,14 @@ export class ClothingOverlayElement extends StyleElement {
       const shotType = (clothing as any).shotType || 'medium-shot'
       const prompt = this.buildOverlayPrompt(clothing, branding, shotType, clothingColors)
 
+      Logger.info('[ClothingOverlayElement] Generated overlay prompt', {
+        generationId,
+        style: clothing.style,
+        details: clothing.details,
+        clothingColors,
+        promptPreview: prompt.substring(0, 5000) + '...'
+      })
+
       // Generate with Gemini
       const result = await generateWithGemini(
         prompt,
@@ -515,9 +523,15 @@ export class ClothingOverlayElement extends StyleElement {
     // Build layer descriptions with colors
     const layerDescriptions: string[] = []
 
+    // Determine if this is a single-layer garment (no outer layer)
+    const isSingleLayer = !wardrobeConfig.outerLayer
+
     if (wardrobeConfig.baseLayer) {
+      // For single-layer garments (hoodie, t-shirt, polo, dress), use topLayerColor
+      // For multi-layer garments, use baseLayerColor for the base layer
+      const colorToUse = isSingleLayer ? topLayerColor : baseLayerColor
       layerDescriptions.push(
-        `Base layer: ${wardrobeConfig.baseLayer} in ${baseLayerColor} color`
+        `Base layer: ${wardrobeConfig.baseLayer} in ${colorToUse} color`
       )
     }
 
@@ -539,6 +553,36 @@ export class ClothingOverlayElement extends StyleElement {
       layerDescriptions.push(`Shoes: ${shoesDescription}`)
     }
 
+    // Build layout requirements based on garment structure
+    const layoutParts = [`STANDARDIZED LAYOUT REQUIREMENTS:
+- Arrange items in a GRID layout on a clean white background with ALL items FULLY SEPARATED
+- CRITICAL: NO overlapping - each garment must be completely visible with clear space between items
+- CRITICAL: Show EXACTLY ${layerDescriptions.length} item(s) total - no more, no less`]
+
+    if (isSingleLayer) {
+      // Single-layer garments: only one main garment (hoodie, t-shirt, polo, dress)
+      layoutParts.push(`- Main garment (the ${wardrobeConfig.baseLayer}) laid perfectly flat, facing forward, symmetrical, fully spread out, 100% visible`)
+    } else {
+      // Multi-layer garments: base layer + outer layer (business casual, etc.)
+      layoutParts.push(`- Base layer garment in its own space, 100% visible with no obstructions`)
+      layoutParts.push(`- Outer layer in its own separate space, NOT touching or overlapping the base layer`)
+    }
+
+    if (showPants) {
+      layoutParts.push(`- Pants in their own separate space below, NOT touching upper garments`)
+    }
+    if (showShoes) {
+      layoutParts.push(`- Shoes in their own separate space at the bottom, NOT touching other items`)
+    }
+
+    layoutParts.push(`- Minimum 5cm spacing between ALL items - no parts of any garment should touch`)
+    layoutParts.push(`- All items laid perfectly flat, facing forward, symmetrical, fully spread out`)
+    layoutParts.push(`- Professional product catalog photography style showing each item individually`)
+    layoutParts.push(`- Soft, even studio lighting with minimal shadows`)
+    layoutParts.push(`- Each garment should be photographed as if it's a standalone product listing`)
+
+    const layoutInstructions = layoutParts.join('\n')
+
     return `
 CREATE A PROFESSIONAL CLOTHING TEMPLATE WITH LOGO:
 
@@ -547,18 +591,7 @@ You are creating a standardized flat-lay photograph showing clothing items with 
 CLOTHING ITEMS TO SHOW:
 ${layerDescriptions.map((layer, i) => `${i + 1}. ${layer}`).join('\n')}
 
-STANDARDIZED LAYOUT REQUIREMENTS:
-- Arrange items in a GRID layout on a clean white background with ALL items FULLY SEPARATED
-- CRITICAL: NO overlapping - each garment must be completely visible with clear space between items
-- Base layer garment in its own space, 100% visible with no obstructions
-- Outer layer (if present) in its own separate space, NOT touching or overlapping the base layer
-${showPants ? '- Pants in their own separate space below, NOT touching upper garments' : ''}
-${showShoes ? '- Shoes in their own separate space at the bottom, NOT touching other items' : ''}
-- Minimum 5cm spacing between ALL items - no parts of any garment should touch
-- All items laid perfectly flat, facing forward, symmetrical, fully spread out
-- Professional product catalog photography style showing each item individually
-- Soft, even studio lighting with minimal shadows
-- Each garment should be photographed as if it's a standalone product listing
+${layoutInstructions}
 
 LOGO PLACEMENT - CRITICAL REQUIREMENTS:
 TARGET GARMENT: ${template.logoLayer}
