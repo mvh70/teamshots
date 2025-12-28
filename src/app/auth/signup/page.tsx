@@ -89,7 +89,7 @@ export default function SignUpPage() {
         setError(data.error || 'Failed to send OTP')
       }
     } catch {
-      setError('An error occurred')
+      setError('errorOccurred')
     } finally {
       setIsLoading(false)
     }
@@ -171,7 +171,7 @@ export default function SignUpPage() {
         }
       }
     } catch {
-      setError('An error occurred')
+      setError('errorOccurred')
     } finally {
       setIsLoading(false)
     }

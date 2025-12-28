@@ -550,7 +550,8 @@
       "resendCode": "Reenviar código",
       "resendIn": "Reenviar en {seconds}s",
       "otpHelp": "Código caduca en 10 min",
-      "newCodeSent": "Código inválido o caducado. Enviamos uno nuevo."
+      "newCodeSent": "Código inválido o caducado. Enviamos uno nuevo.",
+      "errorOccurred": "Ocurrió un error. Por favor intenta de nuevo."
     },
     "forgotPassword": {
       "title": "Restablece tu contraseña",

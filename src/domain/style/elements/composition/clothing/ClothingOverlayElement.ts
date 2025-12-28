@@ -659,9 +659,9 @@ FINAL VERIFICATION BEFORE OUTPUT:
     const templates: Record<string, ClothingTemplate> = {
       // LAYERED STYLES (Multi-layer clothing)
       'business-casual': {
-        description: 'Business casual with jacket over shirt',
-        layers: ['Base layer: Fitted t-shirt or knit top', 'Outer layer: Blazer or suit jacket, worn open'],
-        logoLayer: 'Base layer (t-shirt/knit top)',
+        description: 'Business casual with jacket over deluxe t-shirt',
+        layers: ['Base layer: Deluxe t-shirt (substantial and refined, like Mercerized cotton, Pima cotton, or modal blends, with a tight crew neck)', 'Outer layer: Blazer or suit jacket, worn open'],
+        logoLayer: 'Base layer (deluxe t-shirt)',
         logoPosition: 'Center chest, slightly below neckline',
         logoStyle: 'printed or embroidered',
         isLayered: true,
