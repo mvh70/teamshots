@@ -186,9 +186,6 @@ export default function PricingCard({
               <div className="text-xs lg:text-sm font-medium text-text-body">
                 {t('customizablePhotos', { count: numberOfPhotos })} with fixed teamshots branding
               </div>
-              <div className="text-xs lg:text-sm font-semibold text-brand-premium">
-                {t('chooseTheBest')}
-              </div>
             </div>
           </div>
         )}
