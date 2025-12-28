@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         individual: balanceSummary.individual,
-        team: balanceSummary.team
+        team: balanceSummary.team,
+        person: balanceSummary.person
       })
     } else if (type === 'individual') {
       const balanceSummary = await CreditService.getCreditBalanceSummary(session.user.id)

@@ -113,6 +113,7 @@ export async function GET() {
       credits: {
         individual: creditBalance.individual,
         team: creditBalance.team,
+        person: creditBalance.person,
       },
       // Dashboard stats
       stats: {

@@ -40,13 +40,21 @@ export class RegenerationService {
         personId: personId
       },
       include: {
-        context: true
+        context: true,
+        person: {
+          select: {
+            teamId: true
+          }
+        }
       }
     })
 
     if (!sourceGeneration) {
       throw new Error('Generation not found')
     }
+
+    // Extract teamId from person for job enqueuing
+    const teamId = sourceGeneration.person?.teamId ?? undefined
 
     // Find the original generation in the group to check remaining regenerations
     let originalGeneration = sourceGeneration
@@ -57,7 +65,12 @@ export class RegenerationService {
           isOriginal: true
         },
         include: {
-          context: true
+          context: true,
+          person: {
+            select: {
+              teamId: true
+            }
+          }
         }
       })
       if (foundOriginal) {
@@ -142,6 +155,7 @@ export class RegenerationService {
       generationId: generation.id,
       personId: personId,
       userId: userId,
+      teamId: teamId,
       selfieS3Keys: jobSelfieS3Keys,
       prompt: 'Professional headshot with same style as original',
       workflowVersion: determineWorkflowVersion(workflowVersion),

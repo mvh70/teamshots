@@ -50,15 +50,15 @@ export default function PricingContent({ variant }: PricingContentProps) {
             {/* Seats Pricing Card */}
             <SeatsPricingCard unauth={true} />
 
-            {/* Try It For Free Card */}
+            {/* Free Trial Card */}
             <PricingCard
-              id="tryItForFree"
+              id="free"
               price="Free"
               credits={PRICING_CONFIG.freeTrial.pro}
-              regenerations={PRICING_CONFIG.regenerations.tryItForFree}
-              pricePerPhoto={formatPrice(getPricePerPhoto('tryItForFree'))}
+              regenerations={PRICING_CONFIG.regenerations.free}
+              pricePerPhoto={formatPrice(getPricePerPhoto('free'))}
               ctaMode="link"
-              href="/auth/signup?period=tryItForFree"
+              href="/auth/signup"
             />
           </div>
 
@@ -113,15 +113,15 @@ export default function PricingContent({ variant }: PricingContentProps) {
     totalPhotos: getTotalPhotos(PRICING_CONFIG.individual.credits, PRICING_CONFIG.regenerations.individual),
   }
 
-  const tryItForFreePlan = {
-    id: 'tryItForFree' as const,
+  const freePlan = {
+    id: 'free' as const,
     price: 'Free',
     credits: PRICING_CONFIG.freeTrial.individual,
-    regenerations: PRICING_CONFIG.regenerations.tryItForFree,
-    pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
+    regenerations: PRICING_CONFIG.regenerations.free,
+    pricePerPhoto: formatPrice(getPricePerPhoto('free')),
     totalPhotos: getTotalPhotos(
       PRICING_CONFIG.freeTrial.individual,
-      PRICING_CONFIG.regenerations.tryItForFree
+      PRICING_CONFIG.regenerations.free
     ),
   }
 
@@ -134,7 +134,7 @@ export default function PricingContent({ variant }: PricingContentProps) {
     // Show Individual for individual domain or no domain restriction
     ...(domainSignupType === 'individual' || domainSignupType === null ? [individualPlan] : []),
     // Always show Try It For Free last
-    tryItForFreePlan,
+    freePlan,
   ]
 
   return (
@@ -191,13 +191,13 @@ export default function PricingContent({ variant }: PricingContentProps) {
         }`}>
           {plansToShow.map((plan) => {
             // Free plan still uses signup flow
-            if (plan.id === 'tryItForFree') {
+            if (plan.id === 'free') {
               return (
                 <PricingCard
                   key={plan.id}
                   {...plan}
                   ctaMode="link"
-                  href="/auth/signup?period=tryItForFree"
+                  href="/auth/signup"
                   className="h-full"
                 />
               )

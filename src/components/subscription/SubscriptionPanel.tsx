@@ -62,7 +62,7 @@ export default function SubscriptionPanel({ subscription, userMode, onCancel, on
   // const pricing = useMemo(() => getPricingDisplay(), []) // Disabled for transactional pricing
 
   // Build standardized plan objects (matching PricingPreview/PricingContent pattern)
-  // Note: tryItForFree is automatically granted on signup, so it's not shown as a purchasable option
+  // Note: Free trial is automatically granted on signup, so it's not shown as a purchasable option
 
   const individualPlan = {
     id: 'individual' as const,

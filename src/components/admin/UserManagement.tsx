@@ -57,9 +57,9 @@ function PackageGrantModal({
   const [error, setError] = useState<string | null>(null)
 
   // Only show packages that are actually registered in CLIENT_PACKAGES
-  // Exclude 'tryitforfree' (special signup flow) and 'freepackage' (runtime teaser)
+  // Exclude 'freepackage' (runtime teaser for free users)
   const registeredPackages = Object.keys(CLIENT_PACKAGES).filter(
-    p => p !== 'tryitforfree' && p !== 'freepackage'
+    p => p !== 'freepackage'
   )
   const userPackageIds = user.packages.map(p => p.packageId)
   const grantablePackages = registeredPackages.filter(p => !userPackageIds.includes(p))

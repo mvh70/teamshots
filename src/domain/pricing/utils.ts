@@ -1,7 +1,7 @@
 import { PRICING_CONFIG, type PricingTier, getRegenerationsForPlan } from '@/config/pricing'
 
-// Type for pricing tiers that have price configurations (excluding tryItForFree)
-type PricedTier = Exclude<PricingTier, 'tryItForFree'>
+// Type for pricing tiers that have price configurations (excluding free)
+type PricedTier = Exclude<PricingTier, 'free'>
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
 
 // Removed: calculateAnnualSavings - no longer needed for transactional pricing
@@ -46,8 +46,8 @@ export function calculatePricePerPhoto(
 }
 
 export function getPricePerPhoto(tier: PricingTier): number {
-  // Try It For Free is free, so price per photo is 0
-  if (tier === 'tryItForFree') {
+  // Free tier has no price, so price per photo is 0
+  if (tier === 'free') {
     return 0
   }
 
@@ -73,8 +73,8 @@ export function getPricingDisplay() {
     freeTrial: {
       price: 'Free',
       credits: PRICING_CONFIG.freeTrial.individual,
-      pricePerPhoto: formatPrice(getPricePerPhoto('tryItForFree')),
-      regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+      pricePerPhoto: formatPrice(getPricePerPhoto('free')),
+      regenerations: PRICING_CONFIG.regenerations.free,
     },
     individual: {
       price: formatPrice(PRICING_CONFIG.individual.price),

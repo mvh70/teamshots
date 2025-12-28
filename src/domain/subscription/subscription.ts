@@ -279,13 +279,13 @@ export function getTierFeatures(tier: PlanTier, period: PlanPeriod | null | unde
     if (tier === 'pro') {
       return {
         credits: PRICING_CONFIG.freeTrial.pro,
-        regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+        regenerations: PRICING_CONFIG.regenerations.free,
         topUpPrice: 0,
       }
     }
     return {
       credits: PRICING_CONFIG.freeTrial.individual,
-      regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+      regenerations: PRICING_CONFIG.regenerations.free,
       topUpPrice: 0,
     }
   }
@@ -304,7 +304,7 @@ export function getTierFeatures(tier: PlanTier, period: PlanPeriod | null | unde
   if (tier === 'pro') {
     return {
       credits: 0,
-      regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+      regenerations: PRICING_CONFIG.regenerations.free,
       topUpPrice: 0,
     }
   }
@@ -320,7 +320,7 @@ export function getTierFeatures(tier: PlanTier, period: PlanPeriod | null | unde
 
   return {
     credits: 0,
-    regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+    regenerations: PRICING_CONFIG.regenerations.free,
     topUpPrice: 0,
   }
 }

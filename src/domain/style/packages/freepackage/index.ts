@@ -32,7 +32,7 @@ const AVAILABLE_POSES = [
   'classic_corporate',
   'slimming_three_quarter',
   'power_cross',
-  'approachable_lean',
+  //'approachable_lean',
   'candid_over_shoulder',
   'seated_engagement'
 ]

@@ -132,6 +132,30 @@ export async function POST(request: NextRequest) {
       return u.toString();
     };
 
+    // Check if user is a team admin with existing seats (for seats isTopUp detection)
+    // We check if they're an admin because we only want to show "additional seats" 
+    // if THEY previously purchased seats, not if they were invited to someone else's team
+    let seatsIsTopUp = false;
+    if (type === 'seats' && user?.id) {
+      const person = await prisma.person.findUnique({
+        where: { userId: user.id },
+        select: { 
+          teamId: true,
+          team: {
+            select: {
+              adminId: true,
+              totalSeats: true
+            }
+          }
+        }
+      });
+      // Only consider it a top-up if:
+      // 1. They have a team AND
+      // 2. They are the admin of that team AND  
+      // 3. The team already has seats (totalSeats > 0)
+      seatsIsTopUp = !!(person?.teamId && person?.team?.adminId === user.id && (person?.team?.totalSeats ?? 0) > 0);
+    }
+
     // Create specific success messages based on purchase type
     let successMessage = ''
     let successTier = ''
@@ -172,6 +196,12 @@ export async function POST(request: NextRequest) {
         : creditsPerPackage;
       queryExtras.credits = String(totalCredits)
       queryExtras.tier = encodeURIComponent(tier || 'individual')
+    }
+    
+    // For seats, pass seats count and isTopUp flag
+    if (type === 'seats') {
+      queryExtras.seats = String(quantity)
+      queryExtras.isTopUp = String(seatsIsTopUp)
     }
 
     // Add redirect parameters:
@@ -306,29 +336,52 @@ export async function POST(request: NextRequest) {
         credits: String(totalCredits),
       };
     } else if (type === 'seats') {
-      // Seats-based pricing with volume discounts
-      // quantity represents the number of seats to purchase
-      if (!priceId || priceId !== PRICING_CONFIG.seats.stripePriceId) {
-        throw new Error('Invalid price ID for seats checkout');
+      // Seats-based pricing with graduated pricing (calculated server-side)
+      // Graduated pricing is not supported by Stripe for one-time payments,
+      // so we calculate the total cost here and use price_data
+
+      // Validate minimum seats based on purchase type
+      // First purchase: minimum 2 seats required
+      // Additional seats: minimum 1 seat (no restriction)
+      if (!seatsIsTopUp && quantity < PRICING_CONFIG.seats.minSeats) {
+        throw new Error(`Minimum ${PRICING_CONFIG.seats.minSeats} seats required for first purchase`);
+      }
+      if (quantity < 1) {
+        throw new Error('At least 1 seat required');
       }
 
-      // Validate minimum seats
-      if (quantity < PRICING_CONFIG.seats.minSeats) {
-        throw new Error(`Minimum ${PRICING_CONFIG.seats.minSeats} seats required`);
-      }
+      // Calculate graduated price using config
+      const totalCost = PRICING_CONFIG.seats.calculateTotal(quantity);
+      const photosPerSeat = PRICING_CONFIG.seats.creditsPerSeat / PRICING_CONFIG.credits.perGeneration;
+      const totalPhotos = quantity * photosPerSeat;
 
       sessionParams.line_items = [
         {
-          price: priceId,
-          quantity, // Number of seats
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `TeamShots - ${quantity} Seat${quantity === 1 ? '' : 's'}`,
+              description: `Professional headshots for your team (${totalPhotos} photos total with graduated pricing)`,
+              metadata: {
+                type: 'team_seats',
+                seats: String(quantity),
+                credits_per_seat: String(PRICING_CONFIG.seats.creditsPerSeat),
+                photos_per_seat: String(photosPerSeat),
+              }
+            },
+            unit_amount: Math.round(totalCost * 100), // Convert to cents
+          },
+          quantity: 1, // Quantity is 1 because the price already includes all seats
         },
       ];
 
       sessionParams.metadata = {
         ...sessionParams.metadata,
         seats: String(quantity),
+        totalCost: String(totalCost),
         planTier: 'pro',
         planPeriod: 'seats',
+        isTopUp: String(seatsIsTopUp),
       };
     }
 

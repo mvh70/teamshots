@@ -1,8 +1,10 @@
+//STRIPE_SECRET_KEY=sk_live_xxx node scripts/import-stripe-products.js
+
 // Define Stripe Price IDs per environment (test vs production)
 const TEST_STRIPE_PRICE_IDS = {
   INDIVIDUAL: "price_1SajfxENr8odIuXaJU1IuCr3",
   VIP: "price_1SajfzENr8odIuXavTftq5Dy",
-  TEAM_SEATS: "", // Run scripts/import-stripe-products.js to generate
+  TEAM_SEATS: "",  // No price needed - calculated server-side
   INDIVIDUAL_TOP_UP: "price_1Sajg0ENr8odIuXa6kcQpNKs",
   VIP_TOP_UP: "price_1Sajg2ENr8odIuXaUYFabxOr",
 } as const;
@@ -10,7 +12,7 @@ const TEST_STRIPE_PRICE_IDS = {
 const PROD_STRIPE_PRICE_IDS = {
   INDIVIDUAL: "price_1SajhGENr8odIuXaapskBoOc",
   VIP: "price_1SajhIENr8odIuXaeponRjAR",
-  TEAM_SEATS: "", // Run scripts/import-stripe-products.js to generate
+  TEAM_SEATS: "",  // No price needed - calculated server-side
   INDIVIDUAL_TOP_UP: "price_1SajhJENr8odIuXaVePSTFSd",
   VIP_TOP_UP: "price_1SajhLENr8odIuXa8TUXvCxh",
 } as const;
@@ -38,7 +40,7 @@ export const PRICING_CONFIG = {
 
   // Regeneration system
   regenerations: {
-    tryItForFree: 1,
+    free: 1,
     individual: 1,
     vip: 3, // VIP gets most retries
     seats: 2, // Seats-based pricing gets 2 regenerations
@@ -83,12 +85,12 @@ export const PRICING_CONFIG = {
       { min: 100, max: 499, pricePerSeat: 20.99 },
       { min: 25, max: 99, pricePerSeat: 22.49 },
       { min: 5, max: 24, pricePerSeat: 23.99 },
-      { min: 2, max: 4, pricePerSeat: 29.99 },
+      { min: 1, max: 4, pricePerSeat: 29.99 },
     ],
     // Helper to calculate total price using graduated pricing
     // Each tier is charged separately: (tier1 seats × tier1 price) + (tier2 seats × tier2 price) + ...
     calculateTotal: (seats: number): number => {
-      if (seats < 2) return 0
+      if (seats < 1) return 0
 
       let total = 0
       let remaining = seats
@@ -134,7 +136,7 @@ export const PRICING_CONFIG = {
 } as const;
 
 // Pricing tier type (maps to pricing config keys)
-export type PricingTier = 'tryItForFree' | 'individual' | 'vip';
+export type PricingTier = 'free' | 'individual' | 'vip';
 
 // Import types from subscription utils
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils'
@@ -177,7 +179,7 @@ export function getPricingTier(
 ): PricingTier {
   const configKey = getPricingConfigKey(tier, period)
   if (configKey === 'individual') return 'individual'
-  return 'tryItForFree'
+  return 'free'
 }
 
 /**
@@ -217,12 +219,12 @@ export function getRegenerationsForPlan(
 ): number {
   // Handle free plans
   if (!period || period === 'free' || period === 'tryOnce' || period === 'try_once') {
-    return PRICING_CONFIG.regenerations.tryItForFree
+    return PRICING_CONFIG.regenerations.free
   }
 
   // Map tier+period to regenerations
   const configKey = getPricingConfigKey(tier, period)
   if (configKey === 'individual') return PRICING_CONFIG.regenerations.individual
 
-  return PRICING_CONFIG.regenerations.tryItForFree
+  return PRICING_CONFIG.regenerations.free
 }

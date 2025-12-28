@@ -35,30 +35,28 @@ export function OnboardingLauncher() {
       }
       processingToursRef.current.add(tourToStart)
 
-      // Start the tour after a brief delay
-      setTimeout(() => {
-        startTour(tourToStart)
-        const removeTourLocally = () => {
-          const remainingTours = databasePendingTours.filter(tour => tour !== tourToStart)
-          updateContext({ pendingTours: remainingTours })
-        }
-        removeTourLocally()
+      // Start the tour immediately
+      startTour(tourToStart)
+      const removeTourLocally = () => {
+        const remainingTours = databasePendingTours.filter(tour => tour !== tourToStart)
+        updateContext({ pendingTours: remainingTours })
+      }
+      removeTourLocally()
 
-        // Remove from pending tours in database after starting
-        if (onboardingContext.personId) {
-          fetch(`/api/onboarding/pending-tour?tourName=${encodeURIComponent(tourToStart)}`, {
-            method: 'DELETE',
+      // Remove from pending tours in database after starting
+      if (onboardingContext.personId) {
+        fetch(`/api/onboarding/pending-tour?tourName=${encodeURIComponent(tourToStart)}`, {
+          method: 'DELETE',
+        })
+          .catch(error => {
+            console.error('Failed to remove pending tour from database:', error)
           })
-            .catch(error => {
-              console.error('Failed to remove pending tour from database:', error)
-            })
-            .finally(() => {
-              processingToursRef.current.delete(tourToStart)
-            })
-        } else {
-          processingToursRef.current.delete(tourToStart)
-        }
-      }, 1000)
+          .finally(() => {
+            processingToursRef.current.delete(tourToStart)
+          })
+      } else {
+        processingToursRef.current.delete(tourToStart)
+      }
     }
 
     // Clear legacy pendingTour state if it exists (no longer used)

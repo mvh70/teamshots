@@ -490,7 +490,7 @@ export async function POST(request: NextRequest) {
         const userPlanTier = (user as unknown as { planTier?: string | null })?.planTier
         const userPlanPeriod = (user as unknown as { planPeriod?: string | null })?.planPeriod
 
-        let pricingTier: PricingTier = 'tryItForFree' // Default fallback
+        let pricingTier: PricingTier = 'free' // Default fallback
 
         if (userPlanTier === 'individual') {
           // Individual user - check period for VIP vs regular
@@ -511,8 +511,8 @@ export async function POST(request: NextRequest) {
 
         maxRegenerations = getRegenerationCount(pricingTier)
       } else {
-        // No user session - default to tryItForFree
-        maxRegenerations = getRegenerationCount('tryItForFree')
+        // No user session - default to free
+        maxRegenerations = getRegenerationCount('free')
       }
 
     // Handle generation grouping (for new generations only)

@@ -98,8 +98,8 @@ export class LightingElement extends StyleElement {
 
       // Detailed composition lighting instructions
       instructions.push(
-        'Ensure LIGHTING WRAP: The key light should illuminate the person brightly while creating natural falloff on the background',
-        'Apply subtle EDGE LIGHTING or rim light on the person\'s shoulders/hair to separate them from the background and enhance three-dimensionality'
+        'Ensure natural LIGHTING FALLOFF: The key light should illuminate the person brightly while creating natural, gradual falloff on the background',
+        'Apply extremely subtle edge definition where lighting naturally separates the subject from background. CRITICAL: NO visible halos, glows, or bright outlines - edge treatment must be imperceptible and only serve to prevent the subject from looking pasted on'
       )
     }
 

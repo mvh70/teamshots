@@ -132,23 +132,19 @@ export default function GenerationsPage() {
 
     // If forceTour is true, always start the tour (ignore seen flag)
     if (forceTour) {
-      // Start the tour after a small delay for stability
-      setTimeout(() => {
-        startTour('generation-detail', true) // Force bypasses completion check
-      }, 300)
+      // Start the tour immediately
+      startTour('generation-detail', true) // Force bypasses completion check
       return
     }
 
     // Priority 1: If tour is pending in database, start it (regardless of hasSeenTour - pending takes precedence)
     // This handles the case where the tour was set as pending after generation completed
     if (isPendingTour) {
-      setTimeout(() => {
-        try {
-          startTour('generation-detail', true) // Force bypasses completion check
-        } catch (error) {
-          console.error('[GenerationsPage Tour] Error calling startTour (pending):', error)
-        }
-      }, 300)
+      try {
+        startTour('generation-detail', true) // Force bypasses completion check
+      } catch (error) {
+        console.error('[GenerationsPage Tour] Error calling startTour (pending):', error)
+      }
       return
     }
 
@@ -167,13 +163,11 @@ export default function GenerationsPage() {
         })
       }
       
-      setTimeout(() => {
-        try {
-          startTour('generation-detail', true) // Force bypasses completion check since we've already validated conditions
-        } catch (error) {
-          console.error('[GenerationsPage Tour] Error calling startTour:', error)
-        }
-      }, 300)
+      try {
+        startTour('generation-detail', true) // Force bypasses completion check since we've already validated conditions
+      } catch (error) {
+        console.error('[GenerationsPage Tour] Error calling startTour:', error)
+      }
     }
   }, [loading, generations, forceTour, onboardingContext._loaded, onboardingContext.completedTours, onboardingContext.pendingTours, onboardingContext.personId, startTour]) // Changed dependency from generations.length to generations to track status changes
 

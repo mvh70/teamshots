@@ -401,11 +401,7 @@ export async function POST(request: NextRequest) {
         // - Users are granted their target package on signup (e.g., headshot1)
         // - Runtime access control enforces freepackage during free trial (see fetchStyleData in actions.ts)
         // - When users pay, they already "own" the package - runtime override is lifted
-        // - "tryItForFree" period → special tryitforfree package (different teaser)
-        const requestedPeriod = body.period as string | undefined
-        const packageId = requestedPeriod === 'tryItForFree'
-          ? 'tryitforfree'
-          : getDefaultPackage(domain || undefined)
+        const packageId = getDefaultPackage(domain || undefined)
         const freePlanTier = userType === 'team' ? 'pro' : 'individual'
         // Use free trial credits based on user type (Team/Pro gets more)
         const freeCredits = userType === 'team'
@@ -470,7 +466,7 @@ export async function POST(request: NextRequest) {
               purchasedAt: new Date()
             }
           })
-          Logger.info('Package granted', { userId: user.id, packageId, period: requestedPeriod })
+          Logger.info('Package granted', { userId: user.id, packageId })
         }
       })
     } catch (e) {

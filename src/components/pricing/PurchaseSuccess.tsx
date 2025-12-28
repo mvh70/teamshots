@@ -19,7 +19,7 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { refetch: refetchCredits, loading: creditsLoading } = useCredits()
-  const [planType, setPlanType] = useState<'individual' | 'vip' | 'topUp' | null>(null)
+  const [planType, setPlanType] = useState<'individual' | 'vip' | 'topUp' | 'seats' | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
     } else if (successType === 'top_up_success') {
       setPlanType('topUp')
     } else if (successType === 'seats_success') {
-      setPlanType('individual') // Seats use individual for success display
+      setPlanType('seats')
     }
   }, [searchParams])
 
@@ -106,6 +106,31 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
           title: t('topUp.title'), // Add translation key
           features: [
             t('topUp.credits', { photos }) // Add translation key
+          ]
+        }
+      }
+      case 'seats': {
+        // Get seats count from URL
+        const seatsParam = searchParams.get('seats')
+        const seats = seatsParam ? parseInt(seatsParam, 10) : 2
+        
+        // Check if this is additional seats (isTopUp parameter)
+        const isTopUp = searchParams.get('isTopUp') === 'true'
+        
+        // Calculate credits and photos
+        const creditsPerSeat = PRICING_CONFIG.seats.creditsPerSeat
+        const totalCredits = seats * creditsPerSeat
+        const photosPerSeat = creditsPerSeat / PRICING_CONFIG.credits.perGeneration
+        
+        return {
+          title: isTopUp 
+            ? t('seats.additionalTitle', { seats, default: `${seats} Additional Seats` })
+            : t('seats.upgradeTitle', { seats, default: `Team Plan - ${seats} Seats` }),
+          features: [
+            isTopUp
+              ? t('seats.additionalDescription', { seats, photosPerSeat, default: `Added ${seats} seats with ${photosPerSeat} photos each` })
+              : t('seats.upgradeDescription', { seats, photosPerSeat, default: `${seats} team seats with ${photosPerSeat} photos each` }),
+            t('seats.allFeatures', { default: 'Full customization options' })
           ]
         }
       }

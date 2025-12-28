@@ -250,7 +250,7 @@ export async function executeV3Step2(
     
     // Professional Compositing Instructions
     '**Advanced Compositing & Refinement:**',
-    '- **Light Wrap:** Simulate realistic light wrap by allowing the brightest parts of the background to slightly bleed over the edges of the subject, integrating them into the environment.',
+    '- **Light Wrap:** Apply very subtle light wrap where the background lighting naturally affects the subject edges. CRITICAL: Light wrap must be extremely subtle and imperceptible - NO visible halos, glows, or bright edges around the subject.',
     '- **Color Matching:** Match the black levels, white balance, and color grading of the subject to the background environment for a cohesive look.',
     '- **Shadows:** Cast a realistic soft shadow from the subject onto the background based on the specified lighting direction.',
     '- **Global Grading:** Apply a final global color grade to "glue" the layers together, ensuring cohesive tone and atmosphere.',

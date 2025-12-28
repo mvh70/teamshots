@@ -172,29 +172,26 @@ function TourStarter() {
         window.dispatchEvent(new CustomEvent('close-sidebar-for-tour'))
       }
       
-      // Start the tour using Onborda's API
-      setTimeout(() => {
-        // Check again right before starting (race condition protection)
-        // Re-read from context in case it was updated
-        const updatedCompletedTours = context.completedTours || []
-        const stillCompleted = updatedCompletedTours.includes(pendingTour)
-        if (stillCompleted) {
-          clearPendingTour()
-          lastCheckedTourRef.current = null
-          return
-        }
-        // Also check if tour is already visible (might have been started by something else)
-        if (onborda.isOnbordaVisible) {
-          clearPendingTour()
-          lastCheckedTourRef.current = null
-          return
-        }
-        try {
-          onborda.startOnborda(pendingTour)
-        } catch (error) {
-          console.error('[TourStarter Debug] Error calling startOnborda:', error)
-        }
-      }, 500)
+      // Start the tour immediately using Onborda's API
+      // Check right before starting (race condition protection)
+      const updatedCompletedTours = context.completedTours || []
+      const stillCompleted = updatedCompletedTours.includes(pendingTour)
+      if (stillCompleted) {
+        clearPendingTour()
+        lastCheckedTourRef.current = null
+        return
+      }
+      // Also check if tour is already visible (might have been started by something else)
+      if (onborda.isOnbordaVisible) {
+        clearPendingTour()
+        lastCheckedTourRef.current = null
+        return
+      }
+      try {
+        onborda.startOnborda(pendingTour)
+      } catch (error) {
+        console.error('[TourStarter Debug] Error calling startOnborda:', error)
+      }
     }
     
     // Reset lastCheckedTourRef when pendingTour is cleared

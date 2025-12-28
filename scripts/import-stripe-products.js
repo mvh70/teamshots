@@ -180,11 +180,14 @@ async function createProducts() {
 
     console.log(`✅ VIP - Price ID: ${vipPrice.id}`);
 
-    // 3. Team Seats Product (one-time with volume pricing)
+    // 3. Team Seats Product (one-time with graduated pricing calculated server-side)
+    // Note: We don't create a Stripe price for seats because tiered pricing
+    // is not supported for one-time payments. Instead, we calculate the graduated
+    // price server-side in the checkout route using PRICING_CONFIG.seats.calculateTotal()
     console.log('📦 Team Seats product...');
     const teamSeatsProduct = await findOrCreateProduct(
       'TeamShots - Team Seats',
-      `Professional headshots for your team with volume discounts (${read.seats.photosPerSeat} photos per seat)`,
+      `Professional headshots for your team with graduated pricing (${read.seats.photosPerSeat} photos per seat)`,
       {
         type: 'team_seats',
         credits_per_seat: String(read.seats.creditsPerSeat),
@@ -192,47 +195,8 @@ async function createProducts() {
       }
     );
 
-    // Convert config graduatedTiers to Stripe tiers format
-    // Config tiers are sorted from highest to lowest tier (1000+, 500-999, ..., 2-4)
-    // Stripe tiers must be sorted from lowest to highest (2-4, 5-24, ..., 1000+)
-    const stripeTiers = read.seats.graduatedTiers
-      .slice()
-      .reverse()
-      .map(tier => ({
-        up_to: tier.max,
-        unit_amount: toCents(tier.pricePerSeat)
-      }));
-
-    // Check for existing tiered price
-    const existingSeatsPrice = (await stripe.prices.list({
-      product: teamSeatsProduct.id,
-      limit: 100,
-    })).data.find(p =>
-      p.currency === 'usd' &&
-      p.billing_scheme === 'tiered' &&
-      p.tiers_mode === 'graduated'
-    );
-
-    const teamSeatsPrice = existingSeatsPrice || await stripe.prices.create({
-      product: teamSeatsProduct.id,
-      currency: 'usd',
-      billing_scheme: 'tiered',
-      tiers_mode: 'graduated', // Each tier charged separately and summed (more intuitive)
-      tiers: stripeTiers,
-      metadata: {
-        type: 'team_seats',
-        credits_per_seat: String(read.seats.creditsPerSeat),
-        photos_per_seat: String(read.seats.photosPerSeat)
-      }
-    });
-
-    if (existingSeatsPrice) {
-      console.log(`   Found existing tiered price: ${teamSeatsPrice.id}`);
-    } else {
-      console.log(`   Created new tiered price: ${teamSeatsPrice.id}`);
-    }
-
-    console.log(`✅ Team Seats - Price ID: ${teamSeatsPrice.id}`);
+    console.log(`✅ Team Seats - Product ID: ${teamSeatsProduct.id}`);
+    console.log(`   Note: Pricing calculated server-side (no Stripe price needed)`);
 
     // 4. Top-up products (one-time)
     console.log('📦 Top-Up products...')
@@ -265,7 +229,7 @@ async function createProducts() {
     console.log('\n📋 Add these IDs to TEST_STRIPE_PRICE_IDS and PROD_STRIPE_PRICE_IDS in src/config/pricing.ts:');
     console.log('INDIVIDUAL:', `"${individualPrice.id}"`);
     console.log('VIP:', `"${vipPrice.id}"`);
-    console.log('TEAM_SEATS:', `"${teamSeatsPrice.id}"`);
+    console.log('TEAM_SEATS: ""  // No price needed - calculated server-side');
     console.log('INDIVIDUAL_TOP_UP:', `"${individualTopUpPrice.id}"`);
     console.log('VIP_TOP_UP:', `"${vipTopUpPrice.id}"`);
 

@@ -51,7 +51,6 @@ export default function SignUpPage() {
   const planParam = searchParams.get('plan')
   const periodParam = searchParams.get('period')
   const autoCheckout = searchParams.get('autoCheckout') === 'true'
-  const isTryItForFree = periodParam === 'tryItForFree'
 
   // Form state - userType is determined server-side based on domain
   const [formData, setFormData] = useState(() => ({
@@ -115,7 +114,7 @@ export default function SignUpPage() {
           password: formData.password,
           firstName: formData.firstName,
           otpCode: formData.otpCode,
-          period: isTryItForFree ? 'tryItForFree' : undefined,
+          period: periodParam || undefined,
         }),
       })
       if (registerData.success) {

@@ -119,7 +119,7 @@ export async function getTierFeatures(tier: PlanTier, period: PlanPeriod | null 
     PRICING_CONFIG: {
       individual: { credits: number }
       vip: { credits: number }
-      regenerations: { individual: number; vip: number; tryItForFree: number }
+      regenerations: { individual: number; vip: number; free: number }
       freeTrial: { individual: number; pro: number }
     }
   }
@@ -129,12 +129,12 @@ export async function getTierFeatures(tier: PlanTier, period: PlanPeriod | null 
     if (tier === 'pro') {
       return {
         credits: PRICING_CONFIG.freeTrial.pro,
-        regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+        regenerations: PRICING_CONFIG.regenerations.free,
       }
     }
     return {
       credits: PRICING_CONFIG.freeTrial.individual,
-      regenerations: PRICING_CONFIG.regenerations.tryItForFree,
+      regenerations: PRICING_CONFIG.regenerations.free,
     }
   }
 

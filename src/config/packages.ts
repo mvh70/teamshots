@@ -40,13 +40,6 @@ export const PACKAGES_CONFIG = {
       description: 'Free photo style package with background and branding customization options. Perfect for getting started.',
       price: 0, // Free
     } as PackageMetadata,
-    tryitforfree: {
-      id: 'tryitforfree',
-      name: 'Try It For Free',
-      description: 'Free test package with TeamShotsPro branding. Perfect for trying the service before upgrading.',
-      price: 0, // Free
-      audience: 'team',
-    } as PackageMetadata,
     
     // Individual-focused packages (photoshotspro.com)
     linkedin: {
@@ -91,7 +84,6 @@ export const PACKAGES_CONFIG = {
     headshot1: 0, // Free
     outfit1: 0, // Free
     freepackage: 0, // Free
-    tryitforfree: 0, // Free
     linkedin: 0, // Free
     dating: 0, // Free
     casual: 0, // Free

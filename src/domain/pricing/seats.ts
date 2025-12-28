@@ -164,6 +164,7 @@ export async function isSeatsBasedTeam(teamId: string): Promise<boolean> {
   const team = await prisma.team.findUnique({
     where: { id: teamId },
     select: {
+      totalSeats: true,
       isLegacyCredits: true,
       admin: {
         select: { signupDomain: true }
@@ -177,6 +178,11 @@ export async function isSeatsBasedTeam(teamId: string): Promise<boolean> {
 
   // Legacy teams stay on credits model
   if (team.isLegacyCredits) {
+    return false
+  }
+
+  // Free plans (totalSeats = 0) use credit-based model
+  if (team.totalSeats === 0) {
     return false
   }
 
@@ -221,9 +227,10 @@ export async function canAddTeamMember(
   }
 
   // Check if this is a seats-based team
-  const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN
+  // Free plans (totalSeats = 0) and legacy teams use credit-based model
+  const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN && team.totalSeats > 0
 
-  // Legacy teams have no seat limits
+  // Credit-based teams (legacy or free plans) have no seat limits
   if (!isSeatsModel) {
     return { canAdd: true }
   }
@@ -275,7 +282,8 @@ export async function getTeamSeatInfo(teamId: string): Promise<{
     return null
   }
 
-  const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN
+  // Free plans (totalSeats = 0) use credit-based model, not seats-based
+  const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN && team.totalSeats > 0
 
   return {
     totalSeats: team.totalSeats,

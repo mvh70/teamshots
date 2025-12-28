@@ -8,6 +8,7 @@ interface CreditsContextType {
   credits: {
     individual: number
     team: number
+    person: number
   }
   loading: boolean
   refetch: () => Promise<void>
@@ -20,6 +21,7 @@ interface CreditsProviderProps {
   initialCredits?: {
     individual: number
     team: number
+    person?: number
   }
 }
 
@@ -30,7 +32,11 @@ export function CreditsProvider({ children, initialCredits }: CreditsProviderPro
   const [credits, setCredits] = useState(() => {
     // Props take precedence
     if (initialCredits) {
-      return initialCredits
+      return {
+        individual: initialCredits.individual,
+        team: initialCredits.team,
+        person: initialCredits.person || 0
+      }
     }
     // Check sessionStorage for cached data (SSR-safe with function initializer)
     if (typeof window !== 'undefined') {
@@ -41,7 +47,8 @@ export function CreditsProvider({ children, initialCredits }: CreditsProviderPro
           if (initialData.credits) {
             return {
               individual: initialData.credits.individual || 0,
-              team: initialData.credits.team || 0
+              team: initialData.credits.team || 0,
+              person: initialData.credits.person || 0
             }
           }
         }
@@ -49,13 +56,13 @@ export function CreditsProvider({ children, initialCredits }: CreditsProviderPro
         // Ignore parse errors
       }
     }
-    return { individual: 0, team: 0 }
+    return { individual: 0, team: 0, person: 0 }
   })
   const [loading, setLoading] = useState(!initialCredits)
 
   const fetchCredits = useCallback(async () => {
     if (!session?.user?.id) {
-      setCredits({ individual: 0, team: 0 })
+      setCredits({ individual: 0, team: 0, person: 0 })
       setLoading(false)
       return
     }
@@ -66,16 +73,17 @@ export function CreditsProvider({ children, initialCredits }: CreditsProviderPro
       // OPTIMIZATION: Fetch both credit types in a single API call
       // This reduces from 2 HTTP requests + 4+ queries to 1 HTTP request + 2-3 queries
       // Add timestamp to prevent caching
-      const creditsData = await jsonFetcher<{ individual: number; team: number }>(`/api/credits/balance?type=both&_t=${Date.now()}`)
-        .catch(() => ({ individual: 0, team: 0 }))
+      const creditsData = await jsonFetcher<{ individual: number; team: number; person: number }>(`/api/credits/balance?type=both&_t=${Date.now()}`)
+        .catch(() => ({ individual: 0, team: 0, person: 0 }))
 
       setCredits({
         individual: creditsData.individual || 0,
-        team: creditsData.team || 0
+        team: creditsData.team || 0,
+        person: creditsData.person || 0
       })
     } catch (err) {
       console.error('Failed to fetch credits:', err)
-      setCredits({ individual: 0, team: 0 })
+      setCredits({ individual: 0, team: 0, person: 0 })
     } finally {
       setLoading(false)
     }

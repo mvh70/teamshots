@@ -63,7 +63,7 @@ const LANDING_CONFIGS: Record<string, LandingConfig> = {
     variant: 'teamshotspro',
     contentNamespace: 'landing.teamshotspro',
     packages: {
-      available: ['headshot1', 'freepackage', 'tryitforfree'],
+      available: ['headshot1', 'freepackage'],
       default: 'headshot1',
     },
   },

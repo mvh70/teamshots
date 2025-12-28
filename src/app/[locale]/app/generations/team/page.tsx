@@ -213,11 +213,9 @@ export default function TeamGenerationsPage() {
 
     // Trigger tour if it's pending (but only if not already completed) or if this is the first time we see completed generations
     if (isPendingTour && !hasSeenTour) {
-      // Tour is already pending and not completed, just start it (with small delay for stability)
+      // Tour is already pending and not completed, start it immediately
       tourTriggerAttemptedRef.current = true
-      setTimeout(() => {
-        startTour('generation-detail')
-      }, 300)
+      startTour('generation-detail')
     } else if (completedGenerations.length > 0 && !hasSeenTour) {
       // Set the tour as pending if there are completed generations and tour hasn't been seen
       tourTriggerAttemptedRef.current = true
@@ -227,18 +225,14 @@ export default function TeamGenerationsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tourName: 'generation-detail' }),
         }).then(() => {
-          // Start the tour after setting it as pending (with small delay for stability)
-          setTimeout(() => {
-            startTour('generation-detail')
-          }, 300)
+          // Start the tour immediately after setting it as pending
+          startTour('generation-detail')
         }).catch(error => {
           console.error('[Tour Debug] Failed to set pending tour:', error)
         })
       } else {
-        // If no personId, still try to start the tour (with small delay for stability)
-        setTimeout(() => {
-          startTour('generation-detail')
-        }, 300)
+        // If no personId, still try to start the tour immediately
+        startTour('generation-detail')
       }
     }
   }, [loading, generated, onboardingContext._loaded, onboardingContext.completedTours, onboardingContext.pendingTours, onboardingContext.personId, startTour])

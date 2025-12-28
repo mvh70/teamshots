@@ -121,7 +121,7 @@ export default function PhotoStyleSettings({
 
     // Use package-defined groupings, with defaults for backward compatibility
     const compositionCategoryKeys = pkg.compositionCategories ?? ['background', 'branding', 'pose', 'shotType']
-    const userStyleCategoryKeys = pkg.userStyleCategories ?? ['clothing', 'clothingColors', 'customClothing', 'expression', 'lighting']
+    const userStyleCategoryKeys = pkg.userStyleCategories ?? ['clothing', 'clothingColors', 'expression', 'lighting']
 
     // Split by group
     const visiblePhoto = allElements.filter(e =>

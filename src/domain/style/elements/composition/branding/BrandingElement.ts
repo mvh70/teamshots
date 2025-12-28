@@ -113,7 +113,59 @@ export class BrandingElement extends StyleElement {
       throw new Error('BrandingElement.prepare(): downloadAsset must be provided in generationContext')
     }
 
-    // Extract s3Client and owner context for Asset creation
+    const logoKey = branding.logoKey || branding.logoAssetId
+    if (!logoKey) {
+      throw new Error('BrandingElement.prepare(): No logo key or asset ID provided')
+    }
+
+    // OPTIMIZATION: Check if we already have a prepared logo from a previous generation
+    // This is common in regenerations where the logo was already processed
+    const existingPreparedKey = (branding as { preparedLogoKey?: string }).preparedLogoKey
+    if (existingPreparedKey) {
+      Logger.info('[BrandingElement] Found existing prepared logo, attempting to reuse', {
+        generationId,
+        preparedLogoKey: existingPreparedKey,
+        originalLogoKey: logoKey,
+      })
+
+      try {
+        // Try to download the already-prepared logo
+        const preparedLogo = await downloadAsset(existingPreparedKey)
+        if (preparedLogo) {
+          Logger.info('[BrandingElement] Successfully reused prepared logo from previous generation', {
+            generationId,
+            preparedLogoKey: existingPreparedKey,
+            mimeType: preparedLogo.mimeType,
+            savedProcessing: 'skipped download, conversion, and upload',
+          })
+
+          // Return the prepared asset directly
+          return {
+            elementId: this.id,
+            assetType: 'logo',
+            data: {
+              base64: preparedLogo.base64,
+              mimeType: preparedLogo.mimeType,
+              s3Key: logoKey, // Keep original logo key for reference
+              metadata: {
+                position: branding.position,
+                preparedLogoS3Key: existingPreparedKey,
+                reused: true, // Flag to indicate this was reused
+              },
+            },
+          }
+        }
+      } catch (error) {
+        Logger.warn('[BrandingElement] Failed to reuse prepared logo, will re-prepare', {
+          generationId,
+          preparedLogoKey: existingPreparedKey,
+          error: error instanceof Error ? error.message : String(error),
+        })
+        // Fall through to full preparation
+      }
+    }
+
+    // Extract s3Client and owner context for Asset creation (only needed for new preparation)
     const s3Client = generationContext.s3Client as S3Client | undefined
     const teamId = generationContext.teamId as string | undefined
     const personId = generationContext.personId as string | undefined
@@ -124,11 +176,6 @@ export class BrandingElement extends StyleElement {
 
     if (!teamId && !personId) {
       throw new Error('BrandingElement.prepare(): Either teamId or personId must be provided in generationContext')
-    }
-
-    const logoKey = branding.logoKey || branding.logoAssetId
-    if (!logoKey) {
-      throw new Error('BrandingElement.prepare(): No logo key or asset ID provided')
     }
 
     Logger.info('[BrandingElement] Downloading logo', {

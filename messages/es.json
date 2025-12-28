@@ -351,8 +351,15 @@
     "checkoutError": "¡Ups! Algo salió mal. Vuelve a intentar. (Si persiste, avísanos—estamos para ayudar)",
     "plans": {
       "free": {
-        "name": "Plan Gratuito",
-        "description": "Actualiza para desbloquear más funciones y opciones de personalización"
+        "name": "Prueba Gratis",
+        "period": "gratis",
+        "description": "Ve la calidad antes de comprometerte. Sin tarjeta de crédito. Pruébalo gratis y ve los resultados.",
+        "features": [
+          "{photos} foto personalizable, generada {variations}× para elegir la mejor",
+          "Marca de agua fija",
+          "Perfecto para probar la calidad"
+        ],
+        "cta": "Pruébalo gratis"
       },
       "vip": {
         "name": "VIP",
@@ -378,17 +385,6 @@
           "Recarga disponible a {topUpPricePerPhoto} por foto"
         ],
         "cta": "Obtén mis {totalPhotos} fotos"
-      },
-      "tryItForFree": {
-        "name": "Prueba Gratis",
-        "period": "gratis",
-        "description": "Ve la calidad antes de comprometerte. Sin tarjeta de crédito. Pruébalo gratis y ve los resultados.",
-        "features": [
-          "{photos} foto personalizable, generada {variations}× para elegir la mejor",
-          "Marca de agua fija",
-          "Perfecto para probar la calidad"
-        ],
-        "cta": "Pruébalo gratis"
       }
     },
     "perPhoto": "por foto",
@@ -447,6 +443,16 @@
       "topUp": {
         "title": "Recarga de Créditos",
         "credits": "{photos} fotos agregadas a tu cuenta"
+      },
+      "seats": {
+        "upgradeTitle": "Plan de Equipo - {seats, plural, one {# Asiento} other {# Asientos}}",
+        "additionalTitle": "{seats, plural, one {# Asiento Adicional} other {# Asientos Adicionales}}",
+        "upgradeDescription": "{seats, plural, one {# asiento de equipo} other {# asientos de equipo}} con {photosPerSeat} fotos cada uno",
+        "additionalDescription": "{seats, plural, one {Se agregó # asiento} other {Se agregaron # asientos}} con {photosPerSeat} fotos cada uno",
+        "photosPerSeat": "{photos} fotos por asiento",
+        "regenerations": "{retries} reintentos por foto",
+        "inviteColleagues": "Ahora puedes invitar a {colleagues, plural, one {# colega} other {# colegas}}",
+        "allFeatures": "Opciones de personalización completas"
       },
       "continueToGenerate": "Empezar a Generar Fotos",
       "continueToDashboard": "Ir al Panel",
@@ -696,6 +702,7 @@
         "individual": "Fotos personales",
         "team": "Créditos de foto del equipo",
         "seats": "Plazas",
+        "balance": "Tu saldo de fotos",
         "lockedBranding": "con marca Teamshots bloqueada",
         "allocated": "de los cuales asignados a invitaciones",
         "monthlyReset": "Reinicio mensual",
@@ -822,13 +829,13 @@
         "manageTeam": "Gestionar equipo"
       },
       "successMessages": {
-        "tryItForFree": "¡Tu prueba gratis está lista! Se han agregado {photos} fotos a tu cuenta.",
+        "free": "¡Tu prueba gratis está lista! Se han agregado {photos} fotos a tu cuenta.",
         "individual": "¡Plan Individual activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
         "vip": "¡Plan VIP activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
         "seats": "¡Compra de asientos completada exitosamente! Se han agregado créditos a tu cuenta.",
         "topUp": "¡Recarga de créditos completada exitosamente! Se han agregado créditos a tu cuenta.",
         "default": "¡Compra completada exitosamente! Se han agregado créditos a tu cuenta.",
-        "titleTryItForFree": "¡Bienvenido! 🎉",
+        "titleFree": "¡Bienvenido! 🎉",
         "titleIndividual": "¡Entraste! 🚀",
         "titlePro": "¡Pro desbloqueado! 🎯",
         "titleTopUp": "¡Créditos cargados! ⚡"
@@ -1048,7 +1055,7 @@
         "paid": {
           "message": "🎉 ¡Genial, eres un usuario de negocios y necesitas estas facturas! Lo sabemos y te las daremos lo antes posible (porque las finanzas organizadas son geniales y apoyamos esa energía)."
         },
-        "tryItForFree": {
+        "free": {
           "message": "🎉 ¡Estás en el plan gratis! Actualiza para desbloquear facturas y más funciones (porque las finanzas organizadas están de moda, y apoyamos esa energía)."
         },
         "individual": {
@@ -1588,7 +1595,7 @@
       "stamp": "Prueba de Manejo",
       "cta": "Mejorar plan",
       "bodyPersonal": "En el plan gratuito obtienes {photoCount} {photoCount, plural, one {foto} other {fotos}} y marca fija de {brandName}. Mejora tu plan para obtener personalización completa y más fotos.",
-      "bodyTeam": "En el plan gratuito obtienes {photoCount} {photoCount, plural, one {foto} other {fotos}} (que puedes compartir con tu equipo) y marca fija de {brandName}. Mejora tu plan para obtener personalización completa y más fotos.",
+      "bodyTeam": "En el plan gratuito obtienes {photoCount} {photoCount, plural, one {foto} other {fotos}} con marca fija de {brandName} para probar el servicio. Mejora tu plan para obtener personalización completa, invitar miembros del equipo, y más fotos.",
       "bodyGeneric": "En el plan gratuito obtienes {photoCount} {photoCount, plural, one {foto} other {fotos}} y marca fija de {brandName}. Mejora tu plan para obtener personalización completa y más fotos."
     }
   },
@@ -2075,7 +2082,7 @@
       "headers": {
         "member": "Miembro del equipo",
         "selfies": "Selfies",
-        "generations": "Generaciones",
+        "generations": "Fotos generadas",
         "photosAllocated": "Fotos asignadas",
         "photosUsed": "Fotos usadas",
         "remainingPhotos": "Fotos restantes",
@@ -2201,7 +2208,8 @@
     "buttons": {
       "inviteTeamMember": "Invitar Miembro del Equipo",
       "upgrade": "Mejorar",
-      "buyCredits": "Comprar créditos"
+      "buyCredits": "Comprar créditos",
+      "upgradeToInvite": "Mejorar para invitar"
     },
     "adminOnly": {
       "title": "Acceso de Administrador Requerido",

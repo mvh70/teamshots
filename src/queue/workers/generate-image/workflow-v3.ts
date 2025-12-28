@@ -791,6 +791,20 @@ export async function executeV3Workflow({
       preparedAssetCount: preparedAssets.size,
       assetKeys: Array.from(preparedAssets.keys()),
     })
+
+    // OPTIMIZATION: Store preparedLogoKey in branding settings for reuse in regenerations
+    if (styleSettings.branding?.type === 'include') {
+      const preparedLogo = preparedAssets.get('branding-logo')
+      if (preparedLogo?.data.metadata?.preparedLogoS3Key) {
+        const preparedKey = preparedLogo.data.metadata.preparedLogoS3Key as string
+        // Update branding settings with prepared logo key for future regenerations
+        ;(styleSettings.branding as { preparedLogoKey?: string }).preparedLogoKey = preparedKey
+        Logger.info('V3 Step 0: Stored preparedLogoKey in branding settings for regeneration reuse', {
+          generationId,
+          preparedLogoKey: preparedKey,
+        })
+      }
+    }
   } catch (error) {
     Logger.error('V3 Step 0: Asset preparation failed', {
       generationId,

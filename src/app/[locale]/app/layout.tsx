@@ -80,7 +80,7 @@ export default async function AppLayout({
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <DomainProvider isIndividualDomain={isIndividualDomain}>
-        <CreditsProvider initialCredits={creditBalances ? { individual: creditBalances.individual, team: creditBalances.team } : undefined}>
+        <CreditsProvider initialCredits={creditBalances ? { individual: creditBalances.individual, team: creditBalances.team, person: creditBalances.person } : undefined}>
           <OnboardingProvider>
             <OnbordaProvider>
               <AppShell

@@ -1,4 +1,4 @@
-import { reserveCreditsForGeneration, getUserCreditBalance, getEffectiveTeamCreditBalance } from '@/domain/credits/credits'
+import { reserveCreditsForGeneration, getUserCreditBalance, getEffectiveTeamCreditBalance, getPersonCreditBalance } from '@/domain/credits/credits'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { UserService } from './UserService'
 
@@ -134,21 +134,25 @@ export class CreditService {
   static async getCreditBalanceSummary(userId: string, userContext?: Awaited<ReturnType<typeof UserService.getUserContext>>): Promise<{
     individual: number
     team: number
+    person: number
     total: number
   }> {
     // OPTIMIZATION: Use provided userContext to avoid redundant queries
     const context = userContext || await UserService.getUserRoles(userId)
     const teamId = userContext?.teamId || context.user.person?.teamId || null
+    const personId = context.user.person?.id || null
 
     // OPTIMIZATION: Parallel balance fetching
-    const [individual, team] = await Promise.all([
+    const [individual, team, person] = await Promise.all([
       getUserCreditBalance(userId),
-      getEffectiveTeamCreditBalance(userId, teamId) // Always check, even if teamId is null (for pro unmigrated credits)
+      getEffectiveTeamCreditBalance(userId, teamId), // Always check, even if teamId is null (for pro unmigrated credits)
+      personId ? getPersonCreditBalance(personId) : Promise.resolve(0)
     ])
 
     return {
       individual,
       team,
+      person,
       total: individual + team
     }
   }

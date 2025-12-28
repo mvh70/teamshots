@@ -282,12 +282,28 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       }
 
       const packageId = selectedPackageId || PACKAGES_CONFIG.defaultPlanPackage
+      const packageConfig = getPackageConfig(packageId)
+      
+      // Filter styleSettings to only include visible categories (defense-in-depth)
+      const allowedKeys = new Set([
+        ...packageConfig.visibleCategories,
+        'packageId',
+        'presetId',
+        'aspectRatio',
+        'subjectCount',
+        'usageContext',
+        'style'
+      ])
+      const filteredStyleSettings = Object.fromEntries(
+        Object.entries({ ...photoStyleSettings, packageId })
+          .filter(([key]) => allowedKeys.has(key as keyof typeof photoStyleSettings))
+      )
       
       const creditSource = effectiveGenerationType === 'team' ? 'team' : 'individual'
       const payload: Record<string, unknown> = {
         creditSource,
         contextId: activeContext?.id,
-        styleSettings: { ...photoStyleSettings, packageId },
+        styleSettings: filteredStyleSettings,
         prompt: activeContext?.customPrompt || 'Professional headshot',
         selfieIds: selectedSelfies.map(s => s.id),
         // Debug flags

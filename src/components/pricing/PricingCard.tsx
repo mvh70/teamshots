@@ -6,7 +6,7 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { TrackedLink } from '@/components/TrackedLink'
 
-type PlanId = 'individual' | 'tryItForFree' | 'vip'
+type PlanId = 'individual' | 'free' | 'vip'
 
 interface PricingCardProps {
   id: PlanId
@@ -63,7 +63,7 @@ export default function PricingCard({
 
   // Calculate top-up price per photo
   let topUpPricePerPhoto = ''
-  if (id !== 'tryItForFree') {
+  if (id !== 'free') {
     const topUpConfig = id === 'vip'
       ? PRICING_CONFIG.vip.topUp
       : PRICING_CONFIG.individual.topUp
@@ -105,11 +105,11 @@ export default function PricingCard({
   const extras: string[] = []
   // Removed: High quality downloads and Style packages (no longer needed)
   const featuresWithPhotos = [...features, ...extras]
-  const adjustedFeatures = id === 'tryItForFree'
+  const adjustedFeatures = id === 'free'
     ? featuresWithPhotos.map(f => f.toLowerCase().includes('support') ? 'No support' : f)
     : featuresWithPhotos
 
-  const isFree = id === 'tryItForFree'
+  const isFree = id === 'free'
   const isVipTier = isVip || id === 'vip'
   const borderColor = popular
     ? 'ring-4 ring-brand-cta-ring/40 border-[3px] border-brand-cta-ring scale-105 shadow-depth-2xl shadow-brand-cta-shadow/60'

@@ -1,7 +1,6 @@
 import { headshot1 } from './headshot1'
 import { outfit1 } from './outfit1'
 import { freepackage } from './freepackage'
-import { tryitforfree } from './tryitforfree'
 import { validateAllPackages } from './validation'
 
 // Load element metadata registry
@@ -30,7 +29,6 @@ import type { ClientStylePackage } from './types'
 export const CLIENT_PACKAGES: Record<string, ClientStylePackage> = {
   [headshot1.id]: headshot1,
   [freepackage.id]: freepackage,
-  [tryitforfree.id]: tryitforfree,
   [outfit1.id]: outfit1,
 }
 

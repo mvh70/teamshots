@@ -39,6 +39,14 @@ export function deserialize(raw: Record<string, unknown>): PhotoStyleSettings['b
     result.logoAssetId = rb.logoAssetId
   }
 
+  // Preserve preparedLogoKey if present (optimization for regenerations)
+  const hasPreparedLogoKey = (b: unknown): b is { preparedLogoKey: string } =>
+    typeof b === 'object' && b !== null && 'preparedLogoKey' in (b as Record<string, unknown>)
+
+  if (hasPreparedLogoKey(rb)) {
+    (result as { preparedLogoKey?: string }).preparedLogoKey = rb.preparedLogoKey
+  }
+
   return result
 }
 

@@ -8,14 +8,6 @@ import { PRICING_CONFIG } from '@/config/pricing';
 // Use graduated pricing from config
 const MIN_SEATS = PRICING_CONFIG.seats.minSeats;
 
-function getTierPrice(seatCount: number): number {
-  if (seatCount < MIN_SEATS) return 0;
-  const tier = PRICING_CONFIG.seats.graduatedTiers.find(
-    t => seatCount >= t.min && seatCount <= t.max
-  );
-  return tier?.pricePerSeat ?? PRICING_CONFIG.seats.graduatedTiers[PRICING_CONFIG.seats.graduatedTiers.length - 1].pricePerSeat;
-}
-
 function calculateTotal(seats: number): number {
   return PRICING_CONFIG.seats.calculateTotal(seats);
 }
@@ -71,13 +63,20 @@ export default function SeatsPricingCard({
   // Calculate values - ensure seats never goes below minimum
   const validatedSeats = Math.max(seats, minSeats);
   const additionalSeats = isTopUpMode ? validatedSeats - currentSeats : validatedSeats;
-  const pricePerSeat = getTierPrice(validatedSeats);
+
+  // For graduated pricing, calculate totals first
   const total = calculateTotal(validatedSeats);
+  const topUpTotal = isTopUpMode ? calculateTotal(validatedSeats) - calculateTotal(currentSeats) : total;
+
+  // Calculate average price per seat for display (more accurate for graduated pricing)
+  const averagePricePerSeat = isTopUpMode && additionalSeats > 0
+    ? topUpTotal / additionalSeats
+    : validatedSeats > 0
+      ? total / validatedSeats
+      : 0;
+
   const savings = getSavings(validatedSeats);
   const totalPhotos = validatedSeats * (PRICING_CONFIG.seats.creditsPerSeat / PRICING_CONFIG.credits.perGeneration);
-  
-  // For top-up mode, calculate the cost of just the additional seats
-  const topUpTotal = isTopUpMode ? calculateTotal(validatedSeats) - calculateTotal(currentSeats) : total;
 
   return (
     <div className={`bg-white rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border-4 border-brand-primary relative ${className}`}>
@@ -150,9 +149,10 @@ export default function SeatsPricingCard({
           ${(isTopUpMode ? topUpTotal : total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
         <div className="text-sm text-gray-600 mb-2">
-          ${pricePerSeat.toFixed(2)} {t('seats.perSeat')}
-          {isTopUpMode && additionalSeats > 0 && (
-            <span className="ml-1">× {additionalSeats} {additionalSeats === 1 ? 'seat' : 'seats'}</span>
+          {isTopUpMode ? (
+            <>Average ${averagePricePerSeat.toFixed(2)} per seat ({additionalSeats} {additionalSeats === 1 ? 'seat' : 'seats'})</>
+          ) : (
+            <>Average ${averagePricePerSeat.toFixed(2)} {t('seats.perSeat')}</>
           )}
         </div>
         {savings > 0 && (
@@ -170,7 +170,7 @@ export default function SeatsPricingCard({
 
       {/* Features */}
       <ul className="space-y-3 mb-8">
-        {['photosPerSeat', 'professionalQuality', 'teamManagement', 'fastDelivery'].map((feature) => (
+        {['photosPerSeat', 'teamManagement', 'fastDelivery'].map((feature) => (
           <li key={feature} className="flex items-start gap-2 text-sm">
             <svg className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -183,7 +183,6 @@ export default function SeatsPricingCard({
       {/* CTA Button */}
       <CheckoutButton
         type="seats"
-        priceId={PRICING_CONFIG.seats.stripePriceId}
         quantity={isTopUpMode ? additionalSeats : validatedSeats}
         unauth={unauth}
         metadata={{
@@ -197,8 +196,8 @@ export default function SeatsPricingCard({
         useBrandCtaColors
         className="w-full"
       >
-        {isTopUpMode 
-          ? `Buy ${additionalSeats} ${additionalSeats === 1 ? 'seat' : 'seats'}` 
+        {isTopUpMode
+          ? `Buy ${additionalSeats} ${additionalSeats === 1 ? 'seat' : 'seats'}`
           : `Buy ${validatedSeats} ${validatedSeats === 1 ? 'seat' : 'seats'}`
         }
       </CheckoutButton>
