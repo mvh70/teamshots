@@ -274,7 +274,7 @@ export default function ColorPicker({
               className={buttonClassName || `flex-1 px-3 py-2 pr-10 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-sm ${
                 disabled ? 'opacity-60 cursor-not-allowed bg-gray-100' : ''
               }`}
-              placeholder="Type your color (eg Burgundy) and select the right shade"
+              placeholder={t('colorPlaceholder')}
             />
             <button
               ref={buttonRef}

@@ -10,3 +10,8 @@ export interface ExpressionSettings {
     | 'user-choice'
 }
 
+/**
+ * Type alias for expression type values
+ */
+export type ExpressionType = ExpressionSettings['type']
+

@@ -40,6 +40,7 @@ function getThumbnailUrl(key: string): string {
 
 export default function StyleSummary({ settings }: StyleSummaryProps) {
   const t = useTranslations('customization.photoStyle.pose')
+  const tShotType = useTranslations('customization.photoStyle.shotType')
   const [showPoseTooltip, setShowPoseTooltip] = React.useState(false)
   const backgroundKey = settings?.background?.key
   const backgroundPrompt = settings?.background?.prompt
@@ -220,7 +221,9 @@ export default function StyleSummary({ settings }: StyleSummaryProps) {
             ) : (
               <span className="inline-flex items-center gap-2 text-gray-700 normal-case">
                 <span className="font-semibold">
-                  {shotTypeConfig?.label ?? shotType.replace(/-/g, ' ')}
+                  {tShotType(`types.${shotType}.label`, {
+                    default: shotType.replace(/-/g, ' ')
+                  })}
                 </span>
                 {shotTypeConfig?.framingDescription && (
                   <span className="relative inline-flex group">

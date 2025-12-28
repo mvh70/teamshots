@@ -35,7 +35,8 @@ import { getPackageConfig } from '@/domain/style/packages'
 import { applyPosePresetToSettings } from '@/domain/style/elements/pose/config'
 import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
-import { WARDROBE_DETAILS, FALLBACK_DETAIL_BY_STYLE, KnownClothingStyle } from '@/domain/style/elements/clothing/config'
+import type { KnownClothingStyle } from '@/domain/style/elements/clothing/config'
+import { getWardrobeExclusions } from '@/domain/style/elements/clothing/prompt'
 import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
 import { CardGrid, Tooltip } from '@/components/ui'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
@@ -201,13 +202,9 @@ export default function PhotoStyleSettings({
     const clothingStyle = value.clothing?.style || packageDefaults.clothing?.style
     if (clothingStyle && clothingStyle !== 'user-choice') {
       const knownStyle = clothingStyle as KnownClothingStyle
-      const styleDetails = WARDROBE_DETAILS[knownStyle]
-      // Use explicit detail if set, otherwise use the fallback detail for this style
-      const clothingDetail = value.clothing?.details || packageDefaults.clothing?.details || FALLBACK_DETAIL_BY_STYLE[knownStyle]
-      const detailConfig = styleDetails?.[clothingDetail]
-      if (detailConfig?.excludeClothingColors) {
-        detailConfig.excludeClothingColors.forEach(c => exclusions.add(c))
-      }
+      const clothingDetail = value.clothing?.details || packageDefaults.clothing?.details
+      const wardrobeExclusions = getWardrobeExclusions(knownStyle, clothingDetail)
+      wardrobeExclusions.forEach(c => exclusions.add(c))
     }
     
     return Array.from(exclusions)

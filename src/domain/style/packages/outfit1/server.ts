@@ -127,7 +127,7 @@ export const outfit1Server: Outfit1ServerPackage = {
     const packageShotType = outfit1Base.defaultSettings.shotType?.type || 'medium-shot'
     effectiveSettings.shotType = { type: packageShotType }
     const shotTypeConfig = resolveShotType(packageShotType)
-    const shotText = shotTypeConfig.label
+    const shotText = shotTypeConfig.id.replace(/-/g, ' ')
 
     // Resolve aspect ratio using shared logic
     const { ratioConfig, aspectRatio, aspectRatioDescription } = resolvePackageAspectRatio(

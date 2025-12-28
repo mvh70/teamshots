@@ -1,8 +1,11 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { ExpressionSettings } from '@/types/photo-style'
-import { EXPRESSION_CONFIGS, ExpressionType } from './config'
+import { EXPRESSION_CONFIGS } from './config'
+import type { ExpressionType } from './types'
+import { ImagePreview } from '@/components/ui/ImagePreview'
 
 interface ExpressionSelectorProps {
   value: ExpressionSettings
@@ -12,6 +15,17 @@ interface ExpressionSelectorProps {
   className?: string
   showHeader?: boolean
   availableExpressions?: string[]
+}
+
+const EXPRESSIONS_WITH_IMAGES = [
+  'genuine_smile',
+  'laugh_joy',
+  'neutral_serious',
+  'soft_smile'
+] as const
+
+function hasExpressionImage(expressionId: string): boolean {
+  return EXPRESSIONS_WITH_IMAGES.includes(expressionId as typeof EXPRESSIONS_WITH_IMAGES[number])
 }
 
 export default function ExpressionSelector({
@@ -29,14 +43,22 @@ export default function ExpressionSelector({
     ? EXPRESSION_CONFIGS.filter(e => availableExpressions.includes(e.value))
     : EXPRESSION_CONFIGS
 
-  const handleChange = (type: ExpressionType, event?: React.MouseEvent) => {
-    if (event) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
+  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (isPredefined) return
-    onChange({ type })
+    onChange({ type: event.target.value as ExpressionType })
   }
+
+  const [hasMounted, setHasMounted] = useState(false)
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  // Find the currently selected expression to show its description
+  const selectedExpression = visibleExpressions.find(e => e.value === value.type)
+
+  // Use effective value to handle initial load
+  const effectiveExpressionType = value.type
 
   return (
     <div className={`${className}`}>
@@ -59,57 +81,52 @@ export default function ExpressionSelector({
       )}
 
       <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
-        {visibleExpressions.map((expr) => {
-          const isSelected = value.type === expr.value
-          // On mobile, hide unselected options when predefined
-          const shouldHide = isPredefined && !isSelected
-          
-          return (
-            <button
-              type="button"
-              key={expr.value}
-              onClick={(e) =>
-                !(isPredefined || isDisabled) &&
-                handleChange(expr.value, e)
-              }
-              disabled={isPredefined || isDisabled}
-              className={`w-full bg-gray-50 rounded-lg p-4 border-2 transition-all ${
-                isSelected
-                  ? 'border-brand-primary bg-brand-primary-light shadow-sm'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-white hover:shadow-sm'
-              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
-                shouldHide ? 'hidden md:block' : ''
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl ${
-                  isSelected 
-                    ? `bg-gradient-to-br ${expr.color}` 
-                    : 'bg-gray-200'
-                }`}>
-                  {expr.icon}
-                </div>
-                <div className="flex-1 text-left">
-                  <div className={`text-sm font-semibold ${isSelected ? 'text-brand-primary' : 'text-gray-900'}`}>
-                    {expr.label}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-0.5">
-                    {expr.description}
-                  </div>
-                </div>
-                {isSelected && (
-                  <div className="w-5 h-5 bg-brand-primary rounded-full flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-            </button>
-          )
-        })}
+        <div className="relative">
+          <select
+            value={value.type}
+            onChange={handleChange}
+            disabled={isPredefined || isDisabled}
+            className={`block w-full rounded-lg border-2 border-gray-200 p-3 pr-10 text-base focus:border-brand-primary focus:outline-none focus:ring-brand-primary sm:text-sm ${
+              (isPredefined || isDisabled) ? 'cursor-not-allowed bg-gray-50' : 'cursor-pointer bg-white'
+            }`}
+          >
+            {value.type === 'user-choice' && (
+              <option value="user-choice" disabled>
+                {t('selectPlaceholder', { default: 'Choose your expression' })}
+              </option>
+            )}
+            {visibleExpressions.map((expr) => (
+              <option key={expr.value} value={expr.value}>
+                {t(`expressions.${expr.value}.label`)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Selected Expression Description */}
+        {selectedExpression && (
+          <p className="text-sm text-gray-600 px-1">
+            {t(`expressions.${selectedExpression.value}.description`)}
+          </p>
+        )}
+
+        {/* Conditional Image Preview */}
+        {hasExpressionImage(effectiveExpressionType) && (
+          <div className="mt-4">
+            <ImagePreview
+              key={effectiveExpressionType} // Force re-render on value change
+              src={`/images/expressions/${effectiveExpressionType}.png`}
+              alt={t(`expressions.${effectiveExpressionType}.label`)}
+              width={400}
+              height={300}
+              variant="preview"
+              className="w-full h-auto object-cover rounded-lg shadow-sm border border-gray-200"
+              priority={true} // Add priority to ensure it loads immediately
+              unoptimized={true} // Ensure we bypass optimization to avoid stale cache or loading issues
+            />
+          </div>
+        )}
       </div>
     </div>
   )
 }
-

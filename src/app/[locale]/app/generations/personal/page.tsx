@@ -304,9 +304,9 @@ export default function PersonalGenerationsPage() {
               onChange={(e) => setTimeframe(e.target.value as 'all'|'7d'|'30d')} 
               className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[140px]"
             >
-              <option value="all">All time</option>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
+              <option value="all">{tg('filters.allTime')}</option>
+              <option value="7d">{tg('filters.last7Days')}</option>
+              <option value="30d">{tg('filters.last30Days')}</option>
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,7 +323,7 @@ export default function PersonalGenerationsPage() {
                 onChange={(e) => setContext(e.target.value)} 
                 className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-900 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 shadow-sm hover:shadow-md min-w-[160px]"
               >
-                <option value="all">All photo styles</option>
+                <option value="all">{tg('filters.allPhotoStyles')}</option>
                 {styleOptions.map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
@@ -356,7 +356,7 @@ export default function PersonalGenerationsPage() {
                 d="M12 4.5v15m7.5-7.5h-15"
               />
             </svg>
-            New generation
+            {tg('newGeneration')}
           </Link>
           
           {/* Cost information - Enhanced card style */}
@@ -456,7 +456,7 @@ export default function PersonalGenerationsPage() {
                   d="M12 4.5v15m7.5-7.5h-15"
                 />
               </svg>
-              New generation
+              {tg('newGeneration')}
             </Link>
           </div>
         )}

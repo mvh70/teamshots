@@ -30,7 +30,6 @@ const SHOT_TYPES = CANONICAL_SHOT_TYPES.map((type, idx) => {
   ]
   return {
     value: config.id,
-    label: config.label,
     description: config.framingDescription,
     icon: colorMap[idx]?.icon || '📷',
     color: colorMap[idx]?.color || 'from-gray-500 to-gray-600'
@@ -115,10 +114,10 @@ export default function ShotTypeSelector({
                 </div>
                 <div className="flex-1 text-left">
                   <div className={`text-sm font-semibold ${isSelected ? 'text-brand-primary' : 'text-gray-900'}`}>
-                    {shotType.label}
+                    {t(`types.${shotType.value}.label`)}
                   </div>
                   <div className="text-xs text-gray-600 mt-0.5">
-                    {shotType.description}
+                    {t(`types.${shotType.value}.description`)}
                   </div>
                 </div>
                 {isSelected && (

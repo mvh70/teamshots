@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { Resend } from 'resend';
 import WaitlistWelcomeEmail from '@/emails/WaitlistWelcome';
 import TeamInviteEmail from '@/emails/TeamInvite';
+import PasswordResetEmail from '@/emails/PasswordReset';
 import { BRAND_CONFIG, getBrandContact } from '@/config/brand';
 import { getEmailTranslation } from '@/lib/translations';
 import { Env } from '@/lib/env';
@@ -149,6 +150,44 @@ export async function sendMagicLinkEmail({
     return { success: true, data };
   } catch (error) {
     console.error('Failed to send magic link email:', error);
+    return { success: false, error };
+  }
+}
+
+interface SendPasswordResetEmailParams {
+  email: string;
+  resetLink: string;
+  locale?: 'en' | 'es';
+}
+
+/**
+ * Send password reset email
+ */
+export async function sendPasswordResetEmail({
+  email,
+  resetLink,
+  locale = 'en',
+}: SendPasswordResetEmailParams) {
+  try {
+    const subject = getEmailTranslation('passwordReset.subject', locale);
+
+    const { data, error } = await resend.emails.send({
+      from: getFromEmail(),
+      to: email,
+      replyTo: getReplyToEmail(),
+      subject,
+      react: PasswordResetEmail({ resetLink, locale }),
+    });
+
+    if (error) {
+      Logger.error('Error sending password reset email', { error });
+      return { success: false, error };
+    }
+
+    Logger.info('Password reset email sent successfully', { email, messageId: data?.id });
+    return { success: true, data };
+  } catch (error) {
+    Logger.error('Failed to send password reset email', { error });
     return { success: false, error };
   }
 }

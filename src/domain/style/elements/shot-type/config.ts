@@ -30,7 +30,6 @@ export type CanonicalShotType =
 
 export interface ShotTypeConfig {
   id: CanonicalShotType
-  label: string
   framingDescription: string
   preferredOrientation: 'vertical' | 'horizontal'
   compositionNotes?: string
@@ -40,7 +39,6 @@ export interface ShotTypeConfig {
 export const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
   'extreme-close-up': {
     id: 'extreme-close-up',
-    label: 'Extreme Close-Up',
     framingDescription: "Extreme close-up focusing on the subject's eyes or a key facial feature. Keep the frame tight with no background distractions.",
     preferredOrientation: 'vertical',
     compositionNotes: 'Tight framing on facial features with minimal headroom',
@@ -48,7 +46,6 @@ export const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
   },
   'close-up': {
     id: 'close-up',
-    label: 'Close-Up (Tight Headshot)',
     framingDescription: 'Close-up headshot framing from the top of the head to just below the chin, minimal neck visible.',
     preferredOrientation: 'vertical',
     compositionNotes: 'Head and face only, minimal headroom',
@@ -56,7 +53,6 @@ export const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
   },
   'medium-close-up': {
     id: 'medium-close-up',
-    label: 'Medium Close-Up (Standard Headshot)',
     framingDescription: 'Standard professional headshot framing from the top of the head down to mid-chest.',
     preferredOrientation: 'vertical',
     compositionNotes: 'Medium close-up from head to mid-chest',
@@ -64,15 +60,13 @@ export const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
   },
   'medium-shot': {
     id: 'medium-shot',
-    label: 'Medium Shot (Bust)',
-    framingDescription: 'Portrait framing from the top of the head down to the waist, showing torso and arms.',
+    framingDescription: 'Portrait framing from the top of the head down to the natural waistline (belly button level). Frame cuts at the waist, NOT at hips, thighs, or knees. The legs should NOT be visible.',
     preferredOrientation: 'vertical',
-    compositionNotes: 'Bust portrait from head to waist',
+    compositionNotes: 'Bust portrait from head to waist - cut at belly button level, legs NOT visible',
     excludeClothingColors: ['shoes']
   },
   'three-quarter': {
     id: 'three-quarter',
-    label: '3/4 Shot (American)',
     framingDescription:
       'Three-quarter portrait framing from the top of the head to mid-thigh, full arms included. The feet must NOT be visible.',
     preferredOrientation: 'vertical',
@@ -81,7 +75,6 @@ export const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
   },
   'full-length': {
     id: 'full-length',
-    label: 'Full-Length',
     framingDescription: 'Full-length portrait showing the entire body from head to toe with a touch of floor visible.',
     preferredOrientation: 'vertical',
     compositionNotes: 'Full body visible with breathing room top and bottom',
@@ -89,7 +82,6 @@ export const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
   },
   'wide-shot': {
     id: 'wide-shot',
-    label: 'Wide Shot',
     framingDescription: 'Wide shot that places the subject within their environment. Maintain awareness of background balance.',
     preferredOrientation: 'horizontal',
     compositionNotes: 'Environmental composition with subject in context',

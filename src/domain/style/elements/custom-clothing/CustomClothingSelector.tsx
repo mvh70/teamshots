@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import { CustomClothingSettings } from './types'
@@ -51,6 +52,7 @@ export function CustomClothingSelector({
   mode = 'user',
   token,
 }: CustomClothingSelectorProps) {
+  const t = useTranslations('customization.photoStyle.customClothing')
   const [uploading, setUploading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -291,7 +293,7 @@ export function CustomClothingSelector({
               <div className="p-6">
                 <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-sm text-gray-600 mb-2">
-                  Click to upload or drag and drop
+                  {t('uploadPrompt')}
                 </p>
                 <label
                   htmlFor="outfit-upload"

@@ -2315,6 +2315,89 @@ export default function TeamPage() {
           </div>
         </div>
       )}
+
+      {/* Floating Invite Button - Only show when team admin has active context (or is on free plan) */}
+      {userRoles.isTeamAdmin && (teamData?.activeContext || isFreePlan) && (
+        <>
+          {/* Desktop - Top Right Floating Button */}
+          <div className="hidden md:flex fixed top-20 right-8 z-[100] pointer-events-auto">
+            {credits.team === 0 ? (
+              <Link
+                href={isFreePlan ? '/app/upgrade' : '/app/top-up'}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
+                style={{ 
+                  background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.ctaHover}, #4F46E5)`
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
+                }}
+              >
+                <PlusIcon className="h-5 w-5" />
+                {isFreePlan ? t('buttons.upgrade') : t('buttons.buyCredits')}
+              </Link>
+            ) : (
+              <button
+                id="floating-invite-btn-desktop"
+                onClick={() => {
+                  setInviteError(null)
+                  setError(null)
+                  setEmailValue('')
+                  setFirstNameValue('')
+                  setPhotosInputValue(defaultPhotos.toString())
+                  setAllocatedPhotos(defaultPhotos)
+                  setShowInviteForm(true)
+                }}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-secondary hover:bg-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
+              >
+                <PlusIcon className="h-5 w-5" />
+                {t('buttons.inviteTeamMember')}
+              </button>
+            )}
+          </div>
+
+          {/* Mobile - Bottom Sticky Button */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-4 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+            {credits.team === 0 ? (
+              <Link
+                href={isFreePlan ? '/app/upgrade' : '/app/top-up'}
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
+                style={{ 
+                  background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.ctaHover}, #4F46E5)`
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
+                }}
+              >
+                <PlusIcon className="h-5 w-5" />
+                {isFreePlan ? t('buttons.upgrade') : t('buttons.buyCredits')}
+              </Link>
+            ) : (
+              <button
+                id="floating-invite-btn-mobile"
+                onClick={() => {
+                  setInviteError(null)
+                  setError(null)
+                  setEmailValue('')
+                  setFirstNameValue('')
+                  setPhotosInputValue(defaultPhotos.toString())
+                  setAllocatedPhotos(defaultPhotos)
+                  setShowInviteForm(true)
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-secondary hover:bg-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
+              >
+                <PlusIcon className="h-5 w-5" />
+                {t('buttons.inviteTeamMember')}
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

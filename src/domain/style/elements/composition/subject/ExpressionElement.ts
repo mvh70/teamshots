@@ -6,6 +6,7 @@
  */
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
+import { EXPRESSION_LABELS } from '../../expression/prompt'
 
 export class ExpressionElement extends StyleElement {
   readonly id = 'expression'
@@ -41,49 +42,16 @@ export class ExpressionElement extends StyleElement {
     }
 
     // Build payload structure for expression
+    // Use centralized prompt label from expression/prompt.ts
+    const expressionLabel = EXPRESSION_LABELS[expression.type] || EXPRESSION_LABELS.neutral_serious
+
     const payload: Record<string, unknown> = {
       subject: {
         expression: {
           type: expression.type,
+          description: expressionLabel,
         },
       },
-    }
-
-    // Generate expression-specific instructions and payload details
-    const expressionPayload = (payload.subject as Record<string, unknown>).expression as Record<string, unknown>
-
-    switch (expression.type) {
-      case 'genuine_smile':
-        expressionPayload.description = 'Genuine smile showing teeth, natural and approachable'
-        break
-
-      case 'soft_smile':
-        expressionPayload.description = 'Soft professional smile without teeth, subtle and polished'
-        break
-
-      case 'neutral_serious':
-        expressionPayload.description = 'Neutral, relaxed expression with calm composure'
-        break
-
-      case 'laugh_joy':
-        expressionPayload.description = 'Bright, joyful laughter with wide smile and energy'
-        break
-
-      case 'contemplative':
-        expressionPayload.description = 'Thoughtful, engaged expression with intelligence and introspection'
-        break
-
-      case 'confident':
-        expressionPayload.description = 'Confident, poised expression with self-assurance'
-        break
-
-      case 'sad':
-        expressionPayload.description = 'Subtle contemplative expression with gentle emotion'
-        break
-
-      default:
-        // Unknown expression - use neutral
-        expressionPayload.description = 'Natural, relaxed expression'
     }
 
     // Note: Specific expression details are in the JSON payload

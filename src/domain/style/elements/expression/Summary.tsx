@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { useTranslations } from 'next-intl'
 import { ExclamationTriangleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
 import type { ElementSummaryProps } from '../metadata'
 import { resolveExpression } from './config'
@@ -10,6 +11,7 @@ interface ExpressionSettings {
 }
 
 export function ExpressionSummary({ settings }: ElementSummaryProps<ExpressionSettings>) {
+  const t = useTranslations('customization.photoStyle.expression')
   const [showTooltip, setShowTooltip] = React.useState(false)
 
   if (!settings) return null
@@ -33,9 +35,11 @@ export function ExpressionSummary({ settings }: ElementSummaryProps<ExpressionSe
         ) : (
           <span className="inline-flex items-center gap-2 text-gray-700 normal-case">
             <span className="font-semibold">
-              {expressionConfig?.label ?? expressionType}
+              {t(`expressions.${expressionType}.label`, {
+                default: expressionType.replace(/_/g, ' ')
+              })}
             </span>
-            {expressionConfig?.description && (
+            {t(`expressions.${expressionType}.description`, { default: '' }) && (
               <span
                 className="relative inline-block w-4 h-4"
                 onMouseEnter={() => setShowTooltip(true)}
@@ -43,7 +47,7 @@ export function ExpressionSummary({ settings }: ElementSummaryProps<ExpressionSe
               >
                 <QuestionMarkCircleIcon className="w-4 h-4 text-gray-400 hover:text-brand-secondary transition-colors cursor-help" />
                 <span className={`pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-xl bg-gray-900 px-4 py-2.5 text-xs leading-relaxed text-white shadow-2xl transition-opacity duration-200 ${showTooltip ? 'opacity-100' : 'opacity-0'}`}>
-                  {expressionConfig.description}
+                  {t(`expressions.${expressionType}.description`, { default: '' })}
                 </span>
               </span>
             )}

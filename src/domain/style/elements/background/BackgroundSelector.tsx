@@ -207,7 +207,7 @@ export default function BackgroundSelector({
                   </div>
                   <div className="flex-1 text-left">
                     <div className={`text-sm font-semibold ${isSelected ? 'text-brand-primary' : 'text-gray-900'}`}>
-                      {type.label}
+                      {t(`types.${type.value}`)}
                     </div>
                   </div>
                   {isSelected && (

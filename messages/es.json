@@ -501,7 +501,7 @@
       }
     },
     "signup": {
-      "freeBadge": "Incluye 1 generación de prueba gratis en estilo predefinido",
+      "freeBadge": "Te estás registrando en el plan gratuito con {photoCount} {photoCount, plural, one {foto gratis} other {fotos gratis}} y marca fija de {brandName}",
       "title": "Crea tu cuenta",
       "welcome": "Crea tu cuenta",
       "welcomeSubtitle": "Diseñado para equipos y fundadores. Únete en segundos. Sin fotógrafo ni gestión—solo fotos profesionales.",
@@ -545,6 +545,55 @@
       "resendIn": "Reenviar en {seconds}s",
       "otpHelp": "Código caduca en 10 min",
       "newCodeSent": "Código inválido o caducado. Enviamos uno nuevo."
+    },
+    "forgotPassword": {
+      "title": "Restablece tu contraseña",
+      "subtitle": "Ingresa tu correo y te enviaremos un enlace de restablecimiento",
+      "welcomeTitle": "Restablecer Contraseña",
+      "welcomeSubtitle": "No te preocupes, te ayudaremos a recuperar el acceso a tu cuenta.",
+      "emailLabel": "Correo electrónico",
+      "sendResetLink": "Enviar enlace de restablecimiento",
+      "sending": "Enviando...",
+      "backToSignIn": "Volver a iniciar sesión",
+      "checkEmail": "Revisa tu correo",
+      "successTitle": "Enlace enviado",
+      "successDescription": "Te hemos enviado un correo con instrucciones para restablecer tu contraseña.",
+      "emailSent": "Hemos enviado un enlace de restablecimiento a {email}",
+      "checkSpam": "Si no lo ves, revisa tu carpeta de spam",
+      "genericError": "Ocurrió un error. Por favor, inténtalo de nuevo."
+    },
+    "resetPassword": {
+      "title": "Restablece tu contraseña",
+      "subtitle": "Elige una nueva contraseña para tu cuenta",
+      "welcomeTitle": "Crear Nueva Contraseña",
+      "welcomeSubtitle": "Elige una contraseña segura para proteger tu cuenta.",
+      "forEmail": "Restableciendo contraseña para {email}",
+      "passwordLabel": "Nueva contraseña",
+      "confirmPasswordLabel": "Confirmar nueva contraseña",
+      "resetPassword": "Restablecer contraseña",
+      "resetting": "Restableciendo contraseña...",
+      "verifying": "Verificando enlace...",
+      "success": "Contraseña restablecida exitosamente",
+      "successTitle": "Contraseña Actualizada",
+      "successDescription": "Tu contraseña ha sido cambiada. Iniciando sesión...",
+      "redirecting": "Iniciando sesión...",
+      "passwordMismatch": "Las contraseñas no coinciden",
+      "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
+      "genericError": "Algo salió mal. Por favor, inténtalo de nuevo.",
+      "linkProblem": "Hay un problema con este enlace",
+      "linkExpired": "Este enlace ha caducado",
+      "linkExpiredDescription": "Los enlaces de restablecimiento de contraseña caducan después de 1 hora por seguridad.",
+      "linkExpiredHelp": "Puedes solicitar un nuevo enlace de restablecimiento a continuación.",
+      "linkInvalid": "Enlace inválido",
+      "linkInvalidDescription": "Este enlace no parece ser válido. Puede estar corrupto o ya haber sido usado.",
+      "linkInvalidHelp": "Por favor, solicita un nuevo enlace de restablecimiento de contraseña.",
+      "requestNewLink": "Solicitar nuevo enlace",
+      "goToSignIn": "Volver a iniciar sesión",
+      "alreadySet": "Contraseña ya restablecida",
+      "alreadySetTitle": "Enlace Ya Usado",
+      "alreadySetDescription": "Este enlace de restablecimiento de contraseña ya ha sido usado.",
+      "alreadySetHelp": "Si necesitas restablecer tu contraseña nuevamente, por favor solicita un nuevo enlace.",
+      "signIn": "Iniciar sesión"
     },
     "setPassword": {
       "title": "Establece tu contraseña",
@@ -625,7 +674,7 @@
         "team": "Gestionar tu equipo",
         "personalGenerations": "Generaciones Personales",
         "teamGenerations": "Fotos generadas",
-        "selfies": "Mis selfies",
+        "selfies": "Tus selfies",
         "contexts": "Estilos Fotos",
         "personalPhotoStyles": "Estilos Personales",
         "teamPhotoStyles": "Configuración de tu estilo de foto",
@@ -677,9 +726,13 @@
         "fallbackPersonalStyle": "Estilo personal",
         "fallbackTeamStyle": "Estilo de equipo",
         "predefinedStyle": "Estilo predefinido con preajustes",
+        "predefinedTeamStyle": "La configuración de estilo de equipo predefinido está aplicada. Puedes personalizar las configuraciones de elección del usuario para esta generación.",
+        "freestyleTeamDescription": "Crea un estilo de foto de equipo personalizado para esta generación.",
+        "freestyleTeamOnlyDescription": "No hay estilos de equipo disponibles. Crea un estilo de foto de equipo personalizado para esta generación.",
         "insufficientPhotos": "Fotos insuficientes",
         "insufficientPhotosMessage": "Necesitas {required} fotos para generar. Tienes {current}. ¡Recarga!",
         "generatePhoto": "Generar foto",
+        "startingGeneration": "Iniciando generación...",
         "customizeFirstTooltip": "Personaliza tu foto con las secciones editables a continuación",
         "customizeFirstTooltipMobile": "Personaliza tu foto con las secciones editables arriba",
         "buyMorePhotos": "Comprar más fotos",
@@ -1285,19 +1338,32 @@
     },
     "personal": {
       "title": "Generaciones personales",
+      "newGeneration": "Nueva generación",
       "empty": {
         "title": "Aún no hay generaciones personales",
         "subtitle": "Cuando generes fotos personales, tus resultados aparecerán aquí. ¿Listo para hacer algo de magia?"
+      },
+      "filters": {
+        "allTime": "Todo el tiempo",
+        "last7Days": "Últimos 7 días",
+        "last30Days": "Últimos 30 días",
+        "allPhotoStyles": "Todos los estilos de foto"
       }
     },
     "team": {
       "title": "Generaciones del equipo",
+      "description": "Administra y visualiza las fotos profesionales generadas por tu equipo",
+      "newGeneration": "Nueva generación",
       "empty": {
         "title": "Aún no hay generaciones del equipo",
         "subtitle": "Cuando tú o tu equipo generen fotos, los resultados aparecerán aquí. ¡El trabajo en equipo hace que el sueño funcione!"
       },
       "filters": {
-        "allUsers": "Todos los usuarios"
+        "allUsers": "Todos los usuarios",
+        "allTime": "Todo el tiempo",
+        "last7Days": "Últimos 7 días",
+        "last30Days": "Últimos 30 días",
+        "allPhotoStyles": "Todos los estilos de foto"
       },
       "viewOnly": "Solo visualización - trabajo aprobado de miembros del equipo"
     },
@@ -1518,12 +1584,12 @@
       "default": "Predeterminado"
     },
     "freePlan": {
-      "title": "Bono del Plan Gratuito",
+      "title": "Estás en el plan gratuito.",
       "stamp": "Prueba de Manejo",
       "cta": "Mejorar plan",
-      "bodyPersonal": "Prueba antes de comprar. Genera una vista previa para verte con estilos profesionales sin gastar un centavo.",
-      "bodyTeam": "Estandariza la imagen de tu equipo. Genera vistas previas para ver cómo las fotos profesionales consistentes elevan tu marca.",
-      "bodyGeneric": "¿Curioso por los resultados? Genera una vista previa gratuita para ver la calidad de nuestros retratos con IA de primera mano."
+      "bodyPersonal": "En el plan gratuito obtienes {photoCount} {photoCount, plural, one {foto} other {fotos}} y marca fija de {brandName}. Mejora tu plan para obtener personalización completa y más fotos.",
+      "bodyTeam": "En el plan gratuito obtienes {photoCount} {photoCount, plural, one {foto} other {fotos}} (que puedes compartir con tu equipo) y marca fija de {brandName}. Mejora tu plan para obtener personalización completa y más fotos.",
+      "bodyGeneric": "En el plan gratuito obtienes {photoCount} {photoCount, plural, one {foto} other {fotos}} y marca fija de {brandName}. Mejora tu plan para obtener personalización completa y más fotos."
     }
   },
   "emails": {
@@ -1542,6 +1608,18 @@
       "expires": "Este enlace expira en 24 horas por razones de seguridad.",
       "linkFallback": "Si el botón no funciona, copia y pega este enlace en tu navegador:",
       "footer": "Si no solicitaste este enlace de inicio de sesión, puedes ignorar este correo electrónico de forma segura."
+    },
+    "passwordReset": {
+      "subject": "Restablece tu contraseña",
+      "preview": "Restablece tu contraseña para tu cuenta",
+      "title": "Restablece tu contraseña",
+      "greeting": "Recibimos una solicitud para restablecer tu contraseña.",
+      "instructions": "Haz clic en el botón a continuación para elegir una nueva contraseña. Este enlace expirará en 1 hora.",
+      "button": "Restablecer contraseña",
+      "expires": "Por seguridad, este enlace expira en 1 hora.",
+      "notRequested": "Si no solicitaste restablecer tu contraseña, puedes ignorar este correo de forma segura. Tu contraseña permanecerá sin cambios.",
+      "linkFallback": "Si el botón no funciona, copia y pega este enlace en tu navegador:",
+      "footer": "Este enlace de restablecimiento de contraseña fue solicitado para tu cuenta. Si no hiciste esta solicitud, por favor contacta a soporte."
     },
     "teamInvite": {
       "subject": "Invitación al equipo de {teamName}",
@@ -1748,8 +1826,17 @@
         "chooseFile": "Elegir Archivo",
         "colorValue": "Color",
         "colorHint": "Código hex o nombre de color",
+        "colorPlaceholder": "Escribe tu color (ej. Borgoña) y selecciona el tono correcto",
         "variations": "Variaciones",
-        "presets": "Elige un color"
+        "presets": "Elige un color",
+        "types": {
+          "office": "Entorno de Oficina",
+          "tropical-beach": "Playa Tropical",
+          "busy-city": "Ciudad Ocupada",
+          "neutral": "Fondo Neutral",
+          "gradient": "Fondo Degradado",
+          "custom": "Subir Personalizado"
+        }
       },
       "branding": {
         "title": "Marca",
@@ -1776,6 +1863,31 @@
         },
         "accessories": {
           "label": "Accesorios"
+        },
+        "styles": {
+          "business": {
+            "label": "Negocios",
+            "description": "Vestimenta profesional"
+          },
+          "startup": {
+            "label": "Startup",
+            "description": "Casual y creativo"
+          },
+          "black-tie": {
+            "label": "Etiqueta",
+            "description": "Elegancia formal"
+          }
+        },
+        "details_options": {
+          "formal": "Formal",
+          "casual": "Casual",
+          "t-shirt": "Camiseta",
+          "hoodie": "Sudadera",
+          "polo": "Polo",
+          "button-down": "Camisa",
+          "tuxedo": "Esmoquin",
+          "suit": "Traje",
+          "dress": "Vestido"
         }
       },
       "clothingColors": {
@@ -1796,15 +1908,83 @@
         "shoesDesc": "Zapatos de vestir, zapatos casuales",
         "noVisibleColors": "No hay colores de ropa aplicables para este tipo de foto y estilo."
       },
+      "customClothing": {
+        "title": "Ropa Personalizada",
+        "subtitle": "Sube tu propio outfit para que la IA lo coincida",
+        "predefined": "Predefinido",
+        "uploadPrompt": "Haz clic para subir o arrastra y suelta",
+        "chooseFile": "Elegir archivo"
+      },
       "shotType": {
         "title": "Tipo de Toma",
         "subtitle": "Elige el encuadre para tu foto",
-        "predefined": "Predefinido"
+        "predefined": "Predefinido",
+        "types": {
+          "extreme-close-up": {
+            "label": "Primer Plano Extremo",
+            "description": "Primer plano extremo enfocado en los ojos del sujeto o un rasgo facial clave. Mantén el encuadre ajustado sin distracciones de fondo."
+          },
+          "close-up": {
+            "label": "Primer Plano (Retrato Ajustado)",
+            "description": "Retrato en primer plano desde la parte superior de la cabeza hasta justo debajo del mentón, cuello mínimo visible."
+          },
+          "medium-close-up": {
+            "label": "Plano Medio Corto (Retrato Estándar)",
+            "description": "Encuadre de retrato profesional estándar desde la parte superior de la cabeza hasta la mitad del pecho."
+          },
+          "medium-shot": {
+            "label": "Plano Medio (Busto)",
+            "description": "Encuadre de retrato desde la parte superior de la cabeza hasta la cintura natural (nivel del ombligo). El corte es en la cintura, NO en las caderas, muslos o rodillas. Las piernas NO deben ser visibles."
+          },
+          "three-quarter": {
+            "label": "Plano 3/4 (Americano)",
+            "description": "Encuadre de retrato de tres cuartos desde la parte superior de la cabeza hasta la mitad del muslo, brazos completos incluidos. Los pies NO deben ser visibles."
+          },
+          "full-length": {
+            "label": "Cuerpo Completo",
+            "description": "Retrato de cuerpo completo mostrando todo el cuerpo de la cabeza a los pies con un toque de suelo visible."
+          },
+          "wide-shot": {
+            "label": "Plano General",
+            "description": "Plano general que coloca al sujeto dentro de su entorno. Mantén conciencia del equilibrio del fondo."
+          }
+        }
       },
       "expression": {
         "title": "Expresión",
         "subtitle": "Elige una expresión facial",
-        "predefined": "Predefinido"
+        "predefined": "Predefinido",
+        "selectPlaceholder": "Elige tu expresión",
+        "expressions": {
+          "genuine_smile": {
+            "label": "Sonrisa genuina (dientes)",
+            "description": "Accesible, amigable"
+          },
+          "soft_smile": {
+            "label": "Sonrisa suave (sin dientes)",
+            "description": "Profesional, sutil"
+          },
+          "neutral_serious": {
+            "label": "Neutral / serio",
+            "description": "Ejecutivo, dramático"
+          },
+          "laugh_joy": {
+            "label": "Risa / alegría",
+            "description": "Auténtico, estilo de vida"
+          },
+          "contemplative": {
+            "label": "Contemplativo",
+            "description": "Editorial, artístico"
+          },
+          "confident": {
+            "label": "Confiado",
+            "description": "Confiado, equilibrado"
+          },
+          "sad": {
+            "label": "Triste / melancólico",
+            "description": "Sombrío, melancólico"
+          }
+        }
       },
       "pose": {
         "title": "Pose",
@@ -2019,7 +2199,9 @@
       "insufficientCredits": "No hay suficientes créditos del equipo. Disponibles: {available}, Requeridos: {required}"
     },
     "buttons": {
-      "inviteTeamMember": "Invitar Miembro del Equipo"
+      "inviteTeamMember": "Invitar Miembro del Equipo",
+      "upgrade": "Mejorar",
+      "buyCredits": "Comprar créditos"
     },
     "adminOnly": {
       "title": "Acceso de Administrador Requerido",
@@ -2247,6 +2429,7 @@
   },
   "inviteDashboard": {
     "loading": "Cargando panel...",
+    "newGeneration": "Nueva generación",
     "insufficientCredits": {
       "title": "Créditos insuficientes",
       "messageWithName": "No tienes suficientes créditos para generar fotos. Por favor, contacta a {adminName} ({adminEmail}) para solicitar más créditos.",

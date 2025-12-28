@@ -11,6 +11,8 @@ import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
+import { PRICING_CONFIG } from '@/config/pricing'
 
 export default function SignUpPage() {
   const t = useTranslations('auth.signup')
@@ -23,6 +25,27 @@ export default function SignUpPage() {
   const [infoMessage] = useState('')
 
   const router = useRouter()
+  
+  // Determine brand name and free photo count based on current domain
+  const getBrandInfo = () => {
+    if (typeof window === 'undefined') {
+      return {
+        brandName: 'TeamShotsPro',
+        photoCount: Math.floor(PRICING_CONFIG.freeTrial.pro / PRICING_CONFIG.credits.perGeneration)
+      }
+    }
+    const hostname = window.location.hostname.replace(/^www\./, '')
+    if (hostname === INDIVIDUAL_DOMAIN) {
+      return {
+        brandName: 'PhotoShotsPro',
+        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
+      }
+    }
+    return {
+      brandName: 'TeamShotsPro',
+      photoCount: Math.floor(PRICING_CONFIG.freeTrial.pro / PRICING_CONFIG.credits.perGeneration)
+    }
+  }
 
   // URL params for checkout flow
   const planParam = searchParams.get('plan')
@@ -186,9 +209,8 @@ export default function SignUpPage() {
         subtitle={
           <div>
             <div className="flex justify-center mb-4">
-              <span className="inline-flex items-center bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 px-5 py-2.5 rounded-full text-xs lg:text-sm font-bold shadow-md border border-green-200/50 transform transition-all duration-200 hover:scale-105 hover:shadow-lg">
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-2.5 animate-pulse"></span>
-                {t('freeBadge', { default: 'Includes 1 free generation' })}
+              <span className="inline-flex items-center bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 px-5 py-2.5 rounded-lg text-xs lg:text-sm font-bold shadow-md border border-green-200/50 transform transition-all duration-200 hover:scale-105 hover:shadow-lg">
+                {t('freeBadge', getBrandInfo())}
               </span>
             </div>
             <div className="flex items-center justify-center gap-2.5 mb-2">
