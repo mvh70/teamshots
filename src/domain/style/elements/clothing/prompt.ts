@@ -5,6 +5,7 @@ import type {
 } from '@/types/photo-style'
 import type { KnownClothingStyle, WardrobeDetailConfig } from './config'
 import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
+import { getColorDisplay } from '@/domain/style/elements/clothing-colors/types'
 
 /**
  * Details that don't require a top cover layer
@@ -223,20 +224,24 @@ const buildColorPalette = (
 
   // Top layer - the visible outer garment (always present)
   if (colors.topLayer) {
-    palette.push(`top_layer (${detailKey}): ${colors.topLayer} color`)
+    const colorValue = getColorDisplay(colors.topLayer)
+    palette.push(`top_layer (${detailKey}): ${colorValue} color`)
   }
 
   // Base layer - shirt underneath (ONLY for multi-layer garments)
   if (colors.baseLayer && !isSingleLayer) {
-    palette.push(`base_layer (shirt underneath): ${colors.baseLayer} color`)
+    const colorValue = getColorDisplay(colors.baseLayer)
+    palette.push(`base_layer (shirt underneath): ${colorValue} color`)
   }
 
   if (colors.bottom && isBottomVisible(shotType)) {
-    palette.push(`bottom garment (trousers, skirt, dress pants): ${colors.bottom} color`)
+    const colorValue = getColorDisplay(colors.bottom)
+    palette.push(`bottom garment (trousers, skirt, dress pants): ${colorValue} color`)
   }
 
   if (colors.shoes && isFullBodyVisible(shotType)) {
-    palette.push(`shoes (dress shoes, loafers, heels): ${colors.shoes} color`)
+    const colorValue = getColorDisplay(colors.shoes)
+    palette.push(`shoes (dress shoes, loafers, heels): ${colorValue} color`)
   }
 
   return palette.length > 0 ? palette : undefined

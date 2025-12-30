@@ -1,13 +1,20 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { ClothingSettings } from '@/types/photo-style'
+import { ClothingSettings, ClothingColorSettings } from '@/types/photo-style'
 import { Grid } from '@/components/ui'
 import { CLOTHING_STYLES, CLOTHING_DETAILS, CLOTHING_ACCESSORIES } from './config'
+import Image from 'next/image'
+import { useState, useEffect } from 'react'
+import ClothingColorPreview from '../clothing-colors/ClothingColorPreview'
+import type { ClothingColorKey } from '../clothing-colors/types'
 
 interface ClothingSelectorProps {
   value: ClothingSettings
   onChange: (settings: ClothingSettings) => void
+  clothingColors?: ClothingColorSettings // Colors from ClothingColorSelector
+  excludeColors?: ClothingColorKey[] // Which colors to exclude from preview
+  availableStyles?: string[] // Optional list of available clothing styles (filters CLOTHING_STYLES)
   isPredefined?: boolean // If true, user can't change the settings
   isDisabled?: boolean // If true, controls are visually greyed and inactive
   className?: string
@@ -17,12 +24,21 @@ interface ClothingSelectorProps {
 export default function ClothingSelector({
   value,
   onChange,
+  clothingColors,
+  excludeColors = [],
+  availableStyles,
   isPredefined = false,
   isDisabled = false,
   className = '',
   showHeader = false
 }: ClothingSelectorProps) {
   const t = useTranslations('customization.photoStyle.clothing')
+  const [imageExists, setImageExists] = useState(true)
+
+  // Filter clothing styles based on availableStyles prop
+  const filteredClothingStyles = availableStyles
+    ? CLOTHING_STYLES.filter(style => availableStyles.includes(style.value))
+    : CLOTHING_STYLES
 
   const handleStyleChange = (style: ClothingSettings['style'], event?: React.MouseEvent) => {
     if (event) {
@@ -63,6 +79,11 @@ export default function ClothingSelector({
     onChange({ ...value, accessories: newAccessories })
   }
 
+  // Reset image exists state when style or details change
+  useEffect(() => {
+    setImageExists(true)
+  }, [value.style, value.details])
+
 
   return (
     <div className={`${className}`}>
@@ -84,54 +105,22 @@ export default function ClothingSelector({
         </div>
       )}
 
-      {/* Clothing Style Selection */}
-      <div className="space-y-4 mb-6">
-        {CLOTHING_STYLES.map((style) => {
-          const isSelected = value.style === style.value
-          // On mobile, hide unselected options when predefined
-          const shouldHide = isPredefined && !isSelected
-          
-          return (
-            <button
-              type="button"
-              key={style.value}
-              onClick={(e) => !(isPredefined || isDisabled) && handleStyleChange(style.value as ClothingSettings['style'], e)}
-              disabled={isPredefined || isDisabled}
-              className={`w-full bg-gray-50 rounded-lg p-4 border-2 transition-all ${
-                isSelected
-                  ? 'border-brand-primary bg-brand-primary-light shadow-sm'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-white hover:shadow-sm'
-              } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
-                shouldHide ? 'hidden md:block' : ''
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl ${
-                  isSelected 
-                    ? `bg-gradient-to-br ${style.color}` 
-                    : 'bg-gray-200'
-                }`}>
-                  {style.icon}
-                </div>
-                <div className="flex-1 text-left">
-                  <div className={`text-sm font-semibold ${isSelected ? 'text-brand-primary' : 'text-gray-900'}`}>
-                    {t(`styles.${style.value}.label`)}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-0.5">
-                    {t(`styles.${style.value}.description`)}
-                  </div>
-                </div>
-                {isSelected && (
-                  <div className="w-5 h-5 bg-brand-primary rounded-full flex items-center justify-center flex-shrink-0">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-            </button>
-          )
-        })}
+      {/* Clothing Style Selection - Dropdown */}
+      <div className="mb-6">
+        <select
+          value={value.style || ''}
+          onChange={(e) => !(isPredefined || isDisabled) && handleStyleChange(e.target.value as ClothingSettings['style'])}
+          disabled={isPredefined || isDisabled}
+          className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary ${
+            (isPredefined || isDisabled) ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white'
+          }`}
+        >
+          {filteredClothingStyles.map((style) => (
+            <option key={style.value} value={style.value}>
+              {style.icon} {t(`styles.${style.value}.label`)}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Style-specific controls */}
@@ -197,6 +186,29 @@ export default function ClothingSelector({
               </Grid>
             )}
           </div>
+
+          {/* Preview Image with Colors */}
+          {value.details && imageExists && value.style && (
+            <div className="mt-6 rounded-md overflow-hidden border border-gray-200 bg-white p-4">
+              {clothingColors?.colors ? (
+                <ClothingColorPreview
+                  colors={clothingColors.colors}
+                  clothingStyle={value.style}
+                  clothingDetail={value.details}
+                  excludeColors={excludeColors}
+                />
+              ) : (
+                <Image
+                  src={`/images/clothing/${value.style}-${value.details}.png`}
+                  alt={`${t(`styles.${value.style}.label`)} - ${t(`details_options.${value.details}`)}`}
+                  width={600}
+                  height={400}
+                  className="w-full h-auto object-cover"
+                  onError={() => setImageExists(false)}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
 

@@ -44,6 +44,12 @@ const AVAILABLE_EXPRESSIONS = [
   //'confident'
 ]
 
+const AVAILABLE_CLOTHING_STYLES = [
+  'business',
+  'startup'
+  // 'black-tie' excluded from this package
+]
+
 const HEADSHOT1_PRESET = CORPORATE_HEADSHOT
 const HEADSHOT1_PRESET_DEFAULTS = getDefaultPresetSettings(HEADSHOT1_PRESET)
 
@@ -72,6 +78,7 @@ export const headshot1: ClientStylePackage = {
   availableBackgrounds: AVAILABLE_BACKGROUNDS,
   availablePoses: AVAILABLE_POSES,
   availableExpressions: AVAILABLE_EXPRESSIONS,
+  availableClothingStyles: AVAILABLE_CLOTHING_STYLES,
   defaultSettings: DEFAULTS,
   defaultPresetId: HEADSHOT1_PRESET.id,
   presets: { [HEADSHOT1_PRESET.id]: HEADSHOT1_PRESET },

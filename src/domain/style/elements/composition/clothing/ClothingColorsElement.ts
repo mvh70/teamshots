@@ -7,6 +7,7 @@
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
 import type { ShotTypeValue } from '@/types/photo-style'
+import { getColorHex, type ColorValue } from '../../clothing-colors/types'
 
 export class ClothingColorsElement extends StyleElement {
   readonly id = 'clothing-colors'
@@ -92,21 +93,21 @@ export class ClothingColorsElement extends StyleElement {
     if (isSingleLayer) {
       // Single-layer garments: the garment itself is the top layer
       if (colors.topLayer) {
-        colorPalette.push(`${detail || 'main garment'} (the main visible garment): ${colors.topLayer} color`)
+        colorPalette.push(`${detail || 'main garment'} (the main visible garment): ${getColorHex(colors.topLayer)} color`)
       }
     } else {
       // Multi-layer garments: topLayer is the outer garment (jacket, blazer), baseLayer is the shirt underneath
       if (colors.topLayer) {
-        colorPalette.push(`top layer (e.g., suit jacket, blazer, cardigan): ${colors.topLayer} color`)
+        colorPalette.push(`top layer (e.g., suit jacket, blazer, cardigan): ${getColorHex(colors.topLayer)} color`)
       }
       if (colors.baseLayer) {
-        colorPalette.push(`base layer (e.g., shirt under jacket, dress shirt under blazer): ${colors.baseLayer} color`)
+        colorPalette.push(`base layer (e.g., shirt under jacket, dress shirt under blazer): ${getColorHex(colors.baseLayer)} color`)
       }
     }
 
     // Bottom garment (only if visible in shot)
     if (colors.bottom && isBottomVisible) {
-      colorPalette.push(`bottom garment (trousers, skirt, dress pants): ${colors.bottom} color`)
+      colorPalette.push(`bottom garment (trousers, skirt, dress pants): ${getColorHex(colors.bottom)} color`)
     } else if (colors.bottom && !isBottomVisible) {
       // Log that bottom color is specified but won't be visible
       metadata.bottomColorNotVisible = true
@@ -114,7 +115,7 @@ export class ClothingColorsElement extends StyleElement {
 
     // Shoes (only if visible in full-body shot)
     if (colors.shoes && isFullBody) {
-      colorPalette.push(`shoes (dress shoes, loafers, heels): ${colors.shoes} color`)
+      colorPalette.push(`shoes (dress shoes, loafers, heels): ${getColorHex(colors.shoes)} color`)
     } else if (colors.shoes && !isFullBody) {
       // Log that shoes color is specified but won't be visible
       metadata.shoesColorNotVisible = true
@@ -181,20 +182,22 @@ export class ClothingColorsElement extends StyleElement {
     }
 
     // Validate color format (basic check for hex colors or color names)
-    const validateColor = (color: string, name: string) => {
+    const validateColor = (color: string | ColorValue | undefined, name: string) => {
       if (!color) return
+      const hex = getColorHex(color)
+      if (!hex) return
       // Accept hex colors or common color names
-      const isHex = /^#[0-9A-F]{6}$/i.test(color)
-      const isColorName = color.length > 0 && /^[a-z\s-]+$/i.test(color)
+      const isHex = /^#[0-9A-F]{6}$/i.test(hex)
+      const isColorName = hex.length > 0 && /^[a-z\s-]+$/i.test(hex)
       if (!isHex && !isColorName) {
-        errors.push(`Invalid ${name} color format: ${color}`)
+        errors.push(`Invalid ${name} color format: ${hex}`)
       }
     }
 
-    validateColor(colors.topLayer!, 'topLayer')
-    validateColor(colors.baseLayer!, 'baseLayer')
-    validateColor(colors.bottom!, 'bottom')
-    validateColor(colors.shoes!, 'shoes')
+    validateColor(colors.topLayer, 'topLayer')
+    validateColor(colors.baseLayer, 'baseLayer')
+    validateColor(colors.bottom, 'bottom')
+    validateColor(colors.shoes, 'shoes')
 
     return errors
   }

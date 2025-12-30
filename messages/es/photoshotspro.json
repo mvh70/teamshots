@@ -1,0 +1,75 @@
+{
+  "landing": {
+    "photoshotspro": {
+      "hero": {
+        "titleMain": "Retratos profesionales",
+        "titleHighlightTime": "en 60 segundos",
+        "subtitle": "Sube cualquier selfie y obtén retratos profesionales impresionantes al instante. Perfecto para LinkedIn, perfiles de citas, o cualquier lugar donde necesites lucir increíble. ",
+        "subtitleBold": "sin fotógrafo ni estudio costoso.",
+        "subtitleMain": "Convierte cualquier selfie en retratos profesionales impresionantes. Sin fotógrafo, sin esperas.",
+        "finalCtaTitle": "¿Listo para lucir increíble?",
+        "finalCtaSubtitle": "Obtén tus retratos profesionales y ve la diferencia en 60 segundos.",
+        "getStarted": "Empezar",
+        "cta": "Obtén tus retratos profesionales",
+        "ctaSubtext": "Obtén tus retratos profesionales en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
+        "ctaAria": "Obtén tus retratos profesionales en un estilo predefinido al registrarte. Sin compromiso.",
+        "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
+        "badge": "Retratos profesionales sin la molestia del estudio"
+      },
+      "gallery": {
+        "title": "De selfies casuales a retratos profesionales",
+        "subtitle": "Mira cómo transformamos fotos cotidianas en retratos impresionantes perfectos para LinkedIn, apps de citas y perfiles profesionales.",
+        "cta": "Haz que tu equipo se vea así hoy"
+      },
+      "trust": {
+        "title": "¿Por qué la gente elige PhotoShotsPro?",
+        "subtitle": "Retratos profesionales simplificados - sin estudio, sin esperas, solo fotos increíbles",
+        "badges": {
+          "industryTemplates": {
+            "title": "Estilos para cada ocasión",
+            "description": "Retratos optimizados para LinkedIn, fotos para perfiles de citas, looks profesionales casuales, y más. Cada estilo está diseñado para ayudarte a lucir lo mejor posible para tus necesidades específicas."
+          },
+          "qualityControl": {
+            "title": "Calidad garantizada con correcciones automáticas",
+            "description": "Las fotos que fallan nuestros estándares de calidad se regeneran automáticamente. Además obtienes reintentos gratuitos basados en el plan para perfeccionar tus resultados. A diferencia de otros servicios donde pagas por cada intento, manejamos problemas de calidad automáticamente y te damos iteraciones gratuitas para obtener exactamente lo que quieres."
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "Retratos profesionales en 3 simples pasos",
+        "subtitle": "Olvídate del fotógrafo costoso y las poses incómodas. Así de fácil es obtener retratos increíbles.",
+        "totalTime": "Tiempo total:",
+        "totalTimeValue": "2 minutos",
+        "cta": "¡Obtén tus retratos profesionales ahora!",
+        "guarantee": "Sin riesgo: Pruébalo gratis para ver la calidad. Sin tarjeta de crédito, sin compromiso.",
+        "steps": {
+          "1": {
+            "title": "Sube tu selfie",
+            "description": "Cualquier foto clara de tu rostro funciona. Selfies, fotos casuales - trabajamos con lo que tengas.",
+            "duration": "30s"
+          },
+          "2": {
+            "title": "Elige tu estilo",
+            "description": "Selecciona entre profesional para LinkedIn, perfil de citas, negocio casual, y más.",
+            "duration": "30s"
+          },
+          "3": {
+            "title": "Obtén 4 fotos profesionales",
+            "description": "Recibe 4 variaciones impresionantes en 60 segundos. Descarga tus favoritas al instante.",
+            "duration": "60s"
+          }
+        }
+      },
+      "faq": {
+        "title": "Preguntas Frecuentes",
+        "subtitle": "Todo lo que necesitas saber sobre PhotoShotsPro"
+      },
+      "footer": {
+        "tagline": "Retratos profesionales en 60 segundos",
+        "copyright": "© 2025 PhotoShotsPro. Todos los derechos reservados.",
+        "privacy": "Política de Privacidad",
+        "terms": "Términos de Servicio"
+      }
+    }
+  }
+}

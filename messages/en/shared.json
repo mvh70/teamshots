@@ -1,0 +1,2371 @@
+{
+  "metadata": {
+    "title": "Professional Team Photos in 60 Seconds",
+    "description": "Turn any selfie into consistent, on-brand headshots. No photographer, no coordination. Professional AI headshots for your entire team."
+  },
+  "common": {
+    "processingImage": "Processing image...",
+    "processingImages": "Processing {count} images...",
+    "uploading": "Uploading...",
+    "loading": "Loading..."
+  },
+  "nav": {
+    "home": "Home",
+    "pricing": "Pricing",
+    "blog": "Blog",
+    "signin": "Sign in",
+    "dashboard": "Dashboard",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "titleMain": "Professional team photos",
+    "titleHighlightTime": "in 60 seconds",
+    "subtitle": "You set the brand essentials (e.g. logo, clothing style, backgrounds). Your team picks the rest (e.g. colors and poses). Everyone looks unified yet personal. Professional headshots from any selfie in 60 seconds, ",
+    "subtitleBold": "no photographer or scheduling drama required.",
+    "subtitleMain": "Turn any selfie into consistent, on-brand headshots. No photographer, no coordination.",
+    "finalCtaTitle": "Ready to transform your team photos?",
+    "finalCtaSubtitle": "Get your team's professional headshots and see the difference in 60 seconds.",
+    "getStarted": "Get Started",
+    "joinWaitlist": "Get your team's professional headshots",
+    "freeCtaSubtext": "Get your team's professional headshots in a predefined style when you sign up. No commitment, no credit card.",
+    "freeCtaAria": "Get your team's professional headshots in a predefined style when you sign up. No commitment.",
+    "noCreditCard": "No credit card required",
+    "joinedBadge": "Professional team photos without the photoshoot hassle"
+  },
+  "gallery": {
+    "title": "From 'meh' selfies to LinkedIn-worthy headshots",
+    "subtitle": "See how we transform ordinary photos into professional headshots that actually impress clients and recruiters. No fancy camera or photographer required.",
+    "before": "Before",
+    "after": "After",
+    "dragToCompare": "Drag to compare",
+    "generatedIn": "Generated in 45 seconds",
+    "cta": "Make your team look like this today"
+  },
+  "trust": {
+    "title": "Why teams choose TeamShotsPro over everyone else",
+    "subtitle": "Built for serious B2B teams that need enterprise-grade photo management, not consumer gimmicks",
+    "badges": {
+      "teamCommandCenter": {
+        "title": "Team Command Center - Built for managers who hate chaos",
+        "description": "Central dashboard where you control everything: approve photos, invite team members with one click, track progress, and manage brand consistency across your entire organization. Unlike consumer tools, this was built specifically for teams."
+      },
+      "industryTemplates": {
+        "title": "Professional templates designed for your industry",
+        "description": "Pre-built style templates for tech startups, consulting firms, creative agencies, healthcare, finance, and more. Each template understands the professional standards for your industry - from conservative banking styles to creative agency vibes. Not generic filters."
+      },
+      "qualityControl": {
+        "title": "Quality guaranteed with automatic fixes",
+        "description": "Photos that fail our quality standards get regenerated automatically. Plus you get plan-based free retries to perfect your results. Unlike other services where you pay for every attempt, we handle quality issues automatically and give you free iterations to get exactly what you want."
+      }
+    }
+  },
+  "socialProof": {
+    "testimonialsTitle": "Real teams, real results"
+  },
+  "howItWorks": {
+    "title": "From team photo chaos to 'done' in 5 minutes",
+    "subtitle": "Stop wasting weeks coordinating photoshoots. Here's exactly how modern teams get professional headshots instantly.",
+    "totalTime": "Total time:",
+    "totalTimeValue": "5 minutes",
+    "cta": "Get your team's professional headshots now",
+    "guarantee": "Risk-free: Get your team's professional headshots to prove it works. No credit card, no commitment, no BS.",
+    "steps": {
+      "1": {
+        "title": "Set your brand style",
+        "description": "Choose background and upload logo in 30 seconds.",
+        "duration": "30s"
+      },
+      "2": {
+        "title": "Invite your team",
+        "description": "Send personalized links. Each person uploads their selfie from any device.",
+        "duration": "1 min"
+      },
+      "3": {
+        "title": "Professional photos in 60 seconds",
+        "description": "Get polished headshots instantly. No editing required.",
+        "duration": "60s/person"
+      },
+      "4": {
+        "title": "Review & approve",
+        "description": "See all results in one dashboard. Retry anything you want to improve.",
+        "duration": "2 min"
+      },
+      "5": {
+        "title": "Download headshots",
+        "description": "High-resolution files ready for your website, LinkedIn, and business cards.",
+        "duration": "30s"
+      }
+    }
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know about TeamShotsPro",
+    "searchPlaceholder": "Search questions...",
+    "category": {
+      "all": "All",
+      "technical": "Technical",
+      "pricing": "Pricing",
+      "privacy": "Privacy",
+      "usage": "Usage"
+    },
+    "noResults": "No questions found matching your search.",
+    "stillHaveQuestions": "Still have questions?",
+    "contactSupport": "Contact support",
+    "items": {
+      "1": {
+        "question": "Is my data secure and private?",
+        "answer": "Absolutely. We use enterprise-grade encryption and never store your photos permanently. Your photos are automatically deleted within 30 days after account closure, or you can request deletion anytime. We don't share your data with third parties-not even your boss, we promise."
+      },
+      "2": {
+        "question": "How much does it cost?",
+        "answer": "When you sign up, you get a free test generation so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos), or VIP plan at {vipPrice} ({vipPhotos} photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
+        "answerTeam": "When you sign up, you get a free test generation so you can see the quality. After that: Use our seats-based pricing where you pay per team member. Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
+        "answerIndividual": "When you sign up, you get a free test generation with PhotoShotsPro branding so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations."
+      },
+      "3": {
+        "question": "What types of photos work best?",
+        "answer": "Any clear photo of your face works! Selfies and casual photos work great. The better quality your selfie, the better quality your result. The less we need to guess, the better."
+      },
+      "4": {
+        "question": "Can I use these photos for my LinkedIn, website, etc.?",
+        "answer": "Yes! All generated photos are yours to use for any professional purpose - LinkedIn, company websites, business cards, presentations, and more. You receive high-resolution files (1024x1024px) perfect for any professional use. Go ahead, look amazing everywhere."
+      },
+      "5": {
+        "question": "How does the photo generation work?",
+        "answer": "Our system analyzes your uploaded photo and creates professional headshots by applying polished photography styles. You'll still look like you, just more professional and polished. See the gallery above for real examples."
+      },
+      "6": {
+        "question": "How many photos do I get per generation?",
+        "answer": "Each generation produces 4 different professional variations of your photo. You can download all of them and choose your favorites. This gives you options for different contexts or preferences-serious LinkedIn, friendly website, you get the idea."
+      },
+      "7": {
+        "question": "Do you support team photos or just individual headshots?",
+        "answer": "Currently, we focus on individual professional headshots. Each person needs to upload their own photo for the best results (but hey, at least they don't all need to be in the same room). We're working on team photo capabilities for future updates, because group shots are hard."
+      }
+    }
+  },
+  "waitlist": {
+    "title": "Join the Waitlist",
+    "subtitle": "Transform your team photos and save thousands on expensive photoshoots",
+    "emailPlaceholder": "Enter your work email",
+    "submitFirstPerson": "Get Started",
+    "submitting": "Submitting...",
+    "success": "Thanks for joining! Check your email for confirmation. (Check spam if you don't see it-we're friendly, but sometimes email gets confused)",
+    "error": "Oops! Something went wrong. Please try again (we're human, sometimes things break).",
+    "limitedSpots": "Limited beta access - only 100 spots left!",
+    "guarantee": "Try it free, no credit card required. See the quality before you commit.",
+    "secure": "SSL encrypted & secure",
+    "noSpam": "No spam, ever",
+    "joinedBadge": "Professional AI headshots in 60 seconds"
+  },
+  "footer": {
+    "tagline": "Professional team photos in 60 seconds",
+    "copyright": "© 2025 TeamShotsPro. All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
+  },
+  "pricing": {
+    "title": "Simple, use-based pricing",
+    "subtitle": "No subscriptions or hidden fees. Pay only for the photos you generate.",
+    "mostPopular": "Most Popular",
+    "oneTimePayment": "One time payment",
+    "photos": "photos",
+    "photo": "photo",
+    "photoCount": "{count, plural, one {# photo} other {# photos}}",
+    "individualTopUp": "Individual top-up",
+    "vipTopUp": "VIP top-up",
+    "topUpSubtitle": "For occasional use",
+    "confirmTopUp": "Refill my photos",
+    "photoGenerations": "photo generations",
+    "photosRetainedAfterSubscription": "Photos retained while active + 30 days after",
+    "checkoutCanceled": "Checkout canceled. No charges were made. (Changed your mind? We get it, happens to the best of us)",
+    "checkoutError": "Oops! Something went wrong. Please try again. (If it keeps happening, let us know-we're here to help)",
+    "plans": {
+      "free": {
+        "name": "Free Trial",
+        "period": "free",
+        "description": "See the quality before you commit. No credit card required. Try it free and see the results.",
+        "features": [
+          "{photos} customizable photos",
+          "Fixed branding watermark",
+          "Perfect for testing the quality"
+        ],
+        "cta": "Try it free"
+      },
+      "vip": {
+        "name": "VIP",
+        "period": "one-time",
+        "description": "For power users who need lots of professional photos. Get the best value with our VIP plan.",
+        "features": [
+          "{photos} customizable photos, each generated {variations}× so you can pick the best",
+          "Full customization: pose, background, branding, colors",
+          "Unlimited team members",
+          "Low resolution download (1K) for websites, linkedin, social, etc included. High resolution downloads (4K) at a cost",
+          "Top-up available at {topUpPricePerPhoto} per photo"
+        ],
+        "cta": "Get my {totalPhotos} photos"
+      },
+      "individual": {
+        "name": "Personal",
+        "period": "one-time",
+        "description": "Blurry selfies hurting your credibility? Get professional headshots to stand out and make an impact.",
+        "features": [
+          "{photos} customizable photos, each generated {variations}× so you can pick the best",
+          "Full customization: pose, background, branding, colors, expressions",
+          "Credits never expire",
+          "Top-up available at {topUpPricePerPhoto} per photo"
+        ],
+        "cta": "Get my {totalPhotos} photos"
+      }
+    },
+    "perPhotoVariation": "per photo",
+    "perPhoto": "per photo",
+    "chooseTheBest": "Choose the best.",
+    "redirectingToCheckout": "Redirecting to checkout...",
+    "time": "time",
+    "times": "times",
+    "generated": "generated",
+    "includesVariationsPerPhoto": "Includes {count} retries per photo",
+    "customizablePhotos": "{count, plural, one {# customizable photo} other {# customizable photos}}",
+    "variationsBullet": "Retry up to {count} times to perfect each photo",
+    "photoBreakdownTooltip": "{photos} customizable styles × {variations} AI variations each = {totalPhotos} unique photos",
+    "professionalHeadshots": "professional headshots",
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "questions": {
+        "freeGen": {
+          "question": "Do I get a free generation?",
+          "answer": "Yes! We give new users one free test generation in a set style so you can see if our AI lives up to the hype. It normally costs 1 photo credit and lets you retry up to 4 times (depending on your package)."
+        },
+        "howCreditsWork": {
+          "question": "How do photo credits work?",
+          "answer": "Each photo generation uses 1 photo credit and allows up to 4 high-quality variations depending on your plan. Your photo credits never expire. No rush, they're yours to keep!"
+        },
+        "topUp": {
+          "question": "Can I top up photo credits?",
+          "answer": "Yes! You can purchase additional photo credits at any time. Pricing varies by tier."
+        },
+        "satisfaction": {
+          "question": "What if I'm not satisfied?",
+          "answer": "Every photo can be generated 2-4 times with small variations, depending on your plan (free plan: 1 retry, Individual and Pro Small: 2 retries, Pro Large: 3 retries). We offer a free test generation in a predefined style when you sign up. Try it first, no obligations.",
+          "answerTeam": "Every photo can be generated 2-4 times with small variations, depending on your plan (free plan: 1 retry, Pro Small: 2 retries, Pro Large: 3 retries). We offer a free test generation in a predefined style when you sign up. Try it first, no obligations.",
+          "answerIndividual": "Every photo can be generated 2-3 times with small variations, depending on your plan (free plan: 1 retry, Individual: 2 retries). We offer a free test generation in a predefined style when you sign up. Try it first, no obligations."
+        }
+      }
+    },
+    "purchaseSuccess": {
+      "title": "Welcome aboard!",
+      "subtitle": "Your purchase was successful. Here's what you unlocked:",
+      "individual": {
+        "title": "Individual Plan",
+        "credits": "{uniquePhotos} photos",
+        "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
+        "styles": "Custom backgrounds and styles"
+      },
+      "starter": {
+        "title": "Starter Plan",
+        "credits": "{uniquePhotos} photos",
+        "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
+        "styles": "Custom backgrounds and team styles",
+        "team": "Team collaboration features"
+      },
+      "business": {
+        "title": "Business Plan",
+        "credits": "{uniquePhotos} photos",
+        "retriesAndVariations": "{retries} free retries per photo, so {totalVariations} photo variations in total",
+        "styles": "Custom backgrounds and team styles",
+        "team": "Team collaboration features"
+      },
+      "topUp": {
+        "title": "Credit Top-Up",
+        "credits": "{photos} photos added to your account"
+      },
+      "seats": {
+        "upgradeTitle": "Team Plan - {seats, plural, one {# Seat} other {# Seats}}",
+        "additionalTitle": "{seats, plural, one {# Additional Seat} other {# Additional Seats}}",
+        "upgradeDescription": "{seats, plural, one {# team seat} other {# team seats}} with {photosPerSeat} photos each",
+        "additionalDescription": "Added {seats, plural, one {# seat} other {# seats}} with {photosPerSeat} photos each",
+        "photosPerSeat": "{photos} photos per seat",
+        "regenerations": "{retries} retries per photo",
+        "inviteColleagues": "You can now invite {colleagues, plural, one {# colleague} other {# colleagues}}",
+        "allFeatures": "Full customization options"
+      },
+      "continueToGenerate": "Start Generating Photos",
+      "continueToDashboard": "Go to Dashboard",
+      "continueToGeneration": "Continue Generating"
+    },
+    "seats": {
+      "title": "Team headshots pay per seat",
+      "subtitle": "One-time payment. No subscriptions, no recurring fees. Pay once per team member, get 10 professional photos each.",
+      "selectSeats": "How many team members?",
+      "seat": "seat",
+      "seats": "seats",
+      "perSeat": "per seat",
+      "pricePerSeat": "Price per seat",
+      "totalPhotos": "Total photos",
+      "photos": "photos",
+      "savings": "You save",
+      "total": "Total",
+      "cta": "Get {seats} seats for {total}",
+      "whatsIncluded": "What's Included",
+      "volumeHint": "Add {seatsNeeded} more seats to unlock {nextPrice}/seat (save {savingsPerSeat}/seat)",
+      "features": {
+        "photosPerSeat": "10 professional photos per team member",
+        "professionalQuality": "AI-powered professional quality headshots",
+        "teamManagement": "Central team management dashboard",
+        "fastDelivery": "60-second generation time",
+        "support": "Email support and satisfaction guarantee"
+      }
+    }
+  },
+  "auth": {
+    "signin": {
+      "title": "Sign in to your account",
+      "welcomeBack": "Welcome back",
+      "welcomeSubtitle": "Sign in to continue generating professional team photos. We missed you!",
+      "benefit1": "Fast, consistent headshots for your whole team",
+      "benefit2": "No photoshoot needed - remote-friendly",
+      "benefit3": "Brand-aligned backgrounds and styles",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "Email address",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "useMagicLink": "Use magic link instead of password",
+      "forgotPassword": "Forgot password?",
+      "signingIn": "Signing in...",
+      "submit": "Sign in",
+      "noAccount": "Don't have an account? Sign up",
+      "errors": {
+        "invalidCredentials": "Invalid email or password. Please try again.",
+        "magicLinkFailed": "Failed to send magic link. Please try again.",
+        "errorOccurred": "An error occurred. Please try again.",
+        "tooManyAttempts": "Too many sign-in attempts. Please try again later."
+      }
+    },
+    "signup": {
+      "freeBadge": "You're signing up for the free plan with {photoCount} free {photoCount, plural, one {photo} other {photos}} and fixed {brandName} branding",
+      "title": "Create your account",
+      "welcome": "Create your account",
+      "welcomeSubtitle": "Built for teams and startup founders. Join in seconds. No photoshoot, no photographer, no vendor management. Just professional team photos.",
+      "benefit1": "Generate professional headshots in 60 seconds",
+      "benefit2": "Credits never expire. Use them whenever.",
+      "benefit3": "Perfect for remote teams and new hires",
+      "stepOf": "Step {step} of 2",
+      "emailLabel": "Email address",
+      "passwordLabel": "Password",
+      "passwordRequirement": "At least 6 characters",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "confirmPasswordLabel": "Confirm password",
+      "sending": "Sending verification code...",
+      "sendCode": "Send verification code",
+      "verificationCodeLabel": "Verification code",
+      "enterCodeFor": "Enter the 6-digit code we just sent to {email}",
+      "verifying": "Verifying...",
+      "verifyCode": "Verify code",
+      "bannerTitle": "You're in. One last step.",
+      "didntReceiveCode": "Didn't receive a code?",
+      "info": {
+        "checkoutSuccess": "Checkout successful! You're now subscribed to {plan}. We sent a verification code to {email}. Enter it below to confirm your email and start looking amazing.",
+        "guestCheckout": "Payment successful! You're now subscribed to {plan}. We sent a verification code to {email}. Enter it below to verify your email and access your account."
+      },
+      "guestWelcome": {
+        "title": "You're in!",
+        "subtitle": "Your account is ready",
+        "cardTitle": "Welcome to TeamShotsPro",
+        "description": "We've sent an email to set your password. You can start using the app right away!",
+        "redirecting": "Taking you to your dashboard..."
+      },
+      "guestCheckoutError": "We couldn't retrieve your checkout information. Please try again or contact support.",
+      "planPro": "Pro",
+      "planIndividual": "Individual",
+      "planGeneric": "your plan",
+      "firstNameLabel": "First name",
+      "individual": "Individual",
+      "individualDesc": "For personal use. Just you, looking great.",
+      "team": "Team",
+      "teamDesc": "For company or team use. Your whole crew.",
+      "haveAccount": "Already have an account? Sign in",
+      "resendCode": "Resend code",
+      "resendIn": "Resend in {seconds}s",
+      "otpHelp": "Code expires in 10 min",
+      "newCodeSent": "Invalid or expired code. A new verification code was sent.",
+      "errorOccurred": "An error occurred. Please try again."
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link",
+      "welcomeTitle": "Reset Password",
+      "welcomeSubtitle": "Don't worry, we'll help you get back into your account.",
+      "emailLabel": "Email address",
+      "sendResetLink": "Send reset link",
+      "sending": "Sending...",
+      "backToSignIn": "Back to sign in",
+      "checkEmail": "Check your email",
+      "successTitle": "Reset link sent",
+      "successDescription": "We've sent you an email with instructions to reset your password.",
+      "emailSent": "We've sent a password reset link to {email}",
+      "checkSpam": "If you don't see it, check your spam folder",
+      "genericError": "An error occurred. Please try again."
+    },
+    "resetPassword": {
+      "title": "Reset your password",
+      "subtitle": "Choose a new password for your account",
+      "welcomeTitle": "Create New Password",
+      "welcomeSubtitle": "Choose a strong password to secure your account.",
+      "forEmail": "Resetting password for {email}",
+      "passwordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "resetPassword": "Reset password",
+      "resetting": "Resetting password...",
+      "verifying": "Verifying link...",
+      "success": "Password reset successfully",
+      "successTitle": "Password Updated",
+      "successDescription": "Your password has been changed. Signing you in...",
+      "redirecting": "Signing you in...",
+      "passwordMismatch": "Passwords don't match",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "genericError": "Something went wrong. Please try again.",
+      "linkProblem": "There's a problem with this link",
+      "linkExpired": "This link has expired",
+      "linkExpiredDescription": "Password reset links expire after 1 hour for security.",
+      "linkExpiredHelp": "You can request a new password reset link below.",
+      "linkInvalid": "Invalid link",
+      "linkInvalidDescription": "This link doesn't appear to be valid. It may have been corrupted or already used.",
+      "linkInvalidHelp": "Please request a new password reset link.",
+      "requestNewLink": "Request new reset link",
+      "goToSignIn": "Back to sign in",
+      "alreadySet": "Password already reset",
+      "alreadySetTitle": "Link Already Used",
+      "alreadySetDescription": "This password reset link has already been used.",
+      "alreadySetHelp": "If you need to reset your password again, please request a new link.",
+      "signIn": "Sign in"
+    },
+    "setPassword": {
+      "title": "Set your password",
+      "subtitle": "Complete your account setup",
+      "welcomeTitle": "Welcome to TeamShotsPro",
+      "welcomeSubtitle": "Your purchase was successful. Set a password to access your account and start generating professional headshots.",
+      "benefit1": "Your credits are ready to use",
+      "benefit2": "Generate professional headshots instantly",
+      "benefit3": "Access your photos anytime",
+      "forEmail": "Setting password for {email}",
+      "passwordLabel": "Choose a password",
+      "confirmPasswordLabel": "Confirm password",
+      "setPassword": "Set password & continue",
+      "setting": "Setting password...",
+      "verifying": "Verifying link...",
+      "success": "Password set successfully",
+      "successTitle": "You're all set",
+      "successDescription": "Your password has been set. Redirecting you to your dashboard...",
+      "redirecting": "Redirecting to your dashboard...",
+      "passwordMismatch": "Passwords don't match",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "genericError": "Something went wrong. Please try again.",
+      "linkProblem": "There's a problem with this link",
+      "linkExpired": "This link has expired",
+      "linkExpiredDescription": "Password setup links are valid for 24 hours. No worries, we can send you a new one.",
+      "linkExpiredHelp": "Sign in to request a new password setup link, or contact support if you need help.",
+      "linkInvalid": "Invalid link",
+      "linkInvalidDescription": "This link doesn't appear to be valid. It may have been corrupted or already used.",
+      "linkInvalidHelp": "Please try signing in. If you need help, contact support.",
+      "goToSignIn": "Go to sign in",
+      "alreadySetTitle": "Password already set",
+      "alreadySetDescription": "Good news - your password is already configured. You can sign in with your email and password.",
+      "alreadySet": "Password already configured",
+      "alreadySetHelp": "Your password has already been set. You can now sign in to your account.",
+      "signIn": "Sign in"
+    },
+    "verify": {
+      "title": "Check your email",
+      "subtitle": "We've sent you a magic link to finish signing in.",
+      "yourEmail": "your email address",
+      "sentTo": "We've sent a magic link to {email}",
+      "instructions": "Click the link in the email to sign in. The link will expire in 24 hours.",
+      "cantFindTitle": "Can't find the email?",
+      "tipSpam": "Check your spam or junk folder",
+      "tipCorrect": "Make sure you entered the correct email address",
+      "tipDelay": "The email might take a few minutes to arrive",
+      "tip1": "Check your spam or junk folder",
+      "tip2": "Verify the email address is correct",
+      "tip3": "Wait a few minutes for delivery",
+      "backToSignIn": "Back to sign in",
+      "loading": "Loading…"
+    }
+  },
+  "invite": {
+    "benefit1": "Professional, team-branded headshots from your selfies",
+    "benefit2": "Results in 60 seconds",
+    "benefit3": "No account setup needed",
+    "mobileRequired": "Please open this link on your mobile device",
+    "mobileReason": "That's where all the good selfies are 📸",
+    "expired": {
+      "title": "New invite sent",
+      "invalidTitle": "Invalid Invite",
+      "securityTitle": "Why we did this",
+      "securityMessage": "We automatically sent you a fresh invite link because the old one expired. This keeps your team's data secure: expired links can't be used by anyone who might have stumbled upon them. Your new link is valid for 24 hours.",
+      "checkInbox": "Check your inbox for the new invite link.",
+      "goToHomepage": "Go to Homepage"
+    }
+  },
+  "app": {
+    "header": {
+      "title": "Dashboard",
+      "subtitle": "Welcome back! Here's what's happening with your team."
+    },
+    "sidebar": {
+      "brand": "TeamShotsPro",
+      "nav": {
+        "dashboard": "Dashboard",
+        "team": "Manage your team",
+        "personalGenerations": "Personal generations",
+        "teamGenerations": "Generated photos",
+        "selfies": "Your selfies",
+        "contexts": "Photo styles",
+        "personalPhotoStyles": "Personal photo styles",
+        "teamPhotoStyles": "Your photo style settings",
+        "analytics": "Analytics",
+        "settings": "Settings",
+        "admin": "Admin"
+      },
+      "primary": {
+        "generate": "Generate Photos"
+      },
+      "plan": {
+        "free": "Free plan",
+        "individual": "Individual plan",
+        "pro": "Pro plan"
+      },
+      "photos": {
+        "label": "Photos",
+        "title": "Available photos",
+        "individual": "Personal photos",
+        "team": "Team photo credits",
+        "seats": "Seats",
+        "balance": "Your photo balance",
+        "lockedBranding": "with locked Teamshots branding",
+        "allocated": "of which allocated to invites",
+        "monthlyReset": "Monthly reset",
+        "progress": "{used}/{total}",
+        "buyMore": "Buy more photos",
+        "buyMoreSeats": "Buy more seats",
+        "buySeatsToUnlock": "Buy seats to unlock full customization",
+        "upgradeToPaid": "Upgrade to unlock full customization"
+      },
+      "generate": {
+        "photo": "photo",
+        "photos": "photos",
+        "photoCredit": "photo credit",
+        "photoCredits": "photo credits",
+        "perPhoto": "per photo",
+        "retriesPerPhoto": "retries per photo",
+        "getSelfie": "Get selfie",
+        "getSelfieDescription": "Upload a photo or use your camera to take a selfie.",
+        "readyToGenerate": "Ready to generate",
+        "yourSelfie": "Your selfie",
+        "selectPhotoStyle": "Choose photo style",
+        "selectPhotoStyleDescription": "Select a predefined photo style or choose freestyle for full customization.",
+        "noPredefinedStylesMessage": "No predefined photo styles available. You can customize all settings below.",
+        "photoStyleFilter": "Photo style",
+        "freestyle": "Freestyle",
+        "freestyleDescription": "Full customization with all options available",
+        "freestyleOnlyDescription": "Customize all photo style settings for this generation",
+        "fallbackPersonalStyle": "Personal Style",
+        "fallbackTeamStyle": "Team Style",
+        "predefinedStyle": "Predefined style with preset settings",
+        "predefinedTeamStyle": "Predefined team style settings are applied. You can customize user-choice settings for this generation.",
+        "freestyleTeamDescription": "Create a custom team photo style for this generation.",
+        "freestyleTeamOnlyDescription": "No team styles available. Create a custom team photo style for this generation.",
+        "insufficientPhotos": "Insufficient photos",
+        "insufficientPhotosMessage": "You need {required} photos to generate a photo. You currently have {current} photos. Time to top up!",
+        "generatePhoto": "Generate photo",
+        "startingGeneration": "Starting generation...",
+        "customizeFirstTooltip": "Customize your photo with the editable sections below",
+        "customizeFirstTooltipMobile": "Customize your photo with the editable sections above",
+        "buyMorePhotos": "Buy more photos",
+        "insufficientCredits": "Insufficient photo credits",
+        "insufficientCreditsMessage": "You need {required, plural, one {# photo credit} other {# photo credits}} to generate. You currently have {current, plural, one {# photo credit} other {# photo credits}}. Time to top up!",
+        "buyMoreCredits": "Buy more credits",
+        "noPhotosTitle": "No photos available",
+        "noPhotosMessage": "You need photos to generate photos (think of them as tickets to looking amazing). Purchase photos to get started with photo generation.",
+        "noTeamPhotosTitle": "No team photos available",
+        "noTeamPhotosMessage": "Your team has no photos available for team generations. Contact your team admin to request photos (nicely, please) or use your personal photos instead.",
+        "buyPhotos": "Buy photos",
+        "requestPhotos": "Request photos",
+        "usePersonalPhotos": "Use personal photos",
+        "backToDashboard": "Back to dashboard",
+        "noCreditsTitle": "No credits available",
+        "noCreditsMessage": "You need credits to generate photos. Purchase a plan or credit package to get started.",
+        "buyCredits": "Buy credits",
+        "noTeamCreditsTitle": "No team credits available",
+        "noTeamCreditsMessage": "Your team has no credits available for team generations. Contact your team admin to request credits or use your personal credits instead.",
+        "requestCredits": "Request credits",
+        "usePersonalCredits": "Use personal credits",
+        "backToSelfies": "Go back to selfies"
+      },
+      "profile": {
+        "pro": "PRO",
+        "signOut": "Sign out"
+      }
+    },
+    "dashboard": {
+      "welcome": {
+        "title": "Welcome back, {name}!",
+        "titleFirstTime": "Welcome, {name}! Let's get started.",
+        "subtitle": {
+          "individual": "You have generated {count} professional photos this month.",
+          "team": "Your team has generated {count} professional photos this month. Keep up the great work!",
+          "teamAdmin": "Your team has generated {count} professional photos this month. {teamMembers} team members are ready to create more.",
+          "teamAdminNoMembersFree": "Your team is ready to be invited and use the predefined freestyle.",
+          "teamAdminNoMembersPaid": "Your team is ready to be invited with custom predefined styles. Make your custom photo style before you invite.",
+          "teamAdminMembersNoPhotos": "{teamMembers} team members invited to create photos.",
+          "teamAdminMembersWithPhotos": "Your team has generated {count} photos this month. {teamMembers} team members ready to create more.",
+          "individualNoPhotosFree": "You are ready to generate your first photos using the predefined freestyle.",
+          "individualNoPhotosPaid": "You are ready to generate photos with custom predefined styles. Make your custom photo style before you go for it.",
+          "individualWithPhotos": "You have generated {count} photos this month.",
+          "teamNoPhotos": "You are ready to generate photos using your team's styles.",
+          "teamWithPhotos": "Your team has generated {count} professional photos this month. Keep up the great work!"
+        }
+      },
+      "stats": {
+        "teamMembers": "Team members",
+        "photosGenerated": "Photos generated",
+        "activeTemplates": "Active photo styles",
+        "unlockPhotoStyles": "Unlock photo styles",
+        "photosUsed": "Photos used",
+        "photos": "Photocredits",
+        "photosUnit": "photocredits",
+        "generationsAvailable": "{count, plural, =0 {No generations} =1 {generation} other {generations}} available",
+        "buyMore": "Buy more photocredits"
+      },
+      "recentActivity": {
+        "title": "Recent activity",
+        "sent": "Sent {when}",
+        "noActivity": "No recent activity",
+        "status": {
+          "pending": "Pending",
+          "completed": "Completed"
+        },
+        "generationType": {
+          "personal": "Personal",
+          "team": "Team"
+        }
+      },
+      "pendingInvites": {
+        "title": "Pending team invites",
+        "invite": "Invite team member",
+        "resend": "Resend",
+        "resending": "Resending...",
+        "sent": "Sent {when}",
+        "noInvites": "No pending invites",
+        "status": {
+          "pending": "Pending"
+        }
+      },
+      "quickActions": {
+        "title": "Quick actions",
+        "generate": "Generate photos",
+        "createTemplate": "Create photo style",
+        "manageTeam": "Manage team"
+      },
+      "successMessages": {
+        "free": "Your free test is ready! {photos} photos have been added to your account.",
+        "individual": "Individual plan activated successfully! {photos} photos have been added to your account.",
+        "vip": "VIP plan activated successfully! {photos} photos have been added to your account.",
+        "seats": "Seats purchase completed successfully! Your credits have been added to your account.",
+        "topUp": "Photo top-up completed successfully! Your photos have been added to your account.",
+        "default": "Purchase completed successfully! Your photos have been added to your account.",
+        "titleFree": "Welcome! 🎉",
+        "titleIndividual": "You're in! 🚀",
+        "titlePro": "Pro unlocked! 🎯",
+        "titleTopUp": "Photos loaded! ⚡"
+      },
+      "timeAgo": {
+        "justNow": "Just now",
+        "minutesAgo": "{count} minute{count, plural, one {} other {s}} ago",
+        "hoursAgo": "{count} hour{count, plural, one {} other {s}} ago",
+        "daysAgo": "{count} day{count, plural, one {} other {s}} ago"
+      },
+      "onboarding": {
+        "welcomeContent": {
+          "organizer": "Welcome to TeamShotsPro. Transform your team's casual selfies into polished professional headshots in under 60 seconds. Enhance your company's professional presence without the need for photoshoots.",
+          "individual": "Welcome to TeamShotsPro. Transform your casual selfie into polished professional headshots in under 60 seconds. Elevate your LinkedIn profiles, portfolios, and personal brand.",
+          "invited": "Welcome to TeamShotsPro. Your team is creating consistent professional photos, and you are part of it. Upload your selfie to match your team's style and receive your headshots in under 60 seconds."
+        },
+        "transformationContent": {
+          "organizer": "Observe the transformation: We convert everyday selfies into professional headshots that command attention. Pro tip: Use natural lighting and frame from the chest up for optimal results.",
+          "individual": "Observe the transformation: We convert your casual selfie into a standout professional headshot. Ideal for LinkedIn, portfolios, and professional networking. Pro tip: Use natural lighting and frame from the chest up for optimal results.",
+          "invited": "Observe the transformation: We convert your selfie into a professional headshot that aligns with your team's style. This ensures consistent visuals while highlighting your unique professional presence."
+        },
+        "nextSteps": "Next step",
+        "howItWorks": {
+          "title": "Standardize your team's look without the logistical nightmare",
+          "organizer": {
+            "step1": {
+              "title": "You're on a paid plan",
+              "description": "Thanks for choosing us. You can customize every detail to match your team's style. No fixed branding, no limitations. Create headshots that perfectly fit your brand."
+            },
+            "step2": {
+              "title": "Test with your own photo first",
+              "description": "Upload 2-3 selfies, or scan the QR code to capture them on your phone. Adjust the pose, colors, and overall feel. Think of it as a preview of your team's new professional look."
+            },
+            "step3": {
+              "title": "Set the photo style and invite your team",
+              "description": "Lock in your preferred settings and send out invitations. Your team scans a QR code or clicks a link to upload from their devices. No more chasing down colleagues for photos."
+            },
+            "free": {
+              "step1": {
+                "title": "You're on the free plan",
+                "description": "Perfect for testing things out. You'll get limited customization with {brandName} branding. Paid plans unlock full customization."
+              },
+              "step2": {
+                "title": "Generate your test photo",
+                "description": "Upload 2-3 selfies (you can use QR code for easy mobile capture). Customize the photo and generate. This gives you a feel for how the process works."
+              },
+              "step3": {
+                "title": "Set team photo style and send invites",
+                "description": "After your test, define a photo style and invite your colleagues to generate photos with this style. Team members upload via QR code or link. No registration or sign-up needed. That simple."
+              }
+            }
+          },
+          "invited": {
+            "step1": {
+              "title": "Capture your selfie",
+              "description": "Grab a quick photo on any device. We've made it straightforward because your time matters."
+            },
+            "step2": {
+              "title": "Customize your look",
+              "description": "Adjust clothing colors and details to fit you while staying consistent with the team. It's your professional image, just aligned with the guidelines."
+            },
+            "step3": {
+              "title": "Get your professional headshots",
+              "description": "In about 60 seconds, you'll have polished photos ready to use. All matching your team's photo style, because consistency counts."
+            }
+          },
+          "individual": {
+            "step1": {
+              "title": "Upload your selfie",
+              "description": "Take a quick photo on any device. Keep it simple. Natural light helps, but it's not required."
+            },
+            "step2": {
+              "title": "Pick your photo style",
+              "description": "Choose backgrounds, outfits, and expressions that work for you. It's like having a personal stylist, only faster."
+            },
+            "step3": {
+              "title": "Get your results",
+              "descriptionFree": "In under 60 seconds, you'll have professional headshots with our free photo style. Quick and easy, perfect for trying it out.",
+              "descriptionPaid": "Custom professional headshots in under 60 seconds, exactly how you want them. You deserve that kind of control."
+            },
+            "note": "No scheduling, no stress. Just great results when you need them."
+          }
+        },
+        "firstAction": {
+          "shared": {
+            "button": "Start my generation"
+          },
+          "organizer": {
+            "free": {
+              "title": "Ready to begin?",
+              "description": "The free plan uses our Free Package Style preset with fixed professional settings for testing. No customizations are available, but it allows quick evaluation. Send an invitation to yourself to test the process and view the results.",
+              "button": "Go to Team Page"
+            },
+            "paid": {
+              "title": "Ready to define your brand style?",
+              "description": "Begin by establishing your team's photo style, including backgrounds, outfits, expressions, and branding.",
+              "button": "Set Your Photo Style"
+            }
+          },
+          "individual": {
+            "free": {
+              "title": "Ready to begin?",
+              "description": "The free plan uses our preset style. Try it to experience the results. No commitment required.",
+              "button": "Start Creating Professionals"
+            },
+            "paid": {
+              "title": "Ready to begin?",
+              "description": "Proceed to create your first set.",
+              "button": "Start Creating Professionals"
+            }
+          },
+          "invited": {
+            "title": "Ready to join your team?",
+            "description": "Upload now for headshots that match your team's style."
+          }
+        },
+        "navigation": {
+          "back": "Back",
+          "skip": "Skip for now",
+          "next": "Next"
+        }
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Manage your account preferences and company settings",
+      "tabs": {
+        "teamInformation": "Team information",
+        "subscription": "Pricing plan",
+        "billing": "Billing",
+        "adminTools": "Admin tools",
+        "accountInfo": "Account info"
+      },
+      "accountMode": {
+        "title": "Account mode",
+        "individual": {
+          "description": "Individual mode - Personal use only",
+          "features": {
+            "title": "Individual mode features:",
+            "personal": "Personal photo generation",
+            "photos": "Individual photo management",
+            "contexts": "Personal photo styles and settings",
+            "analytics": "Analytics for your own usage"
+          }
+        },
+        "team": {
+          "description": "Company mode - Team management enabled",
+          "features": {
+            "title": "Company mode features:",
+            "team": "Team member management and invitations",
+            "photos": "Team-wide photo allocation",
+            "contexts": "Shared photo styles and settings",
+            "analytics": "Team analytics and reporting",
+            "admin": "Admin controls and permissions"
+          }
+        }
+      },
+      "teamInfo": {
+        "title": "Team information",
+        "subtitle": "Manage your team details and information",
+        "name": {
+          "label": "Team name",
+          "placeholder": "Enter your team name"
+        },
+        "website": {
+          "label": "Company website (optional)",
+          "placeholder": "https://yourcompany.com"
+        },
+        "adminNote": "You are the team administrator with full access to team management features."
+      },
+      "accountInfo": {
+        "title": "Account information",
+        "subtitle": "View your account details and role information",
+        "intro": "🛟 You won't need this info unless something's gone wrong and support asks for it. Just in case, here it is!",
+        "email": "Email",
+        "name": "Name",
+        "userId": "User ID",
+        "currentRoles": "Current roles",
+        "rolesDescription": "Your roles determine what features and permissions you have access to.",
+        "notProvided": "Not provided"
+      },
+      "subscription": {
+        "downgrade": {
+          "title": "Downgrade to {tier} monthly? 🤔",
+          "description": "The path less traveled... but with fewer savings! 🗺️",
+          "button": "Proceed anyway (we tried!) 😅"
+        },
+        "title": "Pricing plan",
+        "subtitle": "Manage your subscription and pricing plan",
+        "noSubscription": "Choose a plan to get started and start looking amazing!",
+        "upgradeOptions": "Upgrade options",
+        "plan": {
+          "free": "Free plan",
+          "individual": "Individual subscription",
+          "pro": "Pro subscription"
+        },
+        "cancelConfirm": "Are you sure you want to cancel? Your benefits stay active until the end of your billing period, and we'll keep your photos for 30 days after that so you can download what you need. We're sad to see you go, but we get it-life happens!",
+        "downgrading": {
+          "note": "📉 Switching to monthly? Your benefits remain active until the end of your annual period.",
+          "noSavings": "We won't judge (but we did try to warn you about missing out on those sweet savings 🍯).",
+          "supportLinkText": "Still wanna switch?"
+        },
+        "cancelling": {
+          "sorryMessage": "😭 We're sorry to see you go! Your benefits will remain active until the end of your billing period.",
+          "photosRetained": "Don't worry - your photos won't disappear! They'll hang around for 30 days after cancellation so you can grab what you need (because we're sentimental like that 📸).",
+          "changedMind": "Changed your mind? {supportLink} keep your photos looking perfect!",
+          "supportLinkText": "We're here to help"
+        }
+      },
+      "billing": {
+        "title": "Billing & invoices",
+        "subtitle": "View and download your invoices",
+        "free": {
+          "message": "🎉 You're on the free plan! Upgrade to unlock invoices and more features (because organized finances are hot, and we support that energy)."
+        },
+        "paid": {
+          "message": "🎉 Yay, we know that as a business you need these invoices. We'll give them to you as soon as possible (because organized finances are hot, and we support that energy)."
+        },
+        "individual": {
+          "message": "🎉 Yay, you bought some photos! Invoices will appear here soon (we're just adding the finishing touches to make them look professional, because that's how we roll)."
+        },
+        "pro": {
+          "message": "🎉 Yay, we know that as a business you need these invoices. We'll give them to you as soon as possible (because organized finances are hot, and we support that energy)."
+        }
+      },
+      "roles": {
+        "platformAdmin": "Platform administrator",
+        "teamAdmin": "Company administrator",
+        "teamMember": "Team member",
+        "individualUser": "Individual user"
+      },
+      "messages": {
+        "teamActivated": "Team mode activated! Team features are now available.",
+        "individualActivated": "Individual mode activated. Team features are now hidden.",
+        "teamUpdated": "Team information updated",
+        "cannotSwitch": "Cannot switch to individual mode while you are admin of a team with other members. Please remove all team members first.",
+        "companyNameRequired": "Team name is required"
+      }
+    },
+    "onboarding": {
+      "nextSteps": "Next step",
+      "benefits": {
+        "noScheduling": {
+          "description": "No scheduling needed"
+        },
+        "lowerCost": {
+          "description": "Lower cost than photographers"
+        },
+        "instantResults": {
+          "description": "60 seconds to results"
+        },
+        "freeRetries": {
+          "description": "Free retries until perfect"
+        }
+      },
+      "tours": {
+        "mainOnboarding": {
+          "welcomeTitle": "Professional team photos in 60 seconds",
+          "welcomeContent": "Welcome to TeamShotsPro! Transform casual selfies into polished professional headshots that command attention and build credibility.\n\nJoin thousands of professionals who've already elevated their presence. Built on secure infrastructure designed for HR and talent teams.",
+          "roleSelectionTitle": "What brings you here?",
+          "roleSelectionContent": "Are you setting this up for your company, building a team style, or just looking to upgrade your personal brand? You're in good company of people teams who care about presentation and fairness. Let's get you started on the right path.",
+          "wowMomentTitle": "See the transformation",
+          "wowMomentContent": "Watch as we turn casual snapshots into professional headshots. Teams using consistent professional photos see 40% higher engagement on company profiles.\n\nHere's a pro tip: Use natural lighting and frame from the chest up for best results.\n\n[Interactive before/after demo would go here]",
+          "outcomeSelectionTitle": "What success looks like for you",
+          "outcomeSelectionContent": "Whether it's standardized photos for your applicant tracking system, consistent branding for your About page, or that perfect LinkedIn upgrade – we've got you covered. Teams like yours usually start with consistent branding across all profiles.",
+          "firstActionTitle": "Ready to begin?",
+          "firstActionContent": "Let's start with uploading your first selfie. We're currently processing a limited number of new teams per day to maintain our quality standards.\n\nOver 4,000 professional photos generated this week."
+        },
+        "roleSelection": {
+          "title": "What brings you here?",
+          "subtitle": "Choose how you'll be using TeamShotsPro",
+          "organizer": {
+            "title": "Team Organizer",
+            "description": "I'm setting up for my company or team"
+          },
+          "individual": {
+            "title": "Just for Me",
+            "description": "I'm upgrading my personal brand"
+          }
+        },
+        "outcomeSelection": {
+          "title": "What success looks like for you",
+          "subtitle": "Choose your primary goal",
+          "organizer": {
+            "ats": {
+              "title": "ATS Optimization",
+              "description": "Standardize photos for applicant tracking systems"
+            },
+            "branding": {
+              "title": "Brand Consistency",
+              "description": "Create cohesive team photos for marketing materials"
+            }
+          },
+          "individual": {
+            "linkedin": {
+              "title": "LinkedIn Upgrade",
+              "description": "Professional headshots that boost your profile"
+            },
+            "portfolio": {
+              "title": "Portfolio Enhancement",
+              "description": "High-quality photos for your creative work"
+            }
+          },
+          "invited": {
+            "team": {
+              "title": "Team Consistency",
+              "description": "Match your team's professional photo style"
+            }
+          }
+        },
+        "benefits": {
+          "noScheduling": {
+            "description": "No scheduling needed"
+          },
+          "lowerCost": {
+            "description": "Lower cost than photographers"
+          },
+          "instantResults": {
+            "description": "60 seconds to results"
+          },
+          "freeRetries": {
+            "description": "Free retries until perfect"
+          }
+        },
+        "welcome": {
+          "title": "Welcome to TeamShotsPro, {Firstname}!",
+          "content": "Thanks for choosing TeamShotsPro. You're awesome! 🚀\n\nYou'll look impeccably professional before your coffee goes cold.",
+          "photoStylesTitle": "Customize your photo styles",
+          "photoStylesContent": "Before generating photos, you can customize your photo styles here. Choose backgrounds, clothing, expressions, and more to create your perfect professional look.",
+          "goToPhotoStylesButton": "Go to photo styles",
+          "generateButton": "Click here to transform your selfie into professional headshots that elevate your presence. Your future self will thank you."
+        },
+        "teamAdminWelcome": {
+          "title": "Welcome to TeamShotsPro, {Firstname}!",
+          "content": "Thanks for choosing TeamShotsPro. You're awesome! 🚀\n\nReady to transform your entire team into a cohesive group of polished professionals? Everyone will look consistently excellent before you finish your coffee break.",
+          "teamButton": "Click here to create your team and begin the transformation.",
+          "teamNameTitle": "Add your team name",
+          "teamNameContent": "Enter your team name here to get started. This will be used to identify your team throughout TeamShotsPro."
+        },
+        "generationTour": {
+          "uploadTitle": "Upload your photo",
+          "uploadContent": "Drop your selfie here and witness the transformation. We turn casual snapshots into headshots that make you shine like a LinkedIn legend.",
+          "styleTitle": "Choose your style",
+          "styleContent": "Personal photos for your professional image, or team photos if you want to coordinate your team's visual consistency.",
+          "photosTitle": "Your photos",
+          "photosContent": "Each generation costs 1 photo. Trust us, you'll want to use them all once you see how impressive you look.",
+          "generateTitle": "Generate your photos",
+          "generateContent": "Click here to begin your transformation. Your professional headshots will be ready before you can say 'cheese.'"
+        },
+        "teamSetupTour": {
+          "createTitle": "Create your team",
+          "createContent": "Set up your team here and prepare to transform your entire group into a team of polished professionals. This takes seconds, the results last forever.",
+          "styleTitle": "Set up photo styles",
+          "styleContent": "Define your team's signature look here. Ensure everyone shines consistently - no more inconsistent photos in company profiles.",
+          "inviteTitle": "Invite your team",
+          "inviteContent": "Bring your team on board so they can begin their professional transformation. They'll thank you when they look this impressive."
+        },
+        "teamPhotoStyleSetupTour": {
+          "title": "Set up your team photo styles",
+          "content": "Create your team's signature look here. Ensure everyone shines consistently - because your brand deserves to look as impressive as your team."
+        },
+        "teamPhotoStylesPageTour": {
+          "headingTitle": "Your team photo styles",
+          "headingContent": "A team photo style is a preset that ensures all your team members' photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so everyone matches your brand identity perfectly. Create and manage your team's signature looks here.",
+          "createTitle": "Create custom styles",
+          "createContent": "Click here to craft custom photo styles that make your team look like the professionals they are. Backgrounds, branding, clothing - you control it all."
+        },
+        "teamPhotoStylesFreeTour": {
+          "headingTitle": "Your team photo styles",
+          "headingContent": "A team photo style is a preset that ensures all your team members' photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so everyone matches your brand identity perfectly. Even on the free plan, everyone gets to shine consistently and professionally.",
+          "freeTitle": "Free Plan Bonus",
+          "freeContent": "Kickstart your team's journey with our Free Package style, perfect for testing the service! Most settings are locked, but each user can customize their wardrobe colors. (Who doesn't love a good teaser?) Upgrade to unlock full custom team styles.",
+          "backgroundTitle": "Background is set",
+          "backgroundContent": "We've got a professional background ready for your team's photos, consistent and sharp!",
+          "brandingTitle": "TeamShotsPro logo on clothing",
+          "brandingContent": "Your team photos feature the TeamShotsPro logo for that extra touch of consistency (we promise it's tasteful).",
+          "shotTypeTitle": "Shot type is 3/4",
+          "shotTypeContent": "Set to 3/4 view, because who doesn't look great from this angle?",
+          "clothingTypeTitle": "Clothing type is business casual",
+          "clothingTypeContent": "Business casual vibe ensures everyone looks professional yet approachable, the perfect balance!",
+          "clothingColorsTitle": "Customize clothing colors",
+          "clothingColorsContent": "Here's where you shine: Each team member can pick their own wardrobe colors while keeping everything consistent. Mix it up!",
+          "expressionTitle": "Expression is confident",
+          "expressionContent": "Confident expressions all around, helping your team project that 'we've got this' energy!",
+          "readyTitle": "Ready to generate or invite",
+          "readyContent": "You're all set! Time to test with your own photo or invite the team, let's make some magic happen."
+        },
+        "personalPhotoStylesPageTour": {
+          "headingTitle": "Your personal photo styles",
+          "headingContent": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so you can create a cohesive professional image. Create and manage your signature looks here.",
+          "headingContentIndividual": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, and expressions so you can create a cohesive professional image. Create and manage your signature looks here.",
+          "headingContentPro": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so you can create a cohesive professional image and brand identity. Create and manage your signature looks here.",
+          "createTitle": "Create custom styles",
+          "createContent": "Click here to craft custom photo styles that make you look like the professional you are. Backgrounds, branding, clothing - you control it all.",
+          "createContentIndividual": "Click here to craft custom photo styles that make you look like the professional you are. Backgrounds, clothing, expressions - you control it all.",
+          "createContentPro": "Click here to craft custom photo styles that make you look like the professional you are. Backgrounds, branding, clothing - you control it all."
+        },
+        "personalPhotoStylesFreeTour": {
+          "headingTitle": "Your personal photo styles",
+          "headingContent": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so you can create a cohesive professional image. Even on the free plan, you get to shine consistently and professionally.",
+          "headingContentIndividual": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, and expressions so you can create a cohesive professional image. Even on the free plan, you get to shine consistently and professionally.",
+          "headingContentPro": "A personal photo style is a preset that ensures all your photos look consistent and professional. It defines backgrounds, clothing, expressions, and branding so you can create a cohesive professional image and brand identity. Even on the free plan, you get to shine consistently and professionally.",
+          "freeTitle": "Free plan",
+          "freeContent": "Use our professional \"Free Package Style\" to make yourself shine immediately. Upgrade anytime to create custom styles that perfectly match your brand.",
+          "freeContentIndividual": "Use our professional \"Free Package Style\" to make yourself shine immediately. Upgrade anytime to create custom styles that perfectly match your professional image.",
+          "freeContentPro": "Use our professional \"Free Package Style\" to make yourself shine immediately. Upgrade anytime to create custom styles that perfectly match your brand.",
+          "backgroundTitle": "Background is set",
+          "backgroundContent": "The background is already configured for your professional look.",
+          "brandingTitle": "TeamShotsPro logo on clothing",
+          "brandingContent": "Your photos will feature the TeamShotsPro logo on clothing for consistent branding.",
+          "shotTypeTitle": "Shot type is 3/4",
+          "shotTypeContent": "The shot type is set to 3/4, giving you a professional, consistent framing.",
+          "clothingTypeTitle": "Clothing type is business casual",
+          "clothingTypeContent": "The clothing style is set to business casual, ensuring you look professional yet approachable.",
+          "clothingColorsTitle": "Customize clothing colors",
+          "clothingColorsContent": "Here's where you shine: You can pick your own wardrobe colors while keeping everything consistent. Mix it up!",
+          "expressionTitle": "Expression is confident",
+          "expressionContent": "The expression is set to confident, helping you project professionalism and assurance.",
+          "readyTitle": "Ready to generate",
+          "readyContent": "Click here to start generating your first photo."
+        },
+        "photoStyleCreationTour": {
+          "nameTitle": "Name your style",
+          "nameContent": "Choose a name that captures your team's brand. Think of it as the label that keeps everyone aligned. No more mismatched LinkedIn photos.",
+          "userChoiceTitle": "User choice or predefined",
+          "userChoiceContent": "Decide if settings are locked for consistency or flexible for your team. Toggle to predefined for brand control, or user choice to let people add their touch.",
+          "compositionTitle": "Composition settings",
+          "compositionContent": "This is where you shape the photo's foundation. Set background, branding, and shot type to create a look that represents your team perfectly.",
+          "backgroundTitle": "Background",
+          "backgroundContent": "Pick solid colors, upload images, or describe professional scenes. It's your chance to set a backdrop that says 'professional' without saying a word.",
+          "brandingTitle": "Branding",
+          "brandingContent": "Add your logo to the background, clothing, or scene elements. Make your brand pop. Subtle reminders build stronger teams.",
+          "shotTypeTitle": "Shot type",
+          "shotTypeContent": "Choose close-up, three-quarter, or full length. This frames how much of each person shows, keeping your team gallery balanced.",
+          "userStyleTitle": "User style settings",
+          "userStyleContent": "Control how people appear in photos. Adjust clothing, colors, expressions, and lighting to match your team's vibe.",
+          "clothingTitle": "Clothing",
+          "clothingContent": "Select business formal, casual, or something in between. Set a standard that makes everyone look sharp. HR's secret to instant professionalism.",
+          "clothingColorsTitle": "Clothing colors",
+          "clothingColorsContent": "Describe shades like navy or blue, or pick exact colors. Allow user choice for variety, or lock it for that uniform look HR managers love.",
+          "expressionTitle": "Facial expression",
+          "expressionContent": "Opt for confident, neutral, or friendly. It's a small choice that projects big energy, perfect for team pages that inspire trust.",
+          "autosaveTitle": "Automatic saving",
+          "autosaveContent": "Changes save instantly. Watch for the saved indicator. Who has time for extra clicks when building a brand?"
+        },
+        "testGenerationTour": {
+          "title": "Generate your first photo",
+          "content": "You're all set up and ready to shine. Test the process here before introducing it to your team - you'll want to see this transformation first."
+        },
+        "inviteTeamTour": {
+          "pageTitle": "Your {teamName} Team Hub",
+          "pageContent": "Welcome to your {teamName} command center! Track who's joined the photo party, who's generated their pro shots (and who needs a nudge), and manage photos with ease. (Pro tip: More photos mean more smiles... or at least more headshots!)",
+          "tableTitle": "Manage invites and photos",
+          "tableContent": "Here's where the magic happens! See all your team members and pending invites in one place. Track who's joined, who's still waiting, and how many photos everyone has. It's like a mission control center, but for professional photos.",
+          "activeStyleTitle": "Your active photo style",
+          "activeStyleContent": "This is the photo style your invited team members will use when generating their photos. All their photos will match this style for consistent branding across your team.",
+          "activeStyleTitleFree": "Free Package Style",
+          "activeStyleContentFree": "Your team members will use the Free Package Style when generating photos. Upgrade to unlock custom backgrounds, branding, clothing styles, and more customization options.",
+          "title": "Invite your team",
+          "content": "Time to grow your squad! Pop in emails here and send invites faster than you can say 'cheese'. They'll get a magic link to upload selfies and generate photos – no signup drama required."
+        },
+        "generationDetailTour": {
+          "photoTitle": "Your generated photo",
+          "photoContent": "This is your generated professional headshot. You can see the transformation from your original selfie to this polished result.",
+          "sliderTitle": "Reveal used selfies",
+          "sliderContent": "Drag this slider button to reveal the selfies that were used to generate this photo. This helps you see the before and after comparison.",
+          "deleteTitle": "Delete generation",
+          "deleteContent": "You can delete this generation if you no longer need it. This action cannot be undone, so make sure you've downloaded what you need first.",
+          "regenerateTitle": "Retry for free",
+          "regenerateContent": "You can retry this photo for free using the same settings. Each generation comes with free retries so you can perfect your results.",
+          "downloadTitle": "Download your photo",
+          "downloadContent": "Download your professional headshot in high resolution. Perfect for LinkedIn, your website, business cards, and more.",
+          "photosTitle": "Generation cost and retries",
+          "photosContent": "This shows the cost of the generation (1 photo) and how many free retries you have left. Use retries to perfect your results without spending more photos.",
+          "photosInfoTitle1": "Not thrilled with your photo?",
+          "photosInfoContent1": "No worries. You get free do-overs with every generation. Check here to see how many tries you have left.",
+          "photosInfoTitle2": "Your photo, your way",
+          "photosInfoContent2": "Love it? Download it ↓. Want another shot? Retry it ↻. Changed your mind? Delete it 🗑️. You're in control.",
+          "creditsInfoTitle1": "Not thrilled with your photo?",
+          "creditsInfoContent1": "No worries. You get free do-overs with every generation. Check here to see how many tries you have left.",
+          "creditsInfoTitle2": "Your photo, your way",
+          "creditsInfoContent2": "Love it? Download it ↓. Want another shot? Retry it ↻. Changed your mind? Delete it 🗑️. You're in control.",
+          "feedbackTitle": "Your feedback matters",
+          "feedbackContent": "Not happy with your photo? Let us know why. Your feedback helps us improve the service and technology. Especially when something isn't right, your input directly shapes better results for everyone.",
+          "manageTitle": "Manage your generation",
+          "manageContent": "Download your photo in high resolution, retry for free using the same settings, or delete if you no longer need it. This also shows the generation cost (1 photo) and how many free retries you have left."
+        }
+      },
+      "indicators": {
+        "team": "Set up your team",
+        "styles": "Customize your photo style",
+        "invite": "Invite team members"
+      }
+    }
+  },
+  "generations": {
+    "upgradePrompt": {
+      "title": "Like what you see?",
+      "description": "Unlock the full power with unlimited custom styles and backgrounds.",
+      "button": "Unlock the Full Power"
+    },
+    "personal": {
+      "title": "Personal generations",
+      "newGeneration": "New generation",
+      "empty": {
+        "title": "No personal generations yet",
+        "subtitle": "When you generate personal photos, your results will appear here. Ready to make some magic?"
+      },
+      "filters": {
+        "allTime": "All time",
+        "last7Days": "Last 7 days",
+        "last30Days": "Last 30 days",
+        "allPhotoStyles": "All photo styles"
+      }
+    },
+    "team": {
+      "title": "Team generations",
+      "description": "Manage and view your team's generated professional photos",
+      "newGeneration": "New generation",
+      "empty": {
+        "title": "No team generations yet",
+        "subtitle": "When you or your team generate photos, your results will appear here. Teamwork makes the dream work!"
+      },
+      "filters": {
+        "allUsers": "All users",
+        "allTime": "All time",
+        "last7Days": "Last 7 days",
+        "last30Days": "Last 30 days",
+        "allPhotoStyles": "All photo styles"
+      },
+      "viewOnly": "View only - team member's approved work"
+    },
+    "generating": "Generating...",
+    "finalizing": "Finalizing...",
+    "actions": {
+      "download": "Download",
+      "regenerate": "Retry",
+      "generate": "Generate",
+      "delete": "Delete",
+      "deleting": "Deleting...",
+      "retrying": "Retrying...",
+      "retryPrompt": "Retry with same settings",
+      "retryFailed": "Failed to retry",
+      "retryFailedMessage": "Failed to retry image. Please try again.",
+      "deleteConfirmation": {
+        "title": "Hold up a second",
+        "description": "You've got {count, plural, one {# retry left} other {# retries left}} on this photo. Once you delete it, those retries disappear forever (and we don't mean 'forever' in the casual way).",
+        "descriptionNoRetries": "You're about to delete this photo. This action is permanent.",
+        "suggestion": "Not happy with it? Hit retry first. You might love what you get.",
+        "suggestionNoRetries": "Double-check you've downloaded any versions you want to keep.",
+        "confirmButton": "Delete anyway",
+        "cancelButton": "Keep it (and maybe retry)",
+        "cancelButtonNoRetries": "Cancel"
+      },
+      "retriesLeft": "{count} retries left",
+      "noRetriesLeft": "No retries left",
+      "retriedPhoto": "Retried photo"
+    },
+    "detail": {
+      "title": "Generation",
+      "loading": "Loading…",
+      "notFound": "Not found",
+      "back": "Back",
+      "status": "Status:",
+      "created": "Created:",
+      "context": "Context:",
+      "credits": "Credits:"
+    },
+    "labels": {
+      "usedInGeneration": "Used in a generation"
+    },
+    "generatedBy": {
+      "you": "Generated by you",
+      "prefix": "Generated by"
+    },
+    "toasts": {
+      "generationFailed": "We couldn't finish that photo. The photo credits have been returned to your balance."
+    }
+  },
+  "selfies": {
+    "title": "Selfies",
+    "upload": {
+      "title": "Upload a New Selfie",
+      "description": "Take a photo with your camera or upload an existing photo to get started."
+    },
+    "infoBanner": {
+      "selected": "Green checks? You're all set. These selfies will train your AI.",
+      "recommendation": "Pro tip: Pick at least 2 selfies with different lighting and angles.",
+      "recommendationDetailed": "Here's the secret sauce: Choose 2+ selfies with varied lighting, angles, and poses. Throw in a full-body shot to nail the proportions. The more variety, the better your professional photos."
+    },
+    "selectionHint": {
+      "text": "Select at least 2 selfies for best results."
+    },
+    "selectionInfo": {
+      "title": "Select at least 2 selfies",
+      "noneSelected": "Take a fresh selfie or grab one from your gallery. Your call.",
+      "oneSelected": "You've got 1 selected. Add one more to continue.",
+      "enoughSelected": "You've selected {count} selfie{count, plural, =1 {} other {s}}. You can continue or select more.",
+      "swipeHint": "Swipe right when you're ready to customize.",
+      "clickHint": "Click Continue when you're ready to customize.",
+      "qrTitle": "Upload from your phone",
+      "qrDescription": "Scan the QR code to capture or upload selfies from your mobile.",
+      "status": {
+        "start": "Select selfies",
+        "oneMore": "Add one more",
+        "ready": "Ready to customize"
+      }
+    },
+    "gallery": {
+      "selectAria": "Select selfie",
+      "deselectAria": "Remove selfie selection",
+      "deleteTooltip": "Delete selfie",
+      "deleteAria": "Delete selfie",
+      "deleteDisabledTooltip": "This selfie is used in a generation and can't be deleted.",
+      "deleteDisabledAria": "Delete disabled. This selfie is used in a generation and can't be deleted.",
+      "deleteDisabledMessage": "Used in a generation and can't be deleted."
+    }
+  },
+  "generate": {
+    "selfie": {
+      "title": "Choose your selfie",
+      "subtitle": "Select a selfie to use for generation, or upload a new one.",
+      "qrTip": {
+        "title": "Take or upload from your computer or phone",
+        "description": "You can use the QR code to take or upload selfies from your phone."
+      },
+      "floatingButton": {
+        "photoCustomization": "Photo customization",
+        "needMoreSelfies": "Add at least 2 selfies",
+        "readyToCustomize": "Ready to customize"
+      }
+    }
+  },
+  "mobileHandoff": {
+    "title": "Upload from your phone",
+    "description": "Scan this QR code to upload selfies from your mobile device.",
+    "scanToUpload": "Scan to upload",
+    "scanToUsePhone": "Scan to use your phone",
+    "scanForMobile": "Scan for mobile selfies",
+    "scanForSelfies": "Switch to mobile",
+    "useYourComputer": "Use this device",
+    "useHere": "Use on computer",
+    "phoneConnected": "Phone connected",
+    "expiresIn": "Expires in {time}",
+    "howToScan": "Open your phone camera and point it at this QR code",
+    "retry": "Try again",
+    "tapToRetry": "Tap to retry",
+    "errors": {
+      "createFailed": "Could not create QR code. Please try again."
+    }
+  },
+  "uploadSelfie": {
+    "loading": "Loading...",
+    "greeting": "Hi {name}!",
+    "subtitle": "Upload selfies from your phone",
+    "addSelfie": "Add selfie",
+    "useCamera": "Use camera",
+    "uploadPhoto": "Upload photo",
+    "progress": "{count} selfie{count, plural, =1 {} other {s}} uploaded",
+    "uploadedCount": "+{count} new",
+    "statusReady": "Ready to generate",
+    "statusUploading": "Upload more selfies",
+    "readyMessage": "You have enough selfies. Head back to desktop to generate your photos.",
+    "doneHint": "When you're done uploading, you can close this page.",
+    "viewDashboard": "View dashboard",
+    "errors": {
+      "title": "Something went wrong",
+      "invalidToken": "This link is invalid or has expired.",
+      "tokenExpired": "This link has expired. Please scan a new QR code from your desktop.",
+      "validationFailed": "Could not validate this link. Please try again.",
+      "scanNewQR": "Please scan a new QR code from your desktop to continue.",
+      "desktopAccess": {
+        "title": "Mobile only",
+        "message": "This page is designed for mobile devices only. Please open this link on your phone.",
+        "hint": "Scan the QR code from your desktop using your mobile camera."
+      }
+    }
+  },
+  "generation": {
+    "flow": {
+      "stepIndicator": "Step {current} of {total}",
+      "back": "Back",
+      "continue": "Continue",
+      "swipeToNext": "Swipe to continue",
+      "swipeHint": "Swipe left to continue"
+    },
+    "typeSelection": {
+      "title": "How would you like to use this photo?",
+      "subtitle": "Choose how you want to generate your professional photo.",
+      "howToUse": "Choose your generation type",
+      "personal": {
+        "title": "Personal use",
+        "fullControl": "Full creative control",
+        "private": "Private to you",
+        "anyStyle": "Any style/background",
+        "cost": "Uses {photos} photos",
+        "remaining": "{photos} individual photos remaining"
+      },
+      "team": {
+        "title": "Company use",
+        "presetStyles": "Company style presets",
+        "branded": "Branded with logo",
+        "adminVisible": "Visible to admin",
+        "cost": "Uses {photos} photos",
+        "remaining": "{photos} company photos remaining",
+        "noAccess": "No company access"
+      },
+      "continue": "Continue",
+      "helpText": "You can always retry this photo later for the other use case if needed."
+    }
+  },
+  "contexts": {
+    "title": "Photo styles",
+    "subtitle": "A photo style is a standard that you can apply over multiple photos to maintain consistency in your professional image.",
+    "subtitleIndividual": "A photo style is a standard that you can apply over multiple photos to maintain consistency in your professional image.",
+    "subtitleIndividualPlan": "A photo style is a standard that you can apply over multiple photos to maintain consistency in your professional image.",
+    "subtitleProPlan": "A photo style is a standard that you can apply over multiple photos to maintain consistency in your professional image and brand identity.",
+    "createContext": "Create photo style",
+    "actions": {
+      "close": "Close"
+    },
+    "errors": {
+      "fetchFailed": "Failed to fetch photo styles",
+      "deleteFailed": "Failed to delete photo style",
+      "activateFailed": "Failed to activate photo style"
+    },
+    "confirmations": {
+      "deleteContext": "Are you sure you want to delete this photo style?"
+    },
+    "status": {
+      "active": "Active",
+      "noActiveContext": "No active photo style",
+      "mustSetActive": "You must set an active photo style before inviting team members"
+    },
+    "buttons": {
+      "setAsActive": "Set as active",
+      "setAsDefault": "Set as default"
+    },
+    "labels": {
+      "personalPhotoStyles": "Personal Photo Styles",
+      "personalStyles": "Personal Styles",
+      "createPersonalStyle": "Create Personal Style",
+      "freePackageStyle": "Free Package Style",
+      "personal": "Personal",
+      "default": "Default"
+    },
+    "freePlan": {
+      "title": "You're on the free plan.",
+      "stamp": "Test Drive",
+      "cta": "Upgrade",
+      "bodyPersonal": "On the free plan you get {photoCount} {photoCount, plural, one {photo} other {photos}} and a fixed {brandName} branding. Upgrade your plan to get full customization and more photos.",
+      "bodyTeam": "On the free plan you get {photoCount} {photoCount, plural, one {photo} other {photos}} with fixed {brandName} branding to test the service. Upgrade your plan to get full customization, invite team members, and more photos.",
+      "bodyGeneric": "On the free plan you get {photoCount} {photoCount, plural, one {photo} other {photos}} and a fixed {brandName} branding. Upgrade your plan to get full customization and more photos."
+    }
+  },
+  "emails": {
+    "otp": {
+      "subject": "Your verification code",
+      "body": "Your verification code is: {code}\n\nThis code expires in 5 minutes."
+    },
+    "magicLink": {
+      "subject": "Your sign-in link",
+      "body": "Click the following link to sign in:\n\n{link}\n\nThis link expires in 24 hours.",
+      "preview": "Click the link to sign in to your account",
+      "title": "Sign in to your account",
+      "greeting": "Click the button below to securely sign in to your TeamShots account.",
+      "instructions": "This magic link will sign you in without needing a password.",
+      "button": "Sign in",
+      "expires": "This link expires in 24 hours for security reasons.",
+      "linkFallback": "If the button doesn't work, copy and paste this link into your browser:",
+      "footer": "If you didn't request this sign-in link, you can safely ignore this email."
+    },
+    "passwordReset": {
+      "subject": "Reset your password",
+      "preview": "Reset your password for your account",
+      "title": "Reset your password",
+      "greeting": "We received a request to reset your password.",
+      "instructions": "Click the button below to choose a new password. This link will expire in 1 hour.",
+      "button": "Reset password",
+      "expires": "For security, this link expires in 1 hour.",
+      "notRequested": "If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.",
+      "linkFallback": "If the button doesn't work, copy and paste this link into your browser:",
+      "footer": "This password reset link was requested for your account. If you didn't make this request, please contact support."
+    },
+    "teamInvite": {
+      "subject": "Team invitation from {teamName}",
+      "text": "You've been invited to join {teamName} on TeamShotsPro.\n\nUse this link to accept: {inviteLink}\n\nYou have {photosAllocated} photos to get started.",
+      "greeting": "You've been invited to join {teamName}!",
+      "greetingWithName": "Hi {firstName}! {inviterFirstName} invited you to get professional headshots for {teamName}.",
+      "photosDescription": "You can generate {photos} customizable photos. And each photo can be redone up to 4 times each. From just a selfie.\n\nYour selfie doesn't need to be perfect. We'll handle the professional polish.",
+      "mobileAdvice": "Open this link on any device. If you start on desktop, you can easily scan a QR code to upload selfies from your phone.",
+      "acceptButton": "Accept invitation",
+      "expires": "This invitation expires in 24 hours. If you can't click the button, copy and paste this link in your browser:",
+      "questions": "Questions? Just reply to this email. We're real people and we'll get back to you."
+    },
+    "waitlistWelcome": {
+      "subject": "Welcome to TeamShotsPro",
+      "title": "Welcome to TeamShotsPro",
+      "thankYou": "Thanks for joining the TeamShotsPro waitlist. We're excited to have you on board as we prepare to launch professional team photography.",
+      "whatToExpect": "What to expect:",
+      "steps": {
+        "step1": {
+          "title": "We're finalizing the product",
+          "description": "Our team is working hard to deliver an amazing experience. We're in the final stages of development."
+        },
+        "step2": {
+          "title": "You'll get early access",
+          "description": "As a waitlist member, you'll be among the first to try TeamShotsPro when we launch."
+        },
+        "step3": {
+          "title": "Launch offer",
+          "description": "We'll send you a discount code when we go live. You'll save on your first professional team photos."
+        }
+      },
+      "visitSite": "Visit our site",
+      "copyright": "© {year} TeamShotsPro. All rights reserved."
+    },
+    "welcomeAfterPurchase": {
+      "subject": "You're in! One quick thing...",
+      "body": "Welcome aboard!\n\nYou can now generate {photos} professional photos - and you're already signed in.\n\nOne quick thing: set up a password so you can sign in again later:\n{setupLink}\n\nThis link expires in 24 hours.\n\nIf you didn't make this purchase, please contact support.",
+      "heading": "You're in! 🎉",
+      "intro": "Welcome aboard. You're already signed in and ready to create some seriously good-looking headshots.",
+      "photosReceived": "You have {photos} photos to play with",
+      "setupInstructions": "One quick thing: set up a password so you can sign back in later. Future you will thank present you.",
+      "ctaButton": "Set my password",
+      "linkExpiry": "This link expires in 24 hours. No pressure, but also... maybe do it now?",
+      "footer": "Didn't make this purchase? That's weird. Contact us and we'll sort it out."
+    }
+  },
+  "customization": {
+    "photoStyle": {
+      "legend": {
+        "editableChip": "Editable",
+        "lockedChip": "Pre-set by team admin",
+        "presetChip": "Preset active"
+      },
+      "lockedSections": {
+        "teaser": {
+          "title": "{count} more settings configured",
+          "subtitle": "Customize the sections above to see what else has been set"
+        }
+      },
+      "autosave": {
+        "saving": "Saving...",
+        "saved": "All changes saved",
+        "error": "Save failed",
+        "retry": "Retry",
+        "idle": "Autosave on"
+      },
+      "progress": {
+        "editable": "{count} of {total} editable",
+        "editableTeam": "{count} of {total} editable by team members"
+      },
+      "mobile": {
+        "banner": {
+          "customize": "Customize {label}",
+          "preset": "Team preset: {label}",
+          "introHeading": "Meet your photo style controls",
+          "selfieTipsHeading": "Selfie tips",
+          "introBadge": "Heads up",
+          "step": "Step {current} of {total}",
+          "progress": "{completed} of {total} steps complete"
+        },
+        "controls": {
+          "previous": "Previous",
+          "next": "Next",
+          "step": "Go to step {index}"
+        },
+        "swipeHint": "Swipe or tap Next to continue",
+        "intro": {
+          "kicker": "",
+          "title": "Now, customize your photo",
+          "subtitle": "You're about to customize how your photos look.",
+          "body": "You can change the background, the pose, the expression, etc. On the next page, you can set each one of them, except the ones fixed by your team admin",
+          "bodyDesktop": "You can change how your photo looks, the background, the pose, the expression, etc. On the next page, you can customize each one of them, except the ones set by your team admin",
+          "swipe": "Swipe right to move forward, left to go back. You can also use the navigation buttons below.",
+          "scrollDesktop": "Scroll down to see all customization options. Adjust each setting to match your preferences.",
+          "editable": "The stars icon means you can edit this setting. Adjust until it matches your preferences.",
+          "locked": "The lock icon means your team admin fixed these. You can view them but not change to maintain consistency.",
+          "skip": "Don't show again",
+          "continueButton": "Continue to customize"
+        },
+        "selfieTips": {
+          "kicker": "Get the best results",
+          "title": "First, take or upload your selfies",
+          "body": "Great photos start with great selfies. Follow these tips to get the best results.",
+          "skip": "Don't show again",
+          "angles": {
+            "title": "Mix up your angles. Include one from further away.",
+            "desc": "Different positions help our AI understand your face better. Adding a selfie from further away, helps understand more of your body proportions, with better results."
+          },
+          "lighting": {
+            "title": "Find good lighting",
+            "desc": "Natural light works best. Avoid harsh shadows on your face."
+          },
+          "minimum": {
+            "title": "3-4 selfies is ideal. Minimum is 2.",
+            "desc": "The more information you give it about your face and your body, the less it has to guess."
+          },
+          "accessories": {
+            "title": "Remove unwanted accessories",
+            "desc": "Headshots will replicate your selfies exactly, including earrings, piercings, watches, and bracelets. Remove or change them now if you don't want them in your photos."
+          }
+        }
+      },
+      "tooltips": {
+        "predefinedToggle": "Predefined locks this setting for all team members. User Choice lets each person customize it.",
+        "background": "Choose the background style for your photos. This sets the overall environment and mood.",
+        "branding": "Include your company logo in generated photos to maintain brand consistency.",
+        "shotType": "Different framings work better for different platforms. Headshots for LinkedIn, full body for team pages.",
+        "clothing": "Set the dress code for your team photos - from casual to business formal.",
+        "clothingColors": "Specify exact colors for clothing items to match your brand palette.",
+        "customClothing": "Upload an outfit image to transfer the clothing style to your generated photos.",
+        "expression": "Control the facial expression and mood of your team photos.",
+        "lighting": "Set the lighting style to match your brand aesthetic - from natural to studio lighting.",
+        "pose": "Choose a body pose and positioning that matches your professional image and brand style."
+      },
+      "toggle": {
+        "predefined": "Predefined",
+        "userChoice": "User Choice"
+      },
+      "comingSoon": "Settings for this category coming soon",
+      "sections": {
+        "composition": "Composition Settings",
+        "compositionDesc": "Background, branding, and shot type",
+        "userStyle": "User Style Settings",
+        "userStyleDesc": "Clothing, expression, and lighting preferences",
+        "customizable": "Customize your photo",
+        "customizableDesc": "Select your choice for each editable part",
+        "preset": "Team presets",
+        "presetDesc": "These are fixed for your team"
+      },
+      "categories": {
+        "background": {
+          "title": "Background",
+          "description": "Choose background style"
+        },
+        "branding": {
+          "title": "Branding",
+          "description": "Set the logo and branding options"
+        },
+        "clothing": {
+          "title": "Clothing",
+          "description": "Choose your clothing style and accessories"
+        },
+        "clothingColors": {
+          "title": "Clothing colors",
+          "description": "Choose your colors for clothing items"
+        },
+        "customClothing": {
+          "title": "Custom Clothing",
+          "description": "Upload your own outfit for the AI to match"
+        },
+        "shotType": {
+          "title": "Shot type",
+          "description": "Photo framing"
+        },
+        "style": {
+          "title": "Photo style",
+          "description": "Overall photo style preset"
+        },
+        "expression": {
+          "title": "Expression",
+          "description": "Choose your facial expression and mood"
+        },
+        "lighting": {
+          "title": "Lighting",
+          "description": "Lighting style and mood"
+        },
+        "pose": {
+          "title": "Pose",
+          "description": "Choose your body pose and positioning"
+        }
+      },
+      "background": {
+        "title": "Background",
+        "subtitle": "Choose your background style",
+        "predefined": "Predefined",
+        "officePrompt": "Office description",
+        "officePromptPlaceholder": "Describe the office environment...",
+        "neutralColor": "Neutral Color",
+        "neutralColorDesc": "Choose your neutral background color",
+        "gradientColor": "Gradient Color",
+        "gradientColorDesc": "Choose your gradient base color",
+        "customUpload": "Upload Background",
+        "uploadPrompt": "Click to upload or drag and drop",
+        "chooseFile": "Choose file",
+        "colorValue": "Color",
+        "colorHint": "Hex code or color name",
+        "colorPlaceholder": "Type your color (eg Burgundy) and select the right shade",
+        "variations": "Variations",
+        "presets": "Choose a color",
+        "types": {
+          "office": "Office Environment",
+          "tropical-beach": "Tropical Beach",
+          "busy-city": "Busy City",
+          "neutral": "Neutral Background",
+          "gradient": "Gradient Background",
+          "custom": "Custom Upload"
+        }
+      },
+      "branding": {
+        "title": "Branding",
+        "subtitle": "Choose logo and branding options",
+        "predefined": "Predefined",
+        "include": "Include Logo",
+        "exclude": "No Logo",
+        "uploadPrompt": "Click to upload or drag and drop",
+        "chooseFile": "Choose file",
+        "noLogoMessage": "No logo will be included in the photos",
+        "position": {
+          "label": "Logo Position",
+          "background": "Background",
+          "clothing": "Clothing",
+          "elements": "Other elements"
+        }
+      },
+      "clothing": {
+        "title": "Clothing style",
+        "subtitle": "Choose clothing style and accessories",
+        "predefined": "Predefined",
+        "details": {
+          "label": "Details"
+        },
+        "accessories": {
+          "label": "Accessories"
+        },
+        "styles": {
+          "business": {
+            "label": "Business",
+            "description": "Professional attire"
+          },
+          "startup": {
+            "label": "Startup",
+            "description": "Casual & creative"
+          },
+          "black-tie": {
+            "label": "Black Tie",
+            "description": "Formal elegance"
+          }
+        },
+        "details_options": {
+          "formal": "Formal",
+          "casual": "Casual",
+          "t-shirt": "T-Shirt",
+          "hoodie": "Hoodie",
+          "polo": "Polo",
+          "button-down": "Button Down",
+          "tuxedo": "Tuxedo",
+          "suit": "Suit",
+          "dress": "Dress"
+        }
+      },
+      "clothingColors": {
+        "title": "Clothing Colors",
+        "subtitle": "Choose colors for clothing items",
+        "predefined": "Predefined",
+        "outerLayer": "Top layer",
+        "outerLayerDesc": "Blazer, jacket, cardigan, button down shirt, hoodie, polo",
+        "topLayer": "Top layer",
+        "topLayerDesc": "The visible outer garment: jacket, blazer, hoodie, polo, t-shirt, dress",
+        "baseLayer": "Base layer",
+        "baseLayerDesc": "Shirt or t-shirt underneath the top layer",
+        "shirtBlouse": "Base layer",
+        "shirtBlouseDesc": "Dress shirt, blouse, t-shirt under button-down",
+        "pantsSkirt": "Pants/Skirt",
+        "pantsSkirtDesc": "Trousers, slacks, skirt",
+        "shoes": "Shoes",
+        "shoesDesc": "Dress shoes, casual shoes",
+        "noVisibleColors": "No clothing colors applicable for this shot type and style."
+      },
+      "customClothing": {
+        "title": "Custom Clothing",
+        "subtitle": "Upload your own outfit for the AI to match",
+        "predefined": "Predefined",
+        "uploadPrompt": "Click to upload or drag and drop",
+        "chooseFile": "Choose file"
+      },
+      "shotType": {
+        "title": "Shot Type",
+        "subtitle": "Choose the framing for your photo",
+        "predefined": "Predefined",
+        "types": {
+          "extreme-close-up": {
+            "label": "Extreme Close-Up",
+            "description": "Extreme close-up focusing on the subject's eyes or a key facial feature. Keep the frame tight with no background distractions."
+          },
+          "close-up": {
+            "label": "Close-Up (Tight Headshot)",
+            "description": "Close-up headshot framing from the top of the head to just below the chin, minimal neck visible."
+          },
+          "medium-close-up": {
+            "label": "Medium Close-Up (Standard Headshot)",
+            "description": "Standard professional headshot framing from the top of the head down to mid-chest."
+          },
+          "medium-shot": {
+            "label": "Medium Shot (Bust)",
+            "description": "Portrait framing from the top of the head down to the natural waistline (belly button level). Frame cuts at the waist, NOT at hips, thighs, or knees. The legs should NOT be visible."
+          },
+          "three-quarter": {
+            "label": "3/4 Shot (American)",
+            "description": "Three-quarter portrait framing from the top of the head to mid-thigh, full arms included. The feet must NOT be visible."
+          },
+          "full-length": {
+            "label": "Full-Length",
+            "description": "Full-length portrait showing the entire body from head to toe with a touch of floor visible."
+          },
+          "wide-shot": {
+            "label": "Wide Shot",
+            "description": "Wide shot that places the subject within their environment. Maintain awareness of background balance."
+          }
+        }
+      },
+      "expression": {
+        "title": "Expression",
+        "subtitle": "Choose a facial expression",
+        "predefined": "Predefined",
+        "selectPlaceholder": "Choose your expression",
+        "expressions": {
+          "genuine_smile": {
+            "label": "Genuine smile (teeth)",
+            "description": "Approachable, friendly"
+          },
+          "soft_smile": {
+            "label": "Soft smile (no teeth)",
+            "description": "Professional, subtle"
+          },
+          "neutral_serious": {
+            "label": "Neutral / serious",
+            "description": "Executive, dramatic"
+          },
+          "laugh_joy": {
+            "label": "Laugh / joy",
+            "description": "Lifestyle, authentic"
+          },
+          "contemplative": {
+            "label": "Contemplative",
+            "description": "Editorial, artistic"
+          },
+          "confident": {
+            "label": "Confident",
+            "description": "Confident, poised"
+          },
+          "sad": {
+            "label": "Sad / melancholic",
+            "description": "Somber, melancholic"
+          }
+        }
+      },
+      "pose": {
+        "title": "Pose",
+        "subtitle": "Choose a body pose and positioning",
+        "predefined": "Predefined",
+        "selectPlaceholder": "Choose your pose",
+        "poses": {
+          "classic_corporate": {
+            "label": "Classic Corporate",
+            "description": "Trustworthy, direct, standard corporate headshot"
+          },
+          "slimming_three_quarter": {
+            "label": "3/4 Slimming Turn",
+            "description": "Dynamic, slimming three-quarter angle for LinkedIn and profiles"
+          },
+          "power_cross": {
+            "label": "Power Cross",
+            "description": "Assertive arms-crossed stance showing authority"
+          },
+          "approachable_lean": {
+            "label": "Approachable Lean",
+            "description": "Forward-leaning, engaging pose for client-facing roles"
+          },
+          "candid_over_shoulder": {
+            "label": "Candid Over-Shoulder",
+            "description": "Modern, relaxed look glancing back over the shoulder"
+          },
+          "power_classic": {
+            "label": "Power Pose",
+            "description": "Executive, founder, leadership"
+          },
+          "power_crossed": {
+            "label": "Power Pose (Arms Crossed)",
+            "description": "Professional, expert, corporate"
+          },
+          "casual_confident": {
+            "label": "Casual Confident",
+            "description": "Modern professional, tech, creative"
+          },
+          "approachable_cross": {
+            "label": "Approachable Expert",
+            "description": "Consultant, coach, service"
+          },
+          "walking_confident": {
+            "label": "Walking - Purposeful",
+            "description": "Dynamic, modern, leadership"
+          },
+          "sitting_engaged": {
+            "label": "Sitting Forward - Engaged",
+            "description": "Coach, consultant, empathetic"
+          },
+          "seated_engagement": {
+            "label": "The Seated Engagement",
+            "description": "Warm and attentive seated pose, implying active listening across a desk"
+          },
+          "executive_seated": {
+            "label": "Seated Executive",
+            "description": "Executive, c-suite, formal"
+          },
+          "thinker": {
+            "label": "The Thinker",
+            "description": "Thought leader, expert, strategic"
+          },
+          "jacket_reveal": {
+            "label": "Jacket Reveal",
+            "description": "Professional pose highlighting attire"
+          }
+        }
+      }
+    }
+  },
+  "team": {
+    "title": "Team management",
+    "subtitle": "Invite team members and manage team photo generation",
+    "setupRequired": {
+      "title": "Setup required",
+      "message": "You must create and set an active photo style before inviting team members.",
+      "createButton": "Create photo style →"
+    },
+    "readyToInvite": {
+      "title": "Ready to invite"
+    },
+    "teamMembers": {
+      "noMembers": {
+        "title": "No team members yet",
+        "subtitle": "Invite team members to start building your team"
+      },
+      "headers": {
+        "member": "Team member",
+        "selfies": "Selfies",
+        "generations": "Generated photos",
+        "photosAllocated": "Photos allocated",
+        "photosUsed": "Photos used",
+        "remainingPhotos": "Remaining photos",
+        "availablePhotos": "Photo credits left",
+        "seatUsage": "Seat usage",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "seatUsage": {
+        "of": "of"
+      },
+      "roles": {
+        "teamAdmin": "Team admin",
+        "teamMember": "Team member",
+        "guest": "Guest"
+      },
+      "you": "YOU",
+      "status": {
+        "registered": "Registered",
+        "guest": "Guest",
+        "revoked": "Revoked"
+      },
+      "revoked": {
+        "title": "Revoked members ({count})"
+      },
+      "actions": {
+        "makeAdmin": "Make admin",
+        "demote": "Demote",
+        "remove": "Remove",
+        "revoke": "Revoke",
+        "reactivate": "Reactivate",
+        "promoting": "Promoting...",
+        "demoting": "Demoting...",
+        "removing": "Removing...",
+        "revoking": "Revoking...",
+        "reactivating": "Reactivating..."
+      }
+    },
+    "teamInvites": {
+      "photosAllocated": "{count} photos allocated",
+      "photosUsed": "{count} used",
+      "creditsAllocated": "{count, plural, one {# photo allocated} other {# photos allocated}}",
+      "creditsUsed": "{count, plural, one {# used} other {# used}}",
+      "status": {
+        "accepted": "Accepted",
+        "expired": "Expired",
+        "pending": "Pending",
+        "revoked": "Revoked"
+      },
+      "actions": {
+        "resend": "Resend",
+        "resending": "Resending...",
+        "resendSuccess": "Invite resent successfully",
+        "revoke": "Revoke",
+        "revoking": "Revoking...",
+        "addPhotos": "Add photos"
+      }
+    },
+    "addPhotosModal": {
+      "title": "Add photos to {name}",
+      "currentAllocation": "Current allocation: {count} photos",
+      "availableTeamPhotos": "Available team photos: {count}",
+      "photosLeft": "Photos left: {count}",
+      "photosToAdd": "Photos to add",
+      "insufficientCredits": "You only have {available} team photos available",
+      "invalidAmount": "Please enter a valid number of photos",
+      "success": "Added {count} photos to {name}",
+      "adding": "Adding...",
+      "addButton": "Add photos",
+      "cancel": "Cancel"
+    },
+    "inviteForm": {
+      "title": "Invite team member",
+      "email": {
+        "label": "Email address",
+        "placeholder": "colleague@company.com",
+        "checking": "Checking...",
+        "alreadyMember": "This email is already a member of your team",
+        "pendingInvite": "An invite has already been sent to this email"
+      },
+      "firstName": {
+        "label": "First name",
+        "placeholder": "John"
+      },
+      "photos": {
+        "label": "Number of photos",
+        "hint": "Each photo can be retried up to {count} times for free",
+        "tooltip": "This is the number of photos they can generate with customization. Each customization can be retried up to {count} times.",
+        "required": "Number of photos must be greater than 0"
+      },
+      "success": "Invitation sent successfully to {email}",
+      "insufficientCreditsModal": "You need {required} photo credits but only have {available} available. Please reduce the photo allocation or purchase more photo credits.",
+      "photoStyle": {
+        "label": "Photo style",
+        "useActiveStyle": "Use active photo style",
+        "useActiveStyleDesc": "Team member will use the predefined photo style: {name}",
+        "allowFreestyle": "Allow freestyle",
+        "allowFreestyleDesc": "Team member can customize their own photo style",
+        "useFreePackageStyle": "Free package style",
+        "useFreePackageStyleDesc": "Team member will use the free package photo style. This cannot be changed for free plan accounts."
+      },
+      "whatHappensNext": {
+        "title": "What happens next?",
+        "step1": "Team member receives email with invite link",
+        "step2": "Link expires in 24 hours",
+        "step3": "No signup required - they can start immediately",
+        "step4": "Photos generated with active photo style: {name}"
+      },
+      "buttons": {
+        "send": "Send invite",
+        "sending": "Sending...",
+        "cancel": "Cancel"
+      }
+    },
+    "buttons": {
+      "inviteTeamMember": "Invite team member",
+      "upgrade": "Upgrade",
+      "buyCredits": "Buy credits",
+      "upgradeToInvite": "Upgrade to invite"
+    },
+    "adminOnly": {
+      "title": "Admin access required",
+      "message": "This page is only accessible to company administrators.",
+      "backToDashboard": "Back to dashboard"
+    },
+    "setup": {
+      "title": "Create your team profile",
+      "subtitle": "Before you can manage your team, please set up your team details.",
+      "teamNameLabel": "Team name",
+      "teamNamePlaceholder": "Your Team Name",
+      "teamWebsiteLabel": "Company website (optional)",
+      "teamWebsitePlaceholder": "https://yourcompany.com",
+      "createButton": "Create team",
+      "welcomePopup": {
+        "title": "You're all set",
+        "message": "You're just moments away from professional team photos that make everyone shine. Start by giving your team a name. Make it epic! 🚀",
+        "dismiss": "Got it"
+      }
+    }
+  },
+  "selfieApproval": {
+    "title": "Review your selfie",
+    "subtitle": "Check the photo quality before continuing",
+    "awaitingApproval": "Awaiting approval",
+    "guidelines": {
+      "title": "Photo quality guidelines",
+      "clearFace": "Clear, well-lit face",
+      "lookingAtCamera": "Looking at camera",
+      "goodResolution": "Good resolution",
+      "cleanBackground": "Clean background"
+    },
+    "buttons": {
+      "approveContinue": "Approve & Save",
+      "retakePhoto": "Retake Photo",
+      "cancel": "Cancel",
+      "processing": "Processing..."
+    },
+    "disclaimer": "By approving, you confirm you have the rights to use this photo and consent to its use for photo generation."
+  },
+  "api": {
+    "errors": {
+      "internalServerError": "Oops! Something went wrong on our end. We've been notified and are working on it. Please try again in a moment.",
+      "teamInvites": {
+        "emailRequired": "Email is required",
+        "firstNameRequired": "First name is required",
+        "userNotInTeam": "Looks like you're not part of a team yet. Ask your team admin to send you an invite.",
+        "noActiveContext": "You need to create and set an active photo style before inviting team members. Set it up first, then come back!",
+        "invalidCreditAllocation": "Photos must be allocated in multiples of {credits} credits (the cost per photo generation). For example: {credits2} credits ({credits} credits × 2), {credits3} credits ({credits} credits × 3), etc.",
+        "teamSizeLimitReached": "Your Pro Small plan allows up to {limit} team members. Upgrade to Pro Large for unlimited team members.",
+        "noAvailableSeats": "No available seats. You have {current} of {total} seats occupied. Please purchase more seats to invite additional team members."
+      }
+    }
+  },
+  "feedback": {
+    "button": "Feedback",
+    "modal": {
+      "title": "Share your feedback",
+      "description": "Help us improve TeamShots by sharing your thoughts"
+    },
+    "categories": {
+      "bug": "Bug report",
+      "suggestion": "Feature suggestion",
+      "question": "Question",
+      "other": "Other"
+    },
+    "rating": {
+      "up": "Thumbs up",
+      "down": "Thumbs down",
+      "thankYou": "Thank you for your feedback!",
+      "updated": "Feedback updated",
+      "submitted": "Feedback submitted"
+    },
+    "form": {
+      "category": "What type of feedback is this?",
+      "rating": "How would you rate your experience?",
+      "email": "Email",
+      "emailPlaceholder": "your@email.com",
+      "comment": "Additional comments",
+      "commentPlaceholder": "Tell us more (optional)",
+      "commentRequired": "Comment is required",
+      "categoryRequired": "Please select a category",
+      "ratingRequired": "Please select a rating",
+      "emailRequired": "Email is required for anonymous feedback",
+      "submit": "Submit",
+      "cancel": "Cancel"
+    },
+    "generation": {
+      "whatsWrong": "What's wrong with this image?",
+      "helpImprove": "We need this to improve the quality of the pics",
+      "feedbackRequired": "Please select at least one issue or provide a comment",
+      "commentPlaceholder": "Tell us what's wrong...",
+      "reasons": {
+        "poorQuality": "Poor quality",
+        "wrongStyle": "Doesn't match style",
+        "inaccurateFace": "Inaccurate face",
+        "wrongBackground": "Wrong background",
+        "other": "Other"
+      }
+    },
+    "success": "Thank you for your feedback!",
+    "error": "Failed to submit feedback. Please try again.",
+    "submitting": "Submitting...",
+    "admin": {
+      "title": "Feedback Management",
+      "description": "View and manage user feedback",
+      "filters": {
+        "type": "Type",
+        "rating": "Rating",
+        "status": "Status",
+        "context": "Context",
+        "all": "All",
+        "general": "General",
+        "generation": "Generation",
+        "positive": "Positive",
+        "negative": "Negative",
+        "resolved": "Resolved",
+        "unresolved": "Unresolved",
+        "landing": "Landing",
+        "dashboard": "Dashboard"
+      },
+      "table": {
+        "date": "Date",
+        "user": "User",
+        "type": "Type",
+        "rating": "Rating",
+        "comment": "Comment",
+        "status": "Status",
+        "actions": "Actions",
+        "empty": "No feedback found",
+        "anonymous": "Anonymous",
+        "noComment": "No comment",
+        "viewGeneration": "View generation"
+      },
+      "status": {
+        "resolved": "Resolved",
+        "unresolved": "Unresolved"
+      },
+      "actions": {
+        "resolve": "Mark as resolved",
+        "unresolve": "Mark as unresolved"
+      },
+      "pagination": {
+        "page": "Page",
+        "of": "of",
+        "previous": "Previous",
+        "next": "Next"
+      }
+    }
+  },
+  "admin": {
+    "badge": "ADMIN",
+    "title": "Admin Dashboard",
+    "subtitle": "Platform administration and monitoring tools",
+    "lastUpdated": "Last updated",
+    "stats": {
+      "totalUsers": "Total users",
+      "paid": "paid",
+      "creditsPurchased": "Credits purchased",
+      "creditsUsed": "Credits used",
+      "teamInvites": "Team invites",
+      "accepted": "accepted"
+    },
+    "quickAccess": {
+      "title": "Quick access",
+      "analytics": "Analytics",
+      "analyticsDesc": "View conversion rates, ARPU, and user metrics",
+      "feedback": "Feedback",
+      "feedbackDesc": "Review and manage user feedback"
+    },
+    "sections": {
+      "adminTools": "Admin tools",
+      "freeStyle": "Free plan style"
+    },
+    "tools": {
+      "roleManagement": "Admin role management",
+      "roleManagementDesc": "This section is only visible to platform administrators. Use with caution for testing purposes.",
+      "currentRole": "Current user role",
+      "platformAdmin": "Platform admin",
+      "changeRoleTitle": "Change role (testing only)",
+      "setAsIndividual": "Set as individual user",
+      "setAsTeamAdmin": "Set as team admin",
+      "roleChangeWarning": "This will change your role immediately. Use for testing only.",
+      "sessionManagement": "Session management",
+      "refreshSession": "Refresh session data",
+      "refreshing": "Refreshing...",
+      "refreshSessionHint": "Refresh your session to see updated role information.",
+      "sessionMismatch": "Session mismatch detected! Database: {dbRole}, Session: {sessionRole}. Please sign out using the profile menu in the sidebar and sign back in.",
+      "sessionUpToDate": "Session is up to date. Database role: {role}",
+      "refreshFailed": "Failed to refresh session",
+      "onlyAdminsCanChangeRoles": "Only platform administrators can change roles",
+      "roleChanged": "Role changed to {role}. Please sign out and sign back in to see the changes.",
+      "roleChangeFailed": "Failed to change role"
+    },
+    "impersonation": {
+      "badge": "IMPERSONATE",
+      "title": "User impersonation",
+      "description": "Impersonate a user to see the application from their perspective. All actions will be logged.",
+      "searchUser": "Search user",
+      "searchPlaceholder": "Search by name or email...",
+      "selected": "Selected",
+      "warning": "You cannot impersonate other platform administrators.",
+      "start": "Start impersonation",
+      "starting": "Starting...",
+      "stop": "Stop impersonation",
+      "stopping": "Stopping...",
+      "currentlyImpersonating": "You are currently impersonating a user. All actions will be logged and attributed to the impersonated user.",
+      "started": "Impersonation started. Redirecting...",
+      "stopped": "Impersonation stopped. Redirecting...",
+      "startFailed": "Failed to start impersonation",
+      "stopFailed": "Failed to stop impersonation"
+    },
+    "roles": {
+      "teamAdmin": "Team admin",
+      "teamAdminNoTeam": "Team admin (no team)",
+      "teamMember": "Team member",
+      "individualUser": "Individual user",
+      "teamSetupHint": "You're a team admin but haven't set up a team yet.",
+      "goToTeam": "Go to team page"
+    }
+  },
+  "inviteDashboard": {
+    "loading": "Loading dashboard...",
+    "newGeneration": "New generation",
+    "insufficientCredits": {
+      "title": "Insufficient credits",
+      "messageWithName": "You don't have enough credits to generate photos. Please contact {adminName} ({adminEmail}) to request more credits.",
+      "messageWithEmail": "You don't have enough credits to generate photos. Please contact your team admin at {adminEmail} to request more credits.",
+      "messageGeneric": "You don't have enough credits to generate photos. Please contact your team admin to request more credits.",
+      "yourTeamAdmin": "your team admin"
+    },
+    "error": {
+      "invalidInvite": "Invalid Invite",
+      "goToHomepage": "Go to Homepage"
+    },
+    "expired": {
+      "title": "New invite sent",
+      "invalidTitle": "Invalid Invite",
+      "securityTitle": "Why we did this",
+      "securityMessage": "We automatically sent you a fresh invite link because the old one expired. This keeps your team's data secure: expired links can't be used by anyone who might have stumbled upon them. Your new link is valid for 24 hours.",
+      "checkInbox": "Check your inbox for the new invite link.",
+      "goToHomepage": "Go to Homepage"
+    },
+    "alerts": {
+      "selectAtLeastTwoSelfies": "Please select at least 2 selfies to continue.",
+      "insufficientCreditsWithName": "You don't have enough credits to generate photos. Please contact {adminName} ({adminEmail}) to request more credits.",
+      "customizePhoto": "Please customize your photo settings before generating",
+      "insufficientCreditsWithEmail": "You don't have enough credits to generate photos. Please contact your team admin at {adminEmail} to request more credits.",
+      "insufficientCreditsGeneric": "You don't have enough credits to generate photos. Please contact your team admin to request more credits.",
+      "generationFailed": "Failed to start generation. Please try again."
+    },
+    "common": {
+      "continue": "Continue",
+      "photoCredit": "photo credit",
+      "photoCredits": "photo credits",
+      "dismiss": "Dismiss"
+    },
+    "getStarted": {
+      "title": "Get started",
+      "description": "We'll guide you through uploading your selfie and generating your team photo.",
+      "startButton": "Start your team photo",
+      "viewTeamPhotos": "View team photos ({count})",
+      "manageSelfies": "Manage my selfies ({count})"
+    },
+    "recentPhotos": {
+      "title": "Recent photos",
+      "viewAll": "View all",
+      "empty": "No photos yet. Generate one and they'll show up here."
+    },
+    "selfieSelection": {
+      "title": "Choose selfies to use",
+      "qrTip": {
+        "title": "Take or upload from your computer or phone",
+        "description": "You can use the QR code to take or upload selfies from your phone"
+      },
+      "mobile": {
+        "bannerTitle": "Select your selfies",
+        "bannerMessage": "Choose at least 2 selfies, then swipe right when you're ready to customize.",
+        "cta": "Swipe right when done",
+        "badgeSelecting": "Need {remaining} more",
+        "badgeReady": "Ready to customize",
+        "hint": "Need to tweak selfies again? Adjust them here, then swipe right to keep going.",
+        "actions": {
+          "camera": "Use camera",
+          "upload": "Upload photo"
+        }
+      }
+    },
+    "styleSelection": {
+      "readyToGenerate": "Ready to Generate",
+      "customizeHint": {
+        "headsUp": "Heads up",
+        "message": "Customize your photo in the editable sections below before generating."
+      },
+      "mobileCustomizeTitle": "Customize {style}",
+      "costPerGeneration": "Cost per generation",
+      "generateButton": "Generate photo"
+    },
+    "mobile": {
+      "intro": {
+        "swipeHint": "Swipe left to start customizing"
+      },
+      "selfieTips": {
+        "swipeHint": "Swipe left to select your selfies"
+      }
+    },
+    "camera": {
+      "permissionNeeded": {
+        "title": "Camera access needed",
+        "description": "To take a selfie, please allow camera access in your browser.",
+        "howTo": "How to enable:",
+        "step1": "Tap the camera/lock icon in your browser address bar",
+        "step2": "Select \"Allow\" for camera access",
+        "step3": "Then tap \"Use camera\" again"
+      }
+    },
+    "generationFlow": {
+      "title": "Generate Team Photos",
+      "noSelfies": {
+        "title": "No selfies uploaded yet",
+        "description": "Upload a selfie first to generate team photos.",
+        "uploadButton": "Upload Selfie"
+      },
+      "chooseSelfie": "Choose a selfie to use:",
+      "selfieAlt": "Selfie",
+      "uploadNewSelfie": "Upload New Selfie",
+      "continueWithSelected": "Continue with Selected Selfie"
+    },
+    "signUpCta": {
+      "title": "Want to create personal photos too?",
+      "description": "Sign up for a personal account to generate photos with full creative control.",
+      "button": "Sign up for personal use"
+    }
+  }
+}

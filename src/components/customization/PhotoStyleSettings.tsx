@@ -208,7 +208,7 @@ export default function PhotoStyleSettings({
     }
     
     return Array.from(exclusions)
-  }, [value.shotType?.type, value.clothing?.style, value.clothing?.details, packageDefaults.shotType?.type, packageDefaults.clothing?.style, packageDefaults.clothing?.details])
+  }, [value.shotType?.type, value.clothing?.style, value.clothing?.details, packageDefaults])
 
   // Track last synced outfit colors to avoid infinite loops
   const lastSyncedOutfitColorsRef = React.useRef<string | null>(null)
@@ -605,6 +605,9 @@ export default function PhotoStyleSettings({
             <ClothingSelector
               value={value.clothing || { style: 'user-choice' }}
               onChange={(settings) => handleCategorySettingsChange('clothing', settings)}
+              clothingColors={resolvedClothingColors}
+              excludeColors={excludedClothingColors}
+              availableStyles={pkg.availableClothingStyles}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
               isDisabled={!showToggles && readonlyPredefined && isPredefined}
             />

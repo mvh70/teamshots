@@ -47,6 +47,12 @@ const AVAILABLE_EXPRESSIONS = [
   //'sad'
 ]
 
+const AVAILABLE_CLOTHING_STYLES = [
+  'business',
+  'startup'
+  // 'black-tie' excluded from this package
+]
+
 const FREE_PRESET = CORPORATE_HEADSHOT
 const FREE_PRESET_DEFAULTS = getDefaultPresetSettings(FREE_PRESET)
 
@@ -78,6 +84,7 @@ export const freepackage: ClientStylePackage = {
   availableBackgrounds: AVAILABLE_BACKGROUNDS,
   availablePoses: AVAILABLE_POSES,
   availableExpressions: AVAILABLE_EXPRESSIONS,
+  availableClothingStyles: AVAILABLE_CLOTHING_STYLES,
   defaultSettings: DEFAULTS,
   defaultPresetId: FREE_PRESET.id,
   presets: { [FREE_PRESET.id]: FREE_PRESET },

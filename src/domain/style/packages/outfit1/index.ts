@@ -136,7 +136,7 @@ export const outfit1: ClientStylePackage = {
         const existingColors = clothingColorsResult?.colors || {}
         
         // Merge colors: outfit colors take precedence, but keep existing ones if outfit doesn't have them
-        const mergedColors: Record<string, string> = { ...existingColors }
+        const mergedColors = { ...existingColors }
         if (outfitColors.topLayer) mergedColors.topLayer = outfitColors.topLayer
         if (outfitColors.baseLayer) mergedColors.baseLayer = outfitColors.baseLayer
         if (outfitColors.bottom) mergedColors.bottom = outfitColors.bottom

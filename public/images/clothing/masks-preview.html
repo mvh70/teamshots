@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clothing Masks Preview</title>
+    <style>
+        body { font-family: system-ui; padding: 20px; background: #f5f5f5; }
+        .item {
+            display: inline-block;
+            margin: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .item h3 { margin-top: 0; }
+        .mask-preview {
+            display: inline-block;
+            margin: 10px;
+            text-align: center;
+        }
+        .mask-preview img {
+            width: 200px;
+            height: auto;
+            border: 1px solid #ddd;
+            background:
+                linear-gradient(45deg, #ccc 25%, transparent 25%),
+                linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #ccc 75%),
+                linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        .mask-preview p { margin: 5px 0; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>Generated Clothing Masks</h1>
+    <p>White areas will receive color overlay. Transparent areas won't.</p>
+
+    <div class="item">
+        <h3>Startup - Hoodie</h3>
+
+        <div class="mask-preview">
+            <img src="masks/startup-hoodie-topLayer.png" alt="topLayer">
+            <p>topLayer</p>
+        </div>
+
+        <div class="mask-preview">
+            <img src="masks/startup-hoodie-baseLayer.png" alt="baseLayer">
+            <p>baseLayer</p>
+        </div>
+
+        <div class="mask-preview">
+            <img src="masks/startup-hoodie-bottom.png" alt="bottom">
+            <p>bottom</p>
+        </div>
+
+    </div>
+
+    <div class="item">
+        <h3>Startup - Polo</h3>
+
+        <div class="mask-preview">
+            <img src="masks/startup-polo-topLayer.png" alt="topLayer">
+            <p>topLayer</p>
+        </div>
+
+        <div class="mask-preview">
+            <img src="masks/startup-polo-baseLayer.png" alt="baseLayer">
+            <p>baseLayer</p>
+        </div>
+
+        <div class="mask-preview">
+            <img src="masks/startup-polo-bottom.png" alt="bottom">
+            <p>bottom</p>
+        </div>
+
+    </div>
+
+    <div class="item">
+        <h3>Startup - Button Down</h3>
+
+        <div class="mask-preview">
+            <img src="masks/startup-button_down-topLayer.png" alt="topLayer">
+            <p>topLayer</p>
+        </div>
+
+        <div class="mask-preview">
+            <img src="masks/startup-button_down-baseLayer.png" alt="baseLayer">
+            <p>baseLayer</p>
+        </div>
+
+        <div class="mask-preview">
+            <img src="masks/startup-button_down-bottom.png" alt="bottom">
+            <p>bottom</p>
+        </div>
+
+    </div>
+
+    <div class="item">
+        <h3>Business - Casual</h3>
+
+        <div class="mask-preview">
+            <img src="masks/business-casual-topLayer.png" alt="topLayer">
+            <p>topLayer</p>
+        </div>
+
+        <div class="mask-preview">
+            <img src="masks/business-casual-baseLayer.png" alt="baseLayer">
+            <p>baseLayer</p>
+        </div>
+
+        <div class="mask-preview">
+            <img src="masks/business-casual-bottom.png" alt="bottom">
+            <p>bottom</p>
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -25,7 +25,7 @@ export default function SignUpPage() {
   const [infoMessage] = useState('')
 
   const router = useRouter()
-  
+
   // Determine brand name and free photo count based on current domain
   const getBrandInfo = () => {
     if (typeof window === 'undefined') {
@@ -60,6 +60,11 @@ export default function SignUpPage() {
     firstName: '',
     otpCode: '',
   }))
+
+  // Password validation state
+  const passwordMeetsRequirements = formData.password.length >= 6
+  const passwordsMatch = formData.password === formData.confirmPassword
+  const confirmPasswordTouched = formData.confirmPassword.length > 0
 
   const handleSendOTP = async () => {
     setIsLoading(true)
@@ -244,30 +249,53 @@ export default function SignUpPage() {
               />
               
               {/* Passwords */}
-              <AuthInput
-                id="password"
-                name="password"
-                type="password"
-                required
-                label={t('passwordLabel')}
-                strengthMeter
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              />
-              <AuthInput
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                label={t('confirmPasswordLabel')}
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              />
+              <div>
+                <AuthInput
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  label={
+                    <span className="flex items-center gap-2">
+                      <span>
+                        {t('passwordLabel')} ({t('passwordRequirement')})
+                      </span>
+                      {passwordMeetsRequirements && (
+                        <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </span>
+                  }
+                  strengthMeter
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+              </div>
+              <div>
+                <AuthInput
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  label={t('confirmPasswordLabel')}
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                />
+                {confirmPasswordTouched && !passwordsMatch && (
+                  <div className="mt-2 flex items-center gap-1.5 text-sm text-red-600">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    {t('passwordsDoNotMatch')}
+                  </div>
+                )}
+              </div>
               <AuthButton
                 type="button"
                 onClick={handleSubscribe}
                 loading={isLoading}
-                disabled={isLoading || !formData.email || !formData.password || formData.password !== formData.confirmPassword || !formData.firstName}
+                disabled={isLoading || !formData.email || !formData.firstName || !passwordMeetsRequirements || !passwordsMatch}
               >
                 {isLoading ? t('sending') : t('sendCode')}
               </AuthButton>

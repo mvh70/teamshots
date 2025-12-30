@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react'
 
 type AuthInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
-  label?: string
+  label?: string | React.ReactNode
   hint?: string
   strengthMeter?: boolean
 }

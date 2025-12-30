@@ -1,0 +1,90 @@
+{
+  "landing": {
+    "teamshotspro": {
+      "hero": {
+        "titleLine1": "Retratos profesionales",
+        "titleLine2": "para tu equipo",
+        "titleHighlightTime": "en 60 segundos",
+        "subtitle": "Define tu estilo de marca y genera retratos profesionales para cada miembro. Calidad consistente en toda la empresa.",
+        "subtitleBold": "100% acorde a tu marca, 0% complicaciones.",
+        "subtitleMain": "Convierte selfies individuales en una imagen de equipo unificada. Sin fotógrafo, sin agenda.",
+        "finalCtaTitle": "¿Listo para transformar las fotos de tu equipo?",
+        "finalCtaSubtitle": "Obtén retratos profesionales para tu equipo y ve la diferencia en 60 segundos.",
+        "getStarted": "Empezar",
+        "cta": "Obtén retratos profesionales para tu equipo",
+        "ctaSubtext": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
+        "ctaAria": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso.",
+        "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
+        "badge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos"
+      },
+      "gallery": {
+        "title": "De selfies normales a retratos profesionales",
+        "subtitle": "Mira cómo transformamos fotos ordinarias en retratos profesionales que realmente impresionan a clientes y reclutadores. Sin cámara profesional ni fotógrafo.",
+        "cta": "Haz que tu equipo se vea así hoy"
+      },
+      "trust": {
+        "title": "¿Por qué equipos eligen TeamShotsPro sobre todos los demás?",
+        "subtitle": "Diseñado para equipos B2B serios que necesitan gestión de fotos de nivel empresarial, no trucos para consumidores",
+        "badges": {
+          "teamCommandCenter": {
+            "title": "Centro de Comando del Equipo - Diseñado para managers que odian el caos",
+            "description": "Panel central donde controlas todo: aprueba fotos, invita miembros del equipo con un clic, rastrea progreso, y gestiona consistencia de marca en toda tu organización. A diferencia de herramientas para consumidores, esto fue diseñado específicamente para equipos."
+          },
+          "industryTemplates": {
+            "title": "Plantillas profesionales diseñadas para tu industria",
+            "description": "Plantillas de estilo preconstruidas para startups de tecnología, firmas consultoras, agencias creativas, salud, finanzas, y más. Cada plantilla entiende los estándares profesionales de tu industria - desde estilos bancarios conservadores hasta el ambiente de agencia creativa. No filtros genéricos."
+          },
+          "qualityControl": {
+            "title": "Calidad garantizada con correcciones automáticas",
+            "description": "Las fotos que fallan nuestros estándares de calidad se regeneran automáticamente. Además obtienes reintentos gratuitos basados en el plan para perfeccionar tus resultados. A diferencia de otros servicios donde pagas por cada intento, manejamos problemas de calidad automáticamente y te damos iteraciones gratuitas para obtener exactamente lo que quieres."
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "Estandariza el look de tu equipo sin la pesadilla logística",
+        "subtitle": "Configuras un estilo acorde a tu marca una vez (por ejemplo, fondo, logo) e invitas a los miembros de tu equipo. Eso es todo. Los miembros de tu equipo recibirán una invitación y podrán generar sus propias fotos, sin fricción y sin registro. Ves todas las fotos en el panel de administración y seleccionas la mejor.",
+        "totalTime": "Tiempo total:",
+        "totalTimeValue": "5 minutos",
+        "cta": "¡Obtén retratos profesionales para tu equipo!",
+        "guarantee": "Sin riesgo: Obtén retratos profesionales para tu equipo para probarlo. Sin tarjeta de crédito, sin compromiso, sin tonterías.",
+        "steps": {
+          "1": {
+            "title": "Configura tu estilo de marca",
+            "description": "Fondos, logo, estilo de ropa. Tú decides qué está fijo y qué pueden cambiar los miembros del equipo (por ejemplo, expresión o colores de ropa).",
+            "duration": "1 min"
+          },
+          "2": {
+            "title": "Invita a tu equipo",
+            "description": "Invita a tu equipo (carga masiva disponible). Recibirán un enlace mágico. Sin cuadrículas de programación, sin Tetris de calendario. Sigue el progreso en tu panel de control.",
+            "duration": "30s"
+          },
+          "3": {
+            "title": "Retratos individuales generados",
+            "description": "Resultados profesionales en 60 segundos por persona. Sin edición necesaria.",
+            "duration": "60s/persona"
+          },
+          "4": {
+            "title": "Revisa y aprueba",
+            "description": "Ve todos los resultados en un panel. Regenera lo que quieras mejorar.",
+            "duration": "2 min"
+          },
+          "5": {
+            "title": "Descarga los retratos",
+            "description": "Archivos de alta resolución listos para tu sitio web, LinkedIn y tarjetas de visita.",
+            "duration": "30s"
+          }
+        }
+      },
+      "faq": {
+        "title": "Preguntas Frecuentes",
+        "subtitle": "Todo lo que necesitas saber sobre TeamShotsPro"
+      },
+      "footer": {
+        "tagline": "Fotos profesionales de equipo en 60 segundos",
+        "copyright": "© 2025 TeamShotsPro. Todos los derechos reservados.",
+        "privacy": "Política de Privacidad",
+        "terms": "Términos de Servicio"
+      }
+    }
+  }
+}

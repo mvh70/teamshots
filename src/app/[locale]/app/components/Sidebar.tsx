@@ -717,12 +717,12 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                 {seatInfo?.isSeatsModel && (
                   <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200 space-y-2`}>
                     {/* Seats row */}
-                    <div className={`flex items-center justify-between ${planTier === 'free' && !effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
+                    <div className={`flex items-center justify-between ${planTier === 'free' && seatInfo.totalSeats === 0 && !effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
                       <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center' : ''}`}>
                         {t('photos.seats')}
                       </span>
                       <span className={`text-lg md:text-xl font-extrabold tracking-tight leading-tight ${effectiveCollapsed ? 'text-xl' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
-                        {planTier === 'free' ? '1 / 1' : `${seatInfo.activeSeats} / ${seatInfo.totalSeats}`}
+                        {seatInfo.totalSeats > 0 ? `${seatInfo.activeSeats} / ${seatInfo.totalSeats}` : '1 / 1'}
                       </span>
                     </div>
                     
@@ -739,7 +739,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                     )}
                     
                     {/* Show locked branding message for free plans inside the container */}
-                    {planTier === 'free' && !effectiveCollapsed && (
+                    {planTier === 'free' && seatInfo.totalSeats === 0 && !effectiveCollapsed && (
                       <div className="text-center">
                         <span className="text-xs text-gray-600 font-medium">
                           {t('photos.lockedBranding')}
@@ -749,7 +749,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                     
                     {effectiveCollapsed && (
                       <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
-                        {t('photos.seats')}: {planTier === 'free' ? '1 / 1' : `${seatInfo.activeSeats} / ${seatInfo.totalSeats}`}
+                        {t('photos.seats')}: {seatInfo.totalSeats > 0 ? `${seatInfo.activeSeats} / ${seatInfo.totalSeats}` : '1 / 1'}
                         {isTeamAdmin && (
                           <>
                             <br />
@@ -824,12 +824,12 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                     className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs md:text-xs font-semibold text-white rounded-lg transition-all duration-200 bg-gradient-to-r from-brand-cta to-brand-cta-hover hover:from-brand-cta-hover hover:to-brand-cta shadow-md shadow-brand-cta/20 hover:shadow-lg hover:shadow-brand-cta/30 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2 min-h-[44px] md:min-h-0"
                   >
                     <PlusIcon className="h-4 w-4 md:h-3 md:w-3 mr-1 transition-transform duration-200 group-hover:rotate-90" />
-                    {planTier === 'free' && seatInfo?.isSeatsModel ? t('photos.buySeatsToUnlock') : planTier === 'free' ? t('photos.upgradeToPaid') : (accountMode === 'pro' ? t('photos.buyMoreSeats') : t('photos.buyMore'))}
+                    {seatInfo?.isSeatsModel && seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : planTier === 'free' ? t('photos.upgradeToPaid') : (accountMode === 'pro' || seatInfo?.isSeatsModel ? t('photos.buyMoreSeats') : t('photos.buyMore'))}
                   </Link>
                 )}
                 {effectiveCollapsed && (
                   <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
-                    {planTier === 'free' && seatInfo?.isSeatsModel ? t('photos.buySeatsToUnlock') : planTier === 'free' ? t('photos.upgradeToPaid') : (accountMode === 'pro' ? t('photos.buyMoreSeats') : t('photos.buyMore'))}
+                    {seatInfo?.isSeatsModel && seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : planTier === 'free' ? t('photos.upgradeToPaid') : (accountMode === 'pro' || seatInfo?.isSeatsModel ? t('photos.buyMoreSeats') : t('photos.buyMore'))}
                   </span>
                 )}
               </div>

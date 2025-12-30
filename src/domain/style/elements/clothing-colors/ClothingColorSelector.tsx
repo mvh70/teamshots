@@ -2,32 +2,8 @@
 
 import { useTranslations } from 'next-intl'
 import { ClothingColorSettings } from '@/types/photo-style'
-import type { ClothingColorKey } from './types'
-import ColorPicker from '@/components/ui/ColorPicker'
-
-// Common clothing color presets
-const CLOTHING_COLOR_PRESETS = [
-  '#000000', // Black
-  '#1f2937', // Charcoal
-  '#374151', // Dark gray
-  '#6b7280', // Gray
-  '#9ca3af', // Light gray
-  '#ffffff', // White
-  '#f5f5dc', // Beige
-  '#d2b48c', // Tan
-  '#8b4513', // Brown
-  '#4a3728', // Dark brown
-  '#000080', // Navy
-  '#1e3a5f', // Dark blue
-  '#3b82f6', // Blue
-  '#60a5fa', // Light blue
-  '#14532d', // Dark green
-  '#166534', // Forest green
-  '#800020', // Burgundy
-  '#7f1d1d', // Dark red
-  '#78350f', // Olive
-  '#fef3c7', // Cream
-]
+import type { ClothingColorKey, ColorValue } from './types'
+import ColorWheelPicker from '@/components/ui/ColorWheelPicker'
 
 interface ClothingColorSelectorProps {
   value: ClothingColorSettings
@@ -58,7 +34,7 @@ export default function ClothingColorSelector({
   // Single-layer garments only show topLayer (baseLayer is excluded)
   const isMultiLayer = !isExcluded('baseLayer')
 
-  const handleColorChange = (colorType: ClothingColorKey, color: string) => {
+  const handleColorChange = (colorType: ClothingColorKey, color: ColorValue) => {
     if (isPredefined) return
 
     onChange({
@@ -113,10 +89,9 @@ export default function ClothingColorSelector({
                   </p>
                 </div>
               </div>
-              <ColorPicker
+              <ColorWheelPicker
                 value={value.colors?.topLayer ?? ''}
                 onChange={(color) => handleColorChange('topLayer', color)}
-                presets={CLOTHING_COLOR_PRESETS}
                 disabled={isPredefined || isDisabled}
               />
             </div>
@@ -136,10 +111,9 @@ export default function ClothingColorSelector({
                   </p>
                 </div>
               </div>
-              <ColorPicker
+              <ColorWheelPicker
                 value={value.colors?.baseLayer ?? ''}
                 onChange={(color) => handleColorChange('baseLayer', color)}
-                presets={CLOTHING_COLOR_PRESETS}
                 disabled={isPredefined || isDisabled}
               />
             </div>
@@ -159,10 +133,9 @@ export default function ClothingColorSelector({
                   </p>
                 </div>
               </div>
-              <ColorPicker
+              <ColorWheelPicker
                 value={value.colors?.bottom ?? ''}
                 onChange={(color) => handleColorChange('bottom', color)}
-                presets={CLOTHING_COLOR_PRESETS}
                 disabled={isPredefined || isDisabled}
               />
             </div>
@@ -182,10 +155,9 @@ export default function ClothingColorSelector({
                   </p>
                 </div>
               </div>
-              <ColorPicker
+              <ColorWheelPicker
                 value={value.colors?.shoes ?? ''}
                 onChange={(color) => handleColorChange('shoes', color)}
-                presets={CLOTHING_COLOR_PRESETS}
                 disabled={isPredefined || isDisabled}
               />
             </div>

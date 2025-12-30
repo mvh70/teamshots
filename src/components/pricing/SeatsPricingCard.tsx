@@ -100,7 +100,7 @@ export default function SeatsPricingCard({
         <input
           type="range"
           min={minSeats}
-          max="1000"
+          max="200"
           step="1"
           value={validatedSeats}
           onChange={(e) => {
@@ -111,13 +111,13 @@ export default function SeatsPricingCard({
           }}
           className="w-full h-3 bg-indigo-100 rounded-lg appearance-none cursor-pointer slider-thumb mb-3"
           style={{
-            background: `linear-gradient(to right, #4F46E5 0%, #4F46E5 ${((validatedSeats - minSeats) / (1000 - minSeats)) * 100}%, #E0E7FF ${((validatedSeats - minSeats) / (1000 - minSeats)) * 100}%, #E0E7FF 100%)`
+            background: `linear-gradient(to right, #4F46E5 0%, #4F46E5 ${((validatedSeats - minSeats) / (200 - minSeats)) * 100}%, #E0E7FF ${((validatedSeats - minSeats) / (200 - minSeats)) * 100}%, #E0E7FF 100%)`
           }}
         />
 
         {/* Quick select buttons - aligned with volume tier breakpoints */}
         <div className="flex gap-2 flex-wrap justify-center">
-          {[2, 5, 25, 100, 500, 1000]
+          {[2, 5, 25, 100, 200]
             .filter(count => count > minSeats)
             .map((count) => (
               <button

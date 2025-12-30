@@ -104,6 +104,7 @@ export interface ClientStylePackage {
   availableBackgrounds?: string[]
   availablePoses?: string[]
   availableExpressions?: string[]
+  availableClothingStyles?: string[]
   defaultSettings: PhotoStyleSettings
   defaultPresetId: string
   presets?: Record<string, StandardPresetConfig>

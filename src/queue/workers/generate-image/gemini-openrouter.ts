@@ -18,40 +18,40 @@ export async function generateWithGeminiOpenRouter(
     throw new Error('OPENROUTER_API_KEY is required to use OpenRouter provider')
   }
 
-  // Validate reference images
-  if (!images || images.length === 0) {
-    Logger.error('generateWithGeminiOpenRouter: No reference images provided!', {
-      imagesCount: images?.length || 0
-    })
-    throw new Error('No reference images provided to OpenRouter')
-  }
-  for (let i = 0; i < images.length; i++) {
-    const img = images[i]
-    if (!img.base64 || !img.mimeType) {
-      Logger.error('generateWithGeminiOpenRouter: Invalid reference image', {
-        index: i,
-        hasBase64: !!img.base64,
-        hasMimeType: !!img.mimeType,
-        description: img.description?.substring(0, 100)
-      })
-      throw new Error(`Reference image at index ${i} is missing base64 or mimeType`)
+  // Validate reference images (if provided)
+  if (images && images.length > 0) {
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i]
+      if (!img.base64 || !img.mimeType) {
+        Logger.error('generateWithGeminiOpenRouter: Invalid reference image', {
+          index: i,
+          hasBase64: !!img.base64,
+          hasMimeType: !!img.mimeType,
+          description: img.description?.substring(0, 100)
+        })
+        throw new Error(`Reference image at index ${i} is missing base64 or mimeType`)
+      }
     }
   }
 
-  // Build multimodal content: prompt first, then description + image pairs
+  // Build multimodal content: prompt first, then description + image pairs (if any)
   const content: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = [
     { type: 'text', text: prompt }
   ]
-  for (const image of images) {
-    if (image.description) {
-      content.push({ type: 'text', text: image.description })
-    }
-    content.push({
-      type: 'image_url',
-      image_url: {
-        url: `data:${image.mimeType};base64,${image.base64}`
+
+  // Add reference images if provided
+  if (images && images.length > 0) {
+    for (const image of images) {
+      if (image.description) {
+        content.push({ type: 'text', text: image.description })
       }
-    })
+      content.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:${image.mimeType};base64,${image.base64}`
+        }
+      })
+    }
   }
 
   const modelFromEnv = Env.string('OPENROUTER_GEMINI_IMAGE_MODEL', 'google/gemini-2.5-flash-image-preview')

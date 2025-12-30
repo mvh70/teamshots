@@ -3,6 +3,7 @@
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
 import type { ElementSummaryProps } from '../metadata'
 import type { ClothingColorSettings } from './types'
+import { getColorHex, getColorDisplay } from './types'
 
 function isHexColor(value?: string): boolean {
   if (!value) return false
@@ -21,40 +22,40 @@ export function ClothingColorsSummary({ settings }: ElementSummaryProps<Clothing
         <div className="ml-6 flex flex-wrap items-center gap-4">
           {colors.topLayer && (
             <div className="flex flex-col items-center gap-1">
-              {isHexColor(colors.topLayer) ? (
-                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: colors.topLayer }} />
+              {isHexColor(getColorHex(colors.topLayer)) ? (
+                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: getColorHex(colors.topLayer) }} />
               ) : (
-                <span className="text-gray-400 text-xs">{colors.topLayer}</span>
+                <span className="text-gray-400 text-xs">{getColorDisplay(colors.topLayer)}</span>
               )}
               <span className="text-xs font-medium text-gray-600">Top</span>
             </div>
           )}
           {colors.baseLayer && (
             <div className="flex flex-col items-center gap-1">
-              {isHexColor(colors.baseLayer) ? (
-                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: colors.baseLayer }} />
+              {isHexColor(getColorHex(colors.baseLayer)) ? (
+                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: getColorHex(colors.baseLayer) }} />
               ) : (
-                <span className="text-gray-400 text-xs">{colors.baseLayer}</span>
+                <span className="text-gray-400 text-xs">{getColorDisplay(colors.baseLayer)}</span>
               )}
               <span className="text-xs font-medium text-gray-600">Base</span>
             </div>
           )}
           {colors.bottom && (
             <div className="flex flex-col items-center gap-1">
-              {isHexColor(colors.bottom) ? (
-                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: colors.bottom }} />
+              {isHexColor(getColorHex(colors.bottom)) ? (
+                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: getColorHex(colors.bottom) }} />
               ) : (
-                <span className="text-gray-400 text-xs">{colors.bottom}</span>
+                <span className="text-gray-400 text-xs">{getColorDisplay(colors.bottom)}</span>
               )}
               <span className="text-xs font-medium text-gray-600">Bottom</span>
             </div>
           )}
           {("shoes" in (colors as Record<string, unknown>)) && colors.shoes && (
             <div className="flex flex-col items-center gap-1">
-              {isHexColor(colors.shoes) ? (
-                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: colors.shoes }} />
+              {isHexColor(getColorHex(colors.shoes)) ? (
+                <div className="w-10 h-10 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-shadow cursor-pointer ring-2 ring-transparent hover:ring-gray-200" style={{ backgroundColor: getColorHex(colors.shoes) }} />
               ) : (
-                <span className="text-gray-400 text-xs">{colors.shoes}</span>
+                <span className="text-gray-400 text-xs">{getColorDisplay(colors.shoes)}</span>
               )}
               <span className="text-xs font-medium text-gray-600">Shoes</span>
             </div>

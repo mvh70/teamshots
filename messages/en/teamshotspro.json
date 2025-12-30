@@ -1,0 +1,85 @@
+{
+  "landing": {
+    "teamshotspro": {
+      "hero": {
+        "titleLine1": "Professional headshots",
+        "titleLine2": "for your whole team",
+        "titleHighlightTime": "in 60 seconds",
+        "subtitle": "Set your brand style and generate professional headshots for every team member. Consistent quality across your entire company.",
+        "subtitleBold": "100% on-brand, 0% hassle.",
+        "subtitleMain": "Turn individual selfies into a unified team look. No photographer, no scheduling.",
+        "finalCtaTitle": "Ready to transform your team photos?",
+        "finalCtaSubtitle": "Get your team's professional headshots and see the difference in 60 seconds.",
+        "getStarted": "Get Started",
+        "cta": "See Your Team's New Look",
+        "ctaSubtext": "",
+        "ctaAria": "Start your team order with no commitment",
+        "noCreditCard": "Test with a fixed style for free, no credit card required",
+        "badge": "Professional team photos without the photoshoot hassle"
+      },
+      "gallery": {
+        "title": "From 'meh' selfies to LinkedIn-worthy headshots",
+        "subtitle": "See how we transform ordinary photos into professional headshots that actually impress clients and recruiters. No fancy camera or photographer required.",
+        "cta": "Make your team look like this today"
+      },
+      "trust": {
+        "title": "Why teams choose TeamShotsPro over everyone else",
+        "subtitle": "Built for serious B2B teams that need enterprise-grade photo management, not consumer gimmicks",
+        "badges": {
+          "teamCommandCenter": {
+            "title": "Team Command Center - Built for managers who hate chaos",
+            "description": "Central dashboard where you control everything: approve photos, invite team members with one click, track progress, and manage brand consistency across your entire organization. Unlike consumer tools, this was built specifically for teams."
+          },
+          "industryTemplates": {
+            "title": "Professional templates designed for your industry",
+            "description": "Pre-built style templates for tech startups, consulting firms, creative agencies, healthcare, finance, and more. Each template understands the professional standards for your industry - from conservative banking styles to creative agency vibes. Not generic filters."
+          },
+          "qualityControl": {
+            "title": "Quality guaranteed with automatic fixes",
+            "description": "Photos that fail our quality standards get regenerated automatically. Plus you get plan-based free retries to perfect your results. Unlike other services where you pay for every attempt, we handle quality issues automatically and give you free iterations to get exactly what you want."
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "Standardize your team's look without the logistical nightmare",
+        "subtitle": "You set an on-brand style once (e.g. background, logo), and you invite your team members. That's it. Your team members will get an invite and can generate their own photos, frictionless without registration. You see all the photos in the admin panel and select the best one.",
+        "totalTime": "Your setup time:",
+        "totalTimeValue": "2 minutes",
+        "cta": "Start My Team Order",
+        "guarantee": "Risk-free: Try it free with your team to see the quality. No credit card, no commitment.",
+        "steps": {
+          "1": {
+            "title": "Set Your Brand Identity",
+            "description": "Backgrounds, logo, clothing style. You decide what's fixed and what team members can change (e.g. expression, or clothing colors).",
+            "duration": "1 min"
+          },
+          "2": {
+            "title": "Invite Your Team",
+            "description": "Invite your team (bulk upload available). They'll get a magic link. No scheduling grids, no calendar Tetris. Follow progress in your dashboard.",
+            "duration": "30s"
+          },
+          "3": {
+            "title": "They Upload a Selfie",
+            "description": "Team members snap a quick selfie from their phone. We transform it into your brand style instantly.",
+            "duration": "2 min/person"
+          },
+          "4": {
+            "title": "Get Your Assets",
+            "description": "Review and download a unified gallery of professional headshots. Consistent, high-res, and ready for your website.",
+            "duration": "30s"
+          }
+        }
+      },
+      "faq": {
+        "title": "Frequently Asked Questions",
+        "subtitle": "Everything you need to know about TeamShotsPro"
+      },
+      "footer": {
+        "tagline": "Professional team photos in 60 seconds",
+        "copyright": "© 2025 TeamShotsPro. All rights reserved.",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service"
+      }
+    }
+  }
+}

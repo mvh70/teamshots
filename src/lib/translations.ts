@@ -1,5 +1,5 @@
-import enMessages from '../../messages/en.json'
-import esMessages from '../../messages/es.json'
+import enMessages from '../../messages/en/shared.json'
+import esMessages from '../../messages/es/shared.json'
 
 type Messages = typeof enMessages
 

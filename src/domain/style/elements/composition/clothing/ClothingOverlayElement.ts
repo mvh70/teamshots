@@ -28,6 +28,7 @@ import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { CostTrackingService } from '@/domain/services/CostTrackingService'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
+import { getColorHex, type ColorValue } from '../../clothing-colors/types'
 import type { S3Client } from '@aws-sdk/client-s3'
 import { getS3BucketName } from '@/lib/s3-client'
 import type { ClothingSettings, BrandingSettings } from '@/types/photo-style'
@@ -379,7 +380,7 @@ export class ClothingOverlayElement extends StyleElement {
     branding: BrandingSettings
     logoData: { base64: string; mimeType: string }
     generationId?: string
-    clothingColors?: { baseLayer?: string; topLayer?: string; bottom?: string; shoes?: string }
+    clothingColors?: { baseLayer?: string | ColorValue; topLayer?: string | ColorValue; bottom?: string | ColorValue; shoes?: string | ColorValue }
   }): Promise<
     | { success: true; data: { base64: string }; usage?: { inputTokens: number; outputTokens: number } }
     | { success: false; error: string; code?: string }
@@ -494,7 +495,7 @@ export class ClothingOverlayElement extends StyleElement {
     clothing: ClothingSettings,
     branding: BrandingSettings,
     shotType: string = 'medium-shot',
-    clothingColors?: { baseLayer?: string; topLayer?: string; bottom?: string; shoes?: string }
+    clothingColors?: { baseLayer?: string | ColorValue; topLayer?: string | ColorValue; bottom?: string | ColorValue; shoes?: string | ColorValue }
   ): string {
     // CRITICAL: Use the SAME wardrobe generation logic as ClothingElement
     // This ensures 100% consistency between overlay generation and regular person generation
@@ -824,13 +825,13 @@ FINAL VERIFICATION BEFORE OUTPUT:
     clothing: ClothingSettings,
     branding: BrandingSettings,
     logoAssetId?: string,
-    clothingColors?: { baseLayer?: string; topLayer?: string; bottom?: string; shoes?: string }
+    clothingColors?: { baseLayer?: string | ColorValue; topLayer?: string | ColorValue; bottom?: string | ColorValue; shoes?: string | ColorValue }
   ): string {
     const colors = clothingColors || {}
-    const baseColor = (colors.baseLayer || '#FFFFFF').toLowerCase()
-    const topColor = (colors.topLayer || '#000000').toLowerCase()
-    const bottomColor = (colors.bottom || 'neutral').toLowerCase()
-    const shoesColor = (colors.shoes || 'default').toLowerCase()
+    const baseColor = (getColorHex(colors.baseLayer) || '#FFFFFF').toLowerCase()
+    const topColor = (getColorHex(colors.topLayer) || '#000000').toLowerCase()
+    const bottomColor = (getColorHex(colors.bottom) || 'neutral').toLowerCase()
+    const shoesColor = (getColorHex(colors.shoes) || 'default').toLowerCase()
 
     const styleParams = {
       clothingStyle: clothing.style,
@@ -959,7 +960,7 @@ FINAL VERIFICATION BEFORE OUTPUT:
     logoAssetId?: string
     ownerContext: { teamId?: string; personId?: string }
     generationId?: string
-    clothingColors?: { baseLayer?: string; topLayer?: string; bottom?: string; shoes?: string }
+    clothingColors?: { baseLayer?: string | ColorValue; topLayer?: string | ColorValue; bottom?: string | ColorValue; shoes?: string | ColorValue }
   }): Promise<Asset> {
     const { s3Key, fingerprint, clothing, branding, logoAssetId, ownerContext, generationId, clothingColors } = params
 
@@ -968,10 +969,10 @@ FINAL VERIFICATION BEFORE OUTPUT:
       clothingStyle: clothing.style,
       clothingDetails: clothing.details || 'default',
       brandingPosition: branding.position,
-      baseLayerColor: colors.baseLayer || '#FFFFFF',
-      topLayerColor: colors.topLayer || '#000000',
-      bottomColor: colors.bottom || 'neutral',
-      shoesColor: colors.shoes || 'default',
+      baseLayerColor: getColorHex(colors.baseLayer) || '#FFFFFF',
+      topLayerColor: getColorHex(colors.topLayer) || '#000000',
+      bottomColor: getColorHex(colors.bottom) || 'neutral',
+      shoesColor: getColorHex(colors.shoes) || 'default',
       logoKey: branding.logoKey,
       step: 'clothing_overlay',
       generationId,

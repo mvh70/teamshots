@@ -55,7 +55,8 @@
     "logs:dev": "./scripts/view-worker-logs.sh dev",
     "logs:last": "./scripts/view-worker-logs.sh last",
     "logs:search": "./scripts/view-worker-logs.sh search",
-    "logs:clear": "./scripts/view-worker-logs.sh clear"
+    "logs:clear": "./scripts/view-worker-logs.sh clear",
+    "generate:clothing-previews": "tsx scripts/generate-clothing-previews.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.0",
@@ -94,6 +95,7 @@
     "posthog-js": "^1.280.1",
     "qrcode.react": "^4.2.0",
     "react": "19.2.3",
+    "react-colorful": "^5.6.1",
     "react-compare-image": "^3.5.10",
     "react-dom": "19.2.3",
     "react-email": "^4.3.0",
