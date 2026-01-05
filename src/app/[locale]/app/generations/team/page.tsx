@@ -257,11 +257,17 @@ export default function TeamGenerationsPage() {
     generated.map(g => g.contextName || 'Freestyle')
   ))
 
-  // Check if user has team credits
-  const hasTeamCredits = userCredits.team > 0
+  // Check if user has credits
+  // Free plan team admins have their credits stored as individual/personal credits
+  // (their free trial credits are not team credits)
+  // Paid team admins have team credits
+  const hasCredits = subscriptionPeriod === 'free'
+    ? userCredits.individual > 0
+    : userCredits.team > 0
 
-  // Show upsell window only if no team credits AND no existing generations
-  if (!creditsLoading && !hasTeamCredits && filteredGenerated.length === 0 && !loading) {
+  // Show upsell window only if no credits AND no existing generations
+  // Also wait for subscriptionPeriod to be known (to correctly determine credit source)
+  if (!creditsLoading && subscriptionPeriod !== null && !hasCredits && filteredGenerated.length === 0 && !loading) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

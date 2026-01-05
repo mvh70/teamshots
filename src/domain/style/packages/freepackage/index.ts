@@ -34,7 +34,8 @@ const AVAILABLE_POSES = [
   'power_cross',
   //'approachable_lean',
   'candid_over_shoulder',
-  'seated_engagement'
+  'seated_engagement',
+  'jacket_reveal'
 ]
 
 const AVAILABLE_EXPRESSIONS = [
