@@ -300,9 +300,13 @@ export async function POST(request: NextRequest) {
     const derivedGenerationType = deriveGenerationType(ownerPerson.teamId)
     const derivedCreditSource = deriveCreditSource(ownerPerson.teamId)
 
+    // Check if user is on free plan (free plan users use personal credits even if they have a team)
+    const isUserOnFreePlan = userContext.subscription?.period === 'free'
+
     // Validate that the determined credit source matches the derived one from person data
-    // This ensures consistency: if person is in a team, they must use team credits
-    if (derivedCreditSource !== enforcedCreditSource) {
+    // EXCEPTION: Free plan users can use individual credits even when they have a teamId
+    // Their free trial credits are stored as personal (teamId: null)
+    if (derivedCreditSource !== enforcedCreditSource && !isUserOnFreePlan) {
       Logger.error('Credit source mismatch', {
         userId: session.user.id,
         personTeamId: ownerPerson.teamId,
@@ -310,8 +314,8 @@ export async function POST(request: NextRequest) {
         enforcedCreditSource,
         reason: creditSourceInfo.reason
       })
-      return NextResponse.json({ 
-        error: 'Credit source mismatch. Person team membership does not match user role.' 
+      return NextResponse.json({
+        error: 'Credit source mismatch. Person team membership does not match user role.'
       }, { status: 400 })
     }
 
