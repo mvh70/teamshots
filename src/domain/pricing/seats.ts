@@ -157,6 +157,9 @@ export function getGraduatedBreakdown(seats: number): Array<{
  * 1. Team admin signed up on teamshotspro.com domain, AND
  * 2. Team has NOT been marked as legacy credits-only
  *
+ * Note: Teams on the team domain are always seats-based (even with 0 purchased seats).
+ * This ensures the UI shows the seats view and the admin's personal balance correctly.
+ *
  * @param teamId - The team ID to check
  * @returns true if team uses seats-based pricing
  */
@@ -181,12 +184,8 @@ export async function isSeatsBasedTeam(teamId: string): Promise<boolean> {
     return false
   }
 
-  // Free plans (totalSeats = 0) use credit-based model
-  if (team.totalSeats === 0) {
-    return false
-  }
-
   // Check if admin signed up on team domain
+  // Teams on team domain are always seats-based (even with 0 purchased seats)
   return team.admin.signupDomain === TEAM_DOMAIN
 }
 
@@ -227,12 +226,24 @@ export async function canAddTeamMember(
   }
 
   // Check if this is a seats-based team
-  // Free plans (totalSeats = 0) and legacy teams use credit-based model
-  const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN && team.totalSeats > 0
+  // Teams on team domain are seats-based (even with 0 purchased seats)
+  // Legacy teams stay on credit-based model
+  const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN
 
-  // Credit-based teams (legacy or free plans) have no seat limits
+  // Credit-based teams (legacy) have no seat limits
   if (!isSeatsModel) {
     return { canAdd: true }
+  }
+
+  // Free plan teams on team domain can still add members (they get 1 implicit seat for admin)
+  // But they must purchase seats to add non-admin members
+  if (team.totalSeats === 0) {
+    return {
+      canAdd: false,
+      reason: 'Please purchase seats to add team members.',
+      currentSeats: team.activeSeats,
+      totalSeats: team.totalSeats
+    }
   }
 
   // Seats-based teams: check seat availability
@@ -282,8 +293,10 @@ export async function getTeamSeatInfo(teamId: string): Promise<{
     return null
   }
 
-  // Free plans (totalSeats = 0) use credit-based model, not seats-based
-  const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN && team.totalSeats > 0
+  // Teams on team domain are seats-based (even with 0 purchased seats)
+  // This ensures the UI shows the seats view and the admin's personal balance correctly
+  // Legacy teams stay on credit-based model
+  const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN
 
   return {
     totalSeats: team.totalSeats,
