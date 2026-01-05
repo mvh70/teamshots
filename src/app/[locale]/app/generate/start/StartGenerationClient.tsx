@@ -280,13 +280,21 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const hasIndividualAccess = userCredits.individual > 0
   
   // Determine effective generation type
-  const effectiveGenerationType: 'personal' | 'team' = useMemo(() => 
-    generationType || 
-    (isTeamAdmin || isTeamMember || isProUser
-      ? 'team' 
-      : (hasIndividualAccess ? 'personal' : (hasTeamAccess && hasTeamCredits ? 'team' : 'personal'))),
-    [generationType, isTeamAdmin, isTeamMember, isProUser, hasIndividualAccess, hasTeamAccess, hasTeamCredits]
-  )
+  // IMPORTANT: Free plan users always use personal credits (even team admins)
+  // Their free trial credits are stored as personal (teamId: null)
+  const effectiveGenerationType: 'personal' | 'team' = useMemo(() => {
+    // If user explicitly selected a type, use that
+    if (generationType) return generationType
+
+    // Free plan users always use personal credits
+    if (isFreePlan) return 'personal'
+
+    // Team admins/members/pro users use team credits
+    if (isTeamAdmin || isTeamMember || isProUser) return 'team'
+
+    // Fallback logic for other users
+    return hasIndividualAccess ? 'personal' : (hasTeamAccess && hasTeamCredits ? 'team' : 'personal')
+  }, [generationType, isFreePlan, isTeamAdmin, isTeamMember, isProUser, hasIndividualAccess, hasTeamAccess, hasTeamCredits])
 
   const onTypeSelected = (type: 'personal' | 'team') => {
     setGenerationType(type)
