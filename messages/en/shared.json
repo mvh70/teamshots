@@ -594,6 +594,8 @@
         "startingGeneration": "Starting generation...",
         "customizeFirstTooltip": "Customize your photo with the editable sections below",
         "customizeFirstTooltipMobile": "Customize your photo with the editable sections above",
+        "customizeFieldsFirst": "Customize all highlighted fields to continue",
+        "generating": "Generating...",
         "buyMorePhotos": "Buy more photos",
         "insufficientCredits": "Insufficient photo credits",
         "insufficientCreditsMessage": "You need {required, plural, one {# photo credit} other {# photo credits}} to generate. You currently have {current, plural, one {# photo credit} other {# photo credits}}. Time to top up!",
@@ -1318,7 +1320,10 @@
         "photoCustomization": "Photo customization",
         "needMoreSelfies": "Add at least 2 selfies",
         "readyToCustomize": "Ready to customize"
-      }
+      },
+      "continueToCustomize": "Continue to customize",
+      "continuing": "Continuing...",
+      "selectMoreSelfies": "Select at least {count} selfies to continue"
     },
     "customize": {
       "title": "Customize your photo",
@@ -1622,6 +1627,7 @@
           "title": "First, take or upload your selfies",
           "body": "Great photos start with great selfies. Follow these tips to get the best results.",
           "skip": "Don't show again",
+          "continueButton": "Continue to selfie upload",
           "angles": {
             "title": "Mix up your angles. Include one from further away.",
             "desc": "Different positions help our AI understand your face better. Adding a selfie from further away, helps understand more of your body proportions, with better results."
@@ -1970,6 +1976,11 @@
         "title": "No team members yet",
         "subtitle": "Invite team members to start building your team"
       },
+      "noSeats": {
+        "title": "Get started with team seats",
+        "subtitle": "Purchase team seats to start inviting team members and generating professional headshots together.",
+        "button": "Buy team seats"
+      },
       "headers": {
         "member": "Team member",
         "selfies": "Selfies",
@@ -2030,6 +2041,11 @@
         "revoke": "Revoke",
         "revoking": "Revoking...",
         "addPhotos": "Add photos"
+      },
+      "noCredits": {
+        "title": "No team credits available",
+        "subtitle": "Add credits to your team account before inviting new team members.",
+        "button": "Buy credits"
       }
     },
     "addPhotosModal": {

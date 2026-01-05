@@ -189,6 +189,9 @@ export class CreditService {
    * Determine the correct credit source for a user
    * Pro users and invited team members ALWAYS use team credits
    * Individual users ALWAYS use personal credits
+   *
+   * EXCEPTION: Free plan team admins use personal credits (free trial)
+   * because their free trial credits are stored as personal (teamId: null)
    */
   static async determineCreditSource(userContext: Awaited<ReturnType<typeof UserService.getUserContext>>): Promise<{
     creditSource: 'individual' | 'team'
@@ -197,6 +200,16 @@ export class CreditService {
     reason: string
   }> {
     const { roles, subscription, teamId } = userContext
+
+    // Free plan users (period === 'free') always use personal credits
+    // This includes free plan team admins whose free trial credits are personal (teamId: null)
+    if (subscription?.period === 'free') {
+      return {
+        creditSource: 'individual',
+        generationType: 'personal',
+        reason: 'Free plan users use personal credits'
+      }
+    }
 
     // Pro users are team admins by definition and always use team credits
     // EXCEPTION: If they haven't created a team yet (deferred setup), they act as individuals

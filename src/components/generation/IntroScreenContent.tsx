@@ -236,8 +236,8 @@ export default function IntroScreenContent({
         </>
       )}
 
-      {/* Continue button for desktop variant */}
-      {variant === 'button' && (
+      {/* Continue button - always show at bottom */}
+      {onContinue && (
         <div className="pt-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 space-y-3">
           <button
             type="button"
@@ -246,29 +246,16 @@ export default function IntroScreenContent({
           >
             {continueButtonText}
           </button>
-          {/* Mobile-only skip link (desktop has it in header) */}
+          {/* Skip link below continue button */}
           {onSkip && (
             <button
               type="button"
               onClick={onSkip}
-              className="md:hidden block w-full text-center text-sm font-medium text-gray-500 hover:text-gray-700 underline underline-offset-4 transition-colors"
+              className="block w-full text-center text-sm font-medium text-gray-500 hover:text-gray-700 underline underline-offset-4 transition-colors"
             >
               {skipText}
             </button>
           )}
-        </div>
-      )}
-
-      {/* Skip link for swipe variant - mobile only (desktop has it in header) */}
-      {variant === 'swipe' && onSkip && (
-        <div className="md:hidden pt-4 text-center animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-          <button
-            type="button"
-            onClick={onSkip}
-            className="text-sm font-medium text-gray-500 hover:text-gray-700 underline underline-offset-4 transition-colors"
-          >
-            {skipText}
-          </button>
         </div>
       )}
     </div>

@@ -287,6 +287,27 @@ function SelfieSelectionPageContent() {
                   </p>
                 </div>
                 <SelectableGrid {...selectableGridProps} />
+
+                {/* Desktop Continue Button */}
+                <div className="pt-8 space-y-3">
+                  <button
+                    type="button"
+                    onClick={handleContinue}
+                    disabled={!canContinue || isNavigating}
+                    className={`w-full px-8 py-4 text-base font-semibold text-white rounded-xl shadow-lg transform transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                      canContinue && !isNavigating
+                        ? 'bg-gradient-to-r from-brand-primary via-brand-primary to-indigo-600 hover:shadow-2xl hover:from-brand-primary-hover hover:via-brand-primary-hover hover:to-indigo-700 hover:-translate-y-1 active:translate-y-0'
+                        : 'bg-gray-300 cursor-not-allowed'
+                    }`}
+                  >
+                    {isNavigating ? t('continuing', { default: 'Continuing...' }) : t('continueToCustomize', { default: 'Continue to customize' })}
+                  </button>
+                  {!canContinue && (
+                    <p className="text-center text-sm text-gray-500">
+                      {t('selectMoreSelfies', { default: 'Select at least {count} selfies to continue', count: MIN_SELFIES_REQUIRED })}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </>

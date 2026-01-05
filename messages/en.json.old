@@ -2070,6 +2070,11 @@
         "title": "No team members yet",
         "subtitle": "Invite team members to start building your team"
       },
+      "noSeats": {
+        "title": "Get started with team seats",
+        "subtitle": "Purchase team seats to start inviting team members and generating professional headshots together.",
+        "button": "Buy team seats"
+      },
       "headers": {
         "member": "Team member",
         "selfies": "Selfies",

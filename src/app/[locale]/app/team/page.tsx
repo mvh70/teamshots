@@ -1114,7 +1114,8 @@ export default function TeamPage() {
       {/* Team Members & Invites */}
       <div className="relative">
         {/* Admin Self-Assignment Button - Top right of table (outside overflow container) */}
-        {userRoles.isTeamAdmin && teamData?.seatInfo?.isSeatsModel && !loadingSelfAssignStatus && !hasSelfAssigned && !adminHasSeatInMembersList && (
+        {/* Only show when team has purchased seats (totalSeats > 0), not on free plan */}
+        {userRoles.isTeamAdmin && teamData?.seatInfo?.isSeatsModel && teamData?.seatInfo?.totalSeats > 0 && !loadingSelfAssignStatus && !hasSelfAssigned && !adminHasSeatInMembersList && (
           <div className="absolute -top-12 right-0 z-10">
             <div className="relative">
               <button
@@ -1200,7 +1201,27 @@ export default function TeamPage() {
         <div id="team-invites-table" className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
         {teamMembers.length === 0 && pendingInvites.length === 0 ? (
           <div className="p-12 text-center">
-            {credits.team === 0 ? (
+            {/* Seats-based teams with no seats: need to buy seats first */}
+            {teamData?.seatInfo?.isSeatsModel && teamData?.seatInfo?.totalSeats === 0 ? (
+              <>
+                <div className="w-16 h-16 bg-gradient-to-br from-brand-primary-light to-brand-primary-lighter rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm ring-2 ring-brand-primary/20">
+                  <svg className="h-8 w-8 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">{t('teamMembers.noSeats.title')}</h3>
+                <p className="text-gray-600 mb-6 text-base leading-relaxed max-w-md mx-auto">
+                  {t('teamMembers.noSeats.subtitle')}
+                </p>
+                <Link
+                  href="/app/upgrade"
+                  className="inline-block px-7 py-3.5 bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover transition-all text-center font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                >
+                  {t('teamMembers.noSeats.button')}
+                </Link>
+              </>
+            ) : credits.team === 0 && !teamData?.seatInfo?.isSeatsModel ? (
+              /* Legacy credit-based teams with no credits */
               <>
                 <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm ring-2 ring-red-100">
                   <svg className="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1219,6 +1240,7 @@ export default function TeamPage() {
                 </Link>
               </>
             ) : (
+              /* Default: has seats or credits, ready to invite */
               <>
                 <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm ring-2 ring-gray-100">
                   <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

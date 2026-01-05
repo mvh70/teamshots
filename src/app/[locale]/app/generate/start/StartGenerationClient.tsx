@@ -823,6 +823,37 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             />
           </div>
 
+          {/* Desktop Generate Button */}
+          <div className="hidden md:block pt-8 space-y-3">
+            {!hasEnoughCredits ? (
+              <Link
+                href={buyCreditsHrefWithReturn}
+                className="w-full inline-flex items-center justify-center px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-brand-primary via-brand-primary to-indigo-600 rounded-xl shadow-lg hover:shadow-2xl hover:from-brand-primary-hover hover:via-brand-primary-hover hover:to-indigo-700 transform hover:-translate-y-1 active:translate-y-0 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                {t('buyMoreCredits')}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={onProceed}
+                disabled={!canGenerate || isPending || isGenerating}
+                className={`w-full px-8 py-4 text-base font-semibold text-white rounded-xl shadow-lg transform transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                  canGenerate && !isPending && !isGenerating
+                    ? 'bg-gradient-to-r from-brand-primary via-brand-primary to-indigo-600 hover:shadow-2xl hover:from-brand-primary-hover hover:via-brand-primary-hover hover:to-indigo-700 hover:-translate-y-1 active:translate-y-0'
+                    : 'bg-gray-300 cursor-not-allowed'
+                }`}
+              >
+                {isGenerating || isPending ? t('generating', { default: 'Generating...' }) : t('generatePhoto')}
+              </button>
+            )}
+            {hasUneditedFields && (
+              <p className="text-center text-sm text-gray-500">
+                {t('customizeFieldsFirst', { default: 'Customize all highlighted fields to continue' })}
+              </p>
+            )}
+          </div>
+
           {/* Custom Prompt */}
           {activeContext?.customPrompt && (
             <div className="bg-white rounded-xl shadow-md border border-gray-200/60 p-6 sm:p-8 mt-8">

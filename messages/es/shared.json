@@ -599,6 +599,8 @@
         "startingGeneration": "Iniciando generación...",
         "customizeFirstTooltip": "Personaliza tu foto con las secciones editables a continuación",
         "customizeFirstTooltipMobile": "Personaliza tu foto con las secciones editables arriba",
+        "customizeFieldsFirst": "Personaliza todos los campos resaltados para continuar",
+        "generating": "Generando...",
         "buyMorePhotos": "Comprar más fotos",
         "insufficientCredits": "Créditos de foto insuficientes",
         "insufficientCreditsMessage": "Necesitas {required, plural, one {# crédito de foto} other {# créditos de foto}} para generar. Actualmente tienes {current, plural, one {# crédito de foto} other {# créditos de foto}}. ¡Es hora de recargar!",
@@ -1325,7 +1327,10 @@
         "photoCustomization": "Personalización de foto",
         "needMoreSelfies": "Agrega al menos 2 selfies",
         "readyToCustomize": "Listo para personalizar"
-      }
+      },
+      "continueToCustomize": "Continuar a personalizar",
+      "continuing": "Continuando...",
+      "selectMoreSelfies": "Selecciona al menos {count} selfies para continuar"
     },
     "customize": {
       "title": "Personaliza tu foto",
@@ -1631,6 +1636,7 @@
           "title": "Primero, toma o sube tus selfies",
           "body": "Las fotos geniales empiezan con buenas selfies. Sigue estos consejos para obtener los mejores resultados.",
           "skip": "No volver a mostrar",
+          "continueButton": "Continuar a subir selfies",
           "angles": {
             "title": "Varía los ángulos. Incluye una de más lejos.",
             "desc": "Diferentes posiciones ayudan a nuestra IA a entender mejor tu rostro. Agregar una selfie de más lejos ayuda a entender mejor tus proporciones corporales, con mejores resultados."
@@ -1978,6 +1984,11 @@
       "noMembers": {
         "title": "Aún no hay miembros del equipo",
         "subtitle": "Invita miembros del equipo para comenzar a construir tu equipo"
+      },
+      "noSeats": {
+        "title": "Comienza con asientos de equipo",
+        "subtitle": "Compra asientos de equipo para comenzar a invitar miembros y generar fotos profesionales juntos.",
+        "button": "Comprar asientos"
       },
       "headers": {
         "member": "Miembro del equipo",

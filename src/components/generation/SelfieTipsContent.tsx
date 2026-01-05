@@ -141,7 +141,7 @@ export default function SelfieTipsContent({
         }
       }}
       swipeHintText={tCommon('swipeHint', { default: 'Swipe or tap Next to continue' })}
-      continueButtonText="Continue"
+      continueButtonText={t('continueButton', { default: 'Continue to selfie upload' })}
       onContinue={onContinue}
       onSkip={onSkip}
       skipText={t('skip', { default: "Don't show again" })}
