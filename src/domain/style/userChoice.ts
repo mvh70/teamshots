@@ -225,3 +225,61 @@ export function areAllCustomizableSectionsCustomized(
   
   return true // All customizable sections are customized
 }
+
+/**
+ * Returns array of category keys that are still unedited (user-choice with no changes).
+ * Used by FlowProgressDock to show "Set: pose, colors, ..." status text.
+ *
+ * @param current - Current photo style settings
+ * @param original - Original context settings to compare against
+ * @param packageId - Package ID to determine visible categories
+ * @returns Array of category keys that need to be edited
+ */
+export function getUneditedEditableFieldNames(
+  current: Record<string, unknown>,
+  original: Record<string, unknown>,
+  packageId: string
+): string[] {
+  const pkg = getPackageConfig(packageId)
+  const visibleCategories = pkg.visibleCategories || []
+  const unedited: string[] = []
+
+  for (const categoryKey of visibleCategories) {
+    const currentSettings = current[categoryKey] as Record<string, unknown> | undefined
+    const originalSettings = original[categoryKey] as Record<string, unknown> | undefined
+
+    if (!currentSettings || !originalSettings) continue
+
+    // Check if this category is user-choice (editable)
+    const isUserChoice = categoryKey === 'clothing'
+      ? currentSettings.style === 'user-choice'
+      : currentSettings.type === 'user-choice'
+
+    if (!isUserChoice) continue // Skip non-editable (predefined) categories
+
+    // Special handling for clothingColors - check if any colors set
+    if (categoryKey === 'clothingColors') {
+      // Resolve colors with package defaults (same logic as PhotoStyleSettings)
+      const packageDefaults = pkg.defaultSettings?.clothingColors
+      const defaultColors = (packageDefaults as { colors?: Record<string, unknown> } | undefined)?.colors || {}
+      const currentColors = (currentSettings.colors as Record<string, unknown>) || {}
+
+      const resolvedColors = {
+        ...defaultColors,
+        ...currentColors
+      }
+
+      const hasColors = !!(resolvedColors.topLayer || resolvedColors.baseLayer || resolvedColors.bottom || resolvedColors.shoes)
+      if (!hasColors) {
+        unedited.push(categoryKey)
+      }
+    } else {
+      // For other categories, check if unchanged from original
+      if (JSON.stringify(currentSettings) === JSON.stringify(originalSettings)) {
+        unedited.push(categoryKey)
+      }
+    }
+  }
+
+  return unedited
+}

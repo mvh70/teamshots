@@ -12,6 +12,20 @@ let model: BlazeFaceModel | null = null
 let loadingPromise: Promise<BlazeFaceModel> | null = null
 
 /**
+ * Preload the face detection model in the background
+ * Call this early in the user flow (e.g., on the selfie tips page)
+ * to ensure the model is ready when the user reaches the selfie capture page
+ *
+ * This is a fire-and-forget operation - it starts loading but doesn't wait
+ */
+export function preloadFaceDetectionModel(): void {
+  // Fire-and-forget: start loading but don't wait
+  loadModel().catch(error => {
+    console.warn('[Face Detection] Preload failed (will retry on actual use):', error)
+  })
+}
+
+/**
  * Load the BlazeFace model (lazy-loaded, singleton pattern)
  * The model is loaded once and cached for subsequent calls
  */

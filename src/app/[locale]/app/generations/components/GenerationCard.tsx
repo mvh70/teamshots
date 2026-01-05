@@ -9,6 +9,7 @@ import { GenerationRating } from '@/components/feedback/GenerationRating'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { useGenerationStatus } from '../hooks/useGenerationStatus'
 import { DeleteConfirmationDialog } from '@/components/generation/DeleteConfirmationDialog'
+import { trackPhotoDownloaded, trackRegenerateClicked } from '@/lib/track'
 
 export type GenerationListItem = {
   id: string
@@ -297,14 +298,20 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
 
   const handleRegenerate = async () => {
     if (isRegenerating) return
-    
+
+    // Track regenerate click
+    trackRegenerateClicked({
+      generation_id: item.id,
+      reason: 'user_initiated'
+    })
+
     setIsRegenerating(true)
     try {
       // Use token-based API if token is provided, otherwise use session-based API
-      const apiUrl = token 
+      const apiUrl = token
         ? `/api/team/member/generations/regenerate?token=${encodeURIComponent(token)}`
         : '/api/generations/create'
-      
+
       const body = token
         ? JSON.stringify({ generationId: item.id })
         : JSON.stringify({
@@ -698,7 +705,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
               <span className="text-sm text-gray-500">Processing...</span>
             ) : (
               <>
-                <button 
+                <button
                   onClick={async () => {
                     if (!imageKey) return
                     try {
@@ -713,6 +720,12 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
                       link.click()
                       document.body.removeChild(link)
                       window.URL.revokeObjectURL(url)
+
+                      // Track successful download
+                      trackPhotoDownloaded({
+                        generation_id: item.id,
+                        format: 'png'
+                      })
                     } catch (error) {
                       console.error('Download failed:', error)
                       alert('Download failed. Please try again.')

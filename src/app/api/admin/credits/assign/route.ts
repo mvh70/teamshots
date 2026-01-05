@@ -53,19 +53,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine where to assign credits
+    // Credits belong to Person (business entity), not User (auth)
     let teamId: string | undefined = undefined
-    let personId: string | undefined = undefined
-    
+    const personId = targetUser.person?.id
+
+    if (!personId) {
+      return NextResponse.json({
+        error: 'User does not have a Person record. Cannot assign credits.'
+      }, { status: 400 })
+    }
+
     if (assignTo === 'team') {
       if (!targetUser.person?.teamId) {
-        return NextResponse.json({ 
-          error: 'User is not part of a team. Cannot assign team credits.' 
+        return NextResponse.json({
+          error: 'User is not part of a team. Cannot assign team credits.'
         }, { status: 400 })
       }
       teamId = targetUser.person.teamId
-    } else {
-      // Individual credits - assign to userId
-      personId = targetUser.person?.id
     }
 
     // Get plan tier and period for the transaction
@@ -73,13 +77,13 @@ export async function POST(request: NextRequest) {
     const planPeriod = targetUser.planPeriod || null
 
     // Create credit transaction
+    // Credits belong to Person (business entity), not User (auth)
     const transaction = await createCreditTransaction({
       credits,
       type: type as 'purchase' | 'refund',
       description: description || `Admin assigned ${credits} credits (${assignTo})`,
-      userId: assignTo === 'individual' ? userId : undefined, // Only set userId for individual credits
-      teamId: assignTo === 'team' ? teamId : undefined,
-      personId: personId
+      personId: personId, // Always use personId
+      teamId: assignTo === 'team' ? teamId : undefined
     })
 
     // Update planTier and planPeriod on the transaction if needed
@@ -104,11 +108,11 @@ export async function POST(request: NextRequest) {
       personId
     })
 
-    // Get updated balance
-    const { getUserCreditBalance, getEffectiveTeamCreditBalance } = await import('@/domain/credits/credits')
-    const individualBalance = await getUserCreditBalance(userId)
-    const teamBalance = targetUser.person?.teamId 
-      ? await getEffectiveTeamCreditBalance(userId, targetUser.person.teamId)
+    // Get updated balance - credits are stored under personId
+    const { getPersonCreditBalance, getTeamCreditBalance } = await import('@/domain/credits/credits')
+    const individualBalance = await getPersonCreditBalance(personId)
+    const teamBalance = targetUser.person?.teamId
+      ? await getTeamCreditBalance(targetUser.person.teamId)
       : 0
 
     return NextResponse.json({

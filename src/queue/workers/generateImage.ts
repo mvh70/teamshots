@@ -28,7 +28,7 @@ import type { AIModelId, AIProvider } from '@/config/ai-costs'
 import { AssetService } from '@/domain/services/AssetService'
 
 // Import shared utilities for V1 workflow improvements
-import { executeWithRateLimitRetry, createProgressRetryCallback, cleanupProgressTracker } from './generate-image/utils/retry-handler'
+import { executeWithRateLimitRetry, createProgressRetryCallback } from './generate-image/utils/retry-handler'
 
 import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/domain/style/elements/aspect-ratio/config'
 import type { AspectRatioId } from '@/domain/style/elements/aspect-ratio/config'
@@ -819,52 +819,41 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
           try {
             // Use creditSource from generation record (more reliable than job data)
             const genCreditSource = (generationRecord.creditSource as 'individual' | 'team') || creditSource
-            
-            // Match the same pattern used when reserving credits:
-            // For individual: personId = null, userId = userId
-            // For team: personId = personId, userId = null
-            const refundPersonId = genCreditSource === 'individual' ? null : personId
-            const refundUserId = genCreditSource === 'individual' ? (generationRecord.person.userId || userId || null) : null
-            
-            // Get teamId from person record (from generation)
-            const teamId = generationRecord.person.teamId || undefined
-            
-            Logger.debug('Refunding credits', { 
-              genCreditSource, 
-              refundPersonId, 
-              refundUserId, 
-              teamId,
-              creditsRefunded: generationRecord.creditsUsed,
-              personTeamId: generationRecord.person.teamId
+
+            // Get teamId from person record (for team credits)
+            const refundTeamId = genCreditSource === 'team' ? (generationRecord.person.teamId || undefined) : undefined
+
+            Logger.debug('Refunding credits', {
+              genCreditSource,
+              personId,
+              teamId: refundTeamId,
+              creditsRefunded: generationRecord.creditsUsed
             })
-            
-            // Credits are tracked per person, not per invite
+
+            // Credits are always refunded to personId (Person is the business entity)
             await refundCreditsForFailedGeneration(
-              refundPersonId,
-              refundUserId,
+              personId,
               generationRecord.creditsUsed, // Use actual credits used, not config value
               `Refund for failed generation ${generationId}`,
-              teamId
+              refundTeamId
             )
-            Logger.info(`Credits refunded for failed generation ${generationId}`, { 
-              personId: refundPersonId, 
-              userId: refundUserId, 
-              teamId, 
+            Logger.info(`Credits refunded for failed generation ${generationId}`, {
+              personId,
+              teamId: refundTeamId,
               creditsRefunded: generationRecord.creditsUsed,
-              creditSource: genCreditSource 
+              creditSource: genCreditSource
             })
           } catch (refundError) {
-            Logger.error(`Failed to refund credits for generation ${generationId}`, { 
+            Logger.error(`Failed to refund credits for generation ${generationId}`, {
               error: refundError instanceof Error ? refundError.message : String(refundError),
               personId,
-              userId,
               creditSource,
               creditsUsed: generationRecord.creditsUsed
             })
           }
         } else {
-          Logger.debug(`Skipping refund for regeneration ${generationId} (free)`, { 
-            creditsUsed: generationRecord?.creditsUsed 
+          Logger.debug(`Skipping refund for regeneration ${generationId} (free)`, {
+            creditsUsed: generationRecord?.creditsUsed
           })
         }
         
@@ -947,10 +936,6 @@ Error Details: ${JSON.stringify(errorDetails, null, 2)}`,
 // Worker event handlers
 imageGenerationWorker.on('completed', (job) => {
   Logger.info('Job completed successfully', { jobId: job.id })
-  // Clean up progress tracker to prevent memory leaks
-  if (job.id) {
-    cleanupProgressTracker(job.id)
-  }
 })
 
 imageGenerationWorker.on('failed', (job, error) => {
@@ -959,10 +944,6 @@ imageGenerationWorker.on('failed', (job, error) => {
     return
   }
   Logger.error('Job failed', { jobId: job.id, attempts: job.attemptsMade, error: error instanceof Error ? error.message : String(error) })
-  // Clean up progress tracker to prevent memory leaks
-  if (job.id) {
-    cleanupProgressTracker(job.id)
-  }
 })
 
 imageGenerationWorker.on('stalled', (jobId) => {

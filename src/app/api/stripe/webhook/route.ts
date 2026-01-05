@@ -10,6 +10,7 @@ import { generatePasswordSetupToken } from '@/domain/auth/password-setup';
 import { sendWelcomeAfterPurchaseEmail, sendOrderNotificationEmail } from '@/lib/email';
 import { getBaseUrl } from '@/lib/url';
 import { calculatePhotosFromCredits } from '@/domain/pricing/utils';
+import { recordPromoCodeUsage } from '@/domain/pricing/promo-codes';
 
 const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
   apiVersion: '2025-10-29.clover',
@@ -266,14 +267,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           },
         });
         
-        // For pro tiers, get teamId from person
+        // Get person record - Person is the business entity that owns credits
         const person = await tx.person.findUnique({ where: { userId: userId || '' } })
-        const teamId = (finalTier === 'pro') ? person?.teamId || null : null
-        
-        // Record credit transaction
+        if (!person) {
+          Logger.error('Person not found for plan purchase', { userId, sessionId: session.id })
+          throw new Error(`Person not found for userId: ${userId}`)
+        }
+        const teamId = (finalTier === 'pro') ? person.teamId || null : null
+
+        // Record credit transaction - credits belong to Person (business entity), not User (auth)
         await tx.creditTransaction.create({
           data: {
-            userId,
+            personId: person.id,
             teamId: teamId || undefined,
             credits: credits,
             type: 'purchase',
@@ -321,7 +326,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
       await prisma.$transaction(async (tx: PrismaTransactionClient) => {
         const person = await tx.person.findUnique({ where: { userId: userId || '' } })
-        const teamId = person?.teamId || null
+        if (!person) {
+          Logger.error('Person not found for top-up', { userId, sessionId: session.id })
+          throw new Error(`Person not found for userId: ${userId}`)
+        }
+        const teamId = person.teamId || null
 
         // Get user's current planPeriod for top-up transaction
         const user = await tx.user.findUnique({ where: { id: userId || '' }, select: { planPeriod: true } })
@@ -329,9 +338,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           ? user.planPeriod
           : (tier === 'vip' ? 'large' : 'small')
 
+        // Credits belong to Person (business entity), not User (auth)
         await tx.creditTransaction.create({
           data: {
-            userId,
+            personId: person.id,
             teamId: teamId || undefined,
             credits: credits,
             type: 'purchase',
@@ -380,7 +390,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
               adminId: userId || '',
               creditsPerSeat: PRICING_CONFIG.seats.creditsPerSeat,
               totalSeats: seats,
-              activeSeats: 1, // Admin occupies one seat
+              activeSeats: 0, // Admin must self-assign a seat via the team dashboard
               isLegacyCredits: false,
             }
           });
@@ -393,53 +403,21 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
           teamId = team.id;
           Logger.info('Created team for seats purchase', { userId, teamId: team.id, seats });
-
-          // Allocate credits to admin (same as invited members)
-          await tx.creditTransaction.create({
-            data: {
-              teamId: team.id,
-              personId: person!.id,
-              type: 'invite_allocated',
-              credits: PRICING_CONFIG.seats.creditsPerSeat,
-              description: 'Credits allocated to team admin',
-            }
-          });
-          Logger.info('Allocated credits to team admin', { userId, personId: person!.id, credits: PRICING_CONFIG.seats.creditsPerSeat });
+          // Note: Admin must explicitly self-assign a seat via /api/team/admin/assign-seat
         } else {
           // Add seats to existing team
           teamId = person.teamId;
-          const existingTeam = await tx.team.findUnique({
-            where: { id: teamId },
-            select: { activeSeats: true }
-          });
-          
-          // If admin doesn't have an active seat yet (activeSeats = 0), mark them as active
-          const shouldActivateAdmin = existingTeam && existingTeam.activeSeats === 0;
-          
+
           await tx.team.update({
             where: { id: teamId },
             data: {
               totalSeats: { increment: seats },
-              activeSeats: shouldActivateAdmin ? 1 : undefined,
               creditsPerSeat: PRICING_CONFIG.seats.creditsPerSeat,
               isLegacyCredits: false,
             }
           });
-          Logger.info('Added seats to existing team', { userId, teamId, seats, shouldActivateAdmin });
-          
-          // Allocate credits to admin if they don't have any yet
-          if (shouldActivateAdmin) {
-            await tx.creditTransaction.create({
-              data: {
-                teamId,
-                personId: person!.id,
-                type: 'invite_allocated',
-                credits: PRICING_CONFIG.seats.creditsPerSeat,
-                description: 'Credits allocated to team admin',
-              }
-            });
-            Logger.info('Allocated credits to team admin (add seats path)', { userId, personId: person!.id, credits: PRICING_CONFIG.seats.creditsPerSeat });
-          }
+          Logger.info('Added seats to existing team', { userId, teamId, seats });
+          // Note: Admin must explicitly self-assign a seat via /api/team/admin/assign-seat
         }
 
         // Update user to pro tier
@@ -454,11 +432,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         });
 
         // Record seat purchase as a credit transaction
+        // Credits belong to team (teamId), with personId for audit trail
         const totalCredits = seats * PRICING_CONFIG.seats.creditsPerSeat;
+        const adminPerson = await tx.person.findUnique({ where: { userId: userId || '' } })
         await tx.creditTransaction.create({
           data: {
             teamId,
-            userId,
+            personId: adminPerson?.id, // Track which person (admin) made the purchase
             type: 'seat_purchase',
             credits: totalCredits,
             amount: (session.amount_total || 0) / 100,
@@ -494,6 +474,45 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           }
         });
       });
+    }
+
+    // Track promo code usage if a promo code was used
+    const promoCodeId = session.metadata?.promoCodeId
+    const promoCodeUsed = session.metadata?.promoCode
+    if (promoCodeId && promoCodeUsed) {
+      try {
+        // Get discount amount from Stripe session
+        const discountAmount = session.total_details?.amount_discount
+          ? session.total_details.amount_discount / 100
+          : 0
+        const originalAmount = session.amount_total
+          ? (session.amount_total + (session.total_details?.amount_discount || 0)) / 100
+          : 0
+
+        await recordPromoCodeUsage({
+          promoCodeId,
+          userId: userId || undefined,
+          email: guestEmail || session.customer_details?.email || session.customer_email || undefined,
+          discountAmount,
+          originalAmount,
+          stripeSessionId: session.id,
+        })
+
+        Logger.info('Recorded promo code usage', {
+          promoCodeId,
+          promoCode: promoCodeUsed,
+          userId,
+          discountAmount,
+          sessionId: session.id,
+        })
+      } catch (promoError) {
+        // Don't fail the webhook if promo tracking fails
+        Logger.error('Failed to record promo code usage', {
+          error: promoError instanceof Error ? promoError.message : String(promoError),
+          promoCodeId,
+          sessionId: session.id,
+        })
+      }
     }
 
     // Send order notification to support
@@ -682,13 +701,19 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       credits = PRICING_CONFIG.individual.credits;
     }
     
-    // Add credits to user account
+    // Add credits to user account - credits belong to Person (business entity)
     await prisma.$transaction(async (tx: PrismaTransactionClient) => {
-      
+      const person = await tx.person.findUnique({ where: { userId: user.id } })
+      if (!person) {
+        Logger.error('Person not found for subscription renewal', { userId: user.id, invoiceId: invoice.id })
+        throw new Error(`Person not found for userId: ${user.id}`)
+      }
+
       // Record credit transaction for renewal credits
       await tx.creditTransaction.create({
         data: {
-          userId: user.id,
+          personId: person.id,
+          teamId: person.teamId || undefined,
           credits: credits,
           type: 'purchase',
           description: `Monthly credits - ${tierStr} subscription renewal`,
@@ -757,9 +782,12 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
 
     await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       const person = await tx.person.findUnique({ where: { userId: user.id } })
+      if (!person) {
+        Logger.error('Person not found for credit top-up invoice', { userId: user.id, invoiceId: invoice.id })
+        throw new Error(`Person not found for userId: ${user.id}`)
+      }
 
       // For pro tier, always allocate as team credits (even without a team)
-      // This allows pro users to use team features and credits get migrated when they create a team
       const shouldBeTeamCredits = finalTier === 'pro'
 
       // Get user's current planPeriod for top-up transaction
@@ -768,10 +796,11 @@ async function handleCreditTopUp(invoice: Stripe.Invoice) {
         ? userWithPeriod.planPeriod as PlanPeriod
         : (tierStr === 'vip' ? 'large' : 'small')
 
+      // Credits belong to Person (business entity), not User (auth)
       await tx.creditTransaction.create({
         data: {
-          userId: user.id,
-          teamId: shouldBeTeamCredits ? (person?.teamId || null) : null, // null for pro = unmigrated team credits
+          personId: person.id,
+          teamId: shouldBeTeamCredits ? (person.teamId || null) : null,
           credits: credits,
           type: 'purchase',
           description: `Credit top-up - ${tierStr} (${credits} credits)`,

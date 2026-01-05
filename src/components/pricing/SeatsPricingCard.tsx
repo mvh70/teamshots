@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { CheckoutButton } from '@/components/ui';
 import { PRICING_CONFIG } from '@/config/pricing';
+import PromoCodeInput, { type PromoCodeDiscount } from './PromoCodeInput';
 
 // Use graduated pricing from config
 const MIN_SEATS = PRICING_CONFIG.seats.minSeats;
@@ -49,6 +50,11 @@ export default function SeatsPricingCard({
   // For top-up mode, start with current seats + 1, otherwise use initialSeats
   const startingSeats = isTopUpMode ? Math.max(currentSeats + 1, initialSeats) : initialSeats;
   const [seats, setSeats] = useState(startingSeats);
+
+  // Promo code state
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+  const [promoDiscount, setPromoDiscount] = useState<PromoCodeDiscount | null>(null);
+  const [stripePromoCodeId, setStripePromoCodeId] = useState<string | undefined>(undefined);
   
   // Update seats when currentSeats changes (important for when API data loads)
   useEffect(() => {
@@ -59,6 +65,28 @@ export default function SeatsPricingCard({
       }
     }
   }, [currentSeats, isTopUpMode, seats, minSeats]);
+
+  // Clear promo code when seats change (price changes)
+  useEffect(() => {
+    if (appliedPromoCode) {
+      setAppliedPromoCode(null);
+      setPromoDiscount(null);
+      setStripePromoCodeId(undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seats]);
+
+  const handlePromoCodeApply = (code: string, discount: PromoCodeDiscount, promoCodeId?: string) => {
+    setAppliedPromoCode(code);
+    setPromoDiscount(discount);
+    setStripePromoCodeId(promoCodeId);
+  };
+
+  const handlePromoCodeClear = () => {
+    setAppliedPromoCode(null);
+    setPromoDiscount(null);
+    setStripePromoCodeId(undefined);
+  };
   
   // Calculate values - ensure seats never goes below minimum
   const validatedSeats = Math.max(seats, minSeats);
@@ -69,11 +97,10 @@ export default function SeatsPricingCard({
   const topUpTotal = isTopUpMode ? calculateTotal(validatedSeats) - calculateTotal(currentSeats) : total;
 
   // Calculate average price per seat for display (more accurate for graduated pricing)
-  const averagePricePerSeat = isTopUpMode && additionalSeats > 0
-    ? topUpTotal / additionalSeats
-    : validatedSeats > 0
-      ? total / validatedSeats
-      : 0;
+  // Use discounted price if promo code is applied
+  const effectiveTotal = promoDiscount ? promoDiscount.finalAmount : (isTopUpMode ? topUpTotal : total);
+  const seatsForAverage = isTopUpMode ? additionalSeats : validatedSeats;
+  const averagePricePerSeat = seatsForAverage > 0 ? effectiveTotal / seatsForAverage : 0;
 
   const savings = getSavings(validatedSeats);
   const totalPhotos = validatedSeats * (PRICING_CONFIG.seats.creditsPerSeat / PRICING_CONFIG.credits.perGeneration);
@@ -145,9 +172,27 @@ export default function SeatsPricingCard({
             Current: {currentSeats} {currentSeats === 1 ? 'seat' : 'seats'} → New total: {validatedSeats} {validatedSeats === 1 ? 'seat' : 'seats'}
           </div>
         )}
-        <div className="text-4xl font-bold text-gray-900 mb-2">
-          ${(isTopUpMode ? topUpTotal : total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </div>
+
+        {/* Price display with discount support */}
+        {promoDiscount ? (
+          <>
+            <div className="text-2xl text-gray-400 line-through mb-1">
+              ${(isTopUpMode ? topUpTotal : total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div className="text-4xl font-bold text-green-600 mb-2">
+              ${promoDiscount.finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div className="text-sm font-semibold text-green-600 mb-2">
+              You save ${promoDiscount.discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {promoDiscount.type === 'percentage' && ` (${promoDiscount.value}% off)`}
+            </div>
+          </>
+        ) : (
+          <div className="text-4xl font-bold text-gray-900 mb-2">
+            ${(isTopUpMode ? topUpTotal : total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        )}
+
         <div className="text-sm text-gray-600 mb-2">
           {isTopUpMode ? (
             <>Average ${averagePricePerSeat.toFixed(2)} per seat ({additionalSeats} {additionalSeats === 1 ? 'seat' : 'seats'})</>
@@ -155,13 +200,13 @@ export default function SeatsPricingCard({
             <>Average ${averagePricePerSeat.toFixed(2)} {t('seats.perSeat')}</>
           )}
         </div>
-        {savings > 0 && (
+        {savings > 0 && !promoDiscount && (
           <div className="text-sm font-semibold text-green-600">
             {t('seats.savings')}: ${savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         )}
         <div className="text-sm text-brand-primary font-semibold mt-2">
-          {isTopUpMode 
+          {isTopUpMode
             ? `+${(additionalSeats * (PRICING_CONFIG.seats.creditsPerSeat / PRICING_CONFIG.credits.perGeneration)).toLocaleString('en-US')} photos`
             : `${totalPhotos.toLocaleString('en-US')} photos in total`
           }
@@ -180,6 +225,18 @@ export default function SeatsPricingCard({
         ))}
       </ul>
 
+      {/* Promo Code Input */}
+      <PromoCodeInput
+        purchaseType="seats"
+        originalAmount={isTopUpMode ? topUpTotal : total}
+        seats={isTopUpMode ? additionalSeats : validatedSeats}
+        onApply={handlePromoCodeApply}
+        onClear={handlePromoCodeClear}
+        isApplied={!!appliedPromoCode}
+        appliedCode={appliedPromoCode || ''}
+        className="mb-4"
+      />
+
       {/* CTA Button */}
       <CheckoutButton
         type="seats"
@@ -193,6 +250,8 @@ export default function SeatsPricingCard({
           currentSeats: currentSeats?.toString() || '0',
         }}
         returnUrl={returnUrl}
+        promoCode={appliedPromoCode || undefined}
+        stripePromoCodeId={stripePromoCodeId}
         useBrandCtaColors
         className="w-full"
       >

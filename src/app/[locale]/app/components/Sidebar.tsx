@@ -145,9 +145,11 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
   }, [])
   /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
-  // On mobile, always use collapsed styling (icons-only), but respect collapsed prop for visibility
-  // On desktop, use collapsed prop for both visibility and styling
-  const effectiveCollapsed = isMobile ? true : collapsed
+  // Mobile drawer pattern: when sidebar is open (collapsed=false), show full content
+  // Desktop: collapsed prop controls both visibility and styling
+  // On mobile when hidden (collapsed=true), sidebar is off-screen
+  // FIXED: Previously always used collapsed mode on mobile, now respects open state
+  const effectiveCollapsed = collapsed
 
   // Initialize subscription data from props if available
   useEffect(() => {
@@ -537,13 +539,14 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
 
   return (
     <div className={`fixed inset-y-0 left-0 z-[120] bg-white border-r border-gray-200/80 transition-all duration-300 transform shadow-[2px_0_8px_0_rgb(0_0_0_/0.04),0_1px_2px_0_rgb(0_0_0_/0.02)] ${
-      // Width: always collapsed (w-20) on mobile, respect effectiveCollapsed on desktop
-      (isMobile ? 'w-20' : (effectiveCollapsed ? 'w-20' : 'w-64')) + ' ' + 
+      // Width: w-72 on mobile when open (drawer), w-64 on desktop when expanded, w-20 when collapsed
+      (isMobile ? (collapsed ? 'w-20' : 'w-72') : (effectiveCollapsed ? 'w-20' : 'w-64')) + ' ' +
       // Visibility: use collapsed prop (when false, sidebar is visible)
-      (collapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0') + ' ' + 
-      (effectiveCollapsed ? 'overflow-visible' : '')
+      (collapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0') + ' ' +
+      // Overflow: only visible on desktop collapsed mode (for tooltips), hidden on mobile to prevent content bleeding
+      (!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-hidden')
     }`}>
-      <div className={`flex flex-col h-dvh max-h-screen ${effectiveCollapsed ? 'overflow-visible' : 'overflow-hidden'}`}>
+      <div className={`flex flex-col h-dvh max-h-screen ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-hidden'}`}>
         {/* Top Section - Header and Primary Action */}
         <div className="flex-shrink-0">
           {/* Header */}
@@ -611,7 +614,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
         </div>
 
         {/* Navigation - Takes up available space */}
-        <nav className={`flex-1 px-4 py-3 space-y-1.5 min-h-0 bg-white ${effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto overflow-x-visible'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
+        <nav className={`flex-1 px-4 py-3 space-y-1.5 min-h-0 bg-white ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
           {!effectiveCollapsed ? (
             <div className="h-full overflow-x-visible">
               {!navReady ? null : navigation.map((item) => {
@@ -670,7 +673,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
         </nav>
 
         {/* Bottom Section - Credits and User Profile (Fixed at bottom) */}
-        <div className={`flex-shrink-0 bg-gradient-to-t from-white via-gray-50/40 to-white border-t border-gray-200/60 backdrop-blur-sm ${effectiveCollapsed ? 'overflow-visible' : ''}`}>
+        <div className={`flex-shrink-0 bg-gradient-to-t from-white via-gray-50/40 to-white border-t border-gray-200/60 backdrop-blur-sm ${!isMobile && effectiveCollapsed ? 'overflow-visible' : ''}`}>
           {/* Credits Section */}
           {session?.user && (
             <div className="px-4 py-3 border-t border-gray-200/60">
@@ -824,12 +827,16 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                     className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs md:text-xs font-semibold text-white rounded-lg transition-all duration-200 bg-gradient-to-r from-brand-cta to-brand-cta-hover hover:from-brand-cta-hover hover:to-brand-cta shadow-md shadow-brand-cta/20 hover:shadow-lg hover:shadow-brand-cta/30 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2 min-h-[44px] md:min-h-0"
                   >
                     <PlusIcon className="h-4 w-4 md:h-3 md:w-3 mr-1 transition-transform duration-200 group-hover:rotate-90" />
-                    {seatInfo?.isSeatsModel && seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : planTier === 'free' ? t('photos.upgradeToPaid') : (accountMode === 'pro' || seatInfo?.isSeatsModel ? t('photos.buyMoreSeats') : t('photos.buyMore'))}
+                    {seatInfo?.isSeatsModel
+                      ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
+                      : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
                   </Link>
                 )}
                 {effectiveCollapsed && (
                   <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
-                    {seatInfo?.isSeatsModel && seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : planTier === 'free' ? t('photos.upgradeToPaid') : (accountMode === 'pro' || seatInfo?.isSeatsModel ? t('photos.buyMoreSeats') : t('photos.buyMore'))}
+                    {seatInfo?.isSeatsModel
+                      ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
+                      : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
                   </span>
                 )}
               </div>

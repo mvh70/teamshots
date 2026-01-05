@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
-import { 
+import {
   ChartBarIcon,
   ChatBubbleLeftRightIcon,
   PaintBrushIcon,
@@ -13,7 +13,8 @@ import {
   CreditCardIcon,
   UserGroupIcon,
   CheckIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  TagIcon,
 } from '@heroicons/react/24/outline'
 import FreePackageStyleAdminPanel from '../settings/FreePackageStyleAdminPanel'
 import UserManagement from '@/components/admin/UserManagement'
@@ -400,7 +401,7 @@ export default function AdminPage() {
             </div>
           </Link>
 
-          <Link 
+          <Link
             href="/app/admin/feedback"
             className="flex items-center gap-4 p-5 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-brand-primary/30 transition-all group"
           >
@@ -410,6 +411,19 @@ export default function AdminPage() {
             <div>
               <h3 className="font-semibold text-gray-900 group-hover:text-brand-primary transition-colors">{t('quickAccess.feedback')}</h3>
               <p className="text-sm text-gray-500">{t('quickAccess.feedbackDesc')}</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/app/admin/promo-codes"
+            className="flex items-center gap-4 p-5 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-green-500/30 transition-all group"
+          >
+            <div className="p-3 bg-green-100 rounded-xl group-hover:bg-green-200 transition-colors">
+              <TagIcon className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 group-hover:text-green-600 transition-colors">Promo Codes</h3>
+              <p className="text-sm text-gray-500">Create and manage discount codes</p>
             </div>
           </Link>
         </div>

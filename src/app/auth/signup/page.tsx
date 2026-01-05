@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn, getSession } from 'next-auth/react'
 import {useTranslations, useLocale} from 'next-intl'
@@ -13,6 +13,7 @@ import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
 import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
+import { trackSignupStarted, trackSignupCompleted } from '@/lib/track'
 
 export default function SignUpPage() {
   const t = useTranslations('auth.signup')
@@ -65,6 +66,11 @@ export default function SignUpPage() {
   const passwordMeetsRequirements = formData.password.length >= 6
   const passwordsMatch = formData.password === formData.confirmPassword
   const confirmPasswordTouched = formData.confirmPassword.length > 0
+
+  // Track signup page view
+  useEffect(() => {
+    trackSignupStarted('email')
+  }, [])
 
   const handleSendOTP = async () => {
     setIsLoading(true)
@@ -133,6 +139,11 @@ export default function SignUpPage() {
         } else {
           // Fetch all initial data in one consolidated call
           const session = await getSession()
+
+          // Track signup completed
+          if (session?.user?.id) {
+            trackSignupCompleted(session.user.id, 'email')
+          }
           if (session?.user) {
             try {
               const response = await fetch('/api/user/initial-data')

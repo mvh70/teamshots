@@ -15,6 +15,7 @@ import FreePlanBanner from '@/components/styles/FreePlanBanner'
 import { usePlanInfo } from '@/hooks/usePlanInfo'
 import { ErrorCard, Grid } from '@/components/ui'
 import { Sparkles, Users, Camera, Image, XCircle, Info } from 'lucide-react'
+import { trackTeamMemberInvited } from '@/lib/track'
 
 interface TeamInvite {
   id: string
@@ -68,7 +69,7 @@ interface TeamMember {
 export default function TeamPage() {
   const { data: session } = useSession()
   const t = useTranslations('team')
-  const { credits } = useCredits()
+  const { credits, refetch: refetchCredits } = useCredits()
   const { isFreePlan, tier, period } = usePlanInfo()
   
   // Get regeneration count for invited users (same as team admin's plan)
@@ -112,6 +113,13 @@ export default function TeamPage() {
   const [addPhotosValue, setAddPhotosValue] = useState('1')
   const [addingPhotos, setAddingPhotos] = useState(false)
   const [addPhotosError, setAddPhotosError] = useState<string | null>(null)
+
+  // Admin self-assignment state
+  const [hasSelfAssigned, setHasSelfAssigned] = useState(false)
+  const [selfAssigning, setSelfAssigning] = useState(false)
+  const [selfAssignError, setSelfAssignError] = useState<string | null>(null)
+  const [loadingSelfAssignStatus, setLoadingSelfAssignStatus] = useState(false)
+  const [showSelfAssignPopover, setShowSelfAssignPopover] = useState(false)
 
   // Check if email is already part of the team
   const checkEmailInTeam = useCallback(async (email: string) => {
@@ -553,6 +561,12 @@ export default function TeamPage() {
       const data = await response.json()
 
       if (response.ok) {
+        // Track successful invite
+        trackTeamMemberInvited({
+          team_id: data.invite?.id,
+          invite_method: 'email'
+        })
+
         await fetchTeamData()
         setShowInviteForm(false)
         setError(null)
@@ -758,6 +772,56 @@ export default function TeamPage() {
     }
   }
 
+  const handleSelfAssignSeat = async () => {
+    setSelfAssigning(true)
+    setSelfAssignError(null)
+
+    try {
+      const response = await fetch('/api/team/admin/assign-seat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setHasSelfAssigned(true)
+        setShowSelfAssignPopover(false) // Close the popover
+        await fetchTeamData()
+        await refetchCredits() // Refresh credit balance
+        setSuccessMessage(t('selfAssignment.success', { default: 'Successfully assigned seat to yourself! You now have 10 additional photos.' }))
+        setSelfAssignError(null)
+      } else {
+        setSelfAssignError(data.error || 'Failed to assign seat')
+      }
+    } catch {
+      setSelfAssignError('Failed to assign seat to yourself')
+    } finally {
+      setSelfAssigning(false)
+    }
+  }
+
+  // Check self-assignment status on mount
+  useEffect(() => {
+    const checkSelfAssignmentStatus = async () => {
+      if (!userRoles.isTeamAdmin || !teamData?.seatInfo?.isSeatsModel) {
+        return
+      }
+
+      setLoadingSelfAssignStatus(true)
+      try {
+        const data = await jsonFetcher<{ hasSelfAssigned: boolean; isSeatsBasedTeam: boolean }>('/api/team/admin/assign-seat')
+        setHasSelfAssigned(data.hasSelfAssigned)
+      } catch (err) {
+        console.error('Failed to check self-assignment status:', err)
+      } finally {
+        setLoadingSelfAssignStatus(false)
+      }
+    }
+
+    void checkSelfAssignmentStatus()
+  }, [userRoles.isTeamAdmin, teamData?.seatInfo?.isSeatsModel])
+
   // Removed unused formatInviteDate to satisfy linter
 
   const isExpired = (expiresAt: string) => {
@@ -768,16 +832,21 @@ export default function TeamPage() {
   const { activeMembers, revokedMembers } = useMemo(() => {
     const active = teamMembers.filter(m => !m.isRevoked)
     const revoked = teamMembers.filter(m => m.isRevoked)
-    
+
     // Sort active members: admins first, then non-admins
     const sortedActive = active.sort((a, b) => {
       if (a.isAdmin && !b.isAdmin) return -1
       if (!a.isAdmin && b.isAdmin) return 1
       return 0
     })
-    
+
     return { activeMembers: sortedActive, revokedMembers: revoked }
   }, [teamMembers])
+
+  // Check if admin is already in the active members list (has a seat)
+  const adminHasSeatInMembersList = useMemo(() => {
+    return activeMembers.some(m => m.isCurrentUser && m.isAdmin)
+  }, [activeMembers])
   
   // Filter out invites that are already active team members
   // An invite should only show as "pending" if:
@@ -1043,7 +1112,92 @@ export default function TeamPage() {
       )}
 
       {/* Team Members & Invites */}
-      <div id="team-invites-table" className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
+      <div className="relative">
+        {/* Admin Self-Assignment Button - Top right of table (outside overflow container) */}
+        {userRoles.isTeamAdmin && teamData?.seatInfo?.isSeatsModel && !loadingSelfAssignStatus && !hasSelfAssigned && !adminHasSeatInMembersList && (
+          <div className="absolute -top-12 right-0 z-10">
+            <div className="relative">
+              <button
+                onClick={() => setShowSelfAssignPopover(!showSelfAssignPopover)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand-cta text-white rounded-lg hover:bg-brand-cta-hover text-sm font-semibold transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-cta shadow-md"
+              >
+                <Sparkles className="h-4 w-4" />
+                {t('selfAssignment.buttonShort')}
+              </button>
+
+              {/* Popover */}
+              {showSelfAssignPopover && (
+                <>
+                  {/* Backdrop to close popover */}
+                  <div
+                    className="fixed inset-0"
+                    style={{ zIndex: 9998 }}
+                    onClick={() => setShowSelfAssignPopover(false)}
+                  />
+                  <div
+                    className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl border border-gray-200 shadow-xl p-4"
+                    style={{ zIndex: 9999 }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="flex-shrink-0 w-10 h-10 bg-brand-cta rounded-lg flex items-center justify-center shadow-md">
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-brand-cta font-bold text-base mb-1">
+                          {t('selfAssignment.title')}
+                        </h3>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-sm mb-4 leading-relaxed">
+                      {t('selfAssignment.message')}
+                    </p>
+                    {selfAssignError && (
+                      <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-700">{selfAssignError}</p>
+                      </div>
+                    )}
+                    {teamData.seatInfo.availableSeats > 0 ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleSelfAssignSeat()
+                        }}
+                        disabled={selfAssigning}
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-cta text-white rounded-lg hover:bg-brand-cta-hover text-sm font-semibold transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-cta shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {selfAssigning ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            {t('selfAssignment.assigning')}
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4" />
+                            {t('selfAssignment.button')}
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="p-2.5 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          <Info className="h-4 w-4 inline mr-1" />
+                          {t('selfAssignment.noSeatsAvailable')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        <div id="team-invites-table" className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
         {teamMembers.length === 0 && pendingInvites.length === 0 ? (
           <div className="p-12 text-center">
             {credits.team === 0 ? (
@@ -1201,7 +1355,8 @@ export default function TeamPage() {
                           <span className="text-base font-bold text-gray-900">
                             {calculatePhotosFromCredits(memberInvite.creditsRemaining)}
                           </span>
-                          {userRoles.isTeamAdmin && !memberInvite.isRevoked && (
+                          {/* Hide add photos button for seats-based teams */}
+                          {userRoles.isTeamAdmin && !memberInvite.isRevoked && !teamData?.seatInfo?.isSeatsModel && (
                             <button
                               onClick={() => {
                                 setAddPhotosInvite(memberInvite)
@@ -1618,7 +1773,8 @@ export default function TeamPage() {
                               : calculatePhotosFromCredits(memberInvite?.creditsRemaining ?? 0)
                             }
                           </p>
-                          {!member.isAdmin && memberInvite && userRoles.isTeamAdmin && !memberInvite.isRevoked && (
+                          {/* Hide add photos button for seats-based teams */}
+                          {!member.isAdmin && memberInvite && userRoles.isTeamAdmin && !memberInvite.isRevoked && !teamData?.seatInfo?.isSeatsModel && (
                             <button
                               onClick={() => {
                                 setAddPhotosInvite(memberInvite)
@@ -1903,7 +2059,55 @@ export default function TeamPage() {
               </div>
             </>
           )}
+        </div>
       </div>
+
+      {/* Invite Team Member Button - Below table */}
+      {/* Show for: admins with active context, free plan, OR seats-based teams (need to set up style to use) */}
+      {userRoles.isTeamAdmin && (teamData?.activeContext || isFreePlan || teamData?.seatInfo?.isSeatsModel) && (
+        <div className="flex justify-center mt-6">
+          {isFreePlan ? (
+            <button
+              disabled
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold rounded-xl shadow-md bg-gray-100 text-gray-400 cursor-not-allowed"
+            >
+              <PlusIcon className="h-5 w-5" />
+              {t('buttons.upgradeToInvite')}
+            </button>
+          ) : !teamData?.activeContext && teamData?.seatInfo?.isSeatsModel ? (
+            // Seats-based team without photo style - prompt to set up first
+            <Link
+              href="/app/styles/team/create"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+            >
+              <PlusIcon className="h-5 w-5" />
+              {t('setupRequired.createButton')}
+            </Link>
+          ) : credits.team === 0 ? (
+            <Link
+              href="/app/top-up"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 bg-gradient-to-r from-brand-cta to-brand-cta-hover hover:from-brand-cta-hover hover:to-indigo-600"
+            >
+              <PlusIcon className="h-5 w-5" />
+              {t('buttons.buyCredits')}
+            </Link>
+          ) : (
+            <button
+              onClick={() => {
+                setInviteError(null)
+                setError(null)
+                setEmailValue('')
+                setFirstNameValue('')
+                setShowInviteForm(true)
+              }}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-secondary hover:bg-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
+            >
+              <PlusIcon className="h-5 w-5" />
+              {t('buttons.inviteTeamMember')}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Invite Form Modal */}
       {showInviteForm && (
@@ -2200,8 +2404,8 @@ export default function TeamPage() {
         </div>
       )}
 
-      {/* Floating Invite Button - Only show when team admin has active context (or is on free plan) */}
-      {userRoles.isTeamAdmin && (teamData?.activeContext || isFreePlan) && (
+      {/* Floating Invite Button - Show for admins with active context, free plan, OR seats-based teams */}
+      {userRoles.isTeamAdmin && (teamData?.activeContext || isFreePlan || teamData?.seatInfo?.isSeatsModel) && (
         <>
           {/* Desktop - Top Right Floating Button */}
           <div className="hidden md:flex fixed top-20 right-8 z-[100] pointer-events-auto">
@@ -2213,11 +2417,20 @@ export default function TeamPage() {
                 <PlusIcon className="h-5 w-5" />
                 {t('buttons.upgradeToInvite')}
               </button>
+            ) : !teamData?.activeContext && teamData?.seatInfo?.isSeatsModel ? (
+              // Seats-based team without photo style - prompt to set up first
+              <Link
+                href="/app/styles/team/create"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+              >
+                <PlusIcon className="h-5 w-5" />
+                {t('setupRequired.createButton')}
+              </Link>
             ) : credits.team === 0 ? (
               <Link
                 href="/app/top-up"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
-                style={{ 
+                style={{
                   background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
                 }}
                 onMouseEnter={(e) => {
@@ -2258,11 +2471,20 @@ export default function TeamPage() {
                 <PlusIcon className="h-5 w-5" />
                 {t('buttons.upgradeToInvite')}
               </button>
+            ) : !teamData?.activeContext && teamData?.seatInfo?.isSeatsModel ? (
+              // Seats-based team without photo style - prompt to set up first
+              <Link
+                href="/app/styles/team/create"
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-primary hover:bg-brand-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+              >
+                <PlusIcon className="h-5 w-5" />
+                {t('setupRequired.createButton')}
+              </Link>
             ) : credits.team === 0 ? (
               <Link
                 href="/app/top-up"
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
-                style={{ 
+                style={{
                   background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
                 }}
                 onMouseEnter={(e) => {

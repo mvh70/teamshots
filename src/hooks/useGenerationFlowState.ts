@@ -44,6 +44,9 @@ function readVisitedSteps(): number[] {
   return []
 }
 
+// Custom event name for notifying other hook instances
+const VISITED_STEPS_CHANGED_EVENT = 'visitedStepsChanged'
+
 function writeVisitedSteps(steps: number[]): void {
   if (typeof window === 'undefined') return
   if (steps.length > 0) {
@@ -51,6 +54,8 @@ function writeVisitedSteps(steps: number[]): void {
   } else {
     sessionStorage.removeItem(VISITED_STEPS_KEY)
   }
+  // Dispatch custom event to notify other hook instances in the same page
+  window.dispatchEvent(new CustomEvent(VISITED_STEPS_CHANGED_EVENT))
 }
 
 function readCustomizationMeta(): CustomizationStepsMeta | null {
@@ -111,12 +116,24 @@ function writeIntroFlag(key: IntroSeenKey, value: boolean): void {
   }
 }
 
+// Helper to get initial state synchronously (for SSR-safe initialization)
+function getInitialVisitedSteps(): number[] {
+  if (typeof window === 'undefined') return []
+  return readVisitedSteps()
+}
+
+function getInitialCustomizationMeta(): CustomizationStepsMeta | null {
+  if (typeof window === 'undefined') return null
+  return readCustomizationMeta()
+}
+
 export function useGenerationFlowState() {
+  // Initialize state directly from sessionStorage to avoid flash of empty state
   const [flags, setFlags] = useState<GenerationFlowFlags>(DEFAULT_FLAGS)
   const [introFlags, setIntroFlags] = useState<IntroSeenFlags>(DEFAULT_INTRO_FLAGS)
   const [hydrated, setHydrated] = useState(false)
-  const [customizationStepsMeta, setCustomizationStepsMetaState] = useState<CustomizationStepsMeta | null>(null)
-  const [visitedSteps, setVisitedStepsState] = useState<number[]>([])
+  const [customizationStepsMeta, setCustomizationStepsMetaState] = useState<CustomizationStepsMeta | null>(getInitialCustomizationMeta)
+  const [visitedSteps, setVisitedStepsState] = useState<number[]>(getInitialVisitedSteps)
 
   const refreshFlags = useCallback(() => {
     if (typeof window === 'undefined') return DEFAULT_FLAGS
@@ -142,6 +159,14 @@ export function useGenerationFlowState() {
     setCustomizationStepsMetaState(readCustomizationMeta())
     setVisitedStepsState(readVisitedSteps())
     setHydrated(true)
+
+    // Listen for custom events to sync state across hook instances in the same page
+    const handleVisitedStepsChange = () => {
+      setVisitedStepsState(readVisitedSteps())
+    }
+
+    window.addEventListener(VISITED_STEPS_CHANGED_EVENT, handleVisitedStepsChange)
+    return () => window.removeEventListener(VISITED_STEPS_CHANGED_EVENT, handleVisitedStepsChange)
   }, [refreshFlags, refreshIntroFlags])
 
   const markInFlow = useCallback(

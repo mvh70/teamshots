@@ -167,6 +167,8 @@ export function CheckoutButton({
   returnUrl,
   onError,
   unauth = false,
+  promoCode,
+  stripePromoCodeId,
   ...props
 }: Omit<ButtonProps, 'variant' | 'type'> & {
   type?: 'subscription' | 'top_up' | 'plan' | 'seats'
@@ -177,6 +179,10 @@ export function CheckoutButton({
   onError?: (message: string) => void
   /** If true, allows guest checkout without requiring authentication */
   unauth?: boolean
+  /** Promo code to apply at checkout */
+  promoCode?: string
+  /** Stripe promo code ID for direct application */
+  stripePromoCodeId?: string
 }) {
   const {
     onClick,
@@ -205,7 +211,9 @@ export function CheckoutButton({
           quantity,
           metadata,
           returnUrl: returnUrl || (typeof window !== 'undefined' ? window.location.href : undefined),
-          unauth
+          unauth,
+          promoCode,
+          stripePromoCodeId
         })
       })
       const data = (await res.json()) as { checkoutUrl?: string; error?: string }

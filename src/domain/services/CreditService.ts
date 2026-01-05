@@ -1,10 +1,13 @@
-import { reserveCreditsForGeneration, getUserCreditBalance, getEffectiveTeamCreditBalance, getPersonCreditBalance } from '@/domain/credits/credits'
+import { reserveCreditsForGeneration, getPersonCreditBalance, getTeamCreditBalance } from '@/domain/credits/credits'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { UserService } from './UserService'
 
 /**
  * Consolidated credit management service
  * Centralizes all credit validation, calculation, and reservation logic
+ *
+ * Note: Credits are stored under personId (Person is the business entity).
+ * User is for authentication only. Team credits are stored under teamId.
  */
 export class CreditService {
   /**
@@ -25,12 +28,14 @@ export class CreditService {
   }> {
     // OPTIMIZATION: Use provided userContext to avoid redundant queries
     const context = userContext || await UserService.getUserRoles(userId)
+    const personId = context.user.person?.id || null
     const teamId = userContext?.teamId || context.user.person?.teamId || null
 
     // OPTIMIZATION: Fetch both balances in parallel
+    // Credits are stored under personId (Person is business entity)
     const [individualBalance, teamBalance] = await Promise.all([
-      getUserCreditBalance(userId),
-      teamId ? getEffectiveTeamCreditBalance(userId, teamId) : Promise.resolve(0)
+      personId ? getPersonCreditBalance(personId) : Promise.resolve(0),
+      teamId ? getTeamCreditBalance(teamId) : Promise.resolve(0)
     ])
 
     const effectiveBalance = individualBalance + teamBalance
@@ -53,6 +58,8 @@ export class CreditService {
   /**
    * Reserve credits for generation with comprehensive validation
    * OPTIMIZATION: Combines validation and reservation in single transaction
+   *
+   * Note: Credits are always reserved using personId (Person is the business entity).
    */
   static async reserveCreditsForGeneration(
     userId: string,
@@ -69,10 +76,10 @@ export class CreditService {
     try {
       // OPTIMIZATION: Use provided userContext to avoid redundant queries
       const context = userContext || await UserService.getUserContext(userId)
-      
+
       // Determine correct credit source using centralized logic
       const creditSourceInfo = await this.determineCreditSource(context)
-      
+
       // Validate access first
       const creditCheck = await this.validateCreditAccess(userId, requiredCredits, context)
       if (!creditCheck.hasAccess) {
@@ -82,25 +89,26 @@ export class CreditService {
         }
       }
 
-      // Reserve credits using existing function
-      // For team credits: pass personId AND teamId (both required for team credit deduction)
-      // For individual credits: pass userId only (no personId, no teamId) to use getUserCreditBalance
-      // Credits are tracked per person, not per invite
+      // Reserve credits using personId (Person is the business entity)
+      // For team credits: pass personId AND teamId
+      // For individual credits: pass personId only
+      const effectiveTeamId = creditSourceInfo.creditSource === 'team'
+        ? (creditSourceInfo.teamId || context.teamId || undefined)
+        : undefined
+
       const transaction = await reserveCreditsForGeneration(
-        creditSourceInfo.creditSource === 'team' ? personId : null,
-        creditSourceInfo.creditSource === 'team' ? null : userId,
+        personId,
         requiredCredits,
         `Generation reservation`,
-        creditSourceInfo.creditSource === 'team' ? (creditSourceInfo.teamId || context.teamId || undefined) : undefined
+        effectiveTeamId
       )
 
       // Check if transaction was created successfully
       if (transaction && transaction.id) {
-        // Calculate how credits were allocated
-        const effectiveTeamId = creditSourceInfo.teamId || context.teamId || null
+        // Calculate how credits were allocated by comparing balances
         const finalBalances = await Promise.all([
-          getUserCreditBalance(userId),
-          effectiveTeamId ? getEffectiveTeamCreditBalance(userId, effectiveTeamId) : Promise.resolve(0)
+          getPersonCreditBalance(personId),
+          effectiveTeamId ? getTeamCreditBalance(effectiveTeamId) : Promise.resolve(0)
         ])
 
         // OPTIMIZATION: Use the context data for credit allocation calculation
@@ -130,6 +138,10 @@ export class CreditService {
   /**
    * Get credit balance summary for dashboard/stats
    * OPTIMIZATION: Single call for both individual and team balances
+   *
+   * Note: Credits are stored under personId (Person is the business entity).
+   * Individual balance = person balance (non-team credits stored under personId)
+   * Team balance = credits stored under teamId
    */
   static async getCreditBalanceSummary(userId: string, userContext?: Awaited<ReturnType<typeof UserService.getUserContext>>): Promise<{
     individual: number
@@ -143,17 +155,17 @@ export class CreditService {
     const personId = context.user.person?.id || null
 
     // OPTIMIZATION: Parallel balance fetching
-    const [individual, team, person] = await Promise.all([
-      getUserCreditBalance(userId),
-      getEffectiveTeamCreditBalance(userId, teamId), // Always check, even if teamId is null (for pro unmigrated credits)
-      personId ? getPersonCreditBalance(personId) : Promise.resolve(0)
+    // All credits are now stored under personId or teamId (not userId)
+    const [person, team] = await Promise.all([
+      personId ? getPersonCreditBalance(personId) : Promise.resolve(0),
+      teamId ? getTeamCreditBalance(teamId) : Promise.resolve(0)
     ])
 
     return {
-      individual,
+      individual: person, // Individual credits are stored under personId
       team,
       person,
-      total: individual + team
+      total: person + team
     }
   }
 

@@ -10,20 +10,12 @@ import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
+import { trackLoginCompleted, track } from '@/lib/track'
 
 export default function SignInPage() {
   const t = useTranslations('auth.signin')
   const tGlobal = useTranslations()
   const searchParams = useSearchParams()
-  const track = (event: string, props?: Record<string, unknown>) => {
-    try {
-      // @ts-expect-error analytics may be injected at runtime
-      if (typeof window !== 'undefined' && window?.analytics?.track) {
-        // @ts-expect-error analytics may be injected at runtime
-        window.analytics.track(event, props)
-      }
-    } catch {}
-  }
   const emailParam = searchParams.get('email')
   const initialEmail = emailParam || ''
   const initialError = emailParam ? 'auth.signup.accountExists' : ''
@@ -66,15 +58,20 @@ export default function SignInPage() {
   }, [])
 
   // Helper function to safely redirect to callbackUrl if present
-  const redirectToCallbackOrDefault = (defaultPath: string) => {
+  const redirectToCallbackOrDefault = (defaultPath: string, userId?: string) => {
     const callbackUrl = searchParams.get('callbackUrl')
+
+    // Track login completed
+    if (userId) {
+      trackLoginCompleted(userId, useMagicLink ? 'magic_link' : 'email')
+    }
+
     if (callbackUrl) {
       try {
         const url = new URL(callbackUrl, window.location.origin)
         // Only allow same origin redirects for security
         if (url.origin === window.location.origin) {
           router.push(callbackUrl)
-          track('signin_success')
           return true
         }
       } catch {
@@ -82,7 +79,6 @@ export default function SignInPage() {
       }
     }
     router.push(defaultPath)
-    track('signin_success')
     return false
   }
 
@@ -207,18 +203,18 @@ export default function SignInPage() {
                 // Check for callbackUrl from middleware redirect (e.g., after Stripe checkout)
                 // If callbackUrl exists, redirect there; otherwise use default based on onboarding
                 const defaultPath = data.onboarding?.needsTeamSetup ? '/app/team' : '/app/dashboard'
-                if (redirectToCallbackOrDefault(defaultPath)) {
+                if (redirectToCallbackOrDefault(defaultPath, session.user.id)) {
                   return
                 }
               } else {
                 // Initial data fetch failed, but still check for callbackUrl
-                if (redirectToCallbackOrDefault('/app/dashboard')) {
+                if (redirectToCallbackOrDefault('/app/dashboard', session.user.id)) {
                   return
                 }
               }
             } catch {
               // Fetch failed, but still check for callbackUrl
-              if (redirectToCallbackOrDefault('/app/dashboard')) {
+              if (redirectToCallbackOrDefault('/app/dashboard', session?.user?.id)) {
                 return
               }
             }

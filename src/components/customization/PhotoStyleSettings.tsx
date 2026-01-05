@@ -65,6 +65,8 @@ interface PhotoStyleSettingsProps {
   onStepMetaChange?: (meta: CustomizationStepsMeta) => void
   /** Optional header to show above the flow header on mobile (e.g., app header with hamburger menu) */
   topHeader?: React.ReactNode
+  /** Category key to highlight with pulsing border (desktop only) */
+  highlightedField?: string | null
 }
 
 export type MobileStep = {
@@ -104,7 +106,8 @@ export default function PhotoStyleSettings({
   onMobileStepChange,
   onSwipeBack,
   onStepMetaChange,
-  topHeader
+  topHeader,
+  highlightedField
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   const isSwipeEnabled = useSwipeEnabled()
@@ -463,6 +466,7 @@ export default function PhotoStyleSettings({
     // When showToggles is true (admin setting style), nothing is locked
     const isLockedByPreset = !showToggles && readonlyPredefined && isPredefined
     const isLocked = isLockedByPreset
+    const isHighlighted = highlightedField === category.key
     const chipLabel = isUserChoice
       ? t('legend.editableChip', { default: 'Editable' })
       : isLockedByPreset
@@ -480,6 +484,7 @@ export default function PhotoStyleSettings({
               ? 'rounded-xl border-2 shadow-lg bg-gradient-to-br from-brand-primary-light/50 to-brand-primary-light/30 border-brand-primary/60 hover:shadow-xl hover:border-brand-primary/80 hover:scale-[1.01] hover:-translate-y-0.5'
               : 'rounded-xl border shadow-md bg-white border-gray-200 hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5'
         } ${isLockedByPreset ? 'opacity-75' : ''}`}
+        style={isHighlighted ? { outline: '3px solid rgba(99, 102, 241, 0.5)', outlineOffset: '2px' } : undefined}
       >
         {/* Category Header */}
         <div
@@ -767,11 +772,6 @@ export default function PhotoStyleSettings({
     }
   }, [currentAllStepsIndex, currentMobileStep?.type, currentMobileStep?.category?.key])
 
-  // Persist visited steps to session storage whenever they change
-  React.useEffect(() => {
-    setPersistentVisitedSteps(Array.from(visitedEditableSteps))
-  }, [visitedEditableSteps, setPersistentVisitedSteps])
-
   // Track which editable steps have been customized (value differs from default)
   // For steps other than clothingColors, this determines the "done" (green) state
   const customizedEditableStepIndices = React.useMemo(() => {
@@ -829,6 +829,12 @@ export default function PhotoStyleSettings({
     customizedEditableStepIndices.forEach(idx => done.add(idx))
     return done
   }, [visitedEditableSteps, customizedEditableStepIndices])
+
+  // Persist done steps to session storage whenever they change
+  // This ensures the dots in FlowProgressDock are updated correctly
+  React.useEffect(() => {
+    setPersistentVisitedSteps(Array.from(doneEditableStepIndices))
+  }, [doneEditableStepIndices, setPersistentVisitedSteps])
 
   // Get the current step's position in editable steps (1-indexed), or 0 if not a numbered step
   // When on a locked step, show the last editable step number we completed

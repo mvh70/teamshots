@@ -408,16 +408,17 @@ export async function POST(request: NextRequest) {
           ? PRICING_CONFIG.freeTrial.pro
           : PRICING_CONFIG.freeTrial.individual
 
-        // Get person's team association for credit assignment
+        // Get person's id and team association for credit assignment
+        // Person is the business entity that owns credits
         const personWithTeam = await tx.person.findUnique({
           where: { userId: user.id },
-          select: { teamId: true }
+          select: { id: true, teamId: true }
         })
 
-        // Check existing grants in single query
+        // Check existing grants in single query - use personId for credits (Person is business entity)
         const [existingFreeGrant, existingPackage] = await Promise.all([
           tx.creditTransaction.findFirst({
-            where: { userId: user.id, type: 'free_grant' }
+            where: { personId: personWithTeam?.id, type: 'free_grant' }
           }),
           tx.userPackage.findFirst({
             where: { userId: user.id, packageId }
@@ -425,11 +426,14 @@ export async function POST(request: NextRequest) {
         ])
 
         // Free trial grant (only if not already granted)
-        if (!existingFreeGrant) {
+        // Credits belong to Person (business entity), not User (auth)
+        // NOTE: Free trial credits should NOT have teamId set - they are personal credits
+        // for the admin, not team pool credits. Team pool credits come from seat_purchase.
+        if (!existingFreeGrant && personWithTeam?.id) {
           await tx.creditTransaction.create({
             data: {
-              userId: user.id,
-              teamId: personWithTeam?.teamId || undefined,
+              personId: personWithTeam.id,
+              // Do NOT set teamId here - free trial credits are personal, not team pool
               credits: freeCredits,
               type: 'free_grant',
               description: 'Free trial credits',

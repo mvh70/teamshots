@@ -7,6 +7,8 @@ import { Logger } from '@/lib/logger';
 import { Env } from '@/lib/env';
 import { getBaseUrl } from '@/lib/url';
 import type { PlanTier, PlanPeriod } from '@/domain/subscription/utils';
+import { validatePromoCode, type PurchaseType } from '@/domain/pricing/promo-codes';
+import { getBrand } from '@/config/brand';
 
 
 export const runtime = 'nodejs'
@@ -17,7 +19,7 @@ const stripe = new Stripe(Env.string('STRIPE_SECRET_KEY', ''), {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { type, priceId, quantity = 1, metadata = {}, unauth = false, email, returnUrl: explicitReturnUrl } = body as { type: string; priceId?: string; quantity?: number; metadata?: Record<string, string>; unauth?: boolean; email?: string; returnUrl?: string };
+    const { type, priceId, quantity = 1, metadata = {}, unauth = false, email, returnUrl: explicitReturnUrl, promoCode } = body as { type: string; priceId?: string; quantity?: number; metadata?: Record<string, string>; unauth?: boolean; email?: string; returnUrl?: string; promoCode?: string };
 
     // If explicitReturnUrl is not provided, try to get returnTo from referer URL
     // This handles the multi-step flow: Generation → Upgrade/Top-up?returnTo=... → Checkout
@@ -151,9 +153,57 @@ export async function POST(request: NextRequest) {
       });
       // Only consider it a top-up if:
       // 1. They have a team AND
-      // 2. They are the admin of that team AND  
+      // 2. They are the admin of that team AND
       // 3. The team already has seats (totalSeats > 0)
       seatsIsTopUp = !!(person?.teamId && person?.team?.adminId === user.id && (person?.team?.totalSeats ?? 0) > 0);
+    }
+
+    // Validate promo code if provided
+    let validatedPromoCode: { stripePromoCodeId?: string; promoCodeId?: string } | null = null
+    if (promoCode) {
+      const brand = getBrand(request.headers)
+      const domain = brand.domain
+
+      // Calculate the amount for validation
+      let validationAmount = 0
+      if (type === 'plan' && priceId) {
+        if (priceId === PRICING_CONFIG.individual.stripePriceId) {
+          validationAmount = PRICING_CONFIG.individual.price
+        } else if (priceId === PRICING_CONFIG.vip.stripePriceId) {
+          validationAmount = PRICING_CONFIG.vip.price
+        }
+      } else if (type === 'seats') {
+        validationAmount = PRICING_CONFIG.seats.calculateTotal(quantity)
+      } else if (type === 'top_up') {
+        const tier = (metadata as { tier?: string })?.tier
+        validationAmount = tier === 'vip'
+          ? PRICING_CONFIG.vip.topUp.price
+          : PRICING_CONFIG.individual.topUp.price
+      }
+
+      const promoValidation = await validatePromoCode({
+        code: promoCode,
+        domain,
+        purchaseType: type as PurchaseType,
+        originalAmount: validationAmount,
+        userId: user?.id,
+        email: user?.email || email,
+        seats: type === 'seats' ? quantity : undefined,
+      })
+
+      if (!promoValidation.valid) {
+        return NextResponse.json({ error: promoValidation.error || 'Invalid promo code' }, { status: 400 })
+      }
+
+      if (promoValidation.promoCode?.stripePromoCodeId) {
+        validatedPromoCode = {
+          stripePromoCodeId: promoValidation.promoCode.stripePromoCodeId,
+          promoCodeId: promoValidation.promoCode.id,
+        }
+      } else {
+        // Promo code exists but no Stripe integration - reject for now
+        return NextResponse.json({ error: 'This promo code is not properly configured' }, { status: 400 })
+      }
     }
 
     // Create specific success messages based on purchase type
@@ -263,7 +313,12 @@ export async function POST(request: NextRequest) {
         ...(user?.id ? { userId: user.id } : {}),
         type,
         ...metadata,
+        ...(validatedPromoCode?.promoCodeId ? { promoCodeId: validatedPromoCode.promoCodeId, promoCode } : {}),
       },
+      // Apply promo code discount if validated
+      ...(validatedPromoCode?.stripePromoCodeId ? {
+        discounts: [{ promotion_code: validatedPromoCode.stripePromoCodeId }],
+      } : {}),
     };
 
     // Add line items based on type

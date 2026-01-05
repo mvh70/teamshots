@@ -88,7 +88,7 @@ export async function auth() {
               role: headersList.get('x-e2e-user-role') || 'user',
               isAdmin: headersList.get('x-e2e-user-is-admin') === 'true',
               locale: headersList.get('x-e2e-user-locale') || 'en',
-              signupDomain: null
+              signupDomain: headersList.get('x-e2e-user-signup-domain') || null
             },
             expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
           }

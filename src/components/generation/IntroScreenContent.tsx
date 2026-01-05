@@ -2,6 +2,7 @@
 
 import React from 'react'
 import Image from 'next/image'
+import { EyeSlashIcon } from '@heroicons/react/24/outline'
 
 interface IntroTip {
   /** Unique key for the tip */
@@ -13,7 +14,7 @@ interface IntroTip {
   /** Text color class for the icon */
   textColor: string
   /** Text content - either a simple string or title+description */
-  content: 
+  content:
     | { type: 'simple'; text: string }
     | { type: 'titled'; title: string; description: string }
 }
@@ -72,8 +73,8 @@ interface IntroScreenContentProps {
  * Generic intro screen content component that can be used for selfie tips,
  * customization intro, or other onboarding flows.
  */
-export default function IntroScreenContent({ 
-  variant, 
+export default function IntroScreenContent({
+  variant,
   kicker,
   title,
   body,
@@ -83,23 +84,39 @@ export default function IntroScreenContent({
   continueButtonText = 'Continue',
   onContinue,
   onSkip,
-  skipText = 'Don’t show again',
+  skipText = "Don't show again",
   className = ''
 }: IntroScreenContentProps) {
 
   return (
-    <div className={`p-6 md:p-10 lg:p-12 space-y-8 md:space-y-12 lg:space-y-14 ${className}`}>
-      {/* Header */}
-      <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {kicker && (
-          <p className="text-xs md:text-sm font-semibold uppercase tracking-[0.2em] text-brand-primary opacity-95">
-            {kicker}
-          </p>
-        )}
-        <h3 className="text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-[1.1] font-serif tracking-tight">
+    <div className={`px-4 sm:px-6 lg:px-8 py-8 md:py-10 md:pb-52 space-y-8 md:space-y-10 ${className}`}>
+      {/* Header with optional skip action */}
+      <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {/* Top row: kicker and skip action */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            {kicker && (
+              <p className="text-xs md:text-sm font-semibold uppercase tracking-[0.2em] text-brand-primary opacity-95">
+                {kicker}
+              </p>
+            )}
+          </div>
+          {/* Desktop skip action - positioned in header to avoid dock overlap */}
+          {onSkip && (
+            <button
+              type="button"
+              onClick={onSkip}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-full transition-all duration-200 group"
+            >
+              <EyeSlashIcon className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
+              <span>{skipText}</span>
+            </button>
+          )}
+        </div>
+        <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 leading-[1.1] font-serif tracking-tight">
           {title}
         </h3>
-        <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-5xl">
+        <p className="text-lg text-gray-600 leading-relaxed max-w-3xl">
           {body}
         </p>
       </div>
@@ -229,11 +246,12 @@ export default function IntroScreenContent({
           >
             {continueButtonText}
           </button>
+          {/* Mobile-only skip link (desktop has it in header) */}
           {onSkip && (
             <button
               type="button"
               onClick={onSkip}
-              className="block w-full text-center text-sm font-medium text-gray-500 hover:text-gray-700 underline underline-offset-4 transition-colors"
+              className="md:hidden block w-full text-center text-sm font-medium text-gray-500 hover:text-gray-700 underline underline-offset-4 transition-colors"
             >
               {skipText}
             </button>
@@ -241,9 +259,9 @@ export default function IntroScreenContent({
         </div>
       )}
 
-      {/* Skip link for swipe variant */}
+      {/* Skip link for swipe variant - mobile only (desktop has it in header) */}
       {variant === 'swipe' && onSkip && (
-        <div className="pt-4 text-center animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+        <div className="md:hidden pt-4 text-center animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
           <button
             type="button"
             onClick={onSkip}

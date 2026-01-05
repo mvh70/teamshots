@@ -92,33 +92,12 @@ export function formatProgressWithAttempt(
   return `Generation #${currentAttempt}\n${progress}% - ${formatted}`
 }
 
-// Track the last progress value to ensure monotonic increases
-const progressTrackers = new Map<string, number>()
-
-/**
- * Get the current progress for a job
- */
-function getLastProgress(jobId: string): number {
-  return progressTrackers.get(jobId) ?? 0
-}
-
-/**
- * Set the last progress for a job
- */
-function setLastProgress(jobId: string, progress: number): void {
-  progressTrackers.set(jobId, progress)
-}
-
-/**
- * Clean up progress tracker for completed job
- */
-export function cleanupProgressTracker(jobId: string): void {
-  progressTrackers.delete(jobId)
-}
-
 /**
  * Safe progress update with error handling
  * Ensures progress never goes backwards
+ *
+ * BullMQ stores job.progress in Redis, so it's shared across all workers.
+ * We use this as the source of truth instead of an in-memory Map.
  *
  * @param job - The BullMQ job
  * @param targetProgress - The desired progress percentage (0-100)
@@ -133,26 +112,33 @@ export async function updateJobProgress(
 ): Promise<void> {
   try {
     const jobId = job.id ?? 'unknown'
-    const lastProgress = getLastProgress(jobId)
+
+    // Get current progress from job (stored in Redis, shared across workers)
+    // job.progress can be a number or an object like { progress: number, message: string }
+    const currentProgress = typeof job.progress === 'object' && job.progress !== null && 'progress' in job.progress
+      ? (job.progress as { progress: number }).progress
+      : typeof job.progress === 'number'
+      ? job.progress
+      : 0
 
     // Only update if progress increases OR if force update is requested
-    if (targetProgress > lastProgress || forceUpdate) {
-      const actualProgress = Math.max(targetProgress, lastProgress)
+    if (targetProgress > currentProgress || forceUpdate) {
+      // Never let progress go backwards - use the higher value
+      const actualProgress = Math.max(targetProgress, currentProgress)
       await job.updateProgress({ progress: actualProgress, message })
-      setLastProgress(jobId, actualProgress)
 
       Logger.debug('Updated job progress', {
         jobId,
         targetProgress,
         actualProgress,
-        lastProgress,
+        currentProgress,
         messagePreview: message.substring(0, 50)
       })
     } else {
       Logger.debug('Skipped progress update (would go backwards)', {
         jobId,
         targetProgress,
-        lastProgress,
+        currentProgress,
         messagePreview: message.substring(0, 50)
       })
     }
@@ -162,6 +148,14 @@ export async function updateJobProgress(
       error: error instanceof Error ? error.message : String(error)
     })
   }
+}
+
+/**
+ * @deprecated No longer needed - progress is stored in Redis via job.progress
+ * Keeping for backwards compatibility but it does nothing
+ */
+export function cleanupProgressTracker(_jobId: string): void {
+  // No-op: Progress is now tracked via job.progress in Redis
 }
 
 /**

@@ -1,10 +1,11 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import CustomizationIntroContent from '@/components/generation/CustomizationIntroContent'
 import { StickyFlowPage } from '@/components/generation/layout'
-import { SwipeableContainer, FlowNavigation } from '@/components/generation/navigation'
+import { SwipeableContainer, FlowNavigation, FlowProgressDock } from '@/components/generation/navigation'
+import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
@@ -24,6 +25,7 @@ import { useOnboardingState } from '@/lib/onborda/hooks'
  */
 export default function CustomizationIntroPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const tIntro = useTranslations('customization.photoStyle.mobile.intro')
   const isMobile = useMobileViewport()
   const isSwipeEnabled = useSwipeEnabled()
@@ -32,13 +34,20 @@ export default function CustomizationIntroPage() {
     hasSeenCustomizationIntro,
     hydrated,
     flags,
-    customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META
+    customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META,
+    visitedSteps
   } = useGenerationFlowState()
   const { context, updateContext } = useOnboardingState()
   const [isSavingPreference, setIsSavingPreference] = useState(false)
   const hasAutoSkippedRef = useRef(false)
 
-  const skipCustomizationIntro = context.hiddenScreens?.includes('customization-intro')
+  // Get selfie count for the progress dock
+  const selfieManager = useSelfieManagement({ autoSelectNewUploads: false })
+  const selfieCount = selfieManager.mode === 'individual' ? selfieManager.selectedIds.length : 0
+
+  // Check if force parameter is set (from info icon click) - always show when forced
+  const forceShow = searchParams.get('force') === '1'
+  const skipCustomizationIntro = !forceShow && context.hiddenScreens?.includes('customization-intro')
 
   // Build step indicator for customization intro (after selfie selection, so selfie is complete)
   const selfieStepIndicator = buildSelfieStepIndicator(customizationStepsMeta, {
@@ -57,8 +66,13 @@ export default function CustomizationIntroPage() {
     : undefined
 
   // Only redirect if already seen AND not coming from selfie selection (pendingGeneration flag)
-  // If coming from selfie selection, always show the intro page
+  // If coming from selfie selection or force=1, always show the intro page
   useEffect(() => {
+    // Never auto-skip if force parameter is set (user clicked info icon)
+    // Check directly from searchParams inside effect to avoid stale closure issues
+    const isForced = searchParams.get('force') === '1'
+    if (isForced) return
+
     const shouldSkip =
       skipCustomizationIntro ||
       (hasSeenCustomizationIntro && !flags.pendingGeneration)
@@ -77,7 +91,8 @@ export default function CustomizationIntroPage() {
     context._loaded,
     flags.pendingGeneration,
     router,
-    markSeenCustomizationIntro
+    markSeenCustomizationIntro,
+    searchParams
   ])
 
   const handleContinue = () => {
@@ -107,9 +122,9 @@ export default function CustomizationIntroPage() {
     }
   }
 
-  // Don't render while checking or if redirecting (but allow rendering if coming from selfie selection)
+  // Don't render while checking or if redirecting (but allow rendering if force=1 or coming from selfie selection)
   const shouldRedirect =
-    skipCustomizationIntro || (hasSeenCustomizationIntro && !flags.pendingGeneration)
+    !forceShow && (skipCustomizationIntro || (hasSeenCustomizationIntro && !flags.pendingGeneration))
 
   if (!hydrated || !context._loaded || shouldRedirect) {
     return null
@@ -120,11 +135,30 @@ export default function CustomizationIntroPage() {
   }
 
   return (
-    <SwipeableContainer
-      onSwipeLeft={isSwipeEnabled ? handleContinue : undefined}
-      onSwipeRight={isSwipeEnabled ? handleBack : undefined}
-      enabled={isSwipeEnabled}
-    >
+    <>
+      {/* Progress Dock - Bottom Center (Desktop) */}
+      <FlowProgressDock
+        selfieCount={selfieCount}
+        uneditedFields={[]}
+        hasUneditedFields={true} // All fields are unedited at this point
+        canGenerate={false}
+        hasEnoughCredits={true}
+        currentStep="intro"
+        onNavigateToSelfies={() => router.push('/app/generate/selfie')}
+        onNavigateToCustomize={handleContinue}
+        onGenerate={() => {}} // Not available on this page
+        hiddenScreens={context.hiddenScreens}
+        onNavigateToSelfieTips={() => router.push('/app/generate/selfie-tips?force=1')}
+        onNavigateToCustomizationIntro={() => {}} // Already on customization intro page
+        customizationStepsMeta={customizationStepsMeta}
+        visitedEditableSteps={visitedSteps}
+      />
+
+      <SwipeableContainer
+        onSwipeLeft={isSwipeEnabled ? handleContinue : undefined}
+        onSwipeRight={isSwipeEnabled ? handleBack : undefined}
+        enabled={isSwipeEnabled}
+      >
       <StickyFlowPage
         topHeader={<Header standalone showBackToDashboard />}
         flowHeader={{
@@ -137,34 +171,35 @@ export default function CustomizationIntroPage() {
         }}
         maxWidth="full"
         background="white"
-        bottomPadding={isMobile ? 'lg' : 'none'}
+        bottomPadding="lg"
         fixedHeaderOnMobile
         mobileHeaderSpacerHeight={80}
-        contentClassName="py-0 sm:py-6"
+        contentClassName="py-0"
       >
-        <div className="pt-6 md:pt-10">
-          <CustomizationIntroContent 
-            variant="swipe"
-            onSkip={handleDontShow}
-            onContinue={handleContinue}
-          />
-        </div>
+        <CustomizationIntroContent
+          variant="swipe"
+          onSkip={handleDontShow}
+          onContinue={handleContinue}
+        />
 
-        {/* Step navigation */}
-        <div className="pb-8 md:pb-12">
-          <FlowNavigation
-            variant="both"
-            size="sm"
-            current={navCurrentIndex}
-            total={Math.max(1, stepperTotalDots)}
-            onPrev={handleBack}
-            onNext={handleContinue}
-            canGoPrev={true}
-            stepColors={navigationStepColors}
-          />
-        </div>
+        {/* Step navigation - Mobile Only */}
+        {isMobile && (
+          <div className="pb-8">
+            <FlowNavigation
+              variant="both"
+              size="sm"
+              current={navCurrentIndex}
+              total={Math.max(1, stepperTotalDots)}
+              onPrev={handleBack}
+              onNext={handleContinue}
+              canGoPrev={true}
+              stepColors={navigationStepColors}
+            />
+          </div>
+        )}
       </StickyFlowPage>
     </SwipeableContainer>
+    </>
   )
 }
 

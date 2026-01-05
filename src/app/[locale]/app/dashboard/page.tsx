@@ -43,6 +43,7 @@ interface UserPermissions {
   isRegularUser: boolean
   teamId?: string
   isFirstVisit?: boolean
+  isSeatsBasedTeam?: boolean
 }
 
 interface Activity {
@@ -74,6 +75,7 @@ const normalizeUserPermissions = (
   isRegularUser: permissions?.isRegularUser ?? true,
   teamId: permissions?.teamId,
   isFirstVisit: permissions?.isFirstVisit,
+  isSeatsBasedTeam: permissions?.isSeatsBasedTeam ?? false,
 })
 
 export default function DashboardPage() {
@@ -384,24 +386,46 @@ export default function DashboardPage() {
 
   const totalPhotos = calculatePhotosFromCredits(totalCredits)
 
-  // Stats configuration (excluding credits which gets special treatment)
-  const statsConfig = [
-    {
-      name: t('stats.photosGenerated'),
-      value: stats.photosGenerated.toString(),
-      icon: PhotoIcon,
-    },
-    {
-      name: t('stats.activeTemplates'),
-      value: stats.activeTemplates.toString(),
-      icon: DocumentTextIcon,
-    },
-    ...(userPermissions.isTeamAdmin ? [{
-      name: t('stats.teamMembers'),
-      value: stats.teamMembers.toString(),
-      icon: UsersIcon,
-    }] : []),
-  ]
+  // Stats configuration based on product type
+  // TeamShots (seats-based): Team members, Photos generated, Active photo style
+  // PhotoShots (individual): Photo credits (separate), Photos generated, Active photo styles
+  const statsConfig = userPermissions.isSeatsBasedTeam
+    ? [
+        // TeamShots: Team members first
+        {
+          name: t('stats.teamMembers'),
+          value: stats.teamMembers.toString(),
+          icon: UsersIcon,
+        },
+        {
+          name: t('stats.photosGenerated'),
+          value: stats.photosGenerated.toString(),
+          icon: PhotoIcon,
+        },
+        {
+          name: t('stats.activeTemplates'),
+          value: stats.activeTemplates.toString(),
+          icon: DocumentTextIcon,
+        },
+      ]
+    : [
+        // PhotoShots: Photos generated, Active templates, Team members (if admin)
+        {
+          name: t('stats.photosGenerated'),
+          value: stats.photosGenerated.toString(),
+          icon: PhotoIcon,
+        },
+        {
+          name: t('stats.activeTemplates'),
+          value: stats.activeTemplates.toString(),
+          icon: DocumentTextIcon,
+        },
+        ...(userPermissions.isTeamAdmin ? [{
+          name: t('stats.teamMembers'),
+          value: stats.teamMembers.toString(),
+          icon: UsersIcon,
+        }] : []),
+      ]
 
   return (
     <div className="space-y-8 md:space-y-10 lg:space-y-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -676,10 +700,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Stats Grid - Credit Status Card First, Then Other Stats */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${userPermissions.isTeamAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6 md:gap-8 animate-fade-in`} style={{ animationDelay: '100ms' }}>
-            {/* Credit Status Card - Prominent First Card */}
-            {loading || creditsLoading ? (
+          {/* Stats Grid - Credit Status Card First (PhotoShots only), Then Other Stats */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${userPermissions.isSeatsBasedTeam ? 'lg:grid-cols-3' : (userPermissions.isTeamAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3')} gap-6 md:gap-8 animate-fade-in`} style={{ animationDelay: '100ms' }}>
+            {/* Credit Status Card - Only show for PhotoShots (non-seats-based) */}
+            {!userPermissions.isSeatsBasedTeam && (loading || creditsLoading ? (
               <div className="bg-white rounded-xl p-6 shadow-depth-sm border border-gray-200 animate-pulse">
                 <div className="flex items-center mb-4">
                   <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
@@ -713,7 +737,7 @@ export default function DashboardPage() {
                   <span className="ml-1 group-hover:translate-x-0.5 transition-transform">→</span>
                 </button>
               </div>
-            )}
+            ))}
 
             {/* Other Stats Cards */}
             {loading ? (

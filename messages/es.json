@@ -279,7 +279,7 @@
       "2": {
         "question": "¿Cuánto cuesta?",
         "answer": "Cuando te registras, obtienes una generación de prueba gratis para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos), o plan VIP a {vipPrice} ({vipPhotos} fotos para equipos más grandes). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
-        "answerTeam": "Cuando te registras, obtienes una generación de prueba gratis para ver la calidad. Después: Usa nuestro precio basado en asientos donde pagas por miembro del equipo. Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
+        "answerTeam": "Cuando te registras, obtienes una generación de prueba gratis para ver la calidad. Después: Usa nuestro precio por miembro donde pagas por cada miembro del equipo. Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones.",
         "answerIndividual": "Cuando te registras, obtienes una generación de prueba gratis en un estilo predefinido para ver la calidad. Después: plan Individual a {individualPrice} ({individualPhotos} fotos). Los créditos de foto nunca caducan, así que acumúlalos como oro digital. Cada generación usa 1 crédito de foto y produce hasta {maxVariations} variaciones."
       },
       "3": {
@@ -445,11 +445,11 @@
         "credits": "{photos} fotos agregadas a tu cuenta"
       },
       "seats": {
-        "upgradeTitle": "Plan de Equipo - {seats, plural, one {# Asiento} other {# Asientos}}",
-        "additionalTitle": "{seats, plural, one {# Asiento Adicional} other {# Asientos Adicionales}}",
-        "upgradeDescription": "{seats, plural, one {# asiento de equipo} other {# asientos de equipo}} con {photosPerSeat} fotos cada uno",
-        "additionalDescription": "{seats, plural, one {Se agregó # asiento} other {Se agregaron # asientos}} con {photosPerSeat} fotos cada uno",
-        "photosPerSeat": "{photos} fotos por asiento",
+        "upgradeTitle": "Plan de Equipo - {seats, plural, one {# Miembro} other {# Miembros}}",
+        "additionalTitle": "{seats, plural, one {# Miembro Adicional} other {# Miembros Adicionales}}",
+        "upgradeDescription": "{seats, plural, one {# miembro del equipo} other {# miembros del equipo}} con {photosPerSeat} fotos cada uno",
+        "additionalDescription": "{seats, plural, one {Se agregó # miembro} other {Se agregaron # miembros}} con {photosPerSeat} fotos cada uno",
+        "photosPerSeat": "{photos} fotos por miembro",
         "regenerations": "{retries} reintentos por foto",
         "inviteColleagues": "Ahora puedes invitar a {colleagues, plural, one {# colega} other {# colegas}}",
         "allFeatures": "Opciones de personalización completas"
@@ -459,20 +459,20 @@
       "continueToGeneration": "Continuar Generando"
     },
     "seats": {
-      "title": "Fotos de equipo pago por asiento",
+      "title": "Fotos de equipo pago por miembro",
       "subtitle": "Pago único. Sin suscripciones, sin tarifas recurrentes. Paga una vez por miembro del equipo, obtén 10 fotos profesionales cada uno.",
       "selectSeats": "¿Cuántos miembros del equipo?",
-      "seat": "asiento",
-      "seats": "asientos",
-      "perSeat": "por asiento",
-      "pricePerSeat": "Precio por asiento",
+      "seat": "miembro",
+      "seats": "miembros",
+      "perSeat": "por miembro",
+      "pricePerSeat": "Precio por miembro",
       "totalPhotos": "Total de fotos",
       "photos": "fotos",
       "savings": "Ahorras",
       "total": "Total",
-      "cta": "Obtener {seats} asientos por {total}",
+      "cta": "Añadir {seats} miembros por {total}",
       "whatsIncluded": "Qué está incluido",
-      "volumeHint": "Añade {seatsNeeded} asientos más para desbloquear {nextPrice}/asiento (ahorra {savingsPerSeat}/asiento)",
+      "volumeHint": "Añade {seatsNeeded} más para desbloquear {nextPrice}/miembro (ahorra {savingsPerSeat}/miembro)",
       "features": {
         "photosPerSeat": "10 fotos profesionales por miembro del equipo",
         "professionalQuality": "Fotos de calidad profesional con IA",
@@ -702,15 +702,15 @@
         "title": "Fotos disponibles",
         "individual": "Fotos personales",
         "team": "Créditos de foto del equipo",
-        "seats": "Plazas",
+        "seats": "Miembros del equipo",
         "balance": "Tu saldo de fotos",
         "lockedBranding": "con marca Teamshots bloqueada",
         "allocated": "de los cuales asignados a invitaciones",
         "monthlyReset": "Reinicio mensual",
         "progress": "{used}/{total}",
         "buyMore": "Comprar más fotos",
-        "buyMoreSeats": "Comprar más plazas",
-        "buySeatsToUnlock": "Comprar plazas para desbloquear personalización completa",
+        "buyMoreSeats": "Añadir miembros del equipo",
+        "buySeatsToUnlock": "Añadir miembros para desbloquear personalización completa",
         "upgradeToPaid": "Actualizar para desbloquear personalización completa"
       },
       "generate": {
@@ -833,7 +833,7 @@
         "free": "¡Tu prueba gratis está lista! Se han agregado {photos} fotos a tu cuenta.",
         "individual": "¡Plan Individual activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
         "vip": "¡Plan VIP activado exitosamente! Se han agregado {photos} fotos a tu cuenta.",
-        "seats": "¡Compra de asientos completada exitosamente! Se han agregado créditos a tu cuenta.",
+        "seats": "¡Miembros del equipo añadidos exitosamente! Se han agregado créditos a tu cuenta.",
         "topUp": "¡Recarga de créditos completada exitosamente! Se han agregado créditos a tu cuenta.",
         "default": "¡Compra completada exitosamente! Se han agregado créditos a tu cuenta.",
         "titleFree": "¡Bienvenido! 🎉",
@@ -1463,8 +1463,8 @@
   },
   "generate": {
     "selfie": {
-      "title": "Elige Tu Selfie",
-      "subtitle": "Selecciona una selfie para usar en la generación, o sube una nueva.",
+      "title": "Selecciona tus selfies",
+      "subtitle": "Elige las fotos que quieres usar para tus retratos profesionales.",
       "qrTip": {
         "title": "Toma o sube desde tu computadora o móvil",
         "description": "Puedes usar el código QR para tomar o subir selfies desde tu móvil."
@@ -1474,6 +1474,10 @@
         "needMoreSelfies": "Agrega al menos 2 selfies",
         "readyToCustomize": "Listo para personalizar"
       }
+    },
+    "customize": {
+      "title": "Personaliza tu foto",
+      "subtitle": "Selecciona tu elección para cada parte editable"
     }
   },
   "mobileHandoff": {
@@ -1718,12 +1722,12 @@
           "kicker": "",
           "title": "Ahora, personaliza tu foto",
           "subtitle": "Estás a punto de personalizar cómo se verán tus fotos.",
-          "body": "Puedes cambiar el fondo, la pose, la expresión, etc. En la siguiente página, puedes personalizar cada uno de ellos, excepto los establecidos por el administrador de tu equipo.",
-          "bodyDesktop": "Puedes cambiar cómo se ve tu foto, el fondo, la pose, la expresión, etc. En la siguiente página, puedes personalizar cada uno de ellos, excepto los establecidos por el administrador de tu equipo",
+          "body": "En la siguiente página puedes personalizar tu foto. Puedes cambiar el fondo, la pose, la expresión, etc. Algunas configuraciones han sido fijadas por el administrador de tu equipo para estandarizar el aspecto de las fotos. Estas no se pueden cambiar.",
+          "bodyDesktop": "En la siguiente página puedes personalizar tu foto. Puedes cambiar el fondo, la pose, la expresión, etc. Algunas configuraciones han sido fijadas por el administrador de tu equipo para estandarizar el aspecto de las fotos. Estas no se pueden cambiar.",
           "swipe": "Desliza a la derecha para avanzar, a la izquierda para volver. También puedes usar los botones de navegación a continuación.",
           "scrollDesktop": "Desplázate hacia abajo para ver todas las opciones de personalización. Ajusta cada configuración según tus preferencias.",
-          "editable": "El icono de estrellas significa que puedes editar esta configuración. Ajusta hasta que coincida con tus preferencias.",
-          "locked": "El icono de candado significa que el administrador de tu equipo fijó estos. Puedes verlos pero no cambiar para mantener la consistencia.",
+          "editable": "Este icono significa que puedes editar esta configuración.",
+          "locked": "Este icono significa que el administrador de tu equipo fijó estos, y no se pueden cambiar.",
           "skip": "No volver a mostrar",
           "continueButton": "Continuar para personalizar"
         },
@@ -2090,7 +2094,7 @@
         "personalCredits": "Créditos personales",
         "teamCredits": "Créditos del equipo",
         "availablePhotos": "Créditos de fotos restantes",
-        "seatUsage": "Uso de asientos",
+        "seatUsage": "Miembros del equipo",
         "status": "Estado",
         "actions": "Acciones"
       },
@@ -2212,6 +2216,20 @@
       "buyCredits": "Comprar créditos",
       "upgradeToInvite": "Mejorar para invitar"
     },
+    "selfAssignment": {
+      "title": "Añadirte al Equipo",
+      "message": "Como administrador del equipo, puedes añadirte como miembro del equipo. Recibirás 10 fotos (100 créditos) y conservarás tus fotos de prueba gratuitas. Esta acción no se puede deshacer.",
+      "button": "Añadirme al Equipo",
+      "buttonShort": "Asignarme un puesto",
+      "assigning": "Añadiendo...",
+      "success": "¡Te has añadido al equipo exitosamente! Ahora tienes 10 fotos adicionales.",
+      "confirmMessage": "¿Estás seguro de que quieres añadirte al equipo? Esta acción no se puede deshacer y recibirás 10 fotos (100 créditos).",
+      "noSeatsAvailable": "Todos los puestos de miembros están ocupados. Añade más miembros del equipo para incluirte.",
+      "alreadyAssigned": {
+        "title": "Ya Añadido",
+        "message": "Ya te has añadido al equipo y has recibido 10 fotos (100 créditos)."
+      }
+    },
     "adminOnly": {
       "title": "Acceso de Administrador Requerido",
       "message": "Esta página solo es accesible para administradores de la empresa.",
@@ -2262,7 +2280,7 @@
         "insufficientTeamCredits": "No hay suficientes créditos del equipo. Tienes {available} disponibles, pero necesitas {required}. ¡Es hora de recargar!",
         "invalidCreditAllocation": "Los créditos deben asignarse en múltiplos de {credits} (el costo por generación de foto). Por ejemplo: {credits}, {credits2}, {credits3}, etc.",
         "teamSizeLimitReached": "Tu plan Pro Small permite hasta {limit} miembros del equipo. Actualiza a Pro Large para miembros ilimitados.",
-        "noAvailableSeats": "No hay asientos disponibles. Tienes {current} de {total} asientos ocupados. Por favor compra más asientos para invitar miembros adicionales al equipo."
+        "noAvailableSeats": "Todos los puestos de miembros están ocupados. Tienes {current} de {total} miembros. Añade más miembros del equipo para invitar a más personas."
       },
       "credits": {
         "invalidType": "Parámetro de tipo inválido"

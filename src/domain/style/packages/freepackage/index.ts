@@ -42,8 +42,8 @@ const AVAILABLE_EXPRESSIONS = [
   'soft_smile',
   'neutral_serious',
   'laugh_joy',
-  'contemplative',
-  'confident',
+  //'contemplative',
+  //'confident',
   //'sad'
 ]
 

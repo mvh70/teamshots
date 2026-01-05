@@ -44,57 +44,95 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
 
-  /* Configure projects for major browsers */
+  /* Configure projects by domain and browser */
   projects: [
+    // ============================================
+    // TeamShots Domain (teamshotspro.com)
+    // Tests: team-admin, team-member flows
+    // ============================================
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-      // Exclude selfie-flow and i18n-mobile tests from parallel execution
-      testIgnore: /(selfie-flow|i18n-mobile)\.spec\.ts/,
-    },
-    {
-      name: 'chromium-sequential',
-      use: { ...devices['Desktop Chrome'] },
-      // Only run database-intensive tests sequentially
-      testMatch: /(selfie-flow|i18n-mobile|complete-real-test)\.spec\.ts/,
-      // Force sequential execution for these tests
-      fullyParallel: false,
-      workers: 1,
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-      // Exclude selfie-flow and i18n-mobile tests from parallel execution
-      testIgnore: /(selfie-flow|i18n-mobile)\.spec\.ts/,
-    },
-    {
-      name: 'webkit',
-      use: { 
-        ...devices['Desktop Safari'],
+      name: 'teamshots-chromium',
+      use: {
+        ...devices['Desktop Chrome'],
         extraHTTPHeaders: {
-          'x-playwright-e2e': '1',
+          'x-forwarded-host': 'teamshotspro.com',
         },
       },
-      // Exclude selfie-flow and i18n-mobile tests from parallel execution
-      testIgnore: /(selfie-flow|i18n-mobile)\.spec\.ts/,
+      testDir: './tests/e2e/teamshots',
+      testMatch: '**/*.spec.ts',
     },
-    /* Test against mobile viewports. */
     {
-      name: 'Mobile Chrome',
-      use: { 
+      name: 'teamshots-mobile',
+      use: {
         ...devices['Pixel 5'],
-        // Increase timeout for mobile Chrome
+        extraHTTPHeaders: {
+          'x-forwarded-host': 'teamshotspro.com',
+        },
         actionTimeout: 15000,
         navigationTimeout: 30000,
       },
-      // Exclude selfie-flow and i18n-mobile tests from parallel execution
+      testDir: './tests/e2e/teamshots',
+      testMatch: '**/*.spec.ts',
+    },
+
+    // ============================================
+    // PhotoShots Domain (photoshotspro.com)
+    // Tests: individual user flows
+    // ============================================
+    {
+      name: 'photoshots-chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        extraHTTPHeaders: {
+          'x-forwarded-host': 'photoshotspro.com',
+        },
+      },
+      testDir: './tests/e2e/photoshots',
+      testMatch: '**/*.spec.ts',
+    },
+    {
+      name: 'photoshots-mobile',
+      use: {
+        ...devices['Pixel 5'],
+        extraHTTPHeaders: {
+          'x-forwarded-host': 'photoshotspro.com',
+        },
+        actionTimeout: 15000,
+        navigationTimeout: 30000,
+      },
+      testDir: './tests/e2e/photoshots',
+      testMatch: '**/*.spec.ts',
+    },
+
+    // ============================================
+    // Shared Tests (domain-agnostic)
+    // Tests: auth, admin, common features
+    // ============================================
+    {
+      name: 'shared-chromium',
+      use: { ...devices['Desktop Chrome'] },
+      testDir: './tests/e2e/shared',
+      testMatch: '**/*.spec.ts',
+    },
+
+    // ============================================
+    // Legacy Tests (existing tests during migration)
+    // TODO: Remove after migration complete
+    // ============================================
+    {
+      name: 'legacy-chromium',
+      use: { ...devices['Desktop Chrome'] },
+      testDir: './tests/e2e/legacy',
+      testMatch: '**/*.spec.ts',
       testIgnore: /(selfie-flow|i18n-mobile)\.spec\.ts/,
     },
     {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-      // Exclude selfie-flow and i18n-mobile tests from parallel execution
-      testIgnore: /(selfie-flow|i18n-mobile)\.spec\.ts/,
+      name: 'legacy-sequential',
+      use: { ...devices['Desktop Chrome'] },
+      testDir: './tests/e2e/legacy',
+      testMatch: /(selfie-flow|i18n-mobile|complete-real-test)\.spec\.ts/,
+      fullyParallel: false,
+      workers: 1,
     },
   ],
 

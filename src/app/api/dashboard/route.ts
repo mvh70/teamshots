@@ -10,6 +10,7 @@ import { getTeamOnboardingState } from '@/domain/team/onboarding'
 import { buildGenerationWhere } from '@/lib/prisma-helpers'
 import { fetchUserActivities, fetchPendingInvites } from '@/domain/dashboard/activities'
 import { formatTimeAgo } from '@/lib/format-time'
+import { getTeamSeatInfo } from '@/domain/pricing/seats'
 
 // OPTIMIZATION: Simple in-memory cache for dashboard stats (30 second TTL)
 const statsCache = new Map<string, { data: unknown; timestamp: number }>()
@@ -73,12 +74,15 @@ export async function GET() {
         ? cachedData.pendingInvites.length
         : 0
 
-      const onboardingState = await getTeamOnboardingState({
-        isTeamAdmin: userContext.roles.isTeamAdmin,
-        teamId,
-        prefetchedMemberCount: typeof cachedData.stats.teamMembers === 'number' ? cachedData.stats.teamMembers : undefined,
-        prefetchedPendingInviteCount: pendingInviteCountFromCache
-      })
+      const [onboardingState, seatInfo] = await Promise.all([
+        getTeamOnboardingState({
+          isTeamAdmin: userContext.roles.isTeamAdmin,
+          teamId,
+          prefetchedMemberCount: typeof cachedData.stats.teamMembers === 'number' ? cachedData.stats.teamMembers : undefined,
+          prefetchedPendingInviteCount: pendingInviteCountFromCache
+        }),
+        teamId ? getTeamSeatInfo(teamId) : Promise.resolve(null)
+      ])
 
       return NextResponse.json({
         success: true,
@@ -96,7 +100,8 @@ export async function GET() {
           needsPhotoStyleSetup: onboardingState.needsPhotoStyleSetup,
           needsTeamInvites: onboardingState.needsTeamInvites,
           nextTeamOnboardingStep: onboardingState.nextStep,
-          isFirstVisit: isFirstVisit
+          isFirstVisit: isFirstVisit,
+          isSeatsBasedTeam: seatInfo?.isSeatsModel ?? false
         },
         activities: cachedData.activities,
         pendingInvites: cachedData.pendingInvites
@@ -210,12 +215,15 @@ export async function GET() {
       }
     }
 
-    const onboardingState = await getTeamOnboardingState({
-      isTeamAdmin: userContext.roles.isTeamAdmin,
-      teamId,
-      prefetchedMemberCount: teamMembersCount,
-      prefetchedPendingInviteCount: pendingTeamInvitesCount
-    })
+    const [onboardingState, seatInfo] = await Promise.all([
+      getTeamOnboardingState({
+        isTeamAdmin: userContext.roles.isTeamAdmin,
+        teamId,
+        prefetchedMemberCount: teamMembersCount,
+        prefetchedPendingInviteCount: pendingTeamInvitesCount
+      }),
+      teamId ? getTeamSeatInfo(teamId) : Promise.resolve(null)
+    ])
 
     const responseData = {
       success: true,
@@ -233,7 +241,8 @@ export async function GET() {
         needsPhotoStyleSetup: onboardingState.needsPhotoStyleSetup,
         needsTeamInvites: onboardingState.needsTeamInvites,
         nextTeamOnboardingStep: onboardingState.nextStep,
-        isFirstVisit: isFirstVisit
+        isFirstVisit: isFirstVisit,
+        isSeatsBasedTeam: seatInfo?.isSeatsModel ?? false
       },
       activities,
       pendingInvites

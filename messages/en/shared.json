@@ -119,7 +119,7 @@
       "2": {
         "question": "How much does it cost?",
         "answer": "When you sign up, you get a free test generation so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos), or VIP plan at {vipPrice} ({vipPhotos} photos for larger teams). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
-        "answerTeam": "When you sign up, you get a free test generation so you can see the quality. After that: Use our seats-based pricing where you pay per team member. Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
+        "answerTeam": "When you sign up, you get a free test generation so you can see the quality. After that: Use our per-member pricing where you pay per team member. Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations.",
         "answerIndividual": "When you sign up, you get a free test generation with PhotoShotsPro branding so you can see the quality. After that: Individual plan at {individualPrice} ({individualPhotos} photos). Photo credits never expire, so you can hoard them like digital gold. Each generation uses 1 photo credit and produces up to {maxVariations} variations."
       },
       "3": {
@@ -180,6 +180,17 @@
     "photosRetainedAfterSubscription": "Photos retained while active + 30 days after",
     "checkoutCanceled": "Checkout canceled. No charges were made. (Changed your mind? We get it, happens to the best of us)",
     "checkoutError": "Oops! Something went wrong. Please try again. (If it keeps happening, let us know-we're here to help)",
+    "promoCode": {
+      "haveCode": "Have a promo code?",
+      "enterPromoCode": "Enter promo code",
+      "placeholder": "Enter code",
+      "apply": "Apply",
+      "applied": "Code applied",
+      "remove": "Remove",
+      "enterCode": "Please enter a promo code",
+      "invalidCode": "Invalid promo code",
+      "validationFailed": "Failed to validate promo code. Please try again."
+    },
     "plans": {
       "free": {
         "name": "Free Trial",
@@ -281,11 +292,11 @@
         "credits": "{photos} photos added to your account"
       },
       "seats": {
-        "upgradeTitle": "Team Plan - {seats, plural, one {# Seat} other {# Seats}}",
-        "additionalTitle": "{seats, plural, one {# Additional Seat} other {# Additional Seats}}",
-        "upgradeDescription": "{seats, plural, one {# team seat} other {# team seats}} with {photosPerSeat} photos each",
-        "additionalDescription": "Added {seats, plural, one {# seat} other {# seats}} with {photosPerSeat} photos each",
-        "photosPerSeat": "{photos} photos per seat",
+        "upgradeTitle": "Team Plan - {seats, plural, one {# Member} other {# Members}}",
+        "additionalTitle": "{seats, plural, one {# Additional Member} other {# Additional Members}}",
+        "upgradeDescription": "{seats, plural, one {# team member} other {# team members}} with {photosPerSeat} photos each",
+        "additionalDescription": "Added {seats, plural, one {# team member} other {# team members}} with {photosPerSeat} photos each",
+        "photosPerSeat": "{photos} photos per member",
         "regenerations": "{retries} retries per photo",
         "inviteColleagues": "You can now invite {colleagues, plural, one {# colleague} other {# colleagues}}",
         "allFeatures": "Full customization options"
@@ -295,20 +306,20 @@
       "continueToGeneration": "Continue Generating"
     },
     "seats": {
-      "title": "Team headshots pay per seat",
+      "title": "Team headshots pay per member",
       "subtitle": "One-time payment. No subscriptions, no recurring fees. Pay once per team member, get 10 professional photos each.",
       "selectSeats": "How many team members?",
-      "seat": "seat",
-      "seats": "seats",
-      "perSeat": "per seat",
-      "pricePerSeat": "Price per seat",
+      "seat": "team member",
+      "seats": "team members",
+      "perSeat": "per member",
+      "pricePerSeat": "Price per member",
       "totalPhotos": "Total photos",
       "photos": "photos",
       "savings": "You save",
       "total": "Total",
-      "cta": "Get {seats} seats for {total}",
+      "cta": "Add {seats} team members for {total}",
       "whatsIncluded": "What's Included",
-      "volumeHint": "Add {seatsNeeded} more seats to unlock {nextPrice}/seat (save {savingsPerSeat}/seat)",
+      "volumeHint": "Add {seatsNeeded} more to unlock {nextPrice}/member (save {savingsPerSeat}/member)",
       "features": {
         "photosPerSeat": "10 professional photos per team member",
         "professionalQuality": "AI-powered professional quality headshots",
@@ -541,15 +552,16 @@
         "title": "Available photos",
         "individual": "Personal photos",
         "team": "Team photo credits",
-        "seats": "Seats",
+        "seats": "Team members",
         "balance": "Your photo balance",
         "lockedBranding": "with locked Teamshots branding",
         "allocated": "of which allocated to invites",
         "monthlyReset": "Monthly reset",
         "progress": "{used}/{total}",
         "buyMore": "Buy more photos",
-        "buyMoreSeats": "Buy more seats",
-        "buySeatsToUnlock": "Buy seats to unlock full customization",
+        "buyMoreCredits": "Buy more credits",
+        "buyMoreSeats": "Add team members",
+        "buySeatsToUnlock": "Add team members to unlock full customization",
         "upgradeToPaid": "Upgrade to unlock full customization"
       },
       "generate": {
@@ -672,7 +684,7 @@
         "free": "Your free test is ready! {photos} photos have been added to your account.",
         "individual": "Individual plan activated successfully! {photos} photos have been added to your account.",
         "vip": "VIP plan activated successfully! {photos} photos have been added to your account.",
-        "seats": "Seats purchase completed successfully! Your credits have been added to your account.",
+        "seats": "Team members added successfully! Your credits have been added to your account.",
         "topUp": "Photo top-up completed successfully! Your photos have been added to your account.",
         "default": "Purchase completed successfully! Your photos have been added to your account.",
         "titleFree": "Welcome! 🎉",
@@ -1296,8 +1308,8 @@
   },
   "generate": {
     "selfie": {
-      "title": "Choose your selfie",
-      "subtitle": "Select a selfie to use for generation, or upload a new one.",
+      "title": "Select your selfies",
+      "subtitle": "Choose the photos you want to use for your professional headshots.",
       "qrTip": {
         "title": "Take or upload from your computer or phone",
         "description": "You can use the QR code to take or upload selfies from your phone."
@@ -1307,6 +1319,10 @@
         "needMoreSelfies": "Add at least 2 selfies",
         "readyToCustomize": "Ready to customize"
       }
+    },
+    "customize": {
+      "title": "Customize your photo",
+      "subtitle": "Select your choice for each editable part"
     }
   },
   "mobileHandoff": {
@@ -1361,6 +1377,49 @@
       "continue": "Continue",
       "swipeToNext": "Swipe to continue",
       "swipeHint": "Swipe left to continue"
+    },
+    "progressDock": {
+      "selfies": {
+        "label": "Selfies",
+        "addPhotos": "Add {count} photos",
+        "addOneMore": "Add 1 more photo",
+        "complete": "{count} photos added"
+      },
+      "customize": {
+        "label": "Customize",
+        "locked": "Complete selfies first",
+        "remaining": "Set: {fields}",
+        "complete": "All set",
+        "notStarted": "Customize your photos",
+        "inProgress": "In progress"
+      },
+      "generate": {
+        "label": "Generate",
+        "needPhotos": "Add photos first",
+        "needCustomization": "Finish customizing",
+        "needCredits": "Get more credits",
+        "ready": "Ready to generate!",
+        "generating": "Generating...",
+        "buyCredits": "Buy Credits"
+      },
+      "fields": {
+        "background": "background",
+        "pose": "pose",
+        "shotType": "shot",
+        "clothing": "clothing",
+        "colors": "colors",
+        "expression": "expression",
+        "branding": "branding"
+      },
+      "tooltips": {
+        "needSelfies": "Add {count} photos first",
+        "needCustomization": "Complete all customization options first",
+        "needCredits": "You need more credits to generate"
+      },
+      "infoIcons": {
+        "selfieTips": "Selfie tips",
+        "customizationIntro": "Customization guide"
+      }
     },
     "typeSelection": {
       "title": "How would you like to use this photo?",
@@ -1549,12 +1608,12 @@
           "kicker": "",
           "title": "Now, customize your photo",
           "subtitle": "You're about to customize how your photos look.",
-          "body": "You can change the background, the pose, the expression, etc. On the next page, you can set each one of them, except the ones fixed by your team admin",
-          "bodyDesktop": "You can change how your photo looks, the background, the pose, the expression, etc. On the next page, you can customize each one of them, except the ones set by your team admin",
+          "body": "On the next page you can customize your photo. You can change the background, the pose, the expression, etc. Some of the settings have been fixed by your team-admin to standardize the look of the photos. These can not be changed.",
+          "bodyDesktop": "On the next page you can customize your photo. You can change the background, the pose, the expression, etc. Some of the settings have been fixed by your team-admin to standardize the look of the photos. These can not be changed.",
           "swipe": "Swipe right to move forward, left to go back. You can also use the navigation buttons below.",
           "scrollDesktop": "Scroll down to see all customization options. Adjust each setting to match your preferences.",
-          "editable": "The stars icon means you can edit this setting. Adjust until it matches your preferences.",
-          "locked": "The lock icon means your team admin fixed these. You can view them but not change to maintain consistency.",
+          "editable": "This icon means you can edit this setting.",
+          "locked": "This icon means your team admin fixed these, and they can not be changed.",
           "skip": "Don't show again",
           "continueButton": "Continue to customize"
         },
@@ -1919,7 +1978,7 @@
         "photosUsed": "Photos used",
         "remainingPhotos": "Remaining photos",
         "availablePhotos": "Photo credits left",
-        "seatUsage": "Seat usage",
+        "seatUsage": "Team members",
         "status": "Status",
         "actions": "Actions"
       },
@@ -2035,6 +2094,20 @@
       "buyCredits": "Buy credits",
       "upgradeToInvite": "Upgrade to invite"
     },
+    "selfAssignment": {
+      "title": "Join Your Team",
+      "message": "As a team admin, you can join as a team member. You will receive 10 photos (100 credits) and keep your free trial photos. This action cannot be undone.",
+      "button": "Join Team",
+      "buttonShort": "Assign me a seat",
+      "assigning": "Joining...",
+      "success": "Successfully joined the team! You now have 10 additional photos.",
+      "confirmMessage": "Are you sure you want to join the team? This action cannot be undone and you will receive 10 photos (100 credits).",
+      "noSeatsAvailable": "No spots available. Please add more team members first.",
+      "alreadyAssigned": {
+        "title": "Already a Member",
+        "message": "You are already a team member and have received 10 photos (100 credits)."
+      }
+    },
     "adminOnly": {
       "title": "Admin access required",
       "message": "This page is only accessible to company administrators.",
@@ -2084,7 +2157,7 @@
         "noActiveContext": "You need to create and set an active photo style before inviting team members. Set it up first, then come back!",
         "invalidCreditAllocation": "Photos must be allocated in multiples of {credits} credits (the cost per photo generation). For example: {credits2} credits ({credits} credits × 2), {credits3} credits ({credits} credits × 3), etc.",
         "teamSizeLimitReached": "Your Pro Small plan allows up to {limit} team members. Upgrade to Pro Large for unlimited team members.",
-        "noAvailableSeats": "No available seats. You have {current} of {total} seats occupied. Please purchase more seats to invite additional team members."
+        "noAvailableSeats": "No spots available. You have {current} of {total} team members. Please add more team members to invite additional people."
       }
     }
   },

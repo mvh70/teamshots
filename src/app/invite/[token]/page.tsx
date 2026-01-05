@@ -1,10 +1,11 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { BeforeAfterSlider } from '@/components/onboarding/BeforeAfterSlider'
 import { Sparkles } from 'lucide-react'
+import { trackInviteLinkViewed, trackTeamInviteAccepted, trackTeamCreated } from '@/lib/track'
 
 interface InviteData {
   email: string
@@ -35,6 +36,7 @@ export default function InvitePage() {
   const [teamNameValue, setTeamNameValue] = useState('')
   const [teamWebsiteValue, setTeamWebsiteValue] = useState('')
   const [submittingTeam, setSubmittingTeam] = useState(false)
+  const hasTrackedViewRef = useRef(false)
 
   // Random before/after sample selection
   const samplePairs = [
@@ -77,6 +79,15 @@ export default function InvitePage() {
           return
         }
         setInviteData(data.invite)
+
+        // Track invite link viewed (only once per session)
+        if (!hasTrackedViewRef.current) {
+          hasTrackedViewRef.current = true
+          trackInviteLinkViewed({
+            team_name: data.invite.teamName,
+            inviter_name: data.invite.inviterFirstName
+          })
+        }
       } else {
         // Check if email was auto-resent
         if (data.expired && data.emailResent) {
@@ -134,7 +145,14 @@ export default function InvitePage() {
         })
       })
 
+      const data = await response.json()
+
       if (response.ok) {
+        // Track team creation
+        trackTeamCreated({
+          team_id: data.teamId
+        })
+
         // Team created successfully, hide the setup modal
         setNeedsTeamSetup(false)
         setShowWelcomePopup(false)
@@ -146,7 +164,6 @@ export default function InvitePage() {
           await validateInvite()
         }
       } else {
-        const data = await response.json()
         setError(data.error || 'Failed to create team.')
         setSubmittingTeam(false)
       }
@@ -170,6 +187,11 @@ export default function InvitePage() {
       const data = await response.json()
 
       if (response.ok) {
+        // Track invite acceptance
+        trackTeamInviteAccepted({
+          team_name: inviteData?.teamName
+        })
+
         // Redirect to invite dashboard
         router.push(`/invite-dashboard/${token}`)
       } else {

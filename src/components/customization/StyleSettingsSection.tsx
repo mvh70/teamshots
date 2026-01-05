@@ -22,6 +22,8 @@ interface StyleSettingsSectionProps {
   onStepMetaChange?: Parameters<typeof PhotoStyleSettings>[0]['onStepMetaChange']
   /** Optional header to show above the flow header on mobile (e.g., app header with hamburger menu) */
   topHeader?: React.ReactNode
+  /** Category key to highlight with pulsing border (desktop only) */
+  highlightedField?: string | null
 }
 
 export default function StyleSettingsSection({
@@ -42,7 +44,8 @@ export default function StyleSettingsSection({
   onMobileStepChange,
   onSwipeBack,
   onStepMetaChange,
-  topHeader
+  topHeader,
+  highlightedField
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -65,6 +68,7 @@ export default function StyleSettingsSection({
         onSwipeBack={onSwipeBack}
         onStepMetaChange={onStepMetaChange}
         topHeader={topHeader}
+        highlightedField={highlightedField}
       />
     </>
   )

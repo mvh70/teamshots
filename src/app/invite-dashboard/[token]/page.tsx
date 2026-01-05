@@ -29,6 +29,7 @@ import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { SwipeableContainer } from '@/components/generation/navigation'
 import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
+import { trackInvitedMemberGenerationStarted } from '@/lib/track'
 
 const isNonNullObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -565,6 +566,12 @@ export default function InviteDashboardPage() {
       })
 
       if (response.ok) {
+        // Track invited member generation
+        trackInvitedMemberGenerationStarted({
+          team_name: inviteData?.teamName,
+          selfie_count: validSelectedIds.length
+        })
+
         // Set generation-detail tour as pending in database for first generation
         // Only for users who have accepted invites (have personId)
         if (typeof window !== 'undefined') {
@@ -581,10 +588,10 @@ export default function InviteDashboardPage() {
             })
           }
         }
-        
+
         // Reset generating state before redirect
         setIsGenerating(false)
-        
+
         // Redirect to generations page to see the result
         clearGenerationFlow()
         router.push(`/invite-dashboard/${token}/generations`)

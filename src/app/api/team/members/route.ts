@@ -110,17 +110,10 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // OPTIMIZATION: Batch fetch all credit transactions for all users and persons
-    const userIds = team.teamMembers.filter((p: TeamMember) => p.userId).map((p: TeamMember) => p.userId as string)
-    // Include current user's userId
-    if (session.user.id && !userIds.includes(session.user.id)) {
-      userIds.push(session.user.id)
-    }
-
     // OPTIMIZATION: Run all independent queries in parallel
+    // Note: Credits are stored under personId (Person is the business entity)
     const [
       allGenerations,
-      userCreditTransactions,
       personCreditTransactions,
       teamInvites
     ] = await Promise.all([
@@ -135,17 +128,7 @@ export async function GET(request: NextRequest) {
           personId: true
         }
       }),
-      // Fetch all credit transactions for users
-      userIds.length > 0 ? prisma.creditTransaction.findMany({
-        where: {
-          userId: { in: userIds }
-        },
-        select: {
-          userId: true,
-          credits: true
-        }
-      }) : Promise.resolve([]),
-      // Fetch all credit transactions for persons
+      // Fetch all credit transactions for persons (credits stored under personId)
       allPersonIds.length > 0 ? prisma.creditTransaction.findMany({
         where: {
           personId: { in: allPersonIds }
@@ -176,14 +159,6 @@ export async function GET(request: NextRequest) {
     })
 
     // Create maps for quick lookup
-    const userCreditsMap = new Map<string, number>()
-    type UserCreditTransaction = typeof userCreditTransactions[number];
-    userCreditTransactions.forEach((tx: UserCreditTransaction) => {
-      if (tx.userId) {
-        userCreditsMap.set(tx.userId, (userCreditsMap.get(tx.userId) || 0) + tx.credits)
-      }
-    })
-
     const teamInvitesMap = new Map<string, typeof teamInvites[0]>()
     type TeamInvite = typeof teamInvites[number];
     teamInvites.forEach((invite: TeamInvite) => {
@@ -236,54 +211,57 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Get seat info early to determine if we should filter admin
+    const seatInfo = await getTeamSeatInfo(team.id)
+    const isSeatsModel = seatInfo?.isSeatsModel || false
+
+    // For seats-based teams, check if admin has self-assigned
+    const adminPersonId = user.person?.id || ''
+    const adminHasSelfAssigned = adminPersonId && teamInvitesMap.has(adminPersonId)
+
     // Build response for all active team members
-    const usersWithCredits = team.teamMembers.map((p: TeamMember) => {
-      let individualCredits = 0
-      let teamCredits = 0
-      
-      if (p.userId) {
-        // User has account, get their credit balance from map
-        individualCredits = userCreditsMap.get(p.userId) || 0
-      } else {
-        // Person without account, get their credit balance from map
-        teamCredits = personCreditsMap.get(p.id) || 0
-      }
-
-      const activeGenerations = generationCounts.get(p.id) || 0
-
-      return {
-        id: p.id, // Always return personId as id
-        name: [p.firstName, p.lastName].filter(Boolean).join(' ') || p.email || 'Member',
-        email: p.email,
-        userId: p.userId,
-        isAdmin: p.userId === team.adminId,
-        isCurrentUser: p.userId === session.user.id,
-        isRevoked: false,
-        stats: {
-          selfies: p._count.selfies,
-          generations: activeGenerations,
-          individualCredits,
-          teamCredits,
-          teamCreditsAllocated: personCreditsAllocatedMap.get(p.id) || 0,
-          teamCreditsUsed: Math.max(0, personCreditsUsedMap.get(p.id) || 0)
+    // Credits are stored under personId (Person is the business entity)
+    // For seats-based teams, exclude admin unless they have self-assigned a seat
+    const usersWithCredits = team.teamMembers
+      .filter((p: TeamMember) => {
+        // For seats-based teams, exclude admin if they haven't self-assigned
+        if (isSeatsModel && p.userId === team.adminId && !adminHasSelfAssigned) {
+          return false
         }
-      }
-    })
+        return true
+      })
+      .map((p: TeamMember) => {
+        // All credits are stored under personId
+        const personCredits = personCreditsMap.get(p.id) || 0
+        const activeGenerations = generationCounts.get(p.id) || 0
+
+        return {
+          id: p.id, // Always return personId as id
+          name: [p.firstName, p.lastName].filter(Boolean).join(' ') || p.email || 'Member',
+          email: p.email,
+          userId: p.userId,
+          isAdmin: p.userId === team.adminId,
+          isCurrentUser: p.userId === session.user.id,
+          isRevoked: false,
+          stats: {
+            selfies: p._count.selfies,
+            generations: activeGenerations,
+            individualCredits: personCredits, // Credits stored under personId
+            teamCredits: personCredits, // Same - credits belong to person
+            teamCreditsAllocated: personCreditsAllocatedMap.get(p.id) || 0,
+            teamCreditsUsed: Math.max(0, personCreditsUsedMap.get(p.id) || 0)
+          }
+        }
+      })
 
     // Add revoked members to the list
+    // Credits are stored under personId (Person is the business entity)
     revokedInvites.forEach((invite: RevokedInvite) => {
       if (!invite.person) return
-      
-      const p = invite.person
-      let individualCredits = 0
-      let teamCredits = 0
-      
-      if (p.userId) {
-        individualCredits = userCreditsMap.get(p.userId) || 0
-      } else {
-        teamCredits = personCreditsMap.get(p.id) || 0
-      }
 
+      const p = invite.person
+      // All credits are stored under personId
+      const personCredits = personCreditsMap.get(p.id) || 0
       const activeGenerations = generationCounts.get(p.id) || 0
 
       usersWithCredits.push({
@@ -297,21 +275,22 @@ export async function GET(request: NextRequest) {
         stats: {
           selfies: p._count.selfies,
           generations: activeGenerations,
-          individualCredits,
-          teamCredits,
+          individualCredits: personCredits,
+          teamCredits: personCredits,
           teamCreditsAllocated: personCreditsAllocatedMap.get(p.id) || 0,
           teamCreditsUsed: Math.max(0, personCreditsUsedMap.get(p.id) || 0)
         }
       })
     })
 
-    // Ensure current admin is included
+    // Only include admin if they have self-assigned a seat (have a TeamInvite)
+    // Note: adminPersonId and adminHasSelfAssigned are already defined above
     type UserWithCredits = typeof usersWithCredits[number];
-    if (!usersWithCredits.find((u: UserWithCredits) => u.id === (user.person?.id || ''))) {
-      const adminPersonId = user.person?.id || ''
-      const adminCredits = userCreditsMap.get(session.user.id) || 0
+
+    // Credits are stored under personId (Person is the business entity)
+    if (!usersWithCredits.find((u: UserWithCredits) => u.id === adminPersonId) && adminHasSelfAssigned) {
+      const adminCredits = personCreditsMap.get(adminPersonId) || 0
       const adminActiveGenerations = generationCounts.get(user.person.id) || 0
-      const adminTeamCredits = personCreditsMap.get(adminPersonId) || 0
 
       usersWithCredits.unshift({
         id: user.person?.id || session.user.id, // prefer personId
@@ -325,15 +304,14 @@ export async function GET(request: NextRequest) {
           selfies: user.person?._count.selfies || 0,
           generations: adminActiveGenerations,
           individualCredits: adminCredits,
-          teamCredits: adminTeamCredits,
+          teamCredits: adminCredits,
           teamCreditsAllocated: personCreditsAllocatedMap.get(adminPersonId) || 0,
           teamCreditsUsed: Math.max(0, personCreditsUsedMap.get(adminPersonId) || 0)
         }
       })
     }
 
-    // Get team seats information if available
-    const seatInfo = await getTeamSeatInfo(team.id)
+    // seatInfo is already fetched above
 
     return NextResponse.json({ 
       users: usersWithCredits,

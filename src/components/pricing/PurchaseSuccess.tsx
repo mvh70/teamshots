@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, usePathname } from '@/i18n/routing'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -8,6 +8,7 @@ import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { useCredits } from '@/contexts/CreditsContext'
+import { trackPaymentCompleted } from '@/lib/track'
 
 interface PurchaseSuccessProps {
   className?: string
@@ -21,6 +22,7 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
   const { refetch: refetchCredits, loading: creditsLoading } = useCredits()
   const [planType, setPlanType] = useState<'individual' | 'vip' | 'topUp' | 'seats' | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
+  const hasTrackedRef = useRef(false)
 
   useEffect(() => {
     const successType = searchParams.get('type')
@@ -35,6 +37,23 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
       setPlanType('seats')
     }
   }, [searchParams])
+
+  // Track payment completion (conversion from free to paid)
+  useEffect(() => {
+    if (planType && !hasTrackedRef.current) {
+      hasTrackedRef.current = true
+
+      // Get additional details from URL params
+      const seatsParam = searchParams.get('seats')
+      const creditsParam = searchParams.get('credits')
+
+      trackPaymentCompleted({
+        plan_tier: planType === 'topUp' ? 'top_up' : planType,
+        plan_period: planType === 'seats' ? 'seats' : (planType === 'vip' ? 'large' : 'small'),
+        seat_count: seatsParam ? parseInt(seatsParam, 10) : undefined,
+      })
+    }
+  }, [planType, searchParams])
 
   // Refresh credits when component mounts (user just completed purchase)
   useEffect(() => {

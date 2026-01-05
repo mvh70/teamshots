@@ -20,16 +20,19 @@ import { loadStyleByContextId } from '@/domain/style/service'
 import { getPackageConfig } from '@/domain/style/packages'
 import GenerationSummaryTeam from '@/components/generation/GenerationSummaryTeam'
 import GenerateButton from '@/components/generation/GenerateButton'
-import { hasUneditedEditableFields } from '@/domain/style/userChoice'
+import { hasUneditedEditableFields, getUneditedEditableFieldNames } from '@/domain/style/userChoice'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { PurchaseSuccess } from '@/components/pricing/PurchaseSuccess'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import type { GenerationPageData, ContextOption } from './actions'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
+import { FlowProgressDock } from '@/components/generation/navigation'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
+import { useOnboardingState } from '@/lib/onborda/hooks'
 import Header from '@/app/[locale]/app/components/Header'
-import { loadClothingColors, saveClothingColors } from '@/lib/clothing-colors-storage'
+import { loadClothingColors, saveClothingColors, loadStyleSettings, saveStyleSettings } from '@/lib/clothing-colors-storage'
+import { preloadFaceDetectionModel } from '@/lib/face-detection'
 
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
 
@@ -44,6 +47,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const pathname = usePathname()
   const { track } = useAnalytics()
   const t = useTranslations('app.sidebar.generate')
+  const tCustomize = useTranslations('generate.customize')
   const skipUpload = useMemo(() => searchParams.get('skipUpload') === '1', [searchParams])
   const searchParamsString = useMemo(() => searchParams.toString(), [searchParams])
   
@@ -71,9 +75,12 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     clearFlow,
     hasSeenCustomizationIntro,
     hydrated,
-    setCustomizationStepsMeta
+    setCustomizationStepsMeta,
+    customizationStepsMeta,
+    visitedSteps
   } = useGenerationFlowState()
   const isMobile = useMobileViewport()
+  const { context: onboardingContext } = useOnboardingState()
 
   const markGenerationFlow = useCallback(() => {
     markInFlow({ pending: true })
@@ -117,6 +124,13 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     }
   } : null, [initialData.session])
 
+  // Preload face detection model early in the generation flow
+  // This ensures the model is ready when users reach the selfie capture page
+  useEffect(() => {
+    console.log('[StartGenerationClient] Preloading face detection model...')
+    preloadFaceDetectionModel()
+  }, [])
+
   // ✅ KEEP: Redirect logic (legitimate side effect for navigation)
   const [isPending, startTransition] = useTransition()
   useEffect(() => {
@@ -147,24 +161,24 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     }
   }, [flowFlags.pendingGeneration, skipUpload, keyFromQuery, isSuccess, session, clearGenerationFlow])
 
-  // Track if we've loaded saved colors to avoid overwriting user changes
-  const hasLoadedSavedColorsRef = React.useRef(false)
+  // Track if we've loaded saved settings to avoid overwriting user changes
+  const hasLoadedSavedSettingsRef = React.useRef(false)
 
   // Helper function to merge saved colors into settings
   // IMPORTANT: Only merges saved colors when clothingColors type is 'user-choice'
   // Never modifies predefined/preset colors - they remain as-is
   const mergeSavedColors = React.useCallback((settings: PhotoStyleSettingsType): PhotoStyleSettingsType => {
     const currentClothingColors = settings.clothingColors
-    
+
     // CRITICAL: Only merge saved colors if type is 'user-choice'
     // If type is 'predefined', return settings unchanged (preserve preset values)
     if (!currentClothingColors || currentClothingColors.type !== 'user-choice') {
       return settings
     }
-    
+
     const savedColors = loadClothingColors()
     if (!savedColors) return settings
-    
+
     // Merge saved colors into user-choice settings
     return {
       ...settings,
@@ -178,35 +192,78 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     }
   }, [])
 
-  // Load saved clothing colors from session storage on mount
-  // IMPORTANT: Only loads saved colors if initial settings are 'user-choice' type
-  // Predefined/preset colors are never modified - they remain as preset values
+  // Helper function to merge saved style settings into current settings
+  // Only merges fields that are 'user-choice' type - preserves predefined/preset values
+  const mergeSavedStyleSettings = React.useCallback((
+    settings: PhotoStyleSettingsType,
+    contextId?: string | null
+  ): PhotoStyleSettingsType => {
+    const savedSettings = loadStyleSettings(contextId)
+    if (!savedSettings) return settings
+
+    // Start with current settings
+    const merged = { ...settings }
+
+    // For each category in saved settings, only merge if current type is 'user-choice'
+    const categoriesToMerge = [
+      'background', 'clothing', 'clothingColors', 'shotType',
+      'branding', 'expression', 'pose', 'customClothing'
+    ] as const
+
+    for (const key of categoriesToMerge) {
+      const currentValue = settings[key] as { type?: string; style?: string } | undefined
+      const savedValue = savedSettings[key]
+
+      // Only merge if current settings allow user choice
+      const isUserChoice = key === 'clothing'
+        ? currentValue?.style === 'user-choice'
+        : currentValue?.type === 'user-choice'
+
+      if (isUserChoice && savedValue) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (merged as any)[key] = savedValue
+      }
+    }
+
+    return merged
+  }, [])
+
+  // Load saved style settings from session storage on mount
+  // IMPORTANT: Only loads settings if current type is 'user-choice'
+  // Predefined/preset values are never modified
   useEffect(() => {
-    // Only load colors once when component is hydrated and ready
-    if (!hydrated || !skipUpload || hasLoadedSavedColorsRef.current) return
-    
-    // Merge saved colors into current settings
-    // mergeSavedColors will return settings unchanged if type is 'predefined'
+    // Only load settings once when component is hydrated and ready
+    if (!hydrated || !skipUpload || hasLoadedSavedSettingsRef.current) return
+
+    const contextId = activeContext?.id
+
     setPhotoStyleSettings(prev => {
-      const merged = mergeSavedColors(prev)
-      hasLoadedSavedColorsRef.current = true
+      // First merge saved style settings (all categories)
+      let merged = mergeSavedStyleSettings(prev, contextId)
+      // Then merge saved clothing colors (for backward compatibility)
+      merged = mergeSavedColors(merged)
+      hasLoadedSavedSettingsRef.current = true
       return merged
     })
-  }, [hydrated, skipUpload, mergeSavedColors])
+  }, [hydrated, skipUpload, activeContext?.id, mergeSavedStyleSettings, mergeSavedColors])
 
-  // Save clothing colors to session storage whenever they change
-  // IMPORTANT: Only saves when type is 'user-choice' - never saves predefined/preset colors
+  // Save all style settings to session storage whenever they change
+  // IMPORTANT: Saves all user choices - this ensures settings survive page refresh
   useEffect(() => {
     // Skip saving during initial load
-    if (!hasLoadedSavedColorsRef.current || !hydrated || !skipUpload) return
-    
-    // CRITICAL: Only save if type is 'user-choice'
-    // Predefined/preset colors are never saved - they remain as preset values
+    if (!hasLoadedSavedSettingsRef.current || !hydrated || !skipUpload) return
+
+    const contextId = activeContext?.id
+
+    // Save all style settings
+    saveStyleSettings(photoStyleSettings, contextId)
+
+    // Also save clothing colors separately for backward compatibility
     const clothingColors = photoStyleSettings.clothingColors
     if (clothingColors?.type === 'user-choice' && clothingColors?.colors) {
       saveClothingColors(clothingColors.colors)
     }
-  }, [photoStyleSettings.clothingColors, hydrated, skipUpload])
+  }, [photoStyleSettings, hydrated, skipUpload, activeContext?.id])
 
   const normalizeContextName = useCallback((rawName: string | null | undefined, index: number, total: number, type: 'personal' | 'team'): string => {
     const trimmed = (rawName ?? '').trim()
@@ -357,6 +414,16 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     ? hasUneditedEditableFields(photoStyleSettings as Record<string, unknown>, originalContextSettings as Record<string, unknown>, effectivePackageId)
     : false
 
+  // Get list of unedited fields for progress dock display
+  const uneditedFields = React.useMemo(() => {
+    if (!originalContextSettings) return []
+    return getUneditedEditableFieldNames(
+      photoStyleSettings as Record<string, unknown>,
+      originalContextSettings as Record<string, unknown>,
+      effectivePackageId
+    )
+  }, [photoStyleSettings, originalContextSettings, effectivePackageId])
+
   const hasVisitedClothingColorsIfEditable = React.useMemo(() => {
     if (!isMobile) return true
 
@@ -458,102 +525,27 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   return (
     <>
-      {/* Floating Generate Button - Top Right (Desktop) - Outside main container */}
-      {skipUpload && (
-        <div className="hidden md:flex fixed top-19 right-8 z-[100] pointer-events-auto">
-          {/* Generate Button Area */}
-          <div className="relative">
-            {!hasEnoughCredits ? (
-              <Link
-                href={buyCreditsHrefWithReturn}
-                className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
-                style={{ 
-                  background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.ctaHover}, #4F46E5)`
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
-                }}
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                {t('buyMoreCredits')}
-              </Link>
-            ) : (
-              <div className={`rounded-xl shadow-lg p-3 min-w-[200px] transition-colors duration-200 ${
-                canGenerate 
-                  ? 'bg-gradient-to-br from-green-50 to-emerald-50/50 border border-green-200/60' 
-                  : 'bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200/60'
-              }`}>
-                {!canGenerate && hasUneditedFields ? (
-                  <div className="mb-2 flex items-start gap-2">
-                    <div className="flex-shrink-0 w-4 h-4 rounded-full bg-amber-100 flex items-center justify-center mt-0.5">
-                      <svg className="w-3 h-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <p className="text-xs text-amber-800 leading-snug flex-1">
-                      {t('customizeFirstTooltip')}
-                    </p>
-                  </div>
-                ) : canGenerate && (
-                  <div className="mb-2 flex items-start gap-2">
-                    <div className="flex-shrink-0 w-4 h-4 rounded-full bg-green-100 flex items-center justify-center mt-0.5">
-                      <svg className="w-3 h-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <p className="text-xs text-green-800 leading-snug flex-1 font-medium">
-                      Ready to generate
-                    </p>
-                  </div>
-                )}
-                
-                {/* Buttons Container */}
-                <div className="flex gap-2">
-                  {/* Back to Selfies Button */}
-                  <button
-                    onClick={handleBackToSelfies}
-                    className="flex items-center justify-center px-4 py-3 text-base font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl border border-green-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0"
-                  >
-                    <ChevronLeftIcon className="h-5 w-5 mr-1.5" />
-                    {t('backToSelfies')}
-                  </button>
-
-                  {/* Generate Button */}
-                  <button
-                    onClick={onProceed}
-                    disabled={!canGenerate || isPending || isGenerating}
-                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold rounded-xl transition-all duration-200 ${
-                      canGenerate && !isPending && !isGenerating
-                        ? 'bg-gradient-to-r from-brand-primary to-indigo-600 text-white hover:from-brand-primary-hover hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {isGenerating || isPending ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        {t('startingGeneration')}
-                      </>
-                    ) : (
-                      <>
-                        {t('generatePhoto')}
-                        <ChevronRightIcon className="h-5 w-5" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+          {/* Progress Dock - Bottom Center (Desktop Only) */}
+          <FlowProgressDock
+            selfieCount={selectedSelfies.length}
+            uneditedFields={uneditedFields}
+            hasUneditedFields={hasUneditedFields}
+            canGenerate={canGenerate}
+            hasEnoughCredits={hasEnoughCredits}
+            currentStep="customize"
+            onNavigateToSelfies={handleBackToSelfies}
+            onNavigateToCustomize={() => {}} // Already on customize page
+            onGenerate={onProceed}
+            onBuyCredits={() => router.push(buyCreditsHrefWithReturn)}
+            isGenerating={isGenerating || isPending}
+            hiddenScreens={onboardingContext.hiddenScreens}
+            onNavigateToSelfieTips={() => router.push('/app/generate/selfie-tips?force=1')}
+            onNavigateToCustomizationIntro={() => router.push('/app/generate/customization-intro?force=1')}
+            customizationStepsMeta={customizationStepsMeta}
+            visitedEditableSteps={visitedSteps}
+          />
       
-      <div className={`${pagePaddingClasses} space-y-8 pb-24 md:pb-8 w-full max-w-full overflow-x-hidden bg-white min-h-screen`}>
+      <div className={`${pagePaddingClasses} space-y-8 pb-32 md:pb-52 w-full max-w-full overflow-x-hidden bg-white min-h-screen`}>
       {!skipUpload && (creditsLoading || !session) ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
@@ -687,6 +679,16 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             </div>
           </div>
 
+          {/* Desktop Page Header - matches intro pages typography */}
+          <div className="hidden md:block pt-8 md:pt-10 space-y-3">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 leading-[1.1] font-serif tracking-tight">
+              {tCustomize('title')}
+            </h1>
+            <p className="text-lg text-gray-600 leading-relaxed max-w-3xl">
+              {tCustomize('subtitle')}
+            </p>
+          </div>
+
           {/* Context Selection for Personal and Team Generations - Hide for free plan users */}
           {!isFreePlan && (effectiveGenerationType === 'personal' || effectiveGenerationType === 'team') && (
             <div className="hidden md:block bg-white rounded-xl shadow-md border border-gray-200/60 p-6 sm:p-8">
@@ -805,7 +807,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
           {/* Photo Style Settings - Desktop */}
           <div className="space-y-6">
-            {/* Package Selector - Desktop (in style settings area) - Removed as integrated into main dropdown */}
             <StyleSettingsSection
               value={photoStyleSettings}
               onChange={setPhotoStyleSettings}
@@ -818,6 +819,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
               className="hidden md:block"
               noContainer
               onStepMetaChange={setCustomizationStepsMeta}
+              highlightedField={uneditedFields.length > 0 ? uneditedFields[0] : undefined}
             />
           </div>
 
@@ -833,7 +835,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             </div>
           )}
 
-          {/* Fixed sticky button at bottom - Mobile */}
+          {/* Fixed sticky button at bottom - Mobile (Restored for non-desktop) */}
           <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-4 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
             {!hasEnoughCredits ? (
               <Link
@@ -852,30 +854,30 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                 <PlusIcon className="h-5 w-5 mr-2" />
                 {t('buyMoreCredits')}
               </Link>
-        ) : (
-          <>
-            {!hasVisitedClothingColorsIfEditable && (
-              <p className="text-xs text-gray-500 text-center mb-2">
-                {t('customizeFirstTooltipMobile')}
-              </p>
-            )}
-              <GenerateButton
-                onClick={onProceed}
-                disabled={!canGenerate || isPending || isGenerating}
-                isGenerating={isGenerating || isPending}
-                size="md"
-                disabledReason={
-                  !hasVisitedClothingColorsIfEditable
-                    ? t('customizeFirstTooltipMobile')
-                    : hasUneditedFields
+            ) : (
+              <>
+                {!hasVisitedClothingColorsIfEditable && (
+                  <p className="text-xs text-gray-500 text-center mb-2">
+                    {t('customizeFirstTooltipMobile')}
+                  </p>
+                )}
+                <GenerateButton
+                  onClick={onProceed}
+                  disabled={!canGenerate || isPending || isGenerating}
+                  isGenerating={isGenerating || isPending}
+                  size="md"
+                  disabledReason={
+                    !hasVisitedClothingColorsIfEditable
                       ? t('customizeFirstTooltipMobile')
-                      : undefined
-                }
-                integrateInPopover={hasUneditedFields && hasVisitedClothingColorsIfEditable}
-              >
-                {t('generatePhoto')}
-              </GenerateButton>
-          </>
+                      : hasUneditedFields
+                        ? t('customizeFirstTooltipMobile')
+                        : undefined
+                  }
+                  integrateInPopover={hasUneditedFields && hasVisitedClothingColorsIfEditable}
+                >
+                  {t('generatePhoto')}
+                </GenerateButton>
+              </>
             )}
           </div>
         </>

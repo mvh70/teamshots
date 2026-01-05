@@ -38,6 +38,7 @@ model User {
   revokedTokens        RevokedToken[]
   contexts             Context[]
   mobileHandoffTokens  MobileHandoffToken[]
+  promoCodeUsages      PromoCodeUsage[]
 
   @@index([email])
 }
@@ -567,5 +568,59 @@ model GenerationCost {
   @@index([teamId])
   @@index([createdAt])
   @@index([evaluationStatus])
+}
+
+// PromoCode: Discount codes for marketing campaigns (domain-specific)
+model PromoCode {
+  id                String           @id @default(cuid())
+  code              String           // e.g., "FOUNDING50"
+  discountType      String           // "percentage" | "fixed_amount"
+  discountValue     Float            // 50 for 50%, or dollar amount
+  maxUses           Int?             // null = unlimited
+  usedCount         Int              @default(0)
+  validFrom         DateTime         @default(now())
+  validUntil        DateTime?
+  active            Boolean          @default(true)
+
+  // Domain restriction (required)
+  domain            String           // "teamshotspro.com" | "photoshotspro.com" | etc.
+
+  // Restrictions
+  applicableTo      String[]         @default(["plan", "seats", "top_up"])
+  minSeats          Int?             // Minimum seats for seats purchases
+
+  // Stripe sync
+  stripeCouponId    String?          @unique
+  stripePromoCodeId String?          @unique
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  usages            PromoCodeUsage[]
+
+  @@unique([code, domain]) // Same code can exist on different domains
+  @@index([domain])
+  @@index([active])
+  @@index([code])
+}
+
+// PromoCodeUsage: Track each use of a promo code
+model PromoCodeUsage {
+  id                String     @id @default(cuid())
+  promoCodeId       String
+  userId            String?
+  email             String?    // For guest checkout
+  discountAmount    Float      // Actual $ saved
+  originalAmount    Float      // Pre-discount amount
+  stripeSessionId   String?
+
+  createdAt         DateTime   @default(now())
+
+  promoCode         PromoCode  @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  user              User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([promoCodeId])
+  @@index([userId])
+  @@index([email])
 }
 

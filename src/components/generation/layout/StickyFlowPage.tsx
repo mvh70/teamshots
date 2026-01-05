@@ -10,7 +10,7 @@ type FooterConfig =
   | { variant: 'actions' | 'navigation' | 'custom'; content: React.ReactNode }
   | { variant: 'swipe-hint'; text: string; direction?: 'left' | 'right' }
 
-type BottomPadding = 'none' | 'sm' | 'md' | 'lg' | 'auto'
+type BottomPadding = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'auto'
 type MaxWidth = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | '5xl' | '7xl' | 'full'
 type Background = 'white' | 'gray'
 
@@ -30,7 +30,8 @@ const bottomPaddingClasses: Record<Exclude<BottomPadding, 'auto'>, string> = {
   none: '',
   sm: 'pb-20',
   md: 'pb-28',
-  lg: 'pb-40'
+  lg: 'pb-40',
+  xl: 'pb-48'
 }
 
 interface StickyFlowPageProps {
