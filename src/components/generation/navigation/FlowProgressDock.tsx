@@ -211,6 +211,7 @@ export default function FlowProgressDock({
     if (!customizationStepsMeta || customizationStepsMeta.allSteps === 0) return null
 
     const { allSteps } = customizationStepsMeta
+    const isOnCustomize = currentStep === 'customize'
 
     return (
       <div className="flex items-center justify-center gap-1.5">
@@ -223,22 +224,24 @@ export default function FlowProgressDock({
             return (
               <div
                 key={`dot-lock-${idx}`}
-                className="w-2 h-2 rounded-full bg-gray-200 flex items-center justify-center"
+                className="w-2 h-2 rounded-full bg-gray-100 flex items-center justify-center"
               >
-                <LockClosedIcon className="h-1.5 w-1.5 text-gray-400" />
+                <LockClosedIcon className="h-1.5 w-1.5 text-gray-300" />
               </div>
             )
           }
 
-          // Editable steps: green if visited, subtle gray with brand ring if not
+          // Editable steps: green if visited AND on customize page, otherwise grey
           return (
             <span
               key={`dot-${idx}`}
               className={`
                 h-2 w-2 rounded-full transition-all duration-300
-                ${isVisited
+                ${isVisited && isOnCustomize
                   ? 'bg-brand-secondary shadow-[0_0_0_2px_rgba(16,185,129,0.2)]'
-                  : 'bg-gray-300 hover:bg-brand-primary-light'
+                  : isVisited
+                    ? 'bg-gray-400'
+                    : 'bg-gray-200 hover:bg-gray-300'
                 }
               `}
             />
@@ -249,36 +252,46 @@ export default function FlowProgressDock({
   }
 
   // Render info icon with optional diagonal line when hidden
+  // isCurrent: true when user is viewing this info page
   const renderInfoIcon = (
     isHidden: boolean,
     onClick: (() => void) | undefined,
-    tooltipText: string
+    tooltipText: string,
+    isCurrent: boolean = false
   ) => {
     if (!onClick) return null
+
+    const getInfoIconStyles = () => {
+      const base = 'relative flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 group flex-shrink-0'
+
+      if (isCurrent) {
+        // Current info page: highlighted with double border
+        return `${base} bg-brand-primary text-white shadow-[0_2px_12px_rgba(99,102,241,0.3)] ring-2 ring-brand-primary/30 ring-offset-2`
+      }
+      if (isHidden) {
+        return `${base} bg-gray-100 hover:bg-gray-150`
+      }
+      // Default: subtle grey
+      return `${base} bg-gray-100 hover:bg-gray-200 hover:scale-105`
+    }
 
     const iconContent = (
       <button
         type="button"
         onClick={onClick}
-        className={`
-          relative flex items-center justify-center w-8 h-8 rounded-full
-          transition-all duration-200 group flex-shrink-0
-          ${isHidden
-            ? 'bg-gray-50 hover:bg-gray-100'
-            : 'bg-brand-primary-light hover:bg-brand-primary-lighter hover:scale-105'
-          }
-        `}
+        className={getInfoIconStyles()}
         aria-label={tooltipText}
       >
         <InformationCircleIcon
-          className={`w-4.5 h-4.5 transition-all duration-200 ${
-            isHidden
-              ? 'text-gray-400 group-hover:text-gray-500'
-              : 'text-brand-primary group-hover:text-brand-primary-hover'
+          className={`w-4 h-4 transition-all duration-200 ${
+            isCurrent
+              ? 'text-white'
+              : isHidden
+                ? 'text-gray-400 group-hover:text-gray-500'
+                : 'text-gray-500 group-hover:text-gray-600'
           }`}
-          style={{ width: '18px', height: '18px' }}
         />
-        {isHidden && (
+        {isHidden && !isCurrent && (
           <div
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
             aria-hidden="true"
@@ -390,37 +403,48 @@ export default function FlowProgressDock({
     }
 
     // Enhanced circle styles with rings and depth
+    // Current step + complete: green with double border
+    // Current step + not complete: blue with double border
+    // Completed (not current): grey with checkmark
+    // Others: greyed
     const getCircleStyles = () => {
       const base = 'w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300'
 
-      if (isLocked) {
-        return `${base} bg-gray-50 text-gray-300 border border-gray-200`
-      }
-      if (isComplete) {
-        return `${base} bg-brand-secondary text-white shadow-[0_2px_8px_rgba(16,185,129,0.25)] border border-brand-secondary`
+      if (isCurrentStep && isComplete) {
+        // Current step and complete: green with double border
+        return `${base} bg-brand-secondary text-white shadow-[0_2px_12px_rgba(16,185,129,0.3)] ring-2 ring-brand-secondary/30 ring-offset-2`
       }
       if (isCurrentStep) {
-        return `${base} bg-brand-primary text-white shadow-[0_2px_12px_rgba(99,102,241,0.3)] border border-brand-primary ring-2 ring-brand-primary/20 ring-offset-2`
+        // Current step but not complete: blue with double border
+        return `${base} bg-brand-primary text-white shadow-[0_2px_12px_rgba(99,102,241,0.3)] ring-2 ring-brand-primary/30 ring-offset-2`
       }
-      // Active but not current (e.g. visited but moved back)
-      return `${base} bg-white text-gray-500 border border-gray-200 hover:border-brand-primary-light hover:bg-gray-50`
+      if (isComplete) {
+        // Completed but not current: grey with checkmark
+        return `${base} bg-gray-200 text-gray-500 border border-gray-300`
+      }
+      if (isLocked) {
+        return `${base} bg-gray-100 text-gray-300 border border-gray-200`
+      }
+      // Active but not current: grey
+      return `${base} bg-gray-100 text-gray-400 border border-gray-200 hover:bg-gray-150`
     }
 
     // Label styles with better hierarchy
     const getLabelStyles = () => {
       const base = 'text-sm font-medium tracking-tight transition-colors duration-200'
-      if (isLocked) return `${base} text-gray-300`
       if (isCurrentStep) return `${base} text-gray-900`
-      if (isComplete) return `${base} text-gray-700`
-      return `${base} text-gray-500`
+      if (isComplete) return `${base} text-gray-500`
+      if (isLocked) return `${base} text-gray-300`
+      return `${base} text-gray-400`
     }
 
     // Status text styles
     const getStatusStyles = () => {
       const base = 'text-[10px] leading-tight font-medium transition-colors duration-200'
-      if (isComplete) return `${base} text-brand-secondary`
-      if (isLocked) return `${base} text-gray-300`
+      if (isCurrentStep && isComplete) return `${base} text-brand-secondary`
       if (isCurrentStep) return `${base} text-brand-primary`
+      if (isComplete) return `${base} text-gray-400`
+      if (isLocked) return `${base} text-gray-300`
       return `${base} text-gray-400`
     }
 
@@ -479,9 +503,7 @@ export default function FlowProgressDock({
     const isActive = fromState === 'complete' && toState !== 'locked'
     const isPartial = fromState === 'complete' || fromState === 'active'
 
-    // Don't render line if it goes to Generate step (since that's now a distinct button)
-    // Actually, we might still want a small line or gap?
-    // Let's keep a subtle line but shorter
+    // Lines are grey - darker when progress has been made
     return (
       <div className="w-8 flex items-center justify-center px-1">
         <div className="relative w-full h-0.5 rounded-full overflow-hidden bg-gray-100">
@@ -489,9 +511,9 @@ export default function FlowProgressDock({
             className={`
               absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out
               ${isActive
-                ? 'w-full bg-brand-secondary'
+                ? 'w-full bg-gray-300'
                 : isPartial
-                  ? 'w-1/2 bg-gradient-to-r from-brand-secondary to-transparent'
+                  ? 'w-1/2 bg-gradient-to-r from-gray-300 to-transparent'
                   : 'w-0'
               }
             `}
@@ -551,7 +573,8 @@ export default function FlowProgressDock({
               {renderInfoIcon(
                 isSelfieTipsHidden,
                 onNavigateToSelfieTips,
-                t('infoIcons.selfieTips', { default: 'Selfie tips' })
+                t('infoIcons.selfieTips', { default: 'Selfie tips' }),
+                currentStep === 'tips' // Highlight info icon when on tips page
               )}
               {/* Small spacing instead of connector */}
               <div className="w-2" />
@@ -564,7 +587,7 @@ export default function FlowProgressDock({
             getSelfieStatusText(),
             selfieState,
             handleSelfieClick,
-            currentStep === 'selfies' || currentStep === 'tips',
+            currentStep === 'selfies', // Only highlight when actually on selfies, not on tips
             undefined,
             1
           )}
@@ -578,7 +601,8 @@ export default function FlowProgressDock({
               {renderInfoIcon(
                 isCustomizationIntroHidden,
                 onNavigateToCustomizationIntro,
-                t('infoIcons.customizationIntro', { default: 'Customization guide' })
+                t('infoIcons.customizationIntro', { default: 'Customization guide' }),
+                currentStep === 'intro' // Highlight info icon when on intro page
               )}
             </div>
           )}
@@ -590,7 +614,7 @@ export default function FlowProgressDock({
               getCustomizeStatusText(),
               customizeState,
               handleCustomizeClick,
-              currentStep === 'customize' || currentStep === 'intro',
+              currentStep === 'customize', // Only highlight when actually on customize, not on intro
               getTooltipText(customizeState, 'customize'),
               2
             )}
