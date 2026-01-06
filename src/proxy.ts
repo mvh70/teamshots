@@ -83,6 +83,7 @@ function addSecurityHeaders(response: NextResponse) {
     'https://static.cloudflareinsights.com',
     'https://pineapple.teamshotspro.com',
     'https://www.googletagmanager.com', // Google Tag Manager & Analytics
+    'https://assets.apollo.io', // Apollo.io
     posthogDomains
   ].filter(Boolean).join(' ')
   
@@ -92,7 +93,7 @@ function addSecurityHeaders(response: NextResponse) {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.googletagmanager.com", // Allow GTM & Google Fonts styles
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts
-    `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://storage.googleapis.com https://cdn.jsdelivr.net https://unpkg.com https://tfhub.dev https://www.kaggle.com ${posthogDomains} ws: wss:`,
+    `connect-src 'self' https://api.resend.com https://cloudflareinsights.com https://pineapple.teamshotspro.com https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://www.googletagmanager.com https://storage.googleapis.com https://cdn.jsdelivr.net https://unpkg.com https://tfhub.dev https://www.kaggle.com https://*.apollo.io ${posthogDomains} ws: wss:`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
