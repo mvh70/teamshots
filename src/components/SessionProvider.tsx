@@ -4,6 +4,7 @@ import { SessionProvider as NextAuthSessionProvider, useSession } from 'next-aut
 import type { Session } from 'next-auth'
 import { useEffect } from 'react'
 import { posthog } from '@/lib/posthog'
+import { ApolloTracking } from '@/components/ApolloTracking'
 
 function PostHogUserIdentifier() {
   const { data: session } = useSession()
@@ -39,6 +40,7 @@ export default function SessionProvider({
       refetchOnWindowFocus={false} // Avoid burst of extra calls on focus
     >
       <PostHogUserIdentifier />
+      <ApolloTracking />
       {children}
     </NextAuthSessionProvider>
   )
