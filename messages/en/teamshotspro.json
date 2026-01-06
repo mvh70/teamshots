@@ -15,6 +15,8 @@
         "ctaSubtext": "",
         "ctaAria": "Start your team order with no commitment",
         "noCreditCard": "Test with a fixed style for free, no credit card required",
+        "noCreditCardLine": "No credit card required",
+        "freeGenerationsLine": "3 free generations with fixed TeamShots branding",
         "badge": "Professional team photos without the photoshoot hassle"
       },
       "gallery": {
@@ -76,7 +78,7 @@
       },
       "footer": {
         "tagline": "Professional team photos in 60 seconds",
-        "copyright": "© 2025 TeamShotsPro. All rights reserved.",
+        "copyright": "© 2026 TeamShotsPro. All rights reserved.",
         "privacy": "Privacy Policy",
         "terms": "Terms of Service"
       }

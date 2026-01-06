@@ -14,6 +14,8 @@
         "ctaSubtext": "Get your professional headshots in a predefined style when you sign up. No commitment, no credit card.",
         "ctaAria": "Get your professional headshots in a predefined style when you sign up. No commitment.",
         "noCreditCard": "Test with a fixed style for free, no credit card required",
+        "noCreditCardLine": "No credit card required",
+        "freeGenerationsLine": "1 free generation with fixed PhotoShots branding",
         "badge": "Professional headshots without the studio hassle"
       },
       "gallery": {
@@ -66,7 +68,7 @@
       },
       "footer": {
         "tagline": "Professional headshots in 60 seconds",
-        "copyright": "© 2025 PhotoShotsPro. All rights reserved.",
+        "copyright": "© 2026 PhotoShotsPro. All rights reserved.",
         "privacy": "Privacy Policy",
         "terms": "Terms of Service"
       }

@@ -15,6 +15,8 @@
         "ctaSubtext": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
         "ctaAria": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso.",
         "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
+        "noCreditCardLine": "Sin tarjeta de crédito",
+        "freeGenerationsLine": "3 generaciones gratis con marca fija de TeamShots",
         "badge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos"
       },
       "gallery": {
@@ -81,7 +83,7 @@
       },
       "footer": {
         "tagline": "Fotos profesionales de equipo en 60 segundos",
-        "copyright": "© 2025 TeamShotsPro. Todos los derechos reservados.",
+        "copyright": "© 2026 TeamShotsPro. Todos los derechos reservados.",
         "privacy": "Política de Privacidad",
         "terms": "Términos de Servicio"
       }

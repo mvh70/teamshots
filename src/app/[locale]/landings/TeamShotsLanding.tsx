@@ -11,6 +11,7 @@ import PricingPreview from '@/components/PricingPreview';
 import { TrackedLink } from '@/components/TrackedLink';
 import { prefersReducedMotion, ANIMATION_DELAYS } from '@/lib/animations';
 import { FeedbackButton } from '@/components/feedback/FeedbackButton';
+import { CreditCardIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import type { LandingVariant, LandingSections } from '@/config/landing-content';
 import type { LandingProps } from '../page';
 
@@ -99,8 +100,8 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
             </p>
 
             {/* Primary CTA */}
-            <div 
-              className={`flex flex-col sm:flex-row items-start sm:items-center gap-6 ${
+            <div
+              className={`flex flex-col items-start gap-4 ${
                 heroMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
               } transition-all duration-700 ease-out`}
               style={{ transitionDelay: reducedMotion ? '0ms' : `${ANIMATION_DELAYS.hero.cta}ms` }}
@@ -118,9 +119,16 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
               >
                 {t('cta')}
               </TrackedLink>
-              <p className="text-sm sm:text-base text-text-muted self-center sm:self-auto">
-                {t('noCreditCard')}
-              </p>
+              <div className="flex flex-col gap-1.5 text-sm text-text-muted">
+                <p className="flex items-center gap-2">
+                  <CreditCardIcon className="w-4 h-4 flex-shrink-0" />
+                  <span>{t('noCreditCardLine')}</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <PhotoIcon className="w-4 h-4 flex-shrink-0" />
+                  <span>{t('freeGenerationsLine')}</span>
+                </p>
+              </div>
             </div>
           </div>
 
@@ -197,9 +205,16 @@ export default function TeamShotsLanding({ supportEmail }: LandingProps) {
         >
           {t('cta')}
         </TrackedLink>
-        <p className="mt-4 text-sm text-text-muted">
-          {t('noCreditCard')}
-        </p>
+        <div className="mt-4 flex flex-col items-center gap-1.5 text-sm text-text-muted">
+          <p className="flex items-center gap-2">
+            <CreditCardIcon className="w-4 h-4 flex-shrink-0" />
+            <span>{t('noCreditCardLine')}</span>
+          </p>
+          <p className="flex items-center gap-2">
+            <PhotoIcon className="w-4 h-4 flex-shrink-0" />
+            <span>{t('freeGenerationsLine')}</span>
+          </p>
+        </div>
       </section>
 
       {/* Feedback Button */}
