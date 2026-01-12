@@ -31,13 +31,6 @@ export async function generateMetadata(): Promise<Metadata> {
       shortcut: '/favicon.ico',
     },
     referrer: 'strict-origin-when-cross-origin',
-    alternates: {
-      canonical: '/',
-      languages: {
-        'en': '/',
-        'es': '/es',
-      },
-    },
     openGraph: {
       type: 'website',
       siteName: brandConfig.name,

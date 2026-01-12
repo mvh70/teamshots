@@ -31,6 +31,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         '/invite/',   // Invite pages (private)
         '/invite-dashboard/', // Private invite dashboards
         '/dashboard/', // Dashboard (authenticated)
+        '/cdn-cgi/',   // Cloudflare email protection
       ],
     },
     sitemap: `${cleanBaseUrl}/sitemap.xml`,
