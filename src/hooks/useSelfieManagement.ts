@@ -157,6 +157,12 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
 
       // Reload uploads to show new selfies
       await uploadsHook.loadUploads()
+      
+      // Force another refresh after a short delay to catch classifications
+      // that complete very quickly
+      setTimeout(() => {
+        uploadsHook.loadUploads(true)
+      }, 500)
 
       // Call parent callback
       onSelfiesApproved?.(promotedResults)

@@ -29,31 +29,37 @@ DO NOT pick one area to analyze - scan the ENTIRE image and count ALL people.
 
 STEP 2: If exactly 1 person total, classify the photo into ONE of these categories:
 
-1. front_view - Face clearly visible from the front
-   - Both eyes visible (or nearly visible)
-   - Nose pointing toward or near the camera
+1. front_view - Face clearly visible from straight-on - FACE CLOSE-UP
+   - Both eyes clearly visible and looking roughly toward camera
+   - Nose pointing directly at or nearly at the camera
+   - Face is centered and symmetrical in the frame
    - Face is the PRIMARY focus taking up majority of the frame
-   - Slight head tilts still count as front view
-   - Shoulders may be visible but are cropped/cut off at the frame edges
-   - The framing is a close-up of the face, not a wider portrait
+   - Head rotation is 45 degrees or less
+   - Shoulders may be partially visible BUT are CUT OFF FLAT at the frame edges (not showing the full rounded shoulder shape)
+   - The framing is a CLOSE-UP of the face/head, zoomed in on facial features
+   When the photo is mid-torso, with both shoulders visible and not cut off at the frame edges, it is a partial_body
 
-2. side_view - Profile view showing side of face
-   - Only one eye visible or showing clear profile
-   - Nose points to left or right
-   - Can be 3/4 profile or full profile
-   - Face is the PRIMARY focus
+2. side_view - Profile or angled view showing side of face
+   - Head is turned MORE than 45 degrees to the left or right
+   - Can be 3/4 profile (head turned ~50-70 degrees) OR full profile (90 degrees)
+   - For 3/4 profile: nose is pointing noticeably to the side, may see both eyes but from an angle
+   - For full profile: only one eye visible, clear profile of nose and chin
+   - Face is the PRIMARY focus taking up majority of the frame
    - Shoulders may be visible but are cropped/cut off at the frame edges
    - The framing is a close-up of the face/profile, not a wider portrait
+   - KEY: If the head/face is rotated MORE than 45 degrees → side_view
 
-3. partial_body - Photo showing head and upper body (torso)
-   - BOTH shoulders are FULLY visible from edge to edge with background/space visible around them
-   - The shoulder line/width is complete and not cut off by the frame
-   - Shows head, complete shoulders, chest, and upper torso in frame
+3. partial_body - Photo showing head and upper body (torso) - WIDER FRAMING
+   - The frame shows MORE than just the face - it includes significant upper body/torso
+   - BOTH shoulders are COMPLETE and visible within the frame (not cut off at the edges)
+   - The shoulder's rounded shape is fully visible - you can see where the shoulder curves down to meet the arm
+   - The frame typically cuts off somewhere between the shoulders and elbows (showing upper arms)
+   - Shows: head + complete shoulders + chest + upper torso
    - Cuts off at or above mid-hip level
    - Does NOT show legs or feet
-   - This is a wider "upper body portrait" where the body is intentionally framed, not just face
-   - KEY: Can you see where the shoulder ends and the background begins on both sides? → partial_body
-   - KEY: Are the shoulders cut off by the frame edges? → front_view or side_view
+   - This is a WIDER "upper body portrait" shot, not a tight face close-up
+   - SIMPLE TEST: Can you see the full rounded shape of BOTH shoulders? YES = partial_body. Are the shoulders cut off at the frame edge (flat crop)? = front_view/side_view
+   - The framing is deliberately wider to show the torso, not zoomed in on the face
 
 4. full_body - Photo showing the body below mid-hip
    - Shows legs, thighs, or any body part below mid-hip
@@ -64,19 +70,37 @@ STEP 2: If exactly 1 person total, classify the photo into ONE of these categori
 5. unknown - Cannot determine (multiple people, no face, too blurry)
 
 IMPORTANT: Return ONLY valid JSON in this exact format:
+
+Front view example:
 {
   "selfie_type": "front_view",
   "confidence": 0.95,
   "person_count": 1,
-  "reasoning": "Single person visible. Both eyes visible, face centered, looking at camera. Shoulders partially cropped = front_view"
+  "reasoning": "Single person visible. Face pointing straight at camera, both eyes clearly visible, minimal head rotation. Shoulders partially cropped = front_view"
+}
+
+Side view example:
+{
+  "selfie_type": "side_view",
+  "confidence": 0.90,
+  "person_count": 1,
+  "reasoning": "Single person visible. Head turned MORE than 45 degrees to the side (approximately 60 degrees), nose pointing sideways, clear 3/4 profile angle. Shoulders partially cropped = side_view"
+}
+
+Partial body example:
+{
+  "selfie_type": "partial_body",
+  "confidence": 0.85,
+  "person_count": 1,
+  "reasoning": "Single person visible. WIDER framing showing upper body. Can see the full ROUNDED SHAPE of BOTH shoulders within the frame - they are not cut off flat at the edges. The shoulders curve down naturally to meet the upper arms. Frame shows head, complete shoulders, chest, and upper torso. This is an upper body portrait shot, not a tight face close-up = partial_body"
 }
 
 Rules:
 - person_count: TOTAL people visible in the ENTIRE image (not just one section)
 - If image shows multiple photos/panels, count people in ALL of them
 - confidence should be 0.0 to 1.0
-- KEY DISTINCTION: Can you see where both shoulders END (the complete shoulder line with space/background on both sides)? → partial_body. Are shoulders cut off by frame? → front_view/side_view
-- side_view requires clear profile angle (not just slight turn)
+- KEY DISTINCTION for body shots: Can you see the full ROUNDED SHAPE of both shoulders (not cut off flat at frame edge)? → partial_body. Are shoulders cropped/cut off by the frame edge? → front_view/side_view
+- KEY DISTINCTION for angles: Is the head/face rotated MORE than 45 degrees to the side? → side_view. Is head rotation 45 degrees or less? → front_view
 - If person_count is 0 or more than 1, set selfie_type to "unknown" and confidence to 0`
 
 /**

@@ -22,6 +22,7 @@ export function useSelfieUploads() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const mountedRef = useRef(false)
 
   const loadUploads = useCallback(async (silent = false) => {
     // Reset error state
@@ -54,15 +55,24 @@ export function useSelfieUploads() {
     }
   }, [])
 
-  // Auto-poll when there are selfies being analyzed (selfieType === null)
+  // Initial load on mount
   useEffect(() => {
-    const analyzingItems = uploads.filter(u => u.selfieType === null || u.selfieType === undefined)
+    if (!mountedRef.current) {
+      mountedRef.current = true
+      loadUploads()
+    }
+  }, [loadUploads])
+
+  // Auto-poll when there are selfies being analyzed (selfieType === null, undefined, or empty string)
+  useEffect(() => {
+    const analyzingItems = uploads.filter(u => !u.selfieType || u.selfieType === '')
     const hasAnalyzing = analyzingItems.length > 0
 
     console.log('[useSelfieUploads] Polling check:', {
       hasAnalyzing,
       analyzingCount: analyzingItems.length,
-      analyzingIds: analyzingItems.map(i => i.id.slice(-6))
+      analyzingIds: analyzingItems.map(i => i.id.slice(-6)),
+      totalUploads: uploads.length
     })
 
     if (hasAnalyzing) {
@@ -70,13 +80,14 @@ export function useSelfieUploads() {
       if (!pollIntervalRef.current) {
         console.log('[useSelfieUploads] Starting poll interval')
         pollIntervalRef.current = setInterval(() => {
+          console.log('[useSelfieUploads] Polling for updates...')
           loadUploads(true) // Silent refresh
         }, ANALYZING_POLL_INTERVAL)
       }
     } else {
       // Stop polling when no more analyzing
       if (pollIntervalRef.current) {
-        console.log('[useSelfieUploads] Stopping poll interval')
+        console.log('[useSelfieUploads] Stopping poll interval - all selfies classified')
         clearInterval(pollIntervalRef.current)
         pollIntervalRef.current = null
       }

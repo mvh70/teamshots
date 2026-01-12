@@ -9,6 +9,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { fileTypeFromBuffer } from 'file-type'
 import { classifySelfieType } from '@/domain/selfie/selfie-classifier'
+import { classificationQueue } from '@/lib/classification-queue'
 
 const s3 = createS3Client({ forcePathStyle: true })
 const bucket = getS3BucketName()
@@ -56,8 +57,27 @@ async function runAsyncClassification(
       selfieId,
       error: error instanceof Error ? error.message : String(error),
     })
-    // Don't throw - this is fire-and-forget
-    // Selfie will remain with null classification (can be retried later)
+    
+    // Mark as null to allow retry or set to unknown if we want to prevent retry
+    // Using null allows the polling mechanism to retry classification
+    try {
+      await prisma.selfie.update({
+        where: { id: selfieId },
+        data: {
+          selfieType: null, // Use null instead of 'unknown' to allow retry
+          selfieTypeConfidence: null,
+          personCount: null,
+          isProper: null,
+          improperReason: null,
+        },
+      })
+      Logger.info('[uploads/promote] Marked failed classification as null for retry', { selfieId })
+    } catch (dbError) {
+      Logger.error('[uploads/promote] Failed to update selfie after classification error', {
+        selfieId,
+        dbError: dbError instanceof Error ? dbError.message : String(dbError),
+      })
+    }
   }
 }
 
@@ -202,14 +222,30 @@ export async function POST(req: NextRequest) {
     try { await fs.unlink(filePath) } catch {}
 
     // Run classification asynchronously (fire-and-forget)
-    // Don't await - let it run in background while user continues uploading
+    // Queue the classification to limit concurrent requests (max 3 at a time)
     if (!selfieType) {
       const selfieIdForClassification = selfie.id
-      runAsyncClassification(
-        selfieIdForClassification,
-        imageBase64ForClassification,
-        mimeTypeForClassification
-      )
+      
+      // Don't await - this runs in background via queue
+      classificationQueue.enqueue(async () => {
+        await runAsyncClassification(
+          selfieIdForClassification,
+          imageBase64ForClassification,
+          mimeTypeForClassification
+        )
+      }).catch((error) => {
+        Logger.error('[uploads/promote] Queue error', {
+          selfieId: selfieIdForClassification,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      })
+      
+      // Log queue status for monitoring
+      const queueStatus = classificationQueue.getStatus()
+      Logger.info('[uploads/promote] Classification queued', {
+        selfieId: selfieIdForClassification,
+        queueStatus,
+      })
     }
 
     return NextResponse.json({ key: relativeKey, selfieId: selfie.id })

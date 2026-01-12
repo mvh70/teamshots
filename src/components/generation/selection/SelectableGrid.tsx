@@ -13,6 +13,262 @@ import SelfieApproval from '@/components/Upload/SelfieApproval'
 
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 
+// Small inline badge component for selfie type classification
+const SelfieTypeBadgeSmall = ({ type }: { type?: string | null }) => {
+  if (!type || type === 'unknown') return null
+
+  const labels: Record<string, string> = {
+    front_view: 'Front',
+    side_view: 'Side',
+    partial_body: 'Partial',
+    full_body: 'Full'
+  }
+
+  const colors: Record<string, string> = {
+    front_view: 'bg-blue-500/90 text-white',
+    side_view: 'bg-green-500/90 text-white',
+    partial_body: 'bg-purple-500/90 text-white',
+    full_body: 'bg-orange-500/90 text-white'
+  }
+
+  const label = labels[type] || type
+  const colorClass = colors[type] || 'bg-gray-500/90 text-white'
+
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold shadow-sm backdrop-blur-sm ${colorClass}`}>
+      {label}
+    </span>
+  )
+}
+
+// Memoized grid item component to prevent unnecessary re-renders
+const GridItem = React.memo<{
+  item: SelectableItem
+  isSelected: boolean
+  isLoaded: boolean
+  isImproper: boolean
+  showLoadingState: boolean
+  allowDelete: boolean
+  hoveredDeleteId: string | null
+  onToggle: (id: string, selected: boolean) => void
+  onDelete: (id: string, key?: string) => void
+  setLoadedSet: React.Dispatch<React.SetStateAction<Set<string>>>
+  setHoveredDeleteId: React.Dispatch<React.SetStateAction<string | null>>
+  t: (key: string, options?: any) => string
+}>(({ 
+  item, 
+  isSelected, 
+  isLoaded, 
+  isImproper, 
+  showLoadingState,
+  allowDelete,
+  hoveredDeleteId,
+  onToggle,
+  onDelete,
+  setLoadedSet,
+  setHoveredDeleteId,
+  t
+}) => {
+  const handleLoad = useCallback(() => {
+    setLoadedSet(prev => new Set(prev).add(item.id))
+  }, [item.id, setLoadedSet])
+
+  const handleError = useCallback(() => {
+    setLoadedSet(prev => new Set(prev).add(item.id))
+  }, [item.id, setLoadedSet])
+
+  const handleToggleClick = useCallback(() => {
+    if (!isImproper) {
+      onToggle(item.id, !isSelected)
+    }
+  }, [item.id, isSelected, isImproper, onToggle])
+
+  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!item.used) {
+      onDelete(item.id, item.key)
+    }
+  }, [item.id, item.key, item.used, onDelete])
+
+  const handleDeleteMouseEnter = useCallback(() => {
+    setHoveredDeleteId(item.id)
+  }, [item.id, setHoveredDeleteId])
+
+  const handleDeleteMouseLeave = useCallback(() => {
+    setHoveredDeleteId(null)
+  }, [setHoveredDeleteId])
+
+  // Only compute these values, don't log every render
+  const hasValidType = item.selfieType && item.selfieType !== 'unknown' && item.selfieType !== ''
+  const isAnalyzing = !item.selfieType || item.selfieType === ''
+
+  return (
+    <div
+      className={`relative group rounded-xl transition-all duration-300 ${
+        isImproper
+          ? 'opacity-60 ring-2 ring-red-300 ring-offset-1'
+          : isSelected
+            ? 'ring-2 ring-brand-secondary ring-offset-2 shadow-xl shadow-brand-secondary/30 scale-[1.02]'
+            : 'hover:shadow-xl hover:shadow-gray-300/60 hover:-translate-y-1.5 hover:scale-[1.01]'
+      }`}
+    >
+      {/* Selection checkbox */}
+      <button
+        type="button"
+        disabled={isImproper}
+        className={`absolute top-3 left-3 z-10 inline-flex items-center justify-center w-9 h-9 md:w-8 md:h-8 rounded-lg border-2 transition-all duration-200 ${
+          isImproper
+            ? 'bg-red-100 text-red-500 border-red-300 cursor-not-allowed'
+            : isSelected
+              ? 'bg-gradient-to-br from-brand-secondary to-emerald-600 text-white border-brand-secondary shadow-lg scale-110 ring-2 ring-brand-secondary/30'
+              : 'bg-white/95 backdrop-blur-sm text-gray-600 border-gray-300 hover:border-brand-secondary hover:scale-110 hover:bg-white hover:shadow-md'
+        } shadow-sm`}
+        aria-pressed={isSelected ? 'true' : 'false'}
+        aria-label={isImproper ? t('improperAria', { default: 'This selfie cannot be used' }) : isSelected ? t('deselectAria', { default: 'Remove selfie selection' }) : t('selectAria', { default: 'Select selfie' })}
+        onClick={handleToggleClick}
+      >
+        {isImproper ? (
+          <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l8 8M14 6l-8 8" />
+          </svg>
+        ) : isSelected ? (
+          <svg className="w-5 h-5 transition-transform duration-200" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fillRule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0L4 11.414a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <rect x="3" y="3" width="14" height="14" rx="2" ry="2" />
+          </svg>
+        )}
+      </button>
+
+      {/* Image container */}
+      <div
+        className={`aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+          isSelected
+            ? 'border-brand-secondary shadow-inner ring-1 ring-brand-secondary/20'
+            : 'border-gray-200/50 group-hover:border-gray-300 group-hover:shadow-md'
+        } relative`}
+      >
+        {/* Loading spinner */}
+        {!isLoaded && showLoadingState && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 z-10">
+            <LoadingSpinner />
+          </div>
+        )}
+        
+        {/* Image */}
+        <div className={`absolute inset-0 transition-transform duration-300 ${isSelected ? 'scale-100' : 'group-hover:scale-105'}`}>
+          <Image
+            src={item.url}
+            alt="Selfie"
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            unoptimized
+            onLoad={handleLoad}
+            onError={handleError}
+          />
+        </div>
+        
+        {/* Selection overlay */}
+        <div
+          className={`absolute inset-0 transition-all duration-300 pointer-events-none ${
+            isSelected
+              ? 'bg-brand-secondary/5 ring-1 ring-brand-secondary/10'
+              : 'bg-black/0 group-hover:bg-black/5'
+          }`}
+        />
+
+        {/* Selfie type badge or analyzing indicator */}
+        {hasValidType && !isImproper && (
+          <div className="absolute bottom-2 left-2 z-10">
+            <SelfieTypeBadgeSmall type={item.selfieType} />
+          </div>
+        )}
+        
+        {isAnalyzing && !isImproper && (
+          <div className="absolute bottom-2 left-2 z-10">
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800/80 text-white text-[10px] font-medium backdrop-blur-sm">
+              <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              {t('analyzing', { defaultValue: 'Analyzing...' })}
+            </span>
+          </div>
+        )}
+
+        {/* Delete disabled message */}
+        {item.used && hoveredDeleteId === item.id && (
+          <div className="absolute inset-x-0 bottom-0 bg-black/80 text-white text-[11px] leading-tight px-3 py-2 flex items-center gap-1.5 backdrop-blur-sm">
+            <InformationCircleIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{t('deleteDisabledMessage')}</span>
+          </div>
+        )}
+
+        {/* Improper selfie indicator */}
+        {isImproper && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+            <div className="text-center px-4">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/90 text-white mb-2">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <p className="text-white text-xs font-medium drop-shadow-lg">
+                {t('improperSelfie', { default: 'Cannot be used' })}
+              </p>
+              {item.improperReason && (
+                <p className="text-white/90 text-[10px] mt-1 drop-shadow">
+                  {item.improperReason}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Delete button */}
+      {allowDelete && (
+        <button
+          type="button"
+          disabled={item.used}
+          className={`absolute top-3 right-3 z-10 inline-flex items-center justify-center w-9 h-9 md:w-8 md:h-8 rounded-lg border-2 transition-all duration-200 ${
+            item.used
+              ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+              : 'bg-white/95 backdrop-blur-sm text-red-600 border-red-300 hover:border-red-500 hover:scale-110 hover:bg-white hover:shadow-md'
+          } shadow-sm`}
+          aria-label={item.used ? t('deleteDisabledAria', { default: 'Cannot delete used selfie' }) : t('deleteAria', { default: 'Delete selfie' })}
+          onClick={handleDeleteClick}
+          onMouseEnter={handleDeleteMouseEnter}
+          onMouseLeave={handleDeleteMouseLeave}
+        >
+          <TrashIcon className="w-5 h-5" aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if these specific props changed
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.selfieType === nextProps.item.selfieType &&
+    prevProps.item.isProper === nextProps.item.isProper &&
+    prevProps.item.used === nextProps.item.used &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isLoaded === nextProps.isLoaded &&
+    prevProps.isImproper === nextProps.isImproper &&
+    prevProps.hoveredDeleteId === nextProps.hoveredDeleteId
+  )
+})
+
+GridItem.displayName = 'GridItem'
+
 export interface SelectableItem {
   id: string
   key: string
@@ -217,160 +473,24 @@ export default function SelectableGrid({
       {visibleItems.map((item) => {
         const isSelected = selectedSet.has(item.id)
         const isLoaded = !showLoadingState || loadedSet.has(item.id)
-        // Check if selfie is improper (isProper is explicitly false, not just undefined)
         const isImproper = item.isProper === false
 
         return (
-          <div
+          <GridItem
             key={item.id}
-            className={`relative group rounded-xl transition-all duration-300 ${
-              isImproper
-                ? 'opacity-60 ring-2 ring-red-300 ring-offset-1'
-                : isSelected
-                  ? 'ring-2 ring-brand-secondary ring-offset-2 shadow-xl shadow-brand-secondary/30 scale-[1.02]'
-                  : 'hover:shadow-xl hover:shadow-gray-300/60 hover:-translate-y-1.5 hover:scale-[1.01]'
-            }`}
-          >
-            {/* Selection checkbox - disabled for improper selfies */}
-            <button
-              type="button"
-              disabled={isImproper}
-              className={`absolute top-3 left-3 z-10 inline-flex items-center justify-center w-9 h-9 md:w-8 md:h-8 rounded-lg border-2 transition-all duration-200 ${
-                isImproper
-                  ? 'bg-red-100 text-red-500 border-red-300 cursor-not-allowed'
-                  : isSelected
-                    ? 'bg-gradient-to-br from-brand-secondary to-emerald-600 text-white border-brand-secondary shadow-lg scale-110 ring-2 ring-brand-secondary/30'
-                    : 'bg-white/95 backdrop-blur-sm text-gray-600 border-gray-300 hover:border-brand-secondary hover:scale-110 hover:bg-white hover:shadow-md'
-              } shadow-sm`}
-              aria-pressed={isSelected ? 'true' : 'false'}
-              aria-label={isImproper ? t('improperAria', { default: 'This selfie cannot be used' }) : isSelected ? t('deselectAria', { default: 'Remove selfie selection' }) : t('selectAria', { default: 'Select selfie' })}
-              onClick={() => !isImproper && handleToggle(item.id, !isSelected)}
-            >
-              {isImproper ? (
-                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l8 8M14 6l-8 8" />
-                </svg>
-              ) : isSelected ? (
-                <svg className="w-5 h-5 transition-transform duration-200" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0L4 11.414a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <rect x="3" y="3" width="14" height="14" rx="2" ry="2" />
-                </svg>
-              )}
-            </button>
-
-            {/* Image container */}
-            <div
-              className={`aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                isSelected
-                  ? 'border-brand-secondary shadow-inner ring-1 ring-brand-secondary/20'
-                  : 'border-gray-200/50 group-hover:border-gray-300 group-hover:shadow-md'
-              } relative`}
-            >
-              {/* Loading spinner */}
-              {!isLoaded && showLoadingState && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 z-10">
-                  <LoadingSpinner />
-                </div>
-              )}
-              
-              {/* Image */}
-              <div className={`absolute inset-0 transition-transform duration-300 ${isSelected ? 'scale-100' : 'group-hover:scale-105'}`}>
-                <Image
-                  src={item.url}
-                  alt="Selfie"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  unoptimized
-                  onLoad={() => setLoadedSet(prev => new Set(prev).add(item.id))}
-                  onError={() => setLoadedSet(prev => new Set(prev).add(item.id))}
-                />
-              </div>
-              
-              {/* Selection overlay */}
-              <div
-                className={`absolute inset-0 transition-all duration-300 pointer-events-none ${
-                  isSelected
-                    ? 'bg-brand-secondary/5 ring-1 ring-brand-secondary/10'
-                    : 'bg-black/0 group-hover:bg-black/5'
-                }`}
-              />
-
-              {/* Selfie type badge or analyzing indicator */}
-              {item.selfieType && item.selfieType !== 'unknown' && !isImproper ? (
-                <div className="absolute bottom-2 left-2 z-10" key={`badge-${item.id}-${item.selfieType}`}>
-                  <SelfieTypeBadgeSmall type={item.selfieType} />
-                </div>
-              ) : (item.selfieType === null || item.selfieType === undefined) && !isImproper ? (
-                <div className="absolute bottom-2 left-2 z-10" key={`analyzing-${item.id}`}>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800/80 text-white text-[10px] font-medium backdrop-blur-sm">
-                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    {t('analyzing', { defaultValue: 'Analyzing...' })}
-                  </span>
-                </div>
-              ) : null}
-
-              {/* Delete disabled message */}
-              {item.used && hoveredDeleteId === item.id && (
-                <div className="absolute inset-x-0 bottom-0 bg-black/80 text-white text-[11px] leading-tight px-3 py-2 flex items-center gap-1.5 backdrop-blur-sm">
-                  <InformationCircleIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  <span>{t('deleteDisabledMessage')}</span>
-                </div>
-              )}
-
-              {/* Improper selfie message - always visible for improper selfies */}
-              {isImproper && (
-                <div className="absolute inset-x-0 bottom-0 bg-red-600/95 text-white text-[11px] leading-tight px-3 py-2.5 flex items-center gap-1.5 backdrop-blur-sm rounded-b-xl">
-                  <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span className="font-medium">{item.improperReason || t('improperSelfie', { defaultValue: 'Cannot use this photo' })}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Delete button */}
-            {allowDelete && (
-              <div
-                className={`absolute top-3 right-3 z-20 inline-flex items-center justify-center rounded-full transition-all duration-200 ${
-                  item.used
-                    ? 'bg-gray-300 text-white cursor-not-allowed opacity-70'
-                    : 'bg-red-500 text-white shadow-lg opacity-100 md:group-hover:opacity-100'
-                }`}
-                onMouseEnter={item.used ? () => setHoveredDeleteId(item.id) : undefined}
-                onMouseLeave={item.used ? () => setHoveredDeleteId((current) => current === item.id ? null : current) : undefined}
-                title={item.used ? t('deleteDisabledTooltip') : t('deleteTooltip')}
-              >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (!item.used) {
-                      handleDelete(item.id, item.key)
-                    }
-                  }}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  disabled={Boolean(item.used)}
-                  aria-disabled={item.used ? 'true' : 'false'}
-                  aria-label={item.used ? t('deleteDisabledAria') : t('deleteAria')}
-                  className="p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 touch-manipulation transition-transform hover:scale-110 active:scale-95"
-                  style={{ WebkitTapHighlightColor: 'transparent', pointerEvents: 'auto' }}
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-          </div>
+            item={item}
+            isSelected={isSelected}
+            isLoaded={isLoaded}
+            isImproper={isImproper}
+            showLoadingState={showLoadingState}
+            allowDelete={allowDelete}
+            hoveredDeleteId={hoveredDeleteId}
+            onToggle={handleToggle}
+            onDelete={handleDelete}
+            setLoadedSet={setLoadedSet}
+            setHoveredDeleteId={setHoveredDeleteId}
+            t={t}
+          />
         )
       })}
 
@@ -412,49 +532,24 @@ function UploadTile({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') onClick() }}
-      data-testid="selfie-upload-trigger"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/0 to-indigo-50/0 group-hover:from-brand-primary/5 group-hover:to-indigo-50/20 transition-all duration-300" />
-      <div className="relative w-full flex flex-col items-center gap-4 z-10">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-primary/10 to-indigo-100/50 flex items-center justify-center group-hover:from-brand-primary/20 group-hover:to-indigo-200/50 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm group-hover:shadow-md">
-          <svg className="w-8 h-8 text-brand-primary group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+      <div className="relative z-10">
+        <div className="flex items-center justify-center w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary shadow-lg shadow-brand-primary/30 text-white group-hover:scale-110 group-active:scale-95 transition-all duration-300">
+          <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
         </div>
-        <div className="space-y-1.5">
-          <p className="text-sm font-semibold text-gray-700 group-hover:text-brand-primary transition-colors duration-200">Add selfie</p>
-          <p className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200">Click to upload</p>
-        </div>
+        <p className="text-gray-700 text-sm md:text-base font-medium group-hover:text-brand-primary transition-colors duration-300">
+          Upload selfies
+        </p>
       </div>
     </div>
   )
 }
-
-/** Small badge showing selfie type classification */
-function SelfieTypeBadgeSmall({ type }: { type: string }) {
-  const labels: Record<string, string> = {
-    front_view: 'Front view',
-    side_view: 'Side view',
-    partial_body: 'Partial body',
-    full_body: 'Full body'
-  }
-
-  const colors: Record<string, string> = {
-    front_view: 'bg-green-500/90 text-white',
-    side_view: 'bg-blue-500/90 text-white',
-    partial_body: 'bg-orange-500/90 text-white',
-    full_body: 'bg-purple-500/90 text-white'
-  }
-
-  const label = labels[type] || type
-  const colorClass = colors[type] || 'bg-gray-500/90 text-white'
-
-  return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold shadow-sm backdrop-blur-sm ${colorClass}`}>
-      {label}
-    </span>
-  )
-}
-

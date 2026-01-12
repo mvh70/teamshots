@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { SelectableGrid } from '@/components/generation/selection'
 import { useState, useEffect } from 'react'
+import React from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import dynamic from 'next/dynamic'
@@ -48,6 +49,20 @@ function SelfiesPageContent() {
     improperReason?: string | null
   }
   const uploadListItems = uploads as UploadListItem[]
+
+  // Memoize the grid items to prevent unnecessary re-renders
+  const gridItems = React.useMemo(() => 
+    uploadListItems.map(u => ({
+      id: u.id,
+      key: u.uploadedKey,
+      url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`,
+      uploadedAt: u.createdAt,
+      used: u.hasGenerations,
+      selfieType: u.selfieType,
+      selfieTypeConfidence: u.selfieTypeConfidence,
+      isProper: u.isProper ?? undefined,
+      improperReason: u.improperReason
+    })), [uploadListItems])
 
   // Hook handles initialization internally
 
@@ -111,17 +126,7 @@ function SelfiesPageContent() {
       ) : (
         <div className={isMobile ? 'pb-40' : ''}>
           <SelectableGrid
-            items={uploadListItems.map(u => ({
-              id: u.id,
-              key: u.uploadedKey,
-              url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`,
-              uploadedAt: u.createdAt,
-              used: u.hasGenerations,
-              selfieType: u.selfieType,
-              selfieTypeConfidence: u.selfieTypeConfidence,
-              isProper: u.isProper ?? undefined,
-              improperReason: u.improperReason
-            }))}
+            items={gridItems}
             selection={{ mode: 'managed' }}
             allowDelete
             showUploadTile={!isMobile}

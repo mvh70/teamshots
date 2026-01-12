@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useCallback, useRef, useEffect, useTransition } from 'react'
+import { useCallback, useRef, useEffect, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { SelectableGrid } from '@/components/generation/selection'
 import { SwipeableContainer, FlowNavigation, FlowProgressDock } from '@/components/generation/navigation'
@@ -140,8 +140,9 @@ function SelfieSelectionPageContent() {
     router.push('/app/generate/selfie-tips')
   }
 
-  const selectableGridProps = {
-    items: uploadListItems.map(u => ({
+  // Memoize grid items to prevent unnecessary re-renders
+  const gridItems = useMemo(() => 
+    uploadListItems.map(u => ({
       id: u.id,
       key: u.uploadedKey,
       url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`,
@@ -151,7 +152,10 @@ function SelfieSelectionPageContent() {
       selfieTypeConfidence: u.selfieTypeConfidence,
       isProper: u.isProper ?? undefined,
       improperReason: u.improperReason
-    })),
+    })), [uploadListItems])
+
+  const selectableGridProps = {
+    items: gridItems,
     selection: {
       mode: 'managed' as const,
       onAfterChange: handleSelectionChange
@@ -298,10 +302,6 @@ function SelfieSelectionPageContent() {
               />
             ) : (
               <div className="px-4 sm:px-6 lg:px-8 pt-8 md:pt-10 pb-52">
-                {/* Selfie Type Progress Overlay */}
-                <div className="mb-6 flex justify-center">
-                  <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} />
-                </div>
                 {/* Desktop Page Header - matches intro pages typography */}
                 <div className="mb-8 space-y-3">
                   <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 leading-[1.1] font-serif tracking-tight">
@@ -311,6 +311,12 @@ function SelfieSelectionPageContent() {
                     {t('subtitle')}
                   </p>
                 </div>
+                
+                {/* Selfie Type Progress Overlay */}
+                <div className="mb-6 flex justify-center">
+                  <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} />
+                </div>
+                
                 <SelectableGrid {...selectableGridProps} />
 
                 {/* Desktop Continue Button */}

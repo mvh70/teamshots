@@ -70,7 +70,24 @@ export default function SelfieTypeOverlay({
       >
         <div className="flex items-center justify-center gap-2">
           <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          <span className="text-xs text-white/70">Loading...</span>
+          <span className="text-xs text-white/70">Analyzing selfies...</span>
+        </div>
+      </div>
+    )
+  }
+  
+  // Also show "Analyzing" if no selfies have been classified yet
+  const hasAnyClassified = status.some((s) => s.captured)
+  const allPending = !hasAnyClassified && status.length > 0
+  
+  if (allPending) {
+    return (
+      <div
+        className={`bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 ${className}`}
+      >
+        <div className="flex items-center justify-center gap-2">
+          <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          <span className="text-xs text-white/70">Analyzing selfies...</span>
         </div>
       </div>
     )
