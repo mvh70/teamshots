@@ -5,11 +5,6 @@ export const initPostHog = () => {
     return // Server-side, skip initialization
   }
 
-  // Prevent tracking in non-production environments
-  if (process.env.NODE_ENV !== 'production') {
-    return
-  }
-
   // Already initialized
   if (posthog.__loaded) {
     return
