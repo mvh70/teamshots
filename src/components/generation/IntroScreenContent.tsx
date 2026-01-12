@@ -16,7 +16,7 @@ interface IntroTip {
   /** Text content - either a simple string or title+description */
   content:
     | { type: 'simple'; text: string }
-    | { type: 'titled'; title: string; description: string }
+    | { type: 'titled'; title: string; description: string | React.ReactNode }
 }
 
 interface IntroScreenContentProps {
@@ -149,14 +149,14 @@ export default function IntroScreenContent({
           </div>
 
           {/* Tips side */}
-          <div className="space-y-3 lg:space-y-4">
+          <div className="space-y-2 lg:space-y-3">
             {tips.map((tip, index) => (
               <div
                 key={tip.key}
                 className="animate-in fade-in slide-in-from-bottom-4 duration-700"
                 style={{ animationDelay: `${(index + 1) * 100}ms` }}
               >
-                <div className="flex items-start gap-5 md:gap-6 p-5 md:p-6 rounded-2xl bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-sm">
+                <div className="flex items-start gap-5 md:gap-6 px-5 md:px-6 py-4 md:py-5 rounded-2xl bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-sm">
                   <div
                     className={`flex h-10 w-10 md:h-12 md:w-12 flex-shrink-0 items-center justify-center rounded-xl border-2 border-white/90 ${tip.bgColor}`}
                   >
@@ -168,9 +168,15 @@ export default function IntroScreenContent({
                         <h4 className="text-lg md:text-xl font-bold text-gray-900 leading-tight tracking-tight">
                           {tip.content.title}
                         </h4>
-                        <p className="text-base md:text-lg text-gray-600 leading-relaxed">
-                          {tip.content.description}
-                        </p>
+                        {typeof tip.content.description === 'string' ? (
+                          <p className="text-base md:text-lg text-gray-600 leading-relaxed">
+                            {tip.content.description}
+                          </p>
+                        ) : (
+                          <div className="text-base md:text-lg text-gray-600 leading-relaxed">
+                            {tip.content.description}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-base md:text-lg text-gray-700 leading-relaxed font-medium">
@@ -200,14 +206,14 @@ export default function IntroScreenContent({
           )}
 
           {/* Tips List */}
-          <div className="space-y-0.5">
+          <div className="space-y-0">
         {tips.map((tip, index) => (
           <div 
             key={tip.key} 
             className="animate-in fade-in slide-in-from-bottom-4 duration-700"
             style={{ animationDelay: `${(index + 1) * 100}ms` }}
           >
-            <div className="flex items-start gap-5 md:gap-6 p-5 md:p-6 rounded-2xl bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-sm">
+            <div className="flex items-start gap-5 md:gap-6 px-5 md:px-6 py-4 md:py-5 rounded-2xl bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-sm">
               <div className={`flex h-10 w-10 md:h-12 md:w-12 flex-shrink-0 items-center justify-center rounded-xl border-2 border-white/90 ${tip.bgColor}`}>
                 <div className={tip.textColor}>
                   {tip.icon}
@@ -219,9 +225,15 @@ export default function IntroScreenContent({
                     <h4 className="text-lg md:text-xl font-bold text-gray-900 leading-tight tracking-tight">
                       {tip.content.title}
                     </h4>
-                    <p className="text-base md:text-lg text-gray-600 leading-relaxed">
-                      {tip.content.description}
-                    </p>
+                    {typeof tip.content.description === 'string' ? (
+                      <p className="text-base md:text-lg text-gray-600 leading-relaxed">
+                        {tip.content.description}
+                      </p>
+                    ) : (
+                      <div className="text-base md:text-lg text-gray-600 leading-relaxed">
+                        {tip.content.description}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-base md:text-lg text-gray-700 leading-relaxed font-medium">

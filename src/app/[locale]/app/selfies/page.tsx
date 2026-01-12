@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { SelectableGrid } from '@/components/generation/selection'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import dynamic from 'next/dynamic'
@@ -10,6 +10,7 @@ import { useMobileViewport } from '@/hooks/useMobileViewport'
 import SelfieInfoOverlayTrigger from '@/components/generation/SelfieInfoOverlayTrigger'
 import { QRPlaceholder } from '@/components/MobileHandoff'
 import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
+import { preloadFaceDetectionModel } from '@/lib/face-detection'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -27,6 +28,12 @@ function SelfiesPageContent() {
   }
 
   const { uploads, loading, loadUploads, handleSelfiesApproved } = selfieManager
+
+  // Preload face detection model immediately when page loads
+  useEffect(() => {
+    console.log('[SelfiesPage] Preloading face detection model...')
+    preloadFaceDetectionModel()
+  }, [])
   
   // Type assertion: in individual mode, uploads is always UploadListItem[]
   type UploadListItem = {

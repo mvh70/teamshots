@@ -32,25 +32,34 @@ STEP 2: If exactly 1 person total, classify the photo into ONE of these categori
 1. front_view - Face clearly visible from the front
    - Both eyes visible (or nearly visible)
    - Nose pointing toward or near the camera
-   - Face takes up significant portion of frame
+   - Face is the PRIMARY focus taking up majority of the frame
    - Slight head tilts still count as front view
-   - Shows head/face only, or head with minimal shoulder/chest
+   - Shoulders may be visible but are cropped/cut off at the frame edges
+   - The framing is a close-up of the face, not a wider portrait
 
 2. side_view - Profile view showing side of face
    - Only one eye visible or showing clear profile
    - Nose points to left or right
    - Can be 3/4 profile or full profile
+   - Face is the PRIMARY focus
+   - Shoulders may be visible but are cropped/cut off at the frame edges
+   - The framing is a close-up of the face/profile, not a wider portrait
 
 3. partial_body - Photo showing head and upper body (torso)
-   - Shows head, shoulders, chest, and torso
+   - BOTH shoulders are FULLY visible from edge to edge with background/space visible around them
+   - The shoulder line/width is complete and not cut off by the frame
+   - Shows head, complete shoulders, chest, and upper torso in frame
    - Cuts off at or above mid-hip level
    - Does NOT show legs or feet
-   - Typical "half body" or "upper body" shot
+   - This is a wider "upper body portrait" where the body is intentionally framed, not just face
+   - KEY: Can you see where the shoulder ends and the background begins on both sides? → partial_body
+   - KEY: Are the shoulders cut off by the frame edges? → front_view or side_view
 
 4. full_body - Photo showing the body below mid-hip
    - Shows legs, thighs, or any body part below mid-hip
    - Can see head, torso, AND lower body in same frame
    - If you can see knees, thighs, or feet = full_body
+   - MUST show BOTH shoulders FULLY visible with clear space around them
 
 5. unknown - Cannot determine (multiple people, no face, too blurry)
 
@@ -59,17 +68,15 @@ IMPORTANT: Return ONLY valid JSON in this exact format:
   "selfie_type": "front_view",
   "confidence": 0.95,
   "person_count": 1,
-  "reasoning": "Single person visible. Both eyes visible, face centered, looking at camera"
+  "reasoning": "Single person visible. Both eyes visible, face centered, looking at camera. Shoulders partially cropped = front_view"
 }
 
 Rules:
 - person_count: TOTAL people visible in the ENTIRE image (not just one section)
 - If image shows multiple photos/panels, count people in ALL of them
 - confidence should be 0.0 to 1.0
-- Be generous with front_view - most selfies are front view
+- KEY DISTINCTION: Can you see where both shoulders END (the complete shoulder line with space/background on both sides)? → partial_body. Are shoulders cut off by frame? → front_view/side_view
 - side_view requires clear profile angle (not just slight turn)
-- partial_body = head + torso only, cuts off at/above mid-hip
-- full_body = anything showing below mid-hip (legs, thighs, knees, feet)
 - If person_count is 0 or more than 1, set selfie_type to "unknown" and confidence to 0`
 
 /**

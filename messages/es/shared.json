@@ -1641,21 +1641,22 @@
           "body": "Las fotos geniales empiezan con buenas selfies. Sigue estos consejos para obtener los mejores resultados.",
           "skip": "No volver a mostrar",
           "continueButton": "Continuar a subir selfies",
-          "angles": {
-            "title": "Varía los ángulos. Incluye una de más lejos.",
-            "desc": "Diferentes posiciones ayudan a nuestra IA a entender mejor tu rostro. Agregar una selfie de más lejos ayuda a entender mejor tus proporciones corporales, con mejores resultados."
+          "quality": {
+            "title": "La calidad importa: mejores selfies crean mejores retratos",
+            "desc": "Tus resultados solo serán tan buenos como lo que proporciones. Para obtener fotos de calidad profesional:",
+            "subPoints": [
+              "Varía los ángulos (vista frontal, vista lateral) e incluye al menos una foto de cuerpo completo desde más lejos",
+              "Busca buena iluminación - la luz natural funciona mejor, evita sombras fuertes",
+              "Quita los accesorios que no quieras que aparezcan en la imagen final, como aretes, piercings, relojes o pulseras"
+            ]
           },
-          "lighting": {
-            "title": "Busca buena iluminación",
-            "desc": "La luz natural funciona mejor. Evita sombras fuertes en tu cara."
+          "mobileQuality": {
+            "title": "Usa tu teléfono para la mejor calidad",
+            "desc": "Las cámaras móviles suelen ofrecer fotos más nítidas que las webcams. Usa el código QR para cambiar a tu teléfono y obtener mejores resultados."
           },
           "minimum": {
-            "title": "Lo ideal son 3-4 selfies. El mínimo es 2.",
-            "desc": "Cuanta más información le des sobre tu rostro y tu cuerpo, menos tiene que adivinar."
-          },
-          "accessories": {
-            "title": "Quita accesorios no deseados",
-            "desc": "Los retratos replicarán exactamente tus selfies, incluyendo aretes, piercings, relojes y pulseras. Quítalos o cámbialos ahora si no los quieres en tus fotos."
+            "title": "3-4 selfies variadas funciona mejor. El mínimo es 3.",
+            "desc": "Más selfies diversas significan menos conjeturas para la IA. Sube fotos desde diferentes ángulos y distancias para resultados óptimos."
           }
         }
       },

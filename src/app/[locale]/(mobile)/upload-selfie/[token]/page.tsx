@@ -13,6 +13,7 @@ import PhotoUpload from '@/components/Upload/PhotoUpload'
 import SelectableGrid from '@/components/generation/selection/SelectableGrid'
 import dynamic from 'next/dynamic'
 import SelfieInfoOverlayTrigger from '@/components/generation/SelfieInfoOverlayTrigger'
+import { preloadFaceDetectionModel } from '@/lib/face-detection'
 
 const SelfieApproval = dynamic(() => import('@/components/Upload/SelfieApproval'), { ssr: false })
 
@@ -162,6 +163,12 @@ export default function UploadSelfiePage() {
 
     validateToken()
   }, [token, t, loadSelfies])
+
+  // Preload face detection model immediately when page loads
+  useEffect(() => {
+    console.log('[UploadSelfiePage] Preloading face detection model...')
+    preloadFaceDetectionModel()
+  }, [])
 
   const handleSelfiesApproved = useCallback(async (results: { key: string; selfieId?: string }[]) => {
     setShowSuccess(true)

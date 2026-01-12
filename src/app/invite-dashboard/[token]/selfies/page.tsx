@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { SelectableGrid } from '@/components/generation/selection'
 import { FlowNavigation, SwipeableContainer } from '@/components/generation/navigation'
 import { StickyFlowPage } from '@/components/generation/layout'
@@ -20,6 +20,7 @@ import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { hasEnoughSelfies } from '@/constants/generation'
 import { useTranslations } from 'next-intl'
 import SelfieInfoOverlayTrigger from '@/components/generation/SelfieInfoOverlayTrigger'
+import { preloadFaceDetectionModel } from '@/lib/face-detection'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -54,6 +55,12 @@ export default function SelfiesPage() {
   } = useGenerationFlowState()
   
   // Note: Redirect logic removed - flow is now controlled by main dashboard handleStartFlow
+
+  // Preload face detection model immediately when page loads
+  useEffect(() => {
+    console.log('[InviteSelfiesPage] Preloading face detection model...')
+    preloadFaceDetectionModel()
+  }, [])
 
   // Multi-select: load and manage selected selfies
   const selfieManager = useSelfieManagement({

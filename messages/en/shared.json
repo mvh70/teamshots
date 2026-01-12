@@ -1632,21 +1632,22 @@
           "body": "Great photos start with great selfies. Follow these tips to get the best results.",
           "skip": "Don't show again",
           "continueButton": "Continue to selfie upload",
-          "angles": {
-            "title": "Mix up your angles. Include one from further away.",
-            "desc": "Different positions help our AI understand your face better. Adding a selfie from further away, helps understand more of your body proportions, with better results."
+          "quality": {
+            "title": "Quality matters: better selfies create better headshots",
+            "desc": "Your results are only as good as what you provide. To get professional-quality photos:",
+            "subPoints": [
+              "Mix up your angles (front view, side view) and include at least one full-body shot from further away",
+              "Find good lighting - natural light works best, avoid harsh shadows",
+              "Remove accessories you don't want to show up in the final image, like earrings, piercings, watches, or bracelets"
+            ]
           },
-          "lighting": {
-            "title": "Find good lighting",
-            "desc": "Natural light works best. Avoid harsh shadows on your face."
+          "mobileQuality": {
+            "title": "Use your phone for the best quality",
+            "desc": "Mobile cameras typically deliver sharper photos than webcams. Use the QR code to switch to your phone for better results."
           },
           "minimum": {
-            "title": "3-4 selfies is ideal. Minimum is 2.",
-            "desc": "The more information you give it about your face and your body, the less it has to guess."
-          },
-          "accessories": {
-            "title": "Remove unwanted accessories",
-            "desc": "Headshots will replicate your selfies exactly, including earrings, piercings, watches, and bracelets. Remove or change them now if you don't want them in your photos."
+            "title": "3-4 varied selfies works best. Minimum is 3.",
+            "desc": "More diverse selfies mean less guesswork for the AI. Upload shots from different angles and distances for optimal results."
           }
         }
       },

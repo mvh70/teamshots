@@ -1,10 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import IntroScreenContent, { IntroTip } from './IntroScreenContent'
-import SelfieTypeSection from './SelfieTypeSection'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
+import { preloadFaceDetectionModel } from '@/lib/face-detection'
 
 interface SelfieTipsContentProps {
   /** 'swipe' for mobile swipe flow, 'button' for desktop with continue button */
@@ -28,74 +28,51 @@ export default function SelfieTipsContent({
   const tQr = useTranslations('generate.selfie.qrTip')
   const isMobile = useMobileViewport()
 
+  // Preload face detection model in the background while user reads tips
+  useEffect(() => {
+    console.log('[SelfieTipsContent] Preloading face detection model...')
+    preloadFaceDetectionModel()
+  }, [])
+
+  // Build sub-points for quality tip
+  const qualitySubPoints = t.raw('quality.subPoints') as string[]
+  const qualityDescription = (
+    <div className="space-y-3">
+      <p className="text-base md:text-lg text-gray-600 leading-relaxed">
+        {t('quality.desc')}
+      </p>
+      <ul className="space-y-2 ml-1">
+        {qualitySubPoints.map((point, index) => (
+          <li key={index} className="flex items-start gap-2 text-base md:text-lg text-gray-600 leading-relaxed">
+            <span className="text-indigo-600 font-bold flex-shrink-0 leading-relaxed">•</span>
+            <span>{point}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+
   const tips: IntroTip[] = [
     {
-      key: 'angles',
+      key: 'quality',
       icon: (
         <svg className="h-6 w-6 md:h-7 md:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
         </svg>
       ),
-      bgColor: 'bg-amber-100',
-      textColor: 'text-amber-700',
+      bgColor: 'bg-indigo-100',
+      textColor: 'text-indigo-700',
       content: {
-        type: 'titled',
-        title: t('angles.title'),
-        description: t('angles.desc')
-      }
-    },
-    {
-      key: 'lighting',
-      icon: (
-        <svg className="h-6 w-6 md:h-7 md:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ),
-      bgColor: 'bg-yellow-100',
-      textColor: 'text-yellow-700',
-      content: {
-        type: 'titled',
-        title: t('lighting.title'),
-        description: t('lighting.desc')
-      }
-    },
-    {
-      key: 'minimum',
-      icon: (
-        <svg className="h-6 w-6 md:h-7 md:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      bgColor: 'bg-green-100',
-      textColor: 'text-green-700',
-      content: {
-        type: 'titled',
-        title: t('minimum.title'),
-        description: t('minimum.desc')
-      }
-    },
-    {
-      key: 'accessories',
-      icon: (
-        <svg className="h-6 w-6 md:h-7 md:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        </svg>
-      ),
-      bgColor: 'bg-purple-100',
-      textColor: 'text-purple-700',
-      content: {
-        type: 'titled',
-        title: t('accessories.title'),
-        description: t('accessories.desc')
+        type: 'titled' as const,
+        title: t('quality.title'),
+        description: qualityDescription
       }
     }
   ]
 
   if (!isMobile) {
-    tips.unshift({
-      key: 'qr',
+    tips.push({
+      key: 'mobileQuality',
       icon: (
         <svg className="h-6 w-6 md:h-7 md:w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="3" y="3" width="6" height="6" />
@@ -112,11 +89,27 @@ export default function SelfieTipsContent({
       textColor: 'text-blue-700',
       content: {
         type: 'titled',
-        title: tQr('title', { default: 'Take or upload from your computer or phone' }),
-        description: tQr('description', { default: 'Scan this QR code with your phone to upload selfies directly from your camera roll.' })
+        title: t('mobileQuality.title'),
+        description: t('mobileQuality.desc')
       }
     })
   }
+
+  tips.push({
+    key: 'minimum',
+    icon: (
+      <svg className="h-6 w-6 md:h-7 md:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    bgColor: 'bg-green-100',
+    textColor: 'text-green-700',
+    content: {
+      type: 'titled',
+      title: t('minimum.title'),
+      description: t('minimum.desc')
+    }
+  })
 
   return (
     <div className={className}>
@@ -148,11 +141,6 @@ export default function SelfieTipsContent({
         onSkip={onSkip}
         skipText={t('skip', { default: "Don't show again" })}
       />
-
-      {/* Selfie Type Section - Shows the 3 required selfie types */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-8 -mt-4 md:-mt-40">
-        <SelfieTypeSection className="max-w-2xl mx-auto" />
-      </div>
     </div>
   )
 }

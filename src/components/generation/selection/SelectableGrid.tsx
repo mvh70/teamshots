@@ -305,11 +305,11 @@ export default function SelectableGrid({
 
               {/* Selfie type badge or analyzing indicator */}
               {item.selfieType && item.selfieType !== 'unknown' && !isImproper ? (
-                <div className="absolute bottom-2 left-2 z-10">
+                <div className="absolute bottom-2 left-2 z-10" key={`badge-${item.id}-${item.selfieType}`}>
                   <SelfieTypeBadgeSmall type={item.selfieType} />
                 </div>
-              ) : !item.selfieType && !isImproper ? (
-                <div className="absolute bottom-2 left-2 z-10">
+              ) : (item.selfieType === null || item.selfieType === undefined) && !isImproper ? (
+                <div className="absolute bottom-2 left-2 z-10" key={`analyzing-${item.id}`}>
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800/80 text-white text-[10px] font-medium backdrop-blur-sm">
                     <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
