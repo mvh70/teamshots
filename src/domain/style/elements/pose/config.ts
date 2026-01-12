@@ -1,23 +1,9 @@
-import type {
-  ArmPositionSetting,
-  BodyAngleSetting,
-  HeadPositionSetting,
-  ShoulderPositionSetting,
-  SittingPoseSetting,
-  WeightDistributionSetting,
-  PoseSettings
-} from './types'
-import type {
-  ExpressionSettings,
-  PhotoStyleSettings
-} from '@/types/photo-style'
+import type { PoseType, PoseSettings, PoseValue } from './types'
 import type { ElementConfig } from '../registry'
-import { getExpressionLabel } from '../expression/prompt'
-
-export { getExpressionLabel }
+import { predefined, userChoice } from '../base/element-types'
 
 export interface PoseTemplate {
-  id: PoseSettings['type']
+  id: PoseType
   // Label and description handled via translation keys:
   // pose.template.[id].label
   // pose.template.[id].description
@@ -34,7 +20,7 @@ export interface PoseTemplate {
   prompt_instructions: string
 }
 
-export const ALL_POSE_IDS: PoseSettings['type'][] = [
+export const ALL_POSE_IDS: PoseType[] = [
   'power_classic',
   'classic_corporate',
   'power_crossed',
@@ -49,7 +35,8 @@ export const ALL_POSE_IDS: PoseSettings['type'][] = [
   'slimming_three_quarter',
   'candid_over_shoulder',
   'seated_engagement',
-  'jacket_reveal'
+  'jacket_reveal',
+  'thumbs_up'
 ]
 
 export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
@@ -270,6 +257,20 @@ export const POSE_TEMPLATES: Record<string, PoseTemplate> = {
       description: 'Professional pose highlighting attire'
     },
     prompt_instructions: 'Subject is elegantly opening their jacket with both hands, opening it partially to reveal the logo on the shirt underneath. Keep the jacket partially open so the logo remains clearly visible. This creates a natural and professional look that showcases the outfit and prominently displays the branding.'
+  },
+  thumbs_up: {
+    id: 'thumbs_up',
+    icon: '👍',
+    pose: {
+      body_angle: 'Slight angle (15-20 degrees)',
+      head_position: 'Turned towards camera with genuine smile',
+      chin_technique: 'Chin slightly up for an open, positive expression',
+      shoulders: 'Relaxed and open',
+      weight_distribution: 'Even or slightly back',
+      arms: 'One arm raised with thumb up gesture, other arm relaxed at side or hand in pocket',
+      description: 'Enthusiastic and approachable pose with thumbs up gesture'
+    },
+    prompt_instructions: 'Subject giving a confident thumbs up gesture with one hand raised at chest or shoulder level, thumb clearly visible and pointing upward. The other arm is relaxed at their side or hand casually in pocket. Expression is warm and genuine with a friendly smile. This creates an approachable, positive, and energetic professional portrait.'
   }
 }
 
@@ -282,9 +283,6 @@ export function getPoseTemplate(id: string): PoseTemplate | undefined {
 
 export function getPoseUIInfo() {
   return ALL_POSE_IDS.map(id => {
-    if (id === 'user-choice') {
-      return { value: id, icon: '📷' }
-    }
     const template = POSE_TEMPLATES[id]
     return {
       value: id,
@@ -297,393 +295,13 @@ export function generatePoseInstructions(template: PoseTemplate): string {
   return template.prompt_instructions
 }
 
-interface PoseConfig<T extends string> {
-  id: T
-  label: string
-  description: string
-  notes?: string[]
-}
-
-export const DEFAULT_BODY_ANGLE: BodyAngleSetting = 'slight-angle'
-
-const BODY_ANGLE_CONFIGS: Record<BodyAngleSetting, PoseConfig<BodyAngleSetting>> = {
-  'square': {
-    id: 'square',
-    label: 'Straight/Square (0°)',
-    description: 'Stand square to camera with shoulders parallel. Projects confidence and power.'
-  },
-  'slight-angle': {
-    id: 'slight-angle',
-    label: 'Slight Angle (20-30°)',
-    description: 'Turn torso 20-30° away from camera. Slimming, polished, and professional.',
-    notes: ['Shift hips slightly away from camera to reinforce the slimming line.']
-  },
-  'angle-45': {
-    id: 'angle-45',
-    label: '45° Angle',
-    description: 'Rotate 45° from camera. Creates editorial slimming lines and dynamic energy.'
-  },
-  'user-choice': {
-    id: 'user-choice',
-    label: 'User Choice',
-    description: 'Use photographer-selected body angle.'
-  }
-}
-
-export function resolveBodyAngle(input?: string): PoseConfig<BodyAngleSetting> {
-  if (!input) return BODY_ANGLE_CONFIGS[DEFAULT_BODY_ANGLE]
-  const config = BODY_ANGLE_CONFIGS[input as BodyAngleSetting]
-  return config ?? BODY_ANGLE_CONFIGS[DEFAULT_BODY_ANGLE]
-}
-
-export const DEFAULT_HEAD_POSITION: HeadPositionSetting = 'straight-level'
-
-const HEAD_POSITION_CONFIGS: Record<HeadPositionSetting, PoseConfig<HeadPositionSetting>> = {
-  'straight-level': {
-    id: 'straight-level',
-    label: 'Straight/Level',
-    description: 'Head level, eyes to camera. Neutral, executive presence.'
-  },
-  'slight-tilt': {
-    id: 'slight-tilt',
-    label: 'Slight Tilt (10-15°)',
-    description: 'Micro tilt for warmth and approachability.'
-  },
-  'face-turn': {
-    id: 'face-turn',
-    label: 'Face Turn (Toward Light)',
-    description: 'Turn face 20-30° toward primary light to define jawline and cheekbones.'
-  },
-  'user-choice': {
-    id: 'user-choice',
-    label: 'User Choice',
-    description: 'Use photographer-selected head position.'
-  }
-}
-
-export function resolveHeadPosition(input?: string): PoseConfig<HeadPositionSetting> {
-  if (!input) return HEAD_POSITION_CONFIGS[DEFAULT_HEAD_POSITION]
-  const config = HEAD_POSITION_CONFIGS[input as HeadPositionSetting]
-  return config ?? HEAD_POSITION_CONFIGS[DEFAULT_HEAD_POSITION]
-}
-
-export const DEFAULT_SHOULDER_POSITION: ShoulderPositionSetting = 'front-shoulder-dropped'
-
-const SHOULDER_POSITION_CONFIGS: Record<
-  ShoulderPositionSetting,
-  PoseConfig<ShoulderPositionSetting>
-> = {
-  'front-shoulder-dropped': {
-    id: 'front-shoulder-dropped',
-    label: 'Front Shoulder Dropped',
-    description: 'Lower the front shoulder slightly to create a flattering diagonal line.',
-    notes: ['Keep back shoulder relaxed to avoid tension.']
-  },
-  'both-relaxed': {
-    id: 'both-relaxed',
-    label: 'Both Shoulders Relaxed Down',
-    description: 'Relax both shoulders downward to lengthen the neck and remove tension.'
-  },
-  'level': {
-    id: 'level',
-    label: 'Level Shoulders',
-    description: 'Neutral shoulder position for a safe, formal presentation.'
-  },
-  'user-choice': {
-    id: 'user-choice',
-    label: 'User Choice',
-    description: 'Use photographer-selected shoulder positioning.'
-  }
-}
-
-export function resolveShoulderPosition(input?: string): PoseConfig<ShoulderPositionSetting> {
-  if (!input) return SHOULDER_POSITION_CONFIGS[DEFAULT_SHOULDER_POSITION]
-  const config = SHOULDER_POSITION_CONFIGS[input as ShoulderPositionSetting]
-  return config ?? SHOULDER_POSITION_CONFIGS[DEFAULT_SHOULDER_POSITION]
-}
-
-export const DEFAULT_WEIGHT_DISTRIBUTION: WeightDistributionSetting = 'back-foot-70'
-
-const WEIGHT_DISTRIBUTION_CONFIGS: Record<
-  WeightDistributionSetting,
-  PoseConfig<WeightDistributionSetting>
-> = {
-  'back-foot-70': {
-    id: 'back-foot-70',
-    label: '70% Weight on Back Foot',
-    description: 'Shift 70% of weight to rear foot, front knee soft. Creates relaxed, natural stance.'
-  },
-  'even': {
-    id: 'even',
-    label: 'Even Weight (50/50)',
-    description: 'Distribute weight evenly for a steady, formal stance.'
-  },
-  'hip-shift': {
-    id: 'hip-shift',
-    label: 'Weight Shifted to One Hip',
-    description: 'Pop back hip with front knee relaxed for casual curve and energy.'
-  },
-  'user-choice': {
-    id: 'user-choice',
-    label: 'User Choice',
-    description: 'Use photographer-selected weight distribution.'
-  }
-}
-
-export function resolveWeightDistribution(input?: string): PoseConfig<WeightDistributionSetting> {
-  if (!input) return WEIGHT_DISTRIBUTION_CONFIGS[DEFAULT_WEIGHT_DISTRIBUTION]
-  const config = WEIGHT_DISTRIBUTION_CONFIGS[input as WeightDistributionSetting]
-  return config ?? WEIGHT_DISTRIBUTION_CONFIGS[DEFAULT_WEIGHT_DISTRIBUTION]
-}
-
-export const DEFAULT_ARM_POSITION: ArmPositionSetting = 'not-visible'
-
-const ARM_POSITION_CONFIGS: Record<ArmPositionSetting, PoseConfig<ArmPositionSetting>> = {
-  'not-visible': {
-    id: 'not-visible',
-    label: 'Arms Not Visible',
-    description: 'Crop arms out of frame. Ideal for headshots and tight portraits.',
-    notes: ['Maintain small gap between upper arm and torso when arms appear at frame edge.']
-  },
-  'arms-crossed': {
-    id: 'arms-crossed',
-    label: 'Arms Crossed',
-    description: 'Arms crossed gently, shoulders relaxed—projects confident executive presence.',
-    notes: ['Show hands lightly gripping biceps without squeezing.']
-  },
-  'one-hand-pocket': {
-    id: 'one-hand-pocket',
-    label: 'One Hand in Pocket',
-    description: 'Place one hand in pocket, thumb hooked. Casual yet confident.',
-    notes: ['Keep other hand relaxed with a visible edge, never flat to camera.']
-  },
-  'adjusting-jacket': {
-    id: 'adjusting-jacket',
-    label: 'Adjusting Jacket/Cuffs',
-    description: 'One hand adjusting lapel or cuffs for polished movement.',
-    notes: ['Fingers relaxed, wrists soft; avoid covering the logo if branding is included.']
-  },
-  'relaxed-sides': {
-    id: 'relaxed-sides',
-    label: 'Relaxed at Sides',
-    description: 'Arms rest at sides with slight bend and relaxed fingers.',
-    notes: [
-      'Maintain small daylight between arm and body for slimming effect.',
-      'Show the edge of hands rather than back of hands.'
-    ]
-  },
-  'user-choice': {
-    id: 'user-choice',
-    label: 'User Choice',
-    description: 'Use photographer-selected arm positioning.'
-  }
-}
-
-export function resolveArmPosition(input?: string): PoseConfig<ArmPositionSetting> {
-  if (!input) return ARM_POSITION_CONFIGS[DEFAULT_ARM_POSITION]
-  const config = ARM_POSITION_CONFIGS[input as ArmPositionSetting]
-  return config ?? ARM_POSITION_CONFIGS[DEFAULT_ARM_POSITION]
-}
-
-export const DEFAULT_SITTING_POSE: SittingPoseSetting = 'upright-lean-forward'
-
-const SITTING_POSE_CONFIGS: Record<SittingPoseSetting, PoseConfig<SittingPoseSetting>> = {
-  'upright-lean-forward': {
-    id: 'upright-lean-forward',
-    label: 'Sitting Upright, Leaning Forward Slightly',
-    description: 'Sit tall near front of seat, lean forward 5-10° for engagement.',
-    notes: ['Angle knees 20° off-center. Keep feet flat or ankles gently crossed.']
-  },
-  'relaxed-back': {
-    id: 'relaxed-back',
-    label: 'Relaxed Back',
-    description: 'Sit back with relaxed posture for casual portrait.',
-    notes: ['Maintain open chest by rolling shoulders back.']
-  },
-  'perched-edge': {
-    id: 'perched-edge',
-    label: 'Perched on Edge',
-    description: 'Sit on chair edge for energetic posture with forward momentum.',
-    notes: ['Legs angled to side; avoid pointing knees straight to camera.']
-  },
-  'user-choice': {
-    id: 'user-choice',
-    label: 'User Choice',
-    description: 'Use photographer-selected seated pose.'
-  }
-}
-
-export function resolveSittingPose(input?: string): PoseConfig<SittingPoseSetting> {
-  if (!input) return SITTING_POSE_CONFIGS[DEFAULT_SITTING_POSE]
-  const config = SITTING_POSE_CONFIGS[input as SittingPoseSetting]
-  return config ?? SITTING_POSE_CONFIGS[DEFAULT_SITTING_POSE]
-}
-
-// Deprecated: merged into PoseSettings
-export interface GranularPoseSettings {
-  bodyAngle?: BodyAngleSetting
-  weightDistribution?: WeightDistributionSetting
-  armPosition?: ArmPositionSetting
-  expression?: ExpressionSettings['type']
-  headPosition?: HeadPositionSetting
-  shoulderPosition?: ShoulderPositionSetting
-  sittingPose?: SittingPoseSetting
-}
-
-export const POSE_PRESET_MAP: Record<string, GranularPoseSettings> = {
-  power_classic: {
-    bodyAngle: 'square',
-    headPosition: 'straight-level',
-    shoulderPosition: 'level',
-    weightDistribution: 'even',
-    armPosition: 'relaxed-sides',
-    //expression: 'confident'
-  },
-  classic_corporate: {
-    bodyAngle: 'square',
-    headPosition: 'straight-level',
-    shoulderPosition: 'both-relaxed',
-    weightDistribution: 'even',
-    armPosition: 'relaxed-sides'
-    //expression: 'confident'
-  },
-  power_crossed: {
-    bodyAngle: 'slight-angle',
-    headPosition: 'face-turn',
-    weightDistribution: 'back-foot-70',
-    armPosition: 'arms-crossed',
-    //expression: 'confident'
-  },
-  power_cross: {
-    bodyAngle: 'slight-angle',
-    headPosition: 'straight-level',
-    shoulderPosition: 'level',
-    weightDistribution: 'back-foot-70',
-    armPosition: 'arms-crossed'
-    //expression: 'confident'
-  },
-  casual_confident: {
-    bodyAngle: 'slight-angle',
-    headPosition: 'slight-tilt',
-    shoulderPosition: 'front-shoulder-dropped',
-    weightDistribution: 'hip-shift',
-    armPosition: 'one-hand-pocket',
-    //expression: 'genuine_smile'
-  },
-  approachable_cross: {
-    bodyAngle: 'slight-angle',
-    headPosition: 'slight-tilt',
-    weightDistribution: 'hip-shift',
-    armPosition: 'arms-crossed',
-    //expression: 'soft_smile'
-  },
-  approachable_lean: {
-    bodyAngle: 'slight-angle',
-    headPosition: 'slight-tilt',
-    shoulderPosition: 'both-relaxed',
-    weightDistribution: 'hip-shift',
-    armPosition: 'relaxed-sides'
-    //expression: 'soft_smile'
-  },
-  walking_confident: {
-    bodyAngle: 'slight-angle',
-    headPosition: 'straight-level',
-    weightDistribution: 'back-foot-70',
-    armPosition: 'relaxed-sides',
-    //expression: 'confident'
-  },
-  slimming_three_quarter: {
-    bodyAngle: 'angle-45',
-    headPosition: 'face-turn',
-    shoulderPosition: 'front-shoulder-dropped',
-    weightDistribution: 'back-foot-70',
-    armPosition: 'one-hand-pocket'
-    //expression: 'confident'
-  },
-  sitting_engaged: {
-    sittingPose: 'upright-lean-forward',
-    headPosition: 'slight-tilt',
-    //expression: 'soft_smile'
-  },
-  executive_seated: {
-    sittingPose: 'relaxed-back',
-    headPosition: 'straight-level',
-    //expression: 'confident'
-  },
-  thinker: {
-    headPosition: 'slight-tilt',
-    //expression: 'contemplative'
-  },
-  candid_over_shoulder: {
-    bodyAngle: 'angle-45',
-    headPosition: 'face-turn',
-    shoulderPosition: 'level',
-    weightDistribution: 'even',
-    armPosition: 'not-visible'
-    //expression: 'soft_smile'
-  },
-  seated_engagement: {
-    sittingPose: 'upright-lean-forward',
-    headPosition: 'straight-level',
-    shoulderPosition: 'both-relaxed'
-    //expression: 'soft_smile'
-  }
-}
-
-export function getPoseSettings(id: string): GranularPoseSettings | undefined {
-  return POSE_PRESET_MAP[id]
-}
-
-/**
- * Alias for getPoseSettings to match legacy mapper interface
- */
-export function getPosePresetConfig(poseType: PoseSettings['type']): GranularPoseSettings | null {
-  return getPoseSettings(poseType) || null
-}
-
-/**
- * Applies pose preset configuration to PhotoStyleSettings
- */
-export function applyPosePresetToSettings(
-  settings: PhotoStyleSettings,
-  poseType: PoseSettings['type']
-): PhotoStyleSettings {
-  if (poseType === 'user-choice') {
-    return settings
-  }
-
-  const poseConfig = getPoseSettings(poseType)
-  if (!poseConfig) {
-    return settings
-  }
-
-  const updatedSettings: PhotoStyleSettings = { ...settings }
-
-  // Update pose setting structure - nesting granular settings
-  updatedSettings.pose = { 
-    type: poseType,
-    bodyAngle: poseConfig.bodyAngle,
-    weightDistribution: poseConfig.weightDistribution,
-    armPosition: poseConfig.armPosition,
-    headPosition: poseConfig.headPosition,
-    shoulderPosition: poseConfig.shoulderPosition,
-    sittingPose: poseConfig.sittingPose
-  } as PoseSettings
-
-  // NOTE: Expression is now independent of pose presets
-  // Users can set their expression separately without it being overridden
-  // Previously, changing pose would override the expression setting
-
-  return updatedSettings
-}
-
 import { deserialize } from './deserializer'
 
 /**
  * Element registry config for pose
  */
-export const poseElementConfig: ElementConfig<PhotoStyleSettings['pose']> = {
-  getDefaultPredefined: () => ({ type: 'power_classic' }),
-  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+export const poseElementConfig: ElementConfig<PoseSettings> = {
+  getDefaultPredefined: () => predefined({ type: 'classic_corporate' }),
+  getDefaultUserChoice: () => userChoice(),
   deserialize
 }

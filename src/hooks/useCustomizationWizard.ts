@@ -38,11 +38,19 @@ export function useCustomizationWizard({
         .filter(cat => {
           const categorySettings = (initialSettings as Record<string, unknown>)[cat.key]
           if (!categorySettings) return false
-          
-          if (cat.key === 'clothing') {
-            return (categorySettings as { style?: string }).style === 'user-choice'
+
+          const wrapped = categorySettings as { mode?: string; type?: string; style?: string }
+
+          // Check for new format first (mode property)
+          if ('mode' in wrapped && wrapped.mode !== undefined) {
+            return wrapped.mode === 'user-choice'
           }
-          return (categorySettings as { type?: string }).type === 'user-choice'
+
+          // Legacy format fallback
+          if (cat.key === 'clothing') {
+            return wrapped.style === 'user-choice'
+          }
+          return wrapped.type === 'user-choice'
         })
         .map(cat => cat.key)
     )

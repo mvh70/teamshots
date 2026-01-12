@@ -1,6 +1,7 @@
 import { PhotoStyleSettings } from '@/types/photo-style'
 import { getPackageConfig } from './packages'
 import { extractPackageId } from './settings-resolver'
+import { hasValue } from './elements/base/element-types'
 
 export type Scope = 'individual' | 'pro' | 'freePackage'
 
@@ -44,9 +45,10 @@ export async function saveStyle(params: { scope: Scope; contextId: string | null
 
   // Free plan style is a global setting; use admin endpoint and payload shape
   if (params.scope === 'freePackage') {
-    const backgroundType = params.ui.background?.type ?? 'user-choice'
-    const backgroundPrompt = params.ui.background?.prompt ?? ''
-    const includeLogo = (params.ui.branding?.type ?? 'user-choice') === 'include'
+    const backgroundType = params.ui.background?.value?.type ?? 'user-choice'
+    const backgroundPrompt = params.ui.background?.value?.prompt ?? ''
+    const brandingValue = hasValue(params.ui.branding) ? params.ui.branding.value : undefined
+    const includeLogo = (brandingValue?.type ?? 'user-choice') === 'include'
     const stylePreset = pkg.defaultPresetId // Derive from package
 
     const res = await fetch('/api/admin/free-package-style/save', {

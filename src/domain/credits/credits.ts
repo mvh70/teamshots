@@ -12,8 +12,12 @@ export type CreditTransactionType =
   | 'transfer_out'
   | 'generation'
   | 'refund'
-  | 'invite_allocated'
-  | 'invite_revoked'
+  | 'invite_allocated'  // @deprecated - use seat_assigned/seat_received
+  | 'invite_revoked'    // @deprecated - use seat_revoked/seat_returned
+  | 'seat_assigned'     // Credits deducted from team pool (assigned to member)
+  | 'seat_received'     // Credits added to person (received from team)
+  | 'seat_revoked'      // Credits deducted from person (on removal)
+  | 'seat_returned'     // Credits returned to team pool (from removed member)
 
 export interface CreateCreditTransactionParams {
   credits: number
@@ -186,47 +190,141 @@ export async function getUserCreditBalance(userId: string): Promise<number> {
 }
 
 /**
- * Transfer credits from team to person
+ * Transfer credits from team pool to a person (for invite acceptance or admin seat assignment)
+ *
+ * This is the NEW credit model where:
+ * - Team credits are a "distribution pool" (can't be used directly for generation)
+ * - Credits must be transferred to a person before they can be used
+ * - Creates two transactions: debit from team, credit to person
+ *
+ * @param teamId - Team to deduct credits from
+ * @param personId - Person to add credits to
+ * @param amount - Number of credits to transfer
+ * @param teamInviteId - Optional invite ID for tracking
+ * @param description - Optional description
  */
 export async function transferCreditsFromTeamToPerson(
   teamId: string,
   personId: string,
   amount: number,
+  teamInviteId?: string,
   description?: string
 ) {
   // Check team has enough credits
   const teamBalance = await getTeamCreditBalance(teamId)
   if (teamBalance < amount) {
-    throw new Error(`Insufficient credits. Team has ${teamBalance}, trying to transfer ${amount}`)
+    throw new Error(`Insufficient team credits. Team has ${teamBalance}, trying to transfer ${amount}`)
   }
 
-  // Create debit transaction for team
-  const debitTransaction = await createCreditTransaction({
-    credits: -amount,
-    type: 'transfer_out',
-    description: description || `Transfer to team member`,
-    teamId
-  })
+  // Create both transactions atomically
+  return await prisma.$transaction(async (tx) => {
+    // Debit from team pool
+    const debitTransaction = await tx.creditTransaction.create({
+      data: {
+        credits: -amount,
+        type: 'seat_assigned',
+        description: description || `Credits assigned to team member`,
+        teamId,
+        personId, // Track which person received it (audit)
+        teamInviteId
+      }
+    })
 
-  // Create credit transaction for person
-  const creditTransaction = await createCreditTransaction({
-    credits: amount,
-    type: 'transfer_in',
-    description: description || `Transfer from team`,
-    personId,
-    relatedTransactionId: debitTransaction.id
-  })
+    // Credit to person
+    const creditTransaction = await tx.creditTransaction.create({
+      data: {
+        credits: amount,
+        type: 'seat_received',
+        description: description || `Credits received from team`,
+        personId,
+        teamInviteId,
+        relatedTransactionId: debitTransaction.id
+      }
+    })
 
-  return {
-    debitTransaction,
-    creditTransaction
+    Logger.info('Credits transferred from team to person', {
+      teamId,
+      personId,
+      amount,
+      teamInviteId,
+      debitTransactionId: debitTransaction.id,
+      creditTransactionId: creditTransaction.id
+    })
+
+    return {
+      debitTransaction,
+      creditTransaction
+    }
+  })
+}
+
+/**
+ * Transfer remaining credits from a person back to team pool (for member removal)
+ *
+ * @param personId - Person to deduct credits from
+ * @param teamId - Team to return credits to
+ * @param description - Optional description
+ */
+export async function transferCreditsFromPersonToTeam(
+  personId: string,
+  teamId: string,
+  description?: string
+) {
+  // Get person's remaining balance
+  const personBalance = await getPersonCreditBalance(personId)
+
+  if (personBalance <= 0) {
+    Logger.info('No credits to transfer back to team', { personId, teamId, balance: personBalance })
+    return { transferred: 0 }
   }
+
+  // Create both transactions atomically
+  return await prisma.$transaction(async (tx) => {
+    // Debit from person
+    const debitTransaction = await tx.creditTransaction.create({
+      data: {
+        credits: -personBalance,
+        type: 'seat_revoked',
+        description: description || `Credits returned to team on removal`,
+        personId,
+        teamId // Track which team received it (audit)
+      }
+    })
+
+    // Credit back to team pool
+    const creditTransaction = await tx.creditTransaction.create({
+      data: {
+        credits: personBalance,
+        type: 'seat_returned',
+        description: description || `Credits returned from removed member`,
+        teamId,
+        personId, // Track which person it came from (audit)
+        relatedTransactionId: debitTransaction.id
+      }
+    })
+
+    Logger.info('Credits transferred from person back to team', {
+      personId,
+      teamId,
+      amount: personBalance,
+      debitTransactionId: debitTransaction.id,
+      creditTransactionId: creditTransaction.id
+    })
+
+    return {
+      transferred: personBalance,
+      debitTransaction,
+      creditTransaction
+    }
+  })
 }
 
 /**
  * Allocate credits to a person from an invite
- * This creates a record of allocation WITHOUT transferring credits from team
- * Credits remain with the team until they are actually used for generation
+ * @deprecated Use transferCreditsFromTeamToPerson instead
+ *
+ * This legacy function only creates an allocation marker without transferring credits.
+ * The new model requires actual transfer from team to person.
  */
 export async function allocateCreditsFromInvite(
   personId: string,

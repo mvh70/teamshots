@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma, Prisma } from '@/lib/prisma'
 import { getPackageConfig } from '@/domain/style/packages'
-import type { PhotoStyleSettings, BackgroundSettings, PoseSettings } from '@/types/photo-style'
+import type { PhotoStyleSettings, BackgroundSettings, BackgroundType, PoseSettings, ExpressionSettings, ExpressionType, ClothingSettings, ClothingType, ClothingColorSettings, ShotTypeSettings, ShotTypeValue, BrandingSettings } from '@/types/photo-style'
+import { predefined, userChoice } from '@/domain/style/elements/base/element-types'
+import type { BrandingValue } from '@/domain/style/elements/branding/types'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -51,17 +53,115 @@ export async function POST(request: NextRequest) {
     
     // Reconstruct UI settings from the provided data
     // Preserve undefined/null for user-choice states instead of defaulting
+    // Convert legacy background settings to new format
+    let bgSettingConverted: BackgroundSettings
+    if (backgroundSettings) {
+      // If backgroundSettings provided in legacy format, convert it
+      if (backgroundSettings.type === 'user-choice') {
+        bgSettingConverted = userChoice()
+      } else {
+        bgSettingConverted = predefined({
+          type: backgroundSettings.type as BackgroundType,
+          key: backgroundSettings.key,
+          prompt: backgroundSettings.prompt,
+          color: backgroundSettings.color
+        })
+      }
+    } else if (background === 'user-choice') {
+      bgSettingConverted = userChoice()
+    } else {
+      bgSettingConverted = predefined({
+        type: (background as BackgroundType) || 'office',
+        prompt: backgroundPrompt
+      })
+    }
+
+    // Convert legacy expression settings to new format
+    let exprSettingConverted: ExpressionSettings
+    if (expressionSettings) {
+      if (expressionSettings.type === 'user-choice') {
+        exprSettingConverted = userChoice()
+      } else {
+        exprSettingConverted = predefined({ type: expressionSettings.type as ExpressionType })
+      }
+    } else {
+      exprSettingConverted = pkg.defaultSettings.expression as ExpressionSettings
+    }
+
+    // Convert legacy clothing settings to new format
+    let clothingSettingConverted: ClothingSettings
+    if (clothingSettings) {
+      if (clothingSettings.style === 'user-choice' || clothingSettings.type === 'user-choice') {
+        clothingSettingConverted = userChoice()
+      } else {
+        clothingSettingConverted = predefined({
+          type: clothingSettings.type as ClothingType | undefined,
+          style: clothingSettings.style as ClothingType,
+          details: clothingSettings.details,
+          colors: clothingSettings.colors,
+          accessories: clothingSettings.accessories
+        })
+      }
+    } else {
+      clothingSettingConverted = pkg.defaultSettings.clothing as ClothingSettings
+    }
+
+    // Convert clothingColorsSettings from legacy format if provided
+    let clothingColorsConverted: ClothingColorSettings
+    if (clothingColorsSettings) {
+      if (clothingColorsSettings.type === 'user-choice') {
+        clothingColorsConverted = clothingColorsSettings.colors
+          ? userChoice(clothingColorsSettings.colors)
+          : userChoice()
+      } else {
+        clothingColorsConverted = clothingColorsSettings.colors
+          ? predefined(clothingColorsSettings.colors)
+          : predefined({})
+      }
+    } else {
+      clothingColorsConverted = userChoice()
+    }
+
+    // Convert legacy shotType settings to new format
+    let shotTypeConverted: ShotTypeSettings
+    if (shotTypeSettings) {
+      if (shotTypeSettings.type === 'user-choice') {
+        shotTypeConverted = userChoice()
+      } else {
+        shotTypeConverted = predefined({ type: shotTypeSettings.type as ShotTypeValue })
+      }
+    } else {
+      shotTypeConverted = pkg.defaultSettings.shotType as ShotTypeSettings
+    }
+
+    // Convert branding to new format
+    let brandingConverted: BrandingSettings
+    if (branding) {
+      if (branding.type === 'user-choice') {
+        brandingConverted = userChoice<BrandingValue>()
+      } else {
+        const brandingVal: BrandingValue = {
+          type: branding.type,
+          logoKey: branding.logoKey,
+          position: branding.position
+        }
+        brandingConverted = userChoice(brandingVal)
+      }
+    } else {
+      const defaultBrandingVal: BrandingValue = {
+        type: includeLogo ? 'include' : 'exclude',
+        position: 'clothing'
+      }
+      brandingConverted = userChoice(defaultBrandingVal)
+    }
+
     const ui: PhotoStyleSettings = {
-      background: backgroundSettings || { 
-        type: background as BackgroundSettings['type'] || 'user-choice',
-        prompt: backgroundPrompt 
-      },
-      branding: branding || { type: includeLogo ? 'include' : 'exclude' },
-      clothing: clothingSettings || pkg.defaultSettings.clothing,
-      // Use provided settings or default to user-choice
-      clothingColors: clothingColorsSettings || { type: 'user-choice' },
-      shotType: shotTypeSettings || pkg.defaultSettings.shotType,
-      expression: expressionSettings || pkg.defaultSettings.expression,
+      background: bgSettingConverted,
+      branding: brandingConverted,
+      clothing: clothingSettingConverted,
+      clothingColors: clothingColorsConverted,
+      shotType: shotTypeConverted,
+      expression: exprSettingConverted,
       pose: poseSettings || pkg.defaultSettings.pose
     }
     

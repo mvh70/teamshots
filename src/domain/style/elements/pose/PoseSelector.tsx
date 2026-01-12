@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { PoseSettings } from '@/types/photo-style'
+import type { PoseSettings, PoseType, LegacyPoseSettings } from './types'
 import { getPoseUIInfo } from './config'
 import { ImagePreview } from '@/components/ui/ImagePreview'
+import { hasValue, userChoice } from '../base/element-types'
 
 interface PoseSelectorProps {
-  value: PoseSettings
+  value: PoseSettings | LegacyPoseSettings
   onChange: (settings: PoseSettings) => void
   isPredefined?: boolean
   isDisabled?: boolean
@@ -35,6 +36,29 @@ function hasPoseImage(poseId: string): boolean {
   return POSES_WITH_IMAGES.includes(poseId as typeof POSES_WITH_IMAGES[number])
 }
 
+/**
+ * Extract pose type from settings, handling both legacy and new formats
+ */
+function getPoseTypeFromSettings(value: PoseSettings | LegacyPoseSettings | undefined): PoseType | undefined {
+  if (!value) return undefined
+
+  // New format: { mode: '...', value?: { type: '...' } }
+  if ('mode' in value) {
+    const newValue = value as PoseSettings
+    if (hasValue(newValue)) {
+      return newValue.value.type
+    }
+    return undefined
+  }
+
+  // Legacy format: { type: '...' }
+  const legacyValue = value as LegacyPoseSettings
+  if (legacyValue.type === 'user-choice') {
+    return undefined
+  }
+  return legacyValue.type
+}
+
 export default function PoseSelector({
   value,
   onChange,
@@ -48,13 +72,15 @@ export default function PoseSelector({
 
   // Show all poses enabled in the active package (respects availablePoses prop)
   // Do NOT filter by image availability
-  const visiblePoses = availablePoses 
+  const visiblePoses = availablePoses
     ? POSES.filter(p => availablePoses.includes(p.value))
     : POSES
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (isPredefined) return
-    onChange({ type: event.target.value as PoseSettings['type'] })
+    const selectedType = event.target.value as PoseType
+    // Emit new format, keeping mode as user-choice since user is selecting
+    onChange(userChoice({ type: selectedType }))
   }
 
   const [hasMounted, setHasMounted] = useState(false)
@@ -63,12 +89,14 @@ export default function PoseSelector({
     setHasMounted(true)
   }, [])
 
-  // Find the currently selected pose to show its description
-  const selectedPose = visiblePoses.find(p => p.value === value.type)
+  // Get current pose type, handling both formats
+  const currentPoseType = getPoseTypeFromSettings(value)
 
-  // Use effective value to handle initial load - if value.type is user-choice, it might not have an image
-  // but if it's a specific pose, we want to show it.
-  const effectivePoseType = value.type
+  // Find the currently selected pose to show its description
+  const selectedPose = currentPoseType ? visiblePoses.find(p => p.value === currentPoseType) : undefined
+
+  // For the select value, use first available pose if none selected
+  const selectValue = currentPoseType || (visiblePoses[0]?.value ?? 'classic_corporate')
 
   return (
     <div className={`${className}`}>
@@ -93,18 +121,13 @@ export default function PoseSelector({
       <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
         <div className="relative">
           <select
-            value={value.type}
+            value={selectValue}
             onChange={handleChange}
             disabled={isPredefined || isDisabled}
             className={`block w-full rounded-lg border-2 border-gray-200 p-3 pr-10 text-base focus:border-brand-primary focus:outline-none focus:ring-brand-primary sm:text-sm ${
               (isPredefined || isDisabled) ? 'cursor-not-allowed bg-gray-50' : 'cursor-pointer bg-white'
             }`}
           >
-            {value.type === 'user-choice' && (
-              <option value="user-choice" disabled>
-                {t('selectPlaceholder', { default: 'Choose your pose' })}
-              </option>
-            )}
             {visiblePoses.map((pose) => (
               <option key={pose.value} value={pose.value}>
                 {t(`poses.${pose.value}.label`)}
@@ -121,12 +144,12 @@ export default function PoseSelector({
         )}
 
         {/* Conditional Image Preview */}
-        {hasPoseImage(effectivePoseType) && (
+        {currentPoseType && hasPoseImage(currentPoseType) && (
           <div className="mt-4">
             <ImagePreview
-              key={effectivePoseType} // Force re-render on value change
-              src={`/images/poses/${effectivePoseType}.png`}
-              alt={t(`poses.${effectivePoseType}.label`)}
+              key={currentPoseType} // Force re-render on value change
+              src={`/images/poses/${currentPoseType}.png`}
+              alt={t(`poses.${currentPoseType}.label`)}
               width={400}
               height={300}
               variant="preview"

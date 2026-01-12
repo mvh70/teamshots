@@ -1,28 +1,52 @@
-export type BodyAngleSetting = 'square' | 'slight-angle' | 'angle-45' | 'user-choice'
-export type HeadPositionSetting = 'straight-level' | 'slight-tilt' | 'face-turn' | 'user-choice'
-export type ShoulderPositionSetting = 'front-shoulder-dropped' | 'both-relaxed' | 'level' | 'user-choice'
-export type WeightDistributionSetting = 'back-foot-70' | 'even' | 'hip-shift' | 'user-choice'
-export type ArmPositionSetting =
-  | 'not-visible'
-  | 'arms-crossed'
-  | 'one-hand-pocket'
-  | 'adjusting-jacket'
-  | 'relaxed-sides'
-  | 'user-choice'
-export type SittingPoseSetting = 'upright-lean-forward' | 'relaxed-back' | 'perched-edge' | 'user-choice'
+import type { ElementSetting } from '../base/element-types'
 
-export interface PoseDetails {
-  bodyAngle?: BodyAngleSetting
-  weightDistribution?: WeightDistributionSetting
-  armPosition?: ArmPositionSetting
-  // NOTE: expression removed - it's a separate PhotoStyleSettings field, not part of pose
-  headPosition?: HeadPositionSetting
-  shoulderPosition?: ShoulderPositionSetting
-  sittingPose?: SittingPoseSetting
+/**
+ * Available pose template types
+ */
+export type PoseType =
+  | 'power_classic'
+  | 'classic_corporate'
+  | 'power_crossed'
+  | 'power_cross'
+  | 'casual_confident'
+  | 'approachable_cross'
+  | 'approachable_lean'
+  | 'walking_confident'
+  | 'sitting_engaged'
+  | 'executive_seated'
+  | 'thinker'
+  | 'slimming_three_quarter'
+  | 'candid_over_shoulder'
+  | 'seated_engagement'
+  | 'jacket_reveal'
+  | 'thumbs_up'
+
+/**
+ * Pose value - the actual pose configuration (no 'user-choice')
+ */
+export interface PoseValue {
+  type: PoseType
 }
 
-export interface PoseSettings extends PoseDetails {
+/**
+ * Pose settings with mode wrapper
+ *
+ * @example
+ * // Admin predefined
+ * { mode: 'predefined', value: { type: 'classic_corporate' } }
+ *
+ * // User choice (not yet selected)
+ * { mode: 'user-choice', value: undefined }
+ */
+export type PoseSettings = ElementSetting<PoseValue>
+
+/**
+ * Legacy format for migration support
+ * @deprecated Use PoseSettings instead
+ */
+export interface LegacyPoseSettings {
   type:
+    | 'user-choice'
     | 'power_classic'
     | 'classic_corporate'
     | 'power_crossed'
@@ -38,5 +62,5 @@ export interface PoseSettings extends PoseDetails {
     | 'candid_over_shoulder'
     | 'seated_engagement'
     | 'jacket_reveal'
-    | 'user-choice'
+    | 'thumbs_up'
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { allocateCreditsFromInvite } from '@/domain/credits/credits'
+import { transferCreditsFromTeamToPerson } from '@/domain/credits/credits'
+import { isSeatsBasedTeam } from '@/domain/pricing/seats'
 import { Logger } from '@/lib/logger'
 import { enforceInviteRateLimitWithBlocking } from '@/lib/rate-limit'
 
@@ -83,13 +84,41 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Allocate credits to the person via credit transaction (only for new persons)
-      await allocateCreditsFromInvite(
-        person.id,
-        invite.id,
-        invite.creditsAllocated,
-        `Credits allocated from team invite to ${invite.email}`
-      )
+      // Transfer credits from team to person (only for new persons)
+      // This is the NEW credit model: credits are actually transferred, not just marked
+      const useSeatsModel = await isSeatsBasedTeam(invite.teamId)
+
+      if (useSeatsModel) {
+        // Seats model: transfer credits from team pool to person
+        await transferCreditsFromTeamToPerson(
+          invite.teamId,
+          person.id,
+          invite.creditsAllocated,
+          invite.id,
+          `Seat credits for ${invite.email}`
+        )
+
+        // Note: activeSeats is calculated dynamically from TeamInvite records
+        // No need to increment a counter - avoids drift
+
+        Logger.info('Seat assigned on invite acceptance', {
+          teamId: invite.teamId,
+          personId: person.id,
+          creditsTransferred: invite.creditsAllocated
+        })
+      } else {
+        // Legacy credits model: credits were already deducted on invite creation
+        // Just mark as allocated (no actual transfer needed)
+        await prisma.creditTransaction.create({
+          data: {
+            credits: invite.creditsAllocated,
+            type: 'invite_allocated',
+            description: `Credits allocated from team invite to ${invite.email}`,
+            personId: person.id,
+            teamInviteId: invite.id
+          }
+        })
+      }
     }
 
     // Mark invite as used and link to person

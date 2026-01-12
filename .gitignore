@@ -88,3 +88,7 @@ AGENTS.md
 tests*
 test-results*logs/
 
+chrome-extension/**
+
+/*.md
+/*.jpeg

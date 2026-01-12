@@ -3,6 +3,11 @@
 import Script from 'next/script'
 
 export default function GoogleTagManager() {
+  // Prevent tracking in non-production environments
+  if (process.env.NODE_ENV !== 'production') {
+    return null
+  }
+
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID
 
   if (!gtmId) {
@@ -31,6 +36,11 @@ export default function GoogleTagManager() {
 
 // NoScript fallback component for <body>
 export function GoogleTagManagerNoScript() {
+  // Prevent tracking in non-production environments
+  if (process.env.NODE_ENV !== 'production') {
+    return null
+  }
+
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID
 
   if (!gtmId) {

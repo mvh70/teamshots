@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-
+import { getExtensionAuthFromHeaders, EXTENSION_SCOPES } from '@/domain/extension'
+import { handleCorsPreflightSync, addCorsHeaders } from '@/lib/cors'
 
 export const runtime = 'nodejs'
+
+/**
+ * OPTIONS /api/selfies/[id]/select
+ * Handle CORS preflight requests for extension support
+ */
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  const response = handleCorsPreflightSync(origin)
+  return response || new NextResponse(null, { status: 204 })
+}
 async function getInviteToken(req: Request): Promise<string | undefined> {
   const url = new URL(req.url)
   const fromQuery = url.searchParams.get('token') || undefined
@@ -16,14 +27,18 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const origin = request.headers.get('origin')
+
   try {
-    const session = await auth()
     const { id } = await params
 
     // Parse payload once here
     const payload = await request.json().catch(() => ({})) as { selected?: boolean; token?: string }
     if (typeof payload.selected !== 'boolean') {
-      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+      return addCorsHeaders(
+        NextResponse.json({ error: 'Invalid payload' }, { status: 400 }),
+        origin
+      )
     }
 
     // Load selfie and owner
@@ -33,15 +48,32 @@ export async function PATCH(
     })
 
     if (!selfie) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      return addCorsHeaders(
+        NextResponse.json({ error: 'Not found' }, { status: 404 }),
+        origin
+      )
     }
 
     if (!selfie.person) {
-      return NextResponse.json({ error: 'Selfie has no associated person' }, { status: 400 })
+      return addCorsHeaders(
+        NextResponse.json({ error: 'Selfie has no associated person' }, { status: 400 }),
+        origin
+      )
     }
 
-    // AuthZ: allow either (a) owner session or (b) valid invite token for owner
-    const isOwner = Boolean(session?.user?.id && selfie.person.userId === session.user.id)
+    // Try extension token auth first
+    const extensionAuth = await getExtensionAuthFromHeaders(
+      request.headers,
+      EXTENSION_SCOPES.GENERATION_CREATE
+    )
+
+    // Fall back to session auth
+    const session = extensionAuth ? null : await auth()
+
+    // AuthZ: allow either (a) owner session, (b) extension token for owner, or (c) valid invite token for owner
+    const isOwnerViaSession = Boolean(session?.user?.id && selfie.person.userId === session.user.id)
+    const isOwnerViaExtension = Boolean(extensionAuth?.userId && selfie.person.userId === extensionAuth.userId)
+    const isOwner = isOwnerViaSession || isOwnerViaExtension
 
     // Prefer token in payload; also check query/header for robustness
     const token = payload.token || (await getInviteToken(request))
@@ -85,7 +117,10 @@ export async function PATCH(
     }
 
     if (!isOwner && !hasValidToken) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return addCorsHeaders(
+        NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
+        origin
+      )
     }
 
     // Temporarily cast due to prisma types needing regeneration after migration
@@ -94,9 +129,15 @@ export async function PATCH(
       data: { selected: payload.selected } as unknown as Record<string, unknown>
     })
 
-    return NextResponse.json({ id: updated.id, selected: payload.selected })
+    return addCorsHeaders(
+      NextResponse.json({ id: updated.id, selected: payload.selected }),
+      origin
+    )
   } catch (error) {
     console.error('Error updating selfie selection:', error)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    return addCorsHeaders(
+      NextResponse.json({ error: 'Server error' }, { status: 500 }),
+      request.headers.get('origin')
+    )
   }
 }

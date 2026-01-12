@@ -17,11 +17,16 @@ export async function GET() {
     const uploads = await prisma.selfie.findMany({
       where: { person: { userId: session.user.id } },
       orderBy: { createdAt: 'desc' },
-      select: { 
-        id: true, 
-        key: true, 
-        validated: true, 
-        createdAt: true
+      select: {
+        id: true,
+        key: true,
+        validated: true,
+        createdAt: true,
+        selfieType: true,
+        selfieTypeConfidence: true,
+        personCount: true,
+        isProper: true,
+        improperReason: true
       }
     })
 
@@ -38,11 +43,16 @@ export async function GET() {
     // Get sets of used selfie IDs and keys
     const { usedSelfieIds, usedSelfieKeys } = await getUsedSelfiesForPerson(person.id)
 
-    const items = uploads.map((u: { 
-      id: string; 
-      key: string; 
-      validated: boolean; 
+    const items = uploads.map((u: {
+      id: string
+      key: string
+      validated: boolean
       createdAt: Date
+      selfieType: string | null
+      selfieTypeConfidence: number | null
+      personCount: number | null
+      isProper: boolean | null
+      improperReason: string | null
     }) => {
       // Check if selfie is used: either by ID or by key
       const isUsed = usedSelfieIds.has(u.id) || usedSelfieKeys.has(u.key)
@@ -51,7 +61,12 @@ export async function GET() {
         uploadedKey: u.key,
         validated: u.validated,
         createdAt: u.createdAt.toISOString(),
-        hasGenerations: isUsed
+        hasGenerations: isUsed,
+        selfieType: u.selfieType,
+        selfieTypeConfidence: u.selfieTypeConfidence,
+        personCount: u.personCount,
+        isProper: u.isProper,
+        improperReason: u.improperReason
       }
     })
 

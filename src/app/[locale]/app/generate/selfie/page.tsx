@@ -19,6 +19,7 @@ import Header from '@/app/[locale]/app/components/Header'
 import { QRPlaceholder } from '@/components/MobileHandoff'
 import SelfieInfoOverlayTrigger from '@/components/generation/SelfieInfoOverlayTrigger'
 import { useOnboardingState } from '@/lib/onborda/hooks'
+import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -38,6 +39,7 @@ function SelfieSelectionPageContent() {
   const { markInFlow, setPendingGeneration, hydrated, customizationStepsMeta = DEFAULT_CUSTOMIZATION_STEPS_META, visitedSteps } = useGenerationFlowState()
   const [isNavigating, startNavigateTransition] = useTransition()
   const { context: onboardingContext } = useOnboardingState()
+  const { refreshKey: selfieTypeRefreshKey, refresh: refreshSelfieTypeStatus } = useSelfieTypeStatus()
   
   
   const uploadErrorHandler = useCallback((error: string) => {
@@ -55,6 +57,8 @@ function SelfieSelectionPageContent() {
     onSelfiesApproved: async () => {
       // Reload selected state to trigger re-render with updated selectedIds
       await loadSelected()
+      // Refresh selfie type status overlay to show newly classified selfies
+      refreshSelfieTypeStatus()
       // Small delay to allow React to process state updates
       await new Promise(resolve => setTimeout(resolve, 100))
     },
@@ -68,7 +72,17 @@ function SelfieSelectionPageContent() {
   const { uploads, selectedIds, loading, loadSelected, loadUploads, handleSelfiesApproved } = selfieManager
   
   // Type assertion: in individual mode, uploads is always UploadListItem[]
-  type UploadListItem = { id: string; uploadedKey: string; createdAt: string; hasGenerations: boolean }
+  type UploadListItem = {
+    id: string
+    uploadedKey: string
+    createdAt: string
+    hasGenerations: boolean
+    selfieType?: string | null
+    selfieTypeConfidence?: number | null
+    personCount?: number | null
+    isProper?: boolean | null
+    improperReason?: string | null
+  }
   const uploadListItems = uploads as UploadListItem[]
 
   if (!handleSelfiesApproved) {
@@ -132,7 +146,11 @@ function SelfieSelectionPageContent() {
       key: u.uploadedKey,
       url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`,
       uploadedAt: u.createdAt,
-      used: u.hasGenerations
+      used: u.hasGenerations,
+      selfieType: u.selfieType,
+      selfieTypeConfidence: u.selfieTypeConfidence,
+      isProper: u.isProper ?? undefined,
+      improperReason: u.improperReason
     })),
     selection: {
       mode: 'managed' as const,
@@ -265,6 +283,9 @@ function SelfieSelectionPageContent() {
             {isMobile ? (
               <SharedMobileSelfieFlow
                 canContinue={canContinue}
+                selfieTypeOverlay={
+                  <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} />
+                }
                 infoBanner={
                   <div className="flex-1">
                     <SelfieInfoOverlayTrigger dense className="w-full" />
@@ -277,6 +298,10 @@ function SelfieSelectionPageContent() {
               />
             ) : (
               <div className="px-4 sm:px-6 lg:px-8 pt-8 md:pt-10 pb-52">
+                {/* Selfie Type Progress Overlay */}
+                <div className="mb-6 flex justify-center">
+                  <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} />
+                </div>
                 {/* Desktop Page Header - matches intro pages typography */}
                 <div className="mb-8 space-y-3">
                   <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 leading-[1.1] font-serif tracking-tight">

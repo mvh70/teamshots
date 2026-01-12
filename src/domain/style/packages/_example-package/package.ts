@@ -19,6 +19,7 @@ import { Logger } from '@/lib/logger'
 
 // Import element composition system
 import { StyleElement, type ElementContext, type ElementContribution } from '../../elements/base/StyleElement'
+import { userChoice } from '../../elements/base/element-types'
 
 /**
  * OPTIONAL: Define custom elements for your package
@@ -153,11 +154,11 @@ export const examplePackage: ServerStylePackage = {
    */
   defaultSettings: {
     presetId: 'CORPORATE_HEADSHOT',
-    background: { type: 'office' },
-    branding: { type: 'exclude' },
-    pose: { type: 'power_classic' },
-    expression: { type: 'genuine_smile' },
-    shotType: { type: 'headshot' },
+    background: { mode: 'predefined', value: { type: 'office' } },
+    branding: userChoice({ type: 'exclude', position: 'clothing' }),
+    pose: { mode: 'predefined', value: { type: 'power_classic' } },
+    expression: { mode: 'predefined', value: { type: 'genuine_smile' } },
+    shotType: { mode: 'predefined', value: { type: 'headshot' } },
     subjectCount: '1',
     aspectRatio: '1:1',
   },
@@ -188,9 +189,9 @@ export const examplePackage: ServerStylePackage = {
         identity: `Synthesize from ${selfieKeys.length} selfie references`,
       },
       composition: {
-        background: styleSettings.background?.type || 'office',
-        pose: styleSettings.pose?.type || 'power_classic',
-        expression: styleSettings.expression?.type || 'genuine_smile',
+        background: (styleSettings.background as { value?: { type?: string } })?.value?.type || 'office',
+        pose: (styleSettings.pose as { value?: { type?: string } })?.value?.type || 'power_classic',
+        expression: (styleSettings.expression as { value?: { type?: string } })?.value?.type || 'genuine_smile',
       },
     }
 
@@ -255,8 +256,8 @@ export const examplePackage: ServerStylePackage = {
   promptBuilder: (settings) => {
     return JSON.stringify(
       {
-        background: settings.background?.type || 'office',
-        pose: settings.pose?.type || 'power_classic',
+        background: (settings.background as { value?: { type?: string } })?.value?.type || 'office',
+        pose: (settings.pose as { value?: { type?: string } })?.value?.type || 'power_classic',
       },
       null,
       2

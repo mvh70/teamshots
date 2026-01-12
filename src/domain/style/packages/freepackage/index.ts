@@ -9,6 +9,7 @@ import * as clothing from '../../elements/clothing'
 import * as clothingColors from '../../elements/clothing-colors'
 import * as pose from '../../elements/pose'
 import * as expression from '../../elements/expression'
+import { predefined, userChoice } from '../../elements/base/element-types'
 
 
 const VISIBLE_CATEGORIES: CategoryType[] = [
@@ -61,17 +62,14 @@ const FREE_PRESET_DEFAULTS = getDefaultPresetSettings(FREE_PRESET)
 // Note: visibleCategories controls what users can customize, not this object
 const DEFAULTS = {
   ...FREE_PRESET_DEFAULTS,
-  clothingColors: {
-    type: 'predefined' as const,
-    colors: {
-      topLayer: 'Dark blue',
-      baseLayer: 'White',
-      shoes: 'brown',
-      bottom: 'Gray'
-    }
-  },
+  clothingColors: predefined({
+    topLayer: 'Dark blue',
+    baseLayer: 'White',
+    shoes: 'brown',
+    bottom: 'Gray'
+  }),
   //pose: { type: 'jacket_reveal' as const }, // Package standard (not in visibleCategories)
-  shotType: { type: 'medium-shot' as const }, // Package standard (not in visibleCategories)
+  shotType: predefined({ type: 'medium-shot' as const }), // Package standard (not in visibleCategories)
   subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts
 }
 
@@ -117,7 +115,7 @@ export const freepackage: ClientStylePackage = {
         branding: ui.branding,
         pose: ui.pose,
         clothing: ui.clothing,
-        clothingColors: ui.clothingColors || { type: 'user-choice' },
+        clothingColors: ui.clothingColors || userChoice(),
         expression: ui.expression,
       }
     }),

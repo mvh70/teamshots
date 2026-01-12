@@ -9,6 +9,7 @@
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
 import { deriveLighting } from '../../lighting/derive'
 import { getBackgroundEnvironment } from '../../background/config'
+import { hasValue } from '../../base/element-types'
 import type { LightingInput } from '../../lighting/types'
 
 export class LightingElement extends StyleElement {
@@ -186,12 +187,12 @@ export class LightingElement extends StyleElement {
     const { settings } = context
 
     // Extract shot type
-    const shotType = settings.shotType?.type || 'medium-close-up'
+    const shotType = hasValue(settings.shotType) ? settings.shotType.value.type : 'medium-close-up'
 
     // Extract background environment
-    const backgroundType = settings.background?.type
+    const backgroundType = settings.background?.value?.type
     const backgroundEnvironment = getBackgroundEnvironment(backgroundType)
-    const backgroundModifier = settings.background?.modifier
+    const backgroundModifier = settings.background?.value?.modifier
 
     // Extract subject count (parse string to number)
     const subjectCountStr = settings.subjectCount || '1'

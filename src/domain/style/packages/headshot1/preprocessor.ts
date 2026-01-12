@@ -9,6 +9,7 @@ import { Logger } from '@/lib/logger'
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { httpFetch } from '@/lib/http'
+import { hasValue } from '../../elements/base/element-types'
 
 /**
  * Free Package Image Preprocessor
@@ -67,8 +68,9 @@ export async function preprocessHeadshot1(
     let processedBackground: Buffer | undefined
     
     // Step 1: Process background - remove person if custom background contains one
-    if (styleSettings.background?.type === 'custom' && styleSettings.background.key) {
-      const backgroundKey = additionalContext?.backgroundS3Key || styleSettings.background.key
+    const bgValue = styleSettings.background?.value
+    if (bgValue?.type === 'custom' && bgValue.key) {
+      const backgroundKey = additionalContext?.backgroundS3Key || bgValue.key
       const backgroundBuffer = await downloadAssetAsBuffer(backgroundKey)
       
       if (backgroundBuffer) {
@@ -89,7 +91,8 @@ export async function preprocessHeadshot1(
     }
     
     // Step 2: Place logo on clothing (if branding position is clothing)
-    if (styleSettings.branding?.type !== 'exclude' && styleSettings.branding?.logoKey && additionalContext?.logoS3Key) {
+    const brandingValue = hasValue(styleSettings.branding) ? styleSettings.branding.value : undefined
+    if (brandingValue?.type !== 'exclude' && brandingValue?.logoKey && additionalContext?.logoS3Key) {
       const logoBuffer = await downloadAssetAsBuffer(additionalContext.logoS3Key)
 
       if (logoBuffer) {
@@ -99,7 +102,7 @@ export async function preprocessHeadshot1(
         const logoResult = await placeLogoOnClothing(
           processedSelfie,
           logoBuffer,
-          styleSettings.branding?.position === 'clothing' ? 'center' : 'center' // Default to center for now
+          brandingValue?.position === 'clothing' ? 'center' : 'center' // Default to center for now
         )
 
         if (logoResult.processed) {

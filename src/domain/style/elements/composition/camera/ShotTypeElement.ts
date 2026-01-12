@@ -7,6 +7,7 @@
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
 import { resolveShotType, type ShotTypeConfig } from '../../shot-type/config'
+import { hasValue } from '../../base/element-types'
 
 export class ShotTypeElement extends StyleElement {
   readonly id = 'shot-type'
@@ -27,7 +28,8 @@ export class ShotTypeElement extends StyleElement {
     const { phase, settings } = context
 
     // Resolve shot type configuration
-    const shotType = resolveShotType(settings.shotType?.type)
+    const shotTypeValue = hasValue(settings.shotType) ? settings.shotType.value.type : undefined
+    const shotType = resolveShotType(shotTypeValue)
 
     if (phase === 'person-generation') {
       return this.contributeToPersonGeneration(shotType)
@@ -204,19 +206,21 @@ export class ShotTypeElement extends StyleElement {
   validate(settings: import('@/types/photo-style').PhotoStyleSettings): string[] {
     const errors: string[] = []
 
-    if (!settings.shotType?.type) {
+    if (!hasValue(settings.shotType)) {
       // Not an error - will use default
       return errors
     }
 
+    const shotTypeValue = settings.shotType.value.type
+
     // Try to resolve - if it doesn't throw, it's valid
     try {
-      const resolved = resolveShotType(settings.shotType.type)
+      const resolved = resolveShotType(shotTypeValue)
       if (!resolved) {
-        errors.push(`Invalid shot type: ${settings.shotType.type}`)
+        errors.push(`Invalid shot type: ${shotTypeValue}`)
       }
     } catch (error) {
-      errors.push(`Failed to resolve shot type: ${settings.shotType.type}`)
+      errors.push(`Failed to resolve shot type: ${shotTypeValue}`)
     }
 
     return errors

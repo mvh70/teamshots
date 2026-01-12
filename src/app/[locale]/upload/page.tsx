@@ -129,10 +129,12 @@ export default function UploadPage() {
     )
   }
 
-  // Mock user credits for team member
+  // Credits for team member
+  // NEW CREDIT MODEL: All usable credits are on person
   const userCredits = {
-    individual: 0, // Team members start with no individual credits
-    team: personData.creditsAllocated
+    individual: 0, // Team members don't have individual credits
+    team: 0, // Team pool is not used for generation
+    person: personData.creditsAllocated // This is what they can use
   }
 
   const hasTeamAccess = true // Team members always have team access
@@ -199,7 +201,7 @@ export default function UploadPage() {
                   <div className="text-sm text-gray-600 space-y-1">
                     <p><strong>Type:</strong> {generationType === 'personal' ? 'Personal Use' : 'Team Use'}</p>
                     <p><strong>Credits:</strong> {PRICING_CONFIG.credits.perGeneration} credits</p>
-                    <p><strong>Remaining:</strong> {userCredits[generationType === 'personal' ? 'individual' : 'team']} credits</p>
+                    <p><strong>Remaining:</strong> {userCredits.person} credits</p>
                   </div>
                 </div>
 

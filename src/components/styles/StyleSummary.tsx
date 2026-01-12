@@ -5,15 +5,33 @@ import Image from 'next/image'
 import { ExclamationTriangleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import { useTranslations } from 'next-intl'
+import { hasValue, isUserChoice } from '@/domain/style/elements/base/element-types'
+import type { PhotoStyleSettings } from '@/types/photo-style'
 
+// Legacy interface for backwards compatibility - can receive either format
 export interface PhotoStyleSummarySettings {
   background?: {
+    // New wrapper format
+    mode?: string
+    value?: {
+      key?: string
+      prompt?: string
+      type?: string
+      color?: string
+    }
+    // Legacy format (direct properties)
     key?: string
     prompt?: string
     type?: string
     color?: string
   }
   branding?: {
+    mode?: string
+    value?: {
+      logoKey?: string
+      type?: string
+      position?: string
+    }
     logoKey?: string
     type?: string
     position?: string
@@ -23,15 +41,34 @@ export interface PhotoStyleSummarySettings {
     preset?: string
   }
   shotType?: {
+    mode?: string
+    value?: {
+      type?: string
+    }
     type?: string
   }
   pose?: {
+    mode?: string
+    value?: {
+      type?: string
+    }
     type?: string
   }
 }
 
 interface StyleSummaryProps {
   settings?: PhotoStyleSummarySettings | null
+}
+
+// Helper to extract value from either wrapper or legacy format
+function extractValue<T>(setting: { mode?: string; value?: T } & T | undefined): T | undefined {
+  if (!setting) return undefined
+  // New wrapper format: has mode property
+  if ('mode' in setting && setting.mode !== undefined) {
+    return setting.value as T | undefined
+  }
+  // Legacy format: direct properties
+  return setting as T
 }
 
 function getThumbnailUrl(key: string): string {
@@ -42,25 +79,38 @@ export default function StyleSummary({ settings }: StyleSummaryProps) {
   const t = useTranslations('customization.photoStyle.pose')
   const tShotType = useTranslations('customization.photoStyle.shotType')
   const [showPoseTooltip, setShowPoseTooltip] = React.useState(false)
-  const backgroundKey = settings?.background?.key
-  const backgroundPrompt = settings?.background?.prompt
-  const backgroundType = settings?.background?.type
-  const backgroundColor = settings?.background?.color
+
+  // Extract values from wrapper format (handles both new and legacy formats)
+  const backgroundValue = extractValue(settings?.background)
+  const brandingValue = extractValue(settings?.branding)
+  const shotTypeValue = extractValue(settings?.shotType)
+  const poseValue = extractValue(settings?.pose)
+
+  // Check if settings are user-choice (new format)
+  const isBackgroundUserChoice = settings?.background?.mode === 'user-choice'
+  const isBrandingUserChoice = settings?.branding?.mode === 'user-choice'
+  const isShotTypeUserChoice = settings?.shotType?.mode === 'user-choice'
+  const isPoseUserChoice = settings?.pose?.mode === 'user-choice'
+
+  const backgroundKey = backgroundValue?.key
+  const backgroundPrompt = backgroundValue?.prompt
+  const backgroundType = isBackgroundUserChoice ? 'user-choice' : backgroundValue?.type
+  const backgroundColor = backgroundValue?.color
   const backgroundImageUrl = backgroundKey ? getThumbnailUrl(backgroundKey) : undefined
   const isHexColor = (value?: string): boolean => {
     if (!value) return false
     return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value)
   }
 
-  const logoKey = settings?.branding?.logoKey
-  const brandingType = settings?.branding?.type
-  const logoPosition = settings?.branding?.position
+  const logoKey = brandingValue?.logoKey
+  const brandingType = isBrandingUserChoice ? 'user-choice' : brandingValue?.type
+  const logoPosition = brandingValue?.position
 
   // Style preset computed but intentionally not displayed on the summary card
-  const shotType = settings?.shotType?.type
+  const shotType = isShotTypeUserChoice ? 'user-choice' : shotTypeValue?.type
   const shotTypeConfig =
     shotType && shotType !== 'user-choice' ? resolveShotType(shotType) : undefined
-  const poseType = settings?.pose?.type
+  const poseType = isPoseUserChoice ? 'user-choice' : poseValue?.type
 
   return (
     <div className="space-y-5">

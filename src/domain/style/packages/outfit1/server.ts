@@ -9,6 +9,7 @@ import { resolvePackageAspectRatio } from '../shared/aspect-ratio-resolver'
 import { downloadAssetAsBase64 } from '@/queue/workers/generate-image/s3-utils'
 import { getS3BucketName, createS3Client } from '@/lib/s3-client'
 import { compositionRegistry } from '../../elements/composition'
+import { hasValue, predefined } from '../../elements/base/element-types'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
 import { CostTrackingService } from '@/domain/services/CostTrackingService'
 
@@ -123,10 +124,16 @@ export const outfit1Server: Outfit1ServerPackage = {
       visibleCategories: outfit1Base.visibleCategories
     })
 
-    // Use package default shotType (respects package configuration)
-    const packageShotType = outfit1Base.defaultSettings.shotType?.type || 'medium-shot'
-    effectiveSettings.shotType = { type: packageShotType }
-    const shotTypeConfig = resolveShotType(packageShotType)
+    // Use user's shotType choice if available, otherwise fall back to package default
+    const userShotType = effectiveSettings.shotType
+    const defaultShotType = outfit1Base.defaultSettings.shotType
+    const resolvedShotType = hasValue(userShotType)
+      ? userShotType.value.type
+      : hasValue(defaultShotType)
+        ? defaultShotType.value.type
+        : 'medium-shot'
+    effectiveSettings.shotType = predefined({ type: resolvedShotType })
+    const shotTypeConfig = resolveShotType(resolvedShotType)
     const shotText = shotTypeConfig.id.replace(/-/g, ' ')
 
     // Resolve aspect ratio using shared logic
@@ -181,13 +188,44 @@ export const outfit1Server: Outfit1ServerPackage = {
     // V3 workflow: All custom clothing handling moved to CustomClothingElement.prepare() in step 0
     // V2 legacy code removed
 
+    // Merge contribution reference images (like garment collage) with default references
+    // Convert contribution format { url, description, type } to workflow format { base64, mimeType, description }
+    const contributionReferenceImages = (contributions.referenceImages || []).map(ref => {
+      // Check if it's a data URL (from CustomClothingElement)
+      if (ref.url?.startsWith('data:')) {
+        const match = ref.url.match(/^data:(.*?);base64,(.*)$/)
+        if (match) {
+          return {
+            base64: match[2],
+            mimeType: match[1],
+            description: ref.description,
+          }
+        }
+      }
+      // Return as-is if it already has base64 format
+      return ref as unknown as { base64: string; mimeType: string; description?: string }
+    }).filter(ref => ref.base64) // Filter out any that don't have base64
+
+    const allReferenceImages = [...referenceImages, ...contributionReferenceImages]
+
+    Logger.info('[Outfit1Package] Reference images merged', {
+      generationId,
+      defaultReferenceCount: referenceImages.length,
+      contributionReferenceCount: contributionReferenceImages.length,
+      totalReferenceCount: allReferenceImages.length,
+      hasGarmentCollage: contributionReferenceImages.some(r =>
+        r.description?.toLowerCase().includes('garment') ||
+        r.description?.toLowerCase().includes('collage')
+      ),
+    })
+
     const promptString = JSON.stringify(contributions.payload, null, 2)
 
     return {
       prompt: promptString,
       mustFollowRules: contributions.mustFollow || [],
       freedomRules: contributions.freedom || [],
-      referenceImages,
+      referenceImages: allReferenceImages,
       labelInstruction,
       aspectRatio,
       aspectRatioDescription

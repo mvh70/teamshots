@@ -8,6 +8,7 @@ import { downloadAssetAsBase64 } from '@/queue/workers/generate-image/s3-utils'
 import { getS3BucketName, createS3Client } from '@/lib/s3-client'
 import { compositionRegistry } from '../../elements/composition'
 import { Telemetry } from '@/lib/telemetry'
+import { hasValue, predefined } from '../../elements/base/element-types'
 import type { GenerationContext, GenerationPayload } from '@/types/generation'
 
 export type FreePackageServerPackage = typeof freepackageBase & {
@@ -51,8 +52,9 @@ export const freepackageServer: FreePackageServerPackage = {
     )
 
     // Use package default shotType (respects package configuration)
-    const packageShotType = freepackageBase.defaultSettings.shotType?.type || 'medium-shot'
-    effectiveSettings.shotType = { type: packageShotType }
+    const defaultShotType = freepackageBase.defaultSettings.shotType
+    const packageShotType = hasValue(defaultShotType) ? defaultShotType.value.type : 'medium-shot'
+    effectiveSettings.shotType = predefined({ type: packageShotType })
     const shotTypeConfig = resolveShotType(packageShotType)
     const shotText = shotTypeConfig.id.replace(/-/g, ' ')
 

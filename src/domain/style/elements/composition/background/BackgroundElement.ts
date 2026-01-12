@@ -13,7 +13,8 @@ import {
   ElementContribution,
   type PreparedAsset,
 } from '../../base/StyleElement'
-import type { BackgroundSettings } from '@/types/photo-style'
+import type { BackgroundSettings, BackgroundValue } from '../../background/types'
+import { isUserChoice, hasValue } from '../../base/element-types'
 import { generateBackgroundPrompt } from '../../background/prompt'
 import { Logger } from '@/lib/logger'
 
@@ -27,13 +28,15 @@ export class BackgroundElement extends StyleElement {
     const { phase, settings } = context
     const background = settings.background
 
-    // Skip if no background configured or user-choice (handled elsewhere)
-    if (!background || background.type === 'user-choice') {
+    // Skip if no background configured, user-choice, or no value
+    if (!background || isUserChoice(background) || !hasValue(background)) {
       return false
     }
 
+    const bgValue = background.value
+
     // Simple backgrounds (neutral, gradient) don't need step 1b generation
-    const isSimpleBackground = background.type === 'neutral' || background.type === 'gradient'
+    const isSimpleBackground = bgValue.type === 'neutral' || bgValue.type === 'gradient'
 
     if (isSimpleBackground) {
       // Simple backgrounds: contribute to person-generation (for originalPrompt) and composition (step 2)
@@ -51,12 +54,14 @@ export class BackgroundElement extends StyleElement {
     const { settings } = context
     const background = settings.background
 
-    if (!background) {
+    if (!background || !hasValue(background)) {
       return false
     }
 
+    const bgValue = background.value
+
     // Need preparation only for custom backgrounds with a key
-    return background.type === 'custom' && !!background.key
+    return bgValue.type === 'custom' && !!bgValue.key
   }
 
   /**
@@ -67,7 +72,7 @@ export class BackgroundElement extends StyleElement {
    */
   async prepare(context: ElementContext): Promise<PreparedAsset> {
     const { settings, generationContext } = context
-    const background = settings.background!
+    const background = settings.background
     const generationId = generationContext.generationId || 'unknown'
 
     // Type guard for downloadAsset service
@@ -79,24 +84,30 @@ export class BackgroundElement extends StyleElement {
       throw new Error('BackgroundElement.prepare(): downloadAsset must be provided in generationContext')
     }
 
-    if (background.type !== 'custom' || !background.key) {
+    if (!background || !hasValue(background)) {
+      throw new Error('BackgroundElement.prepare(): Background value required')
+    }
+
+    const bgValue = background.value
+
+    if (bgValue.type !== 'custom' || !bgValue.key) {
       throw new Error('BackgroundElement.prepare(): Custom background requires a key')
     }
 
     Logger.info('[BackgroundElement] Downloading custom background', {
       generationId,
-      backgroundKey: background.key,
+      backgroundKey: bgValue.key,
     })
 
     // Download custom background
-    const backgroundImage = await downloadAsset(background.key)
+    const backgroundImage = await downloadAsset(bgValue.key)
     if (!backgroundImage) {
-      throw new Error(`BackgroundElement.prepare(): Failed to download custom background: ${background.key}`)
+      throw new Error(`BackgroundElement.prepare(): Failed to download custom background: ${bgValue.key}`)
     }
 
     Logger.info('[BackgroundElement] Custom background downloaded successfully', {
       generationId,
-      backgroundKey: background.key,
+      backgroundKey: bgValue.key,
       mimeType: backgroundImage.mimeType,
     })
 
@@ -107,23 +118,30 @@ export class BackgroundElement extends StyleElement {
       data: {
         base64: backgroundImage.base64,
         mimeType: backgroundImage.mimeType,
-        s3Key: background.key,
+        s3Key: bgValue.key,
       },
     }
   }
 
   async contribute(context: ElementContext): Promise<ElementContribution> {
     const { settings } = context
-    const background = settings.background as BackgroundSettings
+    const background = settings.background
+
+    // Should not reach here without a valid background value due to isRelevantForPhase check
+    if (!background || !hasValue(background)) {
+      return { instructions: [], mustFollow: [], payload: {} }
+    }
+
+    const bgValue = background.value
 
     const instructions: string[] = []
     const mustFollow: string[] = []
     const metadata: Record<string, unknown> = {
-      backgroundType: background.type,
+      backgroundType: bgValue.type,
     }
 
     // Generate background prompt for payload
-    const bgPrompt = generateBackgroundPrompt(background)
+    const bgPrompt = generateBackgroundPrompt(bgValue)
 
     // Build payload structure
     const payload: Record<string, unknown> = {
@@ -151,7 +169,7 @@ export class BackgroundElement extends StyleElement {
     // Only add critical quality rules that aren't obvious from the JSON structure
 
     // Add background-specific quality constraints based on type
-    switch (background.type) {
+    switch (bgValue.type) {
       case 'office':
       case 'tropical-beach':
       case 'busy-city':
@@ -160,8 +178,8 @@ export class BackgroundElement extends StyleElement {
           'Background must be softer/blurrier than the subject for depth',
           'Subject must integrate naturally with the background environment'
         )
-        if (background.prompt) {
-          metadata.customPrompt = background.prompt
+        if (bgValue.prompt) {
+          metadata.customPrompt = bgValue.prompt
         }
         break
 
@@ -170,8 +188,8 @@ export class BackgroundElement extends StyleElement {
           'Background must be smooth and uniform',
           'No patterns, textures, or additional elements'
         )
-        if (background.color) {
-          metadata.backgroundColor = background.color
+        if (bgValue.color) {
+          metadata.backgroundColor = bgValue.color
         }
         break
 
@@ -180,8 +198,8 @@ export class BackgroundElement extends StyleElement {
           'Gradient must be smooth without banding',
           'Gradient transition must be natural and professional'
         )
-        if (background.color) {
-          metadata.gradientColor = background.color
+        if (bgValue.color) {
+          metadata.gradientColor = bgValue.color
         }
         break
 
@@ -191,8 +209,8 @@ export class BackgroundElement extends StyleElement {
           'Do not modify or alter the custom background',
           'Subject must be properly integrated with natural lighting/shadows'
         )
-        if (background.key) {
-          metadata.customBackgroundKey = background.key
+        if (bgValue.key) {
+          metadata.customBackgroundKey = bgValue.key
         }
 
         // Get prepared custom background from context
@@ -242,17 +260,19 @@ export class BackgroundElement extends StyleElement {
     const errors: string[] = []
     const background = settings.background
 
-    if (!background) {
+    if (!background || !hasValue(background)) {
       return errors
     }
 
+    const bgValue = background.value
+
     // Validate neutral/gradient backgrounds have colors
-    if ((background.type === 'neutral' || background.type === 'gradient') && !background.color) {
-      errors.push(`${background.type} background requires a color`)
+    if ((bgValue.type === 'neutral' || bgValue.type === 'gradient') && !bgValue.color) {
+      errors.push(`${bgValue.type} background requires a color`)
     }
 
     // Validate custom background has key
-    if (background.type === 'custom' && !background.key) {
+    if (bgValue.type === 'custom' && !bgValue.key) {
       errors.push('Custom background requires key')
     }
 

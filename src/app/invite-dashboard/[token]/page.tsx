@@ -618,18 +618,18 @@ export default function InviteDashboardPage() {
     }
     
     // Add background information
-    if (settings.background?.type) {
-      promptParts.push(`${settings.background.type} background`)
+    if (settings.background?.value?.type) {
+      promptParts.push(`${settings.background.value.type} background`)
     }
     
     // Add clothing information
-    if (settings.clothing?.style) {
-      promptParts.push(`${settings.clothing.style} clothing`)
+    if (settings.clothing?.value?.style) {
+      promptParts.push(`${settings.clothing.value.style} clothing`)
     }
     
     // Add expression information
-    if (settings.expression?.type) {
-      promptParts.push(`${settings.expression.type} expression`)
+    if (settings.expression?.value?.type) {
+      promptParts.push(`${settings.expression.value.type} expression`)
     }
     
     // Add lighting information

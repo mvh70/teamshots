@@ -1,8 +1,9 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { ShotTypeSettings } from '@/types/photo-style'
+import { ShotTypeSettings, ShotTypeValue } from '@/types/photo-style'
 import { resolveShotType, type CanonicalShotType, SHOT_TYPE_CONFIGS } from './config'
+import { hasValue, predefined, isUserChoice } from '../base/element-types'
 
 interface ShotTypeSelectorProps {
   value: ShotTypeSettings
@@ -46,19 +47,19 @@ export default function ShotTypeSelector({
 }: ShotTypeSelectorProps) {
   const t = useTranslations('customization.photoStyle.shotType')
 
-  const handleShotTypeChange = (shotType: ShotTypeSettings['type'], event?: React.MouseEvent) => {
+  const handleShotTypeChange = (shotType: ShotTypeValue, event?: React.MouseEvent) => {
     if (event) {
       event.preventDefault()
       event.stopPropagation()
     }
-    
+
     if (isPredefined) return
-    
-    onChange({ type: shotType })
+
+    onChange(predefined({ type: shotType }))
   }
 
   const selectedType =
-    value?.type && value.type !== 'user-choice' ? resolveShotType(value.type).id : undefined
+    hasValue(value) && !isUserChoice(value) ? resolveShotType(value.value.type).id : undefined
 
   return (
     <div className={`${className}`}>

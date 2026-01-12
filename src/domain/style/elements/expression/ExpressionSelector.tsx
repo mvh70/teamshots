@@ -6,6 +6,7 @@ import { ExpressionSettings } from '@/types/photo-style'
 import { EXPRESSION_CONFIGS } from './config'
 import type { ExpressionType } from './types'
 import { ImagePreview } from '@/components/ui/ImagePreview'
+import { predefined } from '../base/element-types'
 
 interface ExpressionSelectorProps {
   value: ExpressionSettings
@@ -24,7 +25,8 @@ const EXPRESSIONS_WITH_IMAGES = [
   'soft_smile'
 ] as const
 
-function hasExpressionImage(expressionId: string): boolean {
+function hasExpressionImage(expressionId: string | undefined): boolean {
+  if (!expressionId) return false
   return EXPRESSIONS_WITH_IMAGES.includes(expressionId as typeof EXPRESSIONS_WITH_IMAGES[number])
 }
 
@@ -39,13 +41,16 @@ export default function ExpressionSelector({
 }: ExpressionSelectorProps) {
   const t = useTranslations('customization.photoStyle.expression')
 
+  // Extract the current value for easier access
+  const exprValue = value?.value
+
   const visibleExpressions = availableExpressions
     ? EXPRESSION_CONFIGS.filter(e => availableExpressions.includes(e.value))
     : EXPRESSION_CONFIGS
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (isPredefined) return
-    onChange({ type: event.target.value as ExpressionType })
+    onChange(predefined({ type: event.target.value as ExpressionType }))
   }
 
   const [hasMounted, setHasMounted] = useState(false)
@@ -55,10 +60,10 @@ export default function ExpressionSelector({
   }, [])
 
   // Find the currently selected expression to show its description
-  const selectedExpression = visibleExpressions.find(e => e.value === value.type)
+  const selectedExpression = visibleExpressions.find(e => e.value === exprValue?.type)
 
   // Use effective value to handle initial load
-  const effectiveExpressionType = value.type
+  const effectiveExpressionType = exprValue?.type
 
   return (
     <div className={`${className}`}>
@@ -83,15 +88,15 @@ export default function ExpressionSelector({
       <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
         <div className="relative">
           <select
-            value={value.type}
+            value={exprValue?.type || ''}
             onChange={handleChange}
             disabled={isPredefined || isDisabled}
             className={`block w-full rounded-lg border-2 border-gray-200 p-3 pr-10 text-base focus:border-brand-primary focus:outline-none focus:ring-brand-primary sm:text-sm ${
               (isPredefined || isDisabled) ? 'cursor-not-allowed bg-gray-50' : 'cursor-pointer bg-white'
             }`}
           >
-            {value.type === 'user-choice' && (
-              <option value="user-choice" disabled>
+            {!exprValue?.type && (
+              <option value="" disabled>
                 {t('selectPlaceholder', { default: 'Choose your expression' })}
               </option>
             )}
@@ -111,7 +116,7 @@ export default function ExpressionSelector({
         )}
 
         {/* Conditional Image Preview */}
-        {hasExpressionImage(effectiveExpressionType) && (
+        {hasExpressionImage(effectiveExpressionType) && effectiveExpressionType && (
           <div className="mt-4">
             <ImagePreview
               key={effectiveExpressionType} // Force re-render on value change

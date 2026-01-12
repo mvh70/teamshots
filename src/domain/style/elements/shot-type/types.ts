@@ -1,3 +1,8 @@
+import type { ElementSetting } from '../base/element-types'
+
+/**
+ * Shot type value options (without 'user-choice' - that's handled by the wrapper)
+ */
 export type ShotTypeValue =
   | 'extreme-close-up'
   | 'close-up'
@@ -9,10 +14,24 @@ export type ShotTypeValue =
   | 'headshot'
   | 'midchest'
   | 'full-body'
-  | 'user-choice'
 
-export interface ShotTypeSettings {
-  type: ShotTypeValue
+/**
+ * Shot type settings using the ElementSetting wrapper pattern
+ *
+ * @example
+ * // Admin predefined
+ * { mode: 'predefined', value: { type: 'medium-shot' } }
+ *
+ * // User choice (not selected yet)
+ * { mode: 'user-choice', value: undefined }
+ */
+export type ShotTypeSettings = ElementSetting<{ type: ShotTypeValue }>
+
+/**
+ * Legacy format for backward compatibility
+ */
+export interface LegacyShotTypeSettings {
+  type: ShotTypeValue | 'user-choice'
 }
 
 export type FocalLengthSetting =

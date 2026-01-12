@@ -49,20 +49,26 @@ Background: If team, scrape team page â†' extract names/photos
 ### Team Invite Flow
 ```
 Admin creates team context (background, logo, style)
-â†"
+↓
 Admin invites team member with email + credit allocation
-â†"
+↓
 System sends email with 24hr invite link
-â†"
+↓
 Team member clicks link (no signup required)
-â†"
+↓
 Team member enters first/last name
-â†"
-System creates Person record + CreditTransaction (allocates credits)
-â†"
+↓
+System creates Person record + transfers credits from team pool to person
+  - Credits are TRANSFERRED (not just allocated) from team pool
+  - Creates paired transactions: seat_assigned (team) + seat_received (person)
+  - Person now owns these credits and can use them for generation
+↓
 Team member can immediately upload selfie and generate photos
-â†"
+  - Generation always uses person's own credits (never team pool directly)
+↓
 If team member signs up later, User account links to existing Person
+↓
+If member is removed, remaining credits transfer back to team pool
 ```
 
 **Note:** OAuth (Google, GitHub) will be added post-MVP for faster authentication.

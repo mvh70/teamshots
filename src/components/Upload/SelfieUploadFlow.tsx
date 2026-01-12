@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 import { useUploadFlow } from '@/hooks/useUploadFlow'
 import type { UploadResult } from '@/hooks/useUploadFlow'
+import type { ClassificationResult } from '@/domain/selfie/selfie-types'
 import StickyUploadBar from './StickyUploadBar'
 
 // Detect if we can auto-trigger file picker (desktop with pointer device)
@@ -56,6 +57,8 @@ export default function SelfieUploadFlow({
   const [shouldOpenCamera, setShouldOpenCamera] = useState(initialMode === 'camera')
   // Track if user dismissed the manual upload prompt
   const [promptDismissed, setPromptDismissed] = useState(false)
+  // Track the pending file for classification
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const hasTriggeredInitialMode = useRef(false)
   const autoUploadTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -109,9 +112,12 @@ export default function SelfieUploadFlow({
     try {
       const uploads: UploadResult[] = []
       for (const file of Array.from(files)) {
+        // setPendingFile is called inside uploadFile wrapper
         const result = await uploadFile(file)
         if (result) {
           uploads.push(result)
+          // Track the last uploaded file for classification
+          setPendingFile(file)
         }
       }
       if (uploads.length > 0) {
@@ -137,18 +143,23 @@ export default function SelfieUploadFlow({
     fileInputRef.current?.click()
   }, [])
 
-  const handleApprove = useCallback(async () => {
-    await approvePending()
+  const handleApprove = useCallback(async (classification?: ClassificationResult) => {
+    // Pass classification to approvePending which will send to promote endpoint
+    await approvePending(classification)
+    // Clear after approval
+    setPendingFile(null)
   }, [approvePending])
 
   const handleRetake = useCallback(() => {
     retakePending()
+    setPendingFile(null)
     setCameraKey(prev => prev + 1)
     setShouldOpenCamera(true)
   }, [retakePending])
 
   const handleCancelApproval = useCallback(() => {
     cancelPending()
+    setPendingFile(null)
     onCancel()
   }, [cancelPending, onCancel])
 
@@ -158,6 +169,7 @@ export default function SelfieUploadFlow({
         <SelfieApproval
           photoKey={pendingApproval.key}
           previewUrl={pendingApproval.previewUrl}
+          imageFile={pendingFile || undefined}
           onApprove={handleApprove}
           onRetake={handleRetake}
           onCancel={handleCancelApproval}
@@ -166,9 +178,15 @@ export default function SelfieUploadFlow({
     )
   }
 
+  // Wrapper to track file for classification
+  const handleUpload = useCallback(async (file: File) => {
+    setPendingFile(file)
+    return uploadFile(file)
+  }, [uploadFile])
+
   const commonPhotoUploadProps = {
     multiple: true,
-    onUpload: uploadFile,
+    onUpload: handleUpload,
     onUploaded: (result: UploadResult | UploadResult[]) => handleUploadResult(result),
     testId: 'desktop-file-input',
     autoOpenCamera: shouldOpenCamera,

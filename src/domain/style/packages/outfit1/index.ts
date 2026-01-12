@@ -9,6 +9,9 @@ import * as customClothing from '../../elements/custom-clothing'
 import * as clothingColors from '../../elements/clothing-colors'
 import * as pose from '../../elements/pose'
 import * as expression from '../../elements/expression'
+import * as shotType from '../../elements/shot-type'
+import { predefined, userChoice, isUserChoice, hasValue } from '../../elements/base/element-types'
+import type { ClothingColorValue } from '../../elements/clothing-colors/types'
 
 const VISIBLE_CATEGORIES: CategoryType[] = [
   'background',
@@ -16,7 +19,8 @@ const VISIBLE_CATEGORIES: CategoryType[] = [
   'customClothing',
   'clothingColors',
   'pose',
-  'expression']
+  'expression',
+  'shotType']
 
 const AVAILABLE_BACKGROUNDS = [
   'office',
@@ -27,14 +31,12 @@ const AVAILABLE_BACKGROUNDS = [
   'custom']
 
 const AVAILABLE_POSES = [
-  'power_classic',
-  'power_crossed',
-  'casual_confident',
-  'approachable_cross',
-  'walking_confident',
-  'sitting_engaged',
-  'executive_seated',
-  'thinker'
+  'classic_corporate',
+  'slimming_three_quarter',
+  'power_cross',
+  //'approachable_lean',
+  'candid_over_shoulder',
+  'seated_engagement'
 ]
 
 const AVAILABLE_EXPRESSIONS = [
@@ -54,10 +56,8 @@ const DEFAULTS = {
   customClothing: {
     type: 'predefined' as const
   },
-  clothingColors: {
-    type: 'user-choice' as const
-  },
-  shotType: { type: 'medium-close-up' as const },
+  clothingColors: userChoice<ClothingColorValue>(),
+  shotType: predefined({ type: 'medium-close-up' as const }),
   subjectCount: '1' as const
 }
 
@@ -66,7 +66,7 @@ export const outfit1: ClientStylePackage = {
   label: 'Outfit Transfer',
   version: 1,
   visibleCategories: VISIBLE_CATEGORIES,
-  compositionCategories: ['background', 'branding', 'pose'],
+  compositionCategories: ['background', 'branding', 'pose', 'shotType'],
   userStyleCategories: ['customClothing', 'clothingColors', 'expression'],
   availableBackgrounds: AVAILABLE_BACKGROUNDS,
   availablePoses: AVAILABLE_POSES,
@@ -87,6 +87,7 @@ export const outfit1: ClientStylePackage = {
       clothingColors: rawStyleSettings.clothingColors as PhotoStyleSettings['clothingColors'],
       pose: rawStyleSettings.pose as PhotoStyleSettings['pose'],
       expression: rawStyleSettings.expression as PhotoStyleSettings['expression'],
+      shotType: rawStyleSettings.shotType as PhotoStyleSettings['shotType'],
     }
   },
   persistenceAdapter: {
@@ -99,9 +100,10 @@ export const outfit1: ClientStylePackage = {
         customClothing: ui.customClothing && typeof ui.customClothing === 'object' && 'type' in ui.customClothing
           ? ui.customClothing
           : { type: 'predefined' as const },
-        clothingColors: ui.clothingColors || { type: 'user-choice' as const },
+        clothingColors: ui.clothingColors || userChoice(),
         pose: ui.pose,
         expression: ui.expression,
+        shotType: ui.shotType,
       }
     }),
     deserialize: (raw) => {
@@ -125,16 +127,17 @@ export const outfit1: ClientStylePackage = {
       let clothingColorsResult = clothingColors.deserialize(inner, DEFAULTS.clothingColors)
       const poseResult = pose.deserialize(inner, DEFAULTS.pose)
       const expressionResult = expression.deserialize(inner, DEFAULTS.expression)
+      const shotTypeResult = shotType.deserialize(inner, DEFAULTS.shotType)
 
       // Sync colors from customClothing to clothingColors if outfit has colors
       // This ensures colors show up on initial page load (server-side)
       // Merge customClothing colors into clothingColors (customClothing colors take precedence)
-      if (customClothingResult.colors && 
+      if (customClothingResult.colors &&
           customClothingResult.type === 'user-choice' &&
-          clothingColorsResult?.type === 'user-choice') {
+          isUserChoice(clothingColorsResult)) {
         const outfitColors = customClothingResult.colors
-        const existingColors = clothingColorsResult?.colors || {}
-        
+        const existingColors = hasValue(clothingColorsResult) ? clothingColorsResult.value : {}
+
         // Merge colors: outfit colors take precedence, but keep existing ones if outfit doesn't have them
         const mergedColors = { ...existingColors }
         if (outfitColors.topLayer) mergedColors.topLayer = outfitColors.topLayer
@@ -144,10 +147,7 @@ export const outfit1: ClientStylePackage = {
 
         // Update clothingColors with merged colors (only if we have at least one color from outfit)
         if (outfitColors.topLayer || outfitColors.bottom) {
-          clothingColorsResult = {
-            type: 'user-choice',
-            colors: mergedColors
-          }
+          clothingColorsResult = userChoice(mergedColors)
         }
       }
 
@@ -159,6 +159,7 @@ export const outfit1: ClientStylePackage = {
         clothingColors: clothingColorsResult,
         pose: poseResult,
         expression: expressionResult,
+        shotType: shotTypeResult,
       }
     }
   }

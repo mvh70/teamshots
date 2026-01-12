@@ -20,6 +20,14 @@ export interface SelectableItem {
   uploadedAt?: string
   /** If true, item cannot be deleted (was used in a generation) */
   used?: boolean
+  /** Selfie type classification (front_view, side_view, full_body, unknown) */
+  selfieType?: string | null
+  /** Confidence score for the selfie type classification (0.0 - 1.0) */
+  selfieTypeConfidence?: number | null
+  /** Whether the selfie is proper for generation (single person, clear face) */
+  isProper?: boolean
+  /** Reason why the selfie is not proper */
+  improperReason?: string | null
 }
 
 type SelectionMode = 
@@ -103,6 +111,8 @@ export default function SelectableGrid({
   const [loadedSet, setLoadedSet] = useState<Set<string>>(new Set())
   const [hoveredDeleteId, setHoveredDeleteId] = useState<string | null>(null)
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
+  // Store pending file for classification
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
   
   // Upload flow state
   const cameraKeyRef = useRef(0)
@@ -168,10 +178,22 @@ export default function SelectableGrid({
     handleUploadResult(result)
   }, [handleUploadResult])
 
+  // Wrap uploadFile to capture the file for classification
+  const handleUploadFile = useCallback(async (file: File) => {
+    setPendingFile(file)
+    return uploadFile(file)
+  }, [uploadFile])
+
   const handleRetake = useCallback(() => {
+    setPendingFile(null)
     retakePending()
     cameraKeyRef.current += 1
   }, [retakePending])
+
+  const handleCancelPending = useCallback(() => {
+    setPendingFile(null)
+    cancelPending()
+  }, [cancelPending])
 
   // Show approval screen if pending
   if (pendingApproval) {
@@ -179,9 +201,10 @@ export default function SelectableGrid({
       <SelfieApproval
         photoKey={pendingApproval.key}
         previewUrl={pendingApproval.previewUrl}
+        imageFile={pendingFile || undefined}
         onApprove={approvePending}
         onRetake={handleRetake}
-        onCancel={cancelPending}
+        onCancel={handleCancelPending}
       />
     )
   }
@@ -194,29 +217,40 @@ export default function SelectableGrid({
       {visibleItems.map((item) => {
         const isSelected = selectedSet.has(item.id)
         const isLoaded = !showLoadingState || loadedSet.has(item.id)
-        
+        // Check if selfie is improper (isProper is explicitly false, not just undefined)
+        const isImproper = item.isProper === false
+
         return (
           <div
             key={item.id}
             className={`relative group rounded-xl transition-all duration-300 ${
-              isSelected
-                ? 'ring-2 ring-brand-secondary ring-offset-2 shadow-xl shadow-brand-secondary/30 scale-[1.02]'
-                : 'hover:shadow-xl hover:shadow-gray-300/60 hover:-translate-y-1.5 hover:scale-[1.01]'
+              isImproper
+                ? 'opacity-60 ring-2 ring-red-300 ring-offset-1'
+                : isSelected
+                  ? 'ring-2 ring-brand-secondary ring-offset-2 shadow-xl shadow-brand-secondary/30 scale-[1.02]'
+                  : 'hover:shadow-xl hover:shadow-gray-300/60 hover:-translate-y-1.5 hover:scale-[1.01]'
             }`}
           >
-            {/* Selection checkbox */}
+            {/* Selection checkbox - disabled for improper selfies */}
             <button
               type="button"
+              disabled={isImproper}
               className={`absolute top-3 left-3 z-10 inline-flex items-center justify-center w-9 h-9 md:w-8 md:h-8 rounded-lg border-2 transition-all duration-200 ${
-                isSelected
-                  ? 'bg-gradient-to-br from-brand-secondary to-emerald-600 text-white border-brand-secondary shadow-lg scale-110 ring-2 ring-brand-secondary/30'
-                  : 'bg-white/95 backdrop-blur-sm text-gray-600 border-gray-300 hover:border-brand-secondary hover:scale-110 hover:bg-white hover:shadow-md'
+                isImproper
+                  ? 'bg-red-100 text-red-500 border-red-300 cursor-not-allowed'
+                  : isSelected
+                    ? 'bg-gradient-to-br from-brand-secondary to-emerald-600 text-white border-brand-secondary shadow-lg scale-110 ring-2 ring-brand-secondary/30'
+                    : 'bg-white/95 backdrop-blur-sm text-gray-600 border-gray-300 hover:border-brand-secondary hover:scale-110 hover:bg-white hover:shadow-md'
               } shadow-sm`}
               aria-pressed={isSelected ? 'true' : 'false'}
-              aria-label={isSelected ? t('deselectAria', { default: 'Remove selfie selection' }) : t('selectAria', { default: 'Select selfie' })}
-              onClick={() => handleToggle(item.id, !isSelected)}
+              aria-label={isImproper ? t('improperAria', { default: 'This selfie cannot be used' }) : isSelected ? t('deselectAria', { default: 'Remove selfie selection' }) : t('selectAria', { default: 'Select selfie' })}
+              onClick={() => !isImproper && handleToggle(item.id, !isSelected)}
             >
-              {isSelected ? (
+              {isImproper ? (
+                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l8 8M14 6l-8 8" />
+                </svg>
+              ) : isSelected ? (
                 <svg className="w-5 h-5 transition-transform duration-200" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
@@ -268,12 +302,39 @@ export default function SelectableGrid({
                     : 'bg-black/0 group-hover:bg-black/5'
                 }`}
               />
-              
+
+              {/* Selfie type badge or analyzing indicator */}
+              {item.selfieType && item.selfieType !== 'unknown' && !isImproper ? (
+                <div className="absolute bottom-2 left-2 z-10">
+                  <SelfieTypeBadgeSmall type={item.selfieType} />
+                </div>
+              ) : !item.selfieType && !isImproper ? (
+                <div className="absolute bottom-2 left-2 z-10">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800/80 text-white text-[10px] font-medium backdrop-blur-sm">
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    {t('analyzing', { defaultValue: 'Analyzing...' })}
+                  </span>
+                </div>
+              ) : null}
+
               {/* Delete disabled message */}
               {item.used && hoveredDeleteId === item.id && (
                 <div className="absolute inset-x-0 bottom-0 bg-black/80 text-white text-[11px] leading-tight px-3 py-2 flex items-center gap-1.5 backdrop-blur-sm">
                   <InformationCircleIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <span>{t('deleteDisabledMessage')}</span>
+                </div>
+              )}
+
+              {/* Improper selfie message - always visible for improper selfies */}
+              {isImproper && (
+                <div className="absolute inset-x-0 bottom-0 bg-red-600/95 text-white text-[11px] leading-tight px-3 py-2.5 flex items-center gap-1.5 backdrop-blur-sm rounded-b-xl">
+                  <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="font-medium">{item.improperReason || t('improperSelfie', { defaultValue: 'Cannot use this photo' })}</span>
                 </div>
               )}
             </div>
@@ -327,7 +388,7 @@ export default function SelectableGrid({
             <PhotoUpload
               key={`camera-${cameraKeyRef.current}`}
               multiple
-              onUpload={uploadFile}
+              onUpload={handleUploadFile}
               onUploaded={handleUploaded}
               testId="gallery-upload-input"
               autoOpenCamera={cameraKeyRef.current > 0}
@@ -368,6 +429,32 @@ function UploadTile({ onClick }: { onClick: () => void }) {
         </div>
       </div>
     </div>
+  )
+}
+
+/** Small badge showing selfie type classification */
+function SelfieTypeBadgeSmall({ type }: { type: string }) {
+  const labels: Record<string, string> = {
+    front_view: 'Front view',
+    side_view: 'Side view',
+    partial_body: 'Partial body',
+    full_body: 'Full body'
+  }
+
+  const colors: Record<string, string> = {
+    front_view: 'bg-green-500/90 text-white',
+    side_view: 'bg-blue-500/90 text-white',
+    partial_body: 'bg-orange-500/90 text-white',
+    full_body: 'bg-purple-500/90 text-white'
+  }
+
+  const label = labels[type] || type
+  const colorClass = colors[type] || 'bg-gray-500/90 text-white'
+
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold shadow-sm backdrop-blur-sm ${colorClass}`}>
+      {label}
+    </span>
   )
 }
 

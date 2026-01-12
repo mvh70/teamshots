@@ -1,5 +1,6 @@
 import { PhotoStyleSettings } from '@/types/photo-style'
 import { resolveShotType } from './config'
+import { hasValue } from '../base/element-types'
 
 /**
  * Simplified shot type prompt result - only framing
@@ -18,7 +19,8 @@ export interface ShotTypePromptResult {
  * Simplified to only handle framing - camera settings moved to camera-settings element
  */
 export function generateShotTypePrompt(settings: PhotoStyleSettings): ShotTypePromptResult {
-  const shotType = resolveShotType(settings.shotType?.type)
+  const shotTypeValue = hasValue(settings.shotType) ? settings.shotType.value.type : undefined
+  const shotType = resolveShotType(shotTypeValue)
 
   return {
     framing: {

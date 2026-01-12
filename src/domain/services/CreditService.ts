@@ -6,13 +6,18 @@ import { UserService } from './UserService'
  * Consolidated credit management service
  * Centralizes all credit validation, calculation, and reservation logic
  *
- * Note: Credits are stored under personId (Person is the business entity).
- * User is for authentication only. Team credits are stored under teamId.
+ * NEW CREDIT MODEL (simplified):
+ * - Credits ALWAYS belong to a Person (personId)
+ * - Team credits are a "distribution pool" - can only be assigned to people, not used directly
+ * - Generation ALWAYS deducts from person's balance
+ * - No more team vs individual credit source confusion
  */
 export class CreditService {
   /**
    * Validate if user has sufficient credits for an operation
-   * OPTIMIZATION: Single call that handles both individual and team credits
+   *
+   * SIMPLIFIED: Always checks person balance.
+   * In the new model, credits must be transferred to a person before they can be used.
    */
   static async validateCreditAccess(
     userId: string,
@@ -25,41 +30,37 @@ export class CreditService {
     effectiveBalance: number
     canUseIndividual: boolean
     canUseTeam: boolean
+    creditSource: 'individual' | 'team'
   }> {
     // OPTIMIZATION: Use provided userContext to avoid redundant queries
-    const context = userContext || await UserService.getUserRoles(userId)
+    const context = userContext || await UserService.getUserContext(userId)
     const personId = context.user.person?.id || null
     const teamId = userContext?.teamId || context.user.person?.teamId || null
 
-    // OPTIMIZATION: Fetch both balances in parallel
-    // Credits are stored under personId (Person is business entity)
-    const [individualBalance, teamBalance] = await Promise.all([
-      personId ? getPersonCreditBalance(personId) : Promise.resolve(0),
-      teamId ? getTeamCreditBalance(teamId) : Promise.resolve(0)
-    ])
+    // NEW MODEL: Always check person balance (credits must be transferred to person first)
+    const individualBalance = personId ? await getPersonCreditBalance(personId) : 0
 
-    const effectiveBalance = individualBalance + teamBalance
-    const hasAccess = effectiveBalance >= requiredCredits
+    // Team balance is for display/admin purposes only (shows unassigned credits in pool)
+    const teamBalance = teamId ? await getTeamCreditBalance(teamId) : 0
 
-    // Determine which credit pools can be used
-    const canUseIndividual = individualBalance >= requiredCredits
-    const canUseTeam = teamBalance >= requiredCredits
+    const hasAccess = individualBalance >= requiredCredits
 
     return {
       hasAccess,
       individualBalance,
       teamBalance,
-      effectiveBalance,
-      canUseIndividual,
-      canUseTeam
+      effectiveBalance: individualBalance, // Always use individual for generation
+      canUseIndividual: individualBalance >= requiredCredits,
+      canUseTeam: false, // Team credits can't be used directly anymore
+      creditSource: 'individual' // Always individual in new model
     }
   }
 
   /**
    * Reserve credits for generation with comprehensive validation
-   * OPTIMIZATION: Combines validation and reservation in single transaction
    *
-   * Note: Credits are always reserved using personId (Person is the business entity).
+   * SIMPLIFIED: Always reserves from person's balance.
+   * No more team vs individual distinction - credits must be on person to use.
    */
   static async reserveCreditsForGeneration(
     userId: string,
@@ -77,10 +78,7 @@ export class CreditService {
       // OPTIMIZATION: Use provided userContext to avoid redundant queries
       const context = userContext || await UserService.getUserContext(userId)
 
-      // Determine correct credit source using centralized logic
-      const creditSourceInfo = await this.determineCreditSource(context)
-
-      // Validate access first
+      // Validate access first (always checks person balance)
       const creditCheck = await this.validateCreditAccess(userId, requiredCredits, context)
       if (!creditCheck.hasAccess) {
         return {
@@ -89,37 +87,22 @@ export class CreditService {
         }
       }
 
-      // Reserve credits using personId (Person is the business entity)
-      // For team credits: pass personId AND teamId
-      // For individual credits: pass personId only
-      const effectiveTeamId = creditSourceInfo.creditSource === 'team'
-        ? (creditSourceInfo.teamId || context.teamId || undefined)
-        : undefined
-
+      // NEW MODEL: Always reserve from person, never pass teamId
+      // Credits are transferred to person BEFORE generation (on seat assignment/invite acceptance)
       const transaction = await reserveCreditsForGeneration(
         personId,
         requiredCredits,
-        `Generation reservation`,
-        effectiveTeamId
+        `Generation reservation`
+        // No teamId - always deduct from person
       )
 
       // Check if transaction was created successfully
       if (transaction && transaction.id) {
-        // Calculate how credits were allocated by comparing balances
-        const finalBalances = await Promise.all([
-          getPersonCreditBalance(personId),
-          effectiveTeamId ? getTeamCreditBalance(effectiveTeamId) : Promise.resolve(0)
-        ])
-
-        // OPTIMIZATION: Use the context data for credit allocation calculation
-        const individualCreditsUsed = creditCheck.individualBalance - finalBalances[0]
-        const teamCreditsUsed = creditCheck.teamBalance - finalBalances[1]
-
         return {
           success: true,
           transactionId: transaction.id,
-          individualCreditsUsed: Math.max(0, individualCreditsUsed),
-          teamCreditsUsed: Math.max(0, teamCreditsUsed)
+          individualCreditsUsed: requiredCredits,
+          teamCreditsUsed: 0 // Team credits never used directly
         }
       }
 
@@ -137,11 +120,10 @@ export class CreditService {
 
   /**
    * Get credit balance summary for dashboard/stats
-   * OPTIMIZATION: Single call for both individual and team balances
    *
-   * Note: Credits are stored under personId (Person is the business entity).
-   * Individual balance = person balance (non-team credits stored under personId)
-   * Team balance = credits stored under teamId
+   * Returns both person balance (usable) and team balance (assignable pool).
+   * - person/individual: Credits the user can spend on generation
+   * - team: Unassigned credits in team pool (admin only view)
    */
   static async getCreditBalanceSummary(userId: string, userContext?: Awaited<ReturnType<typeof UserService.getUserContext>>): Promise<{
     individual: number
@@ -155,17 +137,16 @@ export class CreditService {
     const personId = context.user.person?.id || null
 
     // OPTIMIZATION: Parallel balance fetching
-    // All credits are now stored under personId or teamId (not userId)
     const [person, team] = await Promise.all([
       personId ? getPersonCreditBalance(personId) : Promise.resolve(0),
       teamId ? getTeamCreditBalance(teamId) : Promise.resolve(0)
     ])
 
     return {
-      individual: person, // Individual credits are stored under personId
-      team,
-      person,
-      total: person + team
+      individual: person, // Usable credits (on person)
+      team,               // Assignable credits (in team pool, admin view only)
+      person,             // Same as individual
+      total: person + team // Total across person + unassigned team pool
     }
   }
 
@@ -186,12 +167,11 @@ export class CreditService {
   }
 
   /**
-   * Determine the correct credit source for a user
-   * Pro users and invited team members ALWAYS use team credits
-   * Individual users ALWAYS use personal credits
+   * Determine the credit source for a user
    *
-   * EXCEPTION: Free plan team admins use personal credits (free trial)
-   * because their free trial credits are stored as personal (teamId: null)
+   * SIMPLIFIED: Always returns 'individual' in the new model.
+   * Credits must be transferred to person before they can be used.
+   * This method is kept for backward compatibility with existing code.
    */
   static async determineCreditSource(userContext: Awaited<ReturnType<typeof UserService.getUserContext>>): Promise<{
     creditSource: 'individual' | 'team'
@@ -199,62 +179,16 @@ export class CreditService {
     teamId?: string
     reason: string
   }> {
-    const { roles, subscription, teamId } = userContext
+    const { teamId } = userContext
 
-    // Free plan users (period === 'free') always use personal credits
-    // This includes free plan team admins whose free trial credits are personal (teamId: null)
-    if (subscription?.period === 'free') {
-      return {
-        creditSource: 'individual',
-        generationType: 'personal',
-        reason: 'Free plan users use personal credits'
-      }
-    }
-
-    // Pro users are team admins by definition and always use team credits
-    // EXCEPTION: If they haven't created a team yet (deferred setup), they act as individuals
-    if (subscription?.tier === 'pro') {
-      if (!teamId) {
-        return {
-          creditSource: 'individual',
-          generationType: 'personal',
-          reason: 'Pro user without team uses personal credits'
-        }
-      }
-
-      return {
-        creditSource: 'team',
-        generationType: 'team',
-        teamId: teamId || undefined,
-        reason: 'Pro users always use team credits'
-      }
-    }
-
-    // Team admins always use team credits (even if not on pro subscription)
-    if (roles.isTeamAdmin) {
-      return {
-        creditSource: 'team',
-        generationType: 'team',
-        teamId: teamId || undefined,
-        reason: 'Team admins always use team credits'
-      }
-    }
-
-    // Invited team members always use team credits
-    if (roles.isTeamMember) {
-      return {
-        creditSource: 'team',
-        generationType: 'team',
-        teamId: teamId || undefined,
-        reason: 'Team members always use team credits'
-      }
-    }
-
-    // Individual users use personal credits
+    // NEW MODEL: Always use individual credits
+    // Team credits are a distribution pool, not a usage pool
+    // Users must have credits transferred to their person before generation
     return {
       creditSource: 'individual',
-      generationType: 'personal',
-      reason: 'Individual users use personal credits'
+      generationType: teamId ? 'team' : 'personal', // For tracking which team the generation belongs to
+      teamId: teamId || undefined,
+      reason: 'Credits always belong to person (new model)'
     }
   }
 }

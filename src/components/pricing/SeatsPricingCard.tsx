@@ -144,7 +144,7 @@ export default function SeatsPricingCard({
 
         {/* Quick select buttons - aligned with volume tier breakpoints */}
         <div className="flex gap-2 flex-wrap justify-center">
-          {[2, 5, 25, 100, 200]
+          {[2, 5, 10, 25, 100, 200]
             .filter(count => count > minSeats)
             .map((count) => (
               <button
@@ -163,7 +163,7 @@ export default function SeatsPricingCard({
       </div>
 
       {/* Pricing Display */}
-      <div className="text-center mb-6 pb-6 border-b border-gray-100">
+      <div className="text-center mb-6">
         <div className="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold mb-3">
           One-time payment • No subscription
         </div>
@@ -173,49 +173,45 @@ export default function SeatsPricingCard({
           </div>
         )}
 
-        {/* Price display with discount support */}
+        {/* Price per seat - prominent */}
+        <div className="text-4xl font-bold text-gray-900 mb-1">
+          ${averagePricePerSeat.toFixed(2)}
+          <span className="text-lg font-medium text-gray-500"> {t('seats.perSeat')}</span>
+        </div>
+
+        {/* Total price - secondary */}
         {promoDiscount ? (
-          <>
-            <div className="text-2xl text-gray-400 line-through mb-1">
+          <div className="mb-2">
+            <span className="text-lg text-gray-400 line-through mr-2">
               ${(isTopUpMode ? topUpTotal : total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <div className="text-4xl font-bold text-green-600 mb-2">
-              ${promoDiscount.finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <div className="text-sm font-semibold text-green-600 mb-2">
+            </span>
+            <span className="text-lg font-semibold text-green-600">
+              ${promoDiscount.finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total
+            </span>
+            <div className="text-sm font-semibold text-green-600">
               You save ${promoDiscount.discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               {promoDiscount.type === 'percentage' && ` (${promoDiscount.value}% off)`}
             </div>
-          </>
+          </div>
         ) : (
-          <div className="text-4xl font-bold text-gray-900 mb-2">
-            ${(isTopUpMode ? topUpTotal : total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div className="text-lg text-gray-600 mb-2">
+            {isTopUpMode ? (
+              <>${(topUpTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total for {additionalSeats} {additionalSeats === 1 ? 'seat' : 'seats'}</>
+            ) : (
+              <>
+                ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total
+                {savings > 0 && (
+                  <span className="text-green-600 font-semibold"> · Save ${savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                )}
+              </>
+            )}
           </div>
         )}
-
-        <div className="text-sm text-gray-600 mb-2">
-          {isTopUpMode ? (
-            <>Average ${averagePricePerSeat.toFixed(2)} per seat ({additionalSeats} {additionalSeats === 1 ? 'seat' : 'seats'})</>
-          ) : (
-            <>Average ${averagePricePerSeat.toFixed(2)} {t('seats.perSeat')}</>
-          )}
-        </div>
-        {savings > 0 && !promoDiscount && (
-          <div className="text-sm font-semibold text-green-600">
-            {t('seats.savings')}: ${savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-        )}
-        <div className="text-sm text-brand-primary font-semibold mt-2">
-          {isTopUpMode
-            ? `+${(additionalSeats * (PRICING_CONFIG.seats.creditsPerSeat / PRICING_CONFIG.credits.perGeneration)).toLocaleString('en-US')} photos`
-            : `${totalPhotos.toLocaleString('en-US')} photos in total`
-          }
-        </div>
       </div>
 
       {/* Features */}
       <ul className="space-y-3 mb-8">
-        {['photosPerSeat', 'teamManagement', 'fastDelivery'].map((feature) => (
+        {['photosPerSeat', 'teamManagement', 'fullCustomization', 'creditsNeverExpire', 'flexibleTeamSize'].map((feature) => (
           <li key={feature} className="flex items-start gap-2 text-sm">
             <svg className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

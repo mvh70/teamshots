@@ -66,8 +66,9 @@ export async function preprocessFreepackage(
     let processedBackground: Buffer | undefined
     
     // Step 1: Process background - remove person if custom background contains one
-    if (styleSettings.background?.type === 'custom' && styleSettings.background.key) {
-      const backgroundKey = additionalContext?.backgroundS3Key || styleSettings.background.key
+    const bgValue = styleSettings.background?.value
+    if (bgValue?.type === 'custom' && bgValue.key) {
+      const backgroundKey = additionalContext?.backgroundS3Key || bgValue.key
       const backgroundBuffer = await downloadAssetAsBuffer(backgroundKey)
       
       if (backgroundBuffer) {

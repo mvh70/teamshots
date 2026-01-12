@@ -13,6 +13,33 @@ import {
   ElementContribution,
   type PreparedAsset,
 } from '../../base/StyleElement'
+import { hasValue } from '../../base/element-types'
+
+/**
+ * Structured description of garments in the collage
+ */
+export interface GarmentItem {
+  category: 'outerwear' | 'top' | 'bottom' | 'footwear' | 'accessory'
+  type: string
+  color: {
+    primary: string
+    secondary?: string | null
+    pattern: 'solid' | 'striped' | 'checkered' | 'patterned' | 'textured'
+  }
+  material?: string | null
+  style: string
+  fit?: string | null
+  details: string[]
+}
+
+export interface GarmentDescription {
+  items: GarmentItem[]
+  overallStyle: string
+  colorPalette: string[]
+  layering: string
+  hasLogo: boolean
+  logoDescription?: string | null
+}
 import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { AssetService } from '@/domain/services/AssetService'
@@ -33,31 +60,52 @@ export class CustomClothingElement extends StyleElement {
 
     // Skip if no custom clothing configured
     if (!settings.customClothing) {
+      Logger.debug('[CustomClothingElement] isRelevantForPhase: no customClothing settings', { phase })
       return false
     }
 
     // Skip if no asset or outfit key
     if (!settings.customClothing.assetId && !settings.customClothing.outfitS3Key) {
+      Logger.debug('[CustomClothingElement] isRelevantForPhase: no assetId or outfitS3Key', {
+        phase,
+        customClothingType: settings.customClothing.type,
+      })
       return false
     }
 
+    const isRelevant = phase === 'person-generation'
+    Logger.info('[CustomClothingElement] isRelevantForPhase result', {
+      phase,
+      isRelevant,
+      hasAssetId: !!settings.customClothing.assetId,
+      hasOutfitS3Key: !!settings.customClothing.outfitS3Key,
+    })
     // Only contribute to person generation
-    return phase === 'person-generation'
+    return isRelevant
   }
 
   /**
    * Check if this element needs to prepare assets (garment collage)
    */
   needsPreparation(context: ElementContext): boolean {
-    const { settings } = context
+    const { settings, generationContext } = context
     const clothing = settings.customClothing
 
     if (!clothing) {
+      Logger.debug('[CustomClothingElement] needsPreparation: no customClothing settings')
       return false
     }
 
     // Need preparation if we have an asset to process
-    return !!(clothing.assetId || clothing.outfitS3Key)
+    const needsPrep = !!(clothing.assetId || clothing.outfitS3Key)
+    Logger.info('[CustomClothingElement] needsPreparation result', {
+      generationId: generationContext?.generationId,
+      needsPrep,
+      hasAssetId: !!clothing.assetId,
+      hasOutfitS3Key: !!clothing.outfitS3Key,
+      clothingType: clothing.type,
+    })
+    return needsPrep
   }
 
   /**
@@ -174,26 +222,27 @@ export class CustomClothingElement extends StyleElement {
       // Download logo ONLY if branding is on clothing position
       let logoImage: { base64: string; mimeType: string } | null = null
       if (
-        settings.branding?.type === 'include' &&
-        settings.branding.logoKey &&
-        settings.branding.position === 'clothing'
+        hasValue(settings.branding) &&
+        settings.branding.value.type === 'include' &&
+        settings.branding.value.logoKey &&
+        settings.branding.value.position === 'clothing'
       ) {
         try {
-          logoImage = await downloadAsset(settings.branding.logoKey)
+          logoImage = await downloadAsset(settings.branding.value.logoKey)
           if (logoImage) {
             Logger.info('[CustomClothingElement] Logo downloaded for clothing branding', {
               generationId,
-              position: settings.branding.position,
+              position: settings.branding.value.position,
             })
           } else {
             Logger.warn('[CustomClothingElement] Logo download returned null', {
-              logoKey: settings.branding.logoKey,
+              logoKey: settings.branding.value.logoKey,
               generationId,
             })
           }
         } catch (error) {
           Logger.warn('[CustomClothingElement] Failed to download logo, proceeding without', {
-            logoKey: settings.branding.logoKey,
+            logoKey: settings.branding.value.logoKey,
             generationId,
             error: error instanceof Error ? error.message : String(error),
           })
@@ -256,7 +305,32 @@ export class CustomClothingElement extends StyleElement {
       }
     }
 
-    // 6. Return prepared asset
+    // 6. Generate structured description of the garment collage
+    let garmentDescription: GarmentDescription | undefined
+    if (collageBase64) {
+      const descriptionResult = await this.describeGarmentCollage(collageBase64, generationId)
+      if (descriptionResult.success) {
+        garmentDescription = descriptionResult.description
+        Logger.info('[CustomClothingElement] Garment description added to prepared asset', {
+          generationId,
+          itemCount: garmentDescription.items.length,
+          overallStyle: garmentDescription.overallStyle,
+        })
+        // Debug: Output full JSON in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.log('\n[DEBUG] Garment Description JSON:')
+          console.log(JSON.stringify(garmentDescription, null, 2))
+          console.log('')
+        }
+      } else {
+        Logger.warn('[CustomClothingElement] Failed to generate garment description, continuing without', {
+          generationId,
+          error: descriptionResult.error,
+        })
+      }
+    }
+
+    // 7. Return prepared asset with collage and description
     return {
       elementId: this.id,
       assetType: 'garment-collage',
@@ -267,6 +341,7 @@ export class CustomClothingElement extends StyleElement {
           outfitKey,
           cachedCollageKey,
           colors: clothing.colors,
+          garmentDescription, // Structured JSON description of the clothing
         },
       },
     }
@@ -275,6 +350,16 @@ export class CustomClothingElement extends StyleElement {
   async contribute(context: ElementContext): Promise<ElementContribution> {
     const { settings, generationContext } = context
     const clothing = settings.customClothing!
+
+    Logger.info('[CustomClothingElement] contribute() called', {
+      generationId: generationContext.generationId,
+      hasCustomClothing: !!clothing,
+      clothingType: clothing?.type,
+      hasAssetId: !!clothing?.assetId,
+      hasOutfitS3Key: !!clothing?.outfitS3Key,
+      hasPreparedAssets: !!generationContext.preparedAssets,
+      preparedAssetKeys: Array.from(generationContext.preparedAssets?.keys() || []),
+    })
 
     // Instructions for wearing the custom clothing
     const instructions = [
@@ -318,7 +403,16 @@ export class CustomClothingElement extends StyleElement {
 
     // Get prepared collage from context (if available)
     const preparedAssets = generationContext.preparedAssets
-    const collageAsset = preparedAssets?.get(`${this.id}-garment-collage`)
+    const collageKey = `${this.id}-garment-collage`
+    const collageAsset = preparedAssets?.get(collageKey)
+
+    Logger.info('[CustomClothingElement] Looking for garment collage', {
+      generationId: generationContext.generationId,
+      collageKey,
+      foundCollage: !!collageAsset,
+      hasBase64: !!collageAsset?.data?.base64,
+      base64Length: collageAsset?.data?.base64?.length || 0,
+    })
 
     // Add reference image if collage was prepared
     const referenceImages = []
@@ -335,11 +429,231 @@ export class CustomClothingElement extends StyleElement {
       })
     }
 
+    // Extract garment description from prepared asset metadata
+    const garmentDescription = collageAsset?.data.metadata?.garmentDescription as GarmentDescription | undefined
+
+    Logger.info('[CustomClothingElement] Checking for garment description in metadata', {
+      generationId: generationContext.generationId,
+      hasCollageAsset: !!collageAsset,
+      hasMetadata: !!collageAsset?.data?.metadata,
+      hasGarmentDescription: !!garmentDescription,
+      metadataKeys: collageAsset?.data?.metadata ? Object.keys(collageAsset.data.metadata) : [],
+      itemCount: garmentDescription?.items?.length || 0,
+    })
+
+    // Debug: Output description in development mode
+    if (process.env.NODE_ENV === 'development' && garmentDescription) {
+      console.log('\n[DEBUG] Garment Description extracted in contribute():')
+      console.log(JSON.stringify(garmentDescription, null, 2))
+      console.log('')
+    }
+
+    // Build payload for Composition JSON - this tells Gemini what clothing to use
+    const payload: Record<string, unknown> = {
+      wardrobe: {
+        source: 'garment_collage',
+        instruction: 'CRITICAL: Dress the person EXACTLY as shown in the GARMENT COLLAGE reference image. The collage shows all clothing items extracted from the original outfit - replicate these items precisely on the person.',
+        description: clothing.description || 'Professional outfit as shown in the garment collage reference image',
+        colors: clothing.colors ? {
+          topLayer: clothing.colors.topLayer,
+          baseLayer: clothing.colors.baseLayer,
+          bottom: clothing.colors.bottom,
+          shoes: clothing.colors.shoes,
+        } : undefined,
+        // Structured garment description from AI analysis
+        garmentAnalysis: garmentDescription ? {
+          items: garmentDescription.items,
+          overallStyle: garmentDescription.overallStyle,
+          colorPalette: garmentDescription.colorPalette,
+          layering: garmentDescription.layering,
+          hasLogo: garmentDescription.hasLogo,
+          logoDescription: garmentDescription.logoDescription,
+        } : undefined,
+      }
+    }
+
+    // Add instruction about using the structured garment analysis
+    if (garmentDescription) {
+      instructions.push(
+        'Use the garmentAnalysis data in the wardrobe section for precise clothing details including item types, colors, materials, and layering information'
+      )
+      mustFollow.push(
+        `CLOTHING ITEMS: The outfit consists of: ${garmentDescription.items.map(item => `${item.color.primary} ${item.type} (${item.category})`).join(', ')}.`,
+        `LAYERING: ${garmentDescription.layering}`,
+        `OVERALL STYLE: ${garmentDescription.overallStyle}`
+      )
+
+      Logger.info('[CustomClothingElement] Added garment analysis to payload', {
+        generationId: generationContext.generationId,
+        itemCount: garmentDescription.items.length,
+        overallStyle: garmentDescription.overallStyle,
+        hasLogo: garmentDescription.hasLogo,
+      })
+    }
+
+    Logger.info('[CustomClothingElement] Added wardrobe payload to contribution', {
+      generationId: generationContext.generationId,
+      hasDescription: !!clothing.description,
+      hasColors: !!clothing.colors,
+    })
+
     return {
       instructions,
       mustFollow,
       metadata,
       referenceImages,
+      payload,
+    }
+  }
+
+  /**
+   * Describe garment collage using Gemini vision
+   *
+   * Analyzes the collage image and returns a structured JSON description
+   * of all clothing items and accessories visible.
+   * Uses the same Vertex AI infrastructure as the evaluation steps.
+   */
+  private async describeGarmentCollage(
+    collageBase64: string,
+    generationId: string
+  ): Promise<{
+    success: true;
+    description: GarmentDescription;
+    usage?: { inputTokens: number; outputTokens: number };
+  } | {
+    success: false;
+    error: string;
+  }> {
+    const startTime = Date.now()
+
+    try {
+      const { getVertexGenerativeModel } = await import('@/queue/workers/generate-image/gemini')
+      const { Env } = await import('@/lib/env')
+
+      // Use the same model as evaluations
+      const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
+      const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
+      const modelName = evalModel || imageModel || 'gemini-2.5-flash'
+
+      const model = await getVertexGenerativeModel(modelName)
+
+      const prompt = `Analyze this garment collage image and provide a detailed JSON description of all clothing items and accessories visible.
+
+Return ONLY a valid JSON object with no markdown formatting, no code blocks, just the raw JSON.
+
+The JSON must follow this exact structure:
+{
+  "items": [
+    {
+      "category": "outerwear" | "top" | "bottom" | "footwear" | "accessory",
+      "type": "string (e.g., blazer, shirt, pants, sneakers, watch)",
+      "color": {
+        "primary": "string (main color)",
+        "secondary": "string | null (accent color if any)",
+        "pattern": "solid" | "striped" | "checkered" | "patterned" | "textured"
+      },
+      "material": "string | null (e.g., cotton, wool, leather, denim)",
+      "style": "string (e.g., formal, casual, business-casual, sporty)",
+      "fit": "string | null (e.g., slim, regular, loose, tailored)",
+      "details": ["array of notable features like buttons, pockets, logos, embroidery"]
+    }
+  ],
+  "overallStyle": "string (e.g., business professional, smart casual, formal)",
+  "colorPalette": ["array of dominant colors in the outfit"],
+  "layering": "string describing how items layer (e.g., 'blazer over button-up shirt')",
+  "hasLogo": boolean,
+  "logoDescription": "string | null (describe logo if present)"
+}
+
+Be precise and objective. Only describe items that are clearly visible in the collage.`
+
+      // Build parts array with text prompt and image
+      const parts = [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType: 'image/png',
+            data: collageBase64.replace(/^data:image\/[a-z]+;base64,/, ''),
+          },
+        },
+      ]
+
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts }],
+        generationConfig: {
+          temperature: 0.1, // Low temperature for consistent structured output
+        },
+      })
+
+      const response = result.response
+      const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+
+      // Try to parse the JSON response
+      let description: GarmentDescription
+      try {
+        // Remove any markdown code blocks if present
+        const cleanedText = responseText
+          .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/\s*```$/i, '')
+          .trim()
+
+        description = JSON.parse(cleanedText)
+      } catch (parseError) {
+        Logger.warn('[CustomClothingElement] Failed to parse garment description JSON', {
+          generationId,
+          responsePreview: responseText.substring(0, 500),
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+        })
+        return { success: false, error: 'Failed to parse description JSON' }
+      }
+
+      const inputTokens = response.usageMetadata?.promptTokenCount || 0
+      const outputTokens = response.usageMetadata?.candidatesTokenCount || 0
+
+      // Track cost
+      await CostTrackingService.trackCall({
+        generationId,
+        provider: 'vertex',
+        model: 'gemini-2.5-flash',
+        inputTokens,
+        outputTokens,
+        reason: 'garment_description',
+        result: 'success',
+        durationMs: Date.now() - startTime,
+      })
+
+      Logger.info('[CustomClothingElement] Garment description generated', {
+        generationId,
+        itemCount: description.items?.length || 0,
+        overallStyle: description.overallStyle,
+        hasLogo: description.hasLogo,
+        durationMs: Date.now() - startTime,
+      })
+
+      // Debug: Output full JSON in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log('\n[DEBUG] Garment Description JSON:')
+        console.log(JSON.stringify(description, null, 2))
+        console.log('')
+      }
+
+      Telemetry.increment('outfit.description.success')
+
+      return {
+        success: true,
+        description,
+        usage: { inputTokens, outputTokens },
+      }
+    } catch (error) {
+      Logger.error('[CustomClothingElement] Garment description failed', {
+        generationId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+
+      Telemetry.increment('outfit.description.error')
+
+      return { success: false, error: 'Description generation failed' }
     }
   }
 

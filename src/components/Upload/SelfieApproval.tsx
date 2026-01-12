@@ -1,13 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { PreviewImage } from '@/components/ui'
+import { useSelfieClassification } from '@/hooks/useSelfieClassification'
+import SelfieTypeBadge from './SelfieTypeBadge'
+import type { ClassificationResult } from '@/domain/selfie/selfie-types'
 
 interface SelfieApprovalProps {
   photoKey: string
   previewUrl?: string
-  onApprove: () => void
+  imageFile?: File
+  onApprove: (classification?: ClassificationResult) => void
   onRetake: () => void
   onCancel: () => void
 }
@@ -15,12 +19,21 @@ interface SelfieApprovalProps {
 export default function SelfieApproval({
   photoKey,
   previewUrl,
+  imageFile,
   onApprove,
   onRetake,
   onCancel
 }: SelfieApprovalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const t = useTranslations('selfieApproval')
+  const { isClassifying, result: classification, classify } = useSelfieClassification()
+
+  // Classify the image when component mounts and we have a file
+  useEffect(() => {
+    if (imageFile) {
+      classify(imageFile)
+    }
+  }, [imageFile, classify])
 
   const handleApprove = async (e?: React.MouseEvent | React.TouchEvent) => {
     // Prevent double-tap/click on mobile
@@ -29,12 +42,12 @@ export default function SelfieApproval({
       e?.stopPropagation()
       return
     }
-    
+
     setIsProcessing(true)
-    
+
     try {
-      // Call the approve callback - it may be async, so wrap it
-      const result = onApprove()
+      // Call the approve callback with classification result
+      const result = onApprove(classification || undefined)
       
       // If it returns a promise, wait for it to complete
       // This is especially important on mobile where async operations can be delayed
@@ -84,6 +97,9 @@ export default function SelfieApproval({
     { key: 'cleanBackground', testId: 'guideline-clean-background' }
   ]
 
+  // Check if classification shows the selfie is improper (e.g., multiple faces)
+  const isImproper = classification && classification.isProper === false
+  const improperReason = classification?.improperReason
 
   return (
     <div className="md:space-y-6 animate-fade-in" data-testid="approval-screen">
@@ -128,12 +144,30 @@ export default function SelfieApproval({
         
         {/* Photo Preview - With decorative glow */}
         <div className="relative flex flex-col items-center">
-          {/* Pending review indicator */}
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
+          {/* Pending review indicator and classification badge */}
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-primary text-white text-xs font-bold shadow-depth-md animate-pulse">
               <span className="w-1.5 h-1.5 rounded-full bg-white/80" />
               {t('awaitingApproval')}
             </span>
+            {/* Show classification badge when available */}
+            {(isClassifying || classification) && !isImproper && (
+              <SelfieTypeBadge
+                type={classification?.selfieType || 'unknown'}
+                confidence={classification?.confidence || 0}
+                isLoading={isClassifying}
+                className="shadow-depth-sm"
+              />
+            )}
+            {/* Show error when selfie is improper (e.g., multiple faces) */}
+            {isImproper && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold shadow-depth-sm border border-red-200">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                {t('improperSelfie', { defaultValue: 'Photo cannot be used' })}
+              </span>
+            )}
           </div>
           
           <div className="relative animate-scale-in pt-4">
@@ -153,6 +187,16 @@ export default function SelfieApproval({
               </div>
             </div>
           </div>
+
+          {/* Error message when selfie is improper */}
+          {isImproper && improperReason && (
+            <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-center animate-fade-in">
+              <p className="text-sm text-red-700 font-medium">{improperReason}</p>
+              <p className="text-xs text-red-600 mt-1">
+                {t('pleaseRetake', { defaultValue: 'Please retake the photo or upload a different one.' })}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -167,9 +211,9 @@ export default function SelfieApproval({
           <button
             onClick={handleApprove}
             onTouchEnd={handleApproveTouch}
-            disabled={isProcessing}
+            disabled={isProcessing || isClassifying || !!isImproper}
             className={`group w-full px-10 py-4 rounded-2xl text-base font-bold transition-all duration-300 touch-manipulation shadow-depth-lg flex items-center justify-center gap-2.5 ${
-              isProcessing
+              isProcessing || isClassifying || isImproper
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-brand-cta to-brand-cta-hover text-white hover:shadow-depth-xl hover:shadow-brand-cta-shadow/50 hover:-translate-y-0.5 active:scale-[0.98] focus:ring-4 focus:ring-brand-cta-ring/50 focus:outline-none'
             }`}
@@ -183,6 +227,21 @@ export default function SelfieApproval({
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
                 {t('buttons.processing')}
+              </>
+            ) : isClassifying ? (
+              <>
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                {t('buttons.analyzing', { defaultValue: 'Analyzing...' })}
+              </>
+            ) : isImproper ? (
+              <>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                {t('buttons.cannotApprove', { defaultValue: 'Cannot Approve' })}
               </>
             ) : (
               <>

@@ -331,43 +331,6 @@ export default function PersonalGenerationsPage() {
           )}
         </div>
 
-        {/* Prominent Generate Button with Cost Info */}
-        <div className="flex flex-col items-stretch sm:items-end md:items-center gap-3 w-full sm:w-auto">
-          <Link 
-            href="/app/generate/start?type=personal" 
-            className="px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 rounded-xl font-bold text-base md:text-lg lg:text-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-2.5 whitespace-nowrap bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white touch-manipulation"
-          >
-            <svg 
-              className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              strokeWidth={2.5} 
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4.5v15m7.5-7.5h-15"
-              />
-            </svg>
-            {tg('newGeneration')}
-          </Link>
-          
-          {/* Cost information - Enhanced card style */}
-          <div className="bg-white rounded-lg border border-gray-200 px-4 py-2.5 shadow-sm text-xs md:text-sm text-gray-600 text-right md:text-center">
-            <div className="space-y-1">
-              <div>
-                <span className="font-semibold" style={{ color: BRAND_CONFIG.colors.primary }}>
-                  {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)} {calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration) === 1 ? t('photoCredit') : t('photoCredits')}
-                </span>
-                <span className="text-gray-500"> {t('perPhoto')}</span>
-              </div>
-              <div className="text-gray-500">
-                {subscriptionTier ? getRegenerationCount(subscriptionTier, subscriptionPeriod) : 3} {t('retriesPerPhoto')}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Content */}

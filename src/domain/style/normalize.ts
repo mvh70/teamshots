@@ -9,6 +9,7 @@ import {
   ClothingColorSettings,
   PoseSettings,
 } from '@/types/photo-style'
+import { hasValue } from './elements/base/element-types'
 
 type LegacyContext = {
   id: string
@@ -38,26 +39,27 @@ export function normalizeContextToPhotoStyleSettings(context: LegacyContext): Ph
     : { type: 'preset', preset: stylePresetVal }
 
   return {
-    // Use settings directly if type exists (preset), otherwise fall back to defaults
+    // Use settings directly if mode or type exists (preset), otherwise fall back to defaults
     // This preserves preset values and prevents them from being overwritten with user-choice defaults
-    background: settings.background?.type 
+    background: (settings.background as { mode?: string; type?: string })?.mode || (settings.background as { mode?: string; type?: string })?.type
       ? settings.background as BackgroundSettings
       : DEFAULT_PHOTO_STYLE_SETTINGS.background,
-    branding: settings.branding?.type 
+    // For branding, check if it has the ElementSetting pattern (mode property) or has a value
+    branding: (settings.branding as { mode?: string })?.mode || hasValue(settings.branding as BrandingSettings)
       ? settings.branding as BrandingSettings
       : DEFAULT_PHOTO_STYLE_SETTINGS.branding,
     style,
     clothing: settings.clothing || DEFAULT_PHOTO_STYLE_SETTINGS.clothing,
-    clothingColors: settings.clothingColors?.type 
+    clothingColors: (settings.clothingColors as { mode?: string; type?: string })?.mode || (settings.clothingColors as { mode?: string; type?: string })?.type
       ? settings.clothingColors as ClothingColorSettings
       : DEFAULT_PHOTO_STYLE_SETTINGS.clothingColors,
-    expression: settings.expression?.type 
+    expression: (settings.expression as { mode?: string; type?: string })?.mode || (settings.expression as { mode?: string; type?: string })?.type
       ? settings.expression as ExpressionSettings
       : DEFAULT_PHOTO_STYLE_SETTINGS.expression,
     lighting: settings.lighting?.type 
       ? settings.lighting as LightingSettings
       : DEFAULT_PHOTO_STYLE_SETTINGS.lighting,
-    pose: settings.pose?.type 
+    pose: settings.pose?.mode
       ? settings.pose as PoseSettings
       : DEFAULT_PHOTO_STYLE_SETTINGS.pose,
   } as PhotoStyleSettings

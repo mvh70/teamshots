@@ -1,8 +1,8 @@
 import { NEUTRAL_COLORS, GRADIENT_COLORS } from './colors'
-import type { BackgroundEnvironment } from './types'
+import type { BackgroundEnvironment, BackgroundSettings } from './types'
 import type { ElementConfig } from '../registry'
-import type { PhotoStyleSettings } from '@/types/photo-style'
 import { deserialize } from './deserializer'
+import { predefined, userChoice } from '../base/element-types'
 
 /**
  * UI metadata for background type selector
@@ -34,7 +34,7 @@ export const BACKGROUND_ENVIRONMENT_MAP: Record<string, BackgroundEnvironment> =
  * Resolves the environment for a given background type
  */
 export function getBackgroundEnvironment(backgroundType?: string): BackgroundEnvironment {
-  if (!backgroundType || backgroundType === 'user-choice') {
+  if (!backgroundType) {
     return 'studio' // Default
   }
   return BACKGROUND_ENVIRONMENT_MAP[backgroundType] || 'studio'
@@ -46,8 +46,8 @@ export { NEUTRAL_COLORS, GRADIENT_COLORS }
 /**
  * Element registry config for background
  */
-export const backgroundElementConfig: ElementConfig<PhotoStyleSettings['background']> = {
-  getDefaultPredefined: () => ({ type: 'office' }),
-  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+export const backgroundElementConfig: ElementConfig<BackgroundSettings> = {
+  getDefaultPredefined: () => predefined({ type: 'office' }),
+  getDefaultUserChoice: () => userChoice(),
   deserialize
 }

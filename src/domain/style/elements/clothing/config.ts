@@ -1,4 +1,6 @@
 import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
+import type { ClothingSettings, ClothingValue } from './types'
+export type { ClothingSettings, ClothingValue, ClothingType } from './types'
 
 /**
  * Known clothing style types
@@ -47,19 +49,19 @@ export const CLOTHING_ACCESSORIES: Record<string, string[]> = {
 }
 
 import type { ElementConfig } from '../registry'
-import type { PhotoStyleSettings } from '@/types/photo-style'
+import { predefined, userChoice, hasValue } from '../base/element-types'
 import { deserialize } from './deserializer'
 
 /**
  * Element registry config for clothing
  */
-export const clothingElementConfig: ElementConfig<PhotoStyleSettings['clothing']> = {
+export const clothingElementConfig: ElementConfig<ClothingSettings> = {
   getDefaultPredefined: (packageDefaults) => {
-    if (packageDefaults) {
-      return { ...packageDefaults }
+    if (packageDefaults && hasValue(packageDefaults)) {
+      return predefined({ ...packageDefaults.value })
     }
-    return { style: 'business' }
+    return predefined({ style: 'business' })
   },
-  getDefaultUserChoice: () => ({ style: 'user-choice' }),
+  getDefaultUserChoice: () => userChoice(),
   deserialize
 }

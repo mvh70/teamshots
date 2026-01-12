@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import SelfieInfoOverlayTrigger from '@/components/generation/SelfieInfoOverlayTrigger'
 import { QRPlaceholder } from '@/components/MobileHandoff'
+import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
 
 const SelfieUploadFlow = dynamic(() => import('@/components/Upload/SelfieUploadFlow'), { ssr: false })
 
@@ -17,7 +18,8 @@ function SelfiesPageContent() {
   const t = useTranslations('selfies')
   const [error, setError] = useState<string | null>(null)
   const isMobile = useMobileViewport()
-  
+  const { refreshKey: selfieTypeRefreshKey, refresh: refreshSelfieTypeStatus } = useSelfieTypeStatus()
+
   const selfieManager = useSelfieManagement()
 
   if (selfieManager.mode !== 'individual') {
@@ -27,13 +29,24 @@ function SelfiesPageContent() {
   const { uploads, loading, loadUploads, handleSelfiesApproved } = selfieManager
   
   // Type assertion: in individual mode, uploads is always UploadListItem[]
-  type UploadListItem = { id: string; uploadedKey: string; createdAt: string; hasGenerations: boolean }
+  type UploadListItem = {
+    id: string
+    uploadedKey: string
+    createdAt: string
+    hasGenerations: boolean
+    selfieType?: string | null
+    selfieTypeConfidence?: number | null
+    personCount?: number | null
+    isProper?: boolean | null
+    improperReason?: string | null
+  }
   const uploadListItems = uploads as UploadListItem[]
 
   // Hook handles initialization internally
 
   const handleSelfiesApprovedWrapper = async (results: { key: string; selfieId?: string }[]) => {
     await handleSelfiesApproved?.(results)
+    refreshSelfieTypeStatus()
     setError(null)
   }
 
@@ -50,6 +63,11 @@ function SelfiesPageContent() {
           <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed">Upload and manage your selfies for photo generation</p>
         </div>
         <SelfieInfoOverlayTrigger />
+      </div>
+
+      {/* Selfie Type Progress Overlay */}
+      <div className="flex justify-center">
+        <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} />
       </div>
 
       {error && (
@@ -86,12 +104,16 @@ function SelfiesPageContent() {
       ) : (
         <div className={isMobile ? 'pb-40' : ''}>
           <SelectableGrid
-            items={uploadListItems.map(u => ({ 
-              id: u.id, 
-              key: u.uploadedKey, 
-              url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`, 
-              uploadedAt: u.createdAt, 
-              used: u.hasGenerations 
+            items={uploadListItems.map(u => ({
+              id: u.id,
+              key: u.uploadedKey,
+              url: `/api/files/get?key=${encodeURIComponent(u.uploadedKey)}`,
+              uploadedAt: u.createdAt,
+              used: u.hasGenerations,
+              selfieType: u.selfieType,
+              selfieTypeConfidence: u.selfieTypeConfidence,
+              isProper: u.isProper ?? undefined,
+              improperReason: u.improperReason
             }))}
             selection={{ mode: 'managed' }}
             allowDelete

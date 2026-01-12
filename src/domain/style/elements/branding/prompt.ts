@@ -1,4 +1,5 @@
-import type { BrandingSettings } from '@/types/photo-style'
+import type { BrandingSettings } from './types'
+import { hasValue } from '../base/element-types'
 import { KnownClothingStyle } from '../clothing/config'
 import { BACKGROUND_BRANDING_PROMPT, ELEMENT_BRANDING_PROMPT, CLOTHING_BRANDING_RULES_BASE } from './config'
 
@@ -204,7 +205,8 @@ export function generateBrandingPrompt({
   styleKey,
   detailKey
 }: BrandingPromptInput): BrandingPromptResult {
-  if (!branding || branding.type !== 'include' || !branding.logoKey) {
+  // Check if branding has a value and is set to include with a logo
+  if (!branding || !hasValue(branding)) {
     return {
       branding: {
         enabled: false
@@ -213,7 +215,17 @@ export function generateBrandingPrompt({
     }
   }
 
-  const position = branding.position ?? 'clothing'
+  const brandingValue = branding.value
+  if (brandingValue.type !== 'include' || !brandingValue.logoKey) {
+    return {
+      branding: {
+        enabled: false
+      },
+      rules: ['No brand marks visible']
+    }
+  }
+
+  const position = brandingValue.position ?? 'clothing'
 
   if (position === 'background') {
     // Extract all instructions (logo_source, placement, rules) from BACKGROUND_BRANDING_PROMPT

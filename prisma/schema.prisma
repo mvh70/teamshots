@@ -39,6 +39,7 @@ model User {
   contexts             Context[]
   mobileHandoffTokens  MobileHandoffToken[]
   promoCodeUsages      PromoCodeUsage[]
+  extensionTokens      ExtensionToken[]
 
   @@index([email])
 }
@@ -194,10 +195,16 @@ model Selfie {
   uploadedByUser     String?
   uploadedViaToken   String?
   assetId            String?   @unique
+  selfieType         String?   // 'front_view' | 'side_view' | 'full_body' | 'unknown'
+  selfieTypeConfidence Float?  // 0.0 - 1.0 confidence score from AI classification
+  personCount        Int?      // Number of people detected in the photo
+  isProper           Boolean?  // Whether selfie is valid for generation (single person, clear face)
+  improperReason     String?   // Reason why selfie is not proper (if isProper is false)
   person             Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
   asset              Asset?    @relation("SelfieAsset", fields: [assetId], references: [id])
 
   @@index([personId])
+  @@index([selfieType])
   @@index([uploadedViaToken])
   @@index([createdAt])
   @@index([isPublic])
@@ -622,5 +629,25 @@ model PromoCodeUsage {
   @@index([promoCodeId])
   @@index([userId])
   @@index([email])
+}
+
+// ExtensionToken: Authentication tokens for Chrome extension
+model ExtensionToken {
+  id         String    @id @default(cuid())
+  userId     String
+  token      String    @unique // Hashed token (SHA-256)
+  name       String?   // User-friendly name, e.g., "Chrome Extension - MacBook Pro"
+  scopes     String[]  @default(["outfit:upload", "generation:create"]) // Permissions
+  lastUsedAt DateTime?
+  lastUsedIp String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
 }
 

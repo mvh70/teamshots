@@ -32,6 +32,7 @@ import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useOnboardingState } from '@/lib/onborda/hooks'
 import Header from '@/app/[locale]/app/components/Header'
 import { loadClothingColors, saveClothingColors, loadStyleSettings, saveStyleSettings } from '@/lib/clothing-colors-storage'
+import { isUserChoice, hasValue, userChoice } from '@/domain/style/elements/base/element-types'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
 
 const GenerationTypeSelector = dynamic(() => import('@/components/GenerationTypeSelector'), { ssr: false })
@@ -165,14 +166,14 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const hasLoadedSavedSettingsRef = React.useRef(false)
 
   // Helper function to merge saved colors into settings
-  // IMPORTANT: Only merges saved colors when clothingColors type is 'user-choice'
+  // IMPORTANT: Only merges saved colors when clothingColors mode is 'user-choice'
   // Never modifies predefined/preset colors - they remain as-is
   const mergeSavedColors = React.useCallback((settings: PhotoStyleSettingsType): PhotoStyleSettingsType => {
     const currentClothingColors = settings.clothingColors
 
-    // CRITICAL: Only merge saved colors if type is 'user-choice'
-    // If type is 'predefined', return settings unchanged (preserve preset values)
-    if (!currentClothingColors || currentClothingColors.type !== 'user-choice') {
+    // CRITICAL: Only merge saved colors if mode is 'user-choice'
+    // If mode is 'predefined', return settings unchanged (preserve preset values)
+    if (!currentClothingColors || !isUserChoice(currentClothingColors)) {
       return settings
     }
 
@@ -180,15 +181,13 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     if (!savedColors) return settings
 
     // Merge saved colors into user-choice settings
+    const currentColors = hasValue(currentClothingColors) ? currentClothingColors.value : {}
     return {
       ...settings,
-      clothingColors: {
-        type: 'user-choice',
-        colors: {
-          ...currentClothingColors.colors,
-          ...savedColors // Saved colors take precedence
-        }
-      }
+      clothingColors: userChoice({
+        ...currentColors,
+        ...savedColors // Saved colors take precedence
+      })
     }
   }, [])
 
@@ -260,8 +259,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
     // Also save clothing colors separately for backward compatibility
     const clothingColors = photoStyleSettings.clothingColors
-    if (clothingColors?.type === 'user-choice' && clothingColors?.colors) {
-      saveClothingColors(clothingColors.colors)
+    if (clothingColors && isUserChoice(clothingColors) && hasValue(clothingColors)) {
+      saveClothingColors(clothingColors.value)
     }
   }, [photoStyleSettings, hydrated, skipUpload, activeContext?.id])
 
@@ -275,9 +274,10 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   }, [teamFallbackLabel, personalFallbackLabel])
 
   // Determine user access
+  // NEW CREDIT MODEL: All credits are on person, team pool is just for distribution
   const hasTeamAccess = Boolean(session?.user?.person?.teamId)
-  const hasTeamCredits = userCredits.team > 0
-  const hasIndividualAccess = userCredits.individual > 0
+  const hasTeamCredits = hasTeamAccess && userCredits.person > 0  // Team member with credits
+  const hasIndividualAccess = userCredits.person > 0  // Anyone with credits
   
   // Determine effective generation type
   // IMPORTANT: Free plan users always use personal credits (even team admins)
@@ -412,8 +412,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     setVisitedMobileSteps(new Set())
   }, [skipUpload])
   
-  const hasEnoughCredits = (effectiveGenerationType === 'team' && userCredits.team >= PRICING_CONFIG.credits.perGeneration) ||
-                          (effectiveGenerationType === 'personal' && userCredits.individual >= PRICING_CONFIG.credits.perGeneration)
+  // NEW CREDIT MODEL: Credits always belong to a person, not team pool
+  // For both team and personal generation, check person's usable credits
+  const hasEnoughCredits = userCredits.person >= PRICING_CONFIG.credits.perGeneration
   const hasRequiredSelfies = hasEnoughSelfies(selectedSelfies.length)
 
   const effectivePackageId = isFreePlan ? 'freepackage' : (selectedPackageId || PACKAGES_CONFIG.defaultPlanPackage)
@@ -436,19 +437,22 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     if (!isMobile) return true
 
     const categorySettings = (originalContextSettings || photoStyleSettings) as Record<string, unknown>
-    const clothingColorsSettings = categorySettings['clothingColors']
+    const clothingColorsSettings = categorySettings['clothingColors'] as { type?: string; mode?: string } | undefined
+    // Support both new format (mode) and legacy format (type)
     const isClothingColorsEditable = !clothingColorsSettings ||
-      (clothingColorsSettings as { type?: string }).type === 'user-choice'
+      clothingColorsSettings.mode === 'user-choice' ||
+      clothingColorsSettings.type === 'user-choice'
 
     return !isClothingColorsEditable || visitedMobileSteps.has('clothingColors')
   }, [isMobile, visitedMobileSteps, originalContextSettings, photoStyleSettings])
   
   const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && !hasUneditedFields && hasVisitedClothingColorsIfEditable
-  
-  const hasAnyCredits = userCredits.team > 0 || userCredits.individual > 0
+
+  // NEW CREDIT MODEL: All usable credits are on person
+  const hasAnyCredits = userCredits.person > 0
   const selectedPackage = getPackageConfig(effectivePackageId)
   const selectedPhotoStyleLabel = activeContext?.name || selectedPackage.label
-  const remainingCreditsForType = effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual
+  const remainingCreditsForType = userCredits.person  // Always use person credits
   const photoCreditsPerGeneration = calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration)
   
   const shouldShowGenerationTypeSelector = false
@@ -601,7 +605,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                     <p className="text-sm text-amber-800 leading-snug">
                       {t('insufficientCreditsMessage', {
                         required: calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration),
-                        current: calculatePhotosFromCredits(effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual)
+                        current: calculatePhotosFromCredits(userCredits.person)
                       })}
                     </p>
                   </div>
@@ -669,7 +673,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                           <p className="text-xs text-amber-800 leading-snug">
                             {t('insufficientCreditsMessage', {
                               required: calculatePhotosFromCredits(PRICING_CONFIG.credits.perGeneration),
-                              current: calculatePhotosFromCredits(effectiveGenerationType === 'team' ? userCredits.team : userCredits.individual)
+                              current: calculatePhotosFromCredits(userCredits.person)
                             })}
                           </p>
                         </div>
@@ -749,9 +753,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                           }
                           setActiveContext(enrichedContext)
                           // CRITICAL: Only merge saved colors if context allows user-choice
-                          // If type is 'predefined', use ui as-is (preserve preset values)
-                          const newSettings = ui.clothingColors?.type === 'user-choice' 
-                            ? mergeSavedColors(ui) 
+                          // If mode is 'predefined', use ui as-is (preserve preset values)
+                          const newSettings = ui.clothingColors && isUserChoice(ui.clothingColors)
+                            ? mergeSavedColors(ui)
                             : ui // Predefined contexts: use preset values, never override with saved colors
                           setPhotoStyleSettings(newSettings)
                           setSelectedPackageId(pkg.id)

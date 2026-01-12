@@ -1,5 +1,6 @@
 import { Logger } from '@/lib/logger'
 import type { PhotoStyleSettings } from '@/types/photo-style'
+import { hasValue } from '@/domain/style/elements/base/element-types'
 
 import type { DownloadSelfieFn } from '@/types/generation'
 
@@ -34,16 +35,19 @@ export async function preprocessSelfie({
     const modifiedStyleSettings: PhotoStyleSettings = {
       ...styleSettings,
       ...(skipBackgroundProcessing && { background: undefined }),
-      ...(skipLogoPlacement && styleSettings.branding && {
+      ...(skipLogoPlacement && hasValue(styleSettings.branding) && {
         branding: {
           ...styleSettings.branding,
-          logoKey: undefined
+          value: {
+            ...styleSettings.branding.value,
+            logoKey: undefined
+          }
         }
       })
     }
 
-    const backgroundKey = modifiedStyleSettings.background?.key
-    const logoKey = modifiedStyleSettings.branding?.logoKey
+    const backgroundKey = modifiedStyleSettings.background?.value?.key
+    const logoKey = hasValue(modifiedStyleSettings.branding) ? modifiedStyleSettings.branding.value.logoKey : undefined
 
     const usesExtendedSignature = preprocessor.length > 2
     const preprocessResult = usesExtendedSignature

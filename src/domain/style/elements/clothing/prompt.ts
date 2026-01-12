@@ -1,11 +1,13 @@
 import type {
   ClothingColorSettings,
-  ClothingSettings,
+  ClothingColorValue,
   ShotTypeValue
 } from '@/types/photo-style'
+import type { ClothingValue } from './types'
 import type { KnownClothingStyle, WardrobeDetailConfig } from './config'
 import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
 import { getColorDisplay } from '@/domain/style/elements/clothing-colors/types'
+import { hasValue } from '../base/element-types'
 
 /**
  * Details that don't require a top cover layer
@@ -145,7 +147,7 @@ export const WARDROBE_DETAILS: Record<KnownClothingStyle, Record<string, Wardrob
 }
 
 export interface WardrobePromptInput {
-  clothing?: ClothingSettings | null
+  clothing?: ClothingValue | null
   clothingColors?: ClothingColorSettings | null
   shotType?: ShotTypeValue | null
 }
@@ -211,7 +213,7 @@ const resolveWardrobeDescriptor = (
 }
 
 const buildColorPalette = (
-  colors: ClothingColorSettings['colors'] | undefined,
+  colors: ClothingColorValue | undefined,
   detailKey: string,
   descriptor: WardrobeDetailConfig,
   shotType?: ShotTypeValue | null
@@ -278,7 +280,7 @@ export function generateWardrobePrompt({
     wardrobe.accessories = clothing.accessories
   }
 
-  const colorPalette = buildColorPalette(clothingColors?.colors, detailKey, descriptor, shotType)
+  const colorPalette = buildColorPalette(clothingColors && hasValue(clothingColors) ? clothingColors.value : undefined, detailKey, descriptor, shotType)
   if (colorPalette) {
     wardrobe.color_palette = colorPalette
   }

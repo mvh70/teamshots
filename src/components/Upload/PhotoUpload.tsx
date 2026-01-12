@@ -58,6 +58,9 @@ export default function PhotoUpload({
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  // Validation error shown in spinner area (separate from inline errors)
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const validationErrorTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [uploadingFileCount, setUploadingFileCount] = useState<number>(0);
@@ -76,8 +79,36 @@ export default function PhotoUpload({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       previewUrls.forEach(url => URL.revokeObjectURL(url));
       if (stream) stream.getTracks().forEach((t) => t.stop());
+      if (validationErrorTimerRef.current) clearTimeout(validationErrorTimerRef.current);
     };
   }, [previewUrl, previewUrls, stream]);
+
+  // Helper to show validation error with auto-dismiss
+  // When camera is open, immediately re-enable capture button
+  const showValidationError = useCallback((message: string, autoDismissMs = 4000) => {
+    // Clear any existing timer
+    if (validationErrorTimerRef.current) {
+      clearTimeout(validationErrorTimerRef.current);
+    }
+    setValidationError(message);
+
+    // If camera is open, immediately re-enable capture button
+    // (error shows in camera overlay, user can retry right away)
+    if (cameraOpen) {
+      setIsUploading(false);
+      setUploadingFileCount(0);
+    }
+
+    // Auto-dismiss after delay
+    validationErrorTimerRef.current = setTimeout(() => {
+      setValidationError(null);
+      // Only reset uploading state if not already reset (camera case)
+      if (!cameraOpen) {
+        setIsUploading(false);
+        setUploadingFileCount(0);
+      }
+    }, autoDismissMs);
+  }, [cameraOpen]);
 
 
   // Simple: show spinner if uploading OR parent is processing
@@ -133,32 +164,33 @@ export default function PhotoUpload({
   )
 
   const handleFile = async (file: File, overrides?: Partial<UploadMetadata>): Promise<boolean> => {
+    // Show spinner immediately when file is selected
+    setIsUploading(true);
+    setUploadingFileCount(1);
     setError(null);
     setErrorType(null);
+    setValidationError(null);
+    if (validationErrorTimerRef.current) {
+      clearTimeout(validationErrorTimerRef.current);
+    }
+
     const err = validateFile(file);
     if (err) {
-      setError(err);
-      // Set appropriate error type based on the error message
-      if (err.includes('Only image files are allowed')) {
-        setErrorType('format-error');
-      } else if (err.includes('File size too large')) {
-        setErrorType('file-size-error');
-      } else {
-        setErrorType('error-message');
-      }
+      // Show error in spinner area with auto-dismiss
+      showValidationError(err);
       return false;
     }
-    
+
     // Check for face detection using BlazeFace model
     console.log('[PhotoUpload] Starting face validation for file:', file.name)
     const faceValidation = await validateSelfieFace(file);
     console.log('[PhotoUpload] Face validation result:', faceValidation)
     if (!faceValidation.isValid) {
-      setError(faceValidation.error || "Face validation failed. Please upload a photo with one clear face.");
-      setErrorType('face-detection-error');
+      // Show error in spinner area with auto-dismiss
+      showValidationError(faceValidation.error || "Face validation failed. Please upload a photo with one clear face.");
       return false;
     }
-    
+
     const preview = URL.createObjectURL(file);
     const metadata = buildMetadata(file, { ...overrides, objectUrl: preview })
 
@@ -176,8 +208,6 @@ export default function PhotoUpload({
     onSelect?.(file);
 
     if (onUpload) {
-      setIsUploading(true);
-      setUploadingFileCount(1);
       try {
         // Add timeout handling for upload
         const uploadPromise = onUpload(file, metadata);
@@ -249,18 +279,21 @@ export default function PhotoUpload({
   };
 
   const handleFiles = async (files: File[]) => {
+    // Show spinner immediately
+    setIsUploading(true);
+    setUploadingFileCount(files.length);
     setError(null);
     setErrorType(null);
-    setIsUploading(true);
-    
+    setValidationError(null);
+    if (validationErrorTimerRef.current) {
+      clearTimeout(validationErrorTimerRef.current);
+    }
+
     const validFiles: File[] = [];
     const errors: string[] = [];
     const previews: string[] = [];
     const uploadResults: UploadResult[] = [];
     const metadataList: UploadMetadata[] = [];
-    
-    // Track the number of files being uploaded
-    setUploadingFileCount(files.length);
 
     // Validate all files first
     for (let i = 0; i < files.length; i++) {
@@ -270,7 +303,7 @@ export default function PhotoUpload({
         errors.push(`${file.name}: ${err}`);
         continue;
       }
-      
+
       // Check for face detection using BlazeFace model
       console.log('[PhotoUpload] Starting face validation for file (multiple):', file.name)
       const faceValidation = await validateSelfieFace(file);
@@ -279,24 +312,26 @@ export default function PhotoUpload({
         errors.push(`${file.name}: ${faceValidation.error || "Face validation failed"}`);
         continue;
       }
-      
+
       validFiles.push(file);
       const preview = URL.createObjectURL(file);
       previews.push(preview);
       metadataList.push(buildMetadata(file, { objectUrl: preview }));
     }
 
-    // Show errors if any
+    // Show errors if any - use spinner area for all-failed case
     if (errors.length > 0) {
-      setError(errors.join('; '));
-      setErrorType('validation-error');
-      // Still process valid files if any
       if (validFiles.length === 0) {
-        setIsUploading(false);
-        setUploadingFileCount(0);
+        // All files failed - show in spinner area with auto-dismiss
+        const errorMsg = files.length === 1
+          ? errors[0].split(': ').slice(1).join(': ') // Single file: show just the error
+          : `${errors.length} file(s) failed validation`;
+        showValidationError(errorMsg);
         return false;
       }
-      // If there are valid files, continue processing them
+      // Some files passed - continue processing but note errors
+      setError(errors.join('; '));
+      setErrorType('validation-error');
     }
 
     // Update previews
@@ -650,16 +685,41 @@ export default function PhotoUpload({
     <div className={`w-full h-full ${hidePlusIcon ? '' : 'min-h-[200px]'}`}>
       {showSpinner ? (
         <div
-          className="rounded-2xl p-4 md:p-8 h-full flex items-center justify-center text-center bg-gradient-to-br from-white via-gray-50 to-gray-100 border border-gray-200"
+          className={`rounded-2xl p-4 md:p-8 h-full flex items-center justify-center text-center border ${
+            validationError
+              ? 'bg-gradient-to-br from-red-50 via-red-50 to-red-100 border-red-200'
+              : 'bg-gradient-to-br from-white via-gray-50 to-gray-100 border-gray-200'
+          }`}
           data-testid="upload-progress"
         >
-          <div className="flex flex-col items-center justify-center space-y-6">
-            <LoadingSpinner size="lg" />
-            <p className="text-lg text-gray-700 font-medium">
-            {uploadingFileCount > 1
-              ? t("processingImages", { count: uploadingFileCount })
-              : t("processingImage")}
-            </p>
+          <div className="flex flex-col items-center justify-center space-y-4">
+            {validationError ? (
+              <>
+                {/* Error Icon */}
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                {/* Error Message */}
+                <p className="text-base text-red-700 font-medium max-w-xs">
+                  {validationError}
+                </p>
+                {/* Auto-dismiss indicator */}
+                <p className="text-xs text-red-500">
+                  {t("dismissingAutomatically", { defaultValue: "Dismissing automatically..." })}
+                </p>
+              </>
+            ) : (
+              <>
+                <LoadingSpinner size="lg" />
+                <p className="text-lg text-gray-700 font-medium">
+                  {uploadingFileCount > 1
+                    ? t("processingImages", { count: uploadingFileCount })
+                    : t("processingImage")}
+                </p>
+              </>
+            )}
           </div>
         </div>
       ) : (
@@ -790,12 +850,24 @@ export default function PhotoUpload({
                 style={{ display: 'block' }}
               />
               <canvas ref={canvasRef} className="hidden" />
-              {/* Error overlay for mobile */}
-              {error && (
+              {/* Error overlay for mobile - shows both camera errors and validation errors */}
+              {(error || validationError) && (
                 <div className="absolute top-4 left-4 right-4 z-20">
                   <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm border border-red-200 shadow-md flex items-center justify-between">
-                    <span>{error}</span>
-                    <button onClick={() => setError(null)} className="ml-2 text-red-800 font-bold">&times;</button>
+                    <span>{validationError || error}</span>
+                    <button
+                      onClick={() => {
+                        setError(null);
+                        setValidationError(null);
+                        if (validationErrorTimerRef.current) {
+                          clearTimeout(validationErrorTimerRef.current);
+                        }
+                        setIsUploading(false);
+                      }}
+                      className="ml-2 text-red-800 font-bold"
+                    >
+                      &times;
+                    </button>
                   </div>
                 </div>
               )}
@@ -840,12 +912,24 @@ export default function PhotoUpload({
                   style={{ display: 'block' }}
                 />
                 <canvas ref={canvasRef} className="hidden" />
-                {/* Error overlay for desktop */}
-                {error && (
+                {/* Error overlay for desktop - shows both camera errors and validation errors */}
+                {(error || validationError) && (
                   <div className="absolute top-2 left-2 right-2 z-10">
                     <div className="bg-red-50 text-red-600 px-3 py-2 rounded-md text-sm border border-red-200 shadow-sm flex items-center justify-between">
-                      <span>{error}</span>
-                      <button onClick={() => setError(null)} className="ml-2 text-red-800 font-bold">&times;</button>
+                      <span>{validationError || error}</span>
+                      <button
+                        onClick={() => {
+                          setError(null);
+                          setValidationError(null);
+                          if (validationErrorTimerRef.current) {
+                            clearTimeout(validationErrorTimerRef.current);
+                          }
+                          setIsUploading(false);
+                        }}
+                        className="ml-2 text-red-800 font-bold"
+                      >
+                        &times;
+                      </button>
                     </div>
                   </div>
                 )}

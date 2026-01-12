@@ -1,12 +1,12 @@
-import type { BrandingSettings } from './types'
+import type { BrandingSettings, BrandingType, BrandingValue } from './types'
 import type { ElementConfig } from '../registry'
-import type { PhotoStyleSettings } from '@/types/photo-style'
 import { deserialize } from './deserializer'
+import { predefined, userChoice, hasValue } from '../base/element-types'
 
-export { BrandingSettings }
+export { BrandingSettings, BrandingType, BrandingValue }
 
 export interface BrandingTypeConfig {
-  value: BrandingSettings['type']
+  value: BrandingType
   icon: string
   color: string
 }
@@ -70,8 +70,13 @@ export const CLOTHING_BRANDING_RULES_BASE = [
 /**
  * Element registry config for branding
  */
-export const brandingElementConfig: ElementConfig<PhotoStyleSettings['branding']> = {
-  getDefaultPredefined: () => ({ type: 'include' }),
-  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+export const brandingElementConfig: ElementConfig<BrandingSettings> = {
+  getDefaultPredefined: (packageDefaults) => {
+    if (packageDefaults && hasValue(packageDefaults)) {
+      return predefined({ ...packageDefaults.value })
+    }
+    return predefined({ type: 'include', position: 'clothing' })
+  },
+  getDefaultUserChoice: () => userChoice(),
   deserialize
 }

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { withTeamPermission } from '@/domain/access/permissions'
 import { Logger } from '@/lib/logger'
-import { getPersonCreditBalance, createCreditTransaction } from '@/domain/credits/credits'
+import { transferCreditsFromPersonToTeam } from '@/domain/credits/credits'
+import { isSeatsBasedTeam } from '@/domain/pricing/seats'
 import { PRICING_CONFIG } from '@/config/pricing'
 
 export async function POST(request: NextRequest) {
@@ -96,32 +97,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Reclaim unused credits before revoking access
+    // Check if this is a seats-based team
+    const useSeatsModel = await isSeatsBasedTeam(teamId)
+
+    // Transfer remaining credits back to team pool (for seats-based teams)
     let creditsReclaimed = 0
     try {
-      // Get the member's remaining credit balance
-      const remainingCredits = await getPersonCreditBalance(targetPerson.id)
-      
-      if (remainingCredits > 0) {
-        // Find the invite associated with this person to link the transaction
-        const invite = await prisma.teamInvite.findFirst({
-          where: { personId: targetPerson.id }
-        })
+      if (useSeatsModel) {
+        // NEW MODEL: Transfer credits back from person to team pool
+        const result = await transferCreditsFromPersonToTeam(
+          targetPerson.id,
+          teamId,
+          `Credits returned on member removal (removed by admin)`
+        )
+        creditsReclaimed = result.transferred
 
-        // Create a negative transaction to deduct remaining credits from the member
-        await createCreditTransaction({
-          credits: -remainingCredits, // Negative to deduct
-          type: 'invite_revoked',
-          description: `Credits reclaimed when member access was revoked`,
-          personId: targetPerson.id,
-          teamId: teamId,
-          teamInviteId: invite?.id,
-          userId: session.user.id // Track who revoked
-        })
+        // Note: activeSeats is calculated dynamically from TeamInvite records
+        // When person.teamId is set to null below, activeSeats will automatically decrease
 
-        creditsReclaimed = remainingCredits
-        
-        Logger.info('Reclaimed credits from revoked member', {
+        Logger.info('Seat revoked and credits returned to team', {
           personId: targetPerson.id,
           creditsReclaimed,
           photosReclaimed: creditsReclaimed / PRICING_CONFIG.credits.perGeneration,
@@ -129,6 +123,7 @@ export async function POST(request: NextRequest) {
           revokedBy: session.user.id
         })
       }
+      // For legacy credit model, credits were already on team, no transfer needed
     } catch (creditError) {
       // Log but don't fail the revoke operation
       Logger.error('Failed to reclaim credits during member revoke', {

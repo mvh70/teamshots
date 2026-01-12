@@ -18,6 +18,7 @@ import {
   compositionRegistry,
   type ElementContext,
 } from '@/domain/style/elements/composition'
+import { hasValue } from '@/domain/style/elements/base/element-types'
 
 export interface V3Step1aInput {
   selfieReferences: ReferenceImage[]
@@ -91,8 +92,9 @@ async function prepareAllReferences({
   // 3. Load logo ONLY if branding is on clothing AND no clothing overlay is being used
   let logoReference: BaseReferenceImage | undefined
   if (
-    styleSettings.branding?.type === 'include' &&
-    styleSettings.branding.position === 'clothing' &&
+    hasValue(styleSettings.branding) &&
+    styleSettings.branding.value.type === 'include' &&
+    styleSettings.branding.value.position === 'clothing' &&
     !hasClothingOverlay  // CRITICAL: Skip if overlay is handling the logo
   ) {
     // Use prepared logo from BrandingElement (Step 0) - already has SVG conversion
@@ -422,11 +424,59 @@ export async function executeV3Step1a(
     freedomCount: effectiveFreedomRules.length,
   })
 
-  // Create a simplified prompt object with ONLY subject and framing (no scene, camera, lighting, rendering)
+  // Extract garment description from preparedAssets (generated in Step 0)
+  let garmentAnalysisFromStep0: Record<string, unknown> | undefined
+  if (preparedAssets) {
+    const collageAsset = preparedAssets.get('custom-clothing-garment-collage')
+    const garmentDescription = collageAsset?.data?.metadata?.garmentDescription as {
+      items: unknown[]
+      overallStyle: string
+      colorPalette: string[]
+      layering: string
+      hasLogo: boolean
+      logoDescription?: string
+    } | undefined
+
+    if (garmentDescription) {
+      garmentAnalysisFromStep0 = {
+        items: garmentDescription.items,
+        overallStyle: garmentDescription.overallStyle,
+        colorPalette: garmentDescription.colorPalette,
+        layering: garmentDescription.layering,
+        hasLogo: garmentDescription.hasLogo,
+        logoDescription: garmentDescription.logoDescription,
+      }
+      Logger.info('V3 Step 1a: Found garment description from Step 0 preparation', {
+        generationId,
+        itemCount: garmentDescription.items?.length || 0,
+        overallStyle: garmentDescription.overallStyle,
+      })
+
+      // Debug: Output in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log('\n[DEBUG] V3 Step 1a - Garment Analysis from Step 0:')
+        console.log(JSON.stringify(garmentAnalysisFromStep0, null, 2))
+        console.log('')
+      }
+    }
+  }
+
+  // Build wardrobe section - merge existing wardrobe with garment analysis from Step 0
+  const existingWardrobe = promptObj.wardrobe as Record<string, unknown> | undefined
+  const wardrobeSection = existingWardrobe ? {
+    ...existingWardrobe,
+    // Add garment analysis from Step 0 (overrides any existing garmentAnalysis)
+    garmentAnalysis: garmentAnalysisFromStep0,
+  } : garmentAnalysisFromStep0 ? {
+    garmentAnalysis: garmentAnalysisFromStep0,
+  } : undefined
+
+  // Create a simplified prompt object with ONLY subject, framing, wardrobe (no scene, camera, lighting, rendering)
   const personOnlyPrompt = {
     subject: promptObj.subject as Record<string, unknown> | undefined, // Keep subject details (clothing, pose, expression)
     framing: promptObj.framing as { shot_type?: string } | undefined, // Keep framing (shot type)
     lighting: promptObj.lighting as Record<string, unknown> | undefined, // Keep lighting for consistency with background
+    wardrobe: wardrobeSection, // Wardrobe with garment analysis from Step 0
     scene: {
       background: {
         type: 'solid',
@@ -493,10 +543,21 @@ export async function executeV3Step1a(
   )
 
   if (hasGarmentCollage) {
-    instructionLines.push(
-      '- **Garment Collage:** Dress the person in the EXACT clothing items shown in the garment collage reference. Match the style, fit, and details of each garment precisely. Use the clothing_colors specified in the subject JSON for accurate color rendering (these are user-adjusted hex values and must be respected). Ensure professional fit and styling appropriate for business attire.'
-    )
-    
+    // Check if we have structured garment analysis from Step 0
+    const hasGarmentAnalysis = !!garmentAnalysisFromStep0
+
+    if (hasGarmentAnalysis) {
+      instructionLines.push(
+        '- **Garment Collage + Analysis:** Dress the person in the EXACT clothing items shown in the garment collage reference. The JSON `wardrobe.garmentAnalysis` section provides a detailed breakdown of each clothing item including category, type, color, material, and layering. Use BOTH the visual collage reference AND this structured data to ensure accurate clothing reproduction.',
+        '- **Clothing Details:** Follow the garmentAnalysis.items array for precise item descriptions. Each item includes primary/secondary colors, pattern type, material, and notable details like buttons, pockets, or logos.',
+        '- **Layering Order:** Follow the garmentAnalysis.layering description for how items should be worn over each other.'
+      )
+    } else {
+      instructionLines.push(
+        '- **Garment Collage:** Dress the person in the EXACT clothing items shown in the garment collage reference. Match the style, fit, and details of each garment precisely. Use the clothing_colors specified in the subject JSON for accurate color rendering (these are user-adjusted hex values and must be respected). Ensure professional fit and styling appropriate for business attire.'
+      )
+    }
+
     // Add specific instruction to ignore lower body parts of the collage for tighter shots
     if (['medium-close-up', 'close-up', 'extreme-close-up', 'medium-shot'].includes(shotDescription)) {
       instructionLines.push(
@@ -662,9 +723,10 @@ export async function executeV3Step1a(
   
   // 2. Load custom background if specified (for Step 3)
   let backgroundBuffer: Buffer | undefined
-  if (styleSettings.background?.type === 'custom' && styleSettings.background.key) {
+  const bgValue = styleSettings.background?.value
+  if (bgValue?.type === 'custom' && bgValue.key) {
     try {
-      const bgAsset = await downloadAsset(styleSettings.background.key)
+      const bgAsset = await downloadAsset(bgValue.key)
       if (bgAsset) {
         backgroundBuffer = Buffer.from(bgAsset.base64, 'base64')
       }
@@ -676,26 +738,27 @@ export async function executeV3Step1a(
   // 3. Load logo ONLY if branding is for background/elements (NOT clothing) - for Step 3
   let backgroundLogoRef: BaseReferenceImage | undefined
   if (
-    styleSettings.branding?.type === 'include' &&
-    (styleSettings.branding.position === 'background' || styleSettings.branding.position === 'elements')
+    hasValue(styleSettings.branding) &&
+    styleSettings.branding.value.type === 'include' &&
+    (styleSettings.branding.value.position === 'background' || styleSettings.branding.value.position === 'elements')
   ) {
     // Use prepared logo from BrandingElement (Step 0) - already has SVG conversion
     const preparedLogo = preparedAssets?.get('branding-logo')
     if (preparedLogo?.data.base64) {
       backgroundLogoRef = {
-        description: `Company logo for ${styleSettings.branding.position} placement`,
+        description: `Company logo for ${styleSettings.branding.value.position} placement`,
         base64: preparedLogo.data.base64,
         mimeType: preparedLogo.data.mimeType || 'image/png'
       }
       Logger.debug('V3 Step 1a: Using prepared logo asset for background/elements branding', {
         generationId,
         mimeType: preparedLogo.data.mimeType,
-        position: styleSettings.branding.position
+        position: styleSettings.branding.value.position
       })
     } else {
       Logger.warn('V3 Step 1a: Prepared logo asset not found for background/elements branding', {
         generationId,
-        position: styleSettings.branding.position,
+        position: styleSettings.branding.value.position,
         preparedAssetKeys: Array.from(preparedAssets?.keys() || [])
       })
     }

@@ -1,4 +1,4 @@
-import { ShotTypeValue, ExpressionSettings } from '@/types/photo-style'
+import { ShotTypeValue, ExpressionType } from '@/types/photo-style'
 import type {
   ApertureSetting,
   FocalLengthSetting,
@@ -6,7 +6,7 @@ import type {
   ShutterSpeedSetting
 } from '../../elements/shot-type/types'
 import { AspectRatioId } from '../../elements/aspect-ratio/config'
-import { PoseDetails } from '../../elements/pose/types'
+import type { PoseType } from '../../elements/pose/types'
 
 type LightingDirection =
   | 'front'
@@ -47,8 +47,11 @@ export interface StandardPresetDefaults {
     lookingSpaceNotes?: string[]
     groundNotes?: string[]
   }
-  pose: Omit<PoseDetails, 'expression'> & { notes?: string[] }
-  expression?: ExpressionSettings['type'] // Separate from pose
+  pose: {
+    type: PoseType
+    notes?: string[]
+  }
+  expression?: ExpressionType
   promptTemplate: string
 }
 
@@ -92,11 +95,7 @@ export const CORPORATE_HEADSHOT: StandardPresetConfig = {
       lookingSpaceNotes: ['Minimal looking space; eyes near top third.']
     },
     pose: {
-      bodyAngle: 'slight-angle',
-      headPosition: 'face-turn',
-      shoulderPosition: 'front-shoulder-dropped',
-      weightDistribution: 'back-foot-70',
-      armPosition: 'not-visible',
+      type: 'slimming_three_quarter',
       notes: ['Chin extended forward and slightly down for jaw definition.']
     },
     expression: 'genuine_smile',
@@ -136,11 +135,7 @@ export const EXECUTIVE_PORTRAIT: StandardPresetConfig = {
       headroomPercent: 12
     },
     pose: {
-      bodyAngle: 'square',
-      headPosition: 'straight-level',
-      shoulderPosition: 'both-relaxed',
-      weightDistribution: 'even',
-      armPosition: 'arms-crossed',
+      type: 'power_cross',
       notes: ['Arms crossed or hands visible to project control and confidence.']
     },
     expression: 'neutral_serious',
@@ -180,11 +175,7 @@ export const LINKEDIN_PROFILE: StandardPresetConfig = {
       headroomPercent: 18
     },
     pose: {
-      bodyAngle: 'slight-angle',
-      headPosition: 'slight-tilt',
-      shoulderPosition: 'front-shoulder-dropped',
-      weightDistribution: 'back-foot-70',
-      armPosition: 'not-visible',
+      type: 'slimming_three_quarter',
       notes: ['Warm genuine smile conveying approachability.']
     },
     expression: 'genuine_smile',
@@ -225,11 +216,7 @@ export const FULL_LENGTH_BUSINESS: StandardPresetConfig = {
       groundNotes: ['Show a touch of floor for grounding.']
     },
     pose: {
-      bodyAngle: 'angle-45',
-      headPosition: 'face-turn',
-      shoulderPosition: 'front-shoulder-dropped',
-      weightDistribution: 'back-foot-70',
-      armPosition: 'one-hand-pocket',
+      type: 'casual_confident',
       notes: ['Front knee slightly bent; alternate pose with arms crossed acceptable.']
     },
     expression: 'soft_smile',
@@ -269,11 +256,7 @@ export const TEAM_GROUP: StandardPresetConfig = {
       lookingSpaceNotes: ['Ensure equal looking direction or consistent gaze for cohesion.']
     },
     pose: {
-      bodyAngle: 'slight-angle',
-      headPosition: 'straight-level',
-      shoulderPosition: 'both-relaxed',
-      weightDistribution: 'even',
-      armPosition: 'relaxed-sides',
+      type: 'classic_corporate',
       notes: ['Encourage light physical connection (touching shoulders) for unity.']
     },
     expression: 'genuine_smile',
@@ -311,11 +294,7 @@ export const FASHION_EDITORIAL: StandardPresetConfig = {
       lookingSpaceNotes: ['Embrace unconventional framing to heighten drama.']
     },
     pose: {
-      bodyAngle: 'angle-45',
-      headPosition: 'slight-tilt',
-      shoulderPosition: 'both-relaxed',
-      weightDistribution: 'hip-shift',
-      armPosition: 'adjusting-jacket',
+      type: 'slimming_three_quarter',
       notes: ['Encourage angular limbs and fashion-forward body language.']
     },
     expression: 'neutral_serious',
@@ -352,11 +331,7 @@ export const LIFESTYLE_CASUAL: StandardPresetConfig = {
       framingNotes: ['Natural, candid framing with breathable negative space']
     },
     pose: {
-      bodyAngle: 'slight-angle',
-      headPosition: 'slight-tilt',
-      shoulderPosition: 'both-relaxed',
-      weightDistribution: 'hip-shift',
-      armPosition: 'one-hand-pocket',
+      type: 'casual_confident',
       notes: ['Encourage real interaction (hold coffee, adjust hair) for authenticity.']
     },
     expression: 'genuine_smile',
@@ -394,11 +369,7 @@ export const INSTAGRAM_SOCIAL: StandardPresetConfig = {
       framingNotes: ['Centered subject with intentional negative space', 'Allow room for graphic overlays']
     },
     pose: {
-      bodyAngle: 'slight-angle',
-      headPosition: 'slight-tilt',
-      shoulderPosition: 'both-relaxed',
-      weightDistribution: 'hip-shift',
-      armPosition: 'relaxed-sides',
+      type: 'approachable_lean',
       notes: ['Capture warm relatable energy; maintain modern styling.']
     },
     expression: 'genuine_smile',
@@ -435,11 +406,7 @@ export const DATING_PROFILE: StandardPresetConfig = {
       framingNotes: ['Face clearly visible, friendly engagement with camera']
     },
     pose: {
-      bodyAngle: 'slight-angle',
-      headPosition: 'straight-level',
-      shoulderPosition: 'both-relaxed',
-      weightDistribution: 'hip-shift',
-      armPosition: 'one-hand-pocket',
+      type: 'casual_confident',
       notes: ['Relaxed posture showing open approachable body language.']
     },
     expression: 'genuine_smile',
@@ -477,11 +444,7 @@ export const FAMILY_PORTRAIT: StandardPresetConfig = {
       framingNotes: ['Balanced arrangement with varied heights', 'Encourage touch and closeness for warmth']
     },
     pose: {
-      bodyAngle: 'slight-angle',
-      headPosition: 'straight-level',
-      shoulderPosition: 'both-relaxed',
-      weightDistribution: 'even',
-      armPosition: 'relaxed-sides',
+      type: 'classic_corporate',
       notes: ['Ensure natural physical connection—hands on shoulders, arms around family members.']
     },
     expression: 'genuine_smile',
@@ -519,11 +482,7 @@ export const ACTOR_HEADSHOT: StandardPresetConfig = {
       framingNotes: ['Minimal headroom; focus on facial expression and eyes']
     },
     pose: {
-      bodyAngle: 'slight-angle',
-      headPosition: 'straight-level',
-      shoulderPosition: 'both-relaxed',
-      weightDistribution: 'even',
-      armPosition: 'not-visible',
+      type: 'classic_corporate',
       notes: ['Chin extended forward and down to sharpen jawline; maintain strong eye contact.']
     },
     expression: 'neutral_serious',
@@ -561,11 +520,7 @@ export const REAL_ESTATE_AGENT: StandardPresetConfig = {
       framingNotes: ['Centered composition with bold presence', 'Allow 15-20% headroom']
     },
     pose: {
-      bodyAngle: 'slight-angle',
-      headPosition: 'straight-level',
-      shoulderPosition: 'both-relaxed',
-      weightDistribution: 'even',
-      armPosition: 'arms-crossed',
+      type: 'power_cross',
       notes: ['Alternate pose with hands on hips or one hand in pocket.']
     },
     expression: 'genuine_smile',
@@ -601,11 +556,7 @@ export const UNIVERSAL_PRESET: StandardPresetConfig = {
       framingNotes: ['Eyes on upper third, minimal looking space', 'Use vertical portrait orientation']
     },
     pose: {
-      bodyAngle: 'slight-angle',
-      headPosition: 'face-turn',
-      shoulderPosition: 'front-shoulder-dropped',
-      weightDistribution: 'back-foot-70',
-      armPosition: 'not-visible',
+      type: 'slimming_three_quarter',
       notes: ['Chin out and down; adjust pose to suit context.']
     },
     expression: 'genuine_smile',

@@ -1,6 +1,7 @@
-import { PhotoStyleSettings } from '@/types/photo-style'
+import { PhotoStyleSettings, ExpressionType, ShotTypeValue } from '@/types/photo-style'
 import { StandardPresetConfig } from './index'
 import { shotTypeSuggestedAspectRatio } from '../elements/shot-type/config'
+import { predefined, hasValue, isUserChoice } from '../elements/base/element-types'
 
 function cloneSettings(settings: PhotoStyleSettings): PhotoStyleSettings {
   return JSON.parse(JSON.stringify(settings)) as PhotoStyleSettings
@@ -19,27 +20,14 @@ export interface AppliedStandardPreset {
 export function getDefaultPresetSettings(preset: StandardPresetConfig): PhotoStyleSettings {
   const defaults: PhotoStyleSettings = {
     presetId: preset.id,
-    shotType: { type: preset.defaults.shotType },
+    shotType: predefined({ type: preset.defaults.shotType as ShotTypeValue }),
     // focalLength, aperture, lightingQuality, shutterSpeed are now dynamically derived
-    // Initialize pose with nested granular defaults
-    pose: {
-      type: 'user-choice',
-      bodyAngle: preset.defaults.pose.bodyAngle,
-      headPosition: preset.defaults.pose.headPosition,
-      shoulderPosition: preset.defaults.pose.shoulderPosition,
-      weightDistribution: preset.defaults.pose.weightDistribution,
-      armPosition: preset.defaults.pose.armPosition,
-      // sittingPose is optional, added below if present
-    },
-    expression: { type: preset.defaults.expression ?? 'user-choice' }
+    pose: predefined({ type: preset.defaults.pose.type }),
+    expression: predefined({ type: (preset.defaults.expression ?? 'genuine_smile') as ExpressionType })
   }
 
   if (preset.defaults.aspectRatio) {
     defaults.aspectRatio = preset.defaults.aspectRatio
-  }
-
-  if (preset.defaults.pose.sittingPose && defaults.pose) {
-    defaults.pose.sittingPose = preset.defaults.pose.sittingPose
   }
 
   return defaults
@@ -68,7 +56,7 @@ export function applyStandardPreset(
 
   // Shot type
   if (!settings.shotType) {
-    settings.shotType = { type: preset.defaults.shotType }
+    settings.shotType = predefined({ type: preset.defaults.shotType as ShotTypeValue })
   }
 
   // Camera defaults
@@ -78,8 +66,8 @@ export function applyStandardPreset(
     }
   }
 
-  const resolvedShotType = settings.shotType?.type
-  if (resolvedShotType && resolvedShotType !== 'user-choice') {
+  const resolvedShotType = hasValue(settings.shotType) ? settings.shotType.value.type : undefined
+  if (resolvedShotType && !isUserChoice(settings.shotType)) {
     const canonicalAspectRatio = shotTypeSuggestedAspectRatio(resolvedShotType).id
     if (settings.aspectRatio !== canonicalAspectRatio) {
       settings.aspectRatio = canonicalAspectRatio
@@ -89,41 +77,14 @@ export function applyStandardPreset(
   // focalLength, aperture, lightingQuality, shutterSpeed are now dynamically derived
   // by camera-settings and lighting elements
 
-  // Initialize pose object if missing
+  // Pose defaults
   if (!settings.pose) {
-    settings.pose = { type: 'user-choice' }
+    settings.pose = predefined({ type: preset.defaults.pose.type })
   }
 
-  // Pose defaults - skip if pose preset is selected to avoid overriding template settings
-  const hasPosePreset = settings.pose.type && settings.pose.type !== 'user-choice'
-  if (!hasPosePreset) {
-    if (!settings.pose.bodyAngle) {
-      settings.pose.bodyAngle = preset.defaults.pose.bodyAngle
-    }
-
-    if (!settings.pose.headPosition) {
-      settings.pose.headPosition = preset.defaults.pose.headPosition
-    }
-
-    if (!settings.pose.shoulderPosition) {
-      settings.pose.shoulderPosition = preset.defaults.pose.shoulderPosition
-    }
-
-    if (!settings.pose.weightDistribution) {
-      settings.pose.weightDistribution = preset.defaults.pose.weightDistribution
-    }
-
-    if (!settings.pose.armPosition) {
-      settings.pose.armPosition = preset.defaults.pose.armPosition
-    }
-
-    if (!settings.pose.sittingPose && preset.defaults.pose.sittingPose) {
-      settings.pose.sittingPose = preset.defaults.pose.sittingPose
-    }
-
-    if (!settings.expression || !settings.expression.type) {
-      settings.expression = { type: preset.defaults.expression ?? 'user-choice' }
-    }
+  // Expression defaults
+  if (!settings.expression || !settings.expression.value?.type) {
+    settings.expression = predefined({ type: (preset.defaults.expression ?? 'genuine_smile') as ExpressionType })
   }
 
   return { preset, settings }

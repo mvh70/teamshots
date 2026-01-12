@@ -1,5 +1,75 @@
 import { getPackageConfig } from './packages'
 
+/**
+ * Helper to check if a category setting indicates user-choice (editable).
+ * Supports both new format (mode) and legacy format (type/style).
+ */
+function isCategoryUserChoice(categoryKey: string, settings: Record<string, unknown> | undefined): boolean {
+  if (!settings) return false
+
+  if (categoryKey === 'clothing') {
+    return settings.style === 'user-choice'
+  }
+
+  // Check new format (mode) first, then legacy format (type)
+  return settings.mode === 'user-choice' || settings.type === 'user-choice'
+}
+
+/**
+ * Determines which categories are user-editable based on:
+ * 1. Original context settings (if admin marked as user-choice)
+ * 2. Package's userStyleCategories as fallback
+ *
+ * This is the source of truth for whether a field should be highlighted
+ * in the sequential focus flow.
+ *
+ * @param originalSettings - The original context settings (from admin or package defaults)
+ * @param packageId - Package ID to get configuration
+ * @returns Set of category keys that are user-editable
+ */
+export function getEditableCategories(
+  originalSettings: Record<string, unknown> | undefined,
+  packageId: string
+): Set<string> {
+  const pkg = getPackageConfig(packageId)
+  const editable = new Set<string>()
+  const visibleCategories = pkg.visibleCategories || []
+
+  // If we have original settings, use them as source of truth
+  // The original settings reflect what the admin configured as editable
+  if (originalSettings) {
+    for (const categoryKey of visibleCategories) {
+      const settings = originalSettings[categoryKey] as Record<string, unknown> | undefined
+      if (isCategoryUserChoice(categoryKey, settings)) {
+        editable.add(categoryKey)
+      }
+    }
+
+    // If original settings exist but no categories are marked as user-choice,
+    // fall back to package's userStyleCategories
+    if (editable.size === 0) {
+      const userStyleCategories = pkg.userStyleCategories || []
+      userStyleCategories.forEach(cat => {
+        if (visibleCategories.includes(cat)) {
+          editable.add(cat)
+        }
+      })
+    }
+
+    return editable
+  }
+
+  // No original settings - use package's userStyleCategories as baseline
+  const userStyleCategories = pkg.userStyleCategories || []
+  userStyleCategories.forEach(cat => {
+    if (visibleCategories.includes(cat)) {
+      editable.add(cat)
+    }
+  })
+
+  return editable
+}
+
 export function hasUserDefinedFields(obj: unknown): boolean {
   const seen = new Set<unknown>()
   const normalize = (s: unknown) =>
@@ -11,8 +81,10 @@ export function hasUserDefinedFields(obj: unknown): boolean {
     seen.add(node)
 
     const record = node as Record<string, unknown>
+    // Check for new format (mode) first, then legacy format (type)
+    const m = (record as { mode?: unknown }).mode
     const t = (record as { type?: unknown }).type
-    if (normalize(t) === 'user-choice') return true
+    if (normalize(m) === 'user-choice' || normalize(t) === 'user-choice') return true
 
     for (const value of Object.values(record)) {
       if (Array.isArray(value)) {
@@ -29,104 +101,28 @@ export function hasUserDefinedFields(obj: unknown): boolean {
   return walk(obj)
 }
 
+/**
+ * Checks if there are any editable fields that haven't been customized yet.
+ * Uses getUneditedEditableFieldNames() for consistent logic.
+ *
+ * @param current - Current photo style settings
+ * @param original - Original context settings to compare against
+ * @param packageId - Package ID to determine which categories are editable
+ * @returns true if there are unedited editable fields, false otherwise
+ */
 export function hasUneditedEditableFields(
   current: Record<string, unknown>,
-  original: Record<string, unknown>,
+  original: Record<string, unknown> | undefined,
   packageId?: string
 ): boolean {
-  // First check if there are any editable fields at all
-  if (!hasUserDefinedFields(current)) {
-    return false
+  // If no packageId, use legacy behavior with hasUserDefinedFields
+  if (!packageId) {
+    return hasUserDefinedFields(current)
   }
 
-  // Special handling for clothingColors at top level: resolve defaults before checking
-  if (packageId && current.clothingColors && original.clothingColors) {
-    const pkg = getPackageConfig(packageId)
-    const packageDefaults = pkg.defaultSettings?.clothingColors
-    const defaultColors = (packageDefaults as { colors?: Record<string, unknown> } | undefined)?.colors || {}
-    
-    const currentClothingColors = current.clothingColors as Record<string, unknown>
-    const originalClothingColors = original.clothingColors as Record<string, unknown>
-    
-    // Check if it's user-choice
-    if ((currentClothingColors.type === 'user-choice' || originalClothingColors.type === 'user-choice')) {
-      const currentColors = (currentClothingColors.colors as Record<string, unknown>) || {}
-      
-      // Merge defaults with current (same logic as PhotoStyleSettings.tsx)
-      const resolvedColors = {
-        ...defaultColors,
-        ...currentColors
-      }
-      
-      const hasColors = !!(resolvedColors.topLayer || resolvedColors.baseLayer || resolvedColors.bottom || resolvedColors.shoes)
-      
-      // If resolved colors exist (from defaults or current), consider it as finished
-      if (hasColors) {
-        // Remove clothingColors from comparison since it's considered finished
-        const currentWithoutClothingColors = { ...current }
-        const originalWithoutClothingColors = { ...original }
-        delete currentWithoutClothingColors.clothingColors
-        delete originalWithoutClothingColors.clothingColors
-        
-        // Continue checking other fields
-        return hasUneditedEditableFields(currentWithoutClothingColors, originalWithoutClothingColors, packageId)
-      }
-    }
-  }
-
-  const seen = new Set<unknown>()
-  const normalize = (s: unknown) =>
-    typeof s === 'string' ? s.toLowerCase().replace(/[\u2010-\u2015]/g, '-').trim() : ''
-
-  const walk = (node: unknown, originalNode: unknown): boolean => {
-    if (!node || typeof node !== 'object') return false
-    if (!originalNode || typeof originalNode !== 'object') return false
-    if (seen.has(node)) return false
-    seen.add(node)
-
-    const currentRecord = node as Record<string, unknown>
-    const originalRecord = originalNode as Record<string, unknown>
-    const currentType = (currentRecord as { type?: unknown }).type
-
-    // If this is a user-choice field, check if it has been modified
-    if (normalize(currentType) === 'user-choice') {
-      // Check if colors are present (for clothingColors or similar)
-      const currentColors = (currentRecord.colors as Record<string, unknown>) || {}
-      const hasCurrentColors = !!(currentColors.topLayer || currentColors.baseLayer || currentColors.bottom || currentColors.shoes)
-      
-      if (hasCurrentColors) {
-        return false // Not unedited - has colors so it's considered finished
-      }
-      
-      // Compare the current and original objects
-      return JSON.stringify(currentRecord) === JSON.stringify(originalRecord)
-    }
-
-    // Recursively check nested objects
-    for (const key of Object.keys(currentRecord)) {
-      const currentValue = currentRecord[key]
-      const originalValue = originalRecord[key]
-
-      if (Array.isArray(currentValue)) {
-        if (Array.isArray(originalValue)) {
-          for (let i = 0; i < currentValue.length; i++) {
-            if (walk(currentValue[i], originalValue[i])) return true
-          }
-        }
-      } else if (typeof currentValue === 'object' && currentValue !== null) {
-        if (typeof originalValue === 'object' && originalValue !== null) {
-          if (walk(currentValue, originalValue)) return true
-        }
-      } else if (typeof currentValue === 'string') {
-        if (normalize(currentValue) === 'user-choice' && currentValue === originalValue) {
-          return true
-        }
-      }
-    }
-    return false
-  }
-
-  return walk(current, original)
+  // Use getUneditedEditableFieldNames for consistent logic
+  const uneditedFields = getUneditedEditableFieldNames(current, original, packageId)
+  return uneditedFields.length > 0
 }
 
 /**
@@ -160,17 +156,18 @@ export function areAllCustomizableSectionsCustomized(
   for (const categoryKey of visibleCategories) {
     const categorySettings = settingsToCheck[categoryKey]
     if (!categorySettings || typeof categorySettings !== 'object') continue
-    
+
     const settings = categorySettings as Record<string, unknown>
-    
+
     // Check if this category is user-choice (customizable)
+    // Support both new format (mode) and legacy format (type)
     let isUserChoice = false
     if (categoryKey === 'clothing') {
       isUserChoice = settings.style === 'user-choice'
     } else {
-      isUserChoice = settings.type === 'user-choice'
+      isUserChoice = settings.mode === 'user-choice' || settings.type === 'user-choice'
     }
-    
+
     if (isUserChoice) {
       initiallyCustomizable.add(categoryKey)
     }
@@ -191,32 +188,37 @@ export function areAllCustomizableSectionsCustomized(
     if (categoryKey === 'clothingColors') {
       // Resolve clothingColors the same way the UI does - merge defaults with current values
       const packageDefaults = pkg.defaultSettings?.clothingColors
-      const defaultColors = (packageDefaults as { colors?: Record<string, unknown> } | undefined)?.colors || {}
-      const currentColors = (settings.colors as Record<string, unknown>) || {}
-      
+      // Support both old format (colors) and new format (value)
+      const pkgDefaultsRecord = packageDefaults as { colors?: Record<string, unknown>; value?: Record<string, unknown> } | undefined
+      const defaultColors = pkgDefaultsRecord?.colors || pkgDefaultsRecord?.value || {}
+      // Support both old format (colors) and new format (value)
+      const currentColors = (settings.colors as Record<string, unknown>) ||
+                           (settings.value as Record<string, unknown>) || {}
+
       // Merge defaults with current (same logic as PhotoStyleSettings.tsx resolvedClothingColors)
       const resolvedColors = {
         ...defaultColors,
         ...currentColors
       }
-      
+
       // Check if resolved colors have any values set
       const hasColors = !!(resolvedColors.topLayer || resolvedColors.baseLayer || resolvedColors.bottom || resolvedColors.shoes)
-      
+
       // If no colors are set (neither in current nor defaults), it's not customized
       if (!hasColors) {
         return false // clothingColors is user-choice but no colors set and no package defaults
       }
       // If colors exist (either from current settings or defaults), consider it as finished
     } else {
-      // For other categories, if type/style is still 'user-choice', it means not customized
-      // When user selects an option, type changes from 'user-choice' to the actual value
+      // For other categories, if type/style/mode is still 'user-choice', it means not customized
+      // When user selects an option, type/mode changes from 'user-choice' to 'predefined' with a value
       if (categoryKey === 'clothing') {
         if (settings.style === 'user-choice') {
           return false // Still 'user-choice', not customized
         }
       } else {
-        if (settings.type === 'user-choice') {
+        // Check both mode (new format) and type (legacy format)
+        if (settings.mode === 'user-choice' || settings.type === 'user-choice') {
           return false // Still 'user-choice', not customized
         }
       }
@@ -228,41 +230,54 @@ export function areAllCustomizableSectionsCustomized(
 
 /**
  * Returns array of category keys that are still unedited (user-choice with no changes).
- * Used by FlowProgressDock to show "Set: pose, colors, ..." status text.
+ * Used by FlowProgressDock to show "Set: pose, colors, ..." status text and for
+ * highlighting the next field in the sequential focus flow.
  *
  * @param current - Current photo style settings
- * @param original - Original context settings to compare against
+ * @param original - Original context settings to compare against (can be undefined)
  * @param packageId - Package ID to determine visible categories
- * @returns Array of category keys that need to be edited
+ * @returns Array of category keys that need to be edited (in visibleCategories order)
  */
 export function getUneditedEditableFieldNames(
   current: Record<string, unknown>,
-  original: Record<string, unknown>,
+  original: Record<string, unknown> | undefined,
   packageId: string
 ): string[] {
   const pkg = getPackageConfig(packageId)
   const visibleCategories = pkg.visibleCategories || []
+
+  // Use package defaults as fallback when original settings are missing
+  const effectiveOriginal = original || (pkg.defaultSettings as Record<string, unknown>) || {}
+
+  // Get editable categories from the proper source of truth
+  // This checks originalSettings first, then falls back to package's userStyleCategories
+  const editableCategories = getEditableCategories(effectiveOriginal, packageId)
+
   const unedited: string[] = []
 
   for (const categoryKey of visibleCategories) {
+    // Only consider categories that are editable (user-choice)
+    if (!editableCategories.has(categoryKey)) continue
+
     const currentSettings = current[categoryKey] as Record<string, unknown> | undefined
-    const originalSettings = original[categoryKey] as Record<string, unknown> | undefined
+    const originalSettings = effectiveOriginal[categoryKey] as Record<string, unknown> | undefined
 
-    if (!currentSettings || !originalSettings) continue
-
-    // Check if this category is user-choice (editable)
-    const isUserChoice = categoryKey === 'clothing'
-      ? currentSettings.style === 'user-choice'
-      : currentSettings.type === 'user-choice'
-
-    if (!isUserChoice) continue // Skip non-editable (predefined) categories
+    // If current settings don't exist, the category needs to be edited
+    if (!currentSettings) {
+      unedited.push(categoryKey)
+      continue
+    }
 
     // Special handling for clothingColors - check if any colors set
     if (categoryKey === 'clothingColors') {
       // Resolve colors with package defaults (same logic as PhotoStyleSettings)
       const packageDefaults = pkg.defaultSettings?.clothingColors
-      const defaultColors = (packageDefaults as { colors?: Record<string, unknown> } | undefined)?.colors || {}
-      const currentColors = (currentSettings.colors as Record<string, unknown>) || {}
+      // Support both old format (colors) and new format (value)
+      const pkgDefaultsRecord = packageDefaults as { colors?: Record<string, unknown>; value?: Record<string, unknown> } | undefined
+      const defaultColors = pkgDefaultsRecord?.colors || pkgDefaultsRecord?.value || {}
+      // Support both old format (colors) and new format (value)
+      const currentColors = (currentSettings.colors as Record<string, unknown>) ||
+                           (currentSettings.value as Record<string, unknown>) || {}
 
       const resolvedColors = {
         ...defaultColors,
@@ -274,8 +289,29 @@ export function getUneditedEditableFieldNames(
         unedited.push(categoryKey)
       }
     } else {
-      // For other categories, check if unchanged from original
-      if (JSON.stringify(currentSettings) === JSON.stringify(originalSettings)) {
+      // For other categories, check if the value has been set/changed
+      // A field is "unedited" if:
+      // 1. It has no value set (value is undefined)
+      // 2. OR it matches the original exactly (user hasn't made any changes)
+
+      // Check if user has made a selection (value exists in new format)
+      const hasValue = currentSettings.value !== undefined
+
+      // If no value yet, it's definitely unedited
+      if (!hasValue) {
+        // Also check legacy format - if mode is user-choice with no value, it's unedited
+        const isUserChoiceWithNoValue =
+          (currentSettings.mode === 'user-choice' && currentSettings.value === undefined) ||
+          (currentSettings.type === 'user-choice')
+
+        if (isUserChoiceWithNoValue) {
+          unedited.push(categoryKey)
+          continue
+        }
+      }
+
+      // Compare with original - if unchanged, it's unedited
+      if (originalSettings && JSON.stringify(currentSettings) === JSON.stringify(originalSettings)) {
         unedited.push(categoryKey)
       }
     }

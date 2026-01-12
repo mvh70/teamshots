@@ -24,6 +24,7 @@ import {
   ElementContribution,
   type PreparedAsset,
 } from '../../base/StyleElement'
+import { isUserChoice, hasValue } from '../../base/element-types'
 import { Logger } from '@/lib/logger'
 import { Telemetry } from '@/lib/telemetry'
 import { CostTrackingService } from '@/domain/services/CostTrackingService'
@@ -31,7 +32,8 @@ import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getColorHex, type ColorValue } from '../../clothing-colors/types'
 import type { S3Client } from '@aws-sdk/client-s3'
 import { getS3BucketName } from '@/lib/s3-client'
-import type { ClothingSettings, BrandingSettings } from '@/types/photo-style'
+import type { BrandingSettings, BrandingValue } from '../../branding/types'
+import type { ClothingValue } from '../../clothing/types'
 import { WARDROBE_DETAILS, generateWardrobePrompt } from '../../clothing/prompt'
 import type { KnownClothingStyle } from '../../clothing/config'
 import { AssetService } from '@/domain/services/AssetService'
@@ -68,12 +70,13 @@ export class ClothingOverlayElement extends StyleElement {
     if (phase !== 'person-generation') return false
 
     // Only when branding on clothing is enabled
-    if (settings.branding?.type !== 'include') return false
-    if (settings.branding?.position !== 'clothing') return false
+    if (!hasValue(settings.branding)) return false
+    if (settings.branding.value.type !== 'include') return false
+    if (settings.branding.value.position !== 'clothing') return false
 
     // For ALL clothing styles when branding on clothing is enabled
     const clothing = settings.clothing
-    if (!clothing || clothing.type === 'user-choice') return false
+    if (!clothing || isUserChoice(clothing) || !hasValue(clothing)) return false
 
     // Overlay applies to all predefined clothing styles
     return true
@@ -87,12 +90,13 @@ export class ClothingOverlayElement extends StyleElement {
     const { settings } = context
 
     // Only when branding on clothing is enabled
-    if (settings.branding?.type !== 'include') return false
-    if (settings.branding?.position !== 'clothing') return false
+    if (!hasValue(settings.branding)) return false
+    if (settings.branding.value.type !== 'include') return false
+    if (settings.branding.value.position !== 'clothing') return false
 
     // For ALL clothing styles when branding on clothing is enabled
     const clothing = settings.clothing
-    if (!clothing || clothing.type === 'user-choice') return false
+    if (!clothing || isUserChoice(clothing) || !hasValue(clothing)) return false
 
     // Overlay applies to all predefined clothing styles
     return true
@@ -113,7 +117,8 @@ export class ClothingOverlayElement extends StyleElement {
     const startTime = Date.now()
     const { settings, generationContext } = context
     const clothing = settings.clothing!
-    const branding = settings.branding!
+    const clothingValue = clothing.value!
+    const branding = settings.branding!.value!
     const generationId = generationContext.generationId || 'unknown'
 
     // Type guard for services
@@ -139,8 +144,8 @@ export class ClothingOverlayElement extends StyleElement {
 
     Logger.info('[ClothingOverlayElement] Starting clothing overlay preparation', {
       generationId,
-      style: clothing.style,
-      details: clothing.details,
+      style: clothingValue.style,
+      details: clothingValue.details,
       brandingPosition: branding.position,
     })
 
@@ -157,8 +162,8 @@ export class ClothingOverlayElement extends StyleElement {
     const logoAssetId = preparedLogo.data.metadata?.assetId as string | undefined
 
     // 1. Generate fingerprint using Asset-based approach
-    const clothingColors = settings.clothingColors?.colors
-    const fingerprint = this.getFingerprint(clothing, branding, logoAssetId, clothingColors)
+    const clothingColors = settings.clothingColors && hasValue(settings.clothingColors) ? settings.clothingColors.value : undefined
+    const fingerprint = this.getFingerprint(clothingValue, branding, logoAssetId, clothingColors)
     Logger.debug('[ClothingOverlayElement] Generated fingerprint', {
       fingerprint,
       generationId,
@@ -237,7 +242,7 @@ export class ClothingOverlayElement extends StyleElement {
 
       // 4. Generate clothing overlay with logo
       const overlayResult = await this.generateClothingOverlay({
-        clothing,
+        clothing: clothingValue,
         branding,
         logoData,
         generationId,
@@ -257,7 +262,7 @@ export class ClothingOverlayElement extends StyleElement {
         const overlayAsset = await this.createOverlayAsset({
           s3Key,
           fingerprint,
-          clothing,
+          clothing: clothingValue,
           branding,
           logoAssetId,
           ownerContext,
@@ -295,7 +300,7 @@ export class ClothingOverlayElement extends StyleElement {
         mimeType: 'image/png',
         s3Key: s3Key!,
         metadata: {
-          clothingStyle: `${clothing.style}-${clothing.details}`,
+          clothingStyle: `${clothingValue.style}-${clothingValue.details}`,
           brandingPosition: branding.position,
           fingerprint,
           fromCache,
@@ -376,8 +381,8 @@ export class ClothingOverlayElement extends StyleElement {
    * Generate clothing overlay using Gemini
    */
   private async generateClothingOverlay(params: {
-    clothing: ClothingSettings
-    branding: BrandingSettings
+    clothing: ClothingValue
+    branding: BrandingValue
     logoData: { base64: string; mimeType: string }
     generationId?: string
     clothingColors?: { baseLayer?: string | ColorValue; topLayer?: string | ColorValue; bottom?: string | ColorValue; shoes?: string | ColorValue }
@@ -492,8 +497,8 @@ export class ClothingOverlayElement extends StyleElement {
    * Build prompt for overlay generation
    */
   private buildOverlayPrompt(
-    clothing: ClothingSettings,
-    branding: BrandingSettings,
+    clothing: ClothingValue,
+    branding: BrandingValue,
     shotType: string = 'medium-shot',
     clothingColors?: { baseLayer?: string | ColorValue; topLayer?: string | ColorValue; bottom?: string | ColorValue; shoes?: string | ColorValue }
   ): string {
@@ -501,7 +506,7 @@ export class ClothingOverlayElement extends StyleElement {
     // This ensures 100% consistency between overlay generation and regular person generation
     const wardrobeResult = generateWardrobePrompt({
       clothing,
-      clothingColors: clothingColors ? { type: 'predefined', colors: clothingColors } : undefined,
+      clothingColors: clothingColors ? { mode: 'predefined', value: clothingColors } : undefined,
       shotType: shotType as any
     })
 
@@ -822,8 +827,8 @@ FINAL VERIFICATION BEFORE OUTPUT:
    * Uses StyleFingerprintService for deterministic hashing
    */
   private getFingerprint(
-    clothing: ClothingSettings,
-    branding: BrandingSettings,
+    clothing: ClothingValue,
+    branding: BrandingValue,
     logoAssetId?: string,
     clothingColors?: { baseLayer?: string | ColorValue; topLayer?: string | ColorValue; bottom?: string | ColorValue; shoes?: string | ColorValue }
   ): string {
@@ -955,8 +960,8 @@ FINAL VERIFICATION BEFORE OUTPUT:
   private async createOverlayAsset(params: {
     s3Key: string
     fingerprint: string
-    clothing: ClothingSettings
-    branding: BrandingSettings
+    clothing: ClothingValue
+    branding: BrandingValue
     logoAssetId?: string
     ownerContext: { teamId?: string; personId?: string }
     generationId?: string
@@ -1012,12 +1017,14 @@ FINAL VERIFICATION BEFORE OUTPUT:
 
     // If clothing overlay would be relevant, validate requirements
     if (
-      branding?.type === 'include' &&
-      branding?.position === 'clothing' &&
+      hasValue(branding) &&
+      branding.value.type === 'include' &&
+      branding.value.position === 'clothing' &&
       clothing &&
-      clothing.type !== 'user-choice'
+      !isUserChoice(clothing) &&
+      hasValue(clothing)
     ) {
-      if (!branding.logoKey) {
+      if (!branding.value.logoKey) {
         errors.push('Clothing overlay requires logo key when branding on clothing')
       }
     }

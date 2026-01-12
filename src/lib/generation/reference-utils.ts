@@ -6,6 +6,7 @@ import path from 'path'
 import { Logger } from '@/lib/logger'
 import { PhotoStyleSettings } from '@/types/photo-style'
 import { DownloadAssetFn, ReferenceImage } from '@/types/generation'
+import { hasValue } from '@/domain/style/elements/base/element-types'
 
 type SelfieBufferProvider = (selfieKey: string) => Promise<Buffer>
 
@@ -443,13 +444,13 @@ export async function buildCollectiveReferenceImages(
 
   // Skip logo/background downloads for v3 workflow - handled by element preparation in step 0
   if (workflowVersion !== 'v3') {
-    if (styleSettings.branding?.type !== 'exclude') {
-      const logo = await buildLogoReference(styleSettings.branding?.logoKey, downloadAsset)
+    if (hasValue(styleSettings.branding) && styleSettings.branding.value.type !== 'exclude') {
+      const logo = await buildLogoReference(styleSettings.branding.value.logoKey, downloadAsset)
       if (logo) references.push(logo)
     }
 
-    if (styleSettings.background?.type === 'custom') {
-      const background = await buildBackgroundReference(styleSettings.background.key, downloadAsset)
+    if (styleSettings.background?.value?.type === 'custom') {
+      const background = await buildBackgroundReference(styleSettings.background.value.key, downloadAsset)
       if (background) references.push(background)
     }
   }

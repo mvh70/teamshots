@@ -4,6 +4,7 @@ import React from 'react'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
 import { UserIcon } from '@heroicons/react/24/outline'
 import { getElementMetadata } from '@/domain/style/elements'
+import { isUserChoice, hasValue } from '@/domain/style/elements/base/element-types'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 interface UserStyleSummaryProps {
   settings?: Partial<PhotoStyleSettings> | null
@@ -21,11 +22,15 @@ const USER_STYLE_ELEMENTS = [
 export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
   if (!settings) return null
 
-  const clothingStyle = settings.clothing?.style
-  const clothingDetails = settings.clothing?.details
-  const clothingAccessories = settings.clothing?.accessories
+  // Extract clothing value from wrapper (if present and has value)
+  const clothingWrapper = settings.clothing
+  const clothingHasValue = clothingWrapper && hasValue(clothingWrapper)
+  const clothingStyle = clothingHasValue ? clothingWrapper.value.style : undefined
+  const clothingDetails = clothingHasValue ? clothingWrapper.value.details : undefined
+  const clothingAccessories = clothingHasValue ? clothingWrapper.value.accessories : undefined
+  const clothingIsUserChoice = clothingWrapper ? isUserChoice(clothingWrapper) : false
   const lightingType = settings.lighting?.type
-  const hasClothing = settings.clothing !== undefined
+  const hasClothingSettings = settings.clothing !== undefined
   const hasLighting = settings.lighting !== undefined
 
   const getClothingPhrase = (style?: string, details?: string): string | undefined => {
@@ -92,14 +97,14 @@ export default function UserStyleSummary({ settings }: UserStyleSummaryProps) {
             }
 
             // Fallback for elements without summary components yet
-            if (elementKey === 'clothing' && hasClothing) {
+            if (elementKey === 'clothing' && hasClothingSettings) {
               return (
                 <div key="clothing" id="style-clothing-type" className="flex flex-col space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="underline decoration-2 underline-offset-2 font-semibold text-gray-800">Clothing style</span>
                   </div>
                   <div className="ml-6 text-sm capitalize">
-                    {!clothingStyle || clothingStyle === 'user-choice' ? (
+                    {clothingIsUserChoice || !clothingStyle ? (
                       <span className="inline-flex items-center gap-1.5 normal-case">
                         <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
                         <span className="text-gray-600">User choice</span>

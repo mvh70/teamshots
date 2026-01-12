@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
-import { BrandingSettings } from '@/types/photo-style'
+import type { BrandingSettings, BrandingValue, BrandingType } from './types'
+import { hasValue, userChoice } from '../base/element-types'
 import { Grid } from '@/components/ui'
 import { BRANDING_POSITIONS } from './config'
 import Image from 'next/image'
@@ -33,23 +34,29 @@ export default function BrandingSelector({
   const [, setImageLoaded] = useState(false)
   const previewSetRef = useRef<string | null>(null)
 
-  const handleTypeChange = (type: BrandingSettings['type']) => {
-    const newSettings: BrandingSettings = { 
+  // Extract inner value for easier access
+  const brandingValue = hasValue(value) ? value.value : undefined
+  const brandingType = brandingValue?.type ?? 'exclude'
+  const logoKey = brandingValue?.logoKey
+  const position = brandingValue?.position ?? 'clothing'
+
+  const handleTypeChange = (type: BrandingType) => {
+    const newValue: BrandingValue = {
       type,
-      position: value.position // Preserve position when toggling type
+      position // Preserve position when toggling type
     }
-    
+
     // Set default values based on type
     switch (type) {
       case 'include':
-        newSettings.logoKey = value.logoKey || ''
+        newValue.logoKey = logoKey || ''
         break
       case 'exclude':
         // No additional settings needed
         break
     }
-    
-    onChange(newSettings)
+
+    onChange(userChoice(newValue))
   }
 
   const handleFileUpload = async (file: File | null) => {
@@ -83,12 +90,22 @@ export default function BrandingSelector({
       }
       
       const { key } = await res.json()
-      
+
       // Store only the key, not the full URL (same as selfies)
-      onChange({ ...value, logoKey: key })
+      const newValue: BrandingValue = {
+        type: brandingType,
+        position,
+        logoKey: key
+      }
+      onChange(userChoice(newValue))
     } catch (e) {
       console.error('Logo upload failed', e)
-      onChange({ ...value, logoKey: undefined })
+      const newValue: BrandingValue = {
+        type: brandingType,
+        position,
+        logoKey: undefined
+      }
+      onChange(userChoice(newValue))
     }
   }
 
@@ -102,29 +119,34 @@ export default function BrandingSelector({
   }, [previewUrl])
 
 
-  const handlePositionChange = (position: BrandingSettings['position']) => {
-    onChange({ ...value, position })
+  const handlePositionChange = (newPosition: BrandingValue['position']) => {
+    const newValue: BrandingValue = {
+      type: brandingType,
+      position: newPosition,
+      logoKey
+    }
+    onChange(userChoice(newValue))
   }
 
-  // Sync preview URL from value.logoKey when editing existing logos.
+  // Sync preview URL from logoKey when editing existing logos.
   // This is an intentional prop sync pattern: when the parent provides a saved logoKey,
   // we need to generate the preview URL. The ref tracks processed keys to avoid redundant updates.
   /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
   useEffect(() => {
     // Only set preview if logoKey changed and we haven't set it yet
-    if (value.logoKey && previewSetRef.current !== value.logoKey) {
+    if (logoKey && previewSetRef.current !== logoKey) {
       const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
-      const url = `/api/files/get?key=${encodeURIComponent(value.logoKey)}${tokenParam}`
+      const url = `/api/files/get?key=${encodeURIComponent(logoKey)}${tokenParam}`
       setPreviewUrl(url)
       setImageLoaded(false) // Reset to false, will be set to true on successful load
-      previewSetRef.current = value.logoKey
-    } else if (!value.logoKey && previewSetRef.current) {
+      previewSetRef.current = logoKey
+    } else if (!logoKey && previewSetRef.current) {
       // Clear preview if no logoKey
       setPreviewUrl(null)
       setImageLoaded(false)
       previewSetRef.current = null
     }
-  }, [value.logoKey, token])
+  }, [logoKey, token])
   /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 
   return (
@@ -151,21 +173,21 @@ export default function BrandingSelector({
       <div className={`mb-6 ${isPredefined ? 'hidden md:block' : ''}`}>
         <button
           type="button"
-          onClick={() => !(isPredefined || isDisabled) && handleTypeChange(value.type === 'include' ? 'exclude' : 'include')}
+          onClick={() => !(isPredefined || isDisabled) && handleTypeChange(brandingType === 'include' ? 'exclude' : 'include')}
           disabled={isPredefined || isDisabled}
           className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
             (isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : ''
           }`}
         >
           <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-            value.type === 'include' ? 'bg-brand-primary' : 'bg-gray-300'
+            brandingType === 'include' ? 'bg-brand-primary' : 'bg-gray-300'
           }`}>
             <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-              value.type === 'include' ? 'translate-x-5' : 'translate-x-1'
+              brandingType === 'include' ? 'translate-x-5' : 'translate-x-1'
             }`} />
           </div>
-          <span className={value.type === 'include' ? 'text-brand-primary' : 'text-gray-600'}>
-            {value.type === 'include' 
+          <span className={brandingType === 'include' ? 'text-brand-primary' : 'text-gray-600'}>
+            {brandingType === 'include'
               ? t('include', { default: 'Include Logo' })
               : t('exclude', { default: 'No Logo' })}
           </span>
@@ -173,7 +195,7 @@ export default function BrandingSelector({
       </div>
 
       {/* Toggle include/exclude via buttons above; when include is active, show upload and position */}
-      {value.type === 'include' && (
+      {brandingType === 'include' && (
         <div className="space-y-3">
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-0 text-center relative overflow-hidden">
             {previewUrl ? (
@@ -194,12 +216,12 @@ export default function BrandingSelector({
                         url: previewUrl,
                         status: response.status,
                         statusText: response.statusText,
-                        logoKey: value.logoKey
+                        logoKey
                       })
                     } catch (fetchError) {
                       console.error('[BrandingSelector] Failed to load logo preview:', {
                         url: previewUrl,
-                        logoKey: value.logoKey,
+                        logoKey,
                         error: fetchError instanceof Error ? fetchError.message : String(fetchError)
                       })
                     }
@@ -254,9 +276,9 @@ export default function BrandingSelector({
             {isPredefined ? (
               <div className="md:hidden">
                 <div className="text-sm font-medium text-gray-700">
-                  {value.position === 'background' && t('position.background', { default: 'Background' })}
-                  {value.position === 'clothing' && t('position.clothing', { default: 'Clothing' })}
-                  {value.position === 'elements' && t('position.elements', { default: 'Other elements' })}
+                  {position === 'background' && t('position.background', { default: 'Background' })}
+                  {position === 'clothing' && t('position.clothing', { default: 'Clothing' })}
+                  {position === 'elements' && t('position.elements', { default: 'Other elements' })}
                 </div>
               </div>
             ) : (
@@ -267,18 +289,18 @@ export default function BrandingSelector({
             <div className={isPredefined ? 'hidden md:block' : ''}>
               <Grid cols={{ mobile: 1, tablet: 3 }} gap="sm">
                 {BRANDING_POSITIONS.map(opt => {
-                  const isSelected = value.position === opt.key
+                  const isSelected = position === opt.key
                   // On mobile, hide unselected options when predefined
                   const shouldHide = isPredefined && !isSelected
-                  
+
                   return (
                   <button
                     type="button"
                     key={opt.key}
-                    onClick={() => !(isPredefined || isDisabled) && handlePositionChange(opt.key as BrandingSettings['position'])}
+                    onClick={() => !(isPredefined || isDisabled) && handlePositionChange(opt.key as BrandingValue['position'])}
                     disabled={isPredefined || isDisabled}
                     className={`w-full px-3 py-2 rounded-md border text-sm transition-colors ${
-                      value.position === opt.key
+                      position === opt.key
                         ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
                       } ${(isPredefined || isDisabled) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${
@@ -290,21 +312,21 @@ export default function BrandingSelector({
                   )
                 })}
               </Grid>
-              
+
               {/* Show preview image for selected position */}
-              {value.position && (() => {
+              {position && (() => {
                 const imageMap: Record<string, string> = {
                   'background': 'branding-background.png',
                   'clothing': 'branding-clothing.png',
                   'elements': 'branding-other.png'
                 }
-                const imageSrc = `/images/branding/${imageMap[value.position]}`
-                
+                const imageSrc = `/images/branding/${imageMap[position]}`
+
                 return (
                   <div className="mt-4 rounded-md overflow-hidden border border-gray-200">
                     <Image
                       src={imageSrc}
-                      alt={t(`position.${value.position}`)}
+                      alt={t(`position.${position}`)}
                       width={600}
                       height={400}
                       className="w-full h-auto object-cover"
@@ -317,7 +339,7 @@ export default function BrandingSelector({
         </div>
       )}
 
-      {value.type === 'exclude' && (
+      {brandingType === 'exclude' && (
         <div className="text-center py-4">
           <p className="text-sm text-gray-600">
             {t('noLogoMessage', { default: 'No logo will be included in the photos' })}

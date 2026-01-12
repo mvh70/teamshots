@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { promoteUploads } from '@/lib/uploadHelpers'
+import type { ClassificationResult } from '@/domain/selfie/selfie-types'
 
 type UploadSource = 'camera' | 'ios-camera' | 'file'
 
@@ -48,6 +49,8 @@ interface PendingApproval {
   key: string
   previewUrl?: string
   source: UploadSource
+  /** Original file for classification */
+  file?: File
 }
 
 type FlowAction =
@@ -124,7 +127,10 @@ export function useUploadFlow({
   }, [])
 
   const persistUploads = useCallback(
-    async (uploads: UploadResult[]): Promise<{ key: string; selfieId?: string }[]> => {
+    async (
+      uploads: UploadResult[],
+      classification?: ClassificationResult
+    ): Promise<{ key: string; selfieId?: string }[]> => {
       if (!uploads.length) return []
 
       if (saveEndpoint) {
@@ -142,7 +148,14 @@ export function useUploadFlow({
         return results
       }
 
-      return promoteUploads(uploads)
+      // Pass classification to promote endpoint
+      return promoteUploads(uploads, classification ? {
+        selfieType: classification.selfieType,
+        selfieTypeConfidence: classification.confidence,
+        personCount: classification.personCount,
+        isProper: classification.isProper,
+        improperReason: classification.improperReason,
+      } : undefined)
     },
     [saveEndpoint]
   )
@@ -183,10 +196,10 @@ export function useUploadFlow({
   )
 
   const approveUploads = useCallback(
-    async (uploads: UploadResult[]) => {
+    async (uploads: UploadResult[], classification?: ClassificationResult) => {
       try {
         dispatch({ type: 'PROCESSING' })
-        const successfulResults = await persistUploads(uploads)
+        const successfulResults = await persistUploads(uploads, classification)
         await onApproved?.(successfulResults)
         dispatch({ type: 'RESET' })
       } catch (error) {
@@ -201,32 +214,17 @@ export function useUploadFlow({
   const handleUploadResult = useCallback(
     async (result: UploadResult | UploadResult[]) => {
       const uploads = Array.isArray(result) ? result : [result]
-      const single = uploads.length === 1 ? uploads[0] : null
-
-      if (
-        single &&
-        (single.source === 'camera' || single.source === 'ios-camera') &&
-        single.url
-      ) {
-        const pending: PendingApproval = {
-          key: single.key,
-          previewUrl: single.url,
-          source: single.source
-        }
-        pendingApprovalRef.current = pending
-        dispatch({ type: 'PENDING_APPROVAL', payload: pending })
-        return
-      }
-
+      // Skip approval screen - classification happens server-side in promote endpoint
+      // Selfies go directly to the grid, improper ones will be shown but not selectable
       await approveUploads(uploads)
     },
     [approveUploads]
   )
 
-  const approvePending = useCallback(async () => {
+  const approvePending = useCallback(async (classification?: ClassificationResult) => {
     if (!pendingApprovalRef.current) return
     const pending = pendingApprovalRef.current
-    await approveUploads([{ key: pending.key }])
+    await approveUploads([{ key: pending.key }], classification)
     pendingApprovalRef.current = null
   }, [approveUploads])
 

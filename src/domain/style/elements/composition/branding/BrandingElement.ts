@@ -20,6 +20,7 @@ import {
 } from '../../branding/config'
 import { generateBrandingPrompt } from '../../branding/prompt'
 import type { KnownClothingStyle } from '../../clothing/config'
+import { hasValue } from '../../base/element-types'
 import { Logger } from '@/lib/logger'
 import sharp from 'sharp'
 import { AssetService } from '@/domain/services/AssetService'
@@ -47,17 +48,24 @@ export class BrandingElement extends StyleElement {
   isRelevantForPhase(context: ElementContext): boolean {
     const { phase, settings } = context
 
-    // Skip if no branding or explicitly excluded
-    if (!settings.branding || settings.branding.type === 'exclude') {
+    // Skip if no branding or no value
+    if (!settings.branding || !hasValue(settings.branding)) {
+      return false
+    }
+
+    const brandingValue = settings.branding.value
+
+    // Skip if explicitly excluded
+    if (brandingValue.type === 'exclude') {
       return false
     }
 
     // Skip if no logo is provided
-    if (!settings.branding.logoKey && !settings.branding.logoAssetId) {
+    if (!brandingValue.logoKey && !brandingValue.logoAssetId) {
       return false
     }
 
-    const position = settings.branding.position || 'background'
+    const position = brandingValue.position || 'background'
 
     // Person generation: contribute for clothing branding only
     if (phase === 'person-generation') {
@@ -85,12 +93,17 @@ export class BrandingElement extends StyleElement {
     const { settings } = context
     const branding = settings.branding
 
-    if (!branding || branding.type === 'exclude') {
+    if (!branding || !hasValue(branding)) {
+      return false
+    }
+
+    const brandingValue = branding.value
+    if (brandingValue.type === 'exclude') {
       return false
     }
 
     // Need preparation if we have a logo to download
-    return !!(branding.logoKey || branding.logoAssetId)
+    return !!(brandingValue.logoKey || brandingValue.logoAssetId)
   }
 
   /**
@@ -101,7 +114,11 @@ export class BrandingElement extends StyleElement {
    */
   async prepare(context: ElementContext): Promise<PreparedAsset> {
     const { settings, generationContext } = context
-    const branding = settings.branding!
+    // Extract the branding value from the wrapper
+    if (!settings.branding || !hasValue(settings.branding)) {
+      throw new Error('BrandingElement.prepare(): branding must have a value')
+    }
+    const brandingValue = settings.branding.value
     const generationId = generationContext.generationId || 'unknown'
 
     // Type guard for downloadAsset service
@@ -113,14 +130,14 @@ export class BrandingElement extends StyleElement {
       throw new Error('BrandingElement.prepare(): downloadAsset must be provided in generationContext')
     }
 
-    const logoKey = branding.logoKey || branding.logoAssetId
+    const logoKey = brandingValue.logoKey || brandingValue.logoAssetId
     if (!logoKey) {
       throw new Error('BrandingElement.prepare(): No logo key or asset ID provided')
     }
 
     // OPTIMIZATION: Check if we already have a prepared logo from a previous generation
     // This is common in regenerations where the logo was already processed
-    const existingPreparedKey = (branding as { preparedLogoKey?: string }).preparedLogoKey
+    const existingPreparedKey = brandingValue.preparedLogoKey
     if (existingPreparedKey) {
       Logger.info('[BrandingElement] Found existing prepared logo, attempting to reuse', {
         generationId,
@@ -148,7 +165,7 @@ export class BrandingElement extends StyleElement {
               mimeType: preparedLogo.mimeType,
               s3Key: logoKey, // Keep original logo key for reference
               metadata: {
-                position: branding.position,
+                position: brandingValue.position,
                 preparedLogoS3Key: existingPreparedKey,
                 reused: true, // Flag to indicate this was reused
               },
@@ -181,7 +198,7 @@ export class BrandingElement extends StyleElement {
     Logger.info('[BrandingElement] Downloading logo', {
       generationId,
       logoKey,
-      position: branding.position,
+      position: brandingValue.position,
     })
 
     // Download logo
@@ -286,7 +303,7 @@ export class BrandingElement extends StyleElement {
         styleFingerprint: undefined, // No fingerprint needed for prepared logos
         styleContext: {
           originalLogoKey: logoKey,
-          brandingPosition: branding.position,
+          brandingPosition: brandingValue.position,
           generationId,
           step: 'logo_preparation',
         },
@@ -309,7 +326,7 @@ export class BrandingElement extends StyleElement {
           mimeType: finalMimeType,
           s3Key: logoKey, // Keep original logo key for reference
           metadata: {
-            position: branding.position,
+            position: brandingValue.position,
             assetId: logoAsset.id, // Include Asset ID for ClothingOverlayElement
             preparedLogoS3Key, // Include prepared logo S3 key
           },
@@ -326,18 +343,22 @@ export class BrandingElement extends StyleElement {
 
   async contribute(context: ElementContext): Promise<ElementContribution> {
     const { phase, settings } = context
-    const branding = settings.branding!
+    // Extract branding value from wrapper
+    if (!settings.branding || !hasValue(settings.branding)) {
+      return {}
+    }
+    const brandingValue = settings.branding.value
 
     if (phase === 'person-generation') {
-      return this.contributeToPersonGeneration(branding, context)
+      return this.contributeToPersonGeneration(brandingValue, context)
     }
 
     if (phase === 'background-generation') {
-      return this.contributeToBackgroundGeneration(branding, context)
+      return this.contributeToBackgroundGeneration(brandingValue, context)
     }
 
     if (phase === 'composition') {
-      return this.contributeToComposition(branding, context)
+      return this.contributeToComposition(brandingValue, context)
     }
 
     return {}
@@ -348,11 +369,11 @@ export class BrandingElement extends StyleElement {
    * Provides logo placement rules for clothing branding
    */
   private contributeToPersonGeneration(
-    branding: NonNullable<import('../../branding/types').BrandingSettings>,
+    brandingValue: import('../../branding/types').BrandingValue,
     context: ElementContext
   ): ElementContribution {
     // Only handle clothing branding in person generation
-    const position = branding.position || 'background'
+    const position = brandingValue.position || 'background'
     if (position !== 'clothing') {
       return {}
     }
@@ -428,8 +449,8 @@ export class BrandingElement extends StyleElement {
       metadata: {
         position: 'clothing',
         hasLogo: true,
-        logoKey: branding.logoKey,
-        logoAssetId: branding.logoAssetId,
+        logoKey: brandingValue.logoKey,
+        logoAssetId: brandingValue.logoAssetId,
         styleKey,
         detailKey,
       },
@@ -441,10 +462,10 @@ export class BrandingElement extends StyleElement {
    * Provides logo placement rules for the background image
    */
   private contributeToBackgroundGeneration(
-    branding: NonNullable<import('../../branding/types').BrandingSettings>,
+    brandingValue: import('../../branding/types').BrandingValue,
     context: ElementContext
   ): ElementContribution {
-    const position = branding.position || 'background'
+    const position = brandingValue.position || 'background'
 
     // CRITICAL: Read clothing data from accumulated payload for branding placement logic
     const subject = context.accumulatedPayload?.subject as Record<string, unknown> | undefined
@@ -518,8 +539,8 @@ export class BrandingElement extends StyleElement {
       metadata: {
         position,
         hasLogo: true,
-        logoKey: branding.logoKey,
-        logoAssetId: branding.logoAssetId,
+        logoKey: brandingValue.logoKey,
+        logoAssetId: brandingValue.logoAssetId,
         styleKey,
         detailKey,
       },
@@ -532,10 +553,10 @@ export class BrandingElement extends StyleElement {
    * (clothing branding is already on the person from Step 1a)
    */
   private contributeToComposition(
-    branding: NonNullable<import('../../branding/types').BrandingSettings>,
+    brandingValue: import('../../branding/types').BrandingValue,
     context: ElementContext
   ): ElementContribution {
-    const position = branding.position || 'background'
+    const position = brandingValue.position || 'background'
 
     // Skip if branding is on clothing (already applied in Step 1a)
     if (position === 'clothing') {
@@ -630,8 +651,8 @@ export class BrandingElement extends StyleElement {
       metadata: {
         hasBackgroundLogo: true,
         position,
-        logoKey: branding.logoKey,
-        logoAssetId: branding.logoAssetId,
+        logoKey: brandingValue.logoKey,
+        logoAssetId: brandingValue.logoAssetId,
       },
     }
   }
@@ -655,15 +676,17 @@ export class BrandingElement extends StyleElement {
     const errors: string[] = []
     const branding = settings.branding
 
-    if (!branding) {
+    if (!branding || !hasValue(branding)) {
       return errors
     }
 
+    const brandingVal = branding.value
+
     // If branding is set to include, must have a logo
     if (
-      branding.type === 'include' &&
-      !branding.logoKey &&
-      !branding.logoAssetId
+      brandingVal.type === 'include' &&
+      !brandingVal.logoKey &&
+      !brandingVal.logoAssetId
     ) {
       errors.push(
         'Branding is set to "include" but no logo key or asset ID is provided'
@@ -672,10 +695,10 @@ export class BrandingElement extends StyleElement {
 
     // Validate position
     if (
-      branding.position &&
-      !['background', 'clothing', 'elements'].includes(branding.position)
+      brandingVal.position &&
+      !['background', 'clothing', 'elements'].includes(brandingVal.position)
     ) {
-      errors.push(`Invalid branding position: ${branding.position}`)
+      errors.push(`Invalid branding position: ${brandingVal.position}`)
     }
 
     return errors

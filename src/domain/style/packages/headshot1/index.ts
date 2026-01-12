@@ -9,6 +9,7 @@ import * as clothing from '../../elements/clothing'
 import * as clothingColors from '../../elements/clothing-colors'
 import * as pose from '../../elements/pose'
 import * as expression from '../../elements/expression'
+import { predefined, userChoice } from '../../elements/base/element-types'
 
 const VISIBLE_CATEGORIES: CategoryType[] = [
   'background', 
@@ -33,7 +34,8 @@ const AVAILABLE_POSES = [
   //'approachable_lean',
   'candid_over_shoulder',
   'seated_engagement',
-  'jacket_reveal'
+  'jacket_reveal',
+  'thumbs_up'
 ]
 const AVAILABLE_EXPRESSIONS = [
   'genuine_smile',
@@ -55,16 +57,13 @@ const HEADSHOT1_PRESET_DEFAULTS = getDefaultPresetSettings(HEADSHOT1_PRESET)
 
 const DEFAULTS = {
   ...HEADSHOT1_PRESET_DEFAULTS,
-  clothingColors: {
-    type: 'predefined' as const,
-    colors: {
-      topLayer: 'Dark red',
-      baseLayer: 'White',
-      shoes: 'brown',
-      bottom: 'Gray'
-    }
-  },
-  shotType: { type: 'medium-shot' as const },
+  clothingColors: predefined({
+    topLayer: 'Dark red',
+    baseLayer: 'White',
+    shoes: 'brown',
+    bottom: 'Gray'
+  }),
+  shotType: predefined({ type: 'medium-shot' as const }),
   subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts
 }
 
@@ -108,7 +107,7 @@ export const headshot1: ClientStylePackage = {
         background: ui.background,
         branding: ui.branding,
         clothing: ui.clothing,
-        clothingColors: ui.clothingColors || { type: 'user-choice' },
+        clothingColors: ui.clothingColors || userChoice(),
         pose: ui.pose, // Now includes nested granular settings
         expression: ui.expression,
       }

@@ -336,7 +336,8 @@ export default function FlowProgressDock({
     onClick: () => void,
     isCurrentStep: boolean,
     tooltipText?: string,
-    stepNumber?: number
+    stepNumber?: number,
+    showLabel: boolean = true
   ) => {
     const isClickable = state !== 'locked'
     const isComplete = state === 'complete'
@@ -473,17 +474,19 @@ export default function FlowProgressDock({
           )}
         </div>
 
-        <div className="flex flex-col items-start gap-0.5 min-w-[80px]">
-          {/* Label */}
-          <span className={getLabelStyles()}>
-            {label}
-          </span>
+        {showLabel && (
+          <div className="flex flex-col items-start gap-0.5 min-w-[80px]">
+            {/* Label */}
+            <span className={getLabelStyles()}>
+              {label}
+            </span>
 
-          {/* Status text */}
-          <span className={getStatusStyles()}>
-            {statusText}
-          </span>
-        </div>
+            {/* Status text */}
+            <span className={getStatusStyles()}>
+              {statusText}
+            </span>
+          </div>
+        )}
       </button>
     )
 
@@ -496,31 +499,6 @@ export default function FlowProgressDock({
     }
 
     return stepContent
-  }
-
-  // Render connecting line with gradient progress
-  const renderLine = (fromState: StepState, toState: StepState) => {
-    const isActive = fromState === 'complete' && toState !== 'locked'
-    const isPartial = fromState === 'complete' || fromState === 'active'
-
-    // Lines are grey - darker when progress has been made
-    return (
-      <div className="w-8 flex items-center justify-center px-1">
-        <div className="relative w-full h-0.5 rounded-full overflow-hidden bg-gray-100">
-          <div
-            className={`
-              absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out
-              ${isActive
-                ? 'w-full bg-gray-300'
-                : isPartial
-                  ? 'w-1/2 bg-gradient-to-r from-gray-300 to-transparent'
-                  : 'w-0'
-              }
-            `}
-          />
-        </div>
-      </div>
-    )
   }
 
   // Use state to track if we're mounted (for portal)
@@ -566,74 +544,137 @@ export default function FlowProgressDock({
         {/* Subtle brand accent at bottom */}
         <div className="absolute inset-x-12 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary/20 to-transparent rounded-full" />
 
-        <div className="flex items-center justify-between gap-4">
-          {/* Info icon: Selfie Tips (before Selfies step) */}
-          {onNavigateToSelfieTips && (
-            <div className="flex items-center">
-              {renderInfoIcon(
-                isSelfieTipsHidden,
-                onNavigateToSelfieTips,
-                t('infoIcons.selfieTips', { default: 'Selfie tips' }),
-                currentStep === 'tips' // Highlight info icon when on tips page
+        <div className="flex items-stretch justify-between">
+          {/* SECTION 1: Selfies */}
+          <div className="flex flex-col items-center gap-1 px-4">
+            {/* Section label on top */}
+            <span className={`text-xs font-semibold tracking-wide uppercase ${
+              currentStep === 'selfies' || currentStep === 'tips'
+                ? 'text-gray-900'
+                : selfieState === 'complete'
+                  ? 'text-gray-500'
+                  : 'text-gray-400'
+            }`}>
+              {t('selfies.label')}
+            </span>
+            {/* Icons row: info icon connected to action icon */}
+            <div className="flex items-center gap-0">
+              {onNavigateToSelfieTips && (
+                <>
+                  {renderInfoIcon(
+                    isSelfieTipsHidden,
+                    onNavigateToSelfieTips,
+                    t('infoIcons.selfieTips', { default: 'Selfie tips' }),
+                    currentStep === 'tips'
+                  )}
+                  {/* Connector line */}
+                  <div className="w-4 h-[2px] bg-gray-300 mx-1" />
+                </>
               )}
-              {/* Small spacing instead of connector */}
-              <div className="w-2" />
-            </div>
-          )}
-
-          {/* Step 1: Selfies */}
-          {renderStep(
-            t('selfies.label'),
-            getSelfieStatusText(),
-            selfieState,
-            handleSelfieClick,
-            currentStep === 'selfies', // Only highlight when actually on selfies, not on tips
-            undefined,
-            1
-          )}
-
-          {/* Line 1 */}
-          {renderLine(selfieState, customizeState)}
-
-          {/* Info icon: Customization Intro (before Customize step) */}
-          {onNavigateToCustomizationIntro && (
-            <div className="flex items-center px-1">
-              {renderInfoIcon(
-                isCustomizationIntroHidden,
-                onNavigateToCustomizationIntro,
-                t('infoIcons.customizationIntro', { default: 'Customization guide' }),
-                currentStep === 'intro' // Highlight info icon when on intro page
+              {/* Step 1: Selfies (icon only) */}
+              {renderStep(
+                t('selfies.label'),
+                getSelfieStatusText(),
+                selfieState,
+                handleSelfieClick,
+                currentStep === 'selfies',
+                undefined,
+                1,
+                false
               )}
             </div>
-          )}
-
-          {/* Step 2: Customize with progress dots */}
-          <div className="flex flex-col items-center gap-1">
-            {renderStep(
-              t('customize.label'),
-              getCustomizeStatusText(),
-              customizeState,
-              handleCustomizeClick,
-              currentStep === 'customize', // Only highlight when actually on customize, not on intro
-              getTooltipText(customizeState, 'customize'),
-              2
-            )}
-            {renderCustomizationDots()}
+            {/* Status text below */}
+            <span className={`text-[10px] font-medium ${
+              currentStep === 'selfies' && selfieState === 'complete'
+                ? 'text-brand-secondary'
+                : currentStep === 'selfies'
+                  ? 'text-brand-primary'
+                  : selfieState === 'complete'
+                    ? 'text-gray-400'
+                    : 'text-gray-400'
+            }`}>
+              {getSelfieStatusText()}
+            </span>
           </div>
 
-          {/* Line 2 - Only show if not just a button next */}
-          {renderLine(customizeState, generateState)}
+          {/* Vertical separator */}
+          <div className="w-[2px] bg-gray-300 rounded-full my-1" />
 
-          {/* Step 3: Generate */}
-          {renderStep(
-            t('generate.label'),
-            getGenerateStatusText(),
-            generateState,
-            handleGenerateClick,
-            false,
-            getTooltipText(generateState, 'generate'),
-            3
-          )}
+          {/* SECTION 2: Customization */}
+          <div className="flex flex-col items-center gap-1 px-4">
+            {/* Section label on top */}
+            <span className={`text-xs font-semibold tracking-wide uppercase ${
+              currentStep === 'customize' || currentStep === 'intro'
+                ? 'text-gray-900'
+                : customizeState === 'complete'
+                  ? 'text-gray-500'
+                  : customizeState === 'locked'
+                    ? 'text-gray-300'
+                    : 'text-gray-400'
+            }`}>
+              {t('customize.label')}
+            </span>
+            {/* Icons row: info icon connected to action icon */}
+            <div className="flex items-center gap-0">
+              {onNavigateToCustomizationIntro && (
+                <>
+                  {renderInfoIcon(
+                    isCustomizationIntroHidden,
+                    onNavigateToCustomizationIntro,
+                    t('infoIcons.customizationIntro', { default: 'Customization guide' }),
+                    currentStep === 'intro'
+                  )}
+                  {/* Connector line */}
+                  <div className="w-4 h-[2px] bg-gray-300 mx-1" />
+                </>
+              )}
+              {/* Step 2: Customize (icon only) */}
+              {renderStep(
+                t('customize.label'),
+                getCustomizeStatusText(),
+                customizeState,
+                handleCustomizeClick,
+                currentStep === 'customize',
+                getTooltipText(customizeState, 'customize'),
+                2,
+                false
+              )}
+            </div>
+            {/* Status text and progress dots below */}
+            <div className="flex flex-col items-center gap-1">
+              <span className={`text-[10px] font-medium ${
+                currentStep === 'customize' && customizeState === 'complete'
+                  ? 'text-brand-secondary'
+                  : currentStep === 'customize'
+                    ? 'text-brand-primary'
+                    : customizeState === 'complete'
+                      ? 'text-gray-400'
+                      : customizeState === 'locked'
+                        ? 'text-gray-300'
+                        : 'text-gray-400'
+              }`}>
+                {getCustomizeStatusText()}
+              </span>
+              {renderCustomizationDots()}
+            </div>
+          </div>
+
+          {/* Vertical separator */}
+          <div className="w-[2px] bg-gray-300 rounded-full my-1" />
+
+          {/* SECTION 3: Generate */}
+          <div className="flex flex-col items-center justify-center px-4">
+            {/* Step 3: Generate button */}
+            {renderStep(
+              t('generate.label'),
+              getGenerateStatusText(),
+              generateState,
+              handleGenerateClick,
+              false,
+              getTooltipText(generateState, 'generate'),
+              3
+            )}
+          </div>
         </div>
       </div>
     </div>

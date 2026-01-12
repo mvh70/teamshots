@@ -2,11 +2,12 @@
  * Pose Element
  *
  * Contributes body positioning and posture rules to person generation.
- * Handles pose templates and granular pose settings (body angle, arms, weight, etc.).
+ * Handles pose templates.
  */
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
 import { generatePosePrompt } from '../../pose/prompt'
+import { isUserChoice, hasValue } from '../../base/element-types'
 
 export class PoseElement extends StyleElement {
   readonly id = 'pose'
@@ -17,13 +18,8 @@ export class PoseElement extends StyleElement {
   isRelevantForPhase(context: ElementContext): boolean {
     const { phase, settings } = context
 
-    // Skip if no pose configured
-    if (!settings.pose) {
-      return false
-    }
-
-    // Skip if user-choice
-    if (settings.pose.type === 'user-choice') {
+    // Skip if no pose configured or user-choice without selection
+    if (!settings.pose || isUserChoice(settings.pose) || !hasValue(settings.pose)) {
       return false
     }
 
@@ -34,11 +30,12 @@ export class PoseElement extends StyleElement {
   async contribute(context: ElementContext): Promise<ElementContribution> {
     const { settings } = context
     const pose = settings.pose!
+    const poseValue = pose.value!
 
     const instructions: string[] = []
     const mustFollow: string[] = []
     const metadata: Record<string, unknown> = {
-      poseType: pose.type,
+      poseType: poseValue.type,
     }
 
     // Generate pose prompt result for payload
@@ -76,8 +73,8 @@ export class PoseElement extends StyleElement {
     }
 
     // Add pose quality constraints (mood/feeling, not technical specs)
-    if (pose.type && pose.type !== 'user-choice') {
-      const poseRules = this.getPoseQualityRules(pose.type)
+    if (poseValue.type) {
+      const poseRules = this.getPoseQualityRules(poseValue.type)
       if (poseRules.length > 0) {
         mustFollow.push(...poseRules)
       }
@@ -165,6 +162,11 @@ export class PoseElement extends StyleElement {
         'Seated posture must appear warm, attentive, and actively engaged',
         'Forward lean should create connection without appearing aggressive',
         'Must convey active listening and professional warmth'
+      ],
+      thumbs_up: [
+        'Thumbs up gesture must appear natural and confident',
+        'Must convey enthusiasm and positive energy',
+        'Expression should be warm and genuine with friendly smile'
       ]
     }
 
@@ -182,7 +184,7 @@ export class PoseElement extends StyleElement {
       return errors
     }
 
-    // Validate pose type
+    // Validate pose type (only if value exists)
     const validPoseTypes = [
       'power_classic',
       'classic_corporate',
@@ -199,11 +201,11 @@ export class PoseElement extends StyleElement {
       'candid_over_shoulder',
       'seated_engagement',
       'jacket_reveal',
-      'user-choice'
+      'thumbs_up'
     ]
 
-    if (pose.type && !validPoseTypes.includes(pose.type)) {
-      errors.push(`Unknown pose type: ${pose.type}`)
+    if (hasValue(pose) && !validPoseTypes.includes(pose.value.type)) {
+      errors.push(`Unknown pose type: ${pose.value.type}`)
     }
 
     return errors

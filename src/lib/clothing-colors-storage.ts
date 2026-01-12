@@ -1,4 +1,4 @@
-import type { ClothingColorSettings } from '@/domain/style/elements/clothing-colors/types'
+import type { ClothingColorValue } from '@/domain/style/elements/clothing-colors/types'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 
 const STORAGE_KEY = 'teamshots_clothing_colors'
@@ -64,7 +64,7 @@ export function clearStyleSettings(contextId?: string | null): void {
 // ============================================
 
 export function saveClothingColors(
-  colors: ClothingColorSettings['colors']
+  colors: ClothingColorValue
 ): void {
   if (typeof window === 'undefined') return
   
@@ -75,7 +75,7 @@ export function saveClothingColors(
   }
 }
 
-export function loadClothingColors(): ClothingColorSettings['colors'] | null {
+export function loadClothingColors(): ClothingColorValue | null {
   if (typeof window === 'undefined') return null
   
   try {
@@ -97,7 +97,7 @@ export function loadClothingColors(): ClothingColorSettings['colors'] | null {
     
     if (Object.keys(validColors).length === 0) return null
     
-    return validColors as ClothingColorSettings['colors']
+    return validColors as ClothingColorValue
   } catch (error) {
     console.warn('Failed to load clothing colors from session:', error)
     return null

@@ -190,6 +190,28 @@ export async function isSeatsBasedTeam(teamId: string): Promise<boolean> {
 }
 
 /**
+ * Calculate active seats for a team dynamically
+ *
+ * An "active seat" is a TeamInvite that:
+ * 1. Has been used (usedAt is not null)
+ * 2. The linked person is still on the team (person.teamId matches)
+ *
+ * This avoids drift between a stored counter and actual state.
+ */
+export async function calculateActiveSeats(teamId: string): Promise<number> {
+  const activeSeats = await prisma.teamInvite.count({
+    where: {
+      teamId,
+      usedAt: { not: null },
+      person: {
+        teamId: teamId  // Person is still on the team (not revoked)
+      }
+    }
+  })
+  return activeSeats
+}
+
+/**
  * Check if a team can add a new member
  *
  * For seats-based teams: checks if activeSeats < totalSeats
@@ -210,7 +232,6 @@ export async function canAddTeamMember(
     where: { id: teamId },
     select: {
       totalSeats: true,
-      activeSeats: true,
       isLegacyCredits: true,
       admin: {
         select: { signupDomain: true }
@@ -235,30 +256,33 @@ export async function canAddTeamMember(
     return { canAdd: true }
   }
 
+  // Calculate active seats dynamically from actual data
+  const activeSeats = await calculateActiveSeats(teamId)
+
   // Free plan teams on team domain can still add members (they get 1 implicit seat for admin)
   // But they must purchase seats to add non-admin members
   if (team.totalSeats === 0) {
     return {
       canAdd: false,
       reason: 'Please purchase seats to add team members.',
-      currentSeats: team.activeSeats,
+      currentSeats: activeSeats,
       totalSeats: team.totalSeats
     }
   }
 
   // Seats-based teams: check seat availability
-  if (team.activeSeats >= team.totalSeats) {
+  if (activeSeats >= team.totalSeats) {
     return {
       canAdd: false,
       reason: 'No available seats. Please purchase more seats.',
-      currentSeats: team.activeSeats,
+      currentSeats: activeSeats,
       totalSeats: team.totalSeats
     }
   }
 
   return {
     canAdd: true,
-    currentSeats: team.activeSeats,
+    currentSeats: activeSeats,
     totalSeats: team.totalSeats
   }
 }
@@ -280,7 +304,6 @@ export async function getTeamSeatInfo(teamId: string): Promise<{
     where: { id: teamId },
     select: {
       totalSeats: true,
-      activeSeats: true,
       creditsPerSeat: true,
       isLegacyCredits: true,
       admin: {
@@ -298,10 +321,13 @@ export async function getTeamSeatInfo(teamId: string): Promise<{
   // Legacy teams stay on credit-based model
   const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN
 
+  // Calculate active seats dynamically from actual data (avoids drift)
+  const activeSeats = await calculateActiveSeats(teamId)
+
   return {
     totalSeats: team.totalSeats,
-    activeSeats: team.activeSeats,
-    availableSeats: Math.max(0, team.totalSeats - team.activeSeats),
+    activeSeats,
+    availableSeats: Math.max(0, team.totalSeats - activeSeats),
     creditsPerSeat: team.creditsPerSeat,
     isSeatsModel
   }

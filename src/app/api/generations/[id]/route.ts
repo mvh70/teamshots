@@ -2,6 +2,7 @@
  * Generation Status API Endpoint
  *
  * Returns the current status and data for a specific generation
+ * Supports both session-based auth and extension token auth
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -17,28 +18,61 @@ import { SecurityLogger } from '@/lib/security-logger'
 import { Logger } from '@/lib/logger'
 import { createS3Client, getS3BucketName, getS3Key } from '@/lib/s3-client'
 import { deriveGenerationType } from '@/domain/generation/utils'
+import { getExtensionAuthFromHeaders, EXTENSION_SCOPES } from '@/domain/extension'
+import { handleCorsPreflightSync, addCorsHeaders } from '@/lib/cors'
 
 // S3 configuration (supports Backblaze B2, Hetzner, AWS S3, etc.)
 const s3 = createS3Client({ forcePathStyle: true })
 const bucket = getS3BucketName()
 
+/**
+ * OPTIONS /api/generations/[id]
+ * Handle CORS preflight requests for extension support
+ */
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  const response = handleCorsPreflightSync(origin)
+  return response || new NextResponse(null, { status: 204 })
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const origin = request.headers.get('origin')
+
   try {
     const { id: generationId } = await params
-    
+
     if (!generationId) {
-      return badRequest('Generation ID is required')
+      return addCorsHeaders(badRequest('Generation ID is required'), origin)
     }
 
-    // Get user session
-    const authResult = await requireAuth()
-    if (authResult instanceof NextResponse) {
-      return authResult
+    // Authenticate (support both session and extension token)
+    let userId: string | null = null
+
+    // Try extension token first (X-Extension-Token header)
+    const extensionAuth = await getExtensionAuthFromHeaders(
+      request.headers,
+      EXTENSION_SCOPES.GENERATION_CREATE
+    )
+    if (extensionAuth) {
+      userId = extensionAuth.userId
+    } else {
+      // Fall back to session auth
+      const authResult = await requireAuth()
+      if (authResult instanceof NextResponse) {
+        return addCorsHeaders(authResult, origin)
+      }
+      userId = authResult.userId
     }
-    const { userId } = authResult
+
+    if (!userId) {
+      return addCorsHeaders(
+        NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+        origin
+      )
+    }
 
     // SECURITY: Get user person first to build authorization filter
     const userPerson = await prisma.person.findUnique({
@@ -47,7 +81,7 @@ export async function GET(
     })
 
     if (!userPerson) {
-      return notFound('User person not found')
+      return addCorsHeaders(notFound('User person not found'), origin)
     }
 
     // SECURITY: Filter generation by authorization DURING query, not after
@@ -93,7 +127,7 @@ export async function GET(
         )
       }
 
-      return notFound('Generation not found')
+      return addCorsHeaders(notFound('Generation not found'), origin)
     }
 
     // Get job status from queue if generation is still processing
@@ -168,8 +202,8 @@ export async function GET(
 
     // Derive generationType from person.teamId (single source of truth)
     const derivedGenerationType = deriveGenerationType(generation.person.teamId)
-    
-    return NextResponse.json({
+
+    return addCorsHeaders(NextResponse.json({
       id: generation.id,
       status: generation.status,
       generationType: derivedGenerationType, // Derived from person.teamId, not stored field
@@ -215,11 +249,11 @@ export async function GET(
         name: generation.context.name,
         stylePreset: (generation.context.settings as Record<string, unknown> | undefined)?.stylePreset as string | undefined,
       } : null,
-    })
+    }), origin)
 
   } catch (error) {
     Logger.error('Failed to get generation status', { error: error instanceof Error ? error.message : String(error) })
-    return internalError('Failed to get generation status')
+    return addCorsHeaders(internalError('Failed to get generation status'), origin)
   }
 }
 

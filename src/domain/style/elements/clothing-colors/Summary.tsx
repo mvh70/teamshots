@@ -4,6 +4,7 @@ import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
 import type { ElementSummaryProps } from '../metadata'
 import type { ClothingColorSettings } from './types'
 import { getColorHex, getColorDisplay } from './types'
+import { hasValue } from '../base/element-types'
 
 function isHexColor(value?: string): boolean {
   if (!value) return false
@@ -11,7 +12,7 @@ function isHexColor(value?: string): boolean {
 }
 
 export function ClothingColorsSummary({ settings }: ElementSummaryProps<ClothingColorSettings>) {
-  const colors = settings?.colors
+  const colors = settings && hasValue(settings) ? settings.value : undefined
 
   return (
     <div id="style-clothing-colors" className="flex flex-col space-y-2">

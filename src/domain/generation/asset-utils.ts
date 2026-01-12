@@ -1,6 +1,6 @@
 /**
  * Asset Utilities
- * 
+ *
  * Centralized utilities for loading and processing generation assets
  * (logos, backgrounds, etc.)
  */
@@ -8,6 +8,7 @@
 import { Logger } from '@/lib/logger'
 import type { PhotoStyleSettings } from '@/types/photo-style'
 import type { ReferenceImage, DownloadAssetFn } from '@/types/generation'
+import { hasValue } from '@/domain/style/elements/base/element-types'
 
 /**
  * Loads logo reference if branding is configured
@@ -31,23 +32,30 @@ export async function loadLogoReference(
   styleSettings: PhotoStyleSettings,
   downloadAsset: DownloadAssetFn
 ): Promise<ReferenceImage | undefined> {
+  // Check if branding has a value
+  if (!styleSettings.branding || !hasValue(styleSettings.branding)) {
+    return undefined
+  }
+
+  const brandingValue = styleSettings.branding.value
+
   // Check if logo should be included
-  if (styleSettings.branding?.type !== 'include') {
+  if (brandingValue.type !== 'include') {
     return undefined
   }
 
   // Check if logo key is provided
-  if (!styleSettings.branding.logoKey) {
+  if (!brandingValue.logoKey) {
     Logger.debug('Logo branding enabled but no logoKey provided')
     return undefined
   }
 
   try {
-    const logoAsset = await downloadAsset(styleSettings.branding.logoKey)
-    
+    const logoAsset = await downloadAsset(brandingValue.logoKey)
+
     if (!logoAsset) {
       Logger.warn('Logo asset download returned null', {
-        logoKey: styleSettings.branding.logoKey
+        logoKey: brandingValue.logoKey
       })
       return undefined
     }
@@ -60,7 +68,7 @@ export async function loadLogoReference(
   } catch (error) {
     Logger.warn('Failed to load logo reference', {
       error: error instanceof Error ? error.message : String(error),
-      logoKey: styleSettings.branding.logoKey
+      logoKey: brandingValue.logoKey
     })
     return undefined
   }
@@ -69,7 +77,7 @@ export async function loadLogoReference(
 /**
  * Loads logo reference specifically for clothing placement
  * Only returns logo if position is set to 'clothing'
- * 
+ *
  * @param styleSettings - Photo style settings
  * @param downloadAsset - Asset download function
  * @returns Logo reference or undefined
@@ -78,8 +86,12 @@ export async function loadClothingLogoReference(
   styleSettings: PhotoStyleSettings,
   downloadAsset: DownloadAssetFn
 ): Promise<ReferenceImage | undefined> {
-  // Only load if position is clothing
-  if (styleSettings.branding?.position !== 'clothing') {
+  // Only load if branding has value and position is clothing
+  if (!styleSettings.branding || !hasValue(styleSettings.branding)) {
+    return undefined
+  }
+
+  if (styleSettings.branding.value.position !== 'clothing') {
     return undefined
   }
 
@@ -98,16 +110,17 @@ export async function loadBackgroundReference(
   downloadAsset: DownloadAssetFn
 ): Promise<ReferenceImage | undefined> {
   // Check if custom background is configured (uses 'key' not 'imageKey')
-  if (styleSettings.background?.type !== 'custom' || !styleSettings.background.key) {
+  const bgValue = styleSettings.background?.value
+  if (bgValue?.type !== 'custom' || !bgValue.key) {
     return undefined
   }
 
   try {
-    const backgroundAsset = await downloadAsset(styleSettings.background.key)
-    
+    const backgroundAsset = await downloadAsset(bgValue.key)
+
     if (!backgroundAsset) {
       Logger.warn('Background asset download returned null', {
-        key: styleSettings.background.key
+        key: bgValue.key
       })
       return undefined
     }
@@ -120,7 +133,7 @@ export async function loadBackgroundReference(
   } catch (error) {
     Logger.warn('Failed to load background reference', {
       error: error instanceof Error ? error.message : String(error),
-      key: styleSettings.background.key
+      key: bgValue.key
     })
     return undefined
   }

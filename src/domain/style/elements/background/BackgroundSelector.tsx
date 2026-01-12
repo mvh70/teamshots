@@ -4,9 +4,11 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
-import { BackgroundSettings } from '@/types/photo-style'
-import { BACKGROUND_TYPES, NEUTRAL_COLORS, GRADIENT_COLORS } from './config'
-import ColorPicker from '@/components/ui/ColorPicker'
+import { BackgroundSettings, BackgroundType, BackgroundValue } from '@/types/photo-style'
+import { BACKGROUND_TYPES } from './config'
+import ColorWheelPicker from '@/components/ui/ColorWheelPicker'
+import type { ColorValue } from '@/components/ui/ColorWheelPicker'
+import { predefined, userChoice } from '../base/element-types'
 
 interface BackgroundSelectorProps {
   value: BackgroundSettings
@@ -34,43 +36,49 @@ export default function BackgroundSelector({
   const [, setImageLoaded] = useState(false)
   const previewSetRef = useRef<string | null>(null)
 
+  // Extract the current value for easier access
+  const bgValue = value?.value
+
   // Filter background types based on package availability
   const filteredBackgroundTypes = availableBackgrounds
     ? BACKGROUND_TYPES.filter(type => availableBackgrounds.includes(type.value))
     : BACKGROUND_TYPES
 
-  const handleTypeChange = (type: BackgroundSettings['type']) => {
-    const newSettings: BackgroundSettings = { type }
-    
+  const handleTypeChange = (type: BackgroundType) => {
+    const newValue: BackgroundValue = { type }
+
     // Set default values based on type
     switch (type) {
       case 'office':
-        newSettings.prompt = value.prompt || 'Modern office environment with professional lighting'
+        newValue.prompt = bgValue?.prompt || 'Modern office environment with professional lighting'
         break
       case 'neutral':
-        newSettings.color = value.color || '#ffffff'
+        newValue.color = bgValue?.color || '#ffffff'
         break
       case 'gradient':
-        newSettings.color = value.color || '#667eea'
+        newValue.color = bgValue?.color || '#667eea'
         break
       case 'custom':
-        newSettings.key = value.key || ''
+        newValue.key = bgValue?.key || ''
         break
     }
-    
-    onChange(newSettings)
+
+    onChange(predefined(newValue))
   }
 
-  const handleColorChange = (color: string) => {
-    onChange({ ...value, color })
+  const handleColorChange = (colorValue: ColorValue) => {
+    if (!bgValue) return
+    onChange(predefined({ ...bgValue, color: colorValue.hex }))
   }
 
-  const handleGradientColorChange = (color: string) => {
-    onChange({ ...value, color })
+  const handleGradientColorChange = (colorValue: ColorValue) => {
+    if (!bgValue) return
+    onChange(predefined({ ...bgValue, color: colorValue.hex }))
   }
 
   const handlePromptChange = (prompt: string) => {
-    onChange({ ...value, prompt })
+    if (!bgValue) return
+    onChange(predefined({ ...bgValue, prompt }))
   }
 
   const handleFileUpload = async (file: File | null) => {
@@ -110,12 +118,11 @@ export default function BackgroundSelector({
       const { key } = await res.json()
 
       // Store only the key, not the full URL (same as selfies)
-      const newSettings = { ...value, key }
-      onChange(newSettings)
+      onChange(predefined({ ...bgValue, type: 'custom', key }))
     } catch (e) {
       console.error('Background upload failed', e)
       // Keep preview; remove remote key on error
-      onChange({ ...value, key: undefined })
+      onChange(predefined({ ...bgValue, type: 'custom', key: undefined }))
     }
   }
 
@@ -124,8 +131,8 @@ export default function BackgroundSelector({
   // we need to generate the preview URL. The ref tracks processed keys to avoid redundant updates.
   /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
   useEffect(() => {
-    const currentKey = value.type === 'custom' ? value.key : null
-    
+    const currentKey = bgValue?.type === 'custom' ? bgValue.key : null
+
     // Only set preview if key changed and we haven't set it yet
     if (currentKey && previewSetRef.current !== currentKey) {
       const tokenParam = token ? `&token=${encodeURIComponent(token)}` : ''
@@ -138,7 +145,7 @@ export default function BackgroundSelector({
       setImageLoaded(false)
       previewSetRef.current = null
     }
-  }, [value.type, value.key, token])
+  }, [bgValue?.type, bgValue?.key, token])
   /* eslint-enable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 
   useEffect(() => {
@@ -173,10 +180,10 @@ export default function BackgroundSelector({
       {/* Background Type Selection */}
       <div className={`space-y-4 mb-6 ${
         // Hide entire selection section on mobile when predefined and custom upload is selected
-        isPredefined && value.type === 'custom' ? 'hidden md:block' : ''
+        isPredefined && bgValue?.type === 'custom' ? 'hidden md:block' : ''
       }`}>
         {filteredBackgroundTypes.map((type) => {
-          const isSelected = value.type === type.value
+          const isSelected = bgValue?.type === type.value
           // On mobile, hide unselected options when predefined
           const shouldHide = isPredefined && !isSelected
           // On mobile, hide custom upload option when predefined
@@ -189,7 +196,7 @@ export default function BackgroundSelector({
             >
               <button
                 type="button"
-                onClick={() => !(isPredefined || isDisabled) && handleTypeChange(type.value as BackgroundSettings['type'])}
+                onClick={() => !(isPredefined || isDisabled) && handleTypeChange(type.value as BackgroundType)}
                 disabled={isPredefined || isDisabled}
                 className={`w-full bg-gray-50 rounded-lg p-4 border-2 transition-all ${
                   isSelected
@@ -223,22 +230,20 @@ export default function BackgroundSelector({
               {/* Show color picker inline when neutral is selected */}
               {isSelected && type.value === 'neutral' && (
                 <div className="mt-3 pl-4 pr-4 pb-2">
-                  <ColorPicker
-                    value={value.color || '#ffffff'}
+                  <ColorWheelPicker
+                    value={bgValue?.color || '#ffffff'}
                     onChange={handleColorChange}
-                    presets={NEUTRAL_COLORS}
                     disabled={isPredefined || isDisabled}
                   />
                 </div>
               )}
-              
+
               {/* Show color picker inline when gradient is selected */}
               {isSelected && type.value === 'gradient' && (
                 <div className="mt-3 pl-4 pr-4 pb-2">
-                  <ColorPicker
-                    value={value.color || '#667eea'}
+                  <ColorWheelPicker
+                    value={bgValue?.color || '#667eea'}
                     onChange={handleGradientColorChange}
-                    presets={GRADIENT_COLORS}
                     disabled={isPredefined || isDisabled}
                   />
                 </div>
@@ -249,13 +254,13 @@ export default function BackgroundSelector({
       </div>
 
       {/* Type-specific controls */}
-      {value.type === 'office' && (
+      {bgValue?.type === 'office' && (
         <div className="space-y-3">
           <label className="block text-sm font-medium text-gray-700">
             {t('officePrompt', { default: 'Office Description' })}
           </label>
           <textarea
-            value={value.prompt || ''}
+            value={bgValue?.prompt || ''}
             onChange={(e) => !(isPredefined || isDisabled) && handlePromptChange(e.target.value)}
             disabled={isPredefined || isDisabled}
             placeholder={t('officePromptPlaceholder', { default: 'Describe the office environment...' })}
@@ -267,7 +272,7 @@ export default function BackgroundSelector({
 
       {/* Removed separate ColorPickers for neutral and gradient as they are now integrated in the list */}
 
-      {value.type === 'custom' && (
+      {bgValue?.type === 'custom' && (
         <div className="space-y-3">
           <label className={`block text-sm font-medium text-gray-700 ${
             isPredefined ? 'hidden md:block' : ''

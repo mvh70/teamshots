@@ -1,15 +1,29 @@
 /**
  * Create Generation API Endpoint
- * 
+ *
  * Enqueues image generation jobs and handles credit validation
+ *
+ * Supports both session-based auth and extension token auth (X-Extension-Token header)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { type Session } from 'next-auth'
 import { Prisma } from '@/lib/prisma'
+import { getExtensionAuthFromHeaders, EXTENSION_SCOPES } from '@/domain/extension'
+import { handleCorsPreflightSync, addCorsHeaders } from '@/lib/cors'
 
 export const runtime = 'nodejs'
+
+/**
+ * OPTIONS /api/generations/create
+ * Handle CORS preflight requests for extension support
+ */
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  const response = handleCorsPreflightSync(origin)
+  return response || new NextResponse(null, { status: 204 })
+}
 import { prisma } from '@/lib/prisma'
 import { getPersonCreditBalance } from '@/domain/credits/credits'
 import { PRICING_CONFIG, type PricingTier, getPricingTier } from '@/config/pricing'
@@ -63,25 +77,57 @@ const createGenerationSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get('origin')
+
   try {
-    // Get user session
-    const session = await auth() as Session | null
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
+    // Authenticate (support both session and extension token)
+    let userId: string | null = null
+    let session: Session | null = null
+    let authSource: 'session' | 'extension' = 'session'
+
+    // Try extension token first (X-Extension-Token header)
+    const extensionAuth = await getExtensionAuthFromHeaders(
+      request.headers,
+      EXTENSION_SCOPES.GENERATION_CREATE
+    )
+    if (extensionAuth) {
+      userId = extensionAuth.userId
+      authSource = 'extension'
+      Logger.debug('[GenerationCreate] Authenticated via extension token', {
+        tokenId: extensionAuth.tokenId,
+      })
+      // Create a minimal session-like object for extension auth
+      session = {
+        user: { id: userId },
+        expires: new Date(Date.now() + 3600000).toISOString(),
+      } as Session
+    } else {
+      // Fall back to session auth
+      session = (await auth()) as Session | null
+      if (session?.user?.id) {
+        userId = session.user.id
+      }
+    }
+
+    if (!userId || !session) {
+      return addCorsHeaders(
+        NextResponse.json({ error: 'Authentication required' }, { status: 401 }),
+        origin
       )
     }
 
     // Rate limiting per user
-    const userIdentifier = `generation:user:${session.user.id}`
+    const userIdentifier = `generation:user:${userId}`
     const rateLimit = await checkRateLimit(userIdentifier, RATE_LIMITS.generation.limit, RATE_LIMITS.generation.window)
 
     if (!rateLimit.success) {
       await SecurityLogger.logRateLimitExceeded(userIdentifier)
-      return NextResponse.json(
-        { error: 'Generation rate limit exceeded. Please try again later.' },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000)) }}
+      return addCorsHeaders(
+        NextResponse.json(
+          { error: 'Generation rate limit exceeded. Please try again later.' },
+          { status: 429, headers: { 'Retry-After': String(Math.ceil((rateLimit.reset - Date.now()) / 1000)) }}
+        ),
+        origin
       )
     }
 
@@ -230,7 +276,8 @@ export async function POST(request: NextRequest) {
 
     // Server-side fallback: if only one selfie resolved but the user has multiple selected selfies,
     // merge them in so multi-selfie generations work even if client payload missed IDs
-    if (selfies.length === 1) {
+    // Skip this fallback for extension requests - extensions explicitly control which selfies to use
+    if (selfies.length === 1 && authSource !== 'extension') {
       try {
         const moreSelected = await prisma.selfie.findMany({
           where: { personId: selfies[0].personId, selected: true },
@@ -817,48 +864,53 @@ export async function POST(request: NextRequest) {
     })
 
     Telemetry.increment('generation.create.success')
-    
+    Telemetry.increment(`generation.create.success.${authSource}`)
+
     // Return account mode info to avoid redundant API call on client
     const isPro = userContext.roles.isTeamAdmin ?? false
-    const redirectUrl = isPro ? '/app/generations/team' : 
-      (session?.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
-    
-    return NextResponse.json({
-      success: true,
-      generationId: generation.id,
-      jobId: job.id,
-      status: 'queued',
-      message: 'Generation queued successfully',
-      accountMode: {
-        isPro,
-        redirectUrl
-      }
-    })
+    const redirectUrl = isPro
+      ? '/app/generations/team'
+      : session?.user?.person?.teamId
+        ? '/app/generations/team'
+        : '/app/generations/personal'
 
-  } catch (error) {
-    Logger.error('Failed to create generation', { error: error instanceof Error ? error.message : String(error) })
-    Telemetry.increment('generation.create.error')
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { 
-          error: 'Invalid request data',
-          details: error.issues 
+    return addCorsHeaders(
+      NextResponse.json({
+        success: true,
+        generationId: generation.id,
+        jobId: job.id,
+        status: 'queued',
+        message: 'Generation queued successfully',
+        accountMode: {
+          isPro,
+          redirectUrl,
         },
-        { status: 400 }
+      }),
+      origin
+    )
+  } catch (error) {
+    Logger.error('Failed to create generation', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    Telemetry.increment('generation.create.error')
+
+    if (error instanceof z.ZodError) {
+      return addCorsHeaders(
+        NextResponse.json({ error: 'Invalid request data', details: error.issues }, { status: 400 }),
+        origin
       )
     }
-    
+
     if (error instanceof Error && error.message.includes('Insufficient credits')) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 402 }
+      return addCorsHeaders(
+        NextResponse.json({ error: error.message }, { status: 402 }),
+        origin
       )
     }
-    
-    return NextResponse.json(
-      { error: 'Failed to process generation request' },
-      { status: 500 }
+
+    return addCorsHeaders(
+      NextResponse.json({ error: 'Failed to process generation request' }, { status: 500 }),
+      origin
     )
   }
 }

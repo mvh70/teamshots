@@ -20,6 +20,8 @@ interface SharedMobileSelfieFlowProps {
   statusBadge?: StatusBadgeContent
   /** Optional banner shown above the flow (e.g., upload success) */
   successBanner?: React.ReactNode
+  /** Overlay showing selfie type capture progress (front/side/full body) */
+  selfieTypeOverlay?: React.ReactNode
   /** Whether the user can continue to the next step */
   canContinue: boolean
   /** Additional wrapper classes */
@@ -38,6 +40,7 @@ export default function SharedMobileSelfieFlow({
   uploadSection,
   statusBadge,
   successBanner,
+  selfieTypeOverlay,
   canContinue,
   className = ''
 }: SharedMobileSelfieFlowProps) {
@@ -59,6 +62,12 @@ export default function SharedMobileSelfieFlow({
       {successBanner && (
         <div className="bg-white border-b border-gray-200 px-4 py-4">
           {successBanner}
+        </div>
+      )}
+
+      {selfieTypeOverlay && (
+        <div className="px-4 py-3 flex justify-center">
+          {selfieTypeOverlay}
         </div>
       )}
 

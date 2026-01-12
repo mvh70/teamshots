@@ -1,10 +1,10 @@
-import type { BackgroundSettings } from '@/types/photo-style'
+import type { BackgroundValue } from './types'
 
 export interface BackgroundDefinition {
   id: string
   label: string
   requiresColor?: boolean
-  generatePrompt: (settings: Partial<BackgroundSettings>) => BackgroundPrompt
+  generatePrompt: (settings: Partial<BackgroundValue>) => BackgroundPrompt
 }
 
 export type BackgroundPrompt = {
@@ -84,11 +84,11 @@ export function backgroundRequiresColor(id: string): boolean {
   return BACKGROUND_REPOSITORY[id]?.requiresColor ?? false
 }
 
-export function generateBackgroundPrompt(settings: BackgroundSettings): BackgroundPrompt {
-  const definition = getBackgroundDefinition(settings.type)
+export function generateBackgroundPrompt(value: BackgroundValue): BackgroundPrompt {
+  const definition = getBackgroundDefinition(value.type)
   if (!definition) {
     return {}
   }
-  return definition.generatePrompt(settings)
+  return definition.generatePrompt(value)
 }
 

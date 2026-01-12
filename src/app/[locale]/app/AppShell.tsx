@@ -53,7 +53,7 @@ export default function AppShell({
   const { status } = useSession()
   const router = useRouter()
   const pathname = usePathname()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [hydrated, setHydrated] = useState(false)
   
   // pathname includes locale prefix, so check if it contains the route pattern
@@ -204,8 +204,8 @@ export default function AppShell({
                 aria-hidden="true"
               />
             )}
-            <Sidebar 
-              collapsed={sidebarCollapsed} 
+            <Sidebar
+              collapsed={sidebarCollapsed}
               initialRole={initialRole}
               initialAccountMode={initialAccountMode}
               initialSubscription={initialSubscription}
@@ -222,12 +222,24 @@ export default function AppShell({
                   setSidebarCollapsed(true)
                 }
               }}
+              onMouseEnter={() => {
+                // Expand sidebar on hover (desktop only)
+                if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                  setSidebarCollapsed(false)
+                }
+              }}
+              onMouseLeave={() => {
+                // Collapse sidebar when mouse leaves (desktop only)
+                if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                  setSidebarCollapsed(true)
+                }
+              }}
             />
           </>
         )}
         <div
           className={`flex-1 flex flex-col transition-all duration-300 relative z-0 ${
-            showSidebar ? (sidebarCollapsed ? 'ml-0 lg:ml-16' : 'ml-0 lg:ml-64') : 'ml-0'
+            showSidebar ? (sidebarCollapsed ? 'ml-0 lg:ml-20' : 'ml-0 lg:ml-64') : 'ml-0'
           }`}
         >
           {!isGenerationFlow && (

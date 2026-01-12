@@ -5,6 +5,11 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { initPostHog, posthog } from '@/lib/posthog'
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  // Prevent tracking in non-production environments
+  if (process.env.NODE_ENV !== 'production') {
+    return <>{children}</>
+  }
+
   const pathname = usePathname()
   const searchParams = useSearchParams()
 

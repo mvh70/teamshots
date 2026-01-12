@@ -6,8 +6,9 @@
  */
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
-import type { ShotTypeValue } from '@/types/photo-style'
 import { getColorHex, type ColorValue } from '../../clothing-colors/types'
+import { hasValue } from '../../base/element-types'
+import type { ShotTypeValue } from '@/types/photo-style'
 
 export class ClothingColorsElement extends StyleElement {
   readonly id = 'clothing-colors'
@@ -19,7 +20,7 @@ export class ClothingColorsElement extends StyleElement {
     const { phase, settings } = context
 
     // Skip if no clothing colors configured
-    if (!settings.clothingColors || !settings.clothingColors.colors) {
+    if (!settings.clothingColors || !hasValue(settings.clothingColors)) {
       return false
     }
 
@@ -31,8 +32,9 @@ export class ClothingColorsElement extends StyleElement {
     // CRITICAL: Skip if ClothingOverlayElement is handling clothing
     // (branding on clothing means overlay with colors is active)
     if (
-      settings.branding?.type === 'include' &&
-      settings.branding?.position === 'clothing'
+      hasValue(settings.branding) &&
+      settings.branding.value.type === 'include' &&
+      settings.branding.value.position === 'clothing'
     ) {
       return false // ClothingOverlayElement has colors baked in
     }
@@ -42,8 +44,8 @@ export class ClothingColorsElement extends StyleElement {
 
   async contribute(context: ElementContext): Promise<ElementContribution> {
     const { settings, existingContributions } = context
-    const colors = settings.clothingColors!.colors!
-    const shotType = settings.shotType?.type as ShotTypeValue
+    const colors = settings.clothingColors!.value!
+    const shotType = hasValue(settings.shotType) ? settings.shotType.value.type as ShotTypeValue : undefined
 
     const instructions: string[] = []
     const mustFollow: string[] = []
@@ -51,6 +53,23 @@ export class ClothingColorsElement extends StyleElement {
 
     const metadata: Record<string, unknown> = {
       colors: { ...colors },
+    }
+
+    // Check if colors are from outfit reference image
+    // If so, skip color specifications and let AI match the reference exactly
+    if (colors.source === 'outfit') {
+      return {
+        instructions: [],
+        mustFollow: [
+          'Use the exact clothing colors shown in the outfit reference image',
+          'Do not modify or reinterpret the colors - match the reference exactly'
+        ],
+        metadata: {
+          ...metadata,
+          colorsFromOutfit: true,
+          skipColorSpecifications: true,
+        },
+      }
     }
 
     // CRITICAL: Check if ClothingOverlayElement is handling clothing
@@ -78,7 +97,7 @@ export class ClothingColorsElement extends StyleElement {
 
     // Determine garment structure
     const clothing = settings.clothing
-    const detail = clothing?.details?.toLowerCase() || ''
+    const detail = clothing?.value?.details?.toLowerCase() || ''
 
     // Check if this is a single-layer garment (polo, hoodie, t-shirt, dress, gown, jumpsuit)
     // These garments are worn alone without a visible base layer underneath
@@ -170,11 +189,11 @@ export class ClothingColorsElement extends StyleElement {
     const errors: string[] = []
     const clothingColors = settings.clothingColors
 
-    if (!clothingColors || !clothingColors.colors) {
+    if (!clothingColors || !hasValue(clothingColors)) {
       return errors
     }
 
-    const colors = clothingColors.colors
+    const colors = clothingColors.value
 
     // At least one color should be specified
     if (!colors.topLayer && !colors.baseLayer && !colors.bottom && !colors.shoes) {

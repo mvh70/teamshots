@@ -1,7 +1,28 @@
 // Shared upload helper functions
 
+export interface UploadWithClassification {
+  key: string
+  url?: string
+  selfieType?: string
+  selfieTypeConfidence?: number
+  personCount?: number
+  isProper?: boolean
+  improperReason?: string
+}
+
+export interface ClassificationData {
+  selfieType?: string
+  selfieTypeConfidence?: number
+  personCount?: number
+  isProper?: boolean
+  improperReason?: string
+}
+
 // Shared helper function for promoting uploads (used by both single and multiple uploads)
-export const promoteUploads = async (uploads: { key: string; url?: string }[]): Promise<{ key: string; selfieId?: string }[]> => {
+export const promoteUploads = async (
+  uploads: { key: string; url?: string }[],
+  classification?: ClassificationData
+): Promise<{ key: string; selfieId?: string }[]> => {
   const promotionPromises = uploads
     .filter((upload): upload is { key: string; url?: string } => !!upload.key)
     .map(async (upload): Promise<{ key: string; selfieId?: string }> => {
@@ -12,7 +33,20 @@ export const promoteUploads = async (uploads: { key: string; url?: string }[]): 
           const promoteRes = await fetch('/api/uploads/promote', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tempKey: upload.key }),
+            body: JSON.stringify({
+              tempKey: upload.key,
+              ...(classification?.selfieType && { selfieType: classification.selfieType }),
+              ...(typeof classification?.selfieTypeConfidence === 'number' && {
+                selfieTypeConfidence: classification.selfieTypeConfidence
+              }),
+              ...(typeof classification?.personCount === 'number' && {
+                personCount: classification.personCount
+              }),
+              ...(typeof classification?.isProper === 'boolean' && {
+                isProper: classification.isProper
+              }),
+              ...(classification?.improperReason && { improperReason: classification.improperReason }),
+            }),
             credentials: 'include'
           })
           if (promoteRes.ok) {

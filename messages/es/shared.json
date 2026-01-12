@@ -7,7 +7,8 @@
     "processingImage": "Procesando imagen...",
     "processingImages": "Procesando {count} imágenes...",
     "uploading": "Subiendo...",
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "dismissingAutomatically": "Desapareciendo automáticamente..."
   },
   "nav": {
     "home": "Inicio",
@@ -208,7 +209,7 @@
         "description": "Ve la calidad antes de comprometerte. Sin tarjeta de crédito. Pruébalo gratis y ve los resultados.",
         "features": [
           "{photos} fotos personalizables",
-          "Marca de agua fija",
+          "Fondo fijo y marca de agua",
           "Perfecto para probar la calidad"
         ],
         "cta": "Pruébalo gratis"
@@ -329,7 +330,9 @@
         "photosPerSeat": "10 fotos profesionales por miembro del equipo",
         "professionalQuality": "Fotos de calidad profesional con IA",
         "teamManagement": "Panel de gestión centralizado del equipo",
-        "fastDelivery": "Tiempo de generación de 60 segundos",
+        "fullCustomization": "Personalización completa: fondo, marca, pose, estilo de ropa",
+        "creditsNeverExpire": "Los créditos nunca caducan, úsalos cuando quieras",
+        "flexibleTeamSize": "Escala tu equipo, añade miembros cuando lo necesites",
         "support": "Soporte por correo y garantía de satisfacción"
       }
     }
@@ -557,7 +560,7 @@
         "title": "Fotos disponibles",
         "individual": "Fotos personales",
         "team": "Créditos de foto del equipo",
-        "seats": "Miembros del equipo",
+        "seats": "Tamaño del equipo",
         "balance": "Tu saldo de fotos",
         "lockedBranding": "con marca Teamshots bloqueada",
         "allocated": "de los cuales asignados a invitaciones",
@@ -1312,7 +1315,8 @@
       "deleteAria": "Eliminar selfie",
       "deleteDisabledTooltip": "Esta selfie se usa en una generación y no se puede eliminar.",
       "deleteDisabledAria": "Eliminación deshabilitada. Esta selfie se usa en una generación y no se puede eliminar.",
-      "deleteDisabledMessage": "Se usa en una generación y no se puede eliminar."
+      "deleteDisabledMessage": "Se usa en una generación y no se puede eliminar.",
+      "analyzing": "Analizando..."
     }
   },
   "generate": {
@@ -1819,7 +1823,10 @@
         "pantsSkirtDesc": "Pantalones, slacks, falda",
         "shoes": "Zapatos",
         "shoesDesc": "Zapatos de vestir, zapatos casuales",
-        "noVisibleColors": "No hay colores de ropa aplicables para este tipo de foto y estilo."
+        "noVisibleColors": "No hay colores de ropa aplicables para este tipo de foto y estilo.",
+        "useOutfitColors": "Usar colores del outfit subido",
+        "outfitColorsActive": "Los colores están sincronizados con tu imagen de outfit subida",
+        "outfitColorsInactive": "Desmarca para personalizar los colores manualmente"
       },
       "customClothing": {
         "title": "Ropa Personalizada",
@@ -2174,6 +2181,40 @@
       "processing": "Procesando..."
     },
     "disclaimer": "Al aprobar, confirmas que tienes los derechos para usar esta foto y consientes su uso para la generación de fotos."
+  },
+  "selfie": {
+    "types": {
+      "title": "Los mejores resultados vienen de la variedad",
+      "description": "Sube selfies desde diferentes ángulos para obtener fotos más realistas",
+      "recommended": "Recomendado",
+      "frontview": {
+        "label": "Vista frontal",
+        "description": "Foto clara del rostro mirando a la cámara"
+      },
+      "sideview": {
+        "label": "Vista lateral",
+        "description": "Foto de perfil mostrando el lado de la cara"
+      },
+      "fullbody": {
+        "label": "Cuerpo completo",
+        "description": "Foto mostrando el cuerpo completo de cabeza a pies"
+      }
+    },
+    "classification": {
+      "analyzing": "Analizando tipo de selfie...",
+      "detected": "Detectado: {type}",
+      "confidence": {
+        "high": "Alta confianza",
+        "medium": "Confianza media",
+        "low": "Baja confianza"
+      }
+    },
+    "checklist": {
+      "title": "Lista de selfies",
+      "captured": "capturado",
+      "pending": "pendiente",
+      "needed": "necesario"
+    }
   },
   "api": {
     "errors": {

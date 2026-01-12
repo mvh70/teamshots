@@ -97,12 +97,15 @@ All features below
 *See [Business Model](business_model) for detailed pricing structure including specific costs, photo packages, and domain-based tiers.*
 *See [User Flows](user_flows) for authentication sign-up process and [Getting Started](getting_started_updated.md) for technical implementation details.*
 
-### 6.5 Enhanced Team Member Photo System
-- **Photo Allocation**: Photos allocated to team members upon invitation acceptance
-- **Photo Types**: Team photos (admin-managed) and individual photos (user-owned)
-- **Usage Tracking**: Photo usage tracked per generation with clear balances
-- **Team Invites**: Photos automatically allocated when team members accept invites
-- **Admin Dashboard**: Photo management with allocation and usage monitoring
+### 6.5 Enhanced Team Member Credit System
+- **Credit Transfer**: Credits are TRANSFERRED (not just allocated) from team pool to person upon invite acceptance
+  - Creates paired transactions: `seat_assigned` (debit team pool) + `seat_received` (credit person)
+  - Person now OWNS these credits and can use them for generation
+- **Person-Centric Model**: All generation uses person's own credits (never draws from team pool directly)
+- **Credit Types**: Team pool (distribution only, admin-managed) and person credits (usable for generation)
+- **Usage Tracking**: Credit usage tracked per generation with clear balances
+- **Credit Return**: When members are removed, remaining credits transfer back to team pool
+- **Admin Dashboard**: Credit management with allocation, usage, and return monitoring
 
 *See [Business Model](business_model) for detailed photo system specifications including default allocations and usage rules.*
 

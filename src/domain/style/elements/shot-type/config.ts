@@ -453,14 +453,20 @@ export function shotTypeSuggestedAspectRatio(shotType?: string) {
 }
 
 import type { ElementConfig } from '../registry'
-import type { PhotoStyleSettings } from '@/types/photo-style'
+import type { ShotTypeSettings } from './types'
 import { deserialize } from './deserializer'
+import { predefined, userChoice, hasValue } from '../base/element-types'
 
 /**
  * Element registry config for shot type
  */
-export const shotTypeElementConfig: ElementConfig<PhotoStyleSettings['shotType']> = {
-  getDefaultPredefined: () => ({ type: 'headshot' }),
-  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+export const shotTypeElementConfig: ElementConfig<ShotTypeSettings> = {
+  getDefaultPredefined: (packageDefaults) => {
+    if (packageDefaults && hasValue(packageDefaults)) {
+      return predefined({ ...packageDefaults.value })
+    }
+    return predefined({ type: 'headshot' })
+  },
+  getDefaultUserChoice: () => userChoice(),
   deserialize
 }

@@ -33,6 +33,7 @@ import { executeWithRateLimitRetry, createProgressRetryCallback } from './genera
 import { ASPECT_RATIOS, DEFAULT_ASPECT_RATIO } from '@/domain/style/elements/aspect-ratio/config'
 import type { AspectRatioId } from '@/domain/style/elements/aspect-ratio/config'
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
+import { hasValue } from '@/domain/style/elements/base/element-types'
 import { extractPackageId } from '@/domain/style/settings-resolver'
 import { getServerPackageConfig } from '@/domain/style/packages/server'
 import type { ImageEvaluationResult } from './generate-image/evaluator'
@@ -303,10 +304,9 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         mergedStyleSettings.presetId = stylePackage.defaultPresetId
       }
 
-      const shotTypeInput =
-        typeof mergedStyleSettings.shotType?.type === 'string'
-          ? mergedStyleSettings.shotType.type
-          : undefined
+      const shotTypeInput = hasValue(mergedStyleSettings.shotType)
+        ? mergedStyleSettings.shotType.value.type
+        : undefined
       const shotTypeConfig = resolveShotType(shotTypeInput)
       const shotLabel = shotTypeConfig.id.replace(/-/g, ' ')
       const shotDescription = shotTypeConfig.framingDescription

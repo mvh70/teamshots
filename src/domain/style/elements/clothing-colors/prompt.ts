@@ -1,5 +1,5 @@
 import type {
-  ClothingColorSettings,
+  ClothingColorValue,
   ShotTypeValue
 } from '@/types/photo-style'
 import type { WardrobeDetailConfig } from '../clothing/config'
@@ -12,7 +12,7 @@ const isBottomVisible = (shotType?: ShotTypeValue | null) =>
   isFullBodyVisible(shotType) || shotType === 'midchest' || shotType === 'three-quarter'
 
 export const buildColorPalette = (
-  colors: ClothingColorSettings['colors'] | undefined,
+  colors: ClothingColorValue | undefined,
   detailKey: string,
   descriptor: WardrobeDetailConfig,
   shotType?: ShotTypeValue | null

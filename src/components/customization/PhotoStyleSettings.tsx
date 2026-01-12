@@ -21,8 +21,10 @@ import {
   DEFAULT_PHOTO_STYLE_SETTINGS,
   ClothingColorSettings,
   ShotTypeSettings,
-  PoseSettings
+  PoseSettings,
+  BackgroundSettings
 } from '@/types/photo-style'
+import { userChoice, predefined, hasValue, isUserChoice } from '@/domain/style/elements/base/element-types'
 import BackgroundSelector from '@/domain/style/elements/background/BackgroundSelector'
 import ClothingSelector from '@/domain/style/elements/clothing/ClothingSelector'
 import ClothingColorSelector from '@/domain/style/elements/clothing-colors/ClothingColorSelector'
@@ -32,7 +34,6 @@ import BrandingSelector from '@/domain/style/elements/branding/BrandingSelector'
 import ExpressionSelector from '@/domain/style/elements/expression/ExpressionSelector'
 import PoseSelector from '@/domain/style/elements/pose/PoseSelector'
 import { getPackageConfig } from '@/domain/style/packages'
-import { applyPosePresetToSettings } from '@/domain/style/elements/pose/config'
 import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import type { KnownClothingStyle } from '@/domain/style/elements/clothing/config'
@@ -157,61 +158,57 @@ export default function PhotoStyleSettings({
   // Compute resolved clothing colors (no memoization to ensure fresh values)
   const defaults = packageDefaults.clothingColors
   const current = value.clothingColors
-  const defaultColors = defaults?.colors || {}
+  const defaultColors = defaults && hasValue(defaults) ? defaults.value : {}
 
   let resolvedClothingColors: ClothingColorSettings
 
   if (current) {
-    if (current.type === 'user-choice') {
-      resolvedClothingColors = {
-        type: 'user-choice' as const,
-        colors: {
-          ...defaultColors,
-          ...(current.colors || {})
-        }
-      }
+    const currentColors = hasValue(current) ? current.value : {}
+    if (isUserChoice(current)) {
+      resolvedClothingColors = userChoice({
+        ...defaultColors,
+        ...currentColors
+      })
     } else {
-      resolvedClothingColors = {
-        type: 'predefined' as const,
-        colors: {
-          ...defaultColors,
-          ...(current.colors || {})
-        }
-      }
+      resolvedClothingColors = predefined({
+        ...defaultColors,
+        ...currentColors
+      })
     }
-  } else if (Object.keys(defaultColors).length > 0) {
-    resolvedClothingColors = {
-      type: 'user-choice',
-      colors: { ...defaultColors }
-    }
+  } else if (defaultColors && Object.keys(defaultColors).length > 0) {
+    resolvedClothingColors = userChoice({ ...defaultColors })
   } else {
-    resolvedClothingColors = { type: 'user-choice' }
+    resolvedClothingColors = userChoice()
   }
 
   // Compute which clothing color pickers to hide based on shot type and clothing style
   const excludedClothingColors = React.useMemo<ClothingColorKey[]>(() => {
     const exclusions = new Set<ClothingColorKey>()
-    
+
     // Get exclusions from shot type (check value first, then package defaults)
-    const shotTypeValue = value.shotType?.type || packageDefaults.shotType?.type
-    if (shotTypeValue && shotTypeValue !== 'user-choice') {
+    const shotTypeValue = hasValue(value.shotType)
+      ? value.shotType.value.type
+      : hasValue(packageDefaults.shotType)
+        ? packageDefaults.shotType.value.type
+        : undefined
+    if (shotTypeValue) {
       const shotTypeConfig = resolveShotType(shotTypeValue)
       if (shotTypeConfig.excludeClothingColors) {
         shotTypeConfig.excludeClothingColors.forEach(c => exclusions.add(c))
       }
     }
-    
+
     // Get exclusions from clothing style + detail (check value first, then package defaults)
-    const clothingStyle = value.clothing?.style || packageDefaults.clothing?.style
-    if (clothingStyle && clothingStyle !== 'user-choice') {
+    const clothingStyle = value.clothing?.value?.style || packageDefaults.clothing?.value?.style
+    if (clothingStyle) {
       const knownStyle = clothingStyle as KnownClothingStyle
-      const clothingDetail = value.clothing?.details || packageDefaults.clothing?.details
+      const clothingDetail = value.clothing?.value?.details || packageDefaults.clothing?.value?.details
       const wardrobeExclusions = getWardrobeExclusions(knownStyle, clothingDetail)
       wardrobeExclusions.forEach(c => exclusions.add(c))
     }
-    
+
     return Array.from(exclusions)
-  }, [value.shotType?.type, value.clothing?.style, value.clothing?.details, packageDefaults])
+  }, [value.shotType, value.clothing?.value?.style, value.clothing?.value?.details, packageDefaults])
 
   // Track last synced outfit colors to avoid infinite loops
   const lastSyncedOutfitColorsRef = React.useRef<string | null>(null)
@@ -244,12 +241,11 @@ export default function PhotoStyleSettings({
       lastSyncedOutfitColorsRef.current = outfitColorSignature
 
       const newSettings = { ...value }
-      // Preserve the existing type (predefined/user-choice), only default to user-choice if not set
-      const existingType = newSettings.clothingColors?.type || 'user-choice'
-      newSettings.clothingColors = {
-        type: existingType,
-        colors: newClothingColors
-      }
+      // Preserve the existing mode (predefined/user-choice), only default to user-choice if not set
+      const existingMode = newSettings.clothingColors?.mode || 'user-choice'
+      newSettings.clothingColors = existingMode === 'predefined'
+        ? predefined(newClothingColors)
+        : userChoice(newClothingColors)
       onChange(newSettings)
     }
   }, [value.customClothing?.colors, value, onChange]) // Re-run when outfit colors change
@@ -261,10 +257,8 @@ export default function PhotoStyleSettings({
     const editable = allCategories.filter(cat => {
       const categorySettings = (value as Record<string, unknown>)[cat.key]
       if (!categorySettings) return true
-      if (cat.key === 'clothing') {
-        return (categorySettings as { style?: string }).style === 'user-choice'
-      }
-      return (categorySettings as { type?: string }).type === 'user-choice'
+      // Use the helper function which handles both new and legacy formats
+      return isUserChoiceSetting(cat.key, categorySettings)
     })
 
     if (editable.length === 0) return // No editable sections
@@ -283,11 +277,11 @@ export default function PhotoStyleSettings({
 
   const syncAspectRatioWithShotType = React.useCallback(
     (target: PhotoStyleSettingsType, shotTypeSettings?: ShotTypeSettings | null) => {
-      if (!shotTypeSettings?.type || shotTypeSettings.type === 'user-choice') {
+      if (!shotTypeSettings || isUserChoice(shotTypeSettings) || !hasValue(shotTypeSettings)) {
         return
       }
 
-      const aspectRatioConfig = defaultAspectRatioForShot(shotTypeSettings.type)
+      const aspectRatioConfig = defaultAspectRatioForShot(shotTypeSettings.value.type)
       if (target.aspectRatio !== aspectRatioConfig.id) {
         target.aspectRatio = aspectRatioConfig.id
       }
@@ -348,9 +342,9 @@ export default function PhotoStyleSettings({
       : elementConfig.getDefaultUserChoice()
 
     // Special handling for clothingColors to preserve existing colors
-    if (category === 'clothingColors' && newSettings.clothingColors?.colors) {
+    if (category === 'clothingColors' && hasValue(newSettings.clothingColors)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (newValue as any).colors = newSettings.clothingColors.colors
+      (newValue as any).value = newSettings.clothingColors.value
     }
 
     // Update the setting
@@ -360,9 +354,6 @@ export default function PhotoStyleSettings({
     // Special post-processing for certain categories
     if (category === 'shotType') {
       syncAspectRatioWithShotType(newSettings, newSettings.shotType)
-    } else if (category === 'pose' && isPredefined && newSettings.pose?.type !== 'user-choice' && newSettings.pose) {
-      const poseSettings = applyPosePresetToSettings(newSettings, newSettings.pose.type)
-      Object.assign(newSettings, poseSettings)
     }
 
     onChange(newSettings)
@@ -382,46 +373,53 @@ export default function PhotoStyleSettings({
     
     if (category === 'shotType') {
       syncAspectRatioWithShotType(newSettings, settings as ShotTypeSettings)
-    } else if (category === 'pose') {
-      // Apply pose preset settings when pose is changed
-      const poseSettings = settings as { type: string }
-      
-      // Explicitly update pose setting first to ensure type is preserved
-      newSettings.pose = { type: poseSettings.type } as PoseSettings
-      
-      if (poseSettings?.type && poseSettings.type !== 'user-choice') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const updatedSettings = applyPosePresetToSettings(newSettings, poseSettings.type as any)
-        Object.assign(newSettings, updatedSettings)
-      }
     }
-    
+
     onChange(newSettings)
   }
 
   const isUserChoiceSetting = (category: CategoryType, settings: unknown) => {
     if (!settings) return false
-    if (category === 'clothing') {
-      return (settings as { style?: string }).style === 'user-choice'
-    }
+
+    // CustomClothing uses a different pattern (type field directly, not wrapped)
     if (category === 'customClothing') {
       return (settings as { type?: string }).type === 'user-choice'
     }
-    if (category === 'pose') {
-      return (settings as { type?: string }).type === 'user-choice'
+
+    // All other categories use the ElementSetting wrapper pattern
+    // Check for new format first (mode property)
+    const wrapped = settings as { mode?: string; type?: string; style?: string }
+    if ('mode' in wrapped && wrapped.mode !== undefined) {
+      return wrapped.mode === 'user-choice'
     }
-    return (settings as { type?: string }).type === 'user-choice'
+
+    // Legacy format fallback
+    if (category === 'clothing') {
+      return wrapped.style === 'user-choice'
+    }
+    return wrapped.type === 'user-choice'
   }
 
   const isPredefinedSetting = (category: CategoryType, settings: unknown) => {
     if (!settings) return false
-    if (category === 'clothing') {
-      return (settings as { style?: string }).style !== 'user-choice'
-    }
+
+    // CustomClothing uses a different pattern (type field directly, not wrapped)
     if (category === 'customClothing') {
       return (settings as { type?: string }).type === 'predefined'
     }
-    return (settings as { type?: string }).type !== 'user-choice'
+
+    // All other categories use the ElementSetting wrapper pattern
+    // Check for new format first (mode property)
+    const wrapped = settings as { mode?: string; type?: string; style?: string }
+    if ('mode' in wrapped && wrapped.mode !== undefined) {
+      return wrapped.mode === 'predefined'
+    }
+
+    // Legacy format fallback
+    if (category === 'clothing') {
+      return wrapped.style !== 'user-choice'
+    }
+    return wrapped.type !== 'user-choice'
   }
 
   const isCategoryPredefined = (category: CategoryType) => {
@@ -596,7 +594,7 @@ export default function PhotoStyleSettings({
         }`}>
           {category.key === 'background' && (
             <BackgroundSelector
-              value={value.background || { type: 'user-choice' }}
+              value={value.background || userChoice()}
               onChange={(settings) => handleCategorySettingsChange('background', settings)}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
               isDisabled={!showToggles && readonlyPredefined && isPredefined}
@@ -608,7 +606,7 @@ export default function PhotoStyleSettings({
           
           {category.key === 'clothing' && (
             <ClothingSelector
-              value={value.clothing || { style: 'user-choice' }}
+              value={value.clothing || userChoice()}
               onChange={(settings) => handleCategorySettingsChange('clothing', settings)}
               clothingColors={resolvedClothingColors}
               excludeColors={excludedClothingColors}
@@ -627,6 +625,7 @@ export default function PhotoStyleSettings({
               showPredefinedBadge={isPredefined}
               showHeader={false}
               excludeColors={excludedClothingColors}
+              customClothingColors={value.customClothing?.colors}
             />
           )}
 
@@ -642,7 +641,7 @@ export default function PhotoStyleSettings({
 
           {category.key === 'shotType' && (
             <ShotTypeSelector
-              value={value.shotType || { type: 'user-choice' }}
+              value={value.shotType || userChoice()}
               onChange={(settings) => handleCategorySettingsChange('shotType', settings)}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
               isDisabled={!showToggles && readonlyPredefined && isPredefined}
@@ -651,7 +650,7 @@ export default function PhotoStyleSettings({
           
           {category.key === 'branding' && (
             <BrandingSelector
-              value={value.branding || { type: 'user-choice' }}
+              value={value.branding || userChoice()}
               onChange={(settings) => handleCategorySettingsChange('branding', settings)}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
               isDisabled={!showToggles && readonlyPredefined && isPredefined}
@@ -661,7 +660,7 @@ export default function PhotoStyleSettings({
           
           {category.key === 'expression' && (
             <ExpressionSelector
-              value={value.expression || { type: 'user-choice' }}
+              value={value.expression || userChoice()}
               onChange={(settings) => handleCategorySettingsChange('expression', settings)}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
               isDisabled={!showToggles && readonlyPredefined && isPredefined}

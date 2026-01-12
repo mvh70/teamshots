@@ -8,10 +8,58 @@ import { createS3Client, getS3BucketName, getS3Key, sanitizeNameForS3 } from '@/
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { fileTypeFromBuffer } from 'file-type'
+import { classifySelfieType } from '@/domain/selfie/selfie-classifier'
 
 const s3 = createS3Client({ forcePathStyle: true })
 const bucket = getS3BucketName()
 const BASE_DIR = path.join(process.cwd(), 'storage', 'tmp')
+
+/**
+ * Run classification asynchronously and update the selfie record.
+ * This function is fire-and-forget - it doesn't block the upload response.
+ */
+async function runAsyncClassification(
+  selfieId: string,
+  imageBase64: string,
+  mimeType: string
+): Promise<void> {
+  try {
+    Logger.info('[uploads/promote] Starting async classification', { selfieId })
+
+    const classification = await classifySelfieType({
+      imageBase64,
+      mimeType,
+    })
+
+    // Update selfie with classification results
+    await prisma.selfie.update({
+      where: { id: selfieId },
+      data: {
+        selfieType: classification.selfieType,
+        selfieTypeConfidence: classification.confidence,
+        personCount: classification.personCount,
+        isProper: classification.isProper,
+        improperReason: classification.improperReason,
+        // If improper, deselect the selfie
+        ...(classification.isProper === false && { selected: false }),
+      },
+    })
+
+    Logger.info('[uploads/promote] Async classification complete', {
+      selfieId,
+      selfieType: classification.selfieType,
+      isProper: classification.isProper,
+      personCount: classification.personCount,
+    })
+  } catch (error) {
+    Logger.error('[uploads/promote] Async classification failed', {
+      selfieId,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    // Don't throw - this is fire-and-forget
+    // Selfie will remain with null classification (can be retried later)
+  }
+}
 
 export async function POST(req: NextRequest) {
   if (!bucket) return NextResponse.json({ error: 'Missing bucket' }, { status: 500 })
@@ -22,7 +70,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { tempKey } = await req.json()
+    const { tempKey, selfieType, selfieTypeConfidence, personCount, isProper, improperReason } = await req.json() as {
+      tempKey?: string
+      selfieType?: string
+      selfieTypeConfidence?: number
+      personCount?: number
+      isProper?: boolean
+      improperReason?: string
+    }
     if (!tempKey || typeof tempKey !== 'string' || !tempKey.startsWith('temp:')) {
       return NextResponse.json({ error: 'Invalid temp key' }, { status: 400 })
     }
@@ -99,16 +154,26 @@ export async function POST(req: NextRequest) {
 
     const firstName = sanitizeNameForS3(person.firstName || 'unknown')
 
-    // Create selfie record first to get the ID
-    // For batch uploads, mark as selected by default
+    // Create selfie record immediately (classification runs async)
+    // Selected defaults to true, will be updated if classification finds issues
     const selfie = await prisma.selfie.create({
       data: {
         personId: person.id,
         key: `temp-${Date.now()}`, // Temporary key, will be updated
         uploadedByUser: session.user.id,
-        selected: true, // Mark as selected by default for batch uploads
+        selected: true, // Default to selected, async classification will update if improper
+        // Include classification if already provided (rare, for backwards compatibility)
+        ...(selfieType && { selfieType }),
+        ...(typeof selfieTypeConfidence === 'number' && { selfieTypeConfidence }),
+        ...(typeof personCount === 'number' && { personCount }),
+        ...(typeof isProper === 'boolean' && { isProper }),
+        ...(improperReason && { improperReason }),
       },
     })
+
+    // Store image base64 and content type for async classification
+    const imageBase64ForClassification = file.toString('base64')
+    const mimeTypeForClassification = contentType
 
     // Use selfie ID as filename (relative key, without folder prefix)
     // Format: selfies/{personId}-{firstName}/{selfieId}.{ext}
@@ -135,6 +200,17 @@ export async function POST(req: NextRequest) {
 
     // Cleanup temp
     try { await fs.unlink(filePath) } catch {}
+
+    // Run classification asynchronously (fire-and-forget)
+    // Don't await - let it run in background while user continues uploading
+    if (!selfieType) {
+      const selfieIdForClassification = selfie.id
+      runAsyncClassification(
+        selfieIdForClassification,
+        imageBase64ForClassification,
+        mimeTypeForClassification
+      )
+    }
 
     return NextResponse.json({ key: relativeKey, selfieId: selfie.id })
   } catch (e) {

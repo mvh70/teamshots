@@ -3,6 +3,7 @@
 import React from 'react'
 import { useTranslations } from 'next-intl'
 import IntroScreenContent, { IntroTip } from './IntroScreenContent'
+import SelfieTypeSection from './SelfieTypeSection'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 
 interface SelfieTipsContentProps {
@@ -118,34 +119,40 @@ export default function SelfieTipsContent({
   }
 
   return (
-    <IntroScreenContent
-      variant={variant}
-      kicker=""
-      title={t('title', { default: 'First, take or upload your selfies' })}
-      body={t('body', { default: "Great photos start with great selfies. Here's how to nail them." })}
-      tips={tips}
-      images={{
-        good: {
-          src: '/images/good_selfies_1.png',
-          alt: 'Examples of good selfies for AI photo generation',
-          width: 300,
-          height: 300,
-          priority: true
-        },
-        bad: {
-          src: '/images/bad_selfies_1.png',
-          alt: 'Examples of bad selfies for AI photo generation',
-          width: 300,
-          height: 300,
-          priority: true
-        }
-      }}
-      swipeHintText={tCommon('swipeHint', { default: 'Swipe or tap Next to continue' })}
-      continueButtonText={t('continueButton', { default: 'Continue to selfie upload' })}
-      onContinue={onContinue}
-      onSkip={onSkip}
-      skipText={t('skip', { default: "Don't show again" })}
-      className={className}
-    />
+    <div className={className}>
+      <IntroScreenContent
+        variant={variant}
+        kicker=""
+        title={t('title', { default: 'First, take or upload your selfies' })}
+        body={t('body', { default: "Great photos start with great selfies. Here's how to nail them." })}
+        tips={tips}
+        images={{
+          good: {
+            src: '/images/good_selfies_1.png',
+            alt: 'Examples of good selfies for AI photo generation',
+            width: 300,
+            height: 300,
+            priority: true
+          },
+          bad: {
+            src: '/images/bad_selfies_1.png',
+            alt: 'Examples of bad selfies for AI photo generation',
+            width: 300,
+            height: 300,
+            priority: true
+          }
+        }}
+        swipeHintText={tCommon('swipeHint', { default: 'Swipe or tap Next to continue' })}
+        continueButtonText={t('continueButton', { default: 'Continue to selfie upload' })}
+        onContinue={onContinue}
+        onSkip={onSkip}
+        skipText={t('skip', { default: "Don't show again" })}
+      />
+
+      {/* Selfie Type Section - Shows the 3 required selfie types */}
+      <div className="px-4 sm:px-6 lg:px-8 pb-8 -mt-4 md:-mt-40">
+        <SelfieTypeSection className="max-w-2xl mx-auto" />
+      </div>
+    </div>
   )
 }

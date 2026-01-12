@@ -1,8 +1,7 @@
-import type { ExpressionSettings } from '@/types/photo-style'
 import type { ElementConfig } from '../registry'
-import type { PhotoStyleSettings } from '@/types/photo-style'
 import { deserialize } from './deserializer'
-import type { ExpressionType } from './types'
+import type { ExpressionSettings, ExpressionType } from './types'
+import { predefined, userChoice } from '../base/element-types'
 
 /**
  * UI configuration for expression options
@@ -79,8 +78,8 @@ export function resolveExpression(value: string): ExpressionConfig | undefined {
 /**
  * Element registry config for expression
  */
-export const expressionElementConfig: ElementConfig<PhotoStyleSettings['expression']> = {
-  getDefaultPredefined: () => ({ type: 'neutral_serious' }),
-  getDefaultUserChoice: () => ({ type: 'user-choice' }),
+export const expressionElementConfig: ElementConfig<ExpressionSettings> = {
+  getDefaultPredefined: () => predefined({ type: 'neutral_serious' }),
+  getDefaultUserChoice: () => userChoice(),
   deserialize
 }

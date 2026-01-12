@@ -5,6 +5,7 @@ import type { PhotoStyleSettings } from '@/types/photo-style'
 import type { DownloadAssetFn, EvaluationFeedback } from '@/types/generation'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import { resolveAspectRatioConfig } from '@/domain/style/elements/aspect-ratio/config'
+import { hasValue } from '@/domain/style/elements/base/element-types'
 import type { PersistedImageReference, V3WorkflowState } from '@/types/workflow'
 import { executeStep0Preparation } from './steps/v3-step0-preparation'
 import { executeV3Step1a } from './steps/v3-step1a-person-generation'
@@ -162,9 +163,10 @@ async function determineLighting(
   generationId: string
 ): Promise<string> {
   // 1. Custom Background: Analyze the image
-  if (styleSettings.background?.type === 'custom' && styleSettings.background.key) {
+  const bgValue = styleSettings.background?.value
+  if (bgValue?.type === 'custom' && bgValue.key) {
     try {
-      const asset = await downloadAsset(styleSettings.background.key)
+      const asset = await downloadAsset(bgValue.key)
       if (asset) {
         const buffer = Buffer.from(asset.base64, 'base64')
         const direction = await analyzeLightingFromImage(buffer)
@@ -181,7 +183,7 @@ async function determineLighting(
 
   // 2. Generated Background Logic
   const sceneDesc = (promptObj.scene?.description || '').toLowerCase()
-  const bgType = (styleSettings.background?.type || '').toLowerCase()
+  const bgType = (bgValue?.type || '').toLowerCase()
   
   // Outdoor / Nature
   if (bgType === 'outdoor' || sceneDesc.includes('outdoor') || sceneDesc.includes('outside') || sceneDesc.includes('park') || sceneDesc.includes('nature') || sceneDesc.includes('sky')) {
@@ -325,11 +327,28 @@ async function generatePersonWithRetry({
         })
       : undefined
 
-    // Extract garment collage from reference images (if present)
-    const garmentCollageReference = referenceImages?.find(ref =>
+    // Extract garment collage - check both referenceImages (from buildGenerationPayload)
+    // and preparedAssets (from step 0 preparation)
+    let garmentCollageReference = referenceImages?.find(ref =>
       ref.description?.toLowerCase().includes('garment') ||
       ref.description?.toLowerCase().includes('collage')
     )
+
+    // If not in referenceImages, check preparedAssets (where CustomClothingElement.prepare() stores it)
+    if (!garmentCollageReference && preparedAssets) {
+      const preparedCollage = preparedAssets.get('custom-clothing-garment-collage')
+      if (preparedCollage?.data.base64) {
+        garmentCollageReference = {
+          base64: preparedCollage.data.base64,
+          mimeType: preparedCollage.data.mimeType || 'image/png',
+          description: 'Garment collage showing authorized clothing and accessories for this outfit',
+        }
+        Logger.info('V3 Step 1a Eval: Using garment collage from preparedAssets', {
+          generationId,
+          base64Length: preparedCollage.data.base64.length,
+        })
+      }
+    }
 
     const step2Output = await executeWithRateLimitRetry(
       async () => {
@@ -428,13 +447,17 @@ async function generateBackgroundWithRetry({
   // Check if Step 1b should run
   // NEW: Step 1b now ONLY runs for custom backgrounds
   // Logo branding is now handled in Step 2 via element composition for better 3D integration
-  const hasCustomBackground = styleSettings.background?.type === 'custom' && styleSettings.background.key
+  const bgValue1b = styleSettings.background?.value
+  const hasCustomBackground = bgValue1b?.type === 'custom' && bgValue1b.key
   const shouldRunStep1b = hasCustomBackground
+
+  // Extract branding value for logging
+  const brandingValue = hasValue(styleSettings.branding) ? styleSettings.branding.value : undefined
 
   if (!shouldRunStep1b) {
     Logger.info('V3 Step 1b: Skipping background generation (no custom background)', {
       hasCustomBackground,
-      brandingPosition: styleSettings.branding?.position,
+      brandingPosition: brandingValue?.position,
       note: 'Logo branding now handled in Step 2 for better 3D integration'
     })
     return undefined
@@ -442,18 +465,18 @@ async function generateBackgroundWithRetry({
 
   // Load logo for branding - use prepared asset from Step 0
   let brandingLogoReference: BaseReferenceImage | undefined
-  if (styleSettings.branding?.type === 'include') {
+  if (brandingValue?.type === 'include') {
     const preparedLogo = preparedAssets?.get('branding-logo')
     if (preparedLogo?.data.base64) {
       brandingLogoReference = {
-        description: `Company logo for ${styleSettings.branding.position} placement`,
+        description: `Company logo for ${brandingValue.position} placement`,
         base64: preparedLogo.data.base64,
         mimeType: preparedLogo.data.mimeType || 'image/png'
       }
       Logger.debug('V3 Step 1b: Using prepared logo asset (SVG already converted)', {
         generationId,
         mimeType: preparedLogo.data.mimeType,
-        position: styleSettings.branding.position
+        position: brandingValue.position
       })
     } else {
       Logger.warn('V3 Step 1b: Prepared logo asset not found', {
@@ -466,9 +489,9 @@ async function generateBackgroundWithRetry({
 
   // Load custom background if specified
   let customBackgroundReference: BaseReferenceImage | undefined
-  if (styleSettings.background?.type === 'custom' && styleSettings.background.key) {
+  if (bgValue1b?.type === 'custom' && bgValue1b.key) {
     try {
-      const bgAsset = await downloadAsset(styleSettings.background.key)
+      const bgAsset = await downloadAsset(bgValue1b.key)
       if (bgAsset) {
         customBackgroundReference = {
           description: `Custom background image`,
@@ -793,12 +816,12 @@ export async function executeV3Workflow({
     })
 
     // OPTIMIZATION: Store preparedLogoKey in branding settings for reuse in regenerations
-    if (styleSettings.branding?.type === 'include') {
+    if (hasValue(styleSettings.branding) && styleSettings.branding.value.type === 'include') {
       const preparedLogo = preparedAssets.get('branding-logo')
       if (preparedLogo?.data.metadata?.preparedLogoS3Key) {
         const preparedKey = preparedLogo.data.metadata.preparedLogoS3Key as string
         // Update branding settings with prepared logo key for future regenerations
-        ;(styleSettings.branding as { preparedLogoKey?: string }).preparedLogoKey = preparedKey
+        ;(styleSettings.branding.value as { preparedLogoKey?: string }).preparedLogoKey = preparedKey
         Logger.info('V3 Step 0: Stored preparedLogoKey in branding settings for regeneration reuse', {
           generationId,
           preparedLogoKey: preparedKey,
@@ -1178,7 +1201,8 @@ export async function executeV3Workflow({
 
   // Determine background buffer for step 2
   // For simple backgrounds (gradient, neutral) without step 1b, pass undefined so AI generates from scene specs
-  const isSimpleBackground = styleSettings.background?.type === 'gradient' || styleSettings.background?.type === 'neutral'
+  const bgTypeStep2 = styleSettings.background?.value?.type
+  const isSimpleBackground = bgTypeStep2 === 'gradient' || bgTypeStep2 === 'neutral'
   const backgroundBufferForStep2 = step1bOutput?.backgroundBuffer
     ? step1bOutput.backgroundBuffer  // Use step 1b output if available
     : isSimpleBackground

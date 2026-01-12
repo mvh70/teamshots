@@ -1,7 +1,8 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { ClothingSettings, ClothingColorSettings } from '@/types/photo-style'
+import { ClothingSettings, ClothingColorSettings, ClothingType, ClothingValue } from '@/types/photo-style'
+import { predefined, hasValue } from '../base/element-types'
 import { Grid } from '@/components/ui'
 import { CLOTHING_STYLES, CLOTHING_DETAILS, CLOTHING_ACCESSORIES } from './config'
 import Image from 'next/image'
@@ -35,24 +36,27 @@ export default function ClothingSelector({
   const t = useTranslations('customization.photoStyle.clothing')
   const [imageExists, setImageExists] = useState(true)
 
+  // Extract the clothing value from the wrapper
+  const clothingValue = hasValue(value) ? value.value : undefined
+
   // Filter clothing styles based on availableStyles prop
   const filteredClothingStyles = availableStyles
     ? CLOTHING_STYLES.filter(style => availableStyles.includes(style.value))
     : CLOTHING_STYLES
 
-  const handleStyleChange = (style: ClothingSettings['style'], event?: React.MouseEvent) => {
+  const handleStyleChange = (style: ClothingType, event?: React.MouseEvent) => {
     if (event) {
       event.preventDefault()
       event.stopPropagation()
     }
-    
-    const newSettings: ClothingSettings = { 
+
+    const newValue: ClothingValue = {
       style,
       details: undefined, // Reset details when style changes
       accessories: []
     }
-    
-    onChange(newSettings)
+
+    onChange(predefined(newValue))
   }
 
   const handleDetailChange = (detail: string, event?: React.MouseEvent) => {
@@ -60,8 +64,9 @@ export default function ClothingSelector({
       event.preventDefault()
       event.stopPropagation()
     }
-    
-    onChange({ ...value, details: detail })
+
+    if (!clothingValue) return
+    onChange(predefined({ ...clothingValue, details: detail }))
   }
 
   const handleAccessoryToggle = (accessory: string, event?: React.MouseEvent) => {
@@ -69,20 +74,20 @@ export default function ClothingSelector({
       event.preventDefault()
       event.stopPropagation()
     }
-    if (isPredefined) return
-    
-    const currentAccessories = value.accessories || []
+    if (isPredefined || !clothingValue) return
+
+    const currentAccessories = clothingValue.accessories || []
     const newAccessories = currentAccessories.includes(accessory)
-      ? currentAccessories.filter(a => a !== accessory)
+      ? currentAccessories.filter((a: string) => a !== accessory)
       : [...currentAccessories, accessory]
-    
-    onChange({ ...value, accessories: newAccessories })
+
+    onChange(predefined({ ...clothingValue, accessories: newAccessories }))
   }
 
   // Reset image exists state when style or details change
   useEffect(() => {
     setImageExists(true)
-  }, [value.style, value.details])
+  }, [clothingValue?.style, clothingValue?.details])
 
 
   return (
@@ -108,8 +113,8 @@ export default function ClothingSelector({
       {/* Clothing Style Selection - Dropdown */}
       <div className="mb-6">
         <select
-          value={value.style || ''}
-          onChange={(e) => !(isPredefined || isDisabled) && handleStyleChange(e.target.value as ClothingSettings['style'])}
+          value={clothingValue?.style || ''}
+          onChange={(e) => !(isPredefined || isDisabled) && handleStyleChange(e.target.value as ClothingType)}
           disabled={isPredefined || isDisabled}
           className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary ${
             (isPredefined || isDisabled) ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white'
@@ -124,7 +129,7 @@ export default function ClothingSelector({
       </div>
 
       {/* Style-specific controls */}
-      {value.style && value.style !== 'user-choice' && (
+      {clothingValue?.style && (
         <div className={`space-y-6 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
           {/* Details Section */}
           <div>
@@ -132,8 +137,8 @@ export default function ClothingSelector({
               {t('details.label', { default: 'Details' })}
             </label>
             <Grid cols={{ mobile: 2 }} gap="sm">
-              {CLOTHING_DETAILS[value.style]?.map((detail) => {
-                const isSelected = value.details === detail
+              {CLOTHING_DETAILS[clothingValue.style]?.map((detail) => {
+                const isSelected = clothingValue.details === detail
                 return (
                   <button
                     type="button"
@@ -159,12 +164,12 @@ export default function ClothingSelector({
                 {t('accessories.label', { default: 'Accessories' })}
               </label>
             </div>
-            
+
             {/* Accessory Selector */}
             {!(isPredefined || isDisabled) && (
               <Grid cols={{ mobile: 2 }} gap="sm" className="p-3 border border-gray-200 rounded-lg bg-gray-50">
-                {CLOTHING_ACCESSORIES[value.style]?.map((accessory) => {
-                  const isSelected = value.accessories?.includes(accessory) || false
+                {CLOTHING_ACCESSORIES[clothingValue.style]?.map((accessory) => {
+                  const isSelected = clothingValue.accessories?.includes(accessory) || false
                   return (
                     <button
                       type="button"
@@ -188,19 +193,19 @@ export default function ClothingSelector({
           </div>
 
           {/* Preview Image with Colors */}
-          {value.details && imageExists && value.style && (
+          {clothingValue.details && imageExists && clothingValue.style && (
             <div className="mt-6 rounded-md overflow-hidden border border-gray-200 bg-white p-4">
-              {clothingColors?.colors ? (
+              {clothingColors && hasValue(clothingColors) ? (
                 <ClothingColorPreview
-                  colors={clothingColors.colors}
-                  clothingStyle={value.style}
-                  clothingDetail={value.details}
+                  colors={clothingColors.value}
+                  clothingStyle={clothingValue.style}
+                  clothingDetail={clothingValue.details}
                   excludeColors={excludeColors}
                 />
               ) : (
                 <Image
-                  src={`/images/clothing/${value.style}-${value.details}.png`}
-                  alt={`${t(`styles.${value.style}.label`)} - ${t(`details_options.${value.details}`)}`}
+                  src={`/images/clothing/${clothingValue.style}-${clothingValue.details}.png`}
+                  alt={`${t(`styles.${clothingValue.style}.label`)} - ${t(`details_options.${clothingValue.details}`)}`}
                   width={600}
                   height={400}
                   className="w-full h-auto object-cover"

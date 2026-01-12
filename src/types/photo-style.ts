@@ -1,44 +1,28 @@
 // Photo Style Settings Types
 // This defines the structure of the JSON settings stored in the Context model
 
-import type {
-  ArmPositionSetting,
-  BodyAngleSetting,
-  HeadPositionSetting,
-  PoseSettings,
-  ShoulderPositionSetting,
-  SittingPoseSetting,
-  WeightDistributionSetting
-} from '../domain/style/elements/pose/types'
-import type { ClothingSettings } from '../domain/style/elements/clothing/types'
-import type { ExpressionSettings } from '../domain/style/elements/expression/types'
+import type { PoseSettings, PoseType, PoseValue } from '../domain/style/elements/pose/types'
+import type { ClothingSettings, ClothingType, ClothingValue } from '../domain/style/elements/clothing/types'
+import type { ExpressionSettings, ExpressionType, ExpressionValue } from '../domain/style/elements/expression/types'
 import type {
   ShotTypeSettings,
   ShotTypeValue
 } from '../domain/style/elements/shot-type/types'
 import type { BrandingSettings } from '../domain/style/elements/branding/types'
-import type { ClothingColorSettings } from '../domain/style/elements/clothing-colors/types'
-import type { BackgroundSettings } from '../domain/style/elements/background/types'
+import type { ClothingColorSettings, ClothingColorValue } from '../domain/style/elements/clothing-colors/types'
+import type { BackgroundSettings, BackgroundType, BackgroundValue } from '../domain/style/elements/background/types'
 import type { CustomClothingSettings } from '../domain/style/elements/custom-clothing/types'
 
-export {
-  ArmPositionSetting,
-  BodyAngleSetting,
-  HeadPositionSetting,
-  PoseSettings,
-  ShoulderPositionSetting,
-  SittingPoseSetting,
-  WeightDistributionSetting
-}
-export { ClothingSettings }
-export { ExpressionSettings }
+export { PoseSettings, PoseType, PoseValue }
+export { ClothingSettings, ClothingType, ClothingValue }
+export { ExpressionSettings, ExpressionType, ExpressionValue }
 export {
   ShotTypeSettings,
   ShotTypeValue
 }
 export { BrandingSettings }
-export { ClothingColorSettings }
-export { BackgroundSettings }
+export { ClothingColorSettings, ClothingColorValue }
+export { BackgroundSettings, BackgroundType, BackgroundValue }
 export { CustomClothingSettings }
 
 export interface StyleSettings {
@@ -84,12 +68,6 @@ export type CategoryType =
   | 'customClothing'
   | 'shotType'
   | 'aspectRatio'
-  | 'bodyAngle'
-  | 'headPosition'
-  | 'shoulderPosition'
-  | 'weightDistribution'
-  | 'armPosition'
-  | 'sittingPose'
   | 'style'
   | 'expression'
   | 'lighting'
@@ -104,23 +82,27 @@ export interface CategoryToggle {
 export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
   presetId: undefined,
   background: {
-    type: 'user-choice'
+    mode: 'user-choice',
+    value: undefined
   },
   branding: {
-    type: 'user-choice',
-    position: 'clothing' // Default position when branding is enabled
+    mode: 'user-choice',
+    value: undefined
   },
   clothing: {
-    style: 'user-choice'
+    mode: 'user-choice',
+    value: undefined
   },
   clothingColors: {
-    type: 'user-choice'
+    mode: 'user-choice',
+    value: undefined
   },
   customClothing: {
     type: 'predefined'
   },
   shotType: {
-    type: 'user-choice'
+    mode: 'user-choice',
+    value: undefined
   },
   aspectRatio: '1:1',
   // Camera settings are now calculated dynamically based on scene requirements
@@ -129,13 +111,15 @@ export const DEFAULT_PHOTO_STYLE_SETTINGS: PhotoStyleSettings = {
     preset: 'corporate'
   },
   expression: {
-    type: 'user-choice'
+    mode: 'user-choice',
+    value: undefined
   },
   lighting: {
     type: 'user-choice'
   },
   pose: {
-    type: 'user-choice'
+    mode: 'user-choice',
+    value: undefined
   },
   subjectCount: '1',
   usageContext: 'general'

@@ -1,74 +1,71 @@
-import type { PhotoStyleSettings } from '@/types/photo-style'
+import type { ClothingColorSettings, ClothingColorValue, LegacyClothingColorSettings } from './types'
+import { predefined, userChoice } from '../base/element-types'
+
+/**
+ * Helper to get color with backward compatibility for old field names
+ */
+function getColorValue(colors: Record<string, unknown> | undefined, newField: string, oldField?: string): string | undefined {
+  if (!colors) return undefined
+  return (colors[newField] as string | undefined) || (oldField ? colors[oldField] as string | undefined : undefined)
+}
+
+/**
+ * Extract ClothingColorValue from raw colors object
+ */
+function extractColorValue(colors: Record<string, unknown> | undefined, fallback: ClothingColorValue): ClothingColorValue {
+  if (!colors) return fallback
+  return {
+    baseLayer: getColorValue(colors, 'baseLayer', 'topBase') || fallback.baseLayer,
+    topLayer: getColorValue(colors, 'topLayer', 'topCover') || fallback.topLayer,
+    bottom: colors.bottom as string | undefined,
+    shoes: colors.shoes as string | undefined
+  }
+}
 
 export function deserialize(
   raw: Record<string, unknown>,
-  defaults?: PhotoStyleSettings['clothingColors']
-): PhotoStyleSettings['clothingColors'] {
-  const rawClothingColors = raw.clothingColors as PhotoStyleSettings['clothingColors'] | null | undefined
+  defaults?: ClothingColorSettings
+): ClothingColorSettings {
+  const rawClothingColors = raw.clothingColors
 
-  // Fallback default colors if defaults is not provided or doesn't have the expected structure
-  const fallbackColors = {
-    baseLayer: defaults?.type === 'predefined' && defaults.colors?.baseLayer ? defaults.colors.baseLayer : 'white',
-    topLayer: defaults?.type === 'predefined' && defaults.colors?.topLayer ? defaults.colors.topLayer : 'navy'
+  // Fallback default colors
+  const fallbackColors: ClothingColorValue = {
+    baseLayer: defaults?.value?.baseLayer || 'white',
+    topLayer: defaults?.value?.topLayer || 'navy'
   }
 
   if (rawClothingColors === null || rawClothingColors === undefined || !('clothingColors' in raw)) {
-    return { type: 'user-choice' }
+    return userChoice()
   }
 
-  // Helper to get color with backward compatibility for old field names
-  const getColorValue = (colors: any, newField: string, oldField?: string): string | undefined => {
-    return colors?.[newField] || (oldField ? colors?.[oldField] : undefined)
+  const colorsObj = rawClothingColors as Record<string, unknown>
+
+  // Detect new format (has 'mode' field)
+  if ('mode' in colorsObj && typeof colorsObj.mode === 'string') {
+    const mode = colorsObj.mode as 'predefined' | 'user-choice'
+    const value = colorsObj.value as ClothingColorValue | undefined
+    return { mode, value }
   }
 
-  if (rawClothingColors.type === 'user-choice') {
-    if (rawClothingColors.colors) {
-      return {
-        type: 'user-choice',
-        colors: {
-          // Try new field names first, fall back to old field names (topBase → baseLayer, topCover → topLayer)
-          baseLayer: getColorValue(rawClothingColors.colors, 'baseLayer', 'topBase'),
-          topLayer: getColorValue(rawClothingColors.colors, 'topLayer', 'topCover'),
-          bottom: rawClothingColors.colors.bottom,
-          shoes: rawClothingColors.colors.shoes
-        }
-      }
+  // Legacy format detection
+  const legacy = colorsObj as unknown as LegacyClothingColorSettings
+
+  if (legacy.type === 'user-choice') {
+    if (legacy.colors) {
+      return userChoice(extractColorValue(legacy.colors as Record<string, unknown>, fallbackColors))
     }
-    return {
-      type: 'user-choice',
-      colors: {
-        baseLayer: fallbackColors.baseLayer,
-        topLayer: fallbackColors.topLayer
-      }
-    }
+    return userChoice(fallbackColors)
   }
 
-  if (rawClothingColors.type === 'predefined') {
-    return {
-      type: 'predefined',
-      colors: {
-        // Try new field names first, fall back to old field names
-        baseLayer: getColorValue(rawClothingColors.colors, 'baseLayer', 'topBase') || fallbackColors.baseLayer,
-        topLayer: getColorValue(rawClothingColors.colors, 'topLayer', 'topCover') || fallbackColors.topLayer,
-        bottom: rawClothingColors.colors?.bottom,
-        shoes: rawClothingColors.colors?.shoes
-      }
-    }
+  if (legacy.type === 'predefined') {
+    return predefined(extractColorValue(legacy.colors as Record<string, unknown>, fallbackColors))
   }
 
-  if (rawClothingColors.colors) {
-    return {
-      type: 'user-choice',
-      colors: {
-        // Try new field names first, fall back to old field names
-        baseLayer: getColorValue(rawClothingColors.colors, 'baseLayer', 'topBase') || fallbackColors.baseLayer,
-        topLayer: getColorValue(rawClothingColors.colors, 'topLayer', 'topCover') || fallbackColors.topLayer,
-        bottom: rawClothingColors.colors.bottom,
-        shoes: rawClothingColors.colors.shoes
-      }
-    }
+  // If has colors but no type, treat as user-choice with colors
+  if (legacy.colors) {
+    return userChoice(extractColorValue(legacy.colors as Record<string, unknown>, fallbackColors))
   }
 
-  return { type: 'user-choice' }
+  return userChoice()
 }
 

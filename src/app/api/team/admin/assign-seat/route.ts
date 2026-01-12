@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { withTeamPermission } from '@/domain/access/permissions'
 import { isSeatsBasedTeam, canAddTeamMember } from '@/domain/pricing/seats'
+import { transferCreditsFromTeamToPerson } from '@/domain/credits/credits'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { Logger } from '@/lib/logger'
 import { getTranslation } from '@/lib/translations'
@@ -132,30 +133,23 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Allocate credits to the admin via CreditTransaction
-      await tx.creditTransaction.create({
-        data: {
-          credits: creditsAllocated,
-          type: 'invite_allocated',
-          description: 'Seat self-assignment credits',
-          teamId: team.id,
-          personId: user.person?.id,
-          teamInviteId: teamInvite.id
-        }
-      })
-
-      // Increment activeSeats counter
-      await tx.team.update({
-        where: { id: team.id },
-        data: {
-          activeSeats: {
-            increment: 1
-          }
-        }
-      })
+      // Note: activeSeats is calculated dynamically from TeamInvite records
+      // No need to increment a counter - avoids drift
 
       return { teamInvite }
     })
+
+    // Transfer credits from team pool to admin's person (outside transaction for proper balance check)
+    // This is the NEW credit model: credits are actually transferred, not just marked
+    if (user.person?.id) {
+      await transferCreditsFromTeamToPerson(
+        team.id,
+        user.person.id,
+        creditsAllocated,
+        result.teamInvite.id,
+        'Admin seat self-assignment credits'
+      )
+    }
 
     Logger.info('Admin self-assigned seat', {
       userId: user.id,

@@ -8,6 +8,11 @@ interface UploadListItem {
   validated: boolean
   createdAt: string
   hasGenerations: boolean
+  selfieType?: string | null
+  selfieTypeConfidence?: number | null
+  personCount?: number | null
+  isProper?: boolean | null
+  improperReason?: string | null
 }
 
 interface Selfie {

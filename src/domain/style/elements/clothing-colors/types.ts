@@ -1,3 +1,5 @@
+import type { ElementSetting } from '../base/element-types'
+
 export type ClothingColorKey = 'topLayer' | 'baseLayer' | 'bottom' | 'shoes'
 
 export interface ColorValue {
@@ -5,14 +7,28 @@ export interface ColorValue {
   name?: string
 }
 
-export interface ClothingColorSettings {
+/**
+ * Clothing color values without mode information
+ */
+export interface ClothingColorValue {
+  topLayer?: string | ColorValue // Top layer color - the visible outer garment (jacket, blazer, hoodie, polo, etc.)
+  baseLayer?: string | ColorValue // Base layer color - shirt underneath outer layer (only for multi-layer outfits)
+  bottom?: string | ColorValue // Bottom color (pants, skirt, etc.)
+  shoes?: string | ColorValue // Shoes color
+  source?: 'outfit' | 'manual' // Source of colors: 'outfit' means from uploaded outfit (skip prompt), 'manual' means user-picked
+}
+
+/**
+ * Clothing color settings with mode wrapper
+ * - mode: 'predefined' means admin has set specific colors
+ * - mode: 'user-choice' means the user can choose their colors
+ */
+export type ClothingColorSettings = ElementSetting<ClothingColorValue>
+
+// Legacy type alias for backward compatibility during migration
+export interface LegacyClothingColorSettings {
   type: 'predefined' | 'user-choice'
-  colors?: {
-    topLayer?: string | ColorValue // Top layer color - the visible outer garment (jacket, blazer, hoodie, polo, etc.)
-    baseLayer?: string | ColorValue // Base layer color - shirt underneath outer layer (only for multi-layer outfits)
-    bottom?: string | ColorValue // Bottom color (pants, skirt, etc.)
-    shoes?: string | ColorValue // Shoes color
-  }
+  colors?: ClothingColorValue
 }
 
 /**

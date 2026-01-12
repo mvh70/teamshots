@@ -92,6 +92,8 @@ interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
   onMenuItemClick?: () => void
+  onMouseEnter?: () => void
+  onMouseLeave?: () => void
   initialRole?: SidebarRoleState
   initialAccountMode?: AccountMode
   initialSubscription?: SerializedSubscription | null
@@ -102,7 +104,7 @@ interface SidebarProps {
   isIndividualDomain?: boolean
 }
 
-export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialRole, initialAccountMode, initialSubscription, initialBrandName, initialBrandLogoLight, initialBrandLogoIcon, isIndividualDomain = false }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseEnter, onMouseLeave, initialRole, initialAccountMode, initialSubscription, initialBrandName, initialBrandLogoLight, initialBrandLogoIcon, isIndividualDomain = false }: SidebarProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const t = useTranslations('app.sidebar')
@@ -538,14 +540,18 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
   }
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-[120] bg-white border-r border-gray-200/80 transition-all duration-300 transform shadow-[2px_0_8px_0_rgb(0_0_0_/0.04),0_1px_2px_0_rgb(0_0_0_/0.02)] ${
-      // Width: w-72 on mobile when open (drawer), w-64 on desktop when expanded, w-20 when collapsed
-      (isMobile ? (collapsed ? 'w-20' : 'w-72') : (effectiveCollapsed ? 'w-20' : 'w-64')) + ' ' +
-      // Visibility: use collapsed prop (when false, sidebar is visible)
-      (collapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0') + ' ' +
-      // Overflow: only visible on desktop collapsed mode (for tooltips), hidden on mobile to prevent content bleeding
-      (!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-hidden')
-    }`}>
+    <div
+      className={`fixed inset-y-0 left-0 z-[120] bg-white border-r border-gray-200/80 transition-all duration-300 transform shadow-[2px_0_8px_0_rgb(0_0_0_/0.04),0_1px_2px_0_rgb(0_0_0_/0.02)] ${
+        // Width: w-72 on mobile when open (drawer), w-64 on desktop when expanded, w-20 when collapsed
+        (isMobile ? (collapsed ? 'w-20' : 'w-72') : (effectiveCollapsed ? 'w-20' : 'w-64')) + ' ' +
+        // Visibility: use collapsed prop (when false, sidebar is visible)
+        (collapsed ? '-translate-x-full lg:translate-x-0' : 'translate-x-0') + ' ' +
+        // Overflow: only visible on desktop collapsed mode (for tooltips), hidden on mobile to prevent content bleeding
+        (!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-hidden')
+      }`}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       <div className={`flex flex-col h-dvh max-h-screen ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-hidden'}`}>
         {/* Top Section - Header and Primary Action */}
         <div className="flex-shrink-0">
@@ -720,11 +726,11 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, initialR
                 {seatInfo?.isSeatsModel && (
                   <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200 space-y-2`}>
                     {/* Seats row */}
-                    <div className={`flex items-center justify-between ${planTier === 'free' && seatInfo.totalSeats === 0 && !effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
-                      <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center' : ''}`}>
+                    <div className={`flex items-center justify-between ${effectiveCollapsed ? 'flex-col space-y-0.5' : ''} ${planTier === 'free' && seatInfo.totalSeats === 0 && !effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
+                      <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center text-[10px]' : ''}`}>
                         {t('photos.seats')}
                       </span>
-                      <span className={`text-lg md:text-xl font-extrabold tracking-tight leading-tight ${effectiveCollapsed ? 'text-xl' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
+                      <span className={`font-extrabold tracking-tight leading-tight ${effectiveCollapsed ? 'text-base' : 'text-lg md:text-xl'}`} style={{ color: BRAND_CONFIG.colors.primary }}>
                         {seatInfo.totalSeats > 0 ? `${seatInfo.activeSeats} / ${seatInfo.totalSeats}` : '1 / 1'}
                       </span>
                     </div>

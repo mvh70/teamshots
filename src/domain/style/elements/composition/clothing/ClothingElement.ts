@@ -6,7 +6,9 @@
  */
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
+import { isUserChoice, hasValue, type ElementSetting } from '../../base/element-types'
 import { generateWardrobePrompt } from '../../clothing/prompt'
+import type { ShotTypeValue } from '@/types/photo-style'
 
 export class ClothingElement extends StyleElement {
   readonly id = 'clothing'
@@ -16,14 +18,15 @@ export class ClothingElement extends StyleElement {
   // Clothing only affects person generation, not backgrounds
   isRelevantForPhase(context: ElementContext): boolean {
     const { phase, settings } = context
+    const clothing = settings.clothing
 
     // Skip if no clothing configured
-    if (!settings.clothing) {
+    if (!clothing) {
       return false
     }
 
-    // Skip if user-choice (no specific style selected)
-    if (settings.clothing.style === 'user-choice') {
+    // Skip if user-choice (no specific style selected) or no value
+    if (isUserChoice(clothing) || !hasValue(clothing)) {
       return false
     }
 
@@ -35,8 +38,9 @@ export class ClothingElement extends StyleElement {
     // CRITICAL: Skip if ClothingOverlayElement is handling clothing
     // (branding on clothing means overlay is active)
     if (
-      settings.branding?.type === 'include' &&
-      settings.branding?.position === 'clothing'
+      hasValue(settings.branding) &&
+      settings.branding.value.type === 'include' &&
+      settings.branding.value.position === 'clothing'
     ) {
       return false // ClothingOverlayElement will handle wardrobe
     }
@@ -47,12 +51,14 @@ export class ClothingElement extends StyleElement {
   async contribute(context: ElementContext): Promise<ElementContribution> {
     const { settings, existingContributions } = context
     const clothing = settings.clothing!
+    // At this point, we know clothing has a value (checked in isRelevantForPhase)
+    const clothingValue = clothing.value!
 
     const instructions: string[] = []
     const mustFollow: string[] = []
     const metadata: Record<string, unknown> = {
-      style: clothing.style,
-      details: clothing.details,
+      style: clothingValue.style,
+      details: clothingValue.details,
     }
 
     // CRITICAL: Check if ClothingOverlayElement is handling clothing
@@ -77,10 +83,11 @@ export class ClothingElement extends StyleElement {
 
     // Normal flow: no overlay, provide wardrobe data
     // Generate wardrobe prompt result for payload
+    const shotTypeValue = hasValue(settings.shotType) ? settings.shotType.value.type : undefined
     const wardrobeResult = generateWardrobePrompt({
-      clothing: settings.clothing,
+      clothing: clothingValue,
       clothingColors: settings.clothingColors,
-      shotType: settings.shotType?.type,
+      shotType: shotTypeValue,
     })
 
     // Build payload structure with wardrobe data
@@ -95,7 +102,7 @@ export class ClothingElement extends StyleElement {
     // Only add critical quality rules that aren't obvious from the JSON structure
 
     // Normalize style for metadata
-    const style = clothing.style?.toLowerCase() || 'startup'
+    const style = clothingValue.style?.toLowerCase() || 'startup'
     metadata.style = style
 
     // Add general clothing quality rules (not specific to any style)
@@ -120,14 +127,16 @@ export class ClothingElement extends StyleElement {
     const errors: string[] = []
     const clothing = settings.clothing
 
-    if (!clothing) {
+    if (!clothing || isUserChoice(clothing) || !hasValue(clothing)) {
       return errors
     }
 
+    const clothingValue = clothing.value
+
     // Validate style is one of the known types
-    const validStyles = ['business', 'startup', 'black-tie', 'user-choice']
-    if (clothing.style && !validStyles.includes(clothing.style)) {
-      errors.push(`Unknown clothing style: ${clothing.style}`)
+    const validStyles = ['business', 'startup', 'black-tie']
+    if (clothingValue.style && !validStyles.includes(clothingValue.style)) {
+      errors.push(`Unknown clothing style: ${clothingValue.style}`)
     }
 
     return errors

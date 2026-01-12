@@ -1,7 +1,8 @@
-import { PhotoStyleSettings, PoseSettings } from '@/types/photo-style'
-import { resolveBodyAngle, resolveHeadPosition, resolveShoulderPosition, resolveWeightDistribution, resolveArmPosition, resolveSittingPose } from './config'
+import { PhotoStyleSettings } from '@/types/photo-style'
 import { getPoseTemplate } from './config'
 import { Logger } from '@/lib/logger'
+import type { PoseType, PoseSettings, LegacyPoseSettings } from './types'
+import { hasValue } from '../base/element-types'
 
 export interface PosePromptResult {
   bodyAngle: string
@@ -13,83 +14,67 @@ export interface PosePromptResult {
   sittingPosition?: string
   description?: string
   detailedInstructions?: string
-  // NOTE: expression removed - it's set directly in createBasePayload, not by pose element
+}
+
+// Default pose template for fallback
+const DEFAULT_POSE_TYPE: PoseType = 'classic_corporate'
+
+/**
+ * Extract pose type from settings, handling both legacy and new formats
+ */
+function getPoseType(pose: PoseSettings | LegacyPoseSettings | undefined): PoseType {
+  if (!pose) return DEFAULT_POSE_TYPE
+
+  // New format: { mode: '...', value?: { type: '...' } }
+  if ('mode' in pose) {
+    const newPose = pose as PoseSettings
+    if (hasValue(newPose)) {
+      return newPose.value.type
+    }
+    return DEFAULT_POSE_TYPE
+  }
+
+  // Legacy format: { type: '...' }
+  const legacyPose = pose as LegacyPoseSettings
+  if (legacyPose.type === 'user-choice') {
+    return DEFAULT_POSE_TYPE
+  }
+  return legacyPose.type
 }
 
 export const generatePosePrompt = (
   settings: Partial<PhotoStyleSettings>
 ): PosePromptResult => {
-  // Check if a high-level pose preset is selected
-  const poseType = settings.pose?.type
-  const isUserChoice = poseType === 'user-choice'
-  
-  Logger.debug('generatePosePrompt - checking pose type:', {
-    poseType,
-    isUserChoice,
-    willUseTemplate: poseType && !isUserChoice
-  })
-  
-  // If a specific pose preset is selected (not user-choice), use the template
-  if (poseType && !isUserChoice) {
-    const template = getPoseTemplate(poseType)
-    Logger.debug('generatePosePrompt - template lookup:', {
-      poseType,
-      templateFound: !!template,
-      templateArms: template?.pose?.arms
-    })
-    if (template) {
-      return {
-        bodyAngle: template.pose.body_angle,
-        headPosition: template.pose.head_position,
-        chinTechnique: template.pose.chin_technique,
-        shoulderPosition: template.pose.shoulders,
-        weightDistribution: template.pose.weight_distribution,
-        arms: template.pose.arms,
-        description: template.pose.description,
-        detailedInstructions: template.prompt_instructions
-      }
+  const poseType = getPoseType(settings.pose as PoseSettings | LegacyPoseSettings | undefined)
+
+  Logger.debug('generatePosePrompt - pose type:', { poseType })
+
+  const template = getPoseTemplate(poseType)
+
+  if (!template) {
+    Logger.warn('generatePosePrompt - template not found, using default:', { poseType })
+    const defaultTemplate = getPoseTemplate(DEFAULT_POSE_TYPE)!
+    return {
+      bodyAngle: defaultTemplate.pose.body_angle,
+      headPosition: defaultTemplate.pose.head_position,
+      chinTechnique: defaultTemplate.pose.chin_technique,
+      shoulderPosition: defaultTemplate.pose.shoulders,
+      weightDistribution: defaultTemplate.pose.weight_distribution,
+      arms: defaultTemplate.pose.arms,
+      description: defaultTemplate.pose.description,
+      detailedInstructions: defaultTemplate.prompt_instructions
     }
   }
 
-  // Fallback to component-based resolution (used for 'user-choice' or individual overrides)
-  // Cast to PoseSettings to access granular properties which are merged into PoseSettings type
-  const granularSettings = settings.pose as PoseSettings || {}
-  
-  const bodyAngle = resolveBodyAngle(granularSettings.bodyAngle)
-  const headPosition = resolveHeadPosition(granularSettings.headPosition)
-  const shoulderPosition = resolveShoulderPosition(granularSettings.shoulderPosition)
-  const weightDistribution = resolveWeightDistribution(granularSettings.weightDistribution)
-  const armPosition = resolveArmPosition(granularSettings.armPosition)
-  const sittingPose = granularSettings.sittingPose && granularSettings.sittingPose !== 'user-choice'
-    ? resolveSittingPose(granularSettings.sittingPose)
-    : undefined
-
-  const descriptionParts = [
-    bodyAngle.description,
-    weightDistribution.description,
-    shoulderPosition.description
-  ]
-
-  if (sittingPose) {
-    descriptionParts.unshift(sittingPose.description)
-  }
-
-  if (armPosition.description) {
-    descriptionParts.push(armPosition.description)
-  }
-  if (headPosition.description) {
-    descriptionParts.push(headPosition.description)
-  }
-
   return {
-    bodyAngle: bodyAngle.description,
-    headPosition: headPosition.description,
-    chinTechnique: 'Chin out and down: extend the neck slightly forward, then lower the chin a touch to define the jawline.',
-    shoulderPosition: shoulderPosition.description,
-    weightDistribution: weightDistribution.description,
-    arms: armPosition.description,
-    sittingPosition: sittingPose?.description,
-    description: descriptionParts.join(' ')
+    bodyAngle: template.pose.body_angle,
+    headPosition: template.pose.head_position,
+    chinTechnique: template.pose.chin_technique,
+    shoulderPosition: template.pose.shoulders,
+    weightDistribution: template.pose.weight_distribution,
+    arms: template.pose.arms,
+    description: template.pose.description,
+    detailedInstructions: template.prompt_instructions
   }
 }
 

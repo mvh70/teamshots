@@ -6,6 +6,7 @@
  */
 
 import { StyleElement, ElementContext, ElementContribution } from '../../base/StyleElement'
+import { isUserChoice, hasValue } from '../../base/element-types'
 import { EXPRESSION_LABELS } from '../../expression/prompt'
 
 export class ExpressionElement extends StyleElement {
@@ -17,13 +18,8 @@ export class ExpressionElement extends StyleElement {
   isRelevantForPhase(context: ElementContext): boolean {
     const { phase, settings } = context
 
-    // Skip if no expression configured
-    if (!settings.expression) {
-      return false
-    }
-
-    // Skip if user-choice
-    if (settings.expression.type === 'user-choice') {
+    // Skip if no expression configured or user-choice
+    if (!settings.expression || isUserChoice(settings.expression) || !hasValue(settings.expression)) {
       return false
     }
 
@@ -33,22 +29,29 @@ export class ExpressionElement extends StyleElement {
 
   async contribute(context: ElementContext): Promise<ElementContribution> {
     const { settings } = context
-    const expression = settings.expression!
+    const expression = settings.expression
+
+    // Should not reach here without a valid expression value
+    if (!expression || !hasValue(expression)) {
+      return { instructions: [], mustFollow: [], payload: {} }
+    }
+
+    const exprValue = expression.value
 
     const instructions: string[] = []
     const mustFollow: string[] = []
     const metadata: Record<string, unknown> = {
-      expressionType: expression.type,
+      expressionType: exprValue.type,
     }
 
     // Build payload structure for expression
     // Use centralized prompt label from expression/prompt.ts
-    const expressionLabel = EXPRESSION_LABELS[expression.type] || EXPRESSION_LABELS.neutral_serious
+    const expressionLabel = EXPRESSION_LABELS[exprValue.type] || EXPRESSION_LABELS.neutral_serious
 
     const payload: Record<string, unknown> = {
       subject: {
         expression: {
-          type: expression.type,
+          type: exprValue.type,
           description: expressionLabel,
         },
       },
@@ -79,9 +82,11 @@ export class ExpressionElement extends StyleElement {
     const errors: string[] = []
     const expression = settings.expression
 
-    if (!expression) {
+    if (!expression || !hasValue(expression)) {
       return errors
     }
+
+    const exprValue = expression.value
 
     // Validate expression type
     const validExpressions = [
@@ -91,12 +96,11 @@ export class ExpressionElement extends StyleElement {
       'laugh_joy',
       'contemplative',
       'confident',
-      'sad',
-      'user-choice'
+      'sad'
     ]
 
-    if (expression.type && !validExpressions.includes(expression.type)) {
-      errors.push(`Unknown expression type: ${expression.type}`)
+    if (exprValue.type && !validExpressions.includes(exprValue.type)) {
+      errors.push(`Unknown expression type: ${exprValue.type}`)
     }
 
     return errors

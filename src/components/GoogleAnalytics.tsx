@@ -3,6 +3,11 @@
 import Script from 'next/script'
 
 export default function GoogleAnalytics() {
+  // Prevent tracking in non-production environments
+  if (process.env.NODE_ENV !== 'production') {
+    return null
+  }
+
   const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 
   if (!measurementId) {

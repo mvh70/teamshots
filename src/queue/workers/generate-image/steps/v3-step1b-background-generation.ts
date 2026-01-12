@@ -262,7 +262,8 @@ export async function executeV3Step1b(
   const jsonPrompt = JSON.stringify(backgroundPrompt, null, 2)
   
   // Check if this is a neutral or gradient background (plain wall requirements apply)
-  const isPlainBackground = styleSettings?.background?.type === 'neutral' || styleSettings?.background?.type === 'gradient'
+  const bgType = styleSettings?.background?.value?.type
+  const isPlainBackground = bgType === 'neutral' || bgType === 'gradient'
   
   // Check if user provided specific camera/aperture settings
   const hasUserCameraSettings = !!promptObj.camera && Object.keys(promptObj.camera).length > 0

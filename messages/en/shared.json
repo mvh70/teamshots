@@ -7,7 +7,8 @@
     "processingImage": "Processing image...",
     "processingImages": "Processing {count} images...",
     "uploading": "Uploading...",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "dismissingAutomatically": "Dismissing automatically..."
   },
   "nav": {
     "home": "Home",
@@ -198,7 +199,7 @@
         "description": "See the quality before you commit. No credit card required. Try it free and see the results.",
         "features": [
           "{photos} customizable photos",
-          "Fixed branding watermark",
+          "Fixed background and branding watermark",
           "Perfect for testing the quality"
         ],
         "cta": "Try it free"
@@ -324,7 +325,9 @@
         "photosPerSeat": "10 professional photos per team member",
         "professionalQuality": "AI-powered professional quality headshots",
         "teamManagement": "Central team management dashboard",
-        "fastDelivery": "60-second generation time",
+        "fullCustomization": "Full customization: background, branding, pose, clothing style",
+        "creditsNeverExpire": "Credits never expire, use anytime",
+        "flexibleTeamSize": "Scale your team anytime, add seats as you grow",
         "support": "Email support and satisfaction guarantee"
       }
     }
@@ -552,7 +555,7 @@
         "title": "Available photos",
         "individual": "Personal photos",
         "team": "Team photo credits",
-        "seats": "Team members",
+        "seats": "Team size",
         "balance": "Your photo balance",
         "lockedBranding": "with locked Teamshots branding",
         "allocated": "of which allocated to invites",
@@ -1305,7 +1308,8 @@
       "deleteAria": "Delete selfie",
       "deleteDisabledTooltip": "This selfie is used in a generation and can't be deleted.",
       "deleteDisabledAria": "Delete disabled. This selfie is used in a generation and can't be deleted.",
-      "deleteDisabledMessage": "Used in a generation and can't be deleted."
+      "deleteDisabledMessage": "Used in a generation and can't be deleted.",
+      "analyzing": "Analyzing..."
     }
   },
   "generate": {
@@ -1810,7 +1814,10 @@
         "pantsSkirtDesc": "Trousers, slacks, skirt",
         "shoes": "Shoes",
         "shoesDesc": "Dress shoes, casual shoes",
-        "noVisibleColors": "No clothing colors applicable for this shot type and style."
+        "noVisibleColors": "No clothing colors applicable for this shot type and style.",
+        "useOutfitColors": "Use colors from uploaded outfit",
+        "outfitColorsActive": "Colors are synced with your uploaded outfit image",
+        "outfitColorsInactive": "Uncheck to customize colors manually"
       },
       "customClothing": {
         "title": "Custom Clothing",
@@ -2162,6 +2169,40 @@
       "processing": "Processing..."
     },
     "disclaimer": "By approving, you confirm you have the rights to use this photo and consent to its use for photo generation."
+  },
+  "selfie": {
+    "types": {
+      "title": "Best Results Come From Variety",
+      "description": "Upload selfies from different angles for the most realistic headshots",
+      "recommended": "Recommended",
+      "frontview": {
+        "label": "Front View",
+        "description": "Clear face photo looking at camera"
+      },
+      "sideview": {
+        "label": "Side View",
+        "description": "Profile photo showing side of face"
+      },
+      "fullbody": {
+        "label": "Full Body",
+        "description": "Photo showing full body from head to feet"
+      }
+    },
+    "classification": {
+      "analyzing": "Analyzing selfie type...",
+      "detected": "Detected: {type}",
+      "confidence": {
+        "high": "High confidence",
+        "medium": "Medium confidence",
+        "low": "Low confidence"
+      }
+    },
+    "checklist": {
+      "title": "Selfie Checklist",
+      "captured": "captured",
+      "pending": "pending",
+      "needed": "needed"
+    }
   },
   "api": {
     "errors": {

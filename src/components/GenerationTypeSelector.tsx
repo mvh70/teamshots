@@ -11,6 +11,7 @@ interface GenerationTypeSelectorProps {
   userCredits: {
     individual: number
     team: number
+    person: number
   }
   hasTeamAccess: boolean
   teamName?: string
@@ -32,8 +33,9 @@ export default function GenerationTypeSelector({
     }
   }
 
-  const canUsePersonal = userCredits.individual >= PRICING_CONFIG.credits.perGeneration
-  const canUseTeam = hasTeamAccess && userCredits.team >= PRICING_CONFIG.credits.perGeneration
+  // NEW CREDIT MODEL: All usable credits are on person
+  const canUsePersonal = userCredits.person >= PRICING_CONFIG.credits.perGeneration
+  const canUseTeam = hasTeamAccess && userCredits.person >= PRICING_CONFIG.credits.perGeneration
 
   return (
     <div className="space-y-6">
@@ -168,7 +170,7 @@ export default function GenerationTypeSelector({
                   {t('typeSelection.team.cost', { credits: PRICING_CONFIG.credits.perGeneration })}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {t('typeSelection.team.remaining', { credits: userCredits.team })}
+                  {t('typeSelection.team.remaining', { credits: userCredits.person })}
                   {teamName && ` • ${teamName}`}
                 </div>
               </div>
