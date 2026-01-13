@@ -15,9 +15,12 @@
         "ctaSubtext": "",
         "ctaAria": "Start your team order with no commitment",
         "noCreditCard": "Test with a fixed style for free, no credit card required",
-        "noCreditCardLine": "No credit card required",
-        "freeGenerationsLine": "3 free generations with fixed TeamShots branding",
-        "badge": "Professional team photos without the photoshoot hassle"
+        "noCreditCardLine": "No credit card required for test photos",
+        "freeGenerationsLine": "Get 3 photos for free with fixed TeamShots branding for testing",
+        "badge": "Professional team photos without the photoshoot hassle",
+        "trustedBy": "Trusted by teams at",
+        "bookDemo": "Book a Demo",
+        "bookDemoAria": "Book a demo"
       },
       "gallery": {
         "title": "From 'meh' selfies to LinkedIn-worthy headshots",
@@ -53,7 +56,7 @@
           "1": {
             "title": "Set Your Brand Identity",
             "description": "Backgrounds, logo, clothing style. You decide what's fixed and what team members can change (e.g. expression, or clothing colors).",
-            "duration": "1 min"
+            "duration": "5 min"
           },
           "2": {
             "title": "Invite Your Team",
@@ -68,7 +71,7 @@
           "4": {
             "title": "Get Your Assets",
             "description": "Review and download a unified gallery of professional headshots. Consistent, high-res, and ready for your website.",
-            "duration": "30s"
+            "duration": "60 s"
           }
         }
       },
