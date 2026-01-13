@@ -1,65 +1,82 @@
 import { MetadataRoute } from 'next'
 import { headers } from 'next/headers'
 import { getBaseUrl } from '@/lib/url'
+import { getLandingVariant } from '@/config/landing-content'
+import { SOLUTIONS } from '@/config/solutions'
+import { routing } from '@/i18n/routing'
 
 /**
- * Generate sitemap.xml for SEO
- * 
- * Next.js automatically serves this at /sitemap.xml
- * Includes all public pages for the CURRENT domain and locales (en, es)
- * 
- * Domain-aware: Generates URLs only for the domain requesting the sitemap
- * to avoid Google "Deceptive Pages" warnings (link farming/impersonation).
+ * Domain-aware sitemap
+ * Returns different content based on the incoming domain:
+ * - TeamShotsPro: blog + solutions + shared routes
+ * - IndividualShots: blog + shared routes
+ * - Others: shared routes only
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Use headers() directly here instead of getServerBaseUrl() to avoid build-time issues
   let baseUrl: string
+  let variant: ReturnType<typeof getLandingVariant>
+  
   try {
     const headersList = await headers()
     baseUrl = getBaseUrl(headersList)
+    const host = headersList.get('host') || headersList.get('x-forwarded-host')
+    const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
+    variant = getLandingVariant(domain)
   } catch {
-    // Fallback during build time when headers() is not available
-    // This happens during static generation
     baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://teamshotspro.com'
+    variant = 'teamshotspro'
   }
   
-  // Public routes that should be indexed
-  const publicRoutes = [
-    '',           // Landing page
-    '/pricing',   // Pricing page
-    '/blog',      // Blog index
-    '/blog/professional-headshot-photography-cost', // Blog: Professional Headshot Cost Guide
-    '/blog/ai-headshots-for-linkedin', // Blog: AI Headshots for LinkedIn
-    '/blog/free-vs-paid-ai-headshots', // Blog: Free vs Paid comparison
-    '/blog/corporate-ai-headshots',    // Blog: Corporate AI Headshots
-    '/blog/best-ai-headshot-generators', // Blog: Best generators comparison
-    '/blog/free-ai-headshot-generator', // Blog: Free AI Headshot Generator
-    '/blog/professional-headshots-ai', // Blog: Professional Headshots AI
-    '/blog/headshot-ai-generator',     // Blog: Headshot AI Generator
-    '/blog/remote-onboarding-broken',
-    '/legal/privacy', // Privacy Policy
-    '/legal/terms',   // Terms of Service
+  // Shared routes for all domains
+  const sharedRoutes = [
+    '', // Landing page
+    '/pricing',
+    '/legal/privacy',
+    '/legal/terms',
   ]
   
-  // Generate sitemap entries for the current domain, route, and locale
+  // Domain-specific routes
+  let domainRoutes: string[] = []
+  
+  if (variant === 'teamshotspro') {
+    // TeamShotsPro: blog + solutions
+    const blogSlugs = ['corporate-ai-headshots', 'remote-onboarding-broken']
+    domainRoutes = [
+      '/blog',
+      ...blogSlugs.map(slug => `/blog/${slug}`),
+      ...SOLUTIONS.map(s => `/solutions/${s.slug}`)
+    ]
+  } else if (variant === 'individualshots') {
+    // IndividualShots: blog only
+    const blogSlugs = [
+      'free-vs-paid-ai-headshots',
+      'professional-headshot-photography-cost',
+      'ai-headshot-maker-individual',
+      'ai-headshot-etiquette',
+      'update-headshot-frequency',
+      'headshot-background-colors',
+      'headshot-clothing-tips',
+    ]
+    domainRoutes = [
+      '/blog',
+      ...blogSlugs.map(slug => `/blog/${slug}`)
+    ]
+  }
+  // Other domains (coupleshots, familyshots, rightclickfit): no blog/solutions yet
+  
+  const allRoutes = [...sharedRoutes, ...domainRoutes]
   const entries: MetadataRoute.Sitemap = []
   
-  for (const route of publicRoutes) {
-    // English (default locale - no prefix due to 'as-needed' config)
-    entries.push({
-      url: `${baseUrl}${route}`,
-      lastModified: new Date(),
-      changeFrequency: route === '' ? 'daily' : 'weekly',
-      priority: route === '' ? 1.0 : 0.8,
-    })
-    
-    // Spanish (with /es prefix)
-    entries.push({
-      url: `${baseUrl}/es${route}`,
-      lastModified: new Date(),
-      changeFrequency: route === '' ? 'daily' : 'weekly',
-      priority: route === '' ? 1.0 : 0.8,
-    })
+  for (const route of allRoutes) {
+    for (const locale of routing.locales) {
+      const path = locale === 'en' ? route : `/${locale}${route}`
+      entries.push({
+        url: `${baseUrl}${path}`,
+        lastModified: new Date(),
+        changeFrequency: route === '' ? 'daily' : 'weekly',
+        priority: route === '' ? 1.0 : 0.8,
+      })
+    }
   }
   
   return entries

@@ -11,7 +11,7 @@ import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { trackSignupStarted, trackSignupCompleted } from '@/lib/track'
 
@@ -36,12 +36,32 @@ export default function SignUpPage() {
       }
     }
     const hostname = window.location.hostname.replace(/^www\./, '')
+    
     if (hostname === INDIVIDUAL_DOMAIN) {
       return {
-        brandName: 'PhotoShotsPro',
+        brandName: 'HeadshotOne',
         photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
       }
     }
+    if (hostname === COUPLES_DOMAIN) {
+      return {
+        brandName: 'DuoSnaps',
+        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
+      }
+    }
+    if (hostname === FAMILY_DOMAIN) {
+      return {
+        brandName: 'KinFrame',
+        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
+      }
+    }
+    if (hostname === EXTENSION_DOMAIN) {
+      return {
+        brandName: 'RightClickFit',
+        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
+      }
+    }
+
     return {
       brandName: 'TeamShotsPro',
       photoCount: Math.floor(PRICING_CONFIG.freeTrial.pro / PRICING_CONFIG.credits.perGeneration)

@@ -25,8 +25,7 @@ import type { LandingProps } from '../page';
  * - 3-step simple workflow
  * - Focus on LinkedIn, dating profiles, personal branding
  */
-export default function PhotoShotsLanding({ supportEmail }: LandingProps) {
-  const variant: LandingVariant = 'photoshotspro';
+export default function PhotoShotsLanding({ supportEmail, variant }: LandingProps) {
   
   // Use domain-specific translations
   const t = useTranslations(`landing.${variant}.hero`);

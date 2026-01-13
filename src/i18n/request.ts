@@ -1,10 +1,12 @@
 import { getRequestConfig } from 'next-intl/server';
 import { routing } from './routing';
 import { headers } from 'next/headers';
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain';
+import { SOLUTIONS } from '@/config/solutions';
 
 /**
  * Detect domain from request headers and normalize to variant name
- * Returns 'teamshotspro' | 'photoshotspro' | null
+ * Returns 'teamshotspro' | 'photoshotspro' | 'coupleshotspro' | 'familyshotspro' | 'rightclickfit' | null
  */
 async function getRequestDomain(): Promise<string | null> {
   try {
@@ -23,13 +25,17 @@ async function getRequestDomain(): Promise<string | null> {
       if (!forced) return null;
 
       // Normalize forced domain to variant name (strip www. and .com)
+      // This is a simplified fallback for local dev
       const normalizedForced = forced.replace(/^www\./, '').toLowerCase().replace(/\.com$/, '');
       return normalizedForced;
     }
 
     // Normalize domain to variant name
-    if (domain === 'teamshotspro.com') return 'teamshotspro';
-    if (domain === 'photoshotspro.com') return 'photoshotspro';
+    if (domain === TEAM_DOMAIN) return 'teamshotspro';
+    if (domain === INDIVIDUAL_DOMAIN) return 'photoshotspro';
+    if (domain === COUPLES_DOMAIN) return 'coupleshotspro';
+    if (domain === FAMILY_DOMAIN) return 'familyshotspro';
+    if (domain === EXTENSION_DOMAIN) return 'rightclickfit';
 
     return null;
   } catch {
@@ -53,6 +59,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
   // Detect domain and load domain-specific messages if applicable
   const domain = await getRequestDomain();
   let domainMessages = {};
+  let solutionMessages: Record<string, unknown> = {};
 
   if (domain) {
     try {
@@ -63,10 +70,29 @@ export default getRequestConfig(async ({ requestLocale }) => {
     }
   }
 
+  // TeamShotsPro-only: load programmatic vertical copy into a dedicated namespace.
+  // This keeps vertical content modular (one file per industry) and prevents bloating teamshotspro.json.
+  if (domain === 'teamshotspro') {
+    const pairs = await Promise.all(
+      SOLUTIONS.map(async (s) => {
+        try {
+          const mod = (await import(`../../messages/${locale}/teamshotspro/solutions/${s.slug}.json`)).default;
+          return [s.slug, mod] as const;
+        } catch {
+          // Missing solution file is allowed during rollout; the page will still 404 if it needs the copy.
+          return [s.slug, null] as const;
+        }
+      }),
+    );
+
+    solutionMessages = Object.fromEntries(pairs.filter(([, v]) => v));
+  }
+
   // Merge messages: domain-specific messages overlay shared messages
   const messages = {
     ...sharedMessages,
     ...domainMessages,
+    ...(Object.keys(solutionMessages).length > 0 ? { solutions: solutionMessages } : {}),
   };
 
   return {
@@ -74,4 +100,3 @@ export default getRequestConfig(async ({ requestLocale }) => {
     messages,
   };
 });
-

@@ -25,8 +25,7 @@ import type { LandingProps } from '../page';
  * - 5-step team workflow
  * - Team Command Center feature highlight
  */
-export default function TeamShotsLanding({ supportEmail }: LandingProps) {
-  const variant: LandingVariant = 'teamshotspro';
+export default function TeamShotsLanding({ supportEmail, variant }: LandingProps) {
   
   // Use domain-specific translations
   const t = useTranslations(`landing.${variant}.hero`);

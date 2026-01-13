@@ -1,0 +1,24 @@
+{
+  "landing": {
+    "photoshotspro": {
+      "hero": {
+        "titleLine1": "Professional Headshots",
+        "titleLine2": "From One Selfie",
+        "titleHighlightTime": "in 60 seconds",
+        "subtitleMain": "Turn a casual photo into a studio-quality headshot instantly.",
+        "subtitle": "Perfect for LinkedIn, resumes, and personal branding. ",
+        "subtitleBold": "No studio, no photographer, just AI.",
+        "cta": "Create Your Headshot",
+        "ctaAria": "Create your professional headshot now",
+        "noCreditCardLine": "No credit card required",
+        "freeGenerationsLine": "Free preview generation",
+        "finalCtaTitle": "Upgrade your professional image today.",
+        "finalCtaSubtitle": "Join thousands of professionals who switched to AI headshots."
+      }
+    }
+  },
+  "metadata": {
+    "title": "HeadshotOne - Professional AI Headshots",
+    "description": "Create professional LinkedIn headshots from a single selfie in 60 seconds. No photographer required."
+  }
+}

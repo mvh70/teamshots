@@ -1,0 +1,8 @@
+<svg width="640" height="160" viewBox="0 0 640 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="8" width="624" height="144" rx="28" fill="#120814"/>
+  <path d="M54 86c0-18.778 15.222-34 34-34 14.5 0 26.87 9.07 31.85 21.86C124.83 61.07 137.2 52 151.7 52c18.778 0 34 15.222 34 34 0 23.5-27.4 39.8-65.7 58.5C81.4 125.8 54 109.5 54 86Z" fill="#EC4899"/>
+  <path d="M111.3 90.5c0-9.224 7.476-16.7 16.7-16.7s16.7 7.476 16.7 16.7-7.476 16.7-16.7 16.7-16.7-7.476-16.7-16.7Z" fill="#FFFFFF" opacity="0.9"/>
+  <text x="230" y="92" fill="#FFFFFF" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="46" font-weight="800" letter-spacing="-0.02em">DuoSnaps</text>
+  <text x="232" y="122" fill="#F6C2D8" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="16" font-weight="700">Placeholder logo</text>
+</svg>
+

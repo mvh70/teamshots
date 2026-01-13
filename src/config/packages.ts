@@ -13,7 +13,7 @@ export interface PackageMetadata {
   price?: number // Price in USD (undefined means free)
   stripePriceId?: string // Stripe price ID if available for purchase
   /** Target audience hint for UI display */
-  audience?: 'team' | 'individual' | 'couple'
+  audience?: 'team' | 'individual' | 'couple' | 'family'
 }
 
 export const PACKAGES_CONFIG = {
@@ -64,14 +64,23 @@ export const PACKAGES_CONFIG = {
       audience: 'individual',
     } as PackageMetadata,
     
-    // Future: Couple-focused packages (coupleshotspro.com)
-    // couple: {
-    //   id: 'couple',
-    //   name: 'Couple Portrait',
-    //   description: 'Beautiful couple photos with coordinated styling and romantic backgrounds.',
-    //   price: 0,
-    //   audience: 'couple',
-    // } as PackageMetadata,
+    // Couple-focused packages (coupleshotspro.com / duosnaps.com)
+    couple: {
+      id: 'couple',
+      name: 'Couple Portrait',
+      description: 'Beautiful couple photos with coordinated styling and romantic backgrounds.',
+      price: 0,
+      audience: 'couple',
+    } as PackageMetadata,
+
+    // Family-focused packages (familyshotspro.com / kinframe.com)
+    family: {
+      id: 'family',
+      name: 'Family Portrait',
+      description: 'Coordinated family portraits perfect for holiday cards and framing.',
+      price: 0,
+      audience: 'family',
+    } as PackageMetadata,
   },
   
   // Default package granted on signup (users "own" this but may be restricted to freepackage during trial)
@@ -87,8 +96,9 @@ export const PACKAGES_CONFIG = {
     linkedin: 0, // Free
     dating: 0, // Free
     casual: 0, // Free
+    couple: 0, // Free
+    family: 0, // Free
   },
 } as const
 
 export type PackageId = keyof typeof PACKAGES_CONFIG.active
-
