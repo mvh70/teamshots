@@ -15,9 +15,12 @@
         "ctaSubtext": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso, sin tarjeta de crédito.",
         "ctaAria": "Obtén retratos profesionales para tu equipo en un estilo predefinido al registrarte. Sin compromiso.",
         "noCreditCard": "Prueba con un estilo fijo gratis, sin tarjeta de crédito",
-        "noCreditCardLine": "Sin tarjeta de crédito",
-        "freeGenerationsLine": "3 generaciones gratis con marca fija de TeamShots",
-        "badge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos"
+        "noCreditCardLine": "Sin tarjeta de crédito para fotos de prueba",
+        "freeGenerationsLine": "Obtén 3 fotos gratis con marca fija de TeamShots para probar",
+        "badge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos",
+        "trustedBy": "Confiado por equipos en",
+        "bookDemo": "Reservar una demo",
+        "bookDemoAria": "Reservar una demo"
       },
       "gallery": {
         "title": "De selfies normales a retratos profesionales",
@@ -53,7 +56,7 @@
           "1": {
             "title": "Configura tu estilo de marca",
             "description": "Fondos, logo, estilo de ropa. Tú decides qué está fijo y qué pueden cambiar los miembros del equipo (por ejemplo, expresión o colores de ropa).",
-            "duration": "1 min"
+            "duration": "5 min"
           },
           "2": {
             "title": "Invita a tu equipo",
@@ -68,7 +71,7 @@
           "4": {
             "title": "Revisa y aprueba",
             "description": "Ve todos los resultados en un panel. Regenera lo que quieras mejorar.",
-            "duration": "2 min"
+            "duration": "60 s"
           },
           "5": {
             "title": "Descarga los retratos",
