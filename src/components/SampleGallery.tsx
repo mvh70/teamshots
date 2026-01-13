@@ -26,13 +26,14 @@ interface SamplePhoto {
 const SAMPLE_PHOTOS: SamplePhoto[] = [
   {
     id: '1', 
-    before: '/samples/before-2.webp',
-    after: '/samples/after-2.webp',
+    before: '/samples/before-6.jpeg',
+    after: '/samples/after-6.png',
     alt: 'Professional headshot transformation example 2',
     attribution: {
-      name: 'Sarah Johnson',
-      role: 'Marketing',
-      team: 'Digital Agency'
+      name: 'David Robles',
+      role: 'Senior Executive',
+      team: 'Evendo',
+      teamUrl: 'https://evendo.com/'
     }
   },
   {
@@ -191,7 +192,7 @@ export default function SampleGallery({ variant }: SampleGalleryProps) {
                   >
                     {/* Background: After image (now background so left = Before) */}
                     <Image
-                      src={`${photo.after}?v=3`}
+                      src={`${photo.after}?v=4`}
                       alt={`${photo.alt} - After`}
                       fill
                       className="object-cover"
