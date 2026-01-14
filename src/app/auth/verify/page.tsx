@@ -441,6 +441,15 @@ export default function VerifyPage() {
                 </div>
               </div>
             )}
+            <AuthInput
+              id="otpCode"
+              name="otpCode"
+              type="text"
+              maxLength={6}
+              required
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value)}
+            />
             <div className="flex items-center justify-between text-xs text-gray-600">
               <span>{t('didntReceiveCode')}</span>
               <button
@@ -452,16 +461,6 @@ export default function VerifyPage() {
                 {resendCooldown > 0 ? t('resendIn', { seconds: resendCooldown }) : t('resendCode')}
               </button>
             </div>
-            <AuthInput
-              id="otpCode"
-              name="otpCode"
-              type="text"
-              maxLength={6}
-              required
-              label={t('enterCodeFor', { email: effectiveEmail })}
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value)}
-            />
             <AuthButton
               type="button"
               onClick={handleVerify}
