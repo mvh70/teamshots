@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { getLandingVariant } from '@/config/landing-content';
 import { BLOG_POSTS } from '@/config/blog';
-import BlogCard from '@/components/blog/BlogCard';
+import { BlogContent } from '@/components/blog';
 
 export async function generateMetadata() {
   const t = await getTranslations('blog');
@@ -30,21 +30,14 @@ export default async function BlogPage() {
 
   const t = await getTranslations('blog');
 
-  // Filter posts for this domain
-  const posts = BLOG_POSTS.filter((post) => post.allowedVariants.includes(variant));
+  // Filter posts for this domain and convert to mutable array
+  const posts = [...BLOG_POSTS.filter((post) => post.allowedVariants.includes(variant))];
 
   return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-4">{t('title')}</h1>
-        <p className="text-xl text-muted-foreground mb-12">{t('description')}</p>
-
-        <div className="grid gap-8 md:grid-cols-2">
-          {posts.map((post) => (
-            <BlogCard key={post.slug} post={post} />
-          ))}
-        </div>
-      </div>
-    </div>
+    <BlogContent
+      posts={posts}
+      title={t('title')}
+      description={t('description')}
+    />
   );
 }

@@ -18,6 +18,10 @@
     "dashboard": "Panel",
     "getStarted": "Empezar"
   },
+  "blog": {
+    "title": "Blog",
+    "description": "Consejos, guías e ideas sobre headshots con IA, marca profesional y fotos de equipo."
+  },
   "hero": {
     "titleMain": "Fotos profesionales de equipo",
     "titleHighlightTime": "en 60 segundos",

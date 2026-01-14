@@ -22,6 +22,22 @@ export type BlogPost = {
   date?: string
   /** Estimated read time */
   readTime?: string
+  /** Featured image for the blog post */
+  image?: string
+  /** Author name */
+  author?: string
+  /** Whether this post should be featured (hero section) */
+  featured?: boolean
+}
+
+/** Category display configuration */
+export const BLOG_CATEGORIES: Record<BlogPostCategory, { label: string; color: string }> = {
+  teams: { label: 'Teams', color: 'bg-blue-100 text-blue-800' },
+  hr: { label: 'HR', color: 'bg-purple-100 text-purple-800' },
+  linkedin: { label: 'LinkedIn', color: 'bg-sky-100 text-sky-800' },
+  'personal-branding': { label: 'Personal Branding', color: 'bg-amber-100 text-amber-800' },
+  comparisons: { label: 'Comparisons', color: 'bg-green-100 text-green-800' },
+  guides: { label: 'Guides', color: 'bg-rose-100 text-rose-800' },
 }
 
 /**
@@ -44,6 +60,8 @@ export const BLOG_POSTS: readonly BlogPost[] = [
       'Complete guide to corporate AI headshots in 2025. Save 80-90% vs. photographers with consistent, professional results for teams. Best practices and tools.',
     date: '2025-01-10',
     readTime: '8 min read',
+    author: 'TeamShotsPro Team',
+    featured: true,
   },
   {
     slug: 'remote-onboarding-broken',
@@ -54,6 +72,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
       'Why remote onboarding feels disconnected and how AI headshots create consistency for distributed teams. Practical guide for HR professionals.',
     date: '2025-01-08',
     readTime: '6 min read',
+    author: 'TeamShotsPro Team',
   },
 
   // IndividualShots silo (consumer / personal branding)
@@ -66,6 +85,8 @@ export const BLOG_POSTS: readonly BlogPost[] = [
       'Professional AI headshots for LinkedIn profiles. Compare top tools, pricing, and quality. Get a standout profile photo in minutes.',
     date: '2025-01-12',
     readTime: '7 min read',
+    author: 'PhotoShotsPro Team',
+    featured: true,
   },
   {
     slug: 'professional-headshot-photography-cost',
@@ -76,6 +97,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
       'What do professional headshots cost in 2025? Compare traditional photography vs AI headshots. Pricing guide and value breakdown.',
     date: '2025-01-11',
     readTime: '6 min read',
+    author: 'PhotoShotsPro Team',
   },
   {
     slug: 'free-vs-paid-ai-headshots',
@@ -86,6 +108,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
       'Honest comparison of free and paid AI headshot generators. Quality differences, limitations, and when to upgrade.',
     date: '2025-01-09',
     readTime: '5 min read',
+    author: 'PhotoShotsPro Team',
   },
   {
     slug: 'best-ai-headshot-generators',
@@ -96,6 +119,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
       'We tested the top AI headshot generators for quality, speed, and price. HeadshotPro, BetterPic, Aragon AI compared.',
     date: '2025-01-13',
     readTime: '9 min read',
+    author: 'PhotoShotsPro Team',
   },
   {
     slug: 'free-ai-headshot-generator',
@@ -106,6 +130,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
       'Looking for a free AI headshot generator? Compare quality, limits, and features. Plus when to consider paid options.',
     date: '2025-01-07',
     readTime: '6 min read',
+    author: 'PhotoShotsPro Team',
   },
   {
     slug: 'professional-headshots-ai',
@@ -116,6 +141,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
       'How to get professional-quality headshots using AI. Best practices, tool comparisons, and what to avoid.',
     date: '2025-01-06',
     readTime: '8 min read',
+    author: 'PhotoShotsPro Team',
   },
   {
     slug: 'headshot-ai-generator',
@@ -126,6 +152,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
       'Everything you need to know about AI headshot generators. How they work, quality expectations, and top tools compared.',
     date: '2025-01-05',
     readTime: '7 min read',
+    author: 'PhotoShotsPro Team',
   },
 ]
 

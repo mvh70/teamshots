@@ -18,6 +18,10 @@
     "dashboard": "Dashboard",
     "getStarted": "Get Started"
   },
+  "blog": {
+    "title": "Blog",
+    "description": "Tips, guides, and insights about AI headshots, professional branding, and team photos."
+  },
   "hero": {
     "titleMain": "Professional team photos",
     "titleHighlightTime": "in 60 seconds",
