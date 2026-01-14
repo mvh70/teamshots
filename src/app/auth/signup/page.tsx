@@ -326,8 +326,7 @@ export default function SignUpPage() {
                 type="text"
                 maxLength={6}
                 required
-                label={t('verificationCodeLabel')}
-                hint={t('enterCodeFor', { email: formData.email })}
+                label={t('enterCodeFor', { email: formData.email })}
                 value={formData.otpCode}
                 onChange={(e) => setFormData({ ...formData, otpCode: e.target.value })}
               />

@@ -458,8 +458,7 @@ export default function VerifyPage() {
               type="text"
               maxLength={6}
               required
-              label={t('verificationCodeLabel')}
-              hint={t('enterCodeFor', { email: effectiveEmail })}
+              label={t('enterCodeFor', { email: effectiveEmail })}
               value={otpCode}
               onChange={(e) => setOtpCode(e.target.value)}
             />
