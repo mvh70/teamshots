@@ -11,6 +11,7 @@ interface ArticleJsonLdProps {
   datePublished: string;
   dateModified?: string;
   url: string;
+  image?: string;
 }
 
 interface FaqItem {
@@ -33,12 +34,14 @@ export function ArticleJsonLd({
   datePublished,
   dateModified,
   url,
+  image,
 }: ArticleJsonLdProps) {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline,
     description,
+    ...(image && { image }),
     author: {
       '@type': 'Person',
       name: authorName,

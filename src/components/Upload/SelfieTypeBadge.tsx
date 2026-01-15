@@ -1,7 +1,8 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import type { SelfieType } from '@/domain/selfie/selfie-types'
+import { Sun, Layers, Check, X } from 'lucide-react'
+import type { SelfieType, QualityRating } from '@/domain/selfie/selfie-types'
 import {
   getSelfieTypeRequirement,
   getConfidenceLevel,
@@ -13,6 +14,8 @@ interface SelfieTypeBadgeProps {
   isLoading?: boolean
   className?: string
   showConfidence?: boolean
+  lightingQuality?: QualityRating | null
+  backgroundQuality?: QualityRating | null
 }
 
 /**
@@ -30,6 +33,8 @@ export default function SelfieTypeBadge({
   isLoading = false,
   className = '',
   showConfidence = true,
+  lightingQuality,
+  backgroundQuality,
 }: SelfieTypeBadgeProps) {
   const t = useTranslations('selfie')
 
@@ -47,7 +52,9 @@ export default function SelfieTypeBadge({
   }
 
   const requirement = getSelfieTypeRequirement(type)
-  const label = requirement?.label || 'Unknown'
+  // Use translation for label, with fallback to hardcoded label
+  const typeKey = type.replace('_', '') // front_view -> frontview
+  const label = t(`types.${typeKey}.label`, { defaultValue: requirement?.label || 'Unknown' })
   const confidenceLevel = getConfidenceLevel(confidence)
 
   const colors: Record<SelfieType, string> = {
@@ -190,3 +197,42 @@ function SelfieTypeIcon({ type, className = '' }: SelfieTypeIconProps) {
 }
 
 export { SelfieTypeIcon }
+
+/**
+ * Separate badge for lighting or background quality assessment.
+ * Shows check for good/acceptable, X for poor.
+ */
+interface QualityBadgeProps {
+  type: 'lighting' | 'background'
+  quality: QualityRating
+  className?: string
+}
+
+export function QualityBadge({ type, quality, className = '' }: QualityBadgeProps) {
+  const t = useTranslations('selfie')
+
+  const isGood = quality === 'good' || quality === 'acceptable'
+
+  const badgeColors = isGood
+    ? 'bg-green-50 text-green-700 border-green-200'
+    : 'bg-red-50 text-red-700 border-red-200'
+
+  const iconColor = isGood ? 'text-green-500' : 'text-red-500'
+
+  const label = type === 'lighting'
+    ? t('quality.lightingLabel', { defaultValue: 'Lighting' })
+    : t('quality.backgroundLabel', { defaultValue: 'Background' })
+
+  const Icon = type === 'lighting' ? Sun : Layers
+  const StatusIcon = isGood ? Check : X
+
+  return (
+    <div
+      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs font-medium ${badgeColors} ${className}`}
+    >
+      <Icon className="w-3 h-3" />
+      <span>{label}</span>
+      <StatusIcon className={`w-3 h-3 ${iconColor}`} />
+    </div>
+  )
+}

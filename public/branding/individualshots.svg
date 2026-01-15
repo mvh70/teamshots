@@ -1,0 +1,8 @@
+<svg width="640" height="160" viewBox="0 0 640 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="8" width="624" height="144" rx="28" fill="#0B1020"/>
+  <path d="M52 80c0-22.091 17.909-40 40-40s40 17.909 40 40-17.909 40-40 40-40-17.909-40-40Z" fill="#6366F1"/>
+  <path d="M78 78c0-7.732 6.268-14 14-14s14 6.268 14 14-6.268 14-14 14-14-6.268-14-14Z" fill="#FFFFFF" opacity="0.9"/>
+  <text x="150" y="92" fill="#FFFFFF" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="44" font-weight="800" letter-spacing="-0.02em">HeadshotOne</text>
+  <text x="152" y="122" fill="#AAB3D5" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="16" font-weight="600">Placeholder logo</text>
+</svg>
+

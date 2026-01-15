@@ -1,0 +1,24 @@
+{
+  "landing": {
+    "coupleshotspro": {
+      "hero": {
+        "titleLine1": "Professional",
+        "titleLine2": "Couple Photos",
+        "titleHighlightTime": "in 60 seconds",
+        "subtitleMain": "Turn your selfies into beautiful couple portraits.",
+        "subtitle": "No photographer required. Just upload your photos and let our AI do the magic.",
+        "subtitleBold": "Perfect for social media, frames, and gifts.",
+        "cta": "Create Couple Photos",
+        "ctaAria": "Start creating couple photos",
+        "noCreditCardLine": "No credit card required",
+        "freeGenerationsLine": "Free preview generation",
+        "finalCtaTitle": "Ready to capture your love?",
+        "finalCtaSubtitle": "Join thousands of couples creating beautiful memories with AI."
+      }
+    }
+  },
+  "metadata": {
+    "title": "DuoSnaps - AI Couple Photos",
+    "description": "Create beautiful AI couple portraits in seconds. Perfect for engagement announcements, holiday cards, and social media."
+  }
+}

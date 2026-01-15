@@ -19,8 +19,8 @@ type Props = {
 const getContent = (locale: string, brandName: string) => {
   if (locale === 'es') {
     return {
-      title: '¿Cuánto Cuestan los Headshots Profesionales en 2025? (Guía de Precios)',
-      description: 'Guía completa de precios de fotografía de headshots profesionales para 2025. Desde sesiones individuales ($100-500) hasta grupos corporativos ($30-75/persona). Compara con alternativas AI.',
+      title: 'Costo de Fotografía de Headshots Profesionales (2026): Precios de Equipo vs. IA',
+      description: 'Ahorra 90% en Sesiones de Equipo. Guía completa de precios de headshots: sesiones individuales ($100-500) a grupos corporativos ($30-75/persona). Compara con alternativas IA.',
       breadcrumb: 'Costos de Headshots Profesionales',
       tldr: [
         '<strong>Sesiones individuales:</strong> $150-500 para sesiones básicas, $500-1,500+ para fotógrafos premium. Incluye tiempo de sesión y 1-20 fotos editadas.',
@@ -31,10 +31,10 @@ const getContent = (locale: string, brandName: string) => {
         intro: {
           title: '¿Cuánto Cuesta un Headshot Profesional?',
           p1: 'Las sesiones de fotos profesionales para headshots típicamente cuestan entre $150-500 para una sesión básica, aunque los precios varían considerablemente dependiendo de varios factores.',
-          p2: 'Esta guía desglosa exactamente lo que puedes esperar pagar en 2025, ya sea para una foto profesional individual o para equipar a todo tu equipo con headshots consistentes. ¿Buscas <Link href="/es/blog/corporate-ai-headshots" className="text-brand-primary hover:underline">precios corporativos para equipos</Link>? También cubrimos eso.'
+          p2: 'Esta guía desglosa exactamente lo que puedes esperar pagar en 2026, ya sea para una foto profesional individual o para equipar a todo tu equipo con headshots consistentes. ¿Buscas <Link href="/es/blog/corporate-ai-headshots" className="text-brand-primary hover:underline">precios corporativos para equipos</Link>? También cubrimos eso.'
         },
         individualPricing: {
-          title: 'Precios de Headshots Individuales 2025',
+          title: 'Precios de Headshots Individuales 2026',
           p1: 'Esto es lo que puedes esperar pagar por un solo headshot profesional:',
           table: {
             headers: ['Nivel', 'Rango de Precio', 'Qué Incluye'],
@@ -129,7 +129,7 @@ const getContent = (locale: string, brandName: string) => {
         },
         aiAlternative: {
           title: 'La Alternativa AI: 80-90% de Ahorro',
-          p1: 'Los headshots AI han surgido como una alternativa legítima en 2025. La tecnología ha mejorado dramáticamente, produciendo resultados indistinguibles de la fotografía tradicional.',
+          p1: 'Los headshots AI han surgido como una alternativa legítima en 2026. La tecnología ha mejorado dramáticamente, produciendo resultados indistinguibles de la fotografía tradicional.',
           comparison: {
             traditional: {
               title: 'Fotografía Tradicional',
@@ -168,7 +168,7 @@ const getContent = (locale: string, brandName: string) => {
         },
         nearMe: {
           title: 'Por Qué No Necesitas Buscar "Headshots Cerca de Mí"',
-          p1: 'Muchos profesionales buscan por defecto "headshots cerca de mí" asumiendo que un estudio local es su única opción. En 2025, la ubicación ya no es una limitación.',
+          p1: 'Muchos profesionales buscan por defecto "headshots cerca de mí" asumiendo que un estudio local es su única opción. En 2026, la ubicación ya no es una limitación.',
           p2: `Con generadores de headshots AI como ${brandName}, el estudio viene a ti. No necesitas conducir por la ciudad, pagar estacionamiento o tomar tiempo libre del trabajo. Puedes generar <Link href="/es/blog/ai-headshots-for-linkedin" className="text-brand-primary hover:underline">headshots para LinkedIn</Link> profesionales desde tu sala, asegurando que obtengas la foto perfecta sin la molestia logística.`
         }
       },
@@ -187,8 +187,8 @@ const getContent = (locale: string, brandName: string) => {
 
   // English
   return {
-    title: 'How Much Do Professional Headshots Cost in 2025? (Pricing Guide)',
-    description: 'Complete professional headshot photography pricing guide for 2025. From individual sessions ($100-500) to corporate groups ($30-75/person). Compare with AI alternatives.',
+    title: 'Professional Headshot Photography Cost (2026): Team Pricing vs. AI',
+    description: 'Save 90% on Team Sessions. Complete professional headshot pricing guide: individual sessions ($100-500) to corporate groups ($30-75/person). Compare with AI alternatives.',
     breadcrumb: 'Professional Headshot Cost',
     tldr: [
       '<strong>Individual sessions:</strong> $150-500 for basic sessions, $500-1,500+ for premium photographers. Includes session time and 1-20 edited photos.',
@@ -199,10 +199,10 @@ const getContent = (locale: string, brandName: string) => {
       intro: {
         title: 'How Much Does a Professional Headshot Cost?',
         p1: 'Professional headshot photoshoots typically cost between $150-500 for a basic session, though prices can vary quite a bit depending on several factors.',
-        p2: 'This guide breaks down exactly what you can expect to pay in 2025, whether you need a single professional photo or need to outfit your entire team with consistent headshots. Looking for <Link href="/blog/corporate-ai-headshots" className="text-brand-primary hover:underline">corporate pricing for teams</Link>? We cover that too.'
+        p2: 'This guide breaks down exactly what you can expect to pay in 2026, whether you need a single professional photo or need to outfit your entire team with consistent headshots. Looking for <Link href="/blog/corporate-ai-headshots" className="text-brand-primary hover:underline">corporate pricing for teams</Link>? We cover that too.'
       },
       individualPricing: {
-        title: 'Individual Headshot Pricing 2025',
+        title: 'Individual Headshot Pricing 2026',
         p1: 'Here\'s what you can expect to pay for a single professional headshot:',
         table: {
           headers: ['Tier', 'Price Range', 'What\'s Included'],
@@ -297,7 +297,7 @@ const getContent = (locale: string, brandName: string) => {
       },
       aiAlternative: {
         title: 'The AI Alternative: 80-90% Savings',
-        p1: 'AI headshots have emerged as a legitimate alternative in 2025. The technology has improved dramatically, producing results that are indistinguishable from traditional photography.',
+        p1: 'AI headshots have emerged as a legitimate alternative in 2026. The technology has improved dramatically, producing results that are indistinguishable from traditional photography.',
         comparison: {
           traditional: {
             title: 'Traditional Photography',
@@ -336,7 +336,7 @@ const getContent = (locale: string, brandName: string) => {
       },
       nearMe: {
         title: 'Why You Don\'t Need to Search for "Headshots Near Me"',
-        p1: 'Many professionals default to searching for "headshots near me" assuming a local studio is their only option. In 2025, location is no longer a constraint.',
+        p1: 'Many professionals default to searching for "headshots near me" assuming a local studio is their only option. In 2026, location is no longer a constraint.',
         p2: `With AI headshot generators like ${brandName}, the studio comes to you. You don't need to drive across town, pay for parking, or take time off work. You can generate professional <Link href="/blog/ai-headshots-for-linkedin" className="text-brand-primary hover:underline">LinkedIn headshots</Link> from your living room, ensuring you get the perfect shot without the logistical hassle.`
       }
     },
@@ -425,7 +425,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       title: content.title,
       description: content.description,
       type: 'article',
-      publishedTime: '2025-12-04',
+      publishedTime: '2026-01-14',
       authors: ['Matthieu van Haperen'],
     },
     alternates: {
@@ -461,7 +461,7 @@ export default async function ProfessionalHeadshotCostPage({ params }: Props) {
         authorJobTitle={`Founder, ${brandConfig.name}`}
         publisherName={brandConfig.name}
         publisherUrl={baseUrl}
-        datePublished="2025-12-04"
+        datePublished="2026-01-14"
         url={`${baseUrl}${locale === 'es' ? '/es' : ''}/blog/professional-headshot-photography-cost`}
       />
       <FaqJsonLd items={faqItems} />
@@ -486,7 +486,7 @@ export default async function ProfessionalHeadshotCostPage({ params }: Props) {
           </div>
           <div>
             <p className="font-medium text-gray-900">Matthieu van Haperen</p>
-            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Dic 2025' : 'Updated Dec 2025'}</p>
+            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Ene 2026' : 'Updated Jan 2026'}</p>
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-import { INDIVIDUAL_DOMAIN, TEAM_DOMAIN } from './domain'
+import { INDIVIDUAL_DOMAIN, TEAM_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
 
 // Type definitions for brand configuration
 export interface BrandContact {
@@ -90,6 +90,18 @@ const TYPOGRAPHY_CONFIGS: Record<string, BrandTypography> = {
     displayFont: 'font-display',
     bodyFont: 'font-sans',
   },
+  [COUPLES_DOMAIN]: {
+    displayFont: 'font-display',
+    bodyFont: 'font-sans',
+  },
+  [FAMILY_DOMAIN]: {
+    displayFont: 'font-display',
+    bodyFont: 'font-sans',
+  },
+  [EXTENSION_DOMAIN]: {
+    displayFont: 'font-display',
+    bodyFont: 'font-sans',
+  },
 };
 
 // Style tokens per domain
@@ -103,6 +115,21 @@ const STYLE_CONFIGS: Record<string, BrandStyle> = {
     borderRadius: 'pill',
     shadowIntensity: 'dramatic',
     tone: 'friendly',
+  },
+  [COUPLES_DOMAIN]: {
+    borderRadius: 'rounded',
+    shadowIntensity: 'medium',
+    tone: 'friendly',
+  },
+  [FAMILY_DOMAIN]: {
+    borderRadius: 'rounded',
+    shadowIntensity: 'medium',
+    tone: 'friendly',
+  },
+  [EXTENSION_DOMAIN]: {
+    borderRadius: 'sharp',
+    shadowIntensity: 'dramatic',
+    tone: 'playful',
   },
 };
 
@@ -133,33 +160,111 @@ const TEAM_BRAND: BrandConfig = {
 };
 
 const INDIVIDUAL_BRAND: BrandConfig = {
-  name: 'PhotoShotsPro',
+  name: 'IndividualShots',
   domain: INDIVIDUAL_DOMAIN,
   contact: {
-    hello: 'hello@photoshotspro.com',
-    support: 'support@photoshotspro.com',
-    privacy: 'privacy@photoshotspro.com',
-    legal: 'legal@photoshotspro.com',
+    hello: `hello@${INDIVIDUAL_DOMAIN}`,
+    support: `support@${INDIVIDUAL_DOMAIN}`,
+    privacy: `privacy@${INDIVIDUAL_DOMAIN}`,
+    legal: `legal@${INDIVIDUAL_DOMAIN}`,
   },
   logo: {
-    light: '/branding/PhotoShotsPro_trans.webp',
-    dark: '/branding/PhotoShotsPro_trans.webp',
+    light: '/branding/individualshots.svg',
+    dark: '/branding/individualshots.svg',
     icon: '/branding/icon.png',
     favicon: '/branding/favicon.ico',
   },
   ogImage: '/branding/og-image.jpg',
   legal: {
     ...SHARED_CONFIG.legal,
-    teamName: 'PhotoShotsPro',
+    teamName: 'IndividualShots',
   },
   colors: SHARED_CONFIG.colors,
   typography: TYPOGRAPHY_CONFIGS[INDIVIDUAL_DOMAIN],
   style: STYLE_CONFIGS[INDIVIDUAL_DOMAIN],
 };
 
+const COUPLES_BRAND: BrandConfig = {
+  name: 'CoupleShots',
+  domain: COUPLES_DOMAIN,
+  contact: {
+    hello: `hello@${COUPLES_DOMAIN}`,
+    support: `support@${COUPLES_DOMAIN}`,
+    privacy: `privacy@${COUPLES_DOMAIN}`,
+    legal: `legal@${COUPLES_DOMAIN}`,
+  },
+  logo: {
+    light: '/branding/coupleshots.svg',
+    dark: '/branding/coupleshots.svg',
+    icon: '/branding/icon.png',
+    favicon: '/branding/favicon.ico',
+  },
+  ogImage: '/branding/og-image.jpg',
+  legal: {
+    ...SHARED_CONFIG.legal,
+    teamName: 'CoupleShots',
+  },
+  colors: { ...SHARED_CONFIG.colors, primary: '#EC4899', primaryHover: '#DB2777' }, // Pink
+  typography: TYPOGRAPHY_CONFIGS[COUPLES_DOMAIN],
+  style: STYLE_CONFIGS[COUPLES_DOMAIN],
+};
+
+const FAMILY_BRAND: BrandConfig = {
+  name: 'FamilyShots',
+  domain: FAMILY_DOMAIN,
+  contact: {
+    hello: `hello@${FAMILY_DOMAIN}`,
+    support: `support@${FAMILY_DOMAIN}`,
+    privacy: `privacy@${FAMILY_DOMAIN}`,
+    legal: `legal@${FAMILY_DOMAIN}`,
+  },
+  logo: {
+    light: '/branding/familyshots.svg',
+    dark: '/branding/familyshots.svg',
+    icon: '/branding/icon.png',
+    favicon: '/branding/favicon.ico',
+  },
+  ogImage: '/branding/og-image.jpg',
+  legal: {
+    ...SHARED_CONFIG.legal,
+    teamName: 'FamilyShots',
+  },
+  colors: { ...SHARED_CONFIG.colors, primary: '#0EA5E9', primaryHover: '#0284C7' }, // Sky Blue
+  typography: TYPOGRAPHY_CONFIGS[FAMILY_DOMAIN],
+  style: STYLE_CONFIGS[FAMILY_DOMAIN],
+};
+
+const EXTENSION_BRAND: BrandConfig = {
+  name: 'RightClickFit',
+  domain: EXTENSION_DOMAIN,
+  contact: {
+    hello: `hello@${EXTENSION_DOMAIN}`,
+    support: `support@${EXTENSION_DOMAIN}`,
+    privacy: `privacy@${EXTENSION_DOMAIN}`,
+    legal: `legal@${EXTENSION_DOMAIN}`,
+  },
+  logo: {
+    light: '/branding/rightclickfit.svg',
+    dark: '/branding/rightclickfit.svg',
+    icon: '/branding/icon.png',
+    favicon: '/branding/favicon.ico',
+  },
+  ogImage: '/branding/og-image.jpg',
+  legal: {
+    ...SHARED_CONFIG.legal,
+    teamName: 'RightClickFit',
+  },
+  colors: { ...SHARED_CONFIG.colors, primary: '#8B5CF6', primaryHover: '#7C3AED' }, // Violet
+  typography: TYPOGRAPHY_CONFIGS[EXTENSION_DOMAIN],
+  style: STYLE_CONFIGS[EXTENSION_DOMAIN],
+};
+
 export const BRAND_CONFIGS: Record<string, BrandConfig> = {
   [TEAM_DOMAIN]: TEAM_BRAND,
   [INDIVIDUAL_DOMAIN]: INDIVIDUAL_BRAND,
+  [COUPLES_DOMAIN]: COUPLES_BRAND,
+  [FAMILY_DOMAIN]: FAMILY_BRAND,
+  [EXTENSION_DOMAIN]: EXTENSION_BRAND,
 };
 
 // Default brand config (TeamShotsPro) - for backwards compatibility
@@ -185,8 +290,11 @@ function getCurrentDomain(requestHeaders?: Headers): string | null {
     const host = requestHeaders.get('host') || requestHeaders.get('x-forwarded-host')
     if (host) {
       const normalizedHost = host.split(':')[0].replace(/^www\./, '').toLowerCase()
-      // On localhost, use forced domain if set
-      if (normalizedHost === 'localhost' && forcedDomain) {
+      
+      // On localhost, allow forced domain override
+      if ((normalizedHost === 'localhost' || normalizedHost === '127.0.0.1') && forcedDomain) {
+        // Log for debugging
+        console.log(`[Brand Detection] Localhost detected. Forcing domain: ${forcedDomain}`);
         return forcedDomain.replace(/^www\./, '').toLowerCase()
       }
       return normalizedHost
@@ -209,8 +317,13 @@ function getCurrentDomain(requestHeaders?: Headers): string | null {
 export function getBrand(requestHeaders?: Headers): BrandConfig {
   const domain = getCurrentDomain(requestHeaders)
   
-  if (domain === INDIVIDUAL_DOMAIN) {
-    return BRAND_CONFIGS[INDIVIDUAL_DOMAIN]
+  if (domain) {
+    // Exact match
+    if (BRAND_CONFIGS[domain]) {
+      return BRAND_CONFIGS[domain]
+    }
+    // Also try matching the forced domain directly if it's not in the map yet (fallback)
+    // This handles cases where EXTENSION_DOMAIN might not be perfectly aligned with the map key in some envs
   }
   
   // Default to TeamShotsPro
@@ -275,4 +388,3 @@ export function getBrandStyle(requestHeaders?: Headers): BrandStyle {
 }
 
 // Note: Tagline should be retrieved using useTranslations('footer.tagline') in components
-

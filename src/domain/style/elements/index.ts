@@ -13,6 +13,7 @@ import './clothing/metadata'
 import './clothing-colors/metadata'
 import './custom-clothing/metadata'
 import './expression/metadata'
+import './industry/metadata'
 import './lighting/metadata'
 import './shot-type/metadata'
 

@@ -8,15 +8,35 @@
     "processingImages": "Processing {count} images...",
     "uploading": "Uploading...",
     "loading": "Loading...",
-    "dismissingAutomatically": "Dismissing automatically..."
+    "dismissingAutomatically": "Dismissing automatically...",
+    "dragCameraInstruction": "Drag this window close to your camera for natural eye contact",
+    "cancel": "Cancel",
+    "capture": "Capture",
+    "useCamera": "Use Camera",
+    "uploadPhoto": "Upload Photo",
+    "processing": "Processing..."
   },
   "nav": {
     "home": "Home",
+    "solutions": "Solutions",
+    "solutionLabels": {
+      "real-estate": "Real Estate",
+      "medical": "Healthcare",
+      "law-firms": "Law Firms",
+      "financial-services": "Financial Services",
+      "actively-hiring": "Growing Teams",
+      "consulting": "Consulting",
+      "accounting": "Accounting"
+    },
     "pricing": "Pricing",
     "blog": "Blog",
     "signin": "Sign in",
     "dashboard": "Dashboard",
     "getStarted": "Get Started"
+  },
+  "blog": {
+    "title": "Blog",
+    "description": "Tips, guides, and insights about AI headshots, professional branding, and team photos."
   },
   "hero": {
     "titleMain": "Professional team photos",
@@ -59,6 +79,12 @@
         "description": "Photos that fail our quality standards get regenerated automatically. Plus you get plan-based free retries to perfect your results. Unlike other services where you pay for every attempt, we handle quality issues automatically and give you free iterations to get exactly what you want."
       }
     }
+  },
+  "trustBadges": {
+    "stripeSecure": "Stripe Secure Checkout",
+    "instantResults": "Results in 60 Seconds",
+    "noSubscription": "No Subscription",
+    "moneyBack": "Money-Back Guarantee"
   },
   "socialProof": {
     "testimonialsTitle": "Real teams, real results"
@@ -317,10 +343,17 @@
       "totalPhotos": "Total photos",
       "photos": "photos",
       "savings": "You save",
+      "saveDollar": "Save ${amount}",
+      "totalForSeats": "${amount} total for {count, plural, one {# seat} other {# seats}}",
       "total": "Total",
       "cta": "Add {seats} team members for {total}",
+      "buySeats": "Buy {count, plural, one {# team member} other {# team members}}",
+      "oneTimePayment": "One-time payment • No subscription",
+      "currentToNew": "Current: {current} {current, plural, one {seat} other {seats}} → New total: {total} {total, plural, one {seat} other {seats}}",
       "whatsIncluded": "What's Included",
       "volumeHint": "Add {seatsNeeded} more to unlock {nextPrice}/member (save {savingsPerSeat}/member)",
+      "personalPlanRedirect": "Looking for a personal plan?",
+      "visitPhotoshotsPro": "Visit PhotoshotsPro.com",
       "features": {
         "photosPerSeat": "10 professional photos per team member",
         "professionalQuality": "AI-powered professional quality headshots",
@@ -330,7 +363,8 @@
         "flexibleTeamSize": "Scale your team anytime, add seats as you grow",
         "support": "Email support and satisfaction guarantee"
       }
-    }
+    },
+    "freeBrandingText": "with fixed teamshots branding"
   },
   "auth": {
     "signin": {
@@ -359,7 +393,7 @@
     "signup": {
       "freeBadge": "You're signing up for the free plan with {photoCount} free {photoCount, plural, one {photo} other {photos}} and fixed {brandName} branding",
       "title": "Create your account",
-      "welcome": "Create your account",
+      "welcome": "Your team's best first impression",
       "welcomeSubtitle": "Built for teams and startup founders. Join in seconds. No photoshoot, no photographer, no vendor management. Just professional team photos.",
       "benefit1": "Generate professional headshots in 60 seconds",
       "benefit2": "Credits never expire. Use them whenever.",
@@ -1274,6 +1308,9 @@
   },
   "selfies": {
     "title": "Selfies",
+    "subtitle": "Upload and manage your selfies for photo generation",
+    "tipsIntro": "Selecting the right selfies is crucial for high resemblance. Here are some tips for your selfies.",
+    "learnMore": "Learn more →",
     "upload": {
       "title": "Upload a New Selfie",
       "description": "Take a photo with your camera or upload an existing photo to get started."
@@ -1309,7 +1346,17 @@
       "deleteDisabledTooltip": "This selfie is used in a generation and can't be deleted.",
       "deleteDisabledAria": "Delete disabled. This selfie is used in a generation and can't be deleted.",
       "deleteDisabledMessage": "Used in a generation and can't be deleted.",
-      "analyzing": "Analyzing..."
+      "analyzing": "Analyzing...",
+      "selfieTypes": {
+        "front_view": "Front View",
+        "side_view": "Side View",
+        "partial_body": "Partial Body",
+        "full_body": "Full Body"
+      },
+      "quality": {
+        "lighting": "Lighting",
+        "background": "Background"
+      }
     }
   },
   "generate": {
@@ -1418,7 +1465,8 @@
         "clothing": "clothing",
         "colors": "colors",
         "expression": "expression",
-        "branding": "branding"
+        "branding": "branding",
+        "industry": "industry"
       },
       "tooltips": {
         "needSelfies": "Add {count} photos first",
@@ -1428,6 +1476,10 @@
       "infoIcons": {
         "selfieTips": "Selfie tips",
         "customizationIntro": "Customization guide"
+      },
+      "navigation": {
+        "continue": "Continue",
+        "back": "Back"
       }
     },
     "typeSelection": {
@@ -1661,7 +1713,8 @@
         "customClothing": "Upload an outfit image to transfer the clothing style to your generated photos.",
         "expression": "Control the facial expression and mood of your team photos.",
         "lighting": "Set the lighting style to match your brand aesthetic - from natural to studio lighting.",
-        "pose": "Choose a body pose and positioning that matches your professional image and brand style."
+        "pose": "Choose a body pose and positioning that matches your professional image and brand style.",
+        "industry": "Select your industry for tailored backgrounds and styling that match your professional sector."
       },
       "toggle": {
         "predefined": "Predefined",
@@ -1718,6 +1771,10 @@
         "pose": {
           "title": "Pose",
           "description": "Choose your body pose and positioning"
+        },
+        "industry": {
+          "title": "Industry",
+          "description": "Select your industry for tailored professional styling"
         }
       },
       "background": {
@@ -1895,6 +1952,42 @@
           "sad": {
             "label": "Sad / melancholic",
             "description": "Somber, melancholic"
+          }
+        }
+      },
+      "industry": {
+        "title": "Industry",
+        "subtitle": "Select your industry for tailored professional styling",
+        "predefined": "Predefined",
+        "selectPlaceholder": "Select your industry",
+        "industries": {
+          "law-firms": {
+            "label": "Law Firms",
+            "description": "Traditional professional look with law library background"
+          },
+          "medical": {
+            "label": "Medical & Healthcare",
+            "description": "Clean clinical appearance with lab coat and stethoscope"
+          },
+          "real-estate": {
+            "label": "Real Estate",
+            "description": "Polished professional with modern office backdrop"
+          },
+          "financial-services": {
+            "label": "Financial Services",
+            "description": "Executive presence with sophisticated corporate setting"
+          },
+          "actively-hiring": {
+            "label": "Tech & Startups",
+            "description": "Approachable tech professional in modern workspace"
+          },
+          "consulting": {
+            "label": "Consulting",
+            "description": "Sharp professional in collaborative environment"
+          },
+          "accounting": {
+            "label": "Accounting",
+            "description": "Trustworthy professional in organized office setting"
           }
         }
       },
@@ -2167,8 +2260,12 @@
       "approveContinue": "Approve & Save",
       "retakePhoto": "Retake Photo",
       "cancel": "Cancel",
-      "processing": "Processing..."
+      "processing": "Processing...",
+      "analyzing": "Analyzing...",
+      "cannotApprove": "Cannot Approve"
     },
+    "improperSelfie": "Photo cannot be used",
+    "pleaseRetake": "Please retake the photo or upload a different one.",
     "disclaimer": "By approving, you confirm you have the rights to use this photo and consent to its use for photo generation."
   },
   "selfie": {
@@ -2184,9 +2281,17 @@
         "label": "Side View",
         "description": "Profile photo showing side of face"
       },
+      "partialbody": {
+        "label": "Partial Body",
+        "description": "Photo showing head and torso until mid-hip"
+      },
       "fullbody": {
         "label": "Full Body",
         "description": "Photo showing full body from head to feet"
+      },
+      "body": {
+        "label": "Body",
+        "description": "Photo showing body (partial or full)"
       }
     },
     "classification": {
@@ -2200,6 +2305,7 @@
     },
     "checklist": {
       "title": "Selfie Checklist",
+      "progress": "Your progress",
       "captured": "captured",
       "pending": "pending",
       "needed": "needed"

@@ -1,0 +1,24 @@
+{
+  "landing": {
+    "familyshotspro": {
+      "hero": {
+        "titleLine1": "Beautiful",
+        "titleLine2": "Family Portraits",
+        "titleHighlightTime": "in minutes",
+        "subtitleMain": "Coordinate your family photos without the stress.",
+        "subtitle": "No matching outfits needed. AI unifies your style instantly.",
+        "subtitleBold": "Perfect for holiday cards and wall art.",
+        "cta": "Create Family Portraits",
+        "ctaAria": "Start creating family portraits",
+        "noCreditCardLine": "No credit card required",
+        "freeGenerationsLine": "Free preview generation",
+        "finalCtaTitle": "The easiest family photo you'll ever take.",
+        "finalCtaSubtitle": "Create lasting memories without the studio hassle."
+      }
+    }
+  },
+  "metadata": {
+    "title": "KinFrame - AI Family Portraits",
+    "description": "Stress-free family portraits using AI. Perfect for Christmas cards, holiday greetings, and family memories."
+  }
+}

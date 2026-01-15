@@ -1,0 +1,143 @@
+{
+  "hero": {
+    "badge": "Diseñado para firmas contables",
+    "title": "Headshots profesionales para firmas contables",
+    "subtitle": "Headshots consistentes y de confianza para cada profesional. Genera confianza en los clientes con una imagen profesional unificada.",
+    "cta": "Ver el nuevo look de tu firma"
+  },
+  "painPoints": {
+    "title": "Por qué las firmas contables luchan con las fotos de equipo",
+    "items": [
+      {
+        "title": "La temporada fiscal hace imposible programar",
+        "description": "Durante la campaña de impuestos, nadie tiene tiempo para sesiones de fotos. El resto del año, estás recuperando todo lo demás."
+      },
+      {
+        "title": "Inconsistencia de fotos entre socios y personal",
+        "description": "Algunos socios tienen headshots profesionales de hace 10 años, las nuevas incorporaciones no tienen nada, y la calidad varía enormemente."
+      },
+      {
+        "title": "Múltiples ubicaciones de oficina",
+        "description": "Coordinar fotógrafos entre diferentes oficinas añade complejidad y coste que se sigue posponiendo."
+      }
+    ],
+    "solution": "TeamShotsPro resuelve todo esto en 60 segundos."
+  },
+  "showcase": {
+    "title": "Transformaciones de firmas contables",
+    "subtitle": "Resultados antes y después de firmas contables reales"
+  },
+  "howItWorks": {
+    "title": "Cómo funciona para firmas contables",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Configura el estilo de tu firma",
+        "description": "Elige un look profesional que transmita confianza y competencia a los clientes."
+      },
+      {
+        "number": "2",
+        "title": "Invita al personal por email",
+        "description": "Envía invitaciones a socios, auditores y personal de soporte en todas las ubicaciones."
+      },
+      {
+        "number": "3",
+        "title": "El equipo se toma una selfie",
+        "description": "Sin necesidad de visitar un estudio. Funciona desde cualquier oficina o casa - incluso durante temporada alta."
+      },
+      {
+        "number": "4",
+        "title": "Descarga para todas las plataformas",
+        "description": "Obtén fotos consistentes listas para web, directorios y materiales de cliente."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Opciones de headshots para contables comparadas",
+    "headers": ["Característica", "Fotógrafo tradicional", "TeamShotsPro"],
+    "rows": [
+      ["Coste por persona", "€250-400", "€26"],
+      ["Tiempo de programación", "2-3 semanas", "60 segundos"],
+      ["Consistencia de marca", "Variable", "100%"],
+      ["Equipos multi-oficina", "Muy difícil", "Fácil"],
+      ["Onboarding nuevos", "Semanas", "Mismo día"]
+    ]
+  },
+  "useCases": {
+    "title": "Dónde usan sus headshots las firmas contables",
+    "platforms": [
+      { "name": "Web de la firma", "icon": "monitor" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Directorios de auditores", "icon": "book" },
+      { "name": "Tarjetas de visita", "icon": "credit-card" },
+      { "name": "Newsletters de clientes", "icon": "mail" },
+      { "name": "Material de campaña fiscal", "icon": "file-text" }
+    ]
+  },
+  "testimonials": {
+    "title": "Lo que dicen las firmas contables",
+    "items": [
+      {
+        "quote": "Finalmente actualizamos las fotos de todos sin interrumpir la temporada fiscal. Deberíamos haberlo hecho hace años.",
+        "author": "Roberto C.",
+        "role": "Socio director",
+        "company": "Firma de auditoría regional"
+      },
+      {
+        "quote": "Las nuevas incorporaciones están listas para fotos el primer día. Nuestros materiales de cara al cliente siempre lucen actualizados y profesionales.",
+        "author": "Amanda T.",
+        "role": "Gerente de RRHH",
+        "company": "Firma contable multi-oficina"
+      },
+      {
+        "quote": "La consistencia en nuestra página de socios finalmente coincide con la calidad de nuestro trabajo.",
+        "author": "David W.",
+        "role": "Socio",
+        "company": "Asesoría fiscal"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Preguntas sobre fotos para firmas contables",
+    "items": [
+      {
+        "question": "¿Qué deben vestir los profesionales?",
+        "answer": "Business professional funciona mejor - trajes, blazers o atuendo formal de negocios. Los colores conservadores transmiten confianza."
+      },
+      {
+        "question": "¿Podemos hacer esto durante temporada alta?",
+        "answer": "Sí. Los miembros del equipo envían una selfie rápida cuando les convenga - toma 2 minutos. No se necesita coordinación de horarios."
+      },
+      {
+        "question": "¿Son suficientemente profesionales para materiales de cliente?",
+        "answer": "Absolutamente. Nuestros headshots son indistinguibles de la fotografía tradicional y perfectos para todos los usos profesionales."
+      },
+      {
+        "question": "¿Cómo manejamos múltiples ubicaciones de oficina?",
+        "answer": "Cada miembro del equipo recibe un enlace de invitación y puede enviar desde cualquier ubicación. Todas las fotos coinciden con el estilo de tu firma automáticamente."
+      },
+      {
+        "question": "¿Ofrecéis precios para toda la firma?",
+        "answer": "Sí. Ofrecemos descuentos por volumen para firmas con 25+ miembros de equipo. Contáctanos para precios enterprise."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Precios simples para firmas contables",
+    "subtitle": "La mayoría de firmas eligen el plan de 25 plazas"
+  },
+  "finalCta": {
+    "title": "¿Listo para transformar la imagen de tu firma?",
+    "subtitle": "Crea headshots profesionales y consistentes para todo tu equipo sin las complicaciones de programación ni el coste de la fotografía tradicional.",
+    "cta": "Ver el nuevo look de tu firma"
+  },
+  "seo": {
+    "title": "Headshots con IA para firmas contables | TeamShotsPro",
+    "description": "Obtén headshots consistentes y profesionales para todo tu equipo contable en 60 segundos. Perfecto para webs de firma, directorios de auditores y materiales de cliente."
+  },
+  "stylingNotes": [
+    "Business professional o atuendo formal de negocios",
+    "Fondo limpio y neutro",
+    "Expresión confiada y de confianza que transmita competencia"
+  ]
+}

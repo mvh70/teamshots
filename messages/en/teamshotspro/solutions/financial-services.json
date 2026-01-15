@@ -1,0 +1,143 @@
+{
+  "hero": {
+    "badge": "Built for financial services",
+    "title": "Professional Team Headshots for Financial Services",
+    "subtitle": "Consistent, trustworthy headshots for every advisor. Build client confidence with a polished, unified team image.",
+    "cta": "See Your Team's New Look"
+  },
+  "painPoints": {
+    "title": "Why Financial Services Teams Struggle with Photos",
+    "items": [
+      {
+        "title": "Compliance-conscious clients expect professionalism",
+        "description": "In financial services, first impressions matter. Inconsistent or dated photos can undermine client trust."
+      },
+      {
+        "title": "Distributed teams across multiple offices",
+        "description": "With advisors, analysts, and support staff in different locations, coordinating photo sessions is a logistical nightmare."
+      },
+      {
+        "title": "Frequent team changes",
+        "description": "New hires, promotions, and team restructuring mean photos are constantly going out of date."
+      }
+    ],
+    "solution": "TeamShotsPro solves all of this in 60 seconds."
+  },
+  "showcase": {
+    "title": "See Financial Services Team Transformations",
+    "subtitle": "Before and after results from actual financial services teams"
+  },
+  "howItWorks": {
+    "title": "How It Works for Financial Services",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Set your firm's brand style",
+        "description": "Choose a professional look that conveys trust and competence to clients."
+      },
+      {
+        "number": "2",
+        "title": "Invite your team",
+        "description": "Send invites to advisors, analysts, and support staff across all locations."
+      },
+      {
+        "number": "3",
+        "title": "Team snaps a selfie",
+        "description": "No studio visit required. Works from any office or remote location."
+      },
+      {
+        "number": "4",
+        "title": "Download for all platforms",
+        "description": "Get consistent photos ready for website, portals, and client materials."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Financial Services Headshot Options Compared",
+    "headers": ["Feature", "Traditional Photographer", "TeamShotsPro"],
+    "rows": [
+      ["Cost per person", "$300-500", "$26"],
+      ["Time to schedule", "2-3 weeks", "60 seconds"],
+      ["Brand consistency", "Variable", "100%"],
+      ["Multi-office teams", "Very difficult", "Easy"],
+      ["New hire onboarding", "Weeks", "Same day"]
+    ]
+  },
+  "useCases": {
+    "title": "Where Financial Services Teams Use Their Headshots",
+    "platforms": [
+      { "name": "Company Website", "icon": "monitor" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Client Portals", "icon": "users" },
+      { "name": "Business Cards", "icon": "credit-card" },
+      { "name": "Annual Reports", "icon": "file-text" },
+      { "name": "Email Signatures", "icon": "mail" }
+    ]
+  },
+  "testimonials": {
+    "title": "What Financial Services Teams Say",
+    "items": [
+      {
+        "quote": "Our advisors look polished and professional across every touchpoint. Clients have noticed the difference.",
+        "author": "Robert H.",
+        "role": "Managing Director",
+        "company": "Wealth Management Firm"
+      },
+      {
+        "quote": "We used to spend weeks coordinating photo sessions. Now everyone gets their headshots in 60 seconds.",
+        "author": "Christine M.",
+        "role": "Marketing Director",
+        "company": "Investment Advisory"
+      },
+      {
+        "quote": "The consistency across our team page builds instant credibility with prospective clients.",
+        "author": "Andrew L.",
+        "role": "Partner",
+        "company": "Private Equity Firm"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Financial Services Photo Questions",
+    "items": [
+      {
+        "question": "What should financial advisors wear?",
+        "answer": "Professional business attire works best - suits, blazers, or formal business wear. Dark colors convey trust and competence."
+      },
+      {
+        "question": "Are these appropriate for compliance-reviewed materials?",
+        "answer": "Yes. Our professional headshots meet the quality standards expected in regulated industries and can be used in all client-facing materials."
+      },
+      {
+        "question": "How do we handle teams across multiple offices?",
+        "answer": "Each team member receives an invite link and can submit their selfie from any location. No coordination required."
+      },
+      {
+        "question": "Can we use these in annual reports?",
+        "answer": "Yes. Our photos are high-resolution and suitable for print materials including annual reports and marketing collateral."
+      },
+      {
+        "question": "Do you offer enterprise pricing?",
+        "answer": "Yes. We offer volume discounts for firms with 25+ team members. Contact us for custom pricing."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Simple Team Pricing for Financial Services",
+    "subtitle": "Most firms choose the 25-seat plan"
+  },
+  "finalCta": {
+    "title": "Ready to Transform Your Firm's Image?",
+    "subtitle": "Get consistent, professional headshots for your entire team without the scheduling hassles of traditional photography.",
+    "cta": "See Your Team's New Look"
+  },
+  "seo": {
+    "title": "AI Headshots for Financial Services | TeamShotsPro",
+    "description": "Get consistent, professional headshots for your entire financial services team in 60 seconds. Perfect for client portals, annual reports, and marketing materials."
+  },
+  "stylingNotes": [
+    "Professional suit or business formal attire",
+    "Neutral, sophisticated background",
+    "Confident expression that conveys trustworthiness"
+  ]
+}

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { CheckCircle2, Circle } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import type { SelfieTypeStatus, SelfieType } from '@/domain/selfie/selfie-types'
 import { SELFIE_TYPE_REQUIREMENTS } from '@/domain/selfie/selfie-types'
+import SelfieTipsContent from '@/components/generation/SelfieTipsContent'
 
 interface SelfieTypeOverlayProps {
   /** Token for invite/handoff flows */
@@ -14,23 +15,39 @@ interface SelfieTypeOverlayProps {
   /** Refresh trigger - increment to force refresh */
   refreshKey?: number
   className?: string
+  /** Show the tips header with learn more link */
+  showTipsHeader?: boolean
 }
 
 /**
- * Semi-transparent overlay showing selfie type capture status.
- * Positioned at the top of the camera viewfinder.
- *
- * Shows: ✓ Front View | ○ Side View (pending) | ○ Full Body (pending)
+ * Card showing selfie type capture status with pill badges.
+ * Shows captured types with green badges, pending with gray outlined badges.
+ * Optionally includes tips header with link to detailed tips overlay.
  */
 export default function SelfieTypeOverlay({
   token,
   onStatusChange,
   refreshKey = 0,
   className = '',
+  showTipsHeader = false,
 }: SelfieTypeOverlayProps) {
   const t = useTranslations('selfie')
+  const tSelfies = useTranslations('selfies')
   const [status, setStatus] = useState<SelfieTypeStatus[]>([])
   const [loading, setLoading] = useState(true)
+  const [tipsOpen, setTipsOpen] = useState(false)
+
+  const closeTips = useCallback(() => setTipsOpen(false), [])
+
+  // Handle escape key for tips overlay
+  useEffect(() => {
+    if (!tipsOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeTips()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [tipsOpen, closeTips])
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -63,82 +80,127 @@ export default function SelfieTypeOverlay({
     fetchStatus()
   }, [fetchStatus, refreshKey])
 
-  if (loading) {
-    return (
-      <div
-        className={`bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 ${className}`}
-      >
-        <div className="flex items-center justify-center gap-2">
-          <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          <span className="text-xs text-white/70">Analyzing selfies...</span>
-        </div>
-      </div>
-    )
-  }
-  
-  // Also show "Analyzing" if no selfies have been classified yet
+  // Loading state
+  const loadingContent = (
+    <div className="flex items-center gap-2 py-1">
+      <div className="w-4 h-4 border-2 border-gray-300 border-t-brand-primary rounded-full animate-spin" />
+      <span className="text-sm text-gray-500">{t('classification.analyzing')}</span>
+    </div>
+  )
+
+  // Check if still analyzing
   const hasAnyClassified = status.some((s) => s.captured)
   const allPending = !hasAnyClassified && status.length > 0
-  
-  if (allPending) {
-    return (
-      <div
-        className={`bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 ${className}`}
-      >
-        <div className="flex items-center justify-center gap-2">
-          <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          <span className="text-xs text-white/70">Analyzing selfies...</span>
-        </div>
-      </div>
-    )
-  }
-
-  const capturedCount = status.filter((s) => s.captured).length
-  const totalCount = SELFIE_TYPE_REQUIREMENTS.filter((r) => r.recommended).length
+  const isAnalyzing = loading || allPending
 
   return (
-    <div
-      className={`bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 ${className}`}
-    >
-      <div className="flex items-center justify-center gap-3 text-xs">
-        {SELFIE_TYPE_REQUIREMENTS.map((req, index) => {
-          const item = status.find((s) => s.type === req.type)
-          const captured = item?.captured || false
+    <>
+      <div
+        className={`bg-white border border-gray-200 rounded-xl px-4 py-4 shadow-sm ${className}`}
+      >
+        {/* Tips header */}
+        {showTipsHeader && (
+          <div className="mb-4 pb-3 border-b border-gray-100">
+            <p className="text-sm text-gray-700 leading-snug">
+              {tSelfies('tipsIntro')}
+            </p>
+            <button
+              type="button"
+              onClick={() => setTipsOpen(true)}
+              className="mt-1 text-sm font-medium text-brand-primary hover:text-brand-primary-hover transition-colors"
+            >
+              {tSelfies('learnMore', { defaultValue: 'Learn more →' })}
+            </button>
+          </div>
+        )}
 
-          return (
-            <div key={req.type} className="flex items-center gap-1">
-              {index > 0 && (
-                <span className="text-white/30 mx-1">|</span>
-              )}
-              {captured ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-              ) : (
-                <Circle className="w-3.5 h-3.5 text-white/40" />
-              )}
-              <span
-                className={`font-medium ${
-                  captured ? 'text-white' : 'text-white/60'
-                }`}
-              >
-                {req.label}
-              </span>
-              {!captured && (
-                <span className="text-white/40 text-[10px]">
-                  ({t('checklist.pending', { defaultValue: 'pending' })})
-                </span>
-              )}
+        {isAnalyzing ? (
+          loadingContent
+        ) : (
+          <>
+            {/* Micro-title */}
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+              {t('checklist.progress', { defaultValue: 'Your progress' })}
+            </p>
+            {/* Selfie type badges - show recommended types, with body as combined */}
+            <div className="flex flex-wrap items-center gap-2">
+              {SELFIE_TYPE_REQUIREMENTS.filter((req) => req.recommended && req.type !== 'full_body').map((req) => {
+                const item = status.find((s) => s.type === req.type)
+                const captured = item?.captured || false
+
+                return (
+                  <div
+                    key={req.type}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      captured
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-gray-50 text-gray-400 border border-gray-200'
+                    }`}
+                  >
+                    {captured && (
+                      <Check className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {t(`types.${req.type.replace('_', '')}.label`, { defaultValue: req.label })}
+                    </span>
+                  </div>
+                )
+              })}
+              {/* Body badge - captured if either partial_body or full_body exists */}
+              {(() => {
+                const hasBody = status.some((s) =>
+                  (s.type === 'partial_body' || s.type === 'full_body') && s.captured
+                )
+                return (
+                  <div
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      hasBody
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-gray-50 text-gray-400 border border-gray-200'
+                    }`}
+                  >
+                    {hasBody && (
+                      <Check className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {t('types.body.label', { defaultValue: 'Body' })}
+                    </span>
+                  </div>
+                )
+              })()}
             </div>
-          )
-        })}
+          </>
+        )}
       </div>
-      {/* Progress indicator */}
-      <div className="mt-1.5 flex items-center justify-center">
-        <div className="flex items-center gap-1 text-[10px] text-white/50">
-          <span>{capturedCount}/{totalCount}</span>
-          <span>{t('checklist.captured', { defaultValue: 'captured' })}</span>
+
+      {/* Tips overlay */}
+      {tipsOpen && (
+        <div
+          className="fixed inset-0 z-[2000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Selfie tips"
+          onClick={closeTips}
+        >
+          <div
+            className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeTips}
+              className="absolute top-3 right-3 p-2 rounded-full text-gray-500 hover:text-gray-800 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
+              aria-label="Close selfie tips"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="p-5 sm:p-7">
+              <SelfieTipsContent variant="button" onContinue={closeTips} className="max-w-4xl mx-auto" />
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   )
 }
 

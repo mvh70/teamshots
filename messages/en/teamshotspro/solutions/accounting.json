@@ -1,0 +1,206 @@
+{
+  "hero": {
+    "badge": "Built for accounting teams",
+    "title": "Professional AI Headshots for Your Entire Accounting Team",
+    "subtitle": "Generate consistent, CPA-quality headshots for your firm in 24 hours. No scheduling conflicts, no busy season disruptions, no photographer coordination needed.",
+    "cta": "Get Professional Team Headshots Now"
+  },
+  "painPoints": {
+    "title": "The Hidden Costs of Outdated Team Photos",
+    "items": [
+      {
+        "title": "Busy Season Scheduling Nightmares",
+        "description": "Coordinating team photo shoots during tax season means pulling accountants away from billable hours and critical client deadlines. Traditional photography requires everyone available at once - nearly impossible during your busiest months."
+      },
+      {
+        "title": "Inconsistent Brand Image Across Offices",
+        "description": "Multiple locations using different photographers creates a patchwork of styles and quality. Your Chicago office photos look nothing like your Denver team, undermining your firm's professional consistency and brand trust."
+      },
+      {
+        "title": "New Hire Onboarding Delays",
+        "description": "Waiting 2-3 weeks for professional headshots means new CPAs start client meetings without proper firm directory photos, business cards, or LinkedIn presence - creating an unprofessional first impression during critical relationship-building moments."
+      }
+    ],
+    "solution": "TeamShotsPro generates CPA-quality headshots for your entire team in 24 hours, without scheduling conflicts or office disruptions. Maintain perfect brand consistency across all locations while onboarding new hires instantly."
+  },
+  "showcase": {
+    "title": "CPA-Quality Results Your Clients Will Trust",
+    "subtitle": "See how accounting professionals transform their presence with AI headshots that meet the industry's highest standards for professionalism and trustworthiness."
+  },
+  "howItWorks": {
+    "title": "Four Simple Steps to Professional Team Headshots",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Upload Team Photos",
+        "description": "Each team member uploads 8-12 existing photos from their phone. No special equipment or studio setup required - work from anywhere during off-hours."
+      },
+      {
+        "number": "2",
+        "title": "Select CPA-Approved Styles",
+        "description": "Choose from conservative, trust-building templates designed specifically for accounting professionals. Consistent styling across all team members automatically."
+      },
+      {
+        "number": "3",
+        "title": "AI Generates Professional Results",
+        "description": "Our AI creates multiple headshot options following accounting industry standards - proper attire, appropriate lighting, and trustworthy expressions that convey competence."
+      },
+      {
+        "number": "4",
+        "title": "Download High-Resolution Images",
+        "description": "Receive print and web-ready files perfect for firm websites, CPA directories, business cards, LinkedIn profiles, and all client-facing materials within 24 hours."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "AI Headshots vs. Traditional Photography",
+    "headers": [
+      "Feature",
+      "Traditional Photography",
+      "TeamShotsPro AI"
+    ],
+    "rows": [
+      [
+        "Cost per person",
+        "$250-400",
+        "$29"
+      ],
+      [
+        "Timeline",
+        "2-3 weeks scheduling + shoot",
+        "24 hours"
+      ],
+      [
+        "Team coordination",
+        "All available same day",
+        "Individual uploads anytime"
+      ],
+      [
+        "Busy season impact",
+        "Disrupts billable hours",
+        "Zero disruption"
+      ],
+      [
+        "Multi-office consistency",
+        "Varies by photographer",
+        "100% consistent"
+      ],
+      [
+        "New hire ready",
+        "Wait for next group shoot",
+        "Same day onboarding"
+      ],
+      [
+        "Retakes/adjustments",
+        "Additional shoot required",
+        "Unlimited generations"
+      ]
+    ]
+  },
+  "useCases": {
+    "title": "Where Your Team Will Shine",
+    "platforms": [
+      {
+        "name": "Firm Website",
+        "icon": "globe"
+      },
+      {
+        "name": "LinkedIn Profiles",
+        "icon": "briefcase"
+      },
+      {
+        "name": "CPA Directories",
+        "icon": "book"
+      },
+      {
+        "name": "Business Cards",
+        "icon": "credit-card"
+      },
+      {
+        "name": "Client Newsletters",
+        "icon": "mail"
+      },
+      {
+        "name": "Tax Season Materials",
+        "icon": "file-text"
+      }
+    ]
+  },
+  "testimonials": {
+    "title": "What Accounting Firms Are Saying",
+    "items": [
+      {
+        "quote": "We onboarded 6 new CPAs during busy season and had their professional headshots ready for client meetings the next day. No scheduling headaches, no disrupted billable hours. Our managing partners were amazed by the quality and consistency.",
+        "author": "Sarah Chen",
+        "role": "HR Director",
+        "company": "Meridian Tax & Advisory"
+      },
+      {
+        "quote": "Our Denver and Austin offices finally look like one cohesive firm. The brand consistency across our website is incredible - clients comment on how professional and unified our team appears. Worth every penny.",
+        "author": "Michael Rodriguez",
+        "role": "Marketing Coordinator",
+        "company": "Southwest CPA Group"
+      },
+      {
+        "quote": "Saved us $8,400 compared to traditional photography for our 30-person team. The AI headshots look more professional than our last photographer's work, and we had them during tax season without pulling anyone off client work.",
+        "author": "Jennifer Walsh",
+        "role": "Practice Administrator",
+        "company": "Harbor Financial Services"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "items": [
+      {
+        "question": "Do AI headshots meet CPA professional standards?",
+        "answer": "Absolutely. Our templates are specifically designed for accounting professionals, ensuring conservative attire, appropriate expressions, and the trustworthy appearance that CPA firms require. The results consistently meet or exceed traditional photography standards."
+      },
+      {
+        "question": "How do you ensure consistency across our multi-office team?",
+        "answer": "Our AI uses the same lighting, styling, and background templates for every team member, regardless of their location or when they upload photos. This guarantees perfect brand consistency that's impossible to achieve with multiple photographers."
+      },
+      {
+        "question": "Can we generate headshots during busy tax season?",
+        "answer": "Yes! Team members upload photos individually on their own schedule - evenings, weekends, or breaks between client meetings. No group coordination required, and absolutely no disruption to billable hours or client deadlines."
+      },
+      {
+        "question": "What if a team member doesn't like their headshots?",
+        "answer": "We include unlimited regenerations. If someone wants adjustments, they can upload different source photos or try alternative styling options at no extra cost. We guarantee satisfaction for every team member."
+      },
+      {
+        "question": "Are the images high enough quality for print materials?",
+        "answer": "Yes. You receive both web-optimized and print-ready high-resolution files. They're perfect for business cards, firm brochures, office displays, website use, and any other professional materials your firm needs."
+      },
+      {
+        "question": "What volume discounts are available for larger accounting firms?",
+        "answer": "We offer significant volume pricing for teams of 25+ people, with additional discounts for firms with 50+ and 100+ employees. Large firms can save up to 40% compared to individual pricing. Contact us for a custom enterprise quote with flexible billing terms."
+      },
+      {
+        "question": "How do you protect client confidentiality and data security?",
+        "answer": "We understand the critical importance of confidentiality in accounting. All uploaded photos are encrypted, processed on secure servers, and permanently deleted after 30 days. We're SOC 2 compliant and maintain the same data security standards required for CPA firms handling sensitive financial information."
+      },
+      {
+        "question": "Do you offer enterprise billing and invoicing options?",
+        "answer": "Yes. Large firms can pay via purchase order, net 30 terms, or centralized billing through accounts payable. We provide detailed invoices with cost center breakdowns and can accommodate your firm's specific procurement and billing requirements."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Transparent Team Pricing",
+    "subtitle": "Professional headshots for your entire accounting team at a fraction of traditional photography costs. Volume discounts available for larger firms."
+  },
+  "finalCta": {
+    "title": "Ready to Upgrade Your Firm's Professional Image?",
+    "subtitle": "Create consistent, professional headshots for your entire team without the scheduling hassles or budget strain of traditional photography.",
+    "cta": "Start Your CPA Team Trial Today"
+  },
+  "seo": {
+    "title": "AI Headshots for Accounting Firms | TeamShotsPro",
+    "description": "Professional AI headshots for accounting teams. CPA-quality results in 24hrs, no scheduling conflicts. 100% satisfaction guaranteed. Start your free trial."
+  },
+  "stylingNotes": [
+    "Conservative business suits in navy, charcoal, or black with crisp white shirts",
+    "Minimal jewelry and professional grooming that conveys trustworthiness and competence"
+  ]
+}

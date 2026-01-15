@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma'
-import { TEAM_DOMAIN } from '@/config/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 
 /**
@@ -167,10 +166,8 @@ export async function isSeatsBasedTeam(teamId: string): Promise<boolean> {
   const team = await prisma.team.findUnique({
     where: { id: teamId },
     select: {
-      totalSeats: true,
-      isLegacyCredits: true,
       admin: {
-        select: { signupDomain: true }
+        select: { planPeriod: true }
       }
     }
   })
@@ -179,14 +176,8 @@ export async function isSeatsBasedTeam(teamId: string): Promise<boolean> {
     return false
   }
 
-  // Legacy teams stay on credits model
-  if (team.isLegacyCredits) {
-    return false
-  }
-
-  // Check if admin signed up on team domain
-  // Teams on team domain are always seats-based (even with 0 purchased seats)
-  return team.admin.signupDomain === TEAM_DOMAIN
+  // Seats model is determined by admin's planPeriod
+  return team.admin.planPeriod === 'seats'
 }
 
 /**
@@ -232,9 +223,8 @@ export async function canAddTeamMember(
     where: { id: teamId },
     select: {
       totalSeats: true,
-      isLegacyCredits: true,
       admin: {
-        select: { signupDomain: true }
+        select: { planPeriod: true }
       }
     }
   })
@@ -246,10 +236,8 @@ export async function canAddTeamMember(
     }
   }
 
-  // Check if this is a seats-based team
-  // Teams on team domain are seats-based (even with 0 purchased seats)
-  // Legacy teams stay on credit-based model
-  const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN
+  // Seats model is determined by admin's planPeriod
+  const isSeatsModel = team.admin.planPeriod === 'seats'
 
   // Credit-based teams (legacy) have no seat limits
   if (!isSeatsModel) {
@@ -305,9 +293,8 @@ export async function getTeamSeatInfo(teamId: string): Promise<{
     select: {
       totalSeats: true,
       creditsPerSeat: true,
-      isLegacyCredits: true,
       admin: {
-        select: { signupDomain: true }
+        select: { planPeriod: true }
       }
     }
   })
@@ -316,10 +303,8 @@ export async function getTeamSeatInfo(teamId: string): Promise<{
     return null
   }
 
-  // Teams on team domain are seats-based (even with 0 purchased seats)
-  // This ensures the UI shows the seats view and the admin's personal balance correctly
-  // Legacy teams stay on credit-based model
-  const isSeatsModel = !team.isLegacyCredits && team.admin.signupDomain === TEAM_DOMAIN
+  // Seats model is determined by admin's planPeriod
+  const isSeatsModel = team.admin.planPeriod === 'seats'
 
   // Calculate active seats dynamically from actual data (avoids drift)
   const activeSeats = await calculateActiveSeats(teamId)

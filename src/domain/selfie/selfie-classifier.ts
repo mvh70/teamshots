@@ -10,14 +10,14 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '@/queue/workers/generate-image/gemini'
-import type { SelfieType, ClassificationResult } from './selfie-types'
+import type { SelfieType, ClassificationResult, QualityRating } from './selfie-types'
 
 export interface ClassificationInput {
   imageBase64: string
   mimeType: string
 }
 
-const CLASSIFICATION_PROMPT = `You are analyzing a selfie photo to classify its type for AI headshot generation.
+const CLASSIFICATION_PROMPT = `You are analyzing a selfie photo to classify its type and quality for AI headshot generation.
 
 STEP 1: Count the TOTAL number of people/faces visible in the ENTIRE image.
 CRITICAL: Count EVERY person you can see anywhere in the image. This includes:
@@ -69,39 +69,59 @@ STEP 2: If exactly 1 person total, classify the photo into ONE of these categori
 
 5. unknown - Cannot determine (multiple people, no face, too blurry)
 
+STEP 3: Assess LIGHTING QUALITY (for single-person photos only):
+
+Evaluate the lighting on the face:
+- "good": Even, well-lit face. Soft shadows. No harsh shadows on face. Face is clearly visible without squinting or overexposure.
+- "acceptable": Minor lighting issues but face details are still visible. Slight shadows under eyes/nose, or slightly overexposed areas, but overall usable.
+- "poor": Significant lighting problems - harsh shadows obscuring facial features, severe backlighting (face in shadow), extreme overexposure washing out features, or very dark/underexposed where face details are lost.
+
+Provide brief feedback if not "good" (e.g., "harsh shadow on left side of face", "backlit - face in shadow", "overexposed highlights").
+
+STEP 4: Assess BACKGROUND SEPARATION (for single-person photos only):
+
+Evaluate how well the face/person stands out from the background:
+- "good": Clear separation between person and background. Face is distinct and easy to identify. Background doesn't merge with hair, skin, or clothing.
+- "acceptable": Mostly clear separation with minor issues. Some areas where background blends slightly with subject, but face is still clearly distinguishable.
+- "poor": Significant separation issues - background color similar to hair/skin making edges unclear, very busy/cluttered background that distracts from face, or subject blends into background making face boundaries unclear.
+
+Provide brief feedback if not "good" (e.g., "hair blends with dark background", "busy background distracts from face", "similar colors make edges unclear").
+
 IMPORTANT: Return ONLY valid JSON in this exact format:
 
-Front view example:
+Example with all fields:
 {
   "selfie_type": "front_view",
   "confidence": 0.95,
   "person_count": 1,
-  "reasoning": "Single person visible. Face pointing straight at camera, both eyes clearly visible, minimal head rotation. Shoulders partially cropped = front_view"
+  "reasoning": "Single person visible. Face pointing straight at camera, both eyes clearly visible, minimal head rotation. Shoulders partially cropped = front_view",
+  "lighting_quality": "good",
+  "lighting_feedback": null,
+  "background_quality": "acceptable",
+  "background_feedback": "Slightly busy background but face is clearly visible"
 }
 
-Side view example:
+Example with lighting issue:
 {
-  "selfie_type": "side_view",
+  "selfie_type": "front_view",
   "confidence": 0.90,
   "person_count": 1,
-  "reasoning": "Single person visible. Head turned MORE than 45 degrees to the side (approximately 60 degrees), nose pointing sideways, clear 3/4 profile angle. Shoulders partially cropped = side_view"
-}
-
-Partial body example:
-{
-  "selfie_type": "partial_body",
-  "confidence": 0.85,
-  "person_count": 1,
-  "reasoning": "Single person visible. WIDER framing showing upper body. Can see the full ROUNDED SHAPE of BOTH shoulders within the frame - they are not cut off flat at the edges. The shoulders curve down naturally to meet the upper arms. Frame shows head, complete shoulders, chest, and upper torso. This is an upper body portrait shot, not a tight face close-up = partial_body"
+  "reasoning": "Single person, face forward",
+  "lighting_quality": "poor",
+  "lighting_feedback": "Strong backlight causes face to be in shadow",
+  "background_quality": "good",
+  "background_feedback": null
 }
 
 Rules:
 - person_count: TOTAL people visible in the ENTIRE image (not just one section)
 - If image shows multiple photos/panels, count people in ALL of them
 - confidence should be 0.0 to 1.0
+- lighting_quality and background_quality: must be "good", "acceptable", or "poor"
+- lighting_feedback and background_feedback: provide brief explanation if quality is not "good", otherwise null
 - KEY DISTINCTION for body shots: Can you see the full ROUNDED SHAPE of both shoulders (not cut off flat at frame edge)? → partial_body. Are shoulders cropped/cut off by the frame edge? → front_view/side_view
 - KEY DISTINCTION for angles: Is the head/face rotated MORE than 45 degrees to the side? → side_view. Is head rotation 45 degrees or less? → front_view
-- If person_count is 0 or more than 1, set selfie_type to "unknown" and confidence to 0`
+- If person_count is 0 or more than 1, set selfie_type to "unknown", confidence to 0, and skip lighting/background assessment`
 
 /**
  * Classify a selfie image using Gemini vision API.
@@ -142,11 +162,30 @@ export async function classifySelfieType(
       ],
       generationConfig: {
         temperature: 0.2, // Low temperature for consistent classification
+        maxOutputTokens: 2048, // Ensure response isn't truncated
       },
     })
 
-    const responseParts = response.response.candidates?.[0]?.content?.parts ?? []
+    const candidate = response.response.candidates?.[0]
+    const finishReason = candidate?.finishReason
+    const responseParts = candidate?.content?.parts ?? []
     const textPart = responseParts.find((part) => Boolean(part.text))?.text ?? ''
+
+    // Log finish reason and response details for debugging
+    Logger.debug('Gemini classification response details', {
+      finishReason,
+      candidatesCount: response.response.candidates?.length ?? 0,
+      partsCount: responseParts.length,
+      responseLength: textPart.length,
+    })
+
+    if (!textPart) {
+      Logger.warn('Empty response from Gemini classification', {
+        finishReason,
+        candidatesCount: response.response.candidates?.length ?? 0,
+        partsCount: responseParts.length,
+      })
+    }
 
     const result = parseClassificationResponse(textPart)
 
@@ -155,7 +194,10 @@ export async function classifySelfieType(
       confidence: result.confidence,
       personCount: result.personCount,
       isProper: result.isProper,
+      improperReason: result.improperReason,
       reasoning: result.reasoning,
+      lightingQuality: result.lightingQuality,
+      backgroundQuality: result.backgroundQuality,
     })
 
     return result
@@ -181,6 +223,10 @@ export async function classifySelfieType(
  */
 function parseClassificationResponse(text: string): ClassificationResult {
   const trimmed = text.trim()
+
+  // Log raw response for debugging
+  Logger.debug('Raw classification response', { response: trimmed.substring(0, 500) })
+
   const jsonMatch = trimmed.match(/\{[\s\S]*\}/)
 
   if (!jsonMatch) {
@@ -198,16 +244,49 @@ function parseClassificationResponse(text: string): ClassificationResult {
   try {
     const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>
 
+    // Log parsed JSON for debugging
+    Logger.debug('Parsed classification JSON', {
+      selfie_type: parsed.selfie_type,
+      confidence: parsed.confidence,
+      person_count: parsed.person_count,
+      lighting_quality: parsed.lighting_quality,
+      background_quality: parsed.background_quality,
+    })
+
     const selfieType = normalizeSelfieType(parsed.selfie_type)
     const confidence = normalizeConfidence(parsed.confidence)
     const reasoning =
       typeof parsed.reasoning === 'string' ? parsed.reasoning : undefined
     const personCount = normalizePersonCount(parsed.person_count)
 
-    // Determine if selfie is proper for generation
-    const { isProper, improperReason } = determineProper(selfieType, personCount)
+    // Parse quality assessments
+    const lightingQuality = normalizeQualityRating(parsed.lighting_quality)
+    const lightingFeedback =
+      typeof parsed.lighting_feedback === 'string' ? parsed.lighting_feedback : undefined
+    const backgroundQuality = normalizeQualityRating(parsed.background_quality)
+    const backgroundFeedback =
+      typeof parsed.background_feedback === 'string' ? parsed.background_feedback : undefined
 
-    return { selfieType, confidence, reasoning, personCount, isProper, improperReason }
+    // Determine if selfie is proper for generation
+    const { isProper, improperReason } = determineProper(
+      selfieType,
+      personCount,
+      lightingQuality,
+      backgroundQuality
+    )
+
+    return {
+      selfieType,
+      confidence,
+      reasoning,
+      personCount,
+      isProper,
+      improperReason,
+      lightingQuality,
+      lightingFeedback,
+      backgroundQuality,
+      backgroundFeedback,
+    }
   } catch (error) {
     Logger.warn('Failed to parse classification JSON', {
       error: error instanceof Error ? error.message : String(error),
@@ -297,11 +376,40 @@ function normalizePersonCount(value: unknown): number {
 }
 
 /**
- * Determine if a selfie is proper for AI headshot generation
+ * Normalize quality rating to valid QualityRating or undefined
+ */
+function normalizeQualityRating(value: unknown): QualityRating | undefined {
+  if (typeof value !== 'string') return undefined
+
+  const normalized = value.trim().toLowerCase()
+
+  switch (normalized) {
+    case 'good':
+      return 'good'
+    case 'acceptable':
+    case 'ok':
+    case 'okay':
+    case 'medium':
+      return 'acceptable'
+    case 'poor':
+    case 'bad':
+    case 'low':
+      return 'poor'
+    default:
+      return undefined
+  }
+}
+
+/**
+ * Determine if a selfie is proper for AI headshot generation.
+ * Quality assessments (lighting, background) are surfaced as feedback
+ * but don't block the selfie from being used.
  */
 function determineProper(
   selfieType: SelfieType,
-  personCount: number
+  personCount: number,
+  _lightingQuality?: QualityRating,
+  _backgroundQuality?: QualityRating
 ): { isProper: boolean; improperReason?: string } {
   // Check for multiple people
   if (personCount > 1) {
@@ -326,6 +434,9 @@ function determineProper(
       improperReason: 'Could not detect a clear face. Please upload a clearer photo.',
     }
   }
+
+  // Quality assessments are surfaced as feedback (lightingFeedback, backgroundFeedback)
+  // but don't block the selfie from being used - users can decide based on the feedback
 
   // All checks passed
   return { isProper: true }

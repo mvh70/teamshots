@@ -1,0 +1,143 @@
+{
+  "hero": {
+    "badge": "Built for real estate teams",
+    "title": "Professional Team Headshots for Real Estate",
+    "subtitle": "Consistent, listing-ready headshots for every agent. No studio days. No mismatched photos.",
+    "cta": "See Your Team's New Look"
+  },
+  "painPoints": {
+    "title": "Why Real Estate Teams Struggle with Team Photos",
+    "items": [
+      {
+        "title": "Remote agents never available",
+        "description": "Coordinating schedules across multiple offices is nearly impossible. By the time everyone's available, you've already hired new agents."
+      },
+      {
+        "title": "Inconsistent branding across MLS",
+        "description": "Each agent's photo looks different - different backgrounds, lighting, and quality. It weakens your brokerage brand."
+      },
+      {
+        "title": "High photographer costs per agent",
+        "description": "$250-500 per person adds up fast, especially with seasonal teams and high turnover rates in real estate."
+      }
+    ],
+    "solution": "TeamShotsPro solves all of this in 60 seconds."
+  },
+  "showcase": {
+    "title": "See Real Estate Team Transformations",
+    "subtitle": "Before and after results from actual real estate teams"
+  },
+  "howItWorks": {
+    "title": "How It Works for Real Estate Teams",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Set your brokerage brand style",
+        "description": "Upload your logo and select the look that matches your brand identity."
+      },
+      {
+        "number": "2",
+        "title": "Invite agents from your CRM",
+        "description": "Bulk upload from your existing agent database or send individual invite links."
+      },
+      {
+        "number": "3",
+        "title": "Agents snap a selfie from the field",
+        "description": "No studio visit needed. Works from any location - even between showings."
+      },
+      {
+        "number": "4",
+        "title": "Download for MLS, website, signs",
+        "description": "Get consistent photos ready for all your marketing platforms in minutes."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Real Estate Headshot Options Compared",
+    "headers": ["Feature", "Traditional Photographer", "TeamShotsPro"],
+    "rows": [
+      ["Cost per agent", "$250-500", "$26"],
+      ["Time to schedule", "2-3 weeks", "60 seconds"],
+      ["Brand consistency", "Variable", "100%"],
+      ["Remote agents", "Impossible", "Easy"],
+      ["New hire onboarding", "Weeks", "Same day"]
+    ]
+  },
+  "useCases": {
+    "title": "Where Real Estate Teams Use Their Headshots",
+    "platforms": [
+      { "name": "MLS Listings", "icon": "building" },
+      { "name": "For Sale Signs", "icon": "signpost" },
+      { "name": "Zillow & Realtor.com", "icon": "globe" },
+      { "name": "Business Cards", "icon": "credit-card" },
+      { "name": "Email Signatures", "icon": "mail" },
+      { "name": "Team Website", "icon": "monitor" }
+    ]
+  },
+  "testimonials": {
+    "title": "What Real Estate Teams Say",
+    "items": [
+      {
+        "quote": "We onboarded 50 agents in one afternoon. Total game changer for our brokerage.",
+        "author": "Sarah J.",
+        "role": "Managing Broker",
+        "company": "Keller Williams"
+      },
+      {
+        "quote": "Finally, our MLS listings all look consistent. Clients notice the difference.",
+        "author": "Michael R.",
+        "role": "Team Lead",
+        "company": "RE/MAX"
+      },
+      {
+        "quote": "New agents get their headshots same day they join. No more waiting for photo day.",
+        "author": "Jennifer L.",
+        "role": "Office Manager",
+        "company": "Coldwell Banker"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Real Estate Team Photo Questions",
+    "items": [
+      {
+        "question": "What should real estate agents wear?",
+        "answer": "Business casual works best - blazers, collared shirts, or professional tops. Avoid busy patterns and stick to solid colors that photograph well."
+      },
+      {
+        "question": "Can we use these on MLS listings?",
+        "answer": "Yes. Our AI headshots meet all MLS photo requirements and are indistinguishable from traditional photography."
+      },
+      {
+        "question": "How do we onboard remote agents?",
+        "answer": "Send them an invite link via email or text. They can submit their selfie from anywhere - even between showings."
+      },
+      {
+        "question": "Do you offer brokerage-wide deals?",
+        "answer": "Yes. We offer volume discounts for larger teams. Contact us for enterprise pricing on 50+ seats."
+      },
+      {
+        "question": "What if an agent doesn't like their result?",
+        "answer": "Our 100% Human-Look Guarantee means unlimited regenerations until they're happy. We don't stop until it looks perfect."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Simple Team Pricing for Real Estate",
+    "subtitle": "Most brokerages choose the 25-seat plan"
+  },
+  "finalCta": {
+    "title": "Ready to Transform Your Real Estate Team Photos?",
+    "subtitle": "Get consistent, professional headshots for your entire team without the scheduling hassles of traditional photography.",
+    "cta": "See Your Team's New Look"
+  },
+  "seo": {
+    "title": "AI Headshots for Real Estate Teams | TeamShotsPro",
+    "description": "Get consistent, professional headshots for your entire real estate team in 60 seconds. Perfect for MLS, signs, and marketing materials."
+  },
+  "stylingNotes": [
+    "Business casual or blazer recommended",
+    "Clean background that won't compete with listings",
+    "Confident, approachable expression"
+  ]
+}

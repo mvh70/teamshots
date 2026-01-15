@@ -39,7 +39,7 @@ export default function Footer({ brandName, brandLogo, variant = 'teamshotspro' 
 
   return (
     <footer className="bg-text-dark text-white py-16 lg:py-20 border-t-2 border-brand-primary-lighter">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-12">
         <div className="text-center">
           <div className="mb-6 flex justify-center">
             {/* Dark background footer uses the dark logo variant */}
@@ -66,7 +66,7 @@ export default function Footer({ brandName, brandLogo, variant = 'teamshotspro' 
               {t('blog')}
             </Link>
             <Link href="/auth/signup" className="text-white hover:text-brand-primary-light transition-colors duration-300 font-medium">
-              Get Started
+              {t('getStarted')}
             </Link>
           </div>
           

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn, getSession } from 'next-auth/react'
 import {useTranslations, useLocale} from 'next-intl'
+import { ShieldCheckIcon, ClockIcon, BanknotesIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { jsonFetcher } from '@/lib/fetcher'
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout'
@@ -11,12 +12,13 @@ import AuthCard from '@/components/auth/AuthCard'
 import AuthInput from '@/components/auth/AuthInput'
 import { AuthButton, InlineError } from '@/components/ui'
 import FocusTrap from '@/components/auth/FocusTrap'
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { trackSignupStarted, trackSignupCompleted } from '@/lib/track'
 
 export default function SignUpPage() {
   const t = useTranslations('auth.signup')
+  const tTrust = useTranslations('trustBadges')
   const locale = useLocale()
   const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
@@ -36,12 +38,32 @@ export default function SignUpPage() {
       }
     }
     const hostname = window.location.hostname.replace(/^www\./, '')
+    
     if (hostname === INDIVIDUAL_DOMAIN) {
       return {
-        brandName: 'PhotoShotsPro',
+        brandName: 'HeadshotOne',
         photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
       }
     }
+    if (hostname === COUPLES_DOMAIN) {
+      return {
+        brandName: 'DuoSnaps',
+        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
+      }
+    }
+    if (hostname === FAMILY_DOMAIN) {
+      return {
+        brandName: 'KinFrame',
+        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
+      }
+    }
+    if (hostname === EXTENSION_DOMAIN) {
+      return {
+        brandName: 'RightClickFit',
+        photoCount: Math.floor(PRICING_CONFIG.freeTrial.individual / PRICING_CONFIG.credits.perGeneration)
+      }
+    }
+
     return {
       brandName: 'TeamShotsPro',
       photoCount: Math.floor(PRICING_CONFIG.freeTrial.pro / PRICING_CONFIG.credits.perGeneration)
@@ -215,6 +237,22 @@ export default function SignUpPage() {
                 <span className="text-lg lg:text-xl text-slate-700 font-medium">{t('benefit3')}</span>
               </div>
             </div>
+
+            {/* Trust Badges */}
+            <div className="flex flex-wrap items-center gap-3 mt-8 text-xs text-slate-500">
+              <div className="flex items-center gap-1.5 bg-white/80 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+                <ShieldCheckIcon className="w-4 h-4 text-green-600" />
+                <span className="font-medium">{tTrust('stripeSecure')}</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/80 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+                <ClockIcon className="w-4 h-4 text-blue-600" />
+                <span className="font-medium">{tTrust('instantResults')}</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/80 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+                <ShieldCheckIcon className="w-4 h-4 text-blue-600" />
+                <span className="font-medium">{tTrust('moneyBack')}</span>
+              </div>
+            </div>
           </div>
         </div>
       }
@@ -368,6 +406,7 @@ export default function SignUpPage() {
           </div>
         </div>
         </FocusTrap>
+
       </AuthCard>
     </AuthSplitLayout>
   )

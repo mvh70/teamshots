@@ -36,6 +36,7 @@ const envSchema = z.object({
   // Gemini AI
   GEMINI_IMAGE_MODEL: z.string().optional(),
   GEMINI_EVAL_MODEL: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),  // Alias for GOOGLE_CLOUD_API_KEY (for REST API)
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   GOOGLE_CLOUD_API_KEY: z.string().optional(),
   GOOGLE_PROJECT_ID: z.string().optional(),
@@ -80,13 +81,13 @@ const envSchema = z.object({
 ).refine(
   (data) => {
     // Ensure at least one Gemini AI authentication method is configured
-    const hasApiKey = !!data.GOOGLE_CLOUD_API_KEY;
+    const hasApiKey = !!data.GOOGLE_CLOUD_API_KEY || !!data.GEMINI_API_KEY;
     const hasServiceAccount = !!data.GOOGLE_APPLICATION_CREDENTIALS || !!data.GOOGLE_PROJECT_ID;
     const hasOpenRouter = !!data.OPENROUTER_API_KEY;
     return hasApiKey || hasServiceAccount || hasOpenRouter;
   },
   {
-    message: 'Configure one of: OPENROUTER_API_KEY (preferred), GOOGLE_CLOUD_API_KEY, or both GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_PROJECT_ID for Gemini AI access.',
+    message: 'Configure one of: OPENROUTER_API_KEY (preferred), GOOGLE_CLOUD_API_KEY/GEMINI_API_KEY, or both GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_PROJECT_ID for Gemini AI access.',
     path: ['OPENROUTER_API_KEY'],
   }
 );

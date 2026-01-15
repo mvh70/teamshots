@@ -60,20 +60,181 @@ function mapSafetySettings(vertexSettings?: Array<{
 }
 
 /**
+ * Direct fetch implementation for Gemini 3 Pro models
+ * The @google/genai SDK doesn't support these models yet, so we use direct REST API calls
+ * This mirrors the implementation in teamshots-marketing that works successfully
+ */
+async function generateWithGemini3DirectFetch(
+  prompt: string,
+  images: GeminiReferenceImage[],
+  modelName: string,
+  apiKey: string,
+  aspectRatio?: string,
+  startTime: number = Date.now()
+): Promise<GeminiGenerationResult> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
+
+  Logger.info('Calling Gemini 3 via direct fetch', {
+    modelName,
+    promptLength: prompt.length,
+    referenceImageCount: images.length,
+    aspectRatio
+  })
+
+  // Build parts array: prompt first, then reference images with descriptions
+  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+    { text: prompt }
+  ]
+
+  // Add reference images (selfies, garments, etc.)
+  for (const image of images) {
+    if (image.description) {
+      parts.push({ text: image.description })
+    }
+    parts.push({
+      inlineData: {
+        mimeType: image.mimeType,
+        data: image.base64
+      }
+    })
+  }
+
+  // Build generationConfig with imageConfig for aspect ratio and resolution
+  // Gemini 3 uses imageConfig nested inside generationConfig
+  // See: https://ai.google.dev/gemini-api/docs/image-generation
+  const generationConfig: Record<string, unknown> = {
+    responseModalities: ['Text', 'Image']
+  }
+
+  // Add imageConfig if aspect ratio is specified
+  if (aspectRatio) {
+    generationConfig.imageConfig = {
+      aspectRatio: aspectRatio // e.g., "3:4", "16:9"
+    }
+  }
+
+  const requestBody = {
+    contents: [{
+      parts
+    }],
+    generationConfig
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      Logger.error('Gemini 3 direct fetch API error', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        modelName
+      })
+      throw new Error(`Gemini 3 API error: ${response.status} ${errorText}`)
+    }
+
+    const data = await response.json() as {
+      candidates?: Array<{
+        content?: {
+          parts?: Array<{
+            text?: string
+            inlineData?: { mimeType: string; data: string }
+          }>
+        }
+        finishReason?: string
+      }>
+      usageMetadata?: {
+        promptTokenCount?: number
+        candidatesTokenCount?: number
+        totalTokenCount?: number
+      }
+    }
+
+    Logger.debug('Gemini 3 direct fetch response received', {
+      modelName,
+      hasCandidates: !!data.candidates,
+      candidatesLength: data.candidates?.length,
+      finishReason: data.candidates?.[0]?.finishReason
+    })
+
+    // Extract images from response
+    const generatedImages: Buffer[] = []
+    const responseParts = data.candidates?.[0]?.content?.parts || []
+
+    for (const part of responseParts) {
+      if (part.inlineData?.mimeType?.startsWith('image/')) {
+        generatedImages.push(Buffer.from(part.inlineData.data, 'base64'))
+        Logger.debug('Gemini 3 returned image', {
+          mimeType: part.inlineData.mimeType,
+          dataLength: part.inlineData.data.length
+        })
+      } else if (part.text) {
+        Logger.debug('Gemini 3 returned text', {
+          textPreview: part.text.substring(0, 200)
+        })
+      }
+    }
+
+    if (generatedImages.length === 0) {
+      Logger.error('Gemini 3 returned no images', {
+        modelName,
+        finishReason: data.candidates?.[0]?.finishReason,
+        partsCount: responseParts.length,
+        partTypes: responseParts.map(p => p.inlineData ? 'image' : p.text ? 'text' : 'unknown')
+      })
+      throw new Error('Gemini 3 returned no images')
+    }
+
+    const usage: GeminiUsageMetadata = {
+      inputTokens: data.usageMetadata?.promptTokenCount,
+      outputTokens: data.usageMetadata?.candidatesTokenCount,
+      totalTokens: data.usageMetadata?.totalTokenCount,
+      imagesGenerated: generatedImages.length,
+      durationMs: Date.now() - startTime
+    }
+
+    Logger.info('Gemini 3 direct fetch succeeded', {
+      modelName,
+      imagesGenerated: generatedImages.length,
+      durationMs: usage.durationMs,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens
+    })
+
+    return {
+      images: generatedImages,
+      usage
+    }
+  } catch (error) {
+    Logger.error('Gemini 3 direct fetch failed', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      modelName
+    })
+    throw error
+  }
+}
+
+/**
  * Generate images using Google Gemini REST API client
  * This uses the @google/genai package for direct REST API access
- * 
+ *
  * Supports both text-to-image and image-to-image generation:
  * - gemini-2.5-flash / gemini-2.5-flash-image: Fast, 1K resolution (auto-normalized for REST API)
  * - gemini-3-pro-image: Advanced, up to 4K resolution
- * 
+ *
  * Note: Vertex AI model names ending in "-image" are automatically normalized to their base
  * model names for REST API compatibility (e.g., "gemini-2.5-flash-image" → "gemini-2.5-flash").
  * Image generation is enabled via the responseModalities configuration.
- * 
+ *
  * Note: Uses non-streaming API as image generation doesn't work with streaming.
  * See: https://ai.google.dev/gemini-api/docs/image-generation
- * 
+ *
  * Returns both the generated images and usage metadata for cost tracking.
  */
 export async function generateWithGeminiRest(
@@ -84,22 +245,30 @@ export async function generateWithGeminiRest(
   options?: GenerationOptions
 ): Promise<GeminiGenerationResult> {
   const startTime = Date.now()
-  const apiKey = Env.string('GOOGLE_CLOUD_API_KEY')
+  // Support both GOOGLE_CLOUD_API_KEY and GEMINI_API_KEY
+  const apiKey = Env.string('GOOGLE_CLOUD_API_KEY', '') || Env.string('GEMINI_API_KEY', '')
   if (!apiKey) {
-    throw new Error('GOOGLE_CLOUD_API_KEY environment variable is required for REST API client')
+    throw new Error('GOOGLE_CLOUD_API_KEY or GEMINI_API_KEY environment variable is required for REST API client')
   }
 
   let modelName = Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
-  
+
   // Normalize Vertex AI model names ending in "-image" to base model names for REST API
   // e.g., "gemini-2.5-flash-image" → "gemini-2.5-flash"
   // REST API uses the base model name with responseModalities to enable image generation
-  if (modelName.endsWith('-image')) {
+  // NOTE: Don't normalize Gemini 3 models - they use "-image-preview" as part of the actual model name
+  if (modelName.endsWith('-image') && !modelName.includes('gemini-3')) {
     modelName = modelName.slice(0, -6) // Remove '-image' suffix
     Logger.debug('Normalized model name for REST API', {
       original: Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash'),
       normalized: modelName
     })
+  }
+
+  // Use direct fetch for Gemini 3 models (SDK doesn't support them properly yet)
+  const isGemini3Model = modelName.includes('gemini-3-pro')
+  if (isGemini3Model) {
+    return generateWithGemini3DirectFetch(prompt, images, modelName, apiKey, aspectRatio, startTime)
   }
 
   // Initialize the REST API client

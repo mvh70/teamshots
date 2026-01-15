@@ -56,9 +56,10 @@ export default async function LocaleLayout({ children, params }: Props) {
     <NextIntlClientProvider messages={messages}>
       <div className={`${displayFont.variable} ${bodyFont.variable} font-body`}>
           {/* Conditional header that only shows on non-app routes */}
-          <ConditionalHeader 
+          <ConditionalHeader
             brandName={brand.name}
             brandLogo={brand.logo.light}
+            variant={variant}
           />
           {children}
           {/* Footer that shows on public routes (landing, pricing, etc.) */}

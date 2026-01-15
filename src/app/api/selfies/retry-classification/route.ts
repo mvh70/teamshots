@@ -108,6 +108,10 @@ export async function POST() {
               personCount: result.personCount,
               isProper: result.isProper,
               improperReason: result.improperReason,
+              lightingQuality: result.lightingQuality,
+              lightingFeedback: result.lightingFeedback,
+              backgroundQuality: result.backgroundQuality,
+              backgroundFeedback: result.backgroundFeedback,
               ...(result.isProper === false && { selected: false }),
             },
           })
@@ -134,6 +138,10 @@ export async function POST() {
                 personCount: null,
                 isProper: null,
                 improperReason: null,
+                lightingQuality: null,
+                lightingFeedback: null,
+                backgroundQuality: null,
+                backgroundFeedback: null,
               },
             })
           } catch {}

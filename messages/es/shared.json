@@ -8,15 +8,35 @@
     "processingImages": "Procesando {count} imágenes...",
     "uploading": "Subiendo...",
     "loading": "Cargando...",
-    "dismissingAutomatically": "Desapareciendo automáticamente..."
+    "dismissingAutomatically": "Desapareciendo automáticamente...",
+    "dragCameraInstruction": "Arrastra esta ventana cerca de tu cámara para un contacto visual natural",
+    "cancel": "Cancelar",
+    "capture": "Capturar",
+    "useCamera": "Usar Cámara",
+    "uploadPhoto": "Subir Foto",
+    "processing": "Procesando..."
   },
   "nav": {
     "home": "Inicio",
+    "solutions": "Soluciones",
+    "solutionLabels": {
+      "real-estate": "Inmobiliarias",
+      "medical": "Salud",
+      "law-firms": "Bufetes de abogados",
+      "financial-services": "Servicios financieros",
+      "actively-hiring": "Equipos en crecimiento",
+      "consulting": "Consultoría",
+      "accounting": "Contabilidad"
+    },
     "pricing": "Precios",
     "blog": "Blog",
     "signin": "Iniciar Sesión",
     "dashboard": "Panel",
     "getStarted": "Empezar"
+  },
+  "blog": {
+    "title": "Blog",
+    "description": "Consejos, guías e ideas sobre headshots con IA, marca profesional y fotos de equipo."
   },
   "hero": {
     "titleMain": "Fotos profesionales de equipo",
@@ -60,6 +80,12 @@
         "description": "Las fotos que fallan nuestros estándares de calidad se regeneran automáticamente. Además obtienes reintentos gratuitos basados en el plan para perfeccionar tus resultados. A diferencia de otros servicios donde pagas por cada intento, manejamos problemas de calidad automáticamente y te damos iteraciones gratuitas para obtener exactamente lo que quieres."
       }
     }
+  },
+  "trustBadges": {
+    "stripeSecure": "Pago Seguro con Stripe",
+    "instantResults": "Resultados en 60 Segundos",
+    "noSubscription": "Sin Suscripción",
+    "moneyBack": "Garantía de Devolución"
   },
   "socialProof": {
     "testimonialsTitle": "¿Qué dicen equipos y fundadores?"
@@ -322,10 +348,17 @@
       "totalPhotos": "Total de fotos",
       "photos": "fotos",
       "savings": "Ahorras",
+      "saveDollar": "Ahorras ${amount}",
+      "totalForSeats": "${amount} total por {count, plural, one {# asiento} other {# asientos}}",
       "total": "Total",
       "cta": "Obtener {seats} miembros por {total}",
+      "buySeats": "Comprar {count, plural, one {# miembro} other {# miembros}}",
+      "oneTimePayment": "Pago único • Sin suscripción",
+      "currentToNew": "Actual: {current} {current, plural, one {asiento} other {asientos}} → Nuevo total: {total} {total, plural, one {asiento} other {asientos}}",
       "whatsIncluded": "Qué está incluido",
       "volumeHint": "Añade {seatsNeeded} miembros más para desbloquear {nextPrice}/miembro (ahorra {savingsPerSeat}/miembro)",
+      "personalPlanRedirect": "¿Buscas un plan personal?",
+      "visitPhotoshotsPro": "Visita PhotoshotsPro.com",
       "features": {
         "photosPerSeat": "10 fotos profesionales por miembro del equipo",
         "professionalQuality": "Fotos de calidad profesional con IA",
@@ -335,7 +368,8 @@
         "flexibleTeamSize": "Escala tu equipo, añade miembros cuando lo necesites",
         "support": "Soporte por correo y garantía de satisfacción"
       }
-    }
+    },
+    "freeBrandingText": "con marca fija de teamshots"
   },
   "auth": {
     "signin": {
@@ -364,7 +398,7 @@
     "signup": {
       "freeBadge": "Te estás registrando en el plan gratuito con {photoCount} {photoCount, plural, one {foto gratis} other {fotos gratis}} y marca fija de {brandName}",
       "title": "Crea tu cuenta",
-      "welcome": "Crea tu cuenta",
+      "welcome": "La mejor primera impresión de tu equipo",
       "welcomeSubtitle": "Diseñado para equipos y fundadores. Únete en segundos. Sin fotógrafo ni gestión—solo fotos profesionales.",
       "benefit1": "Genera retratos en 60 segundos",
       "benefit2": "Créditos nunca caducan. Úsalos cuando quieras.",
@@ -1281,6 +1315,9 @@
   },
   "selfies": {
     "title": "Selfies",
+    "subtitle": "Sube y administra tus selfies para la generación de fotos",
+    "tipsIntro": "Seleccionar las selfies correctas es crucial para un alto parecido. Aquí tienes algunos consejos para tus selfies.",
+    "learnMore": "Más información →",
     "upload": {
       "title": "Subir una Nueva Selfie",
       "description": "Toma una foto con tu cámara o sube una foto existente para comenzar."
@@ -1316,7 +1353,17 @@
       "deleteDisabledTooltip": "Esta selfie se usa en una generación y no se puede eliminar.",
       "deleteDisabledAria": "Eliminación deshabilitada. Esta selfie se usa en una generación y no se puede eliminar.",
       "deleteDisabledMessage": "Se usa en una generación y no se puede eliminar.",
-      "analyzing": "Analizando..."
+      "analyzing": "Analizando...",
+      "selfieTypes": {
+        "front_view": "Vista frontal",
+        "side_view": "Vista lateral",
+        "partial_body": "Cuerpo parcial",
+        "full_body": "Cuerpo completo"
+      },
+      "quality": {
+        "lighting": "Iluminación",
+        "background": "Fondo"
+      }
     }
   },
   "generate": {
@@ -1425,7 +1472,8 @@
         "clothing": "ropa",
         "colors": "colores",
         "expression": "expresión",
-        "branding": "marca"
+        "branding": "marca",
+        "industry": "industria"
       },
       "tooltips": {
         "needSelfies": "Añade {count} fotos primero",
@@ -1435,6 +1483,10 @@
       "infoIcons": {
         "selfieTips": "Consejos para selfies",
         "customizationIntro": "Guía de personalización"
+      },
+      "navigation": {
+        "continue": "Continuar",
+        "back": "Atrás"
       }
     },
     "typeSelection": {
@@ -1670,7 +1722,8 @@
         "customClothing": "Sube una imagen de un outfit para transferir el estilo de ropa a tus fotos generadas.",
         "expression": "Controla la expresión facial y el estado de ánimo de las fotos de tu equipo.",
         "lighting": "Establece el estilo de iluminación para que coincida con tu estética de marca - desde natural hasta iluminación de estudio.",
-        "pose": "Elige una pose corporal y posicionamiento que coincida con tu imagen profesional y estilo de marca."
+        "pose": "Elige una pose corporal y posicionamiento que coincida con tu imagen profesional y estilo de marca.",
+        "industry": "Selecciona tu industria para obtener fondos y estilos adaptados a tu sector profesional."
       },
       "toggle": {
         "predefined": "Predefinido",
@@ -1727,6 +1780,10 @@
         "pose": {
           "title": "Pose",
           "description": "Elige tu pose corporal y posicionamiento"
+        },
+        "industry": {
+          "title": "Industria",
+          "description": "Selecciona tu industria para un estilo profesional adaptado"
         }
       },
       "background": {
@@ -1904,6 +1961,42 @@
           "sad": {
             "label": "Triste / melancólico",
             "description": "Sombrío, melancólico"
+          }
+        }
+      },
+      "industry": {
+        "title": "Industria",
+        "subtitle": "Selecciona tu industria para un estilo profesional adaptado",
+        "predefined": "Predefinido",
+        "selectPlaceholder": "Selecciona tu industria",
+        "industries": {
+          "law-firms": {
+            "label": "Bufetes de abogados",
+            "description": "Aspecto profesional tradicional con fondo de biblioteca jurídica"
+          },
+          "medical": {
+            "label": "Medicina y salud",
+            "description": "Apariencia clínica limpia con bata blanca y estetoscopio"
+          },
+          "real-estate": {
+            "label": "Inmobiliaria",
+            "description": "Profesional elegante con fondo de oficina moderna"
+          },
+          "financial-services": {
+            "label": "Servicios financieros",
+            "description": "Presencia ejecutiva con entorno corporativo sofisticado"
+          },
+          "actively-hiring": {
+            "label": "Tecnología y startups",
+            "description": "Profesional tecnológico accesible en espacio de trabajo moderno"
+          },
+          "consulting": {
+            "label": "Consultoría",
+            "description": "Profesional impecable en entorno colaborativo"
+          },
+          "accounting": {
+            "label": "Contabilidad",
+            "description": "Profesional confiable en entorno de oficina organizado"
           }
         }
       },
@@ -2179,8 +2272,12 @@
       "approveContinue": "Aprobar y guardar",
       "retakePhoto": "Tomar otra foto",
       "cancel": "Cancelar",
-      "processing": "Procesando..."
+      "processing": "Procesando...",
+      "analyzing": "Analizando...",
+      "cannotApprove": "No se puede aprobar"
     },
+    "improperSelfie": "La foto no se puede usar",
+    "pleaseRetake": "Por favor, toma otra foto o sube una diferente.",
     "disclaimer": "Al aprobar, confirmas que tienes los derechos para usar esta foto y consientes su uso para la generación de fotos."
   },
   "selfie": {
@@ -2196,9 +2293,17 @@
         "label": "Vista lateral",
         "description": "Foto de perfil mostrando el lado de la cara"
       },
+      "partialbody": {
+        "label": "Cuerpo parcial",
+        "description": "Foto mostrando cabeza y torso hasta la cadera"
+      },
       "fullbody": {
         "label": "Cuerpo completo",
         "description": "Foto mostrando el cuerpo completo de cabeza a pies"
+      },
+      "body": {
+        "label": "Cuerpo",
+        "description": "Foto mostrando el cuerpo (parcial o completo)"
       }
     },
     "classification": {
@@ -2212,6 +2317,7 @@
     },
     "checklist": {
       "title": "Lista de selfies",
+      "progress": "Tu progreso",
       "captured": "capturado",
       "pending": "pendiente",
       "needed": "necesario"

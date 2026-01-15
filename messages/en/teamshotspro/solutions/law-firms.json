@@ -1,0 +1,143 @@
+{
+  "hero": {
+    "badge": "Built for law firms",
+    "title": "Professional Team Headshots for Law Firms",
+    "subtitle": "Consistent, trustworthy headshots for every attorney. Maintain your firm's professional image across all platforms.",
+    "cta": "See Your Firm's New Look"
+  },
+  "painPoints": {
+    "title": "Why Law Firms Struggle with Team Photos",
+    "items": [
+      {
+        "title": "Partner scheduling conflicts",
+        "description": "Senior partners are impossible to schedule. Between court, depositions, and client meetings, finding time for photos is a nightmare."
+      },
+      {
+        "title": "Firm-wide brand inconsistency",
+        "description": "Each attorney's headshot looks different - different photographers, backgrounds, and quality levels. It undermines your firm's prestige."
+      },
+      {
+        "title": "Expensive photographer fees",
+        "description": "$300-600 per attorney adds up quickly, especially for large firms or when onboarding lateral partners."
+      }
+    ],
+    "solution": "TeamShotsPro solves all of this in 60 seconds."
+  },
+  "showcase": {
+    "title": "See Law Firm Transformations",
+    "subtitle": "Before and after results from actual law firm teams"
+  },
+  "howItWorks": {
+    "title": "How It Works for Law Firms",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Set your firm's brand style",
+        "description": "Choose the professional look that matches your firm's identity and standards."
+      },
+      {
+        "number": "2",
+        "title": "Invite attorneys via email",
+        "description": "Send invites to partners, associates, and staff with a single click."
+      },
+      {
+        "number": "3",
+        "title": "Attorneys snap a selfie",
+        "description": "No studio visit required. Works from the office, home, or between meetings."
+      },
+      {
+        "number": "4",
+        "title": "Download for all platforms",
+        "description": "Get consistent photos ready for website, directories, and marketing materials."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Law Firm Headshot Options Compared",
+    "headers": ["Feature", "Traditional Photographer", "TeamShotsPro"],
+    "rows": [
+      ["Cost per attorney", "$300-600", "$26"],
+      ["Time to schedule", "2-3 weeks", "60 seconds"],
+      ["Brand consistency", "Variable", "100%"],
+      ["Remote attorneys", "Impossible", "Easy"],
+      ["Lateral hire onboarding", "Weeks", "Same day"]
+    ]
+  },
+  "useCases": {
+    "title": "Where Law Firms Use Their Headshots",
+    "platforms": [
+      { "name": "Firm Website", "icon": "monitor" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Martindale-Hubbell", "icon": "scale" },
+      { "name": "Avvo", "icon": "badge" },
+      { "name": "Business Cards", "icon": "credit-card" },
+      { "name": "Legal Directories", "icon": "file-text" }
+    ]
+  },
+  "testimonials": {
+    "title": "What Law Firms Say",
+    "items": [
+      {
+        "quote": "We updated our entire partner page in one afternoon. Clients have commented on how professional it looks.",
+        "author": "David M.",
+        "role": "Managing Partner",
+        "company": "Am Law 200 Firm"
+      },
+      {
+        "quote": "Lateral hires get their headshots the same day they join. No more 'photo coming soon' placeholders.",
+        "author": "Rachel K.",
+        "role": "Marketing Director",
+        "company": "Regional Law Firm"
+      },
+      {
+        "quote": "The quality is indistinguishable from our professional photographer, but at a fraction of the cost.",
+        "author": "James T.",
+        "role": "COO",
+        "company": "Boutique Litigation Firm"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Law Firm Photo Questions",
+    "items": [
+      {
+        "question": "What should attorneys wear?",
+        "answer": "Professional attire works best - suits, ties, or formal business wear. Dark colors photograph particularly well for legal professionals."
+      },
+      {
+        "question": "Are AI headshots professional enough for law firms?",
+        "answer": "Yes. Our photos are indistinguishable from traditional photography and meet the professional standards expected in legal marketing."
+      },
+      {
+        "question": "Can we maintain different looks for partners vs associates?",
+        "answer": "Yes. You can create multiple style presets for different levels within your firm while maintaining overall brand consistency."
+      },
+      {
+        "question": "How do we handle attorneys in multiple offices?",
+        "answer": "Remote attorneys simply receive an invite link and can submit their selfie from any location."
+      },
+      {
+        "question": "Do you offer firm-wide pricing?",
+        "answer": "Yes. We offer volume discounts for firms with 25+ attorneys. Contact us for enterprise pricing."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Simple Team Pricing for Law Firms",
+    "subtitle": "Most firms choose the 50-seat plan"
+  },
+  "finalCta": {
+    "title": "Ready to Transform Your Firm's Image?",
+    "subtitle": "Get consistent, professional headshots for your entire firm without the scheduling hassles of traditional photography.",
+    "cta": "See Your Firm's New Look"
+  },
+  "seo": {
+    "title": "AI Headshots for Law Firms | TeamShotsPro",
+    "description": "Get consistent, professional headshots for your entire law firm in 60 seconds. Perfect for firm websites, Martindale-Hubbell, and legal directories."
+  },
+  "stylingNotes": [
+    "Professional suit and tie or business formal attire",
+    "Neutral, dignified background (dark gray or navy)",
+    "Confident, approachable expression that conveys trust"
+  ]
+}

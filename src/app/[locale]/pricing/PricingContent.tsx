@@ -25,7 +25,7 @@ export default function PricingContent({ variant }: PricingContentProps) {
 
   // Derive signup type from server-provided variant (no client-side detection)
   const domainSignupType: 'individual' | 'team' | null =
-    variant === 'photoshotspro' ? 'individual' :
+    variant === 'individualshots' ? 'individual' :
     variant === 'teamshotspro' ? 'team' :
     null;
 

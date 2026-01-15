@@ -26,7 +26,11 @@ export async function GET() {
         selfieTypeConfidence: true,
         personCount: true,
         isProper: true,
-        improperReason: true
+        improperReason: true,
+        lightingQuality: true,
+        lightingFeedback: true,
+        backgroundQuality: true,
+        backgroundFeedback: true,
       }
     })
 
@@ -53,6 +57,10 @@ export async function GET() {
       personCount: number | null
       isProper: boolean | null
       improperReason: string | null
+      lightingQuality: string | null
+      lightingFeedback: string | null
+      backgroundQuality: string | null
+      backgroundFeedback: string | null
     }) => {
       // Check if selfie is used: either by ID or by key
       const isUsed = usedSelfieIds.has(u.id) || usedSelfieKeys.has(u.key)
@@ -66,7 +74,11 @@ export async function GET() {
         selfieTypeConfidence: u.selfieTypeConfidence,
         personCount: u.personCount,
         isProper: u.isProper,
-        improperReason: u.improperReason
+        improperReason: u.improperReason,
+        lightingQuality: u.lightingQuality,
+        lightingFeedback: u.lightingFeedback,
+        backgroundQuality: u.backgroundQuality,
+        backgroundFeedback: u.backgroundFeedback,
       }
     })
 

@@ -1,0 +1,139 @@
+{
+  "hero": {
+    "badge": "Diseñado para equipos inmobiliarios",
+    "title": "Headshots profesionales para equipos inmobiliarios",
+    "subtitle": "Headshots consistentes y listos para anuncios. Sin sesiones de estudio. Sin fotos desparejas.",
+    "cta": "Ver el nuevo look de tu equipo"
+  },
+  "painPoints": {
+    "title": "Por qué los equipos inmobiliarios luchan con las fotos",
+    "items": [
+      {
+        "title": "Agentes remotos nunca disponibles",
+        "description": "Coordinar horarios entre múltiples oficinas es prácticamente imposible."
+      },
+      {
+        "title": "Branding inconsistente en anuncios",
+        "description": "La foto de cada agente luce diferente, debilitando tu marca."
+      },
+      {
+        "title": "Altos costes de fotógrafo por agente",
+        "description": "€200-400 por persona se acumula rápido con la rotación del equipo."
+      }
+    ],
+    "solution": "TeamShotsPro resuelve todo esto en 60 segundos."
+  },
+  "showcase": {
+    "title": "Transformaciones de equipos inmobiliarios",
+    "subtitle": "Resultados antes y después de equipos inmobiliarios reales"
+  },
+  "howItWorks": {
+    "title": "Cómo funciona para equipos inmobiliarios",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Configura el estilo de tu agencia",
+        "description": "Sube tu logo y selecciona colores que coincidan con tu marca."
+      },
+      {
+        "number": "2",
+        "title": "Invita agentes desde tu CRM",
+        "description": "Carga masiva desde tu base de datos de agentes existente."
+      },
+      {
+        "number": "3",
+        "title": "Los agentes se toman una selfie",
+        "description": "Sin necesidad de visitar un estudio. Funciona desde cualquier lugar."
+      },
+      {
+        "number": "4",
+        "title": "Descarga para todas las plataformas",
+        "description": "Obtén fotos consistentes listas para portales, carteles y web."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Opciones de headshots inmobiliarios comparadas",
+    "headers": ["Característica", "Fotógrafo tradicional", "TeamShotsPro"],
+    "rows": [
+      ["Coste por agente", "€200-400", "€26"],
+      ["Tiempo de programación", "2-3 semanas", "60 segundos"],
+      ["Consistencia de marca", "Variable", "100%"],
+      ["Agentes remotos", "Imposible", "Fácil"],
+      ["Onboarding nuevos", "Semanas", "Mismo día"]
+    ]
+  },
+  "useCases": {
+    "title": "Dónde usan sus headshots los equipos inmobiliarios",
+    "platforms": [
+      { "name": "Portales inmobiliarios", "icon": "building" },
+      { "name": "Carteles de venta", "icon": "sign" },
+      { "name": "Idealista y similares", "icon": "globe" },
+      { "name": "Tarjetas de visita", "icon": "card" },
+      { "name": "Firmas de email", "icon": "mail" },
+      { "name": "Web del equipo", "icon": "monitor" }
+    ]
+  },
+  "testimonials": {
+    "title": "Lo que dicen los equipos inmobiliarios",
+    "items": [
+      {
+        "quote": "Incorporamos 50 agentes en una tarde. Un cambio total.",
+        "author": "María G.",
+        "role": "Directora de agencia",
+        "company": "RE/MAX España"
+      },
+      {
+        "quote": "Nuestros anuncios ahora lucen profesionales y coherentes. Los clientes lo notan.",
+        "author": "Carlos M.",
+        "role": "Gerente de marketing",
+        "company": "Engel & Völkers"
+      },
+      {
+        "quote": "Los agentes remotos finalmente tienen fotos que coinciden con el equipo.",
+        "author": "Laura P.",
+        "role": "Coordinadora de recursos",
+        "company": "Tecnocasa"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Preguntas sobre fotos para equipos inmobiliarios",
+    "items": [
+      {
+        "question": "¿Qué deben vestir los agentes inmobiliarios?",
+        "answer": "Recomendamos casual de negocios o blazers. Evita patrones llamativos que distraigan de tu mensaje profesional."
+      },
+      {
+        "question": "¿Se pueden usar estas fotos en portales inmobiliarios?",
+        "answer": "Sí, nuestras fotos cumplen todos los requisitos de los principales portales inmobiliarios."
+      },
+      {
+        "question": "¿Cómo incorporamos agentes remotos?",
+        "answer": "Envíales un enlace de invitación. Pueden enviar su selfie desde cualquier lugar del mundo."
+      },
+      {
+        "question": "¿Ofrecéis descuentos para agencias?",
+        "answer": "Sí, tenemos descuentos por volumen para agencias con 25+ agentes. Contáctanos para precios personalizados."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Precios simples para equipos inmobiliarios",
+    "subtitle": "La mayoría de agencias eligen el plan de 25 plazas"
+  },
+  "finalCta": {
+    "title": "¿Listo para transformar las fotos de tu equipo?",
+    "subtitle": "Obtén headshots profesionales y consistentes para todo tu equipo sin las complicaciones de la fotografía tradicional.",
+    "cta": "Ver el nuevo look de tu equipo"
+  },
+  "seo": {
+    "title": "Headshots con IA para equipos inmobiliarios | TeamShotsPro",
+    "description": "Obtén headshots consistentes y profesionales para todo tu equipo inmobiliario en 60 segundos. Perfecto para portales, carteles y materiales de marketing."
+  },
+  "stylingNotes": [
+    "Casual de negocios o blazer recomendado",
+    "Fondo limpio que no compita con los anuncios",
+    "Expresión confiada y cercana"
+  ]
+}

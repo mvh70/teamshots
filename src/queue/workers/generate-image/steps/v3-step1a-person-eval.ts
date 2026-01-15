@@ -31,8 +31,8 @@ export interface V3Step1aEvalOutput {
   evaluation: ImageEvaluationResult
 }
 
-const DIMENSION_TOLERANCE_PX = 2
-const ASPECT_RATIO_TOLERANCE = 0.02
+const DIMENSION_TOLERANCE_PX = 50 // Generous tolerance for model variations
+const ASPECT_RATIO_TOLERANCE = 0.05 // 5% tolerance
 
 /**
  * V3 Step 1a Eval: Evaluate person generation

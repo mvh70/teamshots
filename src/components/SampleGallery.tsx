@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { BRAND_CONFIG } from '@/config/brand';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { Grid } from '@/components/ui';
+import { ShieldCheckIcon, ClockIcon, BanknotesIcon } from '@heroicons/react/24/outline';
 import type { LandingVariant } from '@/config/landing-content';
 
 interface SamplePhoto {
@@ -161,7 +162,7 @@ export default function SampleGallery({ variant }: SampleGalleryProps) {
   return (
     <>
       <section className="py-20 sm:py-24 lg:py-32 bg-bg-gray-50 relative grain-texture">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-12">
           <div className="text-center mb-20">
             <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
               {tLanding('title')}
@@ -293,6 +294,26 @@ export default function SampleGallery({ variant }: SampleGalleryProps) {
               <p className="text-sm text-text-body">
                 {tHero('ctaSubtext')}
               </p>
+            </div>
+
+            {/* Trust Badges */}
+            <div className="flex flex-wrap justify-center items-center gap-3 mt-6 text-xs text-text-muted">
+              <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                <ShieldCheckIcon className="w-4 h-4 text-green-600" />
+                <span className="font-medium">{tHero('trustBadges.stripeSecure')}</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                <ClockIcon className="w-4 h-4 text-brand-primary" />
+                <span className="font-medium">{tHero('trustBadges.instantResults')}</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                <BanknotesIcon className="w-4 h-4 text-brand-primary" />
+                <span className="font-medium">{tHero('trustBadges.noSubscription')}</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                <ShieldCheckIcon className="w-4 h-4 text-brand-primary" />
+                <span className="font-medium">{tHero('trustBadges.moneyBack')}</span>
+              </div>
             </div>
           </div>
         </div>

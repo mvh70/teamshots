@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import type { GenerationListItem } from '@/app/[locale]/app/generations/components/GenerationCard'
+import type { GenerationListItem } from '@/app/[locale]/(product)/app/generations/components/GenerationCard'
 import { transformInvitedGeneration } from './utils'
 
 const COMPLETION_REFRESH_WINDOW_MS = 4000

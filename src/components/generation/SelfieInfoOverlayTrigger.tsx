@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Info, X } from 'lucide-react'
 import SelfieTipsContent from './SelfieTipsContent'
 
@@ -15,6 +16,7 @@ interface SelfieInfoOverlayTriggerProps {
  * Hidden content stays reusable across logged-in, invite, and mobile flows.
  */
 export default function SelfieInfoOverlayTrigger({ className = '', dense = false }: SelfieInfoOverlayTriggerProps) {
+  const t = useTranslations('selfies')
   const [open, setOpen] = useState(false)
 
   const close = useCallback(() => setOpen(false), [])
@@ -41,7 +43,7 @@ export default function SelfieInfoOverlayTrigger({ className = '', dense = false
           <Info className="h-4 w-4" aria-hidden="true" />
         </span>
         <span className="text-sm sm:text-base text-gray-800 leading-snug">
-          Selecting the right selfies is crucial for high resemblance. Here are some tips for your selfies.
+          {t('tipsIntro')}
         </span>
       </button>
 

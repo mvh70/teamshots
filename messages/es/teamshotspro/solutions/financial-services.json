@@ -1,0 +1,143 @@
+{
+  "hero": {
+    "badge": "Diseñado para servicios financieros",
+    "title": "Headshots profesionales para servicios financieros",
+    "subtitle": "Headshots consistentes y profesionales para cada asesor. Genera confianza en los clientes con una imagen de equipo unificada.",
+    "cta": "Ver el nuevo look de tu equipo"
+  },
+  "painPoints": {
+    "title": "Por qué los equipos financieros luchan con las fotos",
+    "items": [
+      {
+        "title": "Clientes regulados exigen profesionalismo",
+        "description": "En servicios financieros, las primeras impresiones importan. Fotos inconsistentes o desactualizadas pueden socavar la confianza del cliente."
+      },
+      {
+        "title": "Equipos distribuidos en múltiples oficinas",
+        "description": "Con asesores, analistas y personal de soporte en diferentes ubicaciones, coordinar sesiones de fotos es una pesadilla logística."
+      },
+      {
+        "title": "Cambios frecuentes de equipo",
+        "description": "Nuevas incorporaciones, ascensos y reestructuraciones significan que las fotos quedan desactualizadas constantemente."
+      }
+    ],
+    "solution": "TeamShotsPro resuelve todo esto en 60 segundos."
+  },
+  "showcase": {
+    "title": "Transformaciones de equipos financieros",
+    "subtitle": "Resultados antes y después de equipos financieros reales"
+  },
+  "howItWorks": {
+    "title": "Cómo funciona para servicios financieros",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Configura el estilo de tu firma",
+        "description": "Elige un look profesional que transmita confianza y competencia a los clientes."
+      },
+      {
+        "number": "2",
+        "title": "Invita a tu equipo",
+        "description": "Envía invitaciones a asesores, analistas y personal de soporte en todas las ubicaciones."
+      },
+      {
+        "number": "3",
+        "title": "El equipo se toma una selfie",
+        "description": "Sin necesidad de visitar un estudio. Funciona desde cualquier oficina o ubicación remota."
+      },
+      {
+        "number": "4",
+        "title": "Descarga para todas las plataformas",
+        "description": "Obtén fotos consistentes listas para web, portales y materiales de cliente."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Opciones de headshots financieros comparadas",
+    "headers": ["Característica", "Fotógrafo tradicional", "TeamShotsPro"],
+    "rows": [
+      ["Coste por persona", "€300-500", "€26"],
+      ["Tiempo de programación", "2-3 semanas", "60 segundos"],
+      ["Consistencia de marca", "Variable", "100%"],
+      ["Equipos multi-oficina", "Muy difícil", "Fácil"],
+      ["Onboarding nuevos", "Semanas", "Mismo día"]
+    ]
+  },
+  "useCases": {
+    "title": "Dónde usan sus headshots los equipos financieros",
+    "platforms": [
+      { "name": "Web corporativa", "icon": "monitor" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Portales de cliente", "icon": "users" },
+      { "name": "Tarjetas de visita", "icon": "credit-card" },
+      { "name": "Informes anuales", "icon": "file-text" },
+      { "name": "Firmas de email", "icon": "mail" }
+    ]
+  },
+  "testimonials": {
+    "title": "Lo que dicen los equipos financieros",
+    "items": [
+      {
+        "quote": "Nuestros asesores lucen pulidos y profesionales en todos los puntos de contacto. Los clientes han notado la diferencia.",
+        "author": "Roberto H.",
+        "role": "Director general",
+        "company": "Gestora de patrimonio"
+      },
+      {
+        "quote": "Solíamos pasar semanas coordinando sesiones de fotos. Ahora todos obtienen sus headshots en 60 segundos.",
+        "author": "Cristina M.",
+        "role": "Directora de marketing",
+        "company": "Asesoría de inversiones"
+      },
+      {
+        "quote": "La consistencia en nuestra página de equipo genera credibilidad instantánea con clientes potenciales.",
+        "author": "Andrés L.",
+        "role": "Socio",
+        "company": "Firma de capital privado"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Preguntas sobre fotos para servicios financieros",
+    "items": [
+      {
+        "question": "¿Qué deben vestir los asesores financieros?",
+        "answer": "Atuendo profesional de negocios funciona mejor - trajes, blazers o ropa formal de negocios. Los colores oscuros transmiten confianza y competencia."
+      },
+      {
+        "question": "¿Son apropiadas para materiales regulados?",
+        "answer": "Sí. Nuestros headshots profesionales cumplen los estándares de calidad esperados en industrias reguladas y pueden usarse en todos los materiales de cara al cliente."
+      },
+      {
+        "question": "¿Cómo manejamos equipos en múltiples oficinas?",
+        "answer": "Cada miembro del equipo recibe un enlace de invitación y puede enviar su selfie desde cualquier ubicación. Sin coordinación necesaria."
+      },
+      {
+        "question": "¿Se pueden usar en informes anuales?",
+        "answer": "Sí. Nuestras fotos son de alta resolución y adecuadas para materiales impresos incluyendo informes anuales y material de marketing."
+      },
+      {
+        "question": "¿Ofrecéis precios enterprise?",
+        "answer": "Sí. Ofrecemos descuentos por volumen para firmas con 25+ miembros de equipo. Contáctanos para precios personalizados."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Precios simples para servicios financieros",
+    "subtitle": "La mayoría de firmas eligen el plan de 25 plazas"
+  },
+  "finalCta": {
+    "title": "¿Listo para transformar la imagen de tu firma?",
+    "subtitle": "Obtén headshots profesionales y consistentes para todo tu equipo sin las complicaciones de la fotografía tradicional.",
+    "cta": "Ver el nuevo look de tu equipo"
+  },
+  "seo": {
+    "title": "Headshots con IA para servicios financieros | TeamShotsPro",
+    "description": "Obtén headshots consistentes y profesionales para todo tu equipo financiero en 60 segundos. Perfecto para portales de cliente, informes anuales y materiales de marketing."
+  },
+  "stylingNotes": [
+    "Traje profesional o atuendo formal de negocios",
+    "Fondo neutro y sofisticado",
+    "Expresión confiada que transmita profesionalidad"
+  ]
+}

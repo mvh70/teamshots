@@ -8,13 +8,13 @@
  * controls its own section visibility and layout directly.
  */
 
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from './domain'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from './domain'
 import type { PackageId } from './packages'
 
 /**
  * Landing page variant identifiers - matches domain names without .com
  */
-export type LandingVariant = 'teamshotspro' | 'photoshotspro' | 'coupleshotspro'
+export type LandingVariant = 'teamshotspro' | 'individualshots' | 'coupleshots' | 'familyshots' | 'rightclickfit'
 
 /**
  * Section visibility configuration for landing pages.
@@ -68,22 +68,37 @@ const LANDING_CONFIGS: Record<string, LandingConfig> = {
     },
   },
   [INDIVIDUAL_DOMAIN]: {
-    variant: 'photoshotspro',
-    contentNamespace: 'landing.photoshotspro',
+    variant: 'individualshots',
+    contentNamespace: 'landing.individualshots',
     packages: {
       available: ['linkedin', 'dating', 'casual', 'freepackage'],
       default: 'linkedin',
     },
   },
-  // Future: coupleshotspro.com
-  // 'coupleshotspro.com': {
-  //   variant: 'coupleshotspro',
-  //   contentNamespace: 'landing.coupleshotspro',
-  //   packages: {
-  //     available: ['couple', 'casual', 'freepackage'],
-  //     default: 'couple',
-  //   },
-  // },
+  [COUPLES_DOMAIN]: {
+    variant: 'coupleshots',
+    contentNamespace: 'landing.coupleshots',
+    packages: {
+      available: ['couple', 'casual', 'freepackage'],
+      default: 'couple',
+    },
+  },
+  [FAMILY_DOMAIN]: {
+    variant: 'familyshots',
+    contentNamespace: 'landing.familyshots',
+    packages: {
+      available: ['family', 'casual', 'freepackage'],
+      default: 'family',
+    },
+  },
+  [EXTENSION_DOMAIN]: {
+    variant: 'rightclickfit',
+    contentNamespace: 'landing.rightclickfit',
+    packages: {
+      available: ['outfit1', 'freepackage'],
+      default: 'outfit1',
+    },
+  },
 }
 
 /**
@@ -154,4 +169,3 @@ export function getAvailablePackages(domain?: string): PackageId[] {
 export function getDefaultPackage(domain?: string): PackageId {
   return getLandingConfig(domain).packages.default
 }
-

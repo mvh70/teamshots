@@ -11,7 +11,9 @@ import {
   AuthorBox,
   TldrSection,
   Breadcrumb,
+  BlogHeroImage,
 } from '@/components/blog';
+import { postMeta } from './meta';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -20,8 +22,8 @@ type Props = {
 const getContent = (locale: string, brandName: string) => {
   if (locale === 'es') {
     return {
-      title: 'La integración remota está rota: Cómo solucionar el problema de la foto del "nuevo contratado"',
-      description: 'Guía para resolver los problemas con las fotos de nuevos empleados en equipos remotos. Optimiza tu proceso de onboarding con soluciones eficientes y escalables.',
+      title: postMeta.es.title,
+      description: postMeta.es.description,
       breadcrumb: 'Integración Remota Rota',
       tldr: [
         '<strong>El problema:</strong> Coordinar fotos para nuevos empleados remotos es un caos que roba tiempo.',
@@ -125,8 +127,8 @@ const getContent = (locale: string, brandName: string) => {
 
   // English content (use the provided content structured similarly)
   return {
-    title: 'Remote Onboarding is Broken: How to Fix the "New Hire" Photo Problem',
-    description: 'Guide to solving new employee photo problems in remote teams. Improve your onboarding process with efficient, scalable solutions.',
+    title: postMeta.en.title,
+    description: postMeta.en.description,
     breadcrumb: 'Remote Onboarding Broken',
     tldr: [
       '<strong>The Problem:</strong> Coordinating photos for remote new hires is chaotic and time-consuming.',
@@ -348,6 +350,16 @@ export default async function RemoteOnboardingBrokenPage({ params }: Props) {
             <p key={index} dangerouslySetInnerHTML={{ __html: item }} />
           ))}
         </TldrSection>
+
+        <BlogHeroImage
+          slug="remote-onboarding-broken"
+          alt="New remote employee joining virtual team meeting with inconsistent profile photos visible on screen"
+          caption={{
+            en: 'Consistent professional headshots help new hires feel connected from day one',
+            es: 'Los headshots profesionales consistentes ayudan a las nuevas contrataciones a sentirse conectadas desde el primer día'
+          }}
+          locale={locale}
+        />
 
         {/* The Remote Onboarding Problem */}
         <h2 id="the-problem" className="text-2xl font-bold mt-12 mb-4 text-gray-900">

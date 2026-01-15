@@ -1,0 +1,34 @@
+{
+  "landing": {
+    "rightclickfit": {
+      "hero": {
+        "titleLine1": "Shop Like Magic.",
+        "titleLine2": "Right Click & Fit.",
+        "titleHighlightTime": "instantly",
+        "subtitleMain": "See any outfit on YOUR body before you buy.",
+        "subtitle": "Found a dress you like? Right-click it to try it on immediately. ",
+        "subtitleBold": "Works on Zara, Aritzia, ASOS, and more.",
+        "cta": "Add to Chrome - It's Free",
+        "ctaAria": "Install RightClickFit Chrome Extension",
+        "noCreditCardLine": "Free forever for basic use",
+        "freeGenerationsLine": "Works on any online store",
+        "finalCtaTitle": "Never return a dress again.",
+        "finalCtaSubtitle": "The virtual fitting room that actually works. Install the extension today."
+      },
+      "footer": {
+        "tagline": "The #1 Virtual Fitting Room for Chrome",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service",
+        "copyright": "© 2026 RightClickFit. All rights reserved."
+      },
+      "faq": {
+        "title": "Frequently Asked Questions",
+        "subtitle": "Everything you need to know about RightClickFit"
+      }
+    }
+  },
+  "metadata": {
+    "title": "RightClickFit - The Viral Virtual Try-On Extension",
+    "description": "See any outfit on your body instantly. Right-click any image on the web to virtually try it on. The best AI virtual fitting room for Chrome."
+  }
+}

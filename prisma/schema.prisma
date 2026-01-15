@@ -200,6 +200,10 @@ model Selfie {
   personCount        Int?      // Number of people detected in the photo
   isProper           Boolean?  // Whether selfie is valid for generation (single person, clear face)
   improperReason     String?   // Reason why selfie is not proper (if isProper is false)
+  lightingQuality    String?   // 'good' | 'acceptable' | 'poor' - lighting quality assessment
+  lightingFeedback   String?   // Explanation of lighting issues if not good
+  backgroundQuality  String?   // 'good' | 'acceptable' | 'poor' - background separation quality
+  backgroundFeedback String?   // Explanation of background issues if not good
   person             Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
   asset              Asset?    @relation("SelfieAsset", fields: [assetId], references: [id])
 

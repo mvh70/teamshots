@@ -80,10 +80,10 @@ export const PRICING_CONFIG = {
     // Graduated pricing tiers (each tier charged separately and summed)
     // Stored in descending order for consistent config structure
     graduatedTiers: [
-      { min: 1000, max: Infinity, pricePerSeat: 17.99 },
-      { min: 500, max: 999, pricePerSeat: 19.49 },
-      { min: 100, max: 499, pricePerSeat: 20.99 },
-      { min: 25, max: 99, pricePerSeat: 22.49 },
+      { min: 1000, max: Infinity, pricePerSeat: 10.49 },
+      { min: 250, max: 999, pricePerSeat: 13.49 },
+      { min: 100, max: 249, pricePerSeat: 16.49 },
+      { min: 25, max: 99, pricePerSeat: 19.49 },
       { min: 5, max: 24, pricePerSeat: 23.99 },
       { min: 1, max: 4, pricePerSeat: 29.99 },
     ],

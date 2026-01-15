@@ -29,8 +29,8 @@ export interface V3Step3FinalInput {
   onCostTracking?: CostTrackingHandler // For cost tracking
 }
 
-const DIMENSION_TOLERANCE_PX = 2
-const ASPECT_RATIO_TOLERANCE = 0.02
+const DIMENSION_TOLERANCE_PX = 50 // Generous tolerance for model variations
+const ASPECT_RATIO_TOLERANCE = 0.05 // 5% tolerance
 
 /**
  * Compose contributions from all registered elements for the evaluation phase

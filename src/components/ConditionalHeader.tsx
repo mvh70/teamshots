@@ -8,25 +8,32 @@ import LanguageSwitcher from './LanguageSwitcher'
 import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
 import { useAnalytics } from '@/hooks/useAnalytics'
+import { SOLUTIONS } from '@/config/solutions'
+import type { LandingVariant } from '@/config/landing-content'
 
 interface ConditionalHeaderProps {
   /** Brand name from server */
   brandName: string;
   /** Brand logo URL from server */
   brandLogo: string;
+  /** Landing variant from server */
+  variant: LandingVariant;
 }
 
-export default function ConditionalHeader({ brandName, brandLogo }: ConditionalHeaderProps) {
+export default function ConditionalHeader({ brandName, brandLogo, variant }: ConditionalHeaderProps) {
   const pathname = usePathname()
   const t = useTranslations('nav')
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [solutionsOpen, setSolutionsOpen] = useState(false)
   const { track } = useAnalytics()
-  
+
+  const isTeamShotsPro = variant === 'teamshotspro'
+
   // Don't show header on app routes or mobile upload-selfie page
   const isAppRoute = pathname.includes('/app/')
   const isUploadSelfiePage = pathname.includes('/upload-selfie/')
-  
+
   if (isAppRoute || isUploadSelfiePage) {
     return null
   }
@@ -36,8 +43,8 @@ export default function ConditionalHeader({ brandName, brandLogo }: ConditionalH
   }
 
   return (
-    <header className="border-b border-brand-primary-lighter bg-bg-white/95 backdrop-blur-sm shadow-depth-sm sticky top-0 z-50">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 lg:h-20 flex items-center justify-between">
+    <header className="border-b border-brand-primary-lighter bg-bg-white shadow-depth-sm sticky top-0 z-50">
+      <nav className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-12 h-16 lg:h-20 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center" aria-label={brandName}>
@@ -57,20 +64,63 @@ export default function ConditionalHeader({ brandName, brandLogo }: ConditionalH
 
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center gap-8">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
           >
             {t('home')}
           </Link>
-          <Link 
-            href="/pricing" 
+
+          {/* Solutions Dropdown - TeamShotsPro only */}
+          {isTeamShotsPro && (
+            <div
+              className="relative"
+              onMouseEnter={() => setSolutionsOpen(true)}
+              onMouseLeave={() => setSolutionsOpen(false)}
+            >
+              <button
+                className="flex items-center gap-1 text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
+                aria-expanded={solutionsOpen}
+                aria-haspopup="true"
+              >
+                {t('solutions')}
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 ${solutionsOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Dropdown Menu - pt-2 instead of mt-2 keeps hover area continuous */}
+              {solutionsOpen && (
+                <div className="absolute top-full left-0 pt-2 w-56 z-50">
+                  <div className="bg-bg-white rounded-xl shadow-depth-lg border border-bg-gray-100 py-2">
+                  {SOLUTIONS.map((solution) => (
+                    <Link
+                      key={solution.slug}
+                      href={`/solutions/${solution.slug}`}
+                      className="block px-4 py-2.5 text-sm text-text-body hover:bg-brand-primary-light hover:text-brand-primary transition-colors duration-200"
+                    >
+                      {t(`solutionLabels.${solution.slug}`)}
+                    </Link>
+                  ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <Link
+            href="/pricing"
             className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
           >
             {t('pricing')}
           </Link>
-          <Link 
-            href="/blog" 
+          <Link
+            href="/blog"
             className="text-text-body hover:text-brand-primary transition-colors duration-300 font-medium"
           >
             {t('blog')}
@@ -116,21 +166,43 @@ export default function ConditionalHeader({ brandName, brandLogo }: ConditionalH
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-brand-primary-lighter bg-bg-white">
           <div className="px-4 py-4 space-y-4">
-            <Link 
+            <Link
               href="/"
               onClick={toggleMobileMenu}
               className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
             >
               {t('home')}
             </Link>
-            <Link 
+
+            {/* Solutions Section - TeamShotsPro only */}
+            {isTeamShotsPro && (
+              <div className="py-2">
+                <div className="text-text-muted text-sm font-semibold uppercase tracking-wide mb-2">
+                  {t('solutions')}
+                </div>
+                <div className="space-y-1 pl-2">
+                  {SOLUTIONS.map((solution) => (
+                    <Link
+                      key={solution.slug}
+                      href={`/solutions/${solution.slug}`}
+                      onClick={toggleMobileMenu}
+                      className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-1.5 text-sm"
+                    >
+                      {t(`solutionLabels.${solution.slug}`)}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Link
               href="/pricing"
               onClick={toggleMobileMenu}
               className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"
             >
               {t('pricing')}
             </Link>
-            <Link 
+            <Link
               href="/blog"
               onClick={toggleMobileMenu}
               className="block text-text-body hover:text-brand-primary transition-colors duration-300 font-medium py-2"

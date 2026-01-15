@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import { Env } from '@/lib/env'
-import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
+import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
 
 /**
  * All allowed production domains for this application.
@@ -8,7 +8,10 @@ import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
  */
 export const ALLOWED_DOMAINS = [
   TEAM_DOMAIN,        // teamshotspro.com
-  INDIVIDUAL_DOMAIN,  // photoshotspro.com
+  INDIVIDUAL_DOMAIN,  // headshotone.com
+  COUPLES_DOMAIN,     // duosnaps.com
+  FAMILY_DOMAIN,      // kinframe.com
+  EXTENSION_DOMAIN,   // rightclickfit.com
 ] as const
 
 /**

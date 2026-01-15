@@ -214,8 +214,22 @@ export function useUploadFlow({
   const handleUploadResult = useCallback(
     async (result: UploadResult | UploadResult[]) => {
       const uploads = Array.isArray(result) ? result : [result]
-      // Skip approval screen - classification happens server-side in promote endpoint
-      // Selfies go directly to the grid, improper ones will be shown but not selectable
+
+      // For camera captures, show approval screen so user can review/retake
+      // For file uploads, skip approval - classification happens server-side
+      const firstUpload = uploads[0]
+      if (firstUpload && (firstUpload.source === 'camera' || firstUpload.source === 'ios-camera')) {
+        const pending: PendingApproval = {
+          key: firstUpload.key,
+          previewUrl: firstUpload.url,
+          source: firstUpload.source
+        }
+        pendingApprovalRef.current = pending
+        dispatch({ type: 'PENDING_APPROVAL', payload: pending })
+        return
+      }
+
+      // File uploads go directly to the grid
       await approveUploads(uploads)
     },
     [approveUploads]

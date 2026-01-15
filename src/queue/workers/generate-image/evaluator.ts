@@ -75,8 +75,8 @@ export interface ImageEvaluationResult {
   }
 }
 
-const DIMENSION_TOLERANCE_PX = 2
-const ASPECT_RATIO_TOLERANCE = 0.02
+const DIMENSION_TOLERANCE_PX = 50 // Generous tolerance for model variations (Gemini 3 outputs different base dims)
+const ASPECT_RATIO_TOLERANCE = 0.05 // 5% tolerance
 
 export async function evaluateGeneratedImage({
   imageBase64,

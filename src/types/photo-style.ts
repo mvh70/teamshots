@@ -12,6 +12,7 @@ import type { BrandingSettings } from '../domain/style/elements/branding/types'
 import type { ClothingColorSettings, ClothingColorValue } from '../domain/style/elements/clothing-colors/types'
 import type { BackgroundSettings, BackgroundType, BackgroundValue } from '../domain/style/elements/background/types'
 import type { CustomClothingSettings } from '../domain/style/elements/custom-clothing/types'
+import type { IndustrySettings, IndustryType, IndustryValue } from '../domain/style/elements/industry/types'
 
 export { PoseSettings, PoseType, PoseValue }
 export { ClothingSettings, ClothingType, ClothingValue }
@@ -24,6 +25,7 @@ export { BrandingSettings }
 export { ClothingColorSettings, ClothingColorValue }
 export { BackgroundSettings, BackgroundType, BackgroundValue }
 export { CustomClothingSettings }
+export { IndustrySettings, IndustryType, IndustryValue }
 
 export interface StyleSettings {
   type: 'preset' | 'user-choice'
@@ -57,6 +59,7 @@ export interface PhotoStyleSettings {
   subjectCount?: SubjectCountSetting
   usageContext?: UsageContextSetting
   customPrompt?: string
+  industry?: IndustrySettings
 }
 
 // Helper types for form handling
@@ -72,6 +75,7 @@ export type CategoryType =
   | 'expression'
   | 'lighting'
   | 'pose'
+  | 'industry'
 
 export interface CategoryToggle {
   category: CategoryType
