@@ -56,40 +56,18 @@ export default getRequestConfig(async ({ requestLocale }) => {
   // Load shared messages (always loaded for all routes)
   const sharedMessages = (await import(`../../messages/${locale}/shared.json`)).default;
 
-  // Load ALL domain-specific messages to ensure translations work during static generation.
-  // At build time, domain detection fails (no headers), so we load all domain messages upfront.
-  // Pages are domain-gated at the layout level, so loading extra messages has no security impact.
+  // Load domain-specific messages based on detected domain.
+  // At build time, domain detection fails (no headers) - fall back to 'teamshotspro'.
+  // This is fine because pages are domain-gated at layout level and render dynamically at runtime.
   const detectedDomain = await getRequestDomain();
+  const domain = detectedDomain ?? 'teamshotspro';
   let domainMessages: Record<string, unknown> = {};
   let solutionMessages: Record<string, unknown> = {};
 
-  // All domain variants with message files
-  const domainVariants = ['teamshotspro', 'individualshots', 'coupleshotspro', 'familyshotspro', 'rightclickfit'] as const;
-
-  // Load all domain messages concurrently
-  const domainResults = await Promise.all(
-    domainVariants.map(async (variant) => {
-      try {
-        return { variant, messages: (await import(`../../messages/${locale}/${variant}.json`)).default };
-      } catch {
-        return { variant, messages: null };
-      }
-    }),
-  );
-
-  // Merge all domain messages (for static build compatibility)
-  for (const { messages } of domainResults) {
-    if (messages) {
-      domainMessages = { ...domainMessages, ...messages };
-    }
-  }
-
-  // If domain was detected at runtime, ensure its messages take final priority
-  if (detectedDomain) {
-    const detected = domainResults.find((r) => r.variant === detectedDomain);
-    if (detected?.messages) {
-      domainMessages = { ...domainMessages, ...detected.messages };
-    }
+  try {
+    domainMessages = (await import(`../../messages/${locale}/${domain}.json`)).default;
+  } catch {
+    // Domain file doesn't exist, use shared only
   }
 
   // Load programmatic vertical copy into a dedicated namespace.
