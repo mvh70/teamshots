@@ -70,23 +70,23 @@ export default getRequestConfig(async ({ requestLocale }) => {
     }
   }
 
-  // TeamShotsPro-only: load programmatic vertical copy into a dedicated namespace.
+  // Load programmatic vertical copy into a dedicated namespace.
   // This keeps vertical content modular (one file per industry) and prevents bloating teamshotspro.json.
-  if (domain === 'teamshotspro') {
-    const pairs = await Promise.all(
-      SOLUTIONS.map(async (s) => {
-        try {
-          const mod = (await import(`../../messages/${locale}/teamshotspro/solutions/${s.slug}.json`)).default;
-          return [s.slug, mod] as const;
-        } catch {
-          // Missing solution file is allowed during rollout; the page will still 404 if it needs the copy.
-          return [s.slug, null] as const;
-        }
-      }),
-    );
+  // Always load these regardless of domain detection - the solutions pages are domain-gated by layout,
+  // and we need translations available at build time for static generation.
+  const pairs = await Promise.all(
+    SOLUTIONS.map(async (s) => {
+      try {
+        const mod = (await import(`../../messages/${locale}/teamshotspro/solutions/${s.slug}.json`)).default;
+        return [s.slug, mod] as const;
+      } catch {
+        // Missing solution file is allowed during rollout; the page will still 404 if it needs the copy.
+        return [s.slug, null] as const;
+      }
+    }),
+  );
 
-    solutionMessages = Object.fromEntries(pairs.filter(([, v]) => v));
-  }
+  solutionMessages = Object.fromEntries(pairs.filter(([, v]) => v));
 
   // Merge messages: domain-specific messages overlay shared messages
   const messages = {
