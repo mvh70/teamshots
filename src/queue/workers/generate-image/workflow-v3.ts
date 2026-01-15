@@ -1301,8 +1301,8 @@ export async function executeV3Workflow({
     const actualHeight = metadata.height ?? null
     
     // Calculate dimension and aspect ratio mismatches
-    const DIMENSION_TOLERANCE_PX = 2
-    const ASPECT_RATIO_TOLERANCE = 0.02
+    const DIMENSION_TOLERANCE_PX = 50 // Generous tolerance for model variations
+    const ASPECT_RATIO_TOLERANCE = 0.05 // 5% tolerance
     const expectedRatio = expectedWidth / expectedHeight
     const actualRatio = actualWidth && actualHeight && actualHeight !== 0 ? actualWidth / actualHeight : null
     

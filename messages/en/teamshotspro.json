@@ -20,7 +20,13 @@
         "badge": "Professional team photos without the photoshoot hassle",
         "trustedBy": "Trusted by teams at",
         "bookDemo": "Book a Demo",
-        "bookDemoAria": "Book a demo"
+        "bookDemoAria": "Book a demo",
+        "trustBadges": {
+          "stripeSecure": "Stripe Secure Checkout",
+          "instantResults": "Results in 60 Seconds",
+          "noSubscription": "No Subscription",
+          "moneyBack": "Money-Back Guarantee"
+        }
       },
       "gallery": {
         "title": "From 'meh' selfies to LinkedIn-worthy headshots",
@@ -52,6 +58,19 @@
         "totalTimeValue": "2 minutes",
         "cta": "Start My Team Order",
         "guarantee": "Risk-free: Try it free with your team to see the quality. No credit card, no commitment.",
+        "tabs": {
+          "setBrand": "Set Brand",
+          "inviteTeam": "Invite Team",
+          "teamSelfie": "Team Selfie",
+          "getAssets": "Get Assets",
+          "upload": "Upload",
+          "customize": "Customize",
+          "generate": "Generate"
+        },
+        "tryForFree": "Try for Free",
+        "bookDemo": "Book a Demo",
+        "freePhotosLine": "Get 3 photos for free with fixed TeamShots branding for testing",
+        "noCreditCardLine": "No credit card required for test photos",
         "steps": {
           "1": {
             "title": "Set Your Brand Identity",
@@ -74,6 +93,11 @@
             "duration": "60 s"
           }
         }
+      },
+      "guarantee": {
+        "title": "100% Human-Look Guarantee",
+        "subtitle": "If your photos look like AI, we redo them for free.",
+        "description": "Your team deserves to look professional, not robotic. We guarantee studio-quality results that look like you, just more polished."
       },
       "faq": {
         "title": "Frequently Asked Questions",

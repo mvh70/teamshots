@@ -11,13 +11,14 @@ interface BlogContentProps {
   posts: BlogPost[]
   title: string
   description: string
+  locale?: string
 }
 
 /**
  * Client-side blog content component with filtering.
  * Handles category filtering and displays featured post, grid, and CTA.
  */
-export default function BlogContent({ posts, title, description }: BlogContentProps) {
+export default function BlogContent({ posts, title, description, locale = 'en' }: BlogContentProps) {
   const [selectedCategory, setSelectedCategory] = useState<BlogPostCategory | 'all'>('all')
 
   // Find the featured post (first one marked as featured, or newest post)
@@ -51,7 +52,7 @@ export default function BlogContent({ posts, title, description }: BlogContentPr
         </div>
 
         {/* Featured Post */}
-        {featuredPost && <FeaturedPost post={featuredPost} />}
+        {featuredPost && <FeaturedPost post={featuredPost} locale={locale} />}
 
         {/* Category Filter */}
         <CategoryTabs
@@ -64,7 +65,7 @@ export default function BlogContent({ posts, title, description }: BlogContentPr
         {filteredPosts.length > 0 ? (
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {filteredPosts.map((post) => (
-              <BlogCard key={post.slug} post={post} />
+              <BlogCard key={post.slug} post={post} locale={locale} />
             ))}
           </div>
         ) : (

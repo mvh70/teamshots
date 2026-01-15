@@ -32,6 +32,7 @@ import { CustomClothingSelector } from '@/domain/style/elements/custom-clothing/
 import ShotTypeSelector from '@/domain/style/elements/shot-type/ShotTypeSelector'
 import BrandingSelector from '@/domain/style/elements/branding/BrandingSelector'
 import ExpressionSelector from '@/domain/style/elements/expression/ExpressionSelector'
+import IndustrySelector from '@/domain/style/elements/industry/IndustrySelector'
 import PoseSelector from '@/domain/style/elements/pose/PoseSelector'
 import { getPackageConfig } from '@/domain/style/packages'
 import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
@@ -308,6 +309,7 @@ export default function PhotoStyleSettings({
       'shotType',
       'style',
       'expression',
+      'industry',
       'lighting',
       'pose'
     ] as const
@@ -677,9 +679,18 @@ export default function PhotoStyleSettings({
               availablePoses={pkg.availablePoses}
             />
           )}
-          
+
+          {category.key === 'industry' && (
+            <IndustrySelector
+              value={value.industry || { mode: 'user-choice', value: undefined }}
+              onChange={(settings) => handleCategorySettingsChange('industry', settings)}
+              isPredefined={!showToggles && readonlyPredefined && isPredefined}
+              isDisabled={!showToggles && readonlyPredefined && isPredefined}
+            />
+          )}
+
           {/* Placeholder for other categories */}
-          {!['background', 'clothing', 'clothingColors', 'customClothing', 'shotType', 'branding', 'expression', 'pose'].includes(category.key) && (
+          {!['background', 'clothing', 'clothingColors', 'customClothing', 'shotType', 'branding', 'expression', 'pose', 'industry'].includes(category.key) && (
             <div className={`text-center py-8 text-gray-500 ${isUserChoice ? 'pointer-events-none' : ''}`}>
               <p className="text-sm">
                 {t('comingSoon', { default: 'Settings for this category coming soon' })}

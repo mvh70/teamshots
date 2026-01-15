@@ -4,8 +4,8 @@ import { getVertexGenerativeModel } from '../gemini'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { ReferenceImage, EvaluationFeedback } from '@/types/generation'
 
-const DIMENSION_TOLERANCE_PX = 2
-const ASPECT_RATIO_TOLERANCE = 0.02
+const DIMENSION_TOLERANCE_PX = 50 // Generous tolerance for model variations
+const ASPECT_RATIO_TOLERANCE = 0.05 // 5% tolerance
 
 export async function evaluateFinalImage(
   imageBase64: string,

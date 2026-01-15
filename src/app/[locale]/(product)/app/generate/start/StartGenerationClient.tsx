@@ -30,7 +30,7 @@ import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
 import { FlowProgressDock } from '@/components/generation/navigation'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useOnboardingState } from '@/lib/onborda/hooks'
-import Header from '@/app/[locale]/app/components/Header'
+import Header from '@/app/[locale]/(product)/app/components/Header'
 import { loadClothingColors, saveClothingColors, loadStyleSettings, saveStyleSettings } from '@/lib/clothing-colors-storage'
 import { isUserChoice, hasValue, userChoice } from '@/domain/style/elements/base/element-types'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
@@ -311,7 +311,12 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     })
   }, [])
 
+  // Track whether we've received fresh step meta from PhotoStyleSettings this session
+  // This prevents auto-proceed from using stale cached sessionStorage values
+  const hasReceivedFreshMeta = React.useRef(false)
+
   const handleStepMetaChange = useCallback((meta: { editableSteps: number; allSteps: number; lockedSteps: number[] }) => {
+    hasReceivedFreshMeta.current = true
     setCustomizationStepsMeta(meta)
   }, [setCustomizationStepsMeta])
 
@@ -320,7 +325,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     router.push('/app/generate/selfie')
   }, [router])
 
-  const onProceed = async () => {
+  const onProceed = useCallback(async () => {
     if (!hasEnoughSelfies(selectedSelfies.length) || !effectiveGenerationType) {
       console.error(`Missing required data for generation: need at least ${MIN_SELFIES_REQUIRED} selfies`)
       return
@@ -348,7 +353,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
       const packageId = selectedPackageId || PACKAGES_CONFIG.defaultPlanPackage
       const packageConfig = getPackageConfig(packageId)
-      
+
       // Filter styleSettings to only include visible categories (defense-in-depth)
       const allowedKeys = new Set([
         ...packageConfig.visibleCategories,
@@ -363,7 +368,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
         Object.entries({ ...photoStyleSettings, packageId })
           .filter(([key]) => allowedKeys.has(key as keyof typeof photoStyleSettings))
       )
-      
+
       const creditSource = effectiveGenerationType === 'team' ? 'team' : 'individual'
       const payload: Record<string, unknown> = {
         creditSource,
@@ -375,8 +380,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
         debugMode: process.env.NODE_ENV !== 'production', // Enable debug mode only in development (logs prompts, saves intermediate files)
         // stopAfterStep removed - full flow will now execute
       }
-      
-      const response = await jsonFetcher<{ 
+
+      const response = await jsonFetcher<{
         success?: boolean
         error?: string
         accountMode?: {
@@ -394,17 +399,31 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       // Refresh credits in background to update sidebar
       refetchCredits()
 
-      const redirectUrl = response.accountMode?.redirectUrl || 
+      const redirectUrl = response.accountMode?.redirectUrl ||
         (session?.user?.person?.teamId ? '/app/generations/team' : '/app/generations/personal')
       clearGenerationFlow()
       router.push(redirectUrl)
-      
+
     } catch (error) {
       console.error('Failed to start generation:', error)
       alert(`Failed to start generation: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setIsGenerating(false)
     }
-  }
+  }, [
+    selectedSelfies,
+    effectiveGenerationType,
+    isGenerating,
+    session,
+    track,
+    activeContext,
+    selectedPackageId,
+    isFreePlan,
+    subscriptionTier,
+    photoStyleSettings,
+    refetchCredits,
+    clearGenerationFlow,
+    router
+  ])
 
   const teamName = session?.user?.person ? 'Team' : undefined
   
@@ -421,7 +440,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   const hasUneditedFields = originalContextSettings
     ? hasUneditedEditableFields(photoStyleSettings as Record<string, unknown>, originalContextSettings as Record<string, unknown>, effectivePackageId)
-    : false
+    : true // Default to true when no context settings - requires user to customize
 
   // Get list of unedited fields for progress dock display
   const uneditedFields = React.useMemo(() => {
@@ -464,6 +483,24 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       router.replace('/app/generate/customization-intro')
     }
   }, [hydrated, skipUpload, hasSeenCustomizationIntro, router])
+
+  // Auto-proceed to generation when ALL settings are predefined (no editable fields)
+  // DISABLED: This feature was causing premature generation starts. Generation should only
+  // happen when the user explicitly clicks the generate button.
+  // TODO: Re-enable with proper fix if auto-proceed is needed for admin photostyles
+  // const hasAttemptedAutoProceed = React.useRef(false)
+  // useEffect(() => {
+  //   if (hasAttemptedAutoProceed.current) return
+  //   if (!hydrated || !skipUpload || !hasSeenCustomizationIntro) return
+  //   if (isGenerating || isPending) return
+  //   if (!hasReceivedFreshMeta.current) return
+  //   if (!customizationStepsMeta || customizationStepsMeta.editableSteps === undefined) return
+  //   if (customizationStepsMeta.editableSteps > 0) return
+  //   if (!canGenerate) return
+  //   hasAttemptedAutoProceed.current = true
+  //   console.log('[StartGenerationClient] All settings predefined, auto-proceeding to generation')
+  //   onProceed()
+  // }, [hydrated, skipUpload, hasSeenCustomizationIntro, customizationStepsMeta, canGenerate, isGenerating, isPending, onProceed])
 
   if (isSuccess && (successType === 'individual_success' || successType === 'vip_success' || successType === 'seats_success')) {
     return <PurchaseSuccess />
@@ -830,7 +867,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
               teamContext={effectiveGenerationType === 'team'}
               className="hidden md:block"
               noContainer
-              onStepMetaChange={setCustomizationStepsMeta}
+              onStepMetaChange={handleStepMetaChange}
               highlightedField={uneditedFields.length > 0 ? uneditedFields[0] : undefined}
             />
           </div>

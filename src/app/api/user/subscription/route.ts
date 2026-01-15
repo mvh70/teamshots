@@ -27,17 +27,15 @@ export async function GET() {
         id: true,
         totalSeats: true,
         activeSeats: true,
-        creditsPerSeat: true,
-        isLegacyCredits: true,
         admin: {
-          select: { signupDomain: true }
+          select: { planPeriod: true }
         }
       }
     })
-    
+
     if (ownedTeam) {
-      const TEAM_DOMAIN = 'teamshotspro.com'
-      const isSeatsModel = !ownedTeam.isLegacyCredits && ownedTeam.admin.signupDomain === TEAM_DOMAIN
+      // Seats model is determined by admin's planPeriod
+      const isSeatsModel = ownedTeam.admin.planPeriod === 'seats'
       seatInfo = {
         totalSeats: ownedTeam.totalSeats,
         activeSeats: ownedTeam.activeSeats,

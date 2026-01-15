@@ -10,7 +10,9 @@ import {
   AuthorBox,
   TldrSection,
   Breadcrumb,
+  BlogHeroImage,
 } from '@/components/blog';
+import { postMeta } from './meta';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -19,8 +21,8 @@ type Props = {
 const getContent = (locale: string, brandName: string) => {
   if (locale === 'es') {
     return {
-      title: 'Headshots AI Corporativos: Guía 2025 para Equipos Remotos y RRHH',
-      description: `Guía completa de headshots AI corporativos en 2025. Ahorra 80-90% frente a fotógrafos con resultados consistentes y profesionales para equipos. Mejores prácticas y herramientas.`,
+      title: postMeta.es.title,
+      description: postMeta.es.description,
       breadcrumb: 'Headshots AI Corporativos',
       tldr: [
         '<strong>Ahorro de costos:</strong> Los headshots AI cuestan $15-50/persona vs $200-500/persona para fotografía tradicional. Eso es un ahorro del 80-90%.',
@@ -174,8 +176,8 @@ const getContent = (locale: string, brandName: string) => {
 
   // English
   return {
-    title: 'Corporate AI Headshots: 2025 Guide for Remote Teams & HR',
-    description: `Complete guide to corporate AI headshots in 2025. Save 80-90% vs photographers with consistent, professional results for teams. Best practices and tools.`,
+    title: postMeta.en.title,
+    description: postMeta.en.description,
     breadcrumb: 'Corporate AI Headshots',
     tldr: [
       '<strong>Cost savings:</strong> AI headshots cost $15-50/person vs. $200-500/person for traditional photography. That\'s 80-90% savings.',
@@ -461,6 +463,16 @@ export default async function CorporateAIHeadshotsPage({ params }: Props) {
             <p key={index} dangerouslySetInnerHTML={{ __html: item }} />
           ))}
         </TldrSection>
+
+        <BlogHeroImage
+          slug="corporate-ai-headshots"
+          alt="Remote team members viewing AI-generated professional headshots on laptops in modern office workspace"
+          caption={{
+            en: 'AI headshots provide consistent professional images for distributed teams',
+            es: 'Los headshots AI proporcionan imágenes profesionales consistentes para equipos distribuidos'
+          }}
+          locale={locale}
+        />
 
         {/* The Remote Team Headshot Problem */}
         <h2 id="the-problem" className="text-2xl font-bold mt-12 mb-4 text-gray-900">

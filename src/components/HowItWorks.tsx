@@ -57,55 +57,55 @@ const TAB_ICONS = {
 };
 
 // Icon mapping per variant and step
-const VARIANT_TAB_ICONS: Record<LandingVariant, Record<number, React.ReactNode>> = {
+const VARIANT_TAB_ICONS: Partial<Record<LandingVariant, Record<number, React.ReactNode>>> = {
   teamshotspro: {
     1: TAB_ICONS.sliders,
     2: TAB_ICONS.paperPlane,
     3: TAB_ICONS.mobilePhone,
     4: TAB_ICONS.downloadFolder,
   },
-  photoshotspro: {
+  individualshots: {
     1: TAB_ICONS.upload,
     2: TAB_ICONS.customize,
     3: TAB_ICONS.sparkle,
   },
-  coupleshotspro: {
+  coupleshots: {
     1: TAB_ICONS.upload,
     2: TAB_ICONS.customize,
     3: TAB_ICONS.sparkle,
   },
 };
 
-// Tab labels per variant
-const VARIANT_TAB_LABELS: Record<LandingVariant, Record<number, string>> = {
+// Tab label translation keys per variant
+const VARIANT_TAB_LABEL_KEYS: Partial<Record<LandingVariant, Record<number, string>>> = {
   teamshotspro: {
-    1: 'Set Brand',
-    2: 'Invite Team',
-    3: 'Team Selfie',
-    4: 'Get Assets',
+    1: 'tabs.setBrand',
+    2: 'tabs.inviteTeam',
+    3: 'tabs.teamSelfie',
+    4: 'tabs.getAssets',
   },
-  photoshotspro: {
-    1: 'Upload',
-    2: 'Customize',
-    3: 'Generate',
+  individualshots: {
+    1: 'tabs.upload',
+    2: 'tabs.customize',
+    3: 'tabs.generate',
   },
-  coupleshotspro: {
-    1: 'Upload',
-    2: 'Customize',
-    3: 'Generate',
+  coupleshots: {
+    1: 'tabs.upload',
+    2: 'tabs.customize',
+    3: 'tabs.generate',
   },
 };
 
 // Step images for TeamShotsPro
-const VARIANT_IMAGES: Record<LandingVariant, Record<number, string>> = {
+const VARIANT_IMAGES: Partial<Record<LandingVariant, Record<number, string>>> = {
   teamshotspro: {
     1: '/images/how-it-works/step-1-v2.png',
     2: '/images/how-it-works/step-2-v3.png',
     3: '/images/how-it-works/step-3-v2.png',
     4: '/images/how-it-works/step-4-v2.png',
   },
-  photoshotspro: {},
-  coupleshotspro: {},
+  individualshots: {},
+  coupleshots: {},
 };
 
 interface HowItWorksProps {
@@ -122,17 +122,18 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
 
   // Build steps dynamically based on variant
   const STEPS: Step[] = useMemo(() => {
-    const icons = VARIANT_TAB_ICONS[variant] || VARIANT_TAB_ICONS.teamshotspro;
-    const tabLabels = VARIANT_TAB_LABELS[variant] || VARIANT_TAB_LABELS.teamshotspro;
-    const images = VARIANT_IMAGES[variant] || {};
+    const icons = VARIANT_TAB_ICONS[variant] ?? VARIANT_TAB_ICONS.teamshotspro ?? {};
+    const tabLabelKeys = VARIANT_TAB_LABEL_KEYS[variant] ?? VARIANT_TAB_LABEL_KEYS.teamshotspro ?? {};
+    const images = VARIANT_IMAGES[variant] ?? {};
     const stepCount = variant === 'teamshotspro' ? 4 : 3;
 
     return Array.from({ length: stepCount }, (_, i) => {
       const stepNum = i + 1;
+      const labelKey = tabLabelKeys[stepNum];
       return {
         id: stepNum,
-        icon: icons[stepNum],
-        tabLabel: tabLabels[stepNum],
+        icon: icons[stepNum] ?? TAB_ICONS.sparkle,
+        tabLabel: labelKey ? t(labelKey) : `Step ${stepNum}`,
         image: images[stepNum],
         title: t(`steps.${stepNum}.title`),
         description: t(`steps.${stepNum}.description`),
@@ -171,7 +172,7 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-brand-secondary/5 rounded-full blur-3xl translate-y-1/3" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
 
         {/* Header */}
         <div className={`mb-10 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
@@ -264,7 +265,7 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
                 onClick={() => track('cta_clicked', { placement: 'how_it_works', action: 'signup', step: activeStep })}
                 className="inline-flex items-center justify-center px-6 py-3 bg-brand-cta text-white font-bold rounded-xl hover:bg-brand-cta-hover transition-all duration-300 shadow-depth-md hover:shadow-depth-lg hover:-translate-y-0.5"
               >
-                Try for Free
+                {t('tryForFree')}
               </Link>
               <Link
                 href="https://calendly.com/teamshotspro/demo"
@@ -273,7 +274,7 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
                 onClick={() => track('cta_clicked', { placement: 'how_it_works', action: 'book_demo', step: activeStep })}
                 className="inline-flex items-center justify-center px-6 py-3 bg-white text-text-dark font-bold rounded-xl border-2 border-gray-200 hover:border-brand-primary hover:text-brand-primary transition-all duration-300"
               >
-                Book a Demo
+                {t('bookDemo')}
               </Link>
             </div>
 
@@ -283,13 +284,13 @@ export default function HowItWorks({ variant }: HowItWorksProps) {
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span>Get 3 photos for free with fixed TeamShots branding for testing</span>
+                <span>{t('freePhotosLine')}</span>
               </p>
               <p className="flex items-center gap-2">
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
-                <span>No credit card required for test photos</span>
+                <span>{t('noCreditCardLine')}</span>
               </p>
             </div>
           </div>

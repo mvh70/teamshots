@@ -108,6 +108,13 @@ export async function GET(request: NextRequest) {
             data: {
               selfieType: result.selfieType,
               selfieTypeConfidence: result.confidence,
+              personCount: result.personCount,
+              isProper: result.isProper,
+              improperReason: result.improperReason,
+              lightingQuality: result.lightingQuality,
+              lightingFeedback: result.lightingFeedback,
+              backgroundQuality: result.backgroundQuality,
+              backgroundFeedback: result.backgroundFeedback,
             },
           })
 

@@ -25,7 +25,7 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
 
   // Derive signup type from server-provided variant (no client-side detection)
   const domainSignupType: 'individual' | 'team' | null =
-    variant === 'photoshotspro' ? 'individual' :
+    variant === 'individualshots' ? 'individual' :
     variant === 'teamshotspro' ? 'team' :
     null;
 
@@ -34,7 +34,7 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
 
     return (
       <section className="py-20 sm:py-24 lg:py-32 bg-bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-12">
           <div className="text-center mb-12 sm:mb-16 lg:mb-20 xl:mb-24">
             <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
               {t('seats.title')}
@@ -64,14 +64,14 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
           {/* Personal Plan Redirect */}
           <div className="text-center mt-12 pt-8 border-t border-bg-gray-200">
             <p className="text-base text-text-body">
-              Looking for a personal plan?{' '}
+              {t('seats.personalPlanRedirect')}{' '}
               <a
                 href="https://photoshotspro.com"
                 className="text-brand-primary font-semibold hover:underline transition-all"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Visit PhotoshotsPro.com
+                {t('seats.visitPhotoshotsPro')}
               </a>
             </p>
           </div>
@@ -127,7 +127,7 @@ export default function PricingPreview({ variant }: PricingPreviewProps) {
 
   return (
     <section className="py-20 sm:py-24 lg:py-32 bg-bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-12">
         <div className="text-center mb-12 sm:mb-16 lg:mb-20 xl:mb-24">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-text-dark mb-8 leading-tight">
             {t('title')}

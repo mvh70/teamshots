@@ -36,6 +36,7 @@ export type CategoryType = keyof Pick<
   | 'expression'
   | 'lighting'
   | 'pose'
+  | 'industry'
 >
 
 /**

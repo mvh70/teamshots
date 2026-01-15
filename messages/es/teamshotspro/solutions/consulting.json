@@ -1,0 +1,143 @@
+{
+  "hero": {
+    "badge": "Diseñado para consultoras",
+    "title": "Headshots profesionales para consultoras",
+    "subtitle": "Headshots consistentes y pulidos para cada consultor. Luce tu mejor imagen en propuestas y presentaciones a clientes.",
+    "cta": "Ver el nuevo look de tu equipo"
+  },
+  "painPoints": {
+    "title": "Por qué las consultoras luchan con las fotos de equipo",
+    "items": [
+      {
+        "title": "Consultores viajando constantemente",
+        "description": "Con consultores en proyectos de clientes todo el tiempo, coordinar una sesión de fotos grupal es casi imposible."
+      },
+      {
+        "title": "Fotos inconsistentes en propuestas",
+        "description": "El headshot de cada consultor luce diferente - socava la imagen pulida y unificada que presentas a clientes."
+      },
+      {
+        "title": "Escalado rápido del equipo",
+        "description": "Cuando creces rápido, tener nuevas incorporaciones listas para su primera reunión con cliente es un desafío constante."
+      }
+    ],
+    "solution": "TeamShotsPro resuelve todo esto en 60 segundos."
+  },
+  "showcase": {
+    "title": "Transformaciones de equipos de consultoría",
+    "subtitle": "Resultados antes y después de equipos de consultoría reales"
+  },
+  "howItWorks": {
+    "title": "Cómo funciona para consultoras",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Configura el estilo de tu firma",
+        "description": "Elige un look pulido y profesional que represente la experiencia de tu firma."
+      },
+      {
+        "number": "2",
+        "title": "Invita consultores por email",
+        "description": "Envía invitaciones a socios, managers y analistas - donde sea que estén."
+      },
+      {
+        "number": "3",
+        "title": "Los consultores se toman una selfie",
+        "description": "Sin necesidad de visitar la oficina. Funciona desde clientes, aeropuertos u oficinas en casa."
+      },
+      {
+        "number": "4",
+        "title": "Descarga para todas las plataformas",
+        "description": "Obtén fotos consistentes listas para propuestas, bios y perfiles de LinkedIn."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Opciones de headshots para consultoras comparadas",
+    "headers": ["Característica", "Fotógrafo tradicional", "TeamShotsPro"],
+    "rows": [
+      ["Coste por consultor", "€300-500", "€26"],
+      ["Tiempo de programación", "2-3 semanas", "60 segundos"],
+      ["Consistencia de marca", "Variable", "100%"],
+      ["Consultores remotos", "Imposible", "Fácil"],
+      ["Onboarding nuevos", "Semanas", "Mismo día"]
+    ]
+  },
+  "useCases": {
+    "title": "Dónde usan sus headshots las consultoras",
+    "platforms": [
+      { "name": "Web corporativa", "icon": "monitor" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Propuestas a clientes", "icon": "file-text" },
+      { "name": "Tarjetas de visita", "icon": "credit-card" },
+      { "name": "Casos de estudio", "icon": "book-open" },
+      { "name": "Bios de ponentes", "icon": "mic" }
+    ]
+  },
+  "testimonials": {
+    "title": "Lo que dicen las consultoras",
+    "items": [
+      {
+        "quote": "Las páginas de equipo en nuestras propuestas finalmente lucen unificadas. Los clientes notan el profesionalismo inmediatamente.",
+        "author": "Sara M.",
+        "role": "Socia",
+        "company": "Consultora de gestión"
+      },
+      {
+        "quote": "Con consultores en 15 países, la fotografía tradicional era imposible. TeamShotsPro lo resolvió al instante.",
+        "author": "Miguel R.",
+        "role": "Director de RRHH",
+        "company": "Firma de estrategia global"
+      },
+      {
+        "quote": "Los nuevos consultores tienen sus headshots antes de su primera reunión con cliente. Ha transformado nuestro onboarding.",
+        "author": "Jennifer L.",
+        "role": "Gerente de operaciones",
+        "company": "Boutique de asesoría"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Preguntas sobre fotos para consultoras",
+    "items": [
+      {
+        "question": "¿Qué deben vestir los consultores?",
+        "answer": "Business professional funciona mejor - blazers, trajes o casual elegante dependiendo de la cultura de tu firma. Los colores sólidos fotografían bien."
+      },
+      {
+        "question": "¿Pueden los consultores enviar desde clientes?",
+        "answer": "Sí. Los consultores pueden enviar su selfie desde cualquier lugar - oficinas de clientes, aeropuertos, hoteles o casa. Solo buena iluminación y fondo sencillo."
+      },
+      {
+        "question": "¿Cómo aseguramos consistencia entre oficinas?",
+        "answer": "Configura las preferencias de estilo del equipo una vez. El headshot de cada consultor coincidirá con las guías de marca automáticamente."
+      },
+      {
+        "question": "¿Podemos usar estas fotos en propuestas?",
+        "answer": "Absolutamente. Nuestros headshots son de alta resolución y perfectos para propuestas, pitch decks y materiales impresos."
+      },
+      {
+        "question": "¿Ofrecéis precios enterprise?",
+        "answer": "Sí. Ofrecemos descuentos por volumen para firmas con 25+ consultores. Contáctanos para precios personalizados."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Precios simples para consultoras",
+    "subtitle": "La mayoría de firmas eligen el plan de 50 plazas"
+  },
+  "finalCta": {
+    "title": "¿Listo para transformar la imagen de tu firma?",
+    "subtitle": "Obtén headshots profesionales y consistentes para todo tu equipo sin las complicaciones de la fotografía tradicional.",
+    "cta": "Ver el nuevo look de tu equipo"
+  },
+  "seo": {
+    "title": "Headshots con IA para consultoras | TeamShotsPro",
+    "description": "Obtén headshots consistentes y profesionales para todo tu equipo de consultoría en 60 segundos. Perfecto para propuestas, LinkedIn y presentaciones a clientes."
+  },
+  "stylingNotes": [
+    "Business professional o casual elegante según cultura de la firma",
+    "Fondo limpio y neutro",
+    "Expresión confiada y cercana que transmita experiencia"
+  ]
+}

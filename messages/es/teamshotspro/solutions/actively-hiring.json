@@ -1,16 +1,143 @@
 {
-  "heroTitle": "Fotos de nuevos empleados en minutos",
-  "heroSubtitle": "Integra equipos completos con retratos profesionales. Sin fotógrafo, sin caos de programación. Obtén 20+ fotos de empleados en una hora para directorios, credenciales y páginas de equipo.",
-  "bullets": [
-    "Integra nuevos empleados más rápido con fotos profesionales instantáneas",
-    "Estilo consistente en todos los empleados y departamentos",
-    "Perfecto para directorios de equipo, credenciales de seguridad y perfiles de Slack"
-  ],
-  "seoTitle": "Fotos de nuevos empleados para empresas en rápido crecimiento",
-  "seoDescription": "Agiliza la integración de empleados con fotos profesionales AI. Genera fotos profesionales para nuevos empleados en minutos. Perfecto para equipos de RRHH.",
+  "hero": {
+    "badge": "Diseñado para equipos en crecimiento",
+    "title": "Headshots profesionales para equipos en crecimiento",
+    "subtitle": "Incorpora nuevos empleados con headshots profesionales en 60 segundos. Sin fotógrafo, sin caos de programación.",
+    "cta": "Ver el nuevo look de tu equipo"
+  },
+  "painPoints": {
+    "title": "Por qué las empresas en crecimiento luchan con las fotos",
+    "items": [
+      {
+        "title": "Nuevas incorporaciones cada semana",
+        "description": "Cuando contratas 5-10 personas al mes, coordinar sesiones de fotos se convierte en un trabajo a tiempo completo."
+      },
+      {
+        "title": "Fotos de empleados inconsistentes",
+        "description": "Algunos empleados tienen headshots profesionales, otros tienen selfies, y los nuevos no tienen nada."
+      },
+      {
+        "title": "Fuerza laboral remota e híbrida",
+        "description": "Con miembros del equipo en múltiples ciudades y países, las sesiones de fotos presenciales son imposibles."
+      }
+    ],
+    "solution": "TeamShotsPro resuelve todo esto en 60 segundos."
+  },
+  "showcase": {
+    "title": "Transformaciones de equipos",
+    "subtitle": "Resultados antes y después de empresas en crecimiento reales"
+  },
+  "howItWorks": {
+    "title": "Cómo funciona para equipos en crecimiento",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Configura el estilo de tu empresa",
+        "description": "Elige un look que coincida con la cultura y marca de tu empresa."
+      },
+      {
+        "number": "2",
+        "title": "Añade al flujo de onboarding",
+        "description": "Incluye invitaciones de headshot en tu checklist de onboarding de nuevos empleados."
+      },
+      {
+        "number": "3",
+        "title": "Los nuevos se toman una selfie",
+        "description": "Funciona desde cualquier lugar - oficina en casa, coworking o sede central."
+      },
+      {
+        "number": "4",
+        "title": "Descarga para todas las plataformas",
+        "description": "Obtén fotos consistentes listas para Slack, directorios y páginas de equipo."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Opciones de headshots para empleados comparadas",
+    "headers": ["Característica", "Fotógrafo tradicional", "TeamShotsPro"],
+    "rows": [
+      ["Coste por empleado", "€200-400", "€26"],
+      ["Tiempo de programación", "2-4 semanas", "60 segundos"],
+      ["Consistencia de marca", "Variable", "100%"],
+      ["Empleados remotos", "Imposible", "Fácil"],
+      ["Listo el primer día", "Nunca", "Siempre"]
+    ]
+  },
+  "useCases": {
+    "title": "Dónde usan sus headshots los equipos en crecimiento",
+    "platforms": [
+      { "name": "Página de carreras", "icon": "users" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Perfiles de Slack", "icon": "mail" },
+      { "name": "Directorio de equipo", "icon": "building" },
+      { "name": "Glassdoor", "icon": "globe" },
+      { "name": "Blog corporativo", "icon": "file-text" }
+    ]
+  },
+  "testimonials": {
+    "title": "Lo que dicen los equipos en crecimiento",
+    "items": [
+      {
+        "quote": "Incorporamos 30 nuevos empleados en Q4. Todos tenían su headshot listo el primer día.",
+        "author": "Taylor R.",
+        "role": "Responsable de People Ops",
+        "company": "Startup Serie B"
+      },
+      {
+        "quote": "Nuestras fotos de Glassdoor finalmente lucen consistentes. Los candidatos notan la diferencia.",
+        "author": "Jordan M.",
+        "role": "Gerente de recruiting",
+        "company": "Scale-up tecnológica"
+      },
+      {
+        "quote": "Somos totalmente remotos en 12 países. TeamShotsPro fue la única solución que realmente funcionó.",
+        "author": "Alex K.",
+        "role": "Director de RRHH",
+        "company": "SaaS global"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Preguntas sobre fotos para equipos en crecimiento",
+    "items": [
+      {
+        "question": "¿Qué deben vestir los empleados?",
+        "answer": "Adapta al código de vestimenta de tu empresa - casual de negocios para la mayoría de empresas tech, o lo que refleje la personalidad de tu equipo. La consistencia importa más que la formalidad."
+      },
+      {
+        "question": "¿Cómo manejamos empleados remotos?",
+        "answer": "Solo envíales un enlace de invitación. Pueden enviar su selfie desde cualquier lugar del mundo."
+      },
+      {
+        "question": "¿Podemos integrar con nuestro HRIS?",
+        "answer": "Sí. Ofrecemos integraciones con los principales sistemas de RRHH para automatizar el flujo de onboarding."
+      },
+      {
+        "question": "¿Qué pasa con empleados que ya tienen headshots?",
+        "answer": "Sin problema. Puedes regenerar con nuestro sistema para consistencia, o mantener sus fotos existentes."
+      },
+      {
+        "question": "¿Ofrecéis precios para startups?",
+        "answer": "Sí. Ofrecemos descuentos por volumen y planes flexibles para equipos en rápido crecimiento. Contáctanos para precios personalizados."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Precios simples para empresas en crecimiento",
+    "subtitle": "La mayoría de equipos en crecimiento eligen el plan de 50 plazas"
+  },
+  "finalCta": {
+    "title": "¿Listo para optimizar las fotos de tu equipo?",
+    "subtitle": "Incorpora nuevos empleados con headshots profesionales al instante, sin el caos de la fotografía tradicional.",
+    "cta": "Ver el nuevo look de tu equipo"
+  },
+  "seo": {
+    "title": "Headshots con IA para empresas en crecimiento | TeamShotsPro",
+    "description": "Incorpora nuevos empleados con headshots profesionales en 60 segundos. Perfecto para directorios de equipo, perfiles de Slack y páginas de carreras."
+  },
   "stylingNotes": [
-    "Coincide con el código de vestimenta de tu empresa (formal, casual, informal)",
-    "Fondos con marca en colores de la empresa",
-    "Expresiones amigables y accesibles para la cultura interna del equipo"
+    "Adapta al código de vestimenta de tu empresa (formal, casual de negocios, casual)",
+    "Fondos con marca en colores de empresa",
+    "Expresiones amigables y cercanas para la cultura interna del equipo"
   ]
 }

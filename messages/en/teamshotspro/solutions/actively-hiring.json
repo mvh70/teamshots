@@ -1,13 +1,140 @@
 {
-  "heroTitle": "New hire headshots in minutes",
-  "heroSubtitle": "Onboard entire teams with professional headshots. No photographer, no scheduling chaos. Get 20+ employee photos in an hour for directories, badges, and team pages.",
-  "bullets": [
-    "Onboard new hires faster with instant professional photos",
-    "Consistent style across all employees and departments",
-    "Perfect for team directories, security badges, and Slack profiles"
-  ],
-  "seoTitle": "New hire headshots for fast-growing companies",
-  "seoDescription": "Streamline employee onboarding with AI headshots. Generate professional photos for new hires in minutes. Perfect for HR teams managing rapid growth.",
+  "hero": {
+    "badge": "Built for fast-growing teams",
+    "title": "Professional Team Headshots for Growing Teams",
+    "subtitle": "Onboard new hires with professional headshots in 60 seconds. No photographer, no scheduling chaos.",
+    "cta": "See Your Team's New Look"
+  },
+  "painPoints": {
+    "title": "Why Fast-Growing Companies Struggle with Photos",
+    "items": [
+      {
+        "title": "New hires every week",
+        "description": "When you're hiring 5-10 people a month, coordinating photo sessions becomes a full-time job."
+      },
+      {
+        "title": "Inconsistent employee photos",
+        "description": "Some employees have professional headshots, others have selfies, and new hires have nothing at all."
+      },
+      {
+        "title": "Remote and hybrid workforce",
+        "description": "With team members across multiple cities and countries, in-person photo sessions are impossible."
+      }
+    ],
+    "solution": "TeamShotsPro solves all of this in 60 seconds."
+  },
+  "showcase": {
+    "title": "See Team Transformations",
+    "subtitle": "Before and after results from actual growing companies"
+  },
+  "howItWorks": {
+    "title": "How It Works for Fast-Growing Teams",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Set your company style",
+        "description": "Choose a look that matches your company culture and brand."
+      },
+      {
+        "number": "2",
+        "title": "Add to your onboarding flow",
+        "description": "Include headshot invites in your new hire onboarding checklist."
+      },
+      {
+        "number": "3",
+        "title": "New hires snap a selfie",
+        "description": "Works from anywhere - home office, co-working space, or HQ."
+      },
+      {
+        "number": "4",
+        "title": "Download for all platforms",
+        "description": "Get consistent photos ready for Slack, directories, and team pages."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Employee Headshot Options Compared",
+    "headers": ["Feature", "Traditional Photographer", "TeamShotsPro"],
+    "rows": [
+      ["Cost per employee", "$200-400", "$26"],
+      ["Time to schedule", "2-4 weeks", "60 seconds"],
+      ["Brand consistency", "Variable", "100%"],
+      ["Remote employees", "Impossible", "Easy"],
+      ["Day-one ready", "Never", "Always"]
+    ]
+  },
+  "useCases": {
+    "title": "Where Growing Teams Use Their Headshots",
+    "platforms": [
+      { "name": "Careers Page", "icon": "users" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Slack Profiles", "icon": "mail" },
+      { "name": "Team Directory", "icon": "building" },
+      { "name": "Glassdoor", "icon": "globe" },
+      { "name": "Company Blog", "icon": "file-text" }
+    ]
+  },
+  "testimonials": {
+    "title": "What Fast-Growing Teams Say",
+    "items": [
+      {
+        "quote": "We onboarded 30 new hires in Q4. Every single one had their headshot ready on day one.",
+        "author": "Taylor R.",
+        "role": "People Ops Lead",
+        "company": "Series B Startup"
+      },
+      {
+        "quote": "Our Glassdoor photos finally look consistent. Candidates notice the difference.",
+        "author": "Jordan M.",
+        "role": "Recruiting Manager",
+        "company": "Tech Scale-up"
+      },
+      {
+        "quote": "We're fully remote across 12 countries. TeamShotsPro was the only solution that actually worked.",
+        "author": "Alex K.",
+        "role": "HR Director",
+        "company": "Global SaaS Company"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Fast-Growing Team Photo Questions",
+    "items": [
+      {
+        "question": "What should employees wear?",
+        "answer": "Match your company culture - business casual for most tech companies, or whatever reflects your team's vibe. Consistency matters more than formality."
+      },
+      {
+        "question": "How do we handle remote employees?",
+        "answer": "Just send them an invite link. They can submit their selfie from anywhere in the world."
+      },
+      {
+        "question": "Can we integrate with our HRIS?",
+        "answer": "Yes. We offer integrations with major HR systems to automate the onboarding flow."
+      },
+      {
+        "question": "What about employees who already have headshots?",
+        "answer": "No problem. You can regenerate with our system for consistency, or keep their existing photos."
+      },
+      {
+        "question": "Do you offer startup pricing?",
+        "answer": "Yes. We offer volume discounts and flexible plans for fast-growing teams. Contact us for custom pricing."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Simple Team Pricing for Growing Companies",
+    "subtitle": "Most fast-growing teams choose the 50-seat plan"
+  },
+  "finalCta": {
+    "title": "Ready to Streamline Your Team Photos?",
+    "subtitle": "Get professional headshots for new hires instantly, without the scheduling chaos of traditional photography.",
+    "cta": "See Your Team's New Look"
+  },
+  "seo": {
+    "title": "AI Headshots for Fast-Growing Companies | TeamShotsPro",
+    "description": "Onboard new hires with professional headshots in 60 seconds. Perfect for team directories, Slack profiles, and career pages."
+  },
   "stylingNotes": [
     "Match your company's dress code (business, business casual, casual)",
     "Branded backgrounds with company colors",

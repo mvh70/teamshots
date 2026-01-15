@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { ReactElement } from 'react'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { BLOG_POSTS, isKnownBlogSlug } from '@/config/blog'
@@ -10,10 +11,11 @@ type Props = {
 const POST_MODULES: Record<
   string,
   () => Promise<{
-    default: (props: { params: Promise<{ locale: string }> }) => Promise<JSX.Element>
+    default: (props: { params: Promise<{ locale: string }> }) => Promise<ReactElement>
     generateMetadata?: (props: { params: Promise<{ locale: string }> }) => Promise<Metadata>
   }>
 > = {
+  'average-cost-professional-headshots': () => import('../average-cost-professional-headshots/page'),
   'ai-headshots-for-linkedin': () => import('../ai-headshots-for-linkedin/page'),
   'best-ai-headshot-generators': () => import('../best-ai-headshot-generators/page'),
   'corporate-ai-headshots': () => import('../corporate-ai-headshots/page'),
@@ -56,6 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
   const { locale, slug } = await params
+
   if (!isKnownBlogSlug(slug) || !POST_MODULES[slug]) {
     notFound()
   }

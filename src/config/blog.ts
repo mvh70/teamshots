@@ -1,5 +1,16 @@
 import type { LandingVariant } from '@/config/landing-content'
 
+// Import metadata from blog posts (separate meta.ts files to avoid client/server conflicts)
+import { postMeta as averageCostMeta } from '@/app/[locale]/blog/average-cost-professional-headshots/meta'
+import { postMeta as corporateAiHeadshotsMeta } from '@/app/[locale]/blog/corporate-ai-headshots/meta'
+import { postMeta as remoteOnboardingMeta } from '@/app/[locale]/blog/remote-onboarding-broken/meta'
+
+/** Localized metadata type for blog posts */
+export type PostMeta = {
+  en: { title: string; description: string }
+  es: { title: string; description: string }
+}
+
 export type BlogPostCategory =
   | 'teams'
   | 'hr'
@@ -14,20 +25,42 @@ export type BlogPost = {
   allowedVariants: readonly LandingVariant[]
   /** Optional: used by the blog index for grouping/filtering */
   category: BlogPostCategory
-  /** Title for the blog post card */
+  /** Title for the blog post card (fallback if no meta) */
   title: string
-  /** Short description for the blog post card */
+  /** Short description for the blog post card (fallback if no meta) */
   description: string
+  /** Localized metadata imported from the blog post page */
+  meta?: PostMeta
   /** Publication date */
   date?: string
   /** Estimated read time */
   readTime?: string
   /** Featured image for the blog post */
   image?: string
+  /** Alt text for the featured image (accessibility) */
+  imageAlt?: string
   /** Author name */
   author?: string
   /** Whether this post should be featured (hero section) */
   featured?: boolean
+}
+
+/** Helper to get localized blog post title */
+export function getBlogPostTitle(post: BlogPost, locale: string): string {
+  if (post.meta) {
+    const l = locale === 'es' ? 'es' : 'en'
+    return post.meta[l].title
+  }
+  return post.title
+}
+
+/** Helper to get localized blog post description */
+export function getBlogPostDescription(post: BlogPost, locale: string): string {
+  if (post.meta) {
+    const l = locale === 'es' ? 'es' : 'en'
+    return post.meta[l].description
+  }
+  return post.description
 }
 
 /** Category display configuration */
@@ -50,29 +83,46 @@ export const BLOG_CATEGORIES: Record<BlogPostCategory, { label: string; color: s
  * - coupleshots / familyshots: seasonal lifestyle (none yet)
  */
 export const BLOG_POSTS: readonly BlogPost[] = [
+  {
+    slug: 'average-cost-professional-headshots',
+    allowedVariants: ['teamshotspro'],
+    category: 'guides',
+    title: averageCostMeta.en.title,
+    description: averageCostMeta.en.description,
+    meta: averageCostMeta,
+    date: '2026-01-14',
+    readTime: '12 min read',
+    author: 'TeamShotsPro Team',
+    image: '/blog/average-cost-professional-headshots.png?v=1768472977464',
+    imageAlt: 'HR director laughing at cost savings on tablet while a photography crew struggles with heavy expensive gear in the background.',
+  },
   // TeamShotsPro silo (B2B)
   {
     slug: 'corporate-ai-headshots',
     allowedVariants: ['teamshotspro'],
     category: 'teams',
-    title: 'Corporate AI Headshots: 2025 Guide for Remote Teams & HR',
-    description:
-      'Complete guide to corporate AI headshots in 2025. Save 80-90% vs. photographers with consistent, professional results for teams. Best practices and tools.',
+    title: corporateAiHeadshotsMeta.en.title,
+    description: corporateAiHeadshotsMeta.en.description,
+    meta: corporateAiHeadshotsMeta,
     date: '2025-01-10',
     readTime: '8 min read',
     author: 'TeamShotsPro Team',
     featured: true,
+    image: '/blog/corporate-ai-headshots.png?v=1768472921672',
+    imageAlt: 'HR manager triumphantly holding up a tablet with AI headshots in a lush greenhouse cafe, celebrating effortless remote team coordination.',
   },
   {
     slug: 'remote-onboarding-broken',
     allowedVariants: ['teamshotspro'],
     category: 'hr',
-    title: "Remote Onboarding Is Broken (Here's How AI Headshots Fix It)",
-    description:
-      'Why remote onboarding feels disconnected and how AI headshots create consistency for distributed teams. Practical guide for HR professionals.',
+    title: remoteOnboardingMeta.en.title,
+    description: remoteOnboardingMeta.en.description,
+    meta: remoteOnboardingMeta,
     date: '2025-01-08',
     readTime: '6 min read',
     author: 'TeamShotsPro Team',
+    image: '/blog/remote-onboarding-broken.png?v=1768472852340',
+    imageAlt: 'HR manager laughing on rooftop as wind blows onboarding papers away, symbolizing chaotic remote work logistics',
   },
 
   // IndividualShots silo (consumer / personal branding)
@@ -92,10 +142,10 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     slug: 'professional-headshot-photography-cost',
     allowedVariants: ['individualshots'],
     category: 'guides',
-    title: 'Professional Headshot Photography Cost in 2025',
+    title: 'Professional Headshot Photography Cost (2026): Team Pricing vs. AI',
     description:
-      'What do professional headshots cost in 2025? Compare traditional photography vs AI headshots. Pricing guide and value breakdown.',
-    date: '2025-01-11',
+      'Save 90% on Team Sessions. Complete professional headshot pricing guide: individual sessions ($100-500) to corporate groups ($30-75/person). Compare with AI alternatives.',
+    date: '2026-01-14',
     readTime: '6 min read',
     author: 'PhotoShotsPro Team',
   },

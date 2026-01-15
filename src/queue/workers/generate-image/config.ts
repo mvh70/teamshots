@@ -44,11 +44,11 @@ export const COMPOSITION_CONFIG = {
 
 // Evaluation Tolerances
 export const EVALUATION_CONFIG = {
-  /** Tolerance for dimension mismatch (pixels) */
-  DIMENSION_TOLERANCE_PX: 2,
-  
-  /** Tolerance for aspect ratio mismatch (ratio) */
-  ASPECT_RATIO_TOLERANCE: 0.02
+  /** Tolerance for dimension mismatch (pixels) - generous to allow model variations */
+  DIMENSION_TOLERANCE_PX: 50,
+
+  /** Tolerance for aspect ratio mismatch (ratio) - 5% to handle model variations */
+  ASPECT_RATIO_TOLERANCE: 0.05
 } as const
 
 // AI Generation Parameters

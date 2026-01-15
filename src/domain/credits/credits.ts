@@ -488,7 +488,20 @@ export async function reserveCreditsForGeneration(
       type UsageTransaction = typeof usageTransactions[number];
       const netCreditsUsed = usageTransactions.reduce((sum: number, t: UsageTransaction) => sum - t.credits, 0)
 
-      balance = Math.max(0, totalAllocated - netCreditsUsed)
+      // Also get personal credits (like free trial) that don't have a teamId
+      // These are the person's own credits, not team credits
+      const personalCredits = await tx.creditTransaction.aggregate({
+        where: {
+          personId,
+          teamId: null, // Only personal credits, not team credits
+          type: { notIn: ['generation', 'refund'] } // Exclude usage tracking (already counted above)
+        },
+        _sum: { credits: true }
+      })
+      const personalBalance = personalCredits._sum.credits || 0
+
+      // Balance = allocation + personal credits - net usage
+      balance = Math.max(0, totalAllocated + personalBalance - netCreditsUsed)
     } else {
       // Standard balance - all credits stored under personId
       const balanceResult = await tx.creditTransaction.aggregate({

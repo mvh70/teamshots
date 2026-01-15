@@ -13,6 +13,7 @@ import { clothingElementConfig } from './clothing/config'
 import { clothingColorsElementConfig } from './clothing-colors/config'
 import { customClothingElementConfig } from './custom-clothing/config'
 import { expressionElementConfig } from './expression/config'
+import { industryElementConfig } from './industry/config'
 import { lightingElementConfig } from './lighting/config'
 import { poseElementConfig } from './pose/config'
 import { shotTypeElementConfig } from './shot-type/config'
@@ -27,5 +28,6 @@ registerElement('expression', expressionElementConfig)
 registerElement('lighting', lightingElementConfig)
 registerElement('pose', poseElementConfig)
 registerElement('shotType', shotTypeElementConfig)
+registerElement('industry', industryElementConfig)
 
 // Note: 'style' element is not included as it appears to be deprecated/unused

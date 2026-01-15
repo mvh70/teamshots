@@ -7,6 +7,8 @@ export interface CustomizationStepsMeta {
   allSteps: number
   /** Zero-based indices (within allSteps) that should render as locked dots. */
   lockedSteps: number[]
+  /** Step names for tooltips, in order matching allSteps indices. */
+  stepNames?: string[]
 }
 
 export const DEFAULT_CUSTOMIZATION_STEPS_META: CustomizationStepsMeta = {

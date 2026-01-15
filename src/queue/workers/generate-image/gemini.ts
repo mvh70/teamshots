@@ -167,45 +167,63 @@ function convertToRestOptions(options?: GenerationOptions) {
  * @param preferredProvider Optional provider to prioritize first (for load balancing)
  */
 function buildProviderOrder(preferredProvider?: GeminiProvider): GeminiProvider[] {
-  const hasApiKey = !!Env.string('GOOGLE_CLOUD_API_KEY', '')
+  // Support both GOOGLE_CLOUD_API_KEY and GEMINI_API_KEY for REST API
+  const hasApiKey = !!Env.string('GOOGLE_CLOUD_API_KEY', '') || !!Env.string('GEMINI_API_KEY', '')
   // GOOGLE_APPLICATION_CREDENTIALS JSON file contains project_id, so we only need to check for that
   const hasServiceAccount = !!Env.string('GOOGLE_APPLICATION_CREDENTIALS', '')
   const hasReplicate = !!Env.string('REPLICATE_API_TOKEN', '')
   const hasOpenRouter = !!Env.string('OPENROUTER_API_KEY', '')
+
+  // Check if model requires Google AI Studio REST API (not available on OpenRouter or Vertex)
+  const imageModel = Env.string('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash')
+  const isGemini3Model = imageModel.includes('gemini-3-pro')
+
+  // Gemini 3 Pro models are ONLY available via Google AI Studio REST API
+  // Not available on: OpenRouter, Vertex AI, or Replicate
+  const openRouterAvailable = hasOpenRouter && !isGemini3Model
+  const vertexAvailable = hasServiceAccount && !isGemini3Model
+  const replicateAvailable = hasReplicate && !isGemini3Model
 
   Logger.debug('Building provider order - checking credentials', {
     hasApiKey,
     hasServiceAccount,
     hasReplicate,
     hasOpenRouter,
+    openRouterAvailable,
+    vertexAvailable,
+    replicateAvailable,
+    imageModel,
+    isGemini3Model,
     preferredProvider
   })
 
   // Use preferred provider if specified, otherwise use env var default
-  const primaryProvider = preferredProvider ?? (Env.string('GEMINI_PRIMARY_PROVIDER', 'openrouter') as GeminiProvider)
+  // If Gemini 3 model, default to 'rest' instead of 'openrouter'
+  const defaultProvider = isGemini3Model ? 'rest' : 'openrouter'
+  const primaryProvider = preferredProvider ?? (Env.string('GEMINI_PRIMARY_PROVIDER', defaultProvider) as GeminiProvider)
   const providers: GeminiProvider[] = []
 
   // Add primary provider first if available
-  if (primaryProvider === 'openrouter' && hasOpenRouter) {
+  if (primaryProvider === 'openrouter' && openRouterAvailable) {
     providers.push('openrouter')
     Logger.debug('Added openrouter as primary provider')
-  } else if (primaryProvider === 'vertex' && hasServiceAccount) {
+  } else if (primaryProvider === 'vertex' && vertexAvailable) {
     providers.push('vertex')
     Logger.debug('Added vertex as primary provider')
   } else if (primaryProvider === 'rest' && hasApiKey) {
     providers.push('rest')
     Logger.debug('Added rest as primary provider')
-  } else if (primaryProvider === 'replicate' && hasReplicate) {
+  } else if (primaryProvider === 'replicate' && replicateAvailable) {
     providers.push('replicate')
     Logger.debug('Added replicate as primary provider')
   }
 
   // Add remaining providers as fallbacks (in order of preference)
-  if (!providers.includes('openrouter') && hasOpenRouter) {
+  if (!providers.includes('openrouter') && openRouterAvailable) {
     providers.push('openrouter')
     Logger.debug('Added openrouter as fallback')
   }
-  if (!providers.includes('vertex') && hasServiceAccount) {
+  if (!providers.includes('vertex') && vertexAvailable) {
     providers.push('vertex')
     Logger.debug('Added vertex as fallback')
   }
@@ -213,7 +231,7 @@ function buildProviderOrder(preferredProvider?: GeminiProvider): GeminiProvider[
     providers.push('rest')
     Logger.debug('Added rest as fallback')
   }
-  if (!providers.includes('replicate') && hasReplicate) {
+  if (!providers.includes('replicate') && replicateAvailable) {
     providers.push('replicate')
     Logger.debug('Added replicate as fallback')
   }
@@ -222,7 +240,9 @@ function buildProviderOrder(preferredProvider?: GeminiProvider): GeminiProvider[
     providers,
     providerCount: providers.length,
     primaryProvider,
-    preferredProvider
+    preferredProvider,
+    imageModel,
+    isGemini3Model
   })
 
   return providers

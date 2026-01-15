@@ -136,40 +136,21 @@ export default function SeatsPricingCard({
             const clampedValue = Math.max(newValue, minSeats);
             setSeats(clampedValue);
           }}
-          className="w-full h-3 bg-indigo-100 rounded-lg appearance-none cursor-pointer slider-thumb mb-3"
+          className="w-full h-3 bg-indigo-100 rounded-lg appearance-none cursor-pointer slider-thumb"
           style={{
             background: `linear-gradient(to right, #4F46E5 0%, #4F46E5 ${((validatedSeats - minSeats) / (200 - minSeats)) * 100}%, #E0E7FF ${((validatedSeats - minSeats) / (200 - minSeats)) * 100}%, #E0E7FF 100%)`
           }}
         />
-
-        {/* Quick select buttons - aligned with volume tier breakpoints */}
-        <div className="flex gap-2 flex-wrap justify-center">
-          {[2, 5, 10, 25, 100, 200]
-            .filter(count => count > minSeats)
-            .map((count) => (
-              <button
-                key={count}
-                onClick={() => setSeats(count)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  validatedSeats === count
-                    ? 'bg-brand-primary text-white'
-                    : 'bg-gray-50 text-gray-600 hover:bg-indigo-100'
-                }`}
-              >
-                {count}
-              </button>
-            ))}
-        </div>
       </div>
 
       {/* Pricing Display */}
       <div className="text-center mb-6">
         <div className="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold mb-3">
-          One-time payment • No subscription
+          {t('seats.oneTimePayment')}
         </div>
         {isTopUpMode && currentSeats > 0 && (
           <div className="text-sm text-gray-600 mb-3">
-            Current: {currentSeats} {currentSeats === 1 ? 'seat' : 'seats'} → New total: {validatedSeats} {validatedSeats === 1 ? 'seat' : 'seats'}
+            {t('seats.currentToNew', { current: currentSeats, total: validatedSeats })}
           </div>
         )}
 
@@ -196,12 +177,12 @@ export default function SeatsPricingCard({
         ) : (
           <div className="text-lg text-gray-600 mb-2">
             {isTopUpMode ? (
-              <>${(topUpTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total for {additionalSeats} {additionalSeats === 1 ? 'seat' : 'seats'}</>
+              <>{t('seats.totalForSeats', { amount: (topUpTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), count: additionalSeats })}</>
             ) : (
               <>
                 ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total
                 {savings > 0 && (
-                  <span className="text-green-600 font-semibold"> · Save ${savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-green-600 font-semibold"> · {t('seats.saveDollar', { amount: savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })}</span>
                 )}
               </>
             )}
@@ -251,10 +232,7 @@ export default function SeatsPricingCard({
         useBrandCtaColors
         className="w-full"
       >
-        {isTopUpMode
-          ? `Buy ${additionalSeats} ${additionalSeats === 1 ? 'seat' : 'seats'}`
-          : `Buy ${validatedSeats} ${validatedSeats === 1 ? 'seat' : 'seats'}`
-        }
+{t('seats.buySeats', { count: isTopUpMode ? additionalSeats : validatedSeats })}
       </CheckoutButton>
     </div>
   );

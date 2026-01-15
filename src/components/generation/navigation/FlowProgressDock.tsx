@@ -2,12 +2,13 @@
 
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { CheckIcon, LockClosedIcon, InformationCircleIcon, SparklesIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { CheckIcon, LockClosedIcon, InformationCircleIcon, SparklesIcon, PlusIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { CheckIcon as CheckIconSolid } from '@heroicons/react/24/solid'
 import { useTranslations } from 'next-intl'
 import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
 import Tooltip from '@/components/ui/Tooltip'
 import { SmallLoadingSpinner } from '@/components/ui/LoadingSpinner'
+import type { CustomizationStepsMeta } from '@/lib/customizationSteps'
 
 type StepState = 'locked' | 'incomplete' | 'active' | 'complete' | 'ready'
 
@@ -45,14 +46,7 @@ interface FlowProgressDockProps {
   /** Action to buy credits */
   onBuyCredits?: () => void
   /** Customization steps metadata for progress dots */
-  customizationStepsMeta?: {
-    /** Total number of editable steps */
-    editableSteps: number
-    /** Total number of all steps (editable + locked) */
-    allSteps: number
-    /** Indices of locked steps */
-    lockedSteps: number[]
-  }
+  customizationStepsMeta?: CustomizationStepsMeta
   /** Indices of visited/completed editable steps */
   visitedEditableSteps?: number[]
 }
@@ -210,33 +204,39 @@ export default function FlowProgressDock({
   const renderCustomizationDots = () => {
     if (!customizationStepsMeta || customizationStepsMeta.allSteps === 0) return null
 
-    const { allSteps } = customizationStepsMeta
+    const { allSteps, stepNames } = customizationStepsMeta
     const isOnCustomize = currentStep === 'customize'
 
     return (
-      <div className="flex items-center justify-center gap-1.5">
+      <div className="flex items-center justify-center gap-2">
         {Array.from({ length: allSteps }).map((_, idx) => {
           const isLocked = lockedSet.has(idx)
           const isVisited = visitedSet.has(idx)
+          const stepName = stepNames?.[idx] || ''
 
           if (isLocked) {
-            // Locked steps show a tiny lock icon
-            return (
-              <div
-                key={`dot-lock-${idx}`}
-                className="w-2 h-2 rounded-full bg-gray-100 flex items-center justify-center"
-              >
-                <LockClosedIcon className="h-1.5 w-1.5 text-gray-300" />
+            // Locked steps show a lock icon with tooltip
+            const lockedDot = (
+              <div className="w-3 h-3 rounded-full bg-gray-100 flex items-center justify-center cursor-help">
+                <LockClosedIcon className="h-2 w-2 text-gray-300" />
               </div>
             )
+
+            if (stepName) {
+              return (
+                <Tooltip key={`dot-lock-${idx}`} content={stepName} position="top">
+                  {lockedDot}
+                </Tooltip>
+              )
+            }
+            return <div key={`dot-lock-${idx}`}>{lockedDot}</div>
           }
 
           // Editable steps: green if visited AND on customize page, otherwise grey
-          return (
+          const editableDot = (
             <span
-              key={`dot-${idx}`}
               className={`
-                h-2 w-2 rounded-full transition-all duration-300
+                block h-3 w-3 rounded-full transition-all duration-300 cursor-help
                 ${isVisited && isOnCustomize
                   ? 'bg-brand-secondary shadow-[0_0_0_2px_rgba(16,185,129,0.2)]'
                   : isVisited
@@ -246,6 +246,15 @@ export default function FlowProgressDock({
               `}
             />
           )
+
+          if (stepName) {
+            return (
+              <Tooltip key={`dot-${idx}`} content={stepName} position="top">
+                {editableDot}
+              </Tooltip>
+            )
+          }
+          return <span key={`dot-${idx}`}>{editableDot}</span>
         })}
       </div>
     )
@@ -597,8 +606,44 @@ export default function FlowProgressDock({
             </span>
           </div>
 
-          {/* Vertical separator */}
-          <div className="w-[2px] bg-gray-300 rounded-full my-1" />
+          {/* Navigation arrow between Selfies and Customize */}
+          {(() => {
+            const isOnSelfiesOrTips = currentStep === 'selfies' || currentStep === 'tips'
+            const isOnCustomizeOrIntro = currentStep === 'customize' || currentStep === 'intro'
+            const canContinue = isOnSelfiesOrTips && hasEnoughSelfies
+            const canGoBack = isOnCustomizeOrIntro
+
+            if (canContinue) {
+              // Show "Continue →" when on selfies with enough photos
+              return (
+                <button
+                  type="button"
+                  onClick={onNavigateToCustomize}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary font-medium text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group"
+                >
+                  <span>{t('navigation.continue', { defaultValue: 'Continue' })}</span>
+                  <ChevronRightIcon className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
+                </button>
+              )
+            }
+
+            if (canGoBack) {
+              // Show "← Back" when on customize
+              return (
+                <button
+                  type="button"
+                  onClick={onNavigateToSelfies}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group"
+                >
+                  <ChevronLeftIcon className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" strokeWidth={2.5} />
+                  <span>{t('navigation.back', { defaultValue: 'Back' })}</span>
+                </button>
+              )
+            }
+
+            // Default: show vertical separator
+            return <div className="w-[2px] bg-gray-300 rounded-full my-1" />
+          })()}
 
           {/* SECTION 2: Customization */}
           <div className="flex flex-col items-center gap-1 px-4">

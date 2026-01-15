@@ -184,7 +184,7 @@ export default function PricingCard({
           <div className="relative group mb-4">
             <div className="bg-purple-50 rounded-xl px-3 py-3 lg:px-4 lg:py-4 border border-purple-100">
               <div className="text-xs lg:text-sm font-medium text-text-body">
-                {t('customizablePhotos', { count: numberOfPhotos })} with fixed teamshots branding
+                {t('customizablePhotos', { count: numberOfPhotos })} {t('freeBrandingText')}
               </div>
             </div>
           </div>

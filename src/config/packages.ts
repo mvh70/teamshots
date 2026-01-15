@@ -27,6 +27,13 @@ export const PACKAGES_CONFIG = {
       price: 0, // Free (included with signup)
       audience: 'team',
     } as PackageMetadata,
+    'industry-headshot': {
+      id: 'industry-headshot',
+      name: 'Industry Headshot',
+      description: 'Industry-specific professional headshots. Select your industry and get perfectly styled photos with appropriate attire, background, and professional appearance.',
+      price: 0, // Free
+      audience: 'team',
+    } as PackageMetadata,
     outfit1: {
       id: 'outfit1',
       name: 'Outfit Transfer',

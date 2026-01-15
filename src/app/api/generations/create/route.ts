@@ -42,7 +42,7 @@ import { CreditService } from '@/domain/services/CreditService'
 import { UserService } from '@/domain/services/UserService'
 import { AssetService } from '@/domain/services/AssetService'
 import { RegenerationService } from '@/domain/generation'
-import { deriveGenerationType, deriveCreditSource } from '@/domain/generation/utils'
+import { deriveGenerationType } from '@/domain/generation/utils'
 import { resolvePhotoStyleSettings } from '@/domain/style/settings-resolver'
 import {
   enqueueGenerationJob,
@@ -343,28 +343,8 @@ export async function POST(request: NextRequest) {
     const creditSourceInfo = await CreditService.determineCreditSource(userContext)
     const enforcedCreditSource = creditSourceInfo.creditSource
 
-    // Derive generation type from person's team membership (single source of truth)
+    // Derive generation type from person's team membership (for tracking purposes)
     const derivedGenerationType = deriveGenerationType(ownerPerson.teamId)
-    const derivedCreditSource = deriveCreditSource(ownerPerson.teamId)
-
-    // Check if user is on free plan (free plan users use personal credits even if they have a team)
-    const isUserOnFreePlan = userContext.subscription?.period === 'free'
-
-    // Validate that the determined credit source matches the derived one from person data
-    // EXCEPTION: Free plan users can use individual credits even when they have a teamId
-    // Their free trial credits are stored as personal (teamId: null)
-    if (derivedCreditSource !== enforcedCreditSource && !isUserOnFreePlan) {
-      Logger.error('Credit source mismatch', {
-        userId: session.user.id,
-        personTeamId: ownerPerson.teamId,
-        derivedCreditSource,
-        enforcedCreditSource,
-        reason: creditSourceInfo.reason
-      })
-      return NextResponse.json({
-        error: 'Credit source mismatch. Person team membership does not match user role.'
-      }, { status: 400 })
-    }
 
     Logger.debug('Credit source determination', {
       userId: session.user.id,

@@ -23,7 +23,8 @@ const VALID_CATEGORIES: Set<CategoryType> = new Set([
   'pose',
   'expression',
   'shotType',
-  'lighting'
+  'lighting',
+  'industry'
 ])
 
 /**

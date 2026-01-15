@@ -45,16 +45,9 @@ export function getEditableCategories(
       }
     }
 
-    // If original settings exist but no categories are marked as user-choice,
-    // fall back to package's userStyleCategories
-    if (editable.size === 0) {
-      const userStyleCategories = pkg.userStyleCategories || []
-      userStyleCategories.forEach(cat => {
-        if (visibleCategories.includes(cat)) {
-          editable.add(cat)
-        }
-      })
-    }
+    // IMPORTANT: Do NOT fall back to userStyleCategories when originalSettings exist.
+    // If admin predefined all categories, that's intentional - user should skip customization.
+    // The fallback only applies when there are NO originalSettings at all.
 
     return editable
   }

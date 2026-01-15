@@ -1,0 +1,143 @@
+{
+  "hero": {
+    "badge": "Built for consulting firms",
+    "title": "Professional Team Headshots for Consulting Firms",
+    "subtitle": "Polished, consistent headshots for every consultant. Look your best in client proposals and presentations.",
+    "cta": "See Your Team's New Look"
+  },
+  "painPoints": {
+    "title": "Why Consulting Firms Struggle with Team Photos",
+    "items": [
+      {
+        "title": "Traveling consultants rarely in office",
+        "description": "With consultants constantly at client sites, coordinating a group photo session is nearly impossible."
+      },
+      {
+        "title": "Inconsistent photos in proposals",
+        "description": "Each consultant's headshot looks different - it undermines the polished, unified image you present to clients."
+      },
+      {
+        "title": "Rapid team scaling",
+        "description": "When you're growing fast, getting new hires photo-ready before their first client meeting is a constant challenge."
+      }
+    ],
+    "solution": "TeamShotsPro solves all of this in 60 seconds."
+  },
+  "showcase": {
+    "title": "See Consulting Team Transformations",
+    "subtitle": "Before and after results from actual consulting teams"
+  },
+  "howItWorks": {
+    "title": "How It Works for Consulting Firms",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Set your firm's brand style",
+        "description": "Choose a polished, professional look that represents your firm's expertise."
+      },
+      {
+        "number": "2",
+        "title": "Invite consultants via email",
+        "description": "Send invites to partners, managers, and analysts - wherever they are."
+      },
+      {
+        "number": "3",
+        "title": "Consultants snap a selfie",
+        "description": "No office visit required. Works from client sites, airports, or home offices."
+      },
+      {
+        "number": "4",
+        "title": "Download for all platforms",
+        "description": "Get consistent photos ready for proposals, bios, and LinkedIn profiles."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Consulting Headshot Options Compared",
+    "headers": ["Feature", "Traditional Photographer", "TeamShotsPro"],
+    "rows": [
+      ["Cost per consultant", "$300-500", "$26"],
+      ["Time to schedule", "2-3 weeks", "60 seconds"],
+      ["Brand consistency", "Variable", "100%"],
+      ["Remote consultants", "Impossible", "Easy"],
+      ["New hire onboarding", "Weeks", "Same day"]
+    ]
+  },
+  "useCases": {
+    "title": "Where Consulting Firms Use Their Headshots",
+    "platforms": [
+      { "name": "Company Website", "icon": "monitor" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Client Proposals", "icon": "file-text" },
+      { "name": "Business Cards", "icon": "credit-card" },
+      { "name": "Case Studies", "icon": "book-open" },
+      { "name": "Speaking Bios", "icon": "mic" }
+    ]
+  },
+  "testimonials": {
+    "title": "What Consulting Firms Say",
+    "items": [
+      {
+        "quote": "Our proposal team pages finally look unified. Clients notice the professionalism immediately.",
+        "author": "Sarah M.",
+        "role": "Partner",
+        "company": "Management Consulting Firm"
+      },
+      {
+        "quote": "With consultants across 15 countries, traditional photography was impossible. TeamShotsPro solved it instantly.",
+        "author": "Michael R.",
+        "role": "HR Director",
+        "company": "Global Strategy Firm"
+      },
+      {
+        "quote": "New consultants get their headshots before their first client meeting. It's transformed our onboarding.",
+        "author": "Jennifer L.",
+        "role": "Operations Manager",
+        "company": "Boutique Advisory Firm"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Consulting Firm Photo Questions",
+    "items": [
+      {
+        "question": "What should consultants wear?",
+        "answer": "Business professional works best - blazers, suits, or polished casual depending on your firm's culture. Solid colors photograph well."
+      },
+      {
+        "question": "Can consultants submit from client sites?",
+        "answer": "Yes. Consultants can submit their selfie from anywhere - client offices, airports, hotels, or home. Just good lighting and a plain background."
+      },
+      {
+        "question": "How do we ensure consistency across offices?",
+        "answer": "Set team-wide style preferences once. Every consultant's headshot will match your brand guidelines automatically."
+      },
+      {
+        "question": "Can we use these in client proposals?",
+        "answer": "Absolutely. Our headshots are high-resolution and perfect for proposals, pitch decks, and printed materials."
+      },
+      {
+        "question": "Do you offer enterprise pricing?",
+        "answer": "Yes. We offer volume discounts for firms with 25+ consultants. Contact us for custom pricing."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Simple Team Pricing for Consulting Firms",
+    "subtitle": "Most firms choose the 50-seat plan"
+  },
+  "finalCta": {
+    "title": "Ready to Transform Your Firm's Image?",
+    "subtitle": "Get consistent, professional headshots for your entire team without the scheduling hassles of traditional photography.",
+    "cta": "See Your Team's New Look"
+  },
+  "seo": {
+    "title": "AI Headshots for Consulting Firms | TeamShotsPro",
+    "description": "Get consistent, professional headshots for your entire consulting team in 60 seconds. Perfect for proposals, LinkedIn, and client presentations."
+  },
+  "stylingNotes": [
+    "Business professional or polished casual depending on firm culture",
+    "Clean, neutral background",
+    "Confident, approachable expression that conveys expertise"
+  ]
+}

@@ -4,19 +4,22 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { BlogPost } from '@/config/blog';
-import { BLOG_CATEGORIES } from '@/config/blog';
+import { BLOG_CATEGORIES, getBlogPostTitle, getBlogPostDescription } from '@/config/blog';
 
 interface BlogCardProps {
   post: BlogPost;
+  locale?: string;
 }
 
 /**
  * Blog post card component for the blog index page.
  * Displays a preview of a blog post with image, category, title, description, and metadata.
  */
-export default function BlogCard({ post }: BlogCardProps) {
+export default function BlogCard({ post, locale = 'en' }: BlogCardProps) {
   const categoryConfig = BLOG_CATEGORIES[post.category];
   const [imageError, setImageError] = useState(false);
+  const title = getBlogPostTitle(post, locale);
+  const description = getBlogPostDescription(post, locale);
 
   return (
     <article className="group">
@@ -26,7 +29,7 @@ export default function BlogCard({ post }: BlogCardProps) {
           {post.image && !imageError ? (
             <Image
               src={post.image}
-              alt={post.title}
+              alt={title}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
               onError={() => setImageError(true)}
@@ -57,17 +60,17 @@ export default function BlogCard({ post }: BlogCardProps) {
 
         {/* Title */}
         <h2 className="text-xl font-semibold text-gray-900 group-hover:text-brand-primary transition-colors mb-2 line-clamp-2">
-          {post.title}
+          {title}
         </h2>
 
         {/* Description */}
-        <p className="text-gray-600 mb-3 line-clamp-2">{post.description}</p>
+        <p className="text-gray-600 mb-3 line-clamp-2">{description}</p>
 
         {/* Meta */}
         <div className="flex items-center gap-3 text-sm text-gray-500">
           {post.date && (
             <time dateTime={post.date}>
-              {new Date(post.date).toLocaleDateString('en-US', {
+              {new Date(post.date).toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',

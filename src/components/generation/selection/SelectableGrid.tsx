@@ -14,15 +14,18 @@ import SelfieApproval from '@/components/Upload/SelfieApproval'
 const PhotoUpload = dynamic(() => import('@/components/Upload/PhotoUpload'), { ssr: false })
 
 // Small inline badge component for selfie type classification
-const SelfieTypeBadgeSmall = ({ type }: { type?: string | null }) => {
+const SelfieTypeBadgeSmall = ({
+  type,
+  lightingQuality,
+  backgroundQuality,
+  t
+}: {
+  type?: string | null
+  lightingQuality?: string | null
+  backgroundQuality?: string | null
+  t: (key: string) => string
+}) => {
   if (!type || type === 'unknown') return null
-
-  const labels: Record<string, string> = {
-    front_view: 'Front',
-    side_view: 'Side',
-    partial_body: 'Partial',
-    full_body: 'Full'
-  }
 
   const colors: Record<string, string> = {
     front_view: 'bg-blue-500/90 text-white',
@@ -31,13 +34,61 @@ const SelfieTypeBadgeSmall = ({ type }: { type?: string | null }) => {
     full_body: 'bg-orange-500/90 text-white'
   }
 
-  const label = labels[type] || type
+  const label = t(`selfieTypes.${type}`) || type
   const colorClass = colors[type] || 'bg-gray-500/90 text-white'
 
+  // Quality badge helper
+  const QualityBadge = ({ quality, icon }: { quality: string, icon: 'sun' | 'layers' }) => {
+    const isGood = quality === 'good' || quality === 'acceptable'
+    const iconColor = isGood ? 'text-green-600' : 'text-red-600'
+    const qualityLabel = icon === 'sun' ? t('quality.lighting') || 'Lighting' : t('quality.background') || 'Background'
+
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold shadow-sm backdrop-blur-sm bg-white/95 text-gray-700 border border-gray-200">
+        {icon === 'sun' ? (
+          <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        ) : (
+          <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 15l6-6 4 4 8-8" />
+          </svg>
+        )}
+        {qualityLabel}
+        {isGood ? (
+          <svg className={`w-3 h-3 ${iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        ) : (
+          <svg className={`w-3 h-3 ${iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        )}
+      </span>
+    )
+  }
+
   return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold shadow-sm backdrop-blur-sm ${colorClass}`}>
-      {label}
-    </span>
+    <div className="flex flex-wrap items-center gap-1">
+      <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold shadow-sm backdrop-blur-sm ${colorClass}`}>
+        {label}
+      </span>
+      {lightingQuality && (
+        <QualityBadge quality={lightingQuality} icon="sun" />
+      )}
+      {backgroundQuality && (
+        <QualityBadge quality={backgroundQuality} icon="layers" />
+      )}
+    </div>
   )
 }
 
@@ -187,7 +238,12 @@ const GridItem = React.memo<{
         {/* Selfie type badge or analyzing indicator */}
         {hasValidType && !isImproper && (
           <div className="absolute bottom-2 left-2 z-10">
-            <SelfieTypeBadgeSmall type={item.selfieType} />
+            <SelfieTypeBadgeSmall
+              type={item.selfieType}
+              lightingQuality={item.lightingQuality}
+              backgroundQuality={item.backgroundQuality}
+              t={t}
+            />
           </div>
         )}
         
@@ -258,6 +314,8 @@ const GridItem = React.memo<{
   return (
     prevProps.item.id === nextProps.item.id &&
     prevProps.item.selfieType === nextProps.item.selfieType &&
+    prevProps.item.lightingQuality === nextProps.item.lightingQuality &&
+    prevProps.item.backgroundQuality === nextProps.item.backgroundQuality &&
     prevProps.item.isProper === nextProps.item.isProper &&
     prevProps.item.used === nextProps.item.used &&
     prevProps.isSelected === nextProps.isSelected &&
@@ -284,6 +342,10 @@ export interface SelectableItem {
   isProper?: boolean
   /** Reason why the selfie is not proper */
   improperReason?: string | null
+  /** Lighting quality assessment */
+  lightingQuality?: string | null
+  /** Background separation quality assessment */
+  backgroundQuality?: string | null
 }
 
 type SelectionMode = 

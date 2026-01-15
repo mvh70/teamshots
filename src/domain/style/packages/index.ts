@@ -1,6 +1,7 @@
 import { headshot1 } from './headshot1'
 import { outfit1 } from './outfit1'
 import { freepackage } from './freepackage'
+import { industryHeadshot } from './industry-headshot'
 import { validateAllPackages } from './validation'
 
 // Load element metadata registry
@@ -30,6 +31,7 @@ export const CLIENT_PACKAGES: Record<string, ClientStylePackage> = {
   [headshot1.id]: headshot1,
   [freepackage.id]: freepackage,
   [outfit1.id]: outfit1,
+  [industryHeadshot.id]: industryHeadshot,
 }
 
 // Validate all packages at module load time (only in Node.js environment)

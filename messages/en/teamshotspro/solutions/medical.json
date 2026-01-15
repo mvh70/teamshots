@@ -1,17 +1,143 @@
 {
-  "heroTitle": "AI headshots for medical teams",
-  "heroSubtitle": "Professional headshots for doctors and clinics that feel calm, credible, and consistent.",
-  "bullets": [
-    "Uniform look across practitioners and locations",
-    "Great for clinic websites and provider directories",
-    "Easy onboarding for new staff"
-  ],
-  "seoTitle": "AI headshots for doctors and medical teams",
-  "seoDescription": "Generate consistent medical headshots for doctors, clinics, and healthcare teams. Professional results in minutes.",
+  "hero": {
+    "badge": "Built for healthcare teams",
+    "title": "Professional Team Headshots for Healthcare",
+    "subtitle": "Consistent, trustworthy headshots for every provider. Build patient confidence with a unified team image.",
+    "cta": "See Your Team's New Look"
+  },
+  "painPoints": {
+    "title": "Why Healthcare Teams Struggle with Photos",
+    "items": [
+      {
+        "title": "Large teams across multiple locations",
+        "description": "Coordinating photo sessions across hospitals, clinics, and satellite offices is logistically impossible."
+      },
+      {
+        "title": "Compliance and credentialing requirements",
+        "description": "Photos need to meet specific standards for ID badges, insurance panels, and hospital directories."
+      },
+      {
+        "title": "High staff turnover",
+        "description": "With residents rotating, locums coming and going, and new hires starting frequently, keeping photos current is a constant challenge."
+      }
+    ],
+    "solution": "TeamShotsPro solves all of this in 60 seconds."
+  },
+  "showcase": {
+    "title": "See Healthcare Team Transformations",
+    "subtitle": "Before and after results from actual healthcare teams"
+  },
+  "howItWorks": {
+    "title": "How It Works for Healthcare Teams",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Set your organization's style",
+        "description": "Choose a professional look that matches your healthcare brand standards."
+      },
+      {
+        "number": "2",
+        "title": "Invite providers and staff",
+        "description": "Bulk upload from your HR system or send individual invite links."
+      },
+      {
+        "number": "3",
+        "title": "Staff snap a selfie",
+        "description": "Works from anywhere - between rounds, at clinics, or from home."
+      },
+      {
+        "number": "4",
+        "title": "Download for all platforms",
+        "description": "Get consistent photos ready for directories, badges, and patient portals."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Healthcare Headshot Options Compared",
+    "headers": ["Feature", "Traditional Photographer", "TeamShotsPro"],
+    "rows": [
+      ["Cost per provider", "$200-400", "$26"],
+      ["Time to schedule", "2-4 weeks", "60 seconds"],
+      ["Brand consistency", "Variable", "100%"],
+      ["Multi-location teams", "Very difficult", "Easy"],
+      ["New hire onboarding", "Weeks", "Same day"]
+    ]
+  },
+  "useCases": {
+    "title": "Where Healthcare Teams Use Their Headshots",
+    "platforms": [
+      { "name": "Hospital Directory", "icon": "building" },
+      { "name": "ID Badges", "icon": "badge" },
+      { "name": "Patient Portal", "icon": "users" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Practice Website", "icon": "monitor" },
+      { "name": "Insurance Panels", "icon": "file-text" }
+    ]
+  },
+  "testimonials": {
+    "title": "What Healthcare Teams Say",
+    "items": [
+      {
+        "quote": "We updated photos for 200+ providers across 12 locations in a single week. Previously this took us months.",
+        "author": "Dr. Amanda S.",
+        "role": "CMO",
+        "company": "Regional Health System"
+      },
+      {
+        "quote": "New residents get their headshots on day one. No more waiting for the next photo session.",
+        "author": "Mark J.",
+        "role": "HR Director",
+        "company": "Teaching Hospital"
+      },
+      {
+        "quote": "Our patient satisfaction scores improved after updating our provider photos. First impressions matter.",
+        "author": "Lisa P.",
+        "role": "Practice Manager",
+        "company": "Multi-specialty Clinic"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Healthcare Photo Questions",
+    "items": [
+      {
+        "question": "What should healthcare providers wear?",
+        "answer": "White coats, scrubs, or professional attire all work well. We recommend whatever your providers typically wear when seeing patients."
+      },
+      {
+        "question": "Do these meet ID badge requirements?",
+        "answer": "Yes. Our photos can be exported in the specific formats and resolutions required for ID badge systems."
+      },
+      {
+        "question": "How do we handle rotating residents?",
+        "answer": "Send invite links as part of your onboarding process. Residents can submit photos before they even start."
+      },
+      {
+        "question": "Can we use these for insurance credentialing?",
+        "answer": "Yes. Our professional headshots meet the standards required by insurance panels and credentialing organizations."
+      },
+      {
+        "question": "Do you offer enterprise pricing for health systems?",
+        "answer": "Yes. We offer volume discounts for healthcare organizations with 50+ providers. Contact us for custom pricing."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Simple Team Pricing for Healthcare",
+    "subtitle": "Most health systems choose the 100-seat plan"
+  },
+  "finalCta": {
+    "title": "Ready to Transform Your Healthcare Team Photos?",
+    "subtitle": "Get consistent, professional headshots for your entire team without the scheduling hassles of traditional photography.",
+    "cta": "See Your Team's New Look"
+  },
+  "seo": {
+    "title": "AI Headshots for Healthcare Teams | TeamShotsPro",
+    "description": "Get consistent, professional headshots for your entire healthcare team in 60 seconds. Perfect for hospital directories, ID badges, and patient portals."
+  },
   "stylingNotes": [
-    "White coat or scrubs (depending on specialty)",
-    "Bright, clean lighting",
-    "Warm expressions that build patient trust"
+    "White coat, scrubs, or professional attire",
+    "Clean, clinical or neutral background",
+    "Warm, approachable expression that builds patient trust"
   ]
 }
-

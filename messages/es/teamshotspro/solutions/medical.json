@@ -1,17 +1,143 @@
 {
-  "heroTitle": "Headshots con IA para equipos médicos",
-  "heroSubtitle": "Headshots profesionales para médicos y clínicas: consistentes, confiables y limpios.",
-  "bullets": [
-    "Imagen uniforme entre sedes y especialistas",
-    "Ideal para webs clínicas y directorios",
-    "Onboarding rápido para nuevos miembros"
-  ],
-  "seoTitle": "Headshots con IA para médicos y equipos de salud",
-  "seoDescription": "Genera headshots médicos consistentes para clínicas y equipos. Resultados profesionales en minutos.",
+  "hero": {
+    "badge": "Diseñado para equipos sanitarios",
+    "title": "Headshots profesionales para equipos sanitarios",
+    "subtitle": "Headshots consistentes y profesionales para cada profesional. Genera confianza en los pacientes con una imagen de equipo unificada.",
+    "cta": "Ver el nuevo look de tu equipo"
+  },
+  "painPoints": {
+    "title": "Por qué los equipos sanitarios luchan con las fotos",
+    "items": [
+      {
+        "title": "Equipos grandes en múltiples ubicaciones",
+        "description": "Coordinar sesiones de fotos entre hospitales, clínicas y consultorios satélite es logísticamente imposible."
+      },
+      {
+        "title": "Requisitos de cumplimiento y acreditación",
+        "description": "Las fotos necesitan cumplir estándares específicos para credenciales, seguros y directorios hospitalarios."
+      },
+      {
+        "title": "Alta rotación de personal",
+        "description": "Con residentes rotando, locums llegando y yendo, y nuevas incorporaciones frecuentes, mantener las fotos actualizadas es un desafío constante."
+      }
+    ],
+    "solution": "TeamShotsPro resuelve todo esto en 60 segundos."
+  },
+  "showcase": {
+    "title": "Transformaciones de equipos sanitarios",
+    "subtitle": "Resultados antes y después de equipos sanitarios reales"
+  },
+  "howItWorks": {
+    "title": "Cómo funciona para equipos sanitarios",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Configura el estilo de tu organización",
+        "description": "Elige un look profesional que coincida con los estándares de marca de tu centro sanitario."
+      },
+      {
+        "number": "2",
+        "title": "Invita profesionales y personal",
+        "description": "Carga masiva desde tu sistema de RRHH o envía enlaces de invitación individuales."
+      },
+      {
+        "number": "3",
+        "title": "El personal se toma una selfie",
+        "description": "Funciona desde cualquier lugar - entre guardias, en consultas o desde casa."
+      },
+      {
+        "number": "4",
+        "title": "Descarga para todas las plataformas",
+        "description": "Obtén fotos consistentes listas para directorios, credenciales y portales de pacientes."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Opciones de headshots sanitarios comparadas",
+    "headers": ["Característica", "Fotógrafo tradicional", "TeamShotsPro"],
+    "rows": [
+      ["Coste por profesional", "€200-400", "€26"],
+      ["Tiempo de programación", "2-4 semanas", "60 segundos"],
+      ["Consistencia de marca", "Variable", "100%"],
+      ["Equipos multi-sede", "Muy difícil", "Fácil"],
+      ["Onboarding nuevos", "Semanas", "Mismo día"]
+    ]
+  },
+  "useCases": {
+    "title": "Dónde usan sus headshots los equipos sanitarios",
+    "platforms": [
+      { "name": "Directorio hospitalario", "icon": "building" },
+      { "name": "Credenciales", "icon": "badge" },
+      { "name": "Portal de pacientes", "icon": "users" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Web del centro", "icon": "monitor" },
+      { "name": "Seguros y colegios", "icon": "file-text" }
+    ]
+  },
+  "testimonials": {
+    "title": "Lo que dicen los equipos sanitarios",
+    "items": [
+      {
+        "quote": "Actualizamos fotos de más de 200 profesionales en 12 ubicaciones en una sola semana. Antes nos llevaba meses.",
+        "author": "Dra. Amanda S.",
+        "role": "Directora médica",
+        "company": "Sistema de salud regional"
+      },
+      {
+        "quote": "Los nuevos residentes obtienen sus headshots el primer día. No más esperas para la próxima sesión de fotos.",
+        "author": "Marcos J.",
+        "role": "Director de RRHH",
+        "company": "Hospital universitario"
+      },
+      {
+        "quote": "Nuestras puntuaciones de satisfacción de pacientes mejoraron después de actualizar las fotos de los profesionales. Las primeras impresiones importan.",
+        "author": "Lisa P.",
+        "role": "Gerente de clínica",
+        "company": "Clínica multiespecialidad"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Preguntas sobre fotos para equipos sanitarios",
+    "items": [
+      {
+        "question": "¿Qué deben vestir los profesionales sanitarios?",
+        "answer": "Batas blancas, uniformes o atuendo profesional funcionan bien. Recomendamos lo que tus profesionales típicamente visten al ver pacientes."
+      },
+      {
+        "question": "¿Cumplen los requisitos de credenciales?",
+        "answer": "Sí. Nuestras fotos pueden exportarse en los formatos y resoluciones específicas requeridas para sistemas de credenciales."
+      },
+      {
+        "question": "¿Cómo manejamos residentes rotatorios?",
+        "answer": "Envía enlaces de invitación como parte de tu proceso de onboarding. Los residentes pueden enviar fotos antes de empezar."
+      },
+      {
+        "question": "¿Se pueden usar para seguros y colegios?",
+        "answer": "Sí. Nuestros headshots profesionales cumplen los estándares requeridos por aseguradoras y organizaciones colegiales."
+      },
+      {
+        "question": "¿Ofrecéis precios enterprise para sistemas de salud?",
+        "answer": "Sí. Ofrecemos descuentos por volumen para organizaciones sanitarias con 50+ profesionales. Contáctanos para precios personalizados."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Precios simples para equipos sanitarios",
+    "subtitle": "La mayoría de sistemas de salud eligen el plan de 100 plazas"
+  },
+  "finalCta": {
+    "title": "¿Listo para transformar las fotos de tu equipo sanitario?",
+    "subtitle": "Obtén headshots profesionales y consistentes para todo tu equipo sin las complicaciones de la fotografía tradicional.",
+    "cta": "Ver el nuevo look de tu equipo"
+  },
+  "seo": {
+    "title": "Headshots con IA para equipos sanitarios | TeamShotsPro",
+    "description": "Obtén headshots consistentes y profesionales para todo tu equipo sanitario en 60 segundos. Perfecto para directorios hospitalarios, credenciales y portales de pacientes."
+  },
   "stylingNotes": [
-    "Bata blanca o scrubs según especialidad",
-    "Iluminación clara y limpia",
-    "Expresión cálida que transmita confianza"
+    "Bata blanca, uniforme o atuendo profesional",
+    "Fondo limpio, clínico o neutro",
+    "Expresión cálida y cercana que genere confianza en pacientes"
   ]
 }
-

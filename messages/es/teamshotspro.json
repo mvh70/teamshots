@@ -20,7 +20,13 @@
         "badge": "Fotos profesionales de equipo sin la molestia de sesiones de fotos",
         "trustedBy": "Confiado por equipos en",
         "bookDemo": "Reservar una demo",
-        "bookDemoAria": "Reservar una demo"
+        "bookDemoAria": "Reservar una demo",
+        "trustBadges": {
+          "stripeSecure": "Pago Seguro con Stripe",
+          "instantResults": "Resultados en 60 Segundos",
+          "noSubscription": "Sin Suscripción",
+          "moneyBack": "Garantía de Devolución"
+        }
       },
       "gallery": {
         "title": "De selfies normales a retratos profesionales",
@@ -52,6 +58,19 @@
         "totalTimeValue": "5 minutos",
         "cta": "¡Obtén retratos profesionales para tu equipo!",
         "guarantee": "Sin riesgo: Obtén retratos profesionales para tu equipo para probarlo. Sin tarjeta de crédito, sin compromiso, sin tonterías.",
+        "tabs": {
+          "setBrand": "Configurar Marca",
+          "inviteTeam": "Invitar Equipo",
+          "teamSelfie": "Selfie del Equipo",
+          "getAssets": "Obtener Fotos",
+          "upload": "Subir",
+          "customize": "Personalizar",
+          "generate": "Generar"
+        },
+        "tryForFree": "Pruébalo Gratis",
+        "bookDemo": "Reservar Demo",
+        "freePhotosLine": "Obtén 3 fotos gratis con marca fija de TeamShots para probar",
+        "noCreditCardLine": "Sin tarjeta de crédito para fotos de prueba",
         "steps": {
           "1": {
             "title": "Configura tu estilo de marca",
@@ -79,6 +98,11 @@
             "duration": "30s"
           }
         }
+      },
+      "guarantee": {
+        "title": "Garantía 100% Aspecto Humano",
+        "subtitle": "Si tus fotos parecen hechas por IA, las rehacemos gratis.",
+        "description": "Tu equipo merece verse profesional, no robótico. Garantizamos resultados de calidad de estudio que se ven como tú, solo más pulidos."
       },
       "faq": {
         "title": "Preguntas Frecuentes",

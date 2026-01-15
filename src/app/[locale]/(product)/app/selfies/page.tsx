@@ -8,7 +8,6 @@ import { SecondaryButton, LoadingGrid } from '@/components/ui'
 import { useSelfieManagement } from '@/hooks/useSelfieManagement'
 import dynamic from 'next/dynamic'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
-import SelfieInfoOverlayTrigger from '@/components/generation/SelfieInfoOverlayTrigger'
 import { QRPlaceholder } from '@/components/MobileHandoff'
 import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
 import { preloadFaceDetectionModel } from '@/lib/face-detection'
@@ -47,11 +46,13 @@ function SelfiesPageContent() {
     personCount?: number | null
     isProper?: boolean | null
     improperReason?: string | null
+    lightingQuality?: string | null
+    backgroundQuality?: string | null
   }
   const uploadListItems = uploads as UploadListItem[]
 
   // Memoize the grid items to prevent unnecessary re-renders
-  const gridItems = React.useMemo(() => 
+  const gridItems = React.useMemo(() =>
     uploadListItems.map(u => ({
       id: u.id,
       key: u.uploadedKey,
@@ -61,7 +62,9 @@ function SelfiesPageContent() {
       selfieType: u.selfieType,
       selfieTypeConfidence: u.selfieTypeConfidence,
       isProper: u.isProper ?? undefined,
-      improperReason: u.improperReason
+      improperReason: u.improperReason,
+      lightingQuality: u.lightingQuality,
+      backgroundQuality: u.backgroundQuality,
     })), [uploadListItems])
 
   // Hook handles initialization internally
@@ -77,20 +80,19 @@ function SelfiesPageContent() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 relative z-10">
-        <div className="space-y-2">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight" data-testid="selfies-title">{t('title')}</h1>
-          <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed">Upload and manage your selfies for photo generation</p>
-        </div>
-        <SelfieInfoOverlayTrigger />
+      <div className="space-y-2">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight" data-testid="selfies-title">{t('title')}</h1>
+        <p className="text-gray-600 text-base sm:text-lg font-medium leading-relaxed">{t('subtitle')}</p>
       </div>
 
-      {/* Selfie Type Progress Overlay */}
-      <div className="flex justify-center">
-        <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} />
-      </div>
+      {/* Selfie Type Progress with Tips */}
+      <SelfieTypeOverlay
+        refreshKey={selfieTypeRefreshKey}
+        showTipsHeader
+        className="max-w-xl"
+      />
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4" data-testid="error-message">

@@ -1,4 +1,4 @@
-import type { GenerationListItem } from '@/app/[locale]/app/generations/components/GenerationCard'
+import type { GenerationListItem } from '@/app/[locale]/(product)/app/generations/components/GenerationCard'
 
 /**
  * Extract the key parameter from a file URL

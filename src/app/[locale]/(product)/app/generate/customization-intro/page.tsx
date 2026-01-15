@@ -11,7 +11,7 @@ import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { buildSelfieStepIndicator, DEFAULT_CUSTOMIZATION_STEPS_META } from '@/lib/customizationSteps'
 import { useEffect, useRef, useState } from 'react'
-import Header from '@/app/[locale]/app/components/Header'
+import Header from '@/app/[locale]/(product)/app/components/Header'
 import { useOnboardingState } from '@/lib/onborda/hooks'
 
 /**

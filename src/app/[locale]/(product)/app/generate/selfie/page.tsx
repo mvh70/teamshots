@@ -15,9 +15,8 @@ import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useSwipeEnabled } from '@/hooks/useSwipeEnabled'
 import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
 import SharedMobileSelfieFlow from '@/components/generation/selfie/SharedMobileSelfieFlow'
-import Header from '@/app/[locale]/app/components/Header'
+import Header from '@/app/[locale]/(product)/app/components/Header'
 import { QRPlaceholder } from '@/components/MobileHandoff'
-import SelfieInfoOverlayTrigger from '@/components/generation/SelfieInfoOverlayTrigger'
 import { useOnboardingState } from '@/lib/onborda/hooks'
 import SelfieTypeOverlay, { useSelfieTypeStatus } from '@/components/Upload/SelfieTypeOverlay'
 
@@ -82,6 +81,8 @@ function SelfieSelectionPageContent() {
     personCount?: number | null
     isProper?: boolean | null
     improperReason?: string | null
+    lightingQuality?: string | null
+    backgroundQuality?: string | null
   }
   const uploadListItems = uploads as UploadListItem[]
 
@@ -141,7 +142,7 @@ function SelfieSelectionPageContent() {
   }
 
   // Memoize grid items to prevent unnecessary re-renders
-  const gridItems = useMemo(() => 
+  const gridItems = useMemo(() =>
     uploadListItems.map(u => ({
       id: u.id,
       key: u.uploadedKey,
@@ -151,7 +152,9 @@ function SelfieSelectionPageContent() {
       selfieType: u.selfieType,
       selfieTypeConfidence: u.selfieTypeConfidence,
       isProper: u.isProper ?? undefined,
-      improperReason: u.improperReason
+      improperReason: u.improperReason,
+      lightingQuality: u.lightingQuality,
+      backgroundQuality: u.backgroundQuality,
     })), [uploadListItems])
 
   const selectableGridProps = {
@@ -288,12 +291,7 @@ function SelfieSelectionPageContent() {
               <SharedMobileSelfieFlow
                 canContinue={canContinue}
                 selfieTypeOverlay={
-                  <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} />
-                }
-                infoBanner={
-                  <div className="flex-1">
-                    <SelfieInfoOverlayTrigger dense className="w-full" />
-                  </div>
+                  <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} showTipsHeader />
                 }
                 grid={<SelectableGrid {...selectableGridProps} />}
                 navigation={navigationControls}
@@ -312,10 +310,12 @@ function SelfieSelectionPageContent() {
                   </p>
                 </div>
                 
-                {/* Selfie Type Progress Overlay */}
-                <div className="mb-6 flex justify-center">
-                  <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} />
-                </div>
+                {/* Selfie Type Progress with Tips */}
+                <SelfieTypeOverlay
+                  refreshKey={selfieTypeRefreshKey}
+                  showTipsHeader
+                  className="max-w-xl mb-6"
+                />
                 
                 <SelectableGrid {...selectableGridProps} />
 

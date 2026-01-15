@@ -1,6 +1,6 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getLandingVariant } from '@/config/landing-content';
 import { BLOG_POSTS } from '@/config/blog';
 import { BlogContent } from '@/components/blog';
@@ -22,6 +22,7 @@ export default async function BlogPage() {
   const host = headersList.get('host') || headersList.get('x-forwarded-host');
   const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined;
   const variant = getLandingVariant(domain);
+  const locale = await getLocale();
 
   // Only TeamShotsPro and IndividualShots have blogs
   if (variant !== 'teamshotspro' && variant !== 'individualshots') {
@@ -38,6 +39,7 @@ export default async function BlogPage() {
       posts={posts}
       title={t('title')}
       description={t('description')}
+      locale={locale}
     />
   );
 }

@@ -64,7 +64,7 @@ export default async function AppLayout({
   const host = headersList.get('host') || headersList.get('x-forwarded-host')
   const domain = host ? host.split(':')[0].replace(/^www\./, '').toLowerCase() : undefined
   const variant = getLandingVariant(domain)
-  const isIndividualDomain = variant === 'photoshotspro'
+  const isIndividualDomain = variant === 'individualshots'
 
   // OPTIMIZATION: Serialize subscription for client-side (convert Date objects to ISO strings)
   // Pass subscription to Sidebar to avoid redundant API calls

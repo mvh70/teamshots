@@ -4,19 +4,22 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { BlogPost } from '@/config/blog'
-import { BLOG_CATEGORIES } from '@/config/blog'
+import { BLOG_CATEGORIES, getBlogPostTitle, getBlogPostDescription } from '@/config/blog'
 
 interface FeaturedPostProps {
   post: BlogPost
+  locale?: string
 }
 
 /**
  * Hero section component for featured blog posts.
  * Displays a large featured image with overlay text.
  */
-export default function FeaturedPost({ post }: FeaturedPostProps) {
+export default function FeaturedPost({ post, locale = 'en' }: FeaturedPostProps) {
   const categoryConfig = BLOG_CATEGORIES[post.category]
   const [imageError, setImageError] = useState(false)
+  const title = getBlogPostTitle(post, locale)
+  const description = getBlogPostDescription(post, locale)
 
   return (
     <Link href={`/blog/${post.slug}`} className="group block mb-12">
@@ -25,7 +28,7 @@ export default function FeaturedPost({ post }: FeaturedPostProps) {
         {post.image && !imageError ? (
           <Image
             src={post.image}
-            alt={post.title}
+            alt={title}
             fill
             className="object-cover opacity-60 group-hover:opacity-70 group-hover:scale-105 transition-all duration-500"
             priority
@@ -53,12 +56,12 @@ export default function FeaturedPost({ post }: FeaturedPostProps) {
 
             {/* Title */}
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3 group-hover:text-brand-primary transition-colors">
-              {post.title}
+              {title}
             </h2>
 
             {/* Description */}
             <p className="text-gray-200 text-base md:text-lg mb-4 line-clamp-2">
-              {post.description}
+              {description}
             </p>
 
             {/* Meta */}
@@ -70,7 +73,7 @@ export default function FeaturedPost({ post }: FeaturedPostProps) {
                 <>
                   <span>·</span>
                   <time dateTime={post.date}>
-                    {new Date(post.date).toLocaleDateString('en-US', {
+                    {new Date(post.date).toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',

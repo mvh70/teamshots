@@ -30,9 +30,9 @@ export default function FAQ({ variant, supportEmail }: FAQProps) {
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Derive signup type from server-provided variant (no client-side detection)
-  const domainSignupType: 'individual' | 'team' | null = 
-    variant === 'photoshotspro' ? 'individual' : 
-    variant === 'teamshotspro' ? 'team' : 
+  const domainSignupType: 'individual' | 'team' | null =
+    variant === 'individualshots' ? 'individual' :
+    variant === 'teamshotspro' ? 'team' :
     null;
 
   // Calculate pricing values for FAQ interpolation

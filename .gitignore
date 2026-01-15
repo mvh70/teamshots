@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+*.docx
 /tmp/**
 /app/tmp/**
 /test-results/**
@@ -66,6 +67,7 @@ playwright/.auth/
 playwright*
 playwright-report*
 playwright-test-results*
+.playwright-mcp/
 
 certificates
 
@@ -78,6 +80,7 @@ certificates
 docs/**
 .testing
 storage/**
+backup_images/
 
 .claude
 .cursor

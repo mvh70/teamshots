@@ -75,6 +75,14 @@ export interface SelfieTypeStatus {
 }
 
 /**
+ * Quality rating for lighting and background checks.
+ * - good: Optimal for AI generation
+ * - acceptable: Usable but not ideal
+ * - poor: May produce suboptimal results
+ */
+export type QualityRating = 'good' | 'acceptable' | 'poor'
+
+/**
  * Result from the AI classification service.
  */
 export interface ClassificationResult {
@@ -87,6 +95,14 @@ export interface ClassificationResult {
   isProper: boolean
   /** Reason why the selfie is not proper (if isProper is false) */
   improperReason?: string
+  /** Lighting quality assessment */
+  lightingQuality?: QualityRating
+  /** Explanation of lighting issues if not good */
+  lightingFeedback?: string
+  /** Background separation quality (face stands out from background) */
+  backgroundQuality?: QualityRating
+  /** Explanation of background issues if not good */
+  backgroundFeedback?: string
 }
 
 /**

@@ -107,10 +107,19 @@ export function useCustomizationWizard({
       .map((step, idx) => step.type === 'locked' ? idx : -1)
       .filter(idx => idx >= 0)
 
+    // Extract step names for tooltips
+    const stepNames = allNumberedSteps.map(step => {
+      if (step.type === 'editable' || step.type === 'locked') {
+        return step.category?.label ?? ''
+      }
+      return ''
+    })
+
     return {
       editableSteps: editableNumberedSteps.length,
       allSteps: allNumberedSteps.length,
-      lockedSteps: lockedStepIndices
+      lockedSteps: lockedStepIndices,
+      stepNames
     }
   }, [mobileSteps])
 

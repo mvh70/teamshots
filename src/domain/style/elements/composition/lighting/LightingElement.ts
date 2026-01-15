@@ -71,11 +71,17 @@ export class LightingElement extends StyleElement {
         setup: derived.setup,
         color_temperature: `${derived.colorTemp}K`,
         description: derived.description,
+        note: 'The setup describes how light should appear on the subject, NOT visible equipment. No softboxes, umbrellas, studio lights, or photography equipment should be visible in the image.',
       },
     }
 
     // Note: Specific lighting details (quality, direction, color temperature, setup) are in the JSON payload
     // Only add critical quality rules that aren't obvious from the JSON structure
+
+    // Universal constraint: no visible photography equipment
+    mustFollow.push(
+      'No studio lighting equipment, softboxes, umbrellas, reflectors, or photography gear visible in the image'
+    )
 
     // Phase-specific quality constraints
     if (phase === 'person-generation') {

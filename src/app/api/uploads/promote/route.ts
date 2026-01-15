@@ -41,6 +41,10 @@ async function runAsyncClassification(
         personCount: classification.personCount,
         isProper: classification.isProper,
         improperReason: classification.improperReason,
+        lightingQuality: classification.lightingQuality,
+        lightingFeedback: classification.lightingFeedback,
+        backgroundQuality: classification.backgroundQuality,
+        backgroundFeedback: classification.backgroundFeedback,
         // If improper, deselect the selfie
         ...(classification.isProper === false && { selected: false }),
       },
@@ -51,6 +55,8 @@ async function runAsyncClassification(
       selfieType: classification.selfieType,
       isProper: classification.isProper,
       personCount: classification.personCount,
+      lightingQuality: classification.lightingQuality,
+      backgroundQuality: classification.backgroundQuality,
     })
   } catch (error) {
     Logger.error('[uploads/promote] Async classification failed', {
@@ -69,6 +75,10 @@ async function runAsyncClassification(
           personCount: null,
           isProper: null,
           improperReason: null,
+          lightingQuality: null,
+          lightingFeedback: null,
+          backgroundQuality: null,
+          backgroundFeedback: null,
         },
       })
       Logger.info('[uploads/promote] Marked failed classification as null for retry', { selfieId })

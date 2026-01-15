@@ -67,6 +67,11 @@ export default function PhotoUpload({
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
+  // Desktop camera modal drag state
+  const [modalPosition, setModalPosition] = useState({ x: 0, y: 32 }); // Start near top (32px = pt-8)
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const modalRef = useRef<HTMLDivElement>(null);
   const hasAutoOpenedRef = useRef(false);
   const awaitingIOSCameraCaptureRef = useRef(false);
   const resetUploadState = () => {
@@ -572,7 +577,53 @@ export default function PhotoUpload({
     if (stream) stream.getTracks().forEach((t) => t.stop());
     setStream(null);
     awaitingIOSCameraCaptureRef.current = false;
+    // Reset modal position when closing
+    setModalPosition({ x: 0, y: 32 });
+    setIsDragging(false);
   };
+
+  // Desktop camera modal drag handlers
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    if (!modalRef.current) return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX - modalPosition.x,
+      y: e.clientY - modalPosition.y
+    };
+  }, [modalPosition]);
+
+  const handleDragMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+    const newX = e.clientX - dragStartRef.current.x;
+    const newY = e.clientY - dragStartRef.current.y;
+
+    // Keep modal within viewport bounds
+    const modalWidth = modalRef.current?.offsetWidth || 400;
+    const modalHeight = modalRef.current?.offsetHeight || 400;
+    const maxX = window.innerWidth - modalWidth;
+    const maxY = window.innerHeight - modalHeight;
+
+    setModalPosition({
+      x: Math.max(-maxX / 2, Math.min(maxX / 2, newX)),
+      y: Math.max(0, Math.min(maxY, newY))
+    });
+  }, [isDragging]);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Add/remove drag event listeners
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleDragMove);
+      window.addEventListener('mouseup', handleDragEnd);
+      return () => {
+        window.removeEventListener('mousemove', handleDragMove);
+        window.removeEventListener('mouseup', handleDragEnd);
+      };
+    }
+  }, [isDragging, handleDragMove, handleDragEnd]);
 
   // Auto-open camera if requested - use useEffect to handle prop changes properly
   useEffect(() => {
@@ -769,7 +820,7 @@ export default function PhotoUpload({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span>Use Camera</span>
+                <span>{t("useCamera")}</span>
               </button>
               <button
                 type="button"
@@ -783,7 +834,7 @@ export default function PhotoUpload({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span>Upload Photo</span>
+                <span>{t("uploadPhoto")}</span>
               </button>
             </div>
           </div>
@@ -879,7 +930,7 @@ export default function PhotoUpload({
                 onClick={closeCamera}
                 disabled={isUploading}
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 type="button"
@@ -890,17 +941,36 @@ export default function PhotoUpload({
                 {isUploading ? (
                   <span className="flex items-center gap-2">
                     <LoadingSpinner size="sm" className="border-white/30 border-t-white" />
-                    Processing...
+                    {t("processing")}
                   </span>
                 ) : (
-                  'Capture'
+                  t("capture")
                 )}
               </button>
             </div>
           </div>
-          {/* Desktop: Centered modal */}
-          <div className="hidden md:flex md:items-center md:justify-center h-full">
-            <div className="bg-white rounded-lg p-4 w-full max-w-md shadow-lg">
+          {/* Desktop: Draggable modal (positioned near laptop camera) */}
+          <div className="hidden md:flex md:items-start md:justify-center h-full">
+            <div
+              ref={modalRef}
+              className="bg-white rounded-lg p-4 w-full max-w-md shadow-lg"
+              style={{
+                transform: `translate(${modalPosition.x}px, ${modalPosition.y}px)`,
+                cursor: isDragging ? 'grabbing' : 'default'
+              }}
+            >
+              {/* Drag handle with instruction text */}
+              <div
+                className="mb-3 pb-3 border-b border-gray-100 cursor-grab active:cursor-grabbing select-none"
+                onMouseDown={handleDragStart}
+              >
+                <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+                  <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM14 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM14 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/>
+                  </svg>
+                  <span>{t("dragCameraInstruction")}</span>
+                </div>
+              </div>
               <div className="relative w-full">
                 <video 
                   ref={videoRefDesktop} 
@@ -941,7 +1011,7 @@ export default function PhotoUpload({
                   onClick={closeCamera}
                   disabled={isUploading}
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
                 <button
                   type="button"
@@ -952,10 +1022,10 @@ export default function PhotoUpload({
                   {isUploading ? (
                     <span className="flex items-center gap-2">
                       <LoadingSpinner size="sm" className="border-white/30 border-t-white" />
-                      Processing...
+                      {t("processing")}
                     </span>
                   ) : (
-                    'Capture'
+                    t("capture")
                   )}
                 </button>
               </div>

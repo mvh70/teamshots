@@ -1,16 +1,143 @@
 {
-  "heroTitle": "Fotos profesionales para bufetes de abogados",
-  "heroSubtitle": "Retratos profesionales y confiables para cada abogado. Mantén la consistencia en el sitio web de tu firma, directorios legales y materiales de marketing.",
-  "bullets": [
-    "Transmite profesionalismo y confianza a los clientes",
-    "Estilo consistente en socios, asociados y personal",
-    "Perfecto para sitios web, Martindale-Hubbell y LinkedIn"
-  ],
-  "seoTitle": "Fotos profesionales para bufetes de abogados (profesionales y confiables)",
-  "seoDescription": "Obtén retratos profesionales consistentes para todo tu bufete. Genera fotos pulidas y confiables para abogados, socios y personal en minutos.",
+  "hero": {
+    "badge": "Diseñado para bufetes de abogados",
+    "title": "Headshots profesionales para bufetes de abogados",
+    "subtitle": "Headshots consistentes y profesionales para cada abogado. Mantén la imagen profesional de tu firma en todas las plataformas.",
+    "cta": "Ver el nuevo look de tu firma"
+  },
+  "painPoints": {
+    "title": "Por qué los bufetes luchan con las fotos de equipo",
+    "items": [
+      {
+        "title": "Conflictos de agenda de socios",
+        "description": "Los socios senior son imposibles de programar. Entre juicios, reuniones y clientes, encontrar tiempo para fotos es una pesadilla."
+      },
+      {
+        "title": "Inconsistencia de marca en la firma",
+        "description": "El headshot de cada abogado luce diferente - diferentes fotógrafos, fondos y niveles de calidad. Socava el prestigio de tu firma."
+      },
+      {
+        "title": "Altos honorarios de fotógrafos",
+        "description": "€300-500 por abogado se acumula rápidamente, especialmente para firmas grandes o al incorporar socios laterales."
+      }
+    ],
+    "solution": "TeamShotsPro resuelve todo esto en 60 segundos."
+  },
+  "showcase": {
+    "title": "Transformaciones de bufetes",
+    "subtitle": "Resultados antes y después de bufetes reales"
+  },
+  "howItWorks": {
+    "title": "Cómo funciona para bufetes",
+    "steps": [
+      {
+        "number": "1",
+        "title": "Configura el estilo de tu firma",
+        "description": "Elige el look profesional que coincida con la identidad y estándares de tu firma."
+      },
+      {
+        "number": "2",
+        "title": "Invita abogados por email",
+        "description": "Envía invitaciones a socios, asociados y personal con un solo clic."
+      },
+      {
+        "number": "3",
+        "title": "Los abogados se toman una selfie",
+        "description": "Sin necesidad de visitar un estudio. Funciona desde la oficina, casa o entre reuniones."
+      },
+      {
+        "number": "4",
+        "title": "Descarga para todas las plataformas",
+        "description": "Obtén fotos consistentes listas para web, directorios y materiales de marketing."
+      }
+    ]
+  },
+  "comparison": {
+    "title": "Opciones de headshots legales comparadas",
+    "headers": ["Característica", "Fotógrafo tradicional", "TeamShotsPro"],
+    "rows": [
+      ["Coste por abogado", "€300-500", "€26"],
+      ["Tiempo de programación", "2-3 semanas", "60 segundos"],
+      ["Consistencia de marca", "Variable", "100%"],
+      ["Abogados remotos", "Imposible", "Fácil"],
+      ["Incorporación lateral", "Semanas", "Mismo día"]
+    ]
+  },
+  "useCases": {
+    "title": "Dónde usan sus headshots los bufetes",
+    "platforms": [
+      { "name": "Web de la firma", "icon": "monitor" },
+      { "name": "LinkedIn", "icon": "briefcase" },
+      { "name": "Directorios legales", "icon": "scale" },
+      { "name": "Perfiles profesionales", "icon": "badge" },
+      { "name": "Tarjetas de visita", "icon": "credit-card" },
+      { "name": "Listados de abogados", "icon": "file-text" }
+    ]
+  },
+  "testimonials": {
+    "title": "Lo que dicen los bufetes",
+    "items": [
+      {
+        "quote": "Actualizamos toda la página de socios en una tarde. Los clientes han comentado lo profesional que luce.",
+        "author": "David M.",
+        "role": "Socio director",
+        "company": "Bufete Top 50"
+      },
+      {
+        "quote": "Las incorporaciones laterales obtienen sus headshots el mismo día que se unen. No más placeholders de 'foto próximamente'.",
+        "author": "Raquel K.",
+        "role": "Directora de marketing",
+        "company": "Bufete regional"
+      },
+      {
+        "quote": "La calidad es indistinguible de nuestro fotógrafo profesional, pero a una fracción del coste.",
+        "author": "Javier T.",
+        "role": "COO",
+        "company": "Boutique de litigios"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Preguntas sobre fotos para bufetes",
+    "items": [
+      {
+        "question": "¿Qué deben vestir los abogados?",
+        "answer": "Atuendo profesional funciona mejor - trajes, corbatas o ropa formal de negocios. Los colores oscuros fotografían particularmente bien para profesionales legales."
+      },
+      {
+        "question": "¿Son los headshots con IA suficientemente profesionales para bufetes?",
+        "answer": "Sí. Nuestras fotos son indistinguibles de la fotografía tradicional y cumplen los estándares profesionales esperados en marketing legal."
+      },
+      {
+        "question": "¿Podemos mantener diferentes looks para socios vs asociados?",
+        "answer": "Sí. Puedes crear múltiples presets de estilo para diferentes niveles dentro de tu firma mientras mantienes la consistencia general de marca."
+      },
+      {
+        "question": "¿Cómo manejamos abogados en múltiples oficinas?",
+        "answer": "Los abogados remotos simplemente reciben un enlace de invitación y pueden enviar su selfie desde cualquier ubicación."
+      },
+      {
+        "question": "¿Ofrecéis precios para toda la firma?",
+        "answer": "Sí. Ofrecemos descuentos por volumen para firmas con 25+ abogados. Contáctanos para precios enterprise."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Precios simples para bufetes",
+    "subtitle": "La mayoría de firmas eligen el plan de 50 plazas"
+  },
+  "finalCta": {
+    "title": "¿Listo para transformar la imagen de tu firma?",
+    "subtitle": "Obtén headshots profesionales y consistentes para toda tu firma sin las complicaciones de la fotografía tradicional.",
+    "cta": "Ver el nuevo look de tu firma"
+  },
+  "seo": {
+    "title": "Headshots con IA para bufetes de abogados | TeamShotsPro",
+    "description": "Obtén headshots consistentes y profesionales para todo tu bufete en 60 segundos. Perfecto para webs de firma, directorios legales y marketing."
+  },
   "stylingNotes": [
-    "Traje profesional y corbata o atuendo formal de negocios",
-    "Fondo neutral y digno (gris oscuro o azul marino)",
-    "Expresión segura y accesible que transmita confianza"
+    "Traje y corbata profesional o atuendo formal de negocios",
+    "Fondo neutro y digno (gris oscuro o azul marino)",
+    "Expresión confiada y cercana que transmita confianza"
   ]
 }
