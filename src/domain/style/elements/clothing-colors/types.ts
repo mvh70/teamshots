@@ -58,3 +58,31 @@ export function getColorDisplay(color: string | ColorValue | undefined): string 
   return color.name ? `${color.name} ${color.hex}` : color.hex
 }
 
+/**
+ * Extract all colors from a ClothingColorValue as hex strings
+ * Useful for passing to components that need consistent hex format
+ */
+export function extractHexColors(colors: ClothingColorValue | undefined): {
+  topLayer?: string
+  baseLayer?: string
+  bottom?: string
+  shoes?: string
+} {
+  if (!colors) return {}
+  return {
+    topLayer: getColorHex(colors.topLayer),
+    baseLayer: getColorHex(colors.baseLayer),
+    bottom: getColorHex(colors.bottom),
+    shoes: getColorHex(colors.shoes)
+  }
+}
+
+/**
+ * Check if a color value is a valid hex color (starts with #)
+ * Color names like 'Dark red' are not valid hex colors
+ */
+export function isValidHexColor(color: string | ColorValue | undefined): boolean {
+  const hex = getColorHex(color)
+  return hex !== undefined && hex.startsWith('#')
+}
+

@@ -378,7 +378,7 @@ export async function executeV3Step1b(
       '1K', // Fixed resolution for raw asset
       {
         temperature: AI_CONFIG.GENERATION_TEMPERATURE,
-        preferredProvider: 'openrouter' // Load balancing: Step 1b uses OpenRouter, Step 1a uses Vertex
+        preferredProvider: 'rest' // Prefer Google AI Studio REST API for Gemini 3 models
       }
     )
   } catch (error) {

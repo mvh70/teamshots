@@ -250,7 +250,7 @@ export async function executeV3Step2(
     
     // Professional Compositing Instructions
     '**Advanced Compositing & Refinement:**',
-    '- **Light Wrap:** Apply very subtle light wrap where the background lighting naturally affects the subject edges. CRITICAL: Light wrap must be extremely subtle and imperceptible - NO visible halos, glows, or bright edges around the subject.',
+    '- **Edge Integration:** Ensure clean, natural edges where the subject meets the background. Do NOT add any glow, halo, aura, or brightening effect around the subject edges.',
     '- **Color Matching:** Match the black levels, white balance, and color grading of the subject to the background environment for a cohesive look.',
     '- **Shadows:** Cast a realistic soft shadow from the subject onto the background based on the specified lighting direction.',
     '- **Global Grading:** Apply a final global color grade to "glue" the layers together, ensuring cohesive tone and atmosphere.',
@@ -461,7 +461,7 @@ export async function executeV3Step2(
       resolution,
       {
         temperature: 0.3, // Lower temperature for more consistent refinement
-        preferredProvider: 'openrouter' // Load balancing: Step 2 uses OpenRouter with fallback to Vertex
+        preferredProvider: 'rest' // Prefer Google AI Studio REST API for Gemini 3 models
       }
     )
   } catch (error) {

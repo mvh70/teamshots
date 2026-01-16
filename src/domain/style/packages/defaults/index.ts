@@ -131,7 +131,7 @@ export const EXECUTIVE_PORTRAIT: StandardPresetConfig = {
       notes: ['Keep background understated to emphasise authority.']
     },
     composition: {
-      framingNotes: ['Medium close-up to waist level for commanding presence', 'Rule of thirds alignment'],
+      framingNotes: ['Medium shot to waist level for commanding presence', 'Rule of thirds alignment'],
       headroomPercent: 12
     },
     pose: {

@@ -91,7 +91,7 @@ export const SHOT_TYPE_CONFIGS: Record<CanonicalShotType, ShotTypeConfig> = {
 
 export const SHOT_TYPE_ALIASES: Record<string, CanonicalShotType> = {
   'headshot': 'medium-close-up',
-  'midchest': 'medium-shot',
+  'midchest': 'medium-close-up', // mid-chest = medium-close-up (NOT medium-shot which is waist level)
   'full-body': 'full-length',
   'mediumcloseup': 'medium-close-up',
   'threequarter': 'three-quarter'

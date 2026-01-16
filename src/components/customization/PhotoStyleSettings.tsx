@@ -157,29 +157,64 @@ export default function PhotoStyleSettings({
   const [visitedEditableSteps, setVisitedEditableSteps] = React.useState<Set<number>>(() => new Set(persistedVisitedSteps))
 
   // Compute resolved clothing colors (no memoization to ensure fresh values)
+  // Priority: user-set colors (from session) > package defaults > fallbacks
   const defaults = packageDefaults.clothingColors
   const current = value.clothingColors
-  const defaultColors = defaults && hasValue(defaults) ? defaults.value : {}
+  const defaultColors = defaults && hasValue(defaults) ? defaults.value : undefined
+  const currentColors = current && hasValue(current) ? current.value : undefined
+
+  // Fallback colors - used when colors are missing or invalid
+  // These provide sensible initial values for the clothing preview
+  const fallbackColors = {
+    topLayer: '#2C3E50', // Dark charcoal - professional jacket/blazer
+    baseLayer: '#F8F9FA', // Light gray/off-white - shirt
+    bottom: '#1A1A2E', // Dark navy - trousers
+    shoes: '#2D2D2D' // Dark gray - dress shoes
+  }
+
+  // Helper to check if a color is valid for CSS (hex color or ColorValue object with hex)
+  // Package defaults may have invalid color names like 'Dark red' (with space)
+  const isValidColor = (color: unknown): boolean => {
+    if (!color) return false
+    if (typeof color === 'string') return color.startsWith('#')
+    if (typeof color === 'object' && color !== null && 'hex' in color) {
+      const hex = (color as { hex: string }).hex
+      return typeof hex === 'string' && hex.startsWith('#')
+    }
+    return false
+  }
+
+  // Helper to get color with fallback for invalid colors
+  type ColorType = string | { hex: string; name?: string }
+  const getValidColor = (
+    key: 'topLayer' | 'baseLayer' | 'bottom' | 'shoes',
+    userColor: unknown,
+    defaultColor: unknown
+  ): ColorType => {
+    if (userColor && isValidColor(userColor)) return userColor as ColorType
+    if (defaultColor && isValidColor(defaultColor)) return defaultColor as ColorType
+    return fallbackColors[key]
+  }
 
   let resolvedClothingColors: ClothingColorSettings
 
+  // Build colors with fallback for each property that's invalid
+  const mergedColors = {
+    topLayer: getValidColor('topLayer', currentColors?.topLayer, defaultColors?.topLayer),
+    baseLayer: getValidColor('baseLayer', currentColors?.baseLayer, defaultColors?.baseLayer),
+    bottom: getValidColor('bottom', currentColors?.bottom, defaultColors?.bottom),
+    shoes: getValidColor('shoes', currentColors?.shoes, defaultColors?.shoes)
+  }
+
+  // Preserve the mode from current settings if they exist
   if (current) {
-    const currentColors = hasValue(current) ? current.value : {}
     if (isUserChoice(current)) {
-      resolvedClothingColors = userChoice({
-        ...defaultColors,
-        ...currentColors
-      })
+      resolvedClothingColors = userChoice(mergedColors)
     } else {
-      resolvedClothingColors = predefined({
-        ...defaultColors,
-        ...currentColors
-      })
+      resolvedClothingColors = predefined(mergedColors)
     }
-  } else if (defaultColors && Object.keys(defaultColors).length > 0) {
-    resolvedClothingColors = userChoice({ ...defaultColors })
   } else {
-    resolvedClothingColors = userChoice()
+    resolvedClothingColors = userChoice(mergedColors)
   }
 
   // Compute which clothing color pickers to hide based on shot type and clothing style
@@ -620,7 +655,7 @@ export default function PhotoStyleSettings({
 
           {category.key === 'clothingColors' && (
             <ClothingColorSelector
-              value={resolvedClothingColors}
+              value={value.clothingColors || userChoice()}
               onChange={(settings) => handleCategorySettingsChange('clothingColors', settings)}
               isDisabled={!showToggles && readonlyPredefined && isPredefined}
               isPredefined={!showToggles && readonlyPredefined && isPredefined}
@@ -628,6 +663,7 @@ export default function PhotoStyleSettings({
               showHeader={false}
               excludeColors={excludedClothingColors}
               customClothingColors={value.customClothing?.colors}
+              defaultDisplayColors={hasValue(resolvedClothingColors) ? resolvedClothingColors.value : undefined}
             />
           )}
 
@@ -783,37 +819,41 @@ export default function PhotoStyleSettings({
   }, [currentAllStepsIndex, currentMobileStep?.type, currentMobileStep?.category?.key])
 
   // Track which editable steps have been customized (value differs from default)
-  // For steps other than clothingColors, this determines the "done" (green) state
+  // This determines the "done" (green) state for all steps including clothingColors
   const customizedEditableStepIndices = React.useMemo(() => {
     const customized = new Set<number>()
     editableNumberedSteps.forEach((step) => {
-      // Skip clothingColors - it uses visited logic instead
-      if (step.category?.key === 'clothingColors') return
-      
       let isCustomized = false
-      
+
       if (step.type === 'custom') {
         // Custom steps are considered "set" if they exist
         isCustomized = true
       } else if (step.category) {
         const categorySettings = (value as Record<string, unknown>)[step.category.key]
         const defaultSetting = (packageDefaults as Record<string, unknown>)[step.category.key]
-        
+
         // Compare against originalContextSettings if available (more accurate for team contexts)
-        const comparisonSetting = originalContextSettings 
+        const comparisonSetting = originalContextSettings
           ? (originalContextSettings as Record<string, unknown>)[step.category.key]
           : defaultSetting
-        
-        if (categorySettings && comparisonSetting) {
+
+        // For clothingColors, check if the value property has actual color data
+        if (step.category.key === 'clothingColors') {
+          const colorsValue = categorySettings && hasValue(categorySettings as ClothingColorSettings)
+            ? (categorySettings as ClothingColorSettings).value
+            : null
+          // Mark as customized if colors have been explicitly set (even if matching defaults)
+          isCustomized = colorsValue !== null && Object.keys(colorsValue || {}).length > 0
+        } else if (categorySettings && comparisonSetting) {
           isCustomized = JSON.stringify(categorySettings) !== JSON.stringify(comparisonSetting)
         } else if (categorySettings && !comparisonSetting) {
           // Has a setting but no comparison - check type
-          const settingType = (categorySettings as { type?: string; style?: string }).type || 
+          const settingType = (categorySettings as { type?: string; style?: string }).type ||
                              (categorySettings as { type?: string; style?: string }).style
           isCustomized = settingType !== 'user-choice' && settingType !== undefined
         }
       }
-      
+
       if (isCustomized) {
         const allStepsIdx = allNumberedSteps.findIndex(s => {
           if (step.type === 'custom' && s.type === 'custom') {

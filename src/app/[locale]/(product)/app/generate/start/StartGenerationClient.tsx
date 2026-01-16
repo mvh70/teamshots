@@ -164,6 +164,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   // Track if we've loaded saved settings to avoid overwriting user changes
   const hasLoadedSavedSettingsRef = React.useRef(false)
+  // Track if user has explicitly made changes (to prevent auto-save on initial load)
+  const hasUserMadeChangesRef = React.useRef(false)
 
   // Helper function to merge saved colors into settings
   // IMPORTANT: Only merges saved colors when clothingColors mode is 'user-choice'
@@ -193,12 +195,15 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
   // Helper function to merge saved style settings into current settings
   // Only merges fields that are 'user-choice' type - preserves predefined/preset values
+  // Note: We intentionally use a GLOBAL key (no contextId) to ensure settings persist
+  // across context/package changes. The merge logic handles predefined vs user-choice.
   const mergeSavedStyleSettings = React.useCallback((
-    settings: PhotoStyleSettingsType,
-    contextId?: string | null
+    settings: PhotoStyleSettingsType
   ): PhotoStyleSettingsType => {
-    const savedSettings = loadStyleSettings(contextId)
-    if (!savedSettings) return settings
+    const savedSettings = loadStyleSettings() // Global key - no context-specific key
+    if (!savedSettings) {
+      return settings
+    }
 
     // Start with current settings
     const merged = { ...settings }
@@ -210,59 +215,89 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     ] as const
 
     for (const key of categoriesToMerge) {
-      const currentValue = settings[key] as { type?: string; style?: string } | undefined
-      const savedValue = savedSettings[key]
+      const currentValue = settings[key] as { type?: string; style?: string; mode?: string; value?: unknown } | undefined
+      const savedValue = savedSettings[key] as { type?: string; style?: string; mode?: string; value?: unknown } | undefined
 
-      // Only merge if current settings allow user choice
-      const isUserChoice = key === 'clothing'
-        ? currentValue?.style === 'user-choice'
-        : currentValue?.type === 'user-choice'
+      // Check if saved value has actual content (value property with data)
+      const savedHasValue = savedValue?.value !== undefined
 
-      if (isUserChoice && savedValue) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (merged as any)[key] = savedValue
+      if (savedHasValue) {
+        if (currentValue) {
+          // Both exist: keep current mode, restore saved value
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ;(merged as any)[key] = {
+            ...currentValue,
+            value: savedValue.value
+          }
+        } else {
+          // Current package doesn't have this setting, but we have a saved value
+          // Add the entire saved setting to preserve user's selection
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ;(merged as any)[key] = savedValue
+        }
       }
     }
 
     return merged
   }, [])
 
-  // Load saved style settings from session storage on mount
-  // IMPORTANT: Only loads settings if current type is 'user-choice'
-  // Predefined/preset values are never modified
+  // Mark as ready for saving after hydration (regardless of skipUpload)
+  // This ensures saves work in all flows
   useEffect(() => {
-    // Only load settings once when component is hydrated and ready
-    if (!hydrated || !skipUpload || hasLoadedSavedSettingsRef.current) return
+    console.log('[Load Effect] Running. hydrated:', hydrated, 'hasLoadedSavedSettingsRef:', hasLoadedSavedSettingsRef.current, 'skipUpload:', skipUpload)
+    if (!hydrated || hasLoadedSavedSettingsRef.current) {
+      console.log('[Load Effect] Early return - already loaded or not hydrated')
+      return
+    }
 
-    const contextId = activeContext?.id
+    // If skipUpload is true, load saved settings first
+    if (skipUpload) {
+      console.log('[Load Effect] skipUpload is true, merging saved settings')
+      setPhotoStyleSettings(prev => {
+        // First merge saved style settings (all categories) - uses global key
+        let merged = mergeSavedStyleSettings(prev)
+        // Then merge saved clothing colors (for backward compatibility)
+        merged = mergeSavedColors(merged)
+        return merged
+      })
+    } else {
+      console.log('[Load Effect] skipUpload is false, NOT merging saved settings')
+    }
 
-    setPhotoStyleSettings(prev => {
-      // First merge saved style settings (all categories)
-      let merged = mergeSavedStyleSettings(prev, contextId)
-      // Then merge saved clothing colors (for backward compatibility)
-      merged = mergeSavedColors(merged)
-      hasLoadedSavedSettingsRef.current = true
-      return merged
-    })
-  }, [hydrated, skipUpload, activeContext?.id, mergeSavedStyleSettings, mergeSavedColors])
+    // Mark as ready for saving (always, after hydration)
+    hasLoadedSavedSettingsRef.current = true
+    console.log('[Load Effect] Set hasLoadedSavedSettingsRef to true')
+  }, [hydrated, skipUpload, mergeSavedStyleSettings, mergeSavedColors])
 
   // Save all style settings to session storage whenever they change
-  // IMPORTANT: Saves all user choices - this ensures settings survive page refresh
+  // IMPORTANT: Only saves when user has explicitly made changes (not on initial load)
+  // This prevents overwriting saved settings when page loads with a different package
   useEffect(() => {
-    // Skip saving during initial load
-    if (!hasLoadedSavedSettingsRef.current || !hydrated || !skipUpload) return
+    console.log('[Save Effect] Running. hasLoadedSavedSettingsRef:', hasLoadedSavedSettingsRef.current, 'hasUserMadeChangesRef:', hasUserMadeChangesRef.current, 'hydrated:', hydrated)
+    // Skip saving during initial load, if not hydrated, or if user hasn't made changes
+    if (!hasLoadedSavedSettingsRef.current || !hydrated || !hasUserMadeChangesRef.current) {
+      console.log('[Save Effect] Early return - not ready to save or no user changes')
+      return
+    }
 
-    const contextId = activeContext?.id
-
-    // Save all style settings
-    saveStyleSettings(photoStyleSettings, contextId)
+    console.log('[Save Effect] Saving settings:', photoStyleSettings)
+    // Save all style settings with global key (no context-specific key)
+    // This ensures settings persist regardless of which context/package is active
+    saveStyleSettings(photoStyleSettings)
 
     // Also save clothing colors separately for backward compatibility
     const clothingColors = photoStyleSettings.clothingColors
     if (clothingColors && isUserChoice(clothingColors) && hasValue(clothingColors)) {
       saveClothingColors(clothingColors.value)
     }
-  }, [photoStyleSettings, hydrated, skipUpload, activeContext?.id])
+    console.log('[Save Effect] Save complete')
+  }, [photoStyleSettings, hydrated])
+
+  // Wrapper for settings onChange that marks user as having made changes
+  const handleSettingsChange = useCallback((newSettings: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)) => {
+    hasUserMadeChangesRef.current = true
+    setPhotoStyleSettings(newSettings)
+  }, [])
 
   const normalizeContextName = useCallback((rawName: string | null | undefined, index: number, total: number, type: 'personal' | 'team'): string => {
     const trimmed = (rawName ?? '').trim()
@@ -755,19 +790,25 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                         setActiveContext(null)
                         const fallbackPackage = getPackageConfig(fallbackPackageId)
                         setSelectedPackageId(fallbackPackageId)
-                        // Freestyle packages are always user-choice, so merge saved colors
-                        const newSettings = mergeSavedColors(fallbackPackage.defaultSettings)
+                        // Freestyle packages are always user-choice, so merge saved settings and colors
+                        let newSettings = mergeSavedStyleSettings(fallbackPackage.defaultSettings)
+                        newSettings = mergeSavedColors(newSettings)
                         setPhotoStyleSettings(newSettings)
                         setOriginalContextSettings(fallbackPackage.defaultSettings)
+                        // Mark that user has made changes - enables saving
+                        hasUserMadeChangesRef.current = true
                       } else if (value.startsWith('package_')) {
                         const pkgId = value.replace('package_', '')
                         setActiveContext(null)
                         setSelectedPackageId(pkgId)
                         const pkg = getPackageConfig(pkgId)
-                        // Packages are always user-choice, so merge saved colors
-                        const newSettings = mergeSavedColors(pkg.defaultSettings)
+                        // Packages are always user-choice, so merge saved settings and colors
+                        let newSettings = mergeSavedStyleSettings(pkg.defaultSettings)
+                        newSettings = mergeSavedColors(newSettings)
                         setPhotoStyleSettings(newSettings)
                         setOriginalContextSettings(pkg.defaultSettings)
+                        // Mark that user has made changes - enables saving
+                        hasUserMadeChangesRef.current = true
                       } else {
                         const selectedContext = availableContexts.find(ctx => ctx.id === value)
                         if (selectedContext) {
@@ -797,6 +838,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                           setPhotoStyleSettings(newSettings)
                           setSelectedPackageId(pkg.id)
                           setOriginalContextSettings(ui)
+                          // Mark that user has made changes - enables saving
+                          hasUserMadeChangesRef.current = true
                         }
                       }
                     }}
@@ -838,7 +881,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             <div className="space-y-6 w-full max-w-full overflow-x-hidden">
               <StyleSettingsSection
                 value={photoStyleSettings}
-                onChange={setPhotoStyleSettings}
+                onChange={handleSettingsChange}
                 readonlyPredefined={!!activeContext}
                 originalContextSettings={originalContextSettings}
                 showToggles={false}
@@ -858,7 +901,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           <div className="space-y-6">
             <StyleSettingsSection
               value={photoStyleSettings}
-              onChange={setPhotoStyleSettings}
+              onChange={handleSettingsChange}
               readonlyPredefined={!!activeContext}
               originalContextSettings={originalContextSettings}
               showToggles={false}

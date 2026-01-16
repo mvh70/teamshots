@@ -3,8 +3,8 @@
 import React from 'react'
 import { useTranslations } from 'next-intl'
 import { ClothingColorSettings, ClothingColorValue } from '@/types/photo-style'
-import { predefined, hasValue, userChoice } from '../base/element-types'
-import type { ClothingColorKey, ColorValue } from './types'
+import { predefined, hasValue, userChoice, isUserChoice } from '../base/element-types'
+import { getColorHex, type ClothingColorKey, type ColorValue } from './types'
 import ColorWheelPicker from '@/components/ui/ColorWheelPicker'
 import { PhotoIcon } from '@heroicons/react/24/outline'
 
@@ -27,6 +27,7 @@ interface ClothingColorSelectorProps {
   customClothingColors?: CustomClothingColors // Colors detected from uploaded outfit image
   useCustomColors?: boolean // Whether to use colors from uploaded outfit
   onUseCustomColorsChange?: (useCustom: boolean) => void // Callback when checkbox changes
+  defaultDisplayColors?: ClothingColorValue // Fallback colors to show when no colors are set
 }
 
 export default function ClothingColorSelector({
@@ -40,7 +41,8 @@ export default function ClothingColorSelector({
   excludeColors = [],
   customClothingColors,
   useCustomColors,
-  onUseCustomColorsChange
+  onUseCustomColorsChange,
+  defaultDisplayColors
 }: ClothingColorSelectorProps) {
   const t = useTranslations('customization.photoStyle.clothingColors')
 
@@ -94,10 +96,16 @@ export default function ClothingColorSelector({
   // Extract the color value from the wrapper
   const colorValue = hasValue(value) ? value.value : undefined
 
+  // Check if colorValue has any actual colors set
+  const hasActualColors = colorValue && Object.keys(colorValue).some(
+    key => key !== 'source' && colorValue[key as keyof typeof colorValue]
+  )
+
   // When using custom colors, show those instead
+  // Otherwise, prioritize defaultDisplayColors (validated colors) to match clothes preview
   const displayColors = isUsingCustomColors && customClothingColors
     ? customClothingColors
-    : colorValue
+    : defaultDisplayColors || (hasActualColors ? colorValue : undefined)
 
   const handleColorChange = (colorType: ClothingColorKey, color: ColorValue) => {
     if (isPredefined || (isUsingCustomColors && hasCustomColors)) return
@@ -106,8 +114,12 @@ export default function ClothingColorSelector({
       ...colorValue,
       [colorType]: color
     }
-    // Preserve the existing mode
-    onChange(predefined(newValue))
+    // Preserve the existing mode - use userChoice for user-editable colors
+    if (isUserChoice(value)) {
+      onChange(userChoice(newValue))
+    } else {
+      onChange(predefined(newValue))
+    }
   }
 
   const visibleCount = 4 - excludeColors.length
@@ -182,7 +194,7 @@ export default function ClothingColorSelector({
                 </div>
               </div>
               <ColorWheelPicker
-                value={displayColors?.topLayer ?? ''}
+                value={getColorHex(displayColors?.topLayer) ?? ''}
                 onChange={(color) => handleColorChange('topLayer', color)}
                 disabled={isPredefined || isDisabled || (isUsingCustomColors && hasCustomColors)}
               />
@@ -204,7 +216,7 @@ export default function ClothingColorSelector({
                 </div>
               </div>
               <ColorWheelPicker
-                value={displayColors?.baseLayer ?? ''}
+                value={getColorHex(displayColors?.baseLayer) ?? ''}
                 onChange={(color) => handleColorChange('baseLayer', color)}
                 disabled={isPredefined || isDisabled || (isUsingCustomColors && hasCustomColors)}
               />
@@ -226,7 +238,7 @@ export default function ClothingColorSelector({
                 </div>
               </div>
               <ColorWheelPicker
-                value={displayColors?.bottom ?? ''}
+                value={getColorHex(displayColors?.bottom) ?? ''}
                 onChange={(color) => handleColorChange('bottom', color)}
                 disabled={isPredefined || isDisabled || (isUsingCustomColors && hasCustomColors)}
               />
@@ -248,7 +260,7 @@ export default function ClothingColorSelector({
                 </div>
               </div>
               <ColorWheelPicker
-                value={displayColors?.shoes ?? ''}
+                value={getColorHex(displayColors?.shoes) ?? ''}
                 onChange={(color) => handleColorChange('shoes', color)}
                 disabled={isPredefined || isDisabled || (isUsingCustomColors && hasCustomColors)}
               />

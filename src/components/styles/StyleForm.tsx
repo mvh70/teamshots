@@ -93,12 +93,14 @@ export default function StyleForm({
       totalCount++
       
       // Check if it's editable (user-choice)
+      // Check both 'mode' (new format) and 'type'/'style' (legacy format)
+      const wrapped = setting as { mode?: string; type?: string; style?: string }
       if (category === 'clothing') {
-        if ((setting as { style?: string }).style === 'user-choice') {
+        if (wrapped.mode === 'user-choice' || wrapped.style === 'user-choice') {
           editableCount++
         }
       } else {
-        if ((setting as { type?: string }).type === 'user-choice') {
+        if (wrapped.mode === 'user-choice' || wrapped.type === 'user-choice') {
           editableCount++
         }
       }

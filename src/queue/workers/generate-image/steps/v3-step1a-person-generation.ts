@@ -471,10 +471,11 @@ export async function executeV3Step1a(
     garmentAnalysis: garmentAnalysisFromStep0,
   } : undefined
 
-  // Create a simplified prompt object with ONLY subject, framing, wardrobe (no scene, camera, lighting, rendering)
+  // Create a simplified prompt object - include camera for perspective consistency with Step 2
   const personOnlyPrompt = {
     subject: promptObj.subject as Record<string, unknown> | undefined, // Keep subject details (clothing, pose, expression)
     framing: promptObj.framing as { shot_type?: string } | undefined, // Keep framing (shot type)
+    camera: promptObj.camera as Record<string, unknown> | undefined, // Keep camera for perspective consistency (focal length, distance, angle)
     lighting: promptObj.lighting as Record<string, unknown> | undefined, // Keep lighting for consistency with background
     wardrobe: wardrobeSection, // Wardrobe with garment analysis from Step 0
     scene: {
@@ -484,7 +485,7 @@ export async function executeV3Step1a(
         description: 'Solid flat neutral grey background (#808080)'
       }
     }
-    // Explicitly omit: camera, rendering - these are for Step 2
+    // Explicitly omit: rendering - these post-processing effects are for Step 2
   }
 
   // Compose prompt with simplified specifications
@@ -614,7 +615,7 @@ export async function executeV3Step1a(
       '1K', // Fixed resolution - model max
       {
         temperature: AI_CONFIG.GENERATION_TEMPERATURE,
-        preferredProvider: 'vertex' // Load balancing: Step 1a uses Vertex, Step 1b uses OpenRouter
+        preferredProvider: 'rest' // Prefer Google AI Studio REST API for Gemini 3 models
       }
     )
   } catch (error) {

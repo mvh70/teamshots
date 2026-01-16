@@ -44,15 +44,32 @@ export default function ClothingSelector({
     ? CLOTHING_STYLES.filter(style => availableStyles.includes(style.value))
     : CLOTHING_STYLES
 
+  // Initialize with first available style and detail if not set
+  // This ensures the dropdown value matches what's visually displayed and shows the preview
+  useEffect(() => {
+    if (!clothingValue?.style && filteredClothingStyles.length > 0 && !isPredefined && !isDisabled) {
+      const defaultStyle = filteredClothingStyles[0].value as ClothingType
+      const defaultDetails = CLOTHING_DETAILS[defaultStyle]?.[0]
+      const newValue: ClothingValue = {
+        style: defaultStyle,
+        details: defaultDetails,
+        accessories: []
+      }
+      onChange(predefined(newValue))
+    }
+  }, [clothingValue?.style, filteredClothingStyles, isPredefined, isDisabled, onChange])
+
   const handleStyleChange = (style: ClothingType, event?: React.MouseEvent) => {
     if (event) {
       event.preventDefault()
       event.stopPropagation()
     }
 
+    // Set the first available detail for the new style so preview shows immediately
+    const defaultDetails = CLOTHING_DETAILS[style]?.[0]
     const newValue: ClothingValue = {
       style,
-      details: undefined, // Reset details when style changes
+      details: defaultDetails,
       accessories: []
     }
 
