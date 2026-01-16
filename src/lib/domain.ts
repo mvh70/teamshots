@@ -4,18 +4,23 @@ import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN } from '@/config/domain'
 /**
  * Get signup type from a domain string
  * Used internally to derive signup type from forced domain
+ *
+ * Handles both bare domain names (teamshotspro) and full domains (teamshotspro.com)
  */
 function getSignupTypeForDomain(domain: string): 'individual' | 'team' | null {
+  // Normalize: remove www./app. prefix and lowercase
   const normalized = domain.replace(/^(www\.|app\.)/, '').toLowerCase()
-  
-  switch (normalized) {
-    case TEAM_DOMAIN:
-      return 'team'
-    case INDIVIDUAL_DOMAIN:
-      return 'individual'
-    default:
-      return null
+
+  // Check if domain starts with the known domain name followed by a dot or end of string
+  // This handles both 'teamshotspro' and 'teamshotspro.com'
+  if (normalized === TEAM_DOMAIN || normalized.startsWith(TEAM_DOMAIN + '.')) {
+    return 'team'
   }
+  if (normalized === INDIVIDUAL_DOMAIN || normalized.startsWith(INDIVIDUAL_DOMAIN + '.')) {
+    return 'individual'
+  }
+
+  return null
 }
 
 /**
