@@ -80,7 +80,7 @@ export default function SelfieTypeOverlay({
     fetchStatus()
   }, [fetchStatus, refreshKey])
 
-  // Loading state
+  // Loading state - only shown while API is being fetched
   const loadingContent = (
     <div className="flex items-center gap-2 py-1">
       <div className="w-4 h-4 border-2 border-gray-300 border-t-brand-primary rounded-full animate-spin" />
@@ -88,10 +88,9 @@ export default function SelfieTypeOverlay({
     </div>
   )
 
-  // Check if still analyzing
-  const hasAnyClassified = status.some((s) => s.captured)
-  const allPending = !hasAnyClassified && status.length > 0
-  const isAnalyzing = loading || allPending
+  // Only show analyzing while loading. Once loaded, show progress badges
+  // (even if none are captured - that's the correct state for new users with no selfies)
+  const isAnalyzing = loading
 
   return (
     <>
