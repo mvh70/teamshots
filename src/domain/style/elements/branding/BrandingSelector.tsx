@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import type { BrandingSettings, BrandingValue, BrandingType } from './types'
-import { hasValue, userChoice } from '../base/element-types'
+import { hasValue, userChoice, predefined } from '../base/element-types'
 import { Grid } from '@/components/ui'
 import { BRANDING_POSITIONS } from './config'
 import Image from 'next/image'
@@ -40,6 +40,12 @@ export default function BrandingSelector({
   const logoKey = brandingValue?.logoKey
   const position = brandingValue?.position ?? 'clothing'
 
+  // Helper to preserve mode when updating value
+  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
+  const wrapWithCurrentMode = (newValue: BrandingValue): BrandingSettings => {
+    return value.mode === 'predefined' ? predefined(newValue) : userChoice(newValue)
+  }
+
   const handleTypeChange = (type: BrandingType) => {
     const newValue: BrandingValue = {
       type,
@@ -56,7 +62,7 @@ export default function BrandingSelector({
         break
     }
 
-    onChange(userChoice(newValue))
+    onChange(wrapWithCurrentMode(newValue))
   }
 
   const handleFileUpload = async (file: File | null) => {
@@ -97,7 +103,7 @@ export default function BrandingSelector({
         position,
         logoKey: key
       }
-      onChange(userChoice(newValue))
+      onChange(wrapWithCurrentMode(newValue))
     } catch (e) {
       console.error('Logo upload failed', e)
       const newValue: BrandingValue = {
@@ -105,7 +111,7 @@ export default function BrandingSelector({
         position,
         logoKey: undefined
       }
-      onChange(userChoice(newValue))
+      onChange(wrapWithCurrentMode(newValue))
     }
   }
 
@@ -125,7 +131,7 @@ export default function BrandingSelector({
       position: newPosition,
       logoKey
     }
-    onChange(userChoice(newValue))
+    onChange(wrapWithCurrentMode(newValue))
   }
 
   // Sync preview URL from logoKey when editing existing logos.

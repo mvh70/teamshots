@@ -58,6 +58,12 @@ export default function ClothingColorSelector({
   const [internalUseCustom, setInternalUseCustom] = React.useState(hasCustomColors)
   const isUsingCustomColors = useCustomColors ?? internalUseCustom
 
+  // Helper to preserve mode when updating value
+  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
+  const wrapWithCurrentMode = (newValue: ClothingColorValue): ClothingColorSettings => {
+    return value.mode === 'predefined' ? predefined(newValue) : userChoice(newValue)
+  }
+
   const handleUseCustomColorsToggle = (checked: boolean) => {
     if (onUseCustomColorsChange) {
       onUseCustomColorsChange(checked)
@@ -75,7 +81,7 @@ export default function ClothingColorSelector({
         shoes: customClothingColors.shoes,
         source: 'outfit' // Mark as from outfit - prompt will defer to reference image
       }
-      onChange(userChoice(newValue))
+      onChange(wrapWithCurrentMode(newValue))
     } else if (!checked) {
       // When unchecking, clear source so manual colors are used in prompt
       const currentColors = hasValue(value) ? value.value : {}
@@ -83,7 +89,7 @@ export default function ClothingColorSelector({
         ...currentColors,
         source: 'manual' // Mark as manual - colors will be specified in prompt
       }
-      onChange(userChoice(newValue))
+      onChange(wrapWithCurrentMode(newValue))
     }
   }
 
@@ -114,12 +120,8 @@ export default function ClothingColorSelector({
       ...colorValue,
       [colorType]: color
     }
-    // Preserve the existing mode - use userChoice for user-editable colors
-    if (isUserChoice(value)) {
-      onChange(userChoice(newValue))
-    } else {
-      onChange(predefined(newValue))
-    }
+    // Preserve the existing mode using helper
+    onChange(wrapWithCurrentMode(newValue))
   }
 
   const visibleCount = 4 - excludeColors.length

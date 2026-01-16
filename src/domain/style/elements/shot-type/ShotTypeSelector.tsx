@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { ShotTypeSettings, ShotTypeValue } from '@/types/photo-style'
 import { resolveShotType, type CanonicalShotType, SHOT_TYPE_CONFIGS } from './config'
-import { hasValue, predefined, isUserChoice } from '../base/element-types'
+import { hasValue, predefined, isUserChoice, userChoice } from '../base/element-types'
 
 interface ShotTypeSelectorProps {
   value: ShotTypeSettings
@@ -47,6 +47,12 @@ export default function ShotTypeSelector({
 }: ShotTypeSelectorProps) {
   const t = useTranslations('customization.photoStyle.shotType')
 
+  // Helper to preserve mode when updating value
+  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
+  const wrapWithCurrentMode = (newValue: { type: ShotTypeValue }): ShotTypeSettings => {
+    return value?.mode === 'predefined' ? predefined(newValue) : userChoice(newValue)
+  }
+
   const handleShotTypeChange = (shotType: ShotTypeValue, event?: React.MouseEvent) => {
     if (event) {
       event.preventDefault()
@@ -55,7 +61,7 @@ export default function ShotTypeSelector({
 
     if (isPredefined) return
 
-    onChange(predefined({ type: shotType }))
+    onChange(wrapWithCurrentMode({ type: shotType }))
   }
 
   const selectedType =

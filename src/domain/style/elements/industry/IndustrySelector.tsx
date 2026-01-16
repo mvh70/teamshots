@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import type { IndustrySettings, IndustryType } from './types'
 import { INDUSTRY_CONFIGS } from './config'
-import { predefined } from '../base/element-types'
+import { predefined, userChoice } from '../base/element-types'
 
 interface IndustrySelectorProps {
   value: IndustrySettings
@@ -28,13 +28,19 @@ export default function IndustrySelector({
 
   const industryValue = value?.value
 
+  // Helper to preserve mode when updating value
+  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
+  const wrapWithCurrentMode = (newValue: { type: IndustryType }): IndustrySettings => {
+    return value?.mode === 'predefined' ? predefined(newValue) : userChoice(newValue)
+  }
+
   const visibleIndustries = availableIndustries
     ? INDUSTRY_CONFIGS.filter((i) => availableIndustries.includes(i.value))
     : INDUSTRY_CONFIGS
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (isPredefined || isDisabled) return
-    onChange(predefined({ type: event.target.value as IndustryType }))
+    onChange(wrapWithCurrentMode({ type: event.target.value as IndustryType }))
   }
 
   const selectedIndustry = visibleIndustries.find((i) => i.value === industryValue?.type)

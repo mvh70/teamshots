@@ -194,7 +194,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   }, [])
 
   // Helper function to merge saved style settings into current settings
-  // Only merges fields that are 'user-choice' type - preserves predefined/preset values
+  // CRITICAL: Only merges fields where current mode is 'user-choice'
+  // Predefined values (set by admin) are NEVER overwritten by saved user preferences
   // Note: We intentionally use a GLOBAL key (no contextId) to ensure settings persist
   // across context/package changes. The merge logic handles predefined vs user-choice.
   const mergeSavedStyleSettings = React.useCallback((
@@ -208,7 +209,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     // Start with current settings
     const merged = { ...settings }
 
-    // For each category in saved settings, only merge if current type is 'user-choice'
+    // For each category in saved settings, only merge if current mode is 'user-choice'
     const categoriesToMerge = [
       'background', 'clothing', 'clothingColors', 'shotType',
       'branding', 'expression', 'pose', 'customClothing'
@@ -221,21 +222,21 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
       // Check if saved value has actual content (value property with data)
       const savedHasValue = savedValue?.value !== undefined
 
-      if (savedHasValue) {
-        if (currentValue) {
-          // Both exist: keep current mode, restore saved value
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(merged as any)[key] = {
-            ...currentValue,
-            value: savedValue.value
-          }
-        } else {
-          // Current package doesn't have this setting, but we have a saved value
-          // Add the entire saved setting to preserve user's selection
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(merged as any)[key] = savedValue
+      // CRITICAL: Only merge if current mode is 'user-choice'
+      // If mode is 'predefined', admin has locked this value - never overwrite
+      const currentIsUserChoice = currentValue?.mode === 'user-choice'
+
+      if (savedHasValue && currentValue && currentIsUserChoice) {
+        // Current is user-choice with saved value: restore user's selection
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(merged as any)[key] = {
+          ...currentValue,
+          value: savedValue.value
         }
       }
+      // If currentValue is undefined or mode is 'predefined', keep settings unchanged
+      // - predefined: admin's value is authoritative, never overwrite
+      // - undefined: package doesn't support this setting, don't add it
     }
 
     return merged

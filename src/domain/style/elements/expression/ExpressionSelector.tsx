@@ -6,7 +6,7 @@ import { ExpressionSettings } from '@/types/photo-style'
 import { EXPRESSION_CONFIGS } from './config'
 import type { ExpressionType } from './types'
 import { ImagePreview } from '@/components/ui/ImagePreview'
-import { predefined } from '../base/element-types'
+import { predefined, userChoice } from '../base/element-types'
 
 interface ExpressionSelectorProps {
   value: ExpressionSettings
@@ -44,13 +44,19 @@ export default function ExpressionSelector({
   // Extract the current value for easier access
   const exprValue = value?.value
 
+  // Helper to preserve mode when updating value
+  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
+  const wrapWithCurrentMode = (newValue: { type: ExpressionType }): ExpressionSettings => {
+    return value?.mode === 'predefined' ? predefined(newValue) : userChoice(newValue)
+  }
+
   const visibleExpressions = availableExpressions
     ? EXPRESSION_CONFIGS.filter(e => availableExpressions.includes(e.value))
     : EXPRESSION_CONFIGS
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (isPredefined) return
-    onChange(predefined({ type: event.target.value as ExpressionType }))
+    onChange(wrapWithCurrentMode({ type: event.target.value as ExpressionType }))
   }
 
   const [hasMounted, setHasMounted] = useState(false)

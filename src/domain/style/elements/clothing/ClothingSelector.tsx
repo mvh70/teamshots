@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { ClothingSettings, ClothingColorSettings, ClothingType, ClothingValue } from '@/types/photo-style'
-import { predefined, hasValue } from '../base/element-types'
+import { predefined, hasValue, userChoice } from '../base/element-types'
 import { Grid } from '@/components/ui'
 import { CLOTHING_STYLES, CLOTHING_DETAILS, CLOTHING_ACCESSORIES } from './config'
 import Image from 'next/image'
@@ -39,6 +39,12 @@ export default function ClothingSelector({
   // Extract the clothing value from the wrapper
   const clothingValue = hasValue(value) ? value.value : undefined
 
+  // Helper to preserve mode when updating value
+  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
+  const wrapWithCurrentMode = (newValue: ClothingValue): ClothingSettings => {
+    return value?.mode === 'predefined' ? predefined(newValue) : userChoice(newValue)
+  }
+
   // Filter clothing styles based on availableStyles prop
   const filteredClothingStyles = availableStyles
     ? CLOTHING_STYLES.filter(style => availableStyles.includes(style.value))
@@ -55,7 +61,7 @@ export default function ClothingSelector({
         details: defaultDetails,
         accessories: []
       }
-      onChange(predefined(newValue))
+      onChange(wrapWithCurrentMode(newValue))
     }
   }, [clothingValue?.style, filteredClothingStyles, isPredefined, isDisabled, onChange])
 
@@ -73,7 +79,7 @@ export default function ClothingSelector({
       accessories: []
     }
 
-    onChange(predefined(newValue))
+    onChange(wrapWithCurrentMode(newValue))
   }
 
   const handleDetailChange = (detail: string, event?: React.MouseEvent) => {
@@ -83,7 +89,7 @@ export default function ClothingSelector({
     }
 
     if (!clothingValue) return
-    onChange(predefined({ ...clothingValue, details: detail }))
+    onChange(wrapWithCurrentMode({ ...clothingValue, details: detail }))
   }
 
   const handleAccessoryToggle = (accessory: string, event?: React.MouseEvent) => {
@@ -98,7 +104,7 @@ export default function ClothingSelector({
       ? currentAccessories.filter((a: string) => a !== accessory)
       : [...currentAccessories, accessory]
 
-    onChange(predefined({ ...clothingValue, accessories: newAccessories }))
+    onChange(wrapWithCurrentMode({ ...clothingValue, accessories: newAccessories }))
   }
 
   // Reset image exists state when style or details change

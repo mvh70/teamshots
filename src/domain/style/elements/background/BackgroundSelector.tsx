@@ -39,6 +39,12 @@ export default function BackgroundSelector({
   // Extract the current value for easier access
   const bgValue = value?.value
 
+  // Helper to preserve mode when updating value
+  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
+  const wrapWithCurrentMode = (newValue: BackgroundValue): BackgroundSettings => {
+    return value?.mode === 'predefined' ? predefined(newValue) : userChoice(newValue)
+  }
+
   // Filter background types based on package availability
   const filteredBackgroundTypes = availableBackgrounds
     ? BACKGROUND_TYPES.filter(type => availableBackgrounds.includes(type.value))
@@ -63,22 +69,22 @@ export default function BackgroundSelector({
         break
     }
 
-    onChange(predefined(newValue))
+    onChange(wrapWithCurrentMode(newValue))
   }
 
   const handleColorChange = (colorValue: ColorValue) => {
     if (!bgValue) return
-    onChange(predefined({ ...bgValue, color: colorValue.hex }))
+    onChange(wrapWithCurrentMode({ ...bgValue, color: colorValue.hex }))
   }
 
   const handleGradientColorChange = (colorValue: ColorValue) => {
     if (!bgValue) return
-    onChange(predefined({ ...bgValue, color: colorValue.hex }))
+    onChange(wrapWithCurrentMode({ ...bgValue, color: colorValue.hex }))
   }
 
   const handlePromptChange = (prompt: string) => {
     if (!bgValue) return
-    onChange(predefined({ ...bgValue, prompt }))
+    onChange(wrapWithCurrentMode({ ...bgValue, prompt }))
   }
 
   const handleFileUpload = async (file: File | null) => {
@@ -118,11 +124,11 @@ export default function BackgroundSelector({
       const { key } = await res.json()
 
       // Store only the key, not the full URL (same as selfies)
-      onChange(predefined({ ...bgValue, type: 'custom', key }))
+      onChange(wrapWithCurrentMode({ ...bgValue, type: 'custom', key }))
     } catch (e) {
       console.error('Background upload failed', e)
       // Keep preview; remove remote key on error
-      onChange(predefined({ ...bgValue, type: 'custom', key: undefined }))
+      onChange(wrapWithCurrentMode({ ...bgValue, type: 'custom', key: undefined }))
     }
   }
 

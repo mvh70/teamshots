@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import type { PoseSettings, PoseType, LegacyPoseSettings } from './types'
 import { getPoseUIInfo } from './config'
 import { ImagePreview } from '@/components/ui/ImagePreview'
-import { hasValue, userChoice } from '../base/element-types'
+import { hasValue, userChoice, predefined } from '../base/element-types'
 
 interface PoseSelectorProps {
   value: PoseSettings | LegacyPoseSettings
@@ -76,11 +76,24 @@ export default function PoseSelector({
     ? POSES.filter(p => availablePoses.includes(p.value))
     : POSES
 
+  // Helper to preserve mode when updating value
+  // CRITICAL: Preserves predefined mode when admin is editing a predefined setting
+  const wrapWithCurrentMode = (newValue: { type: PoseType }): PoseSettings => {
+    // Check for new format with mode property
+    if ('mode' in value) {
+      return (value as PoseSettings).mode === 'predefined'
+        ? predefined(newValue)
+        : userChoice(newValue)
+    }
+    // Legacy format - default to user-choice
+    return userChoice(newValue)
+  }
+
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (isPredefined) return
     const selectedType = event.target.value as PoseType
-    // Emit new format, keeping mode as user-choice since user is selecting
-    onChange(userChoice({ type: selectedType }))
+    // Preserve the current mode when user/admin is selecting
+    onChange(wrapWithCurrentMode({ type: selectedType }))
   }
 
   const [hasMounted, setHasMounted] = useState(false)

@@ -36,12 +36,12 @@ export async function POST(request: NextRequest) {
     background: string
     includeLogo: boolean
     backgroundPrompt?: string
-    branding?: { type: 'include' | 'exclude' | 'user-choice'; logoKey?: string; position?: 'background' | 'clothing' | 'elements' }
-    backgroundSettings?: { type: 'office' | 'neutral' | 'gradient' | 'custom' | 'user-choice' | 'tropical-beach' | 'busy-city'; key?: string; prompt?: string; color?: string }
-    clothingSettings?: { type?: 'business' | 'startup' | 'black-tie' | 'user-choice'; style: 'business' | 'startup' | 'black-tie' | 'user-choice'; details?: string; colors?: { topLayer?: string; baseLayer?: string; bottom?: string }; accessories?: string[] }
-    clothingColorsSettings?: { type: 'predefined' | 'user-choice'; colors?: { topLayer?: string; baseLayer?: string; bottom?: string; shoes?: string } }
-    shotTypeSettings?: { type: 'headshot' | 'midchest' | 'full-body' | 'user-choice' }
-    expressionSettings?: { type: 'genuine_smile' | 'soft_smile' | 'neutral_serious' | 'laugh_joy' | 'contemplative' | 'confident' | 'sad' | 'user-choice' }
+    branding?: { mode: 'predefined' | 'user-choice'; value?: { type: 'include' | 'exclude'; logoKey?: string; logoAssetId?: string; position?: 'background' | 'clothing' | 'elements' } }
+    backgroundSettings?: { mode: 'predefined' | 'user-choice'; value?: { type: 'office' | 'neutral' | 'gradient' | 'custom' | 'tropical-beach' | 'busy-city'; key?: string; prompt?: string; color?: string } }
+    clothingSettings?: { mode: 'predefined' | 'user-choice'; value?: { type?: 'business' | 'startup' | 'black-tie'; style: 'business' | 'startup' | 'black-tie'; details?: string; colors?: { topLayer?: string; baseLayer?: string; bottom?: string }; accessories?: string[] } }
+    clothingColorsSettings?: { mode: 'predefined' | 'user-choice'; value?: { topLayer?: string; baseLayer?: string; bottom?: string; shoes?: string } }
+    shotTypeSettings?: { mode: 'predefined' | 'user-choice'; value?: { type: 'headshot' | 'medium-shot' | 'midchest' | 'full-body' } }
+    expressionSettings?: { mode: 'predefined' | 'user-choice'; value?: { type: 'genuine_smile' | 'soft_smile' | 'neutral_serious' | 'laugh_joy' | 'contemplative' | 'confident' | 'sad' } }
     poseSettings?: PoseSettings
     packageId?: string
   }
@@ -52,19 +52,17 @@ export async function POST(request: NextRequest) {
     const pkg = getPackageConfig(pkgId)
     
     // Reconstruct UI settings from the provided data
-    // Preserve undefined/null for user-choice states instead of defaulting
-    // Convert legacy background settings to new format
+    // Now expects new format with mode and value properties
     let bgSettingConverted: BackgroundSettings
     if (backgroundSettings) {
-      // If backgroundSettings provided in legacy format, convert it
-      if (backgroundSettings.type === 'user-choice') {
-        bgSettingConverted = userChoice()
+      if (backgroundSettings.mode === 'user-choice') {
+        // User can choose - optionally with a pre-selected value
+        bgSettingConverted = backgroundSettings.value ? userChoice(backgroundSettings.value) : userChoice()
       } else {
-        bgSettingConverted = predefined({
-          type: backgroundSettings.type as BackgroundType,
-          key: backgroundSettings.key,
-          prompt: backgroundSettings.prompt,
-          color: backgroundSettings.color
+        // Admin has predefined this setting
+        bgSettingConverted = predefined(backgroundSettings.value || {
+          type: (background as BackgroundType) || 'office',
+          prompt: backgroundPrompt
         })
       }
     } else if (background === 'user-choice') {
@@ -76,78 +74,74 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Convert legacy expression settings to new format
+    // Convert expression settings - now expects new format with mode and value
     let exprSettingConverted: ExpressionSettings
     if (expressionSettings) {
-      if (expressionSettings.type === 'user-choice') {
-        exprSettingConverted = userChoice()
+      if (expressionSettings.mode === 'user-choice') {
+        exprSettingConverted = expressionSettings.value ? userChoice(expressionSettings.value) : userChoice()
       } else {
-        exprSettingConverted = predefined({ type: expressionSettings.type as ExpressionType })
+        exprSettingConverted = predefined(expressionSettings.value || { type: 'genuine_smile' as ExpressionType })
       }
     } else {
       exprSettingConverted = pkg.defaultSettings.expression as ExpressionSettings
     }
 
-    // Convert legacy clothing settings to new format
+    // Convert clothing settings - now expects new format with mode and value
     let clothingSettingConverted: ClothingSettings
     if (clothingSettings) {
-      if (clothingSettings.style === 'user-choice' || clothingSettings.type === 'user-choice') {
-        clothingSettingConverted = userChoice()
+      if (clothingSettings.mode === 'user-choice') {
+        clothingSettingConverted = clothingSettings.value ? userChoice(clothingSettings.value) : userChoice()
       } else {
-        clothingSettingConverted = predefined({
-          type: clothingSettings.type as ClothingType | undefined,
-          style: clothingSettings.style as ClothingType,
-          details: clothingSettings.details,
-          colors: clothingSettings.colors,
-          accessories: clothingSettings.accessories
-        })
+        clothingSettingConverted = predefined(clothingSettings.value || { style: 'business' as ClothingType })
       }
     } else {
       clothingSettingConverted = pkg.defaultSettings.clothing as ClothingSettings
     }
 
-    // Convert clothingColorsSettings from legacy format if provided
+    // Convert clothingColorsSettings - now expects new format with mode and value
     let clothingColorsConverted: ClothingColorSettings
     if (clothingColorsSettings) {
-      if (clothingColorsSettings.type === 'user-choice') {
-        clothingColorsConverted = clothingColorsSettings.colors
-          ? userChoice(clothingColorsSettings.colors)
+      if (clothingColorsSettings.mode === 'user-choice') {
+        clothingColorsConverted = clothingColorsSettings.value
+          ? userChoice(clothingColorsSettings.value)
           : userChoice()
       } else {
-        clothingColorsConverted = clothingColorsSettings.colors
-          ? predefined(clothingColorsSettings.colors)
+        clothingColorsConverted = clothingColorsSettings.value
+          ? predefined(clothingColorsSettings.value)
           : predefined({})
       }
     } else {
       clothingColorsConverted = userChoice()
     }
 
-    // Convert legacy shotType settings to new format
+    // Convert shotType settings - now expects new format with mode and value
     let shotTypeConverted: ShotTypeSettings
     if (shotTypeSettings) {
-      if (shotTypeSettings.type === 'user-choice') {
-        shotTypeConverted = userChoice()
+      if (shotTypeSettings.mode === 'user-choice') {
+        shotTypeConverted = shotTypeSettings.value ? userChoice(shotTypeSettings.value) : userChoice()
       } else {
-        shotTypeConverted = predefined({ type: shotTypeSettings.type as ShotTypeValue })
+        shotTypeConverted = predefined(shotTypeSettings.value || { type: 'medium-shot' as ShotTypeValue })
       }
     } else {
       shotTypeConverted = pkg.defaultSettings.shotType as ShotTypeSettings
     }
 
-    // Convert branding to new format
+    // Convert branding - now expects new format with mode and value
     let brandingConverted: BrandingSettings
     if (branding) {
-      if (branding.type === 'user-choice') {
-        brandingConverted = userChoice<BrandingValue>()
+      if (branding.mode === 'user-choice') {
+        // User can choose - optionally with a pre-selected value
+        brandingConverted = branding.value ? userChoice(branding.value) : userChoice<BrandingValue>()
       } else {
-        const brandingVal: BrandingValue = {
-          type: branding.type,
-          logoKey: branding.logoKey,
-          position: branding.position
+        // Admin has predefined this setting - use predefined()
+        const brandingVal: BrandingValue = branding.value || {
+          type: includeLogo ? 'include' : 'exclude',
+          position: 'clothing'
         }
-        brandingConverted = userChoice(brandingVal)
+        brandingConverted = predefined(brandingVal)
       }
     } else {
+      // No branding provided - default to user-choice
       const defaultBrandingVal: BrandingValue = {
         type: includeLogo ? 'include' : 'exclude',
         position: 'clothing'
