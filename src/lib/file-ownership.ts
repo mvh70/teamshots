@@ -59,16 +59,16 @@ export async function findFileOwnership(key: string): Promise<OwnershipRecord | 
       },
     }),
     // Use raw SQL to query JSON fields efficiently
-    // Settings are stored with nested structure: { packageName, version, settings: { background: { key }, branding: { logoKey } } }
-    // So we need to navigate: settings->'settings'->'background'->>'key'
+    // Settings use ElementSettings wrapper: { mode: '...', value: { logoKey: '...' } }
+    // So paths are: settings.settings.branding.value.logoKey or settings.branding.value.logoKey
     prisma.$queryRaw<Array<{ id: string; userId: string | null; teamId: string | null }>>`
       SELECT "id", "userId", "teamId"
       FROM "Context"
-      WHERE 
-        ("settings"->'settings'->'branding'->>'logoKey') = ${trimmedKey}
-        OR ("settings"->'settings'->'background'->>'key') = ${trimmedKey}
-        OR ("settings"->'branding'->>'logoKey') = ${trimmedKey}
-        OR ("settings"->'background'->>'key') = ${trimmedKey}
+      WHERE
+        ("settings"->'settings'->'branding'->'value'->>'logoKey') = ${trimmedKey}
+        OR ("settings"->'settings'->'background'->'value'->>'key') = ${trimmedKey}
+        OR ("settings"->'branding'->'value'->>'logoKey') = ${trimmedKey}
+        OR ("settings"->'background'->'value'->>'key') = ${trimmedKey}
       LIMIT 1
     `.then((results: Array<{ id: string; userId: string | null; teamId: string | null }>) => results[0] || null),
   ])

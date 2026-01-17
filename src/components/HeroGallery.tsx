@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 
@@ -25,23 +25,47 @@ export default function HeroGallery() {
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
 
-  const onMouseDown = (e: React.MouseEvent) => {
+  // Refs for cleanup on unmount
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  // Cleanup listeners on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
+
+  const handleDrag = useCallback((clientX: number, rect: DOMRect) => {
+    const x = clientX - rect.left;
+    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    setSliderPosition(percentage);
+  }, []);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
-    
+    setIsInteracting(true);
+
     const container = e.currentTarget.parentElement as HTMLDivElement;
     const rect = container.getBoundingClientRect();
-    
+
     const onMouseMove = (e: MouseEvent) => {
       e.preventDefault();
-      const x = e.clientX - rect.left;
-      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      setSliderPosition(percentage);
+      handleDrag(e.clientX, rect);
     };
 
     const onMouseUp = () => {
       setIsDragging(false);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      cleanupRef.current = null;
+    };
+
+    // Store cleanup function for unmount case
+    cleanupRef.current = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       document.body.style.userSelect = '';
@@ -52,39 +76,43 @@ export default function HeroGallery() {
     document.body.style.cursor = 'ew-resize';
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  };
+  }, [handleDrag]);
 
-  const onTouchStart = (e: React.TouchEvent) => {
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
     setIsDragging(true);
-    
+    setIsInteracting(true);
+
     const container = e.currentTarget.parentElement as HTMLDivElement;
     const rect = container.getBoundingClientRect();
-    
+
     const onTouchMove = (e: TouchEvent) => {
       e.preventDefault();
-      const x = e.touches[0].clientX - rect.left;
-      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      setSliderPosition(percentage);
+      handleDrag(e.touches[0].clientX, rect);
     };
 
     const onTouchEnd = () => {
       setIsDragging(false);
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
+      cleanupRef.current = null;
     };
 
-    document.addEventListener('touchmove', onTouchMove);
+    // Store cleanup function for unmount case
+    cleanupRef.current = () => {
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
     document.addEventListener('touchend', onTouchEnd);
-  };
+  }, [handleDrag]);
 
   return (
     <div className="w-full max-w-xl mx-auto">
       {/* Interactive Before/After Slider with Enhanced Styling */}
-      <div 
+      <div
         className="relative rounded-3xl overflow-hidden shadow-depth-2xl bg-gray-100 border-2 border-white/50 hover:shadow-floating transition-all duration-500"
-        onMouseEnter={() => setIsInteracting(true)}
-        onTouchStart={() => setIsInteracting(true)}
       >
         <div 
           className="relative aspect-square bg-gray-100 overflow-hidden cursor-ew-resize"
@@ -132,7 +160,7 @@ export default function HeroGallery() {
         {!isInteracting && (
           <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-5 transition-all duration-500 pointer-events-none z-10">
             <div className="absolute top-[40%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div className="bg-white/95 backdrop-blur-sm text-gray-900 px-6 py-3 rounded-full shadow-depth-xl border border-gray-200/50 flex items-center gap-2 animate-pulse">
+              <div className="bg-white/95 backdrop-blur-sm text-gray-900 px-6 py-3 rounded-full shadow-depth-xl border border-gray-200/50 flex items-center gap-2 animate-bounce">
                 <svg className="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                 </svg>

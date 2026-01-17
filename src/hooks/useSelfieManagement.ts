@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSelfieUploads } from './useSelfieUploads'
 import { useSelfieSelection } from './useSelfieSelection'
 
@@ -22,6 +22,12 @@ interface Selfie {
   uploadedAt: string
   used?: boolean
   status?: 'pending' | 'approved' | 'rejected'
+  selfieType?: string | null
+  selfieTypeConfidence?: number | null
+  isProper?: boolean | null
+  improperReason?: string | null
+  lightingQuality?: string | null
+  backgroundQuality?: string | null
 }
 
 interface UseSelfieManagementOptions {
@@ -75,13 +81,26 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
   } = options
 
   // Always use hooks (conditionally calling them causes issues)
-  const uploadsHook = useSelfieUploads()
+  // Pass enabled: false in invite mode to prevent 401 errors from session-based endpoint
+  const uploadsHook = useSelfieUploads({ enabled: !inviteMode })
   const selectionHook = useSelfieSelection({ token })
 
   // Invite-specific state
   const [inviteUploads, setInviteUploads] = useState<Selfie[]>([])
   const [inviteLoading, setInviteLoading] = useState(!inviteMode)
   const [inviteError, setInviteError] = useState<string | null>(null)
+
+  // Timer ref for delayed refresh cleanup
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current)
+      }
+    }
+  }, [])
 
   // Invite flow: fetch selfies from team member API
   const fetchInviteUploads = useCallback(async () => {
@@ -157,11 +176,14 @@ export function useSelfieManagement(options: UseSelfieManagementOptions = {}): U
 
       // Reload uploads to show new selfies
       await uploadsHook.loadUploads()
-      
+
       // Force another refresh after a short delay to catch classifications
       // that complete very quickly
-      setTimeout(() => {
-        uploadsHook.loadUploads(true)
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current)
+      }
+      refreshTimerRef.current = setTimeout(() => {
+        uploadsHook.loadUploads()
       }, 500)
 
       // Call parent callback

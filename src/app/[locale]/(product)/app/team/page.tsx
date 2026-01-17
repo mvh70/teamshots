@@ -107,7 +107,9 @@ export default function TeamPage() {
   const [emailError, setEmailError] = useState<string | null>(null)
   const [checkingEmail, setCheckingEmail] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  
+  const [creatingLink, setCreatingLink] = useState(false)
+  const [tableLinkCopied, setTableLinkCopied] = useState<string | null>(null)
+
   // Add photos modal state
   const [addPhotosInvite, setAddPhotosInvite] = useState<TeamInvite | null>(null)
   const [addPhotosValue, setAddPhotosValue] = useState('1')
@@ -537,14 +539,28 @@ export default function TeamPage() {
       console.error('Error checking email before submit:', error)
     }
 
-    // Seats-based pricing: fixed 10 photos (100 credits) per member
+    // Check availability based on pricing model
+    const isSeatsModel = teamData?.seatInfo?.isSeatsModel
+    const availableSeats = teamData?.seatInfo?.availableSeats ?? 0
+
+    // For credits-based teams, calculate required credits
     const standardPhotos = 10
     const creditsForInvite = standardPhotos * PRICING_CONFIG.credits.perGeneration
 
-    if (credits.team < creditsForInvite) {
-      setInviteError(t('invites.insufficientCredits'))
-      setInviting(false)
-      return
+    if (isSeatsModel) {
+      // Seats-based: check if seats are available
+      if (availableSeats <= 0) {
+        setInviteError(t('inviteForm.disabledReason.noAvailableSeats', { default: 'No available seats. Please purchase more seats.' }))
+        setInviting(false)
+        return
+      }
+    } else {
+      // Credits-based: check if team has enough credits
+      if (credits.team < creditsForInvite) {
+        setInviteError(t('inviteForm.disabledReason.insufficientCredits', { default: 'Not enough photo credits. Please purchase more credits.' }))
+        setInviting(false)
+        return
+      }
     }
 
     try {
@@ -592,6 +608,111 @@ export default function TeamPage() {
       setInviteError('Failed to send invite')
     } finally {
       setInviting(false)
+    }
+  }
+
+  const handleCreateLink = async () => {
+    setInviteError(null)
+    setCreatingLink(true)
+
+    const email = emailValue.trim()
+    const firstName = firstNameValue.trim()
+
+    if (!email || !firstName) {
+      setInviteError('Email and first name are required')
+      setCreatingLink(false)
+      return
+    }
+
+    if (emailError) {
+      setCreatingLink(false)
+      return
+    }
+
+    // Check availability based on pricing model
+    const isSeatsModel = teamData?.seatInfo?.isSeatsModel
+    const availableSeats = teamData?.seatInfo?.availableSeats ?? 0
+
+    // Calculate credits for invite (used for both models in API call)
+    const standardPhotos = 10
+    const creditsForInvite = standardPhotos * PRICING_CONFIG.credits.perGeneration
+
+    if (isSeatsModel) {
+      // Seats-based: check if seats are available
+      if (availableSeats <= 0) {
+        setInviteError(t('inviteForm.disabledReason.noAvailableSeats', { default: 'No available seats. Please purchase more seats.' }))
+        setCreatingLink(false)
+        return
+      }
+    } else {
+      // Credits-based: check if team has enough credits
+      if (credits.team < creditsForInvite) {
+        setInviteError(t('inviteForm.disabledReason.insufficientCredits', { default: 'Not enough photo credits. Please purchase more credits.' }))
+        setCreatingLink(false)
+        return
+      }
+    }
+
+    try {
+      const response = await fetch('/api/team/invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          firstName,
+          creditsAllocated: creditsForInvite,
+          skipEmail: true
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        trackTeamMemberInvited({
+          team_id: data.invite?.id,
+          invite_method: 'link'
+        })
+
+        // Refresh team data and close modal
+        await fetchTeamData()
+        setShowInviteForm(false)
+        setError(null)
+        setInviteError(null)
+        // Clear form values
+        setEmailValue('')
+        setFirstNameValue('')
+        setEmailError(null)
+      } else {
+        if (data.errorCode === 'INVALID_CREDIT_ALLOCATION' || data.errorCode === 'INSUFFICIENT_TEAM_CREDITS') {
+          setInviteError(data.error)
+        } else if (data.errorCode === 'NO_ACTIVE_CONTEXT') {
+          setError(`${data.error} Click here to set up a context.`)
+        } else {
+          setInviteError(data.error)
+        }
+      }
+    } catch {
+      setInviteError('Failed to create invite link')
+    } finally {
+      setCreatingLink(false)
+    }
+  }
+
+  const handleCopyInviteLink = async (link: string, rowId: string) => {
+    try {
+      await navigator.clipboard.writeText(link)
+      setTableLinkCopied(rowId)
+      setTimeout(() => setTableLinkCopied(null), 2000)
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea')
+      textarea.value = link
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setTableLinkCopied(rowId)
+      setTimeout(() => setTableLinkCopied(null), 2000)
     }
   }
 
@@ -1260,11 +1381,11 @@ export default function TeamPage() {
             <div className="hidden md:block divide-y divide-gray-200">
                 {/* Header row */}
                 <div className="px-7 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
-                  <div 
+                  <div
                     className={`grid gap-6 text-xs font-bold text-gray-500 uppercase tracking-wider ${
-                      userRoles.isTeamAdmin 
-                        ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
-                        : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                      userRoles.isTeamAdmin
+                        ? 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr_180px_140px]'
+                        : 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr]'
                     }`}
                   >
                     <div>{t('teamMembers.headers.member')}</div>
@@ -1272,6 +1393,10 @@ export default function TeamPage() {
                     <div className="flex justify-center">{t('teamMembers.headers.generations')}</div>
                     <div className="flex justify-center">{t('teamMembers.headers.remainingPhotos')}</div>
                     <div className="flex justify-center">{t('teamMembers.headers.status')}</div>
+                    <div className="flex justify-center">{t('teamMembers.headers.photoStyle')}</div>
+                    {userRoles.isTeamAdmin && (
+                      <div className="flex justify-center">{t('teamMembers.headers.inviteLink', { default: 'Invite Link' })}</div>
+                    )}
                     {userRoles.isTeamAdmin && (
                       <div className="flex justify-center">{t('teamMembers.headers.actions')}</div>
                     )}
@@ -1286,14 +1411,16 @@ export default function TeamPage() {
                   const creditsAllocated = member.stats?.teamCreditsAllocated ?? memberInvite?.creditsAllocated ?? member.stats?.teamCredits ?? 0
                   const creditsUsed = member.stats?.teamCreditsUsed ?? memberInvite?.creditsUsed ?? 0
                   const photoStyle = memberInvite?.contextName ?? teamData?.activeContext?.name
-                  
+                  // Build invite link from token if available
+                  const inviteLink = memberInvite?.token ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${memberInvite.token}` : null
+
                   return (
                 <div key={`member-${member.id}`} className="px-7 py-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0 group">
-                  <div 
+                  <div
                     className={`grid gap-6 items-center ${
-                      userRoles.isTeamAdmin 
-                        ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
-                        : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                      userRoles.isTeamAdmin
+                        ? 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr_180px_140px]'
+                        : 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr]'
                     }`}
                   >
                     {/* Member Info */}
@@ -1338,17 +1465,6 @@ export default function TeamPage() {
                             </span>
                           )}
                         </p>
-                        {photoStyle && (
-                          <p className="text-xs text-gray-500 mt-1.5 font-medium">
-                            Photo style:{' '}
-                            <Link 
-                              href="/app/styles/team"
-                              className="text-brand-primary hover:text-brand-primary-hover font-semibold underline decoration-2 underline-offset-2 transition-colors"
-                            >
-                              {photoStyle}
-                            </Link>
-                          </p>
-                        )}
                       </div>
                     </div>
                     
@@ -1418,7 +1534,56 @@ export default function TeamPage() {
                         </div>
                       )}
                     </div>
-                    
+
+                    {/* Photo Style - Admins don't have an assigned style */}
+                    <div className="flex justify-center">
+                      {photoStyle && !member.isAdmin ? (
+                        <Link
+                          href="/app/styles/team"
+                          className="text-sm font-semibold text-brand-primary hover:text-brand-primary-hover underline decoration-2 underline-offset-2 transition-colors truncate max-w-[120px]"
+                          title={photoStyle}
+                        >
+                          {photoStyle}
+                        </Link>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </div>
+
+                    {/* Invite Link - Admin only */}
+                    {userRoles.isTeamAdmin && (
+                      <div className="flex justify-center">
+                        {inviteLink && !member.isAdmin ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyInviteLink(inviteLink, member.id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                              tableLinkCopied === member.id
+                                ? 'text-green-700 bg-green-100'
+                                : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                            }`}
+                            title={t('teamMembers.copyInviteLink', { default: 'Copy invite link' })}
+                          >
+                            {tableLinkCopied === member.id ? (
+                              <>
+                                <CheckIcon className="w-3.5 h-3.5" />
+                                {t('teamMembers.copied', { default: 'Copied!' })}
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                {t('teamMembers.copyLink', { default: 'Copy' })}
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </div>
+                    )}
+
                     {/* Admin Actions */}
                     {userRoles.isTeamAdmin && (
                       <div className="flex items-center justify-center gap-2">
@@ -1485,11 +1650,11 @@ export default function TeamPage() {
                       
                       return (
                         <div key={`revoked-${member.id}`} className="px-7 py-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0 group opacity-60">
-                          <div 
+                          <div
                             className={`grid gap-6 items-center ${
-                              userRoles.isTeamAdmin 
-                                ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
-                                : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                              userRoles.isTeamAdmin
+                                ? 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr_180px_140px]'
+                                : 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr]'
                             }`}
                           >
                             {/* Member Info */}
@@ -1521,20 +1686,9 @@ export default function TeamPage() {
                                     )}
                                   </p>
                                 )}
-                                {photoStyle && !member.isAdmin && (
-                                  <p className="text-xs text-gray-400 mt-1.5 font-medium">
-                                    Photo style:{' '}
-                                    <Link 
-                                      href="/app/styles/team"
-                                      className="text-gray-500 hover:text-gray-600 font-semibold underline decoration-2 underline-offset-2 transition-colors"
-                                    >
-                                      {photoStyle}
-                                    </Link>
-                                  </p>
-                                )}
                               </div>
                             </div>
-                            
+
                             {/* Selfies */}
                             <div className="flex justify-center">
                               {member.stats ? (
@@ -1571,7 +1725,29 @@ export default function TeamPage() {
                                 <span className="text-sm font-semibold">{t('teamMembers.status.revoked')}</span>
                               </div>
                             </div>
-                            
+
+                            {/* Photo Style */}
+                            <div className="flex justify-center">
+                              {photoStyle ? (
+                                <Link
+                                  href="/app/styles/team"
+                                  className="text-sm font-semibold text-gray-500 hover:text-gray-600 underline decoration-2 underline-offset-2 transition-colors truncate max-w-[120px]"
+                                  title={photoStyle}
+                                >
+                                  {photoStyle}
+                                </Link>
+                              ) : (
+                                <span className="text-sm text-gray-400">-</span>
+                              )}
+                            </div>
+
+                            {/* Invite Link - Admin only (empty for revoked) */}
+                            {userRoles.isTeamAdmin && (
+                              <div className="flex justify-center">
+                                <span className="text-sm text-gray-400">-</span>
+                              </div>
+                            )}
+
                             {/* Admin Actions */}
                             {userRoles.isTeamAdmin && (
                               <div className="flex items-center justify-center gap-2">
@@ -1592,13 +1768,17 @@ export default function TeamPage() {
                 )}
 
                 {/* Team Invites - only show pending invites */}
-                {pendingInvites.map((invite) => (
+                {pendingInvites.map((invite) => {
+                  // Build invite link from token
+                  const inviteLink = invite.token ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${invite.token}` : null
+
+                  return (
                 <div key={`invite-${invite.id}`} className="px-7 py-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0 group">
-                  <div 
+                  <div
                     className={`grid gap-6 items-center ${
-                      userRoles.isTeamAdmin 
-                        ? 'grid-cols-[250px_repeat(4,minmax(80px,1fr))_140px]' 
-                        : 'grid-cols-[250px_repeat(4,minmax(80px,1fr))]'
+                      userRoles.isTeamAdmin
+                        ? 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr_180px_140px]'
+                        : 'grid-cols-[250px_1fr_1fr_1fr_1fr_1fr]'
                     }`}
                   >
                     {/* Invite Info */}
@@ -1621,17 +1801,6 @@ export default function TeamPage() {
                             </span>
                           )}
                         </p>
-                        {invite.contextName && (
-                          <p className="text-xs text-gray-500 mt-1.5 font-medium">
-                            Photo style:{' '}
-                            <Link 
-                              href="/app/styles/team"
-                              className="text-brand-primary hover:text-brand-primary-hover font-semibold underline decoration-2 underline-offset-2 transition-colors"
-                            >
-                              {invite.contextName}
-                            </Link>
-                          </p>
-                        )}
                       </div>
                     </div>
                     
@@ -1674,7 +1843,56 @@ export default function TeamPage() {
                         </div>
                       )}
                     </div>
-                    
+
+                    {/* Photo Style */}
+                    <div className="flex justify-center">
+                      {invite.contextName ? (
+                        <Link
+                          href="/app/styles/team"
+                          className="text-sm font-semibold text-brand-primary hover:text-brand-primary-hover underline decoration-2 underline-offset-2 transition-colors truncate max-w-[120px]"
+                          title={invite.contextName}
+                        >
+                          {invite.contextName}
+                        </Link>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </div>
+
+                    {/* Invite Link - Admin only */}
+                    {userRoles.isTeamAdmin && (
+                      <div className="flex justify-center">
+                        {inviteLink && !invite.isRevoked ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyInviteLink(inviteLink, invite.id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                              tableLinkCopied === invite.id
+                                ? 'text-green-700 bg-green-100'
+                                : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                            }`}
+                            title={t('teamMembers.copyInviteLink', { default: 'Copy invite link' })}
+                          >
+                            {tableLinkCopied === invite.id ? (
+                              <>
+                                <CheckIcon className="w-3.5 h-3.5" />
+                                {t('teamMembers.copied', { default: 'Copied!' })}
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                {t('teamMembers.copyLink', { default: 'Copy' })}
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </div>
+                    )}
+
                     {/* Admin Actions */}
                     {userRoles.isTeamAdmin && (
                       <div className="flex items-center justify-center gap-2.5">
@@ -1699,7 +1917,7 @@ export default function TeamPage() {
                     )}
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
 
               {/* Mobile: Card Layout */}
@@ -2304,43 +2522,88 @@ export default function TeamPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-8">
-                  <button
-                    type="submit"
-                    disabled={
-                      inviting ||
-                      checkingEmail ||
-                      credits.team < 100 || // Need 100 credits for standard 10 photos
-                      !emailValue.trim() ||
-                      !firstNameValue.trim() ||
-                      !!emailError
-                    }
-                    className={`flex-1 px-7 py-3.5 rounded-xl font-semibold text-base min-h-[48px] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
-                      credits.team < 100 ||
-                      !emailValue.trim() ||
-                      !firstNameValue.trim() ||
-                      !!emailError ||
-                      checkingEmail
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-md hover:shadow-lg disabled:opacity-50 transform hover:-translate-y-0.5'
-                    }`}
-                  >
-                    {inviting ? t('inviteForm.buttons.sending') : t('inviteForm.buttons.send')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInviteError(null)
-                      // Clear form values when canceling
-                      setEmailValue('')
-                      setFirstNameValue('')
-                      setEmailError(null)
-                      setShowInviteForm(false)
-                    }}
-                    className="px-7 py-3.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 min-h-[48px] sm:w-auto font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 shadow-sm hover:shadow"
-                  >
-                    {t('inviteForm.buttons.cancel')}
-                  </button>
-                </div>
+                    {(() => {
+                      // Compute disabled reason for tooltip
+                      const isSeatsModel = teamData?.seatInfo?.isSeatsModel
+                      const availableSeats = teamData?.seatInfo?.availableSeats ?? 0
+
+                      const getDisabledReason = () => {
+                        if (inviting) return t('inviteForm.disabledReason.sending', { default: 'Sending invite...' })
+                        if (creatingLink) return t('inviteForm.disabledReason.creatingLink', { default: 'Creating link...' })
+                        if (checkingEmail) return t('inviteForm.disabledReason.checkingEmail', { default: 'Checking email...' })
+                        if (!emailValue.trim()) return t('inviteForm.disabledReason.emailRequired', { default: 'Please enter an email address' })
+                        if (!firstNameValue.trim()) return t('inviteForm.disabledReason.firstNameRequired', { default: 'Please enter a first name' })
+                        if (emailError) return emailError
+                        // Check availability based on pricing model
+                        if (isSeatsModel) {
+                          if (availableSeats <= 0) return t('inviteForm.disabledReason.noAvailableSeats', { default: 'No available seats. Please purchase more seats.' })
+                        } else {
+                          if (credits.team < 100) return t('inviteForm.disabledReason.insufficientCredits', { default: 'Not enough photo credits. Please purchase more credits.' })
+                        }
+                        return undefined
+                      }
+                      const disabledReason = getDisabledReason()
+                      const isDisabled = !!disabledReason
+
+                      return (
+                        <>
+                          <div className="relative flex-1 group">
+                            <button
+                              type="submit"
+                              disabled={isDisabled}
+                              className={`w-full px-7 py-3.5 rounded-xl font-semibold text-base min-h-[48px] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                                isDisabled
+                                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                  : 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-md hover:shadow-lg disabled:opacity-50 transform hover:-translate-y-0.5'
+                              }`}
+                            >
+                              {inviting ? t('inviteForm.buttons.sending') : t('inviteForm.buttons.send')}
+                            </button>
+                            {isDisabled && disabledReason && (
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                                {disabledReason}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="relative flex-1 group">
+                            <button
+                              type="button"
+                              onClick={handleCreateLink}
+                              disabled={isDisabled}
+                              className={`w-full px-7 py-3.5 rounded-xl font-semibold text-base min-h-[48px] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary border-2 ${
+                                isDisabled
+                                  ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                                  : 'bg-white text-brand-secondary border-brand-secondary hover:bg-brand-secondary/10 shadow-sm hover:shadow disabled:opacity-50'
+                              }`}
+                            >
+                              {creatingLink ? t('inviteForm.buttons.creatingLink', { default: 'Creating...' }) : t('inviteForm.buttons.createLink', { default: 'Create Link' })}
+                            </button>
+                            {isDisabled && disabledReason && (
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                                {disabledReason}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInviteError(null)
+                              // Clear form values when canceling
+                              setEmailValue('')
+                              setFirstNameValue('')
+                              setEmailError(null)
+                              setShowInviteForm(false)
+                            }}
+                            className="px-7 py-3.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 min-h-[48px] sm:w-auto font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 shadow-sm hover:shadow"
+                          >
+                            {t('inviteForm.buttons.cancel')}
+                          </button>
+                        </>
+                      )
+                    })()}
+                  </div>
               </form>
             </div>
           </div>

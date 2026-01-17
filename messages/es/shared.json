@@ -60,7 +60,7 @@
     "before": "Antes",
     "after": "Después",
     "dragToCompare": "Arrastra para comparar",
-    "generatedIn": "Generado en 45 segundos",
+    "generatedIn": "Generado en 60 segundos",
     "cta": "Haz que tu equipo se vea así hoy"
   },
   "trust": {
@@ -1454,7 +1454,8 @@
         "remaining": "Configura: {fields}",
         "complete": "Todo listo",
         "notStarted": "Personaliza tus fotos",
-        "inProgress": "En progreso"
+        "inProgress": "En progreso",
+        "stepProgress": "Paso {current} de {total}"
       },
       "generate": {
         "label": "Generar",
@@ -1473,7 +1474,8 @@
         "colors": "colores",
         "expression": "expresión",
         "branding": "marca",
-        "industry": "industria"
+        "industry": "industria",
+        "customization": "personalización"
       },
       "tooltips": {
         "needSelfies": "Añade {count} fotos primero",
@@ -1486,7 +1488,12 @@
       },
       "navigation": {
         "continue": "Continuar",
-        "back": "Atrás"
+        "back": "Atrás",
+        "dashboard": "Panel",
+        "selfies": "Selfies",
+        "customize": "Personalizar",
+        "generate": "Generar",
+        "dontShowAgain": "No mostrar de nuevo"
       }
     },
     "typeSelection": {
@@ -1654,6 +1661,9 @@
         "retry": "Reintentar",
         "idle": "Guardado automático activado"
       },
+      "errors": {
+        "loadFailed": "Error al cargar la configuración"
+      },
       "progress": {
         "editable": "{count} de {total} editables",
         "editableTeam": "{count} de {total} editables por los miembros del equipo"
@@ -1685,7 +1695,9 @@
           "editable": "Este icono significa que puedes editar esta configuración.",
           "locked": "Este icono significa que el administrador de tu equipo fijó estos, y no se pueden cambiar.",
           "skip": "No volver a mostrar",
-          "continueButton": "Continuar para personalizar"
+          "continueButton": "Continuar para personalizar",
+          "prevLabel": "Selfies",
+          "nextLabel": "Personalizar"
         },
         "selfieTips": {
           "kicker": "Obtén los mejores resultados",
@@ -1693,6 +1705,8 @@
           "body": "Las fotos geniales empiezan con buenas selfies. Sigue estos consejos para obtener los mejores resultados.",
           "skip": "No volver a mostrar",
           "continueButton": "Continuar a subir selfies",
+          "prevLabel": "Panel",
+          "nextLabel": "Selfies",
           "quality": {
             "title": "La calidad importa: mejores selfies crean mejores retratos",
             "desc": "Tus resultados solo serán tan buenos como lo que proporciones. Para obtener fotos de calidad profesional:",
@@ -2065,6 +2079,10 @@
           "jacket_reveal": {
             "label": "Revelación de Chaqueta",
             "description": "Pose profesional que destaca el atuendo"
+          },
+          "thumbs_up": {
+            "label": "Pulgar Arriba",
+            "description": "Pose entusiasta y accesible con gesto de pulgar arriba"
           }
         }
       }
@@ -2103,8 +2121,13 @@
         "availablePhotos": "Créditos de fotos restantes",
         "seatUsage": "Miembros del equipo",
         "status": "Estado",
+        "photoStyle": "Estilo de foto",
+        "inviteLink": "Enlace de invitación",
         "actions": "Acciones"
       },
+      "copyInviteLink": "Copiar enlace de invitación",
+      "copied": "¡Copiado!",
+      "copyLink": "Copiar",
       "seatUsage": {
         "of": "de"
       },
@@ -2205,7 +2228,7 @@
       },
       "whatHappensNext": {
         "title": "¿Qué sucede después?",
-        "step1": "El miembro del equipo recibe un correo con el enlace de invitación",
+        "step1": "El miembro del equipo recibe un correo con el enlace de invitación, o tú envías el enlace manualmente",
         "step2": "El enlace expira en 24 horas",
         "step3": "No se requiere registro - pueden comenzar inmediatamente",
         "step4": "Fotos generadas con estilo de foto activo: {name}"
@@ -2213,7 +2236,25 @@
       "buttons": {
         "send": "Enviar Invitación",
         "sending": "Enviando...",
+        "createLink": "Crear enlace",
+        "creatingLink": "Creando...",
         "cancel": "Cancelar"
+      },
+      "linkCreated": {
+        "title": "¡Enlace de invitación creado!",
+        "description": "Comparte este enlace con tu miembro del equipo para unirse:",
+        "copyButton": "Copiar enlace",
+        "copied": "¡Copiado!",
+        "done": "Listo"
+      },
+      "disabledReason": {
+        "sending": "Enviando invitación...",
+        "creatingLink": "Creando enlace...",
+        "checkingEmail": "Verificando email...",
+        "emailRequired": "Por favor ingresa un correo electrónico",
+        "firstNameRequired": "Por favor ingresa un nombre",
+        "insufficientCredits": "No hay suficientes créditos de fotos. Por favor compra más créditos.",
+        "noAvailableSeats": "No hay puestos disponibles. Por favor compra más puestos."
       },
       "insufficientCredits": "No hay suficientes créditos del equipo. Disponibles: {available}, Requeridos: {required}"
     },
@@ -2554,7 +2595,9 @@
     "recentPhotos": {
       "title": "Fotos recientes",
       "viewAll": "Ver todas",
-      "empty": "Aún no hay fotos. Genera una y aparecerán aquí."
+      "empty": "Aún no hay fotos. Genera una y aparecerán aquí.",
+      "emptyTitle": "Tus fotos aparecerán aquí",
+      "emptySubtitle": "Genera tu primera foto para ver los resultados"
     },
     "selfieSelection": {
       "title": "Elige selfies para usar",
@@ -2569,9 +2612,17 @@
         "badgeSelecting": "Faltan {remaining}",
         "badgeReady": "Listo para personalizar",
         "hint": "¿Necesitas ajustar tus selfies? Hazlo aquí y luego desliza a la derecha para continuar.",
+        "prevLabel": "Panel",
+        "nextLabel": "Personalización",
         "actions": {
           "camera": "Usar cámara",
           "upload": "Subir foto"
+        },
+        "navigation": {
+          "selfies": "Selfies",
+          "back": "Atrás",
+          "next": "Siguiente",
+          "generate": "Generar"
         }
       }
     },
@@ -2583,7 +2634,13 @@
       },
       "mobileCustomizeTitle": "Personaliza {style}",
       "costPerGeneration": "Costo por generación",
-      "generateButton": "Generar foto"
+      "generateButton": "Generar foto",
+      "disabledReasons": {
+        "needSelfies": "Necesitas al menos {required} selfies (tienes {current})",
+        "needCredits": "No tienes suficientes créditos (necesitas {required}, tienes {current})",
+        "needCustomization": "Visita todos los pasos de personalización ({visited}/{total} visitados)",
+        "needClothingColors": "Visita el paso de colores de ropa"
+      }
     },
     "mobile": {
       "intro": {

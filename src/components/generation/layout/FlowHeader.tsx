@@ -34,6 +34,8 @@ export interface FlowHeaderProps {
   rightContent?: React.ReactNode
   /** Force full-width styling even when non-sticky (used to match customization headers) */
   fullBleed?: boolean
+  /** Hide the flow header on desktop (md: and above) */
+  hideOnDesktop?: boolean
 }
 
 /**
@@ -54,7 +56,8 @@ export default function FlowHeader({
   backLabel = 'Back',
   sticky = true,
   className = '',
-  rightContent
+  rightContent,
+  hideOnDesktop = false
 }: FlowHeaderProps) {
   // If there's no meaningful content, don't render the header at all
   // This prevents rendering an empty header bar on desktop when content is shown elsewhere
@@ -64,11 +67,13 @@ export default function FlowHeader({
   }
 
   const positionClasses = sticky ? 'md:static sticky top-0 z-40' : ''
+  const hideOnDesktopClass = hideOnDesktop ? 'md:hidden' : ''
 
   return (
     <div
       className={`
         ${positionClasses}
+        ${hideOnDesktopClass}
         bg-white/95 backdrop-blur-md border-b border-gray-200
         px-4 sm:px-6 py-3.5 shadow-sm
         transition-shadow duration-300
@@ -103,7 +108,7 @@ export default function FlowHeader({
                 {kicker}
               </p>
             )}
-            <h1 className={`font-bold text-gray-900 truncate transition-all duration-300 ${kicker ? 'text-base leading-tight' : 'text-lg'}`}>
+            <h1 className={`font-bold text-gray-900 line-clamp-2 transition-all duration-300 ${kicker ? 'text-base leading-tight' : 'text-lg'}`}>
               {title}
             </h1>
             {subtitle && (

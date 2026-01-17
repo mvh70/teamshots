@@ -12,9 +12,11 @@ interface SharedMobileSelfieFlowProps {
   infoBanner?: React.ReactNode
   /** Main selfie grid content */
   grid: React.ReactNode
-  /** Optional navigation controls rendered below the grid */
+  /** Optional navigation controls rendered in the sticky footer (progress dots) */
   navigation?: React.ReactNode
-  /** Section rendered near the bottom (e.g., upload controls) */
+  /** Optional labeled navigation buttons rendered above progress dots */
+  navButtons?: React.ReactNode
+  /** Section rendered in the sticky footer (e.g., upload controls) */
   uploadSection?: React.ReactNode
   /** Floating status pill content */
   statusBadge?: StatusBadgeContent
@@ -31,12 +33,13 @@ interface SharedMobileSelfieFlowProps {
 /**
  * Shared mobile layout for selfie selection across logged-in and invited flows.
  * Handles scroll-aware banner fading, consistent spacing, floating status pill,
- * and pinned upload controls so the UX matches between contexts.
+ * and sticky footer with navigation and upload controls.
  */
 export default function SharedMobileSelfieFlow({
   infoBanner,
   grid,
   navigation,
+  navButtons,
   uploadSection,
   statusBadge,
   successBanner,
@@ -55,10 +58,10 @@ export default function SharedMobileSelfieFlow({
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const shouldReserveBottomSpace = Boolean(statusBadge || uploadSection)
+  const hasFooter = Boolean(navigation || navButtons || uploadSection)
 
   return (
-    <div className={`md:hidden bg-white ${shouldReserveBottomSpace ? 'pb-48' : ''} ${className}`}>
+    <div className={`md:hidden bg-white ${className}`}>
       {successBanner && (
         <div className="bg-white border-b border-gray-200 px-4 py-4">
           {successBanner}
@@ -87,18 +90,16 @@ export default function SharedMobileSelfieFlow({
         {grid}
       </div>
 
-      {navigation && (
-        <div className="px-4 pb-6">
-          {navigation}
-        </div>
-      )}
+      {/* Space for sticky footer */}
+      {hasFooter && <div className="h-56" />}
 
+      {/* Status badge - floats above sticky footer */}
       {statusBadge && (
-        <div className="fixed bottom-[90px] left-0 right-0 z-50 flex justify-center pointer-events-none">
+        <div className="fixed bottom-[220px] left-0 right-0 z-50 flex justify-center pointer-events-none">
           <span
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold shadow-xl backdrop-blur-sm ${
               canContinue
-                ? 'bg-green-500 text-white'
+                ? 'bg-brand-primary text-white'
                 : 'bg-white/95 text-gray-700 border border-gray-200'
             }`}
           >
@@ -107,9 +108,27 @@ export default function SharedMobileSelfieFlow({
         </div>
       )}
 
-      {uploadSection && (
-        <div className="px-4 pb-6">
-          {uploadSection}
+      {/* Sticky footer with navigation and upload controls */}
+      {hasFooter && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+          {/* Labeled navigation buttons row */}
+          {navButtons && (
+            <div className="px-4 pt-4 pb-2">
+              {navButtons}
+            </div>
+          )}
+          {/* Progress dots row */}
+          {navigation && (
+            <div className="px-4 pb-2">
+              {navigation}
+            </div>
+          )}
+          {/* Upload buttons */}
+          {uploadSection && (
+            <div className="px-4 pb-6">
+              {uploadSection}
+            </div>
+          )}
         </div>
       )}
     </div>

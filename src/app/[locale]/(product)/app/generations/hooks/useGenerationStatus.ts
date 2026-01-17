@@ -1,11 +1,11 @@
 /**
  * Generation Status Hook
- * 
- * Polls generation status until completion or failure
+ *
+ * Polls generation status until completion or failure using SWR
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { jsonFetcher } from '@/lib/fetcher'
+import { useCallback, useRef, useEffect } from 'react'
+import { useSWR, swrFetcher, mutate } from '@/lib/swr'
 
 export interface GenerationStatus {
   id: string
@@ -15,24 +15,24 @@ export interface GenerationStatus {
   creditsUsed: number
   provider: string
   actualCost?: number
-  
+
   // Images
   uploadedPhotoUrl?: string
   generatedImageUrls: string[]
   acceptedPhotoKey?: string
-  
+
   // Progress tracking
   userApproved: boolean
   adminApproved: boolean
-  
+
   // Moderation
   moderationScore?: number
   moderationPassed: boolean
   moderationDate?: string
-  
+
   // Error information
   errorMessage?: string
-  
+
   // Job status
   jobStatus?: {
     id: string
@@ -43,13 +43,13 @@ export interface GenerationStatus {
     finishedOn?: number
     failedReason?: string
   }
-  
+
   // Timestamps
   createdAt: string
   completedAt?: string
   acceptedAt?: string
   updatedAt: string
-  
+
   // Related data
   person: {
     id: string
@@ -78,112 +78,90 @@ interface UseGenerationStatusReturn {
   refetch: () => Promise<void>
 }
 
+function isGenerationComplete(data: GenerationStatus | undefined): boolean {
+  if (!data) return false
+  if (data.status === 'failed') return true
+  if (data.status === 'completed') {
+    // Only consider complete if we have valid image URLs
+    const hasValidUrls = data.generatedImageUrls?.some(url => url && url.length > 0)
+    return hasValidUrls
+  }
+  return false
+}
+
 export function useGenerationStatus({
   generationId,
   enabled = true,
-  pollInterval = 1000, // 1 second
-  maxPollTime = 300000, // 5 minutes
+  pollInterval = 1000,
+  maxPollTime = 300000,
 }: UseGenerationStatusOptions): UseGenerationStatusReturn {
-  const [generation, setGeneration] = useState<GenerationStatus | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [pollStartTime, setPollStartTime] = useState<number>(Date.now())
-  
-  // Track whether we should continue polling (separate from loading state for UI)
-  const [shouldPoll, setShouldPoll] = useState(true)
-  // Prevent concurrent fetches
-  const isFetchingRef = useRef(false)
-  // Track consecutive errors for backoff
   const errorCountRef = useRef(0)
+  const pollStartTimeRef = useRef(Date.now())
+  const shouldStopRef = useRef(false)
 
-  const fetchGenerationStatus = useCallback(async () => {
-    if (!generationId || !enabled) return
-    
-    // Prevent concurrent fetches
-    if (isFetchingRef.current) return
-    isFetchingRef.current = true
+  const key = enabled && generationId ? `/api/generations/${generationId}` : null
 
-    try {
-      const data = await jsonFetcher<GenerationStatus>(`/api/generations/${generationId}`)
-      setGeneration(data)
-      setError(null)
-      errorCountRef.current = 0 // Reset error count on success
-
-      // Stop polling if generation is completed (with images) or failed
-      if (data.status === 'failed') {
-        setShouldPoll(false)
-        setLoading(false)
-      } else if (data.status === 'completed') {
-        // Only stop polling if we have the generated images
-        // This prevents the race condition where status is completed but keys aren't available yet
-        if (data.generatedImageUrls && data.generatedImageUrls.length > 0) {
-          // Double-check that we have actual URLs with keys, not empty strings
-          const hasValidUrls = data.generatedImageUrls.some(url => url && url.length > 0)
-          if (hasValidUrls) {
-            setShouldPoll(false)
-            setLoading(false)
-          }
+  const { data, error: swrError, isLoading } = useSWR<GenerationStatus>(
+    key,
+    swrFetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 500,
+      onSuccess: () => {
+        errorCountRef.current = 0
+      },
+      onError: () => {
+        errorCountRef.current++
+        if (errorCountRef.current >= 5) {
+          shouldStopRef.current = true
         }
-        // If completed but no images, continue polling to get the final data
-      }
+      },
+      refreshInterval: (latestData) => {
+        // Stop if generation is complete
+        if (isGenerationComplete(latestData)) return 0
 
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      setError(errorMessage)
-      errorCountRef.current++
-      
-      // Only stop loading after multiple consecutive errors
-      // This prevents UI freezing on transient network issues
-      if (errorCountRef.current >= 5) {
-        setShouldPoll(false)
-        setLoading(false)
-      }
-    } finally {
-      isFetchingRef.current = false
+        // Stop if too many consecutive errors
+        if (shouldStopRef.current) return 0
+
+        // Stop if exceeded max poll time
+        if (Date.now() - pollStartTimeRef.current > maxPollTime) {
+          shouldStopRef.current = true
+          return 0
+        }
+
+        return pollInterval
+      },
     }
-  }, [generationId, enabled])
+  )
+
+  // Reset refs when generationId changes
+  useEffect(() => {
+    errorCountRef.current = 0
+    pollStartTimeRef.current = Date.now()
+    shouldStopRef.current = false
+  }, [generationId])
 
   const refetch = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    setShouldPoll(true)
     errorCountRef.current = 0
-    setPollStartTime(Date.now())
-    await fetchGenerationStatus()
-  }, [fetchGenerationStatus])
-
-  // Initial fetch
-  useEffect(() => {
-    if (enabled && generationId) {
-      setShouldPoll(true)
-      errorCountRef.current = 0
-      fetchGenerationStatus()
+    pollStartTimeRef.current = Date.now()
+    shouldStopRef.current = false
+    if (key) {
+      await mutate(key)
     }
-  }, [fetchGenerationStatus, enabled, generationId])
+  }, [key])
 
-  // Polling effect - uses shouldPoll instead of loading to control polling
-  useEffect(() => {
-    if (!enabled || !generationId || !shouldPoll) return
-
-    const interval = setInterval(async () => {
-      // Check if we've exceeded max poll time
-      if (Date.now() - pollStartTime > maxPollTime) {
-        setError('Generation timeout - please check back later')
-        setShouldPoll(false)
-        setLoading(false)
-        return
-      }
-
-      await fetchGenerationStatus()
-    }, pollInterval)
-
-    return () => clearInterval(interval)
-  }, [enabled, generationId, shouldPoll, pollInterval, maxPollTime, pollStartTime, fetchGenerationStatus])
+  const errorMessage = swrError
+    ? (errorCountRef.current >= 5
+        ? 'Multiple fetch errors - please check back later'
+        : swrError instanceof Error ? swrError.message : 'Unknown error')
+    : (shouldStopRef.current && !isGenerationComplete(data)
+        ? 'Generation timeout - please check back later'
+        : null)
 
   return {
-    generation,
-    loading,
-    error,
+    generation: data || null,
+    loading: isLoading,
+    error: errorMessage,
     refetch,
   }
 }
@@ -191,53 +169,42 @@ export function useGenerationStatus({
 /**
  * Hook for polling multiple generations
  */
+interface GenerationsListResponse {
+  generations: GenerationStatus[]
+  pagination?: Record<string, unknown>
+}
+
 export function useGenerationsList(options?: {
   page?: number
   limit?: number
   status?: string
   type?: string
 }) {
-  const [generations, setGenerations] = useState<GenerationStatus[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [pagination, setPagination] = useState<Record<string, unknown> | null>(null)
+  const params = new URLSearchParams()
+  if (options?.page) params.set('page', options.page.toString())
+  if (options?.limit) params.set('limit', options.limit.toString())
+  if (options?.status) params.set('status', options.status)
+  if (options?.type) params.set('type', options.type)
 
-  const fetchGenerations = useCallback(async () => {
-    try {
-      const params = new URLSearchParams()
-      if (options?.page) params.set('page', options.page.toString())
-      if (options?.limit) params.set('limit', options.limit.toString())
-      if (options?.status) params.set('status', options.status)
-      if (options?.type) params.set('type', options.type)
+  const key = `/api/generations/list?${params}`
 
-      const response = await fetch(`/api/generations/list?${params}`)
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch generations: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      setGenerations(data.generations)
-      setPagination(data.pagination)
-      setError(null)
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      setError(errorMessage)
-    } finally {
-      setLoading(false)
+  const { data, error, isLoading, mutate: revalidate } = useSWR<GenerationsListResponse>(
+    key,
+    swrFetcher,
+    {
+      revalidateOnFocus: false,
     }
-  }, [options])
+  )
 
-  useEffect(() => {
-    fetchGenerations()
-  }, [fetchGenerations])
+  const refetch = useCallback(async () => {
+    await revalidate()
+  }, [revalidate])
 
   return {
-    generations,
-    pagination,
-    loading,
-    error,
-    refetch: fetchGenerations,
+    generations: data?.generations || [],
+    pagination: data?.pagination || null,
+    loading: isLoading,
+    error: error ? (error instanceof Error ? error.message : 'Unknown error') : null,
+    refetch,
   }
 }

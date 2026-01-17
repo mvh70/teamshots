@@ -6,9 +6,9 @@ import { Link } from '@/i18n/routing'
 import { useCredits } from '@/contexts/CreditsContext'
 import { jsonFetcher } from '@/lib/fetcher'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
-import { 
-  HomeIcon, 
-  UsersIcon, 
+import {
+  HomeIcon,
+  UsersIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   PlusIcon,
@@ -20,7 +20,9 @@ import {
   Bars3Icon,
   XMarkIcon,
   ShieldCheckIcon,
-  PhotoIcon
+  PhotoIcon,
+  UserGroupIcon,
+  CreditCardIcon
 } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
@@ -707,13 +709,27 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
               )}
               <div className={`space-y-1.5 ${effectiveCollapsed ? 'text-center' : ''}`}>
                 {accountMode === 'individual' && (
-                  <div className={`relative group flex items-center justify-between bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200 ${effectiveCollapsed ? 'flex-col space-y-0.5' : ''}`}>
-                    <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center' : ''}`}>
-                      {t('photos.individual')}
-                    </span>
-                    <span className={`text-lg md:text-xl font-extrabold tracking-tight leading-tight ${effectiveCollapsed ? 'text-xl' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
-                      {calculatePhotosFromCredits(credits.individual ?? 0)}
-                    </span>
+                  <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200`}>
+                    {effectiveCollapsed ? (
+                      // Collapsed view: icon above number
+                      <div className="flex flex-col items-center justify-center">
+                        <CreditCardIcon className="h-4 w-4 text-gray-600" />
+                        <span className="text-sm font-extrabold mt-0.5" style={{ color: BRAND_CONFIG.colors.primary }}>
+                          {calculatePhotosFromCredits(credits.individual ?? 0)}
+                        </span>
+                      </div>
+                    ) : (
+                      // Expanded view: icon + text + number
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
+                          <CreditCardIcon className="h-4 w-4 text-gray-600" />
+                          {t('photos.individual')}
+                        </span>
+                        <span className="text-lg md:text-xl font-extrabold tracking-tight leading-tight" style={{ color: BRAND_CONFIG.colors.primary }}>
+                          {calculatePhotosFromCredits(credits.individual ?? 0)}
+                        </span>
+                      </div>
+                    )}
                     {effectiveCollapsed && (
                       <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
                         {t('photos.individual')}: {calculatePhotosFromCredits(credits.individual ?? 0)}
@@ -724,38 +740,65 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
 
                 {/* Seats-based teams: Show seat usage (source of truth from backend) */}
                 {seatInfo?.isSeatsModel && (
-                  <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200 space-y-2`}>
-                    {/* Seats row */}
-                    <div className={`flex items-center justify-between ${effectiveCollapsed ? 'flex-col space-y-0.5' : ''} ${planTier === 'free' && seatInfo.totalSeats === 0 && !effectiveCollapsed ? 'flex-col space-y-1' : ''}`}>
-                      <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center text-[10px]' : ''}`}>
-                        {t('photos.seats')}
-                      </span>
-                      <span className={`font-extrabold tracking-tight leading-tight ${effectiveCollapsed ? 'text-base' : 'text-lg md:text-xl'}`} style={{ color: BRAND_CONFIG.colors.primary }}>
-                        {seatInfo.totalSeats > 0 ? `${seatInfo.activeSeats} / ${seatInfo.totalSeats}` : '1 / 1'}
-                      </span>
-                    </div>
-                    
-                    {/* Show photo balance for team admins */}
-                    {isTeamAdmin && (
-                      <div className={`flex items-center justify-between ${effectiveCollapsed ? 'flex-col space-y-0.5' : ''}`}>
-                        <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center' : ''}`}>
-                          {t('photos.balance')}
-                        </span>
-                        <span className={`text-lg md:text-xl font-extrabold tracking-tight leading-tight ${effectiveCollapsed ? 'text-xl' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
-                          {calculatePhotosFromCredits(credits.person ?? 0)}
-                        </span>
+                  <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200 ${effectiveCollapsed ? '' : 'space-y-2'}`}>
+                    {effectiveCollapsed ? (
+                      // Collapsed view: icons above numbers, stacked vertically
+                      <div className="flex flex-col items-center space-y-3">
+                        {/* Team size: icon above number */}
+                        <div className="flex flex-col items-center">
+                          <UserGroupIcon className="h-4 w-4 text-gray-600" />
+                          <span className="text-sm font-extrabold mt-0.5" style={{ color: BRAND_CONFIG.colors.primary }}>
+                            {seatInfo.totalSeats > 0 ? `${seatInfo.activeSeats}/${seatInfo.totalSeats}` : '1/1'}
+                          </span>
+                        </div>
+                        {/* Photo balance: icon above number (for team admins) */}
+                        {isTeamAdmin && (
+                          <div className="flex flex-col items-center">
+                            <CreditCardIcon className="h-4 w-4 text-gray-600" />
+                            <span className="text-sm font-extrabold mt-0.5" style={{ color: BRAND_CONFIG.colors.primary }}>
+                              {calculatePhotosFromCredits(credits.person ?? 0)}
+                            </span>
+                          </div>
+                        )}
                       </div>
+                    ) : (
+                      // Expanded view: icons + text
+                      <>
+                        {/* Seats row */}
+                        <div className={`flex items-center justify-between ${planTier === 'free' && seatInfo.totalSeats === 0 ? 'flex-col space-y-1' : ''}`}>
+                          <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
+                            <UserGroupIcon className="h-4 w-4 text-gray-600" />
+                            {t('photos.seats')}
+                          </span>
+                          <span className="font-extrabold tracking-tight leading-tight text-lg md:text-xl" style={{ color: BRAND_CONFIG.colors.primary }}>
+                            {seatInfo.totalSeats > 0 ? `${seatInfo.activeSeats} / ${seatInfo.totalSeats}` : '1 / 1'}
+                          </span>
+                        </div>
+
+                        {/* Show photo balance for team admins */}
+                        {isTeamAdmin && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
+                              <CreditCardIcon className="h-4 w-4 text-gray-600" />
+                              {t('photos.balance')}
+                            </span>
+                            <span className="text-lg md:text-xl font-extrabold tracking-tight leading-tight" style={{ color: BRAND_CONFIG.colors.primary }}>
+                              {calculatePhotosFromCredits(credits.person ?? 0)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Show locked branding message for free plans inside the container */}
+                        {planTier === 'free' && seatInfo.totalSeats === 0 && (
+                          <div className="text-center">
+                            <span className="text-xs text-gray-600 font-medium">
+                              {t('photos.lockedBranding')}
+                            </span>
+                          </div>
+                        )}
+                      </>
                     )}
-                    
-                    {/* Show locked branding message for free plans inside the container */}
-                    {planTier === 'free' && seatInfo.totalSeats === 0 && !effectiveCollapsed && (
-                      <div className="text-center">
-                        <span className="text-xs text-gray-600 font-medium">
-                          {t('photos.lockedBranding')}
-                        </span>
-                      </div>
-                    )}
-                    
+
                     {effectiveCollapsed && (
                       <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
                         {t('photos.seats')}: {seatInfo.totalSeats > 0 ? `${seatInfo.activeSeats} / ${seatInfo.totalSeats}` : '1 / 1'}
@@ -773,13 +816,27 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                 {/* Legacy credit-based Pro teams: Show team credits */}
                 {seatInfo && !seatInfo.isSeatsModel && (
                   <>
-                    <div className={`relative group flex items-center justify-between bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200 ${effectiveCollapsed ? 'flex-col space-y-0.5' : ''}`}>
-                      <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center' : ''}`}>
-                        {t('photos.team')}
-                      </span>
-                      <span className={`text-lg md:text-xl font-extrabold tracking-tight leading-tight ${effectiveCollapsed ? 'text-xl' : ''}`} style={{ color: BRAND_CONFIG.colors.primary }}>
-                        {calculatePhotosFromCredits(credits.team ?? 0)}
-                      </span>
+                    <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200`}>
+                      {effectiveCollapsed ? (
+                        // Collapsed view: icon above number
+                        <div className="flex flex-col items-center justify-center">
+                          <UserGroupIcon className="h-4 w-4 text-gray-600" />
+                          <span className="text-sm font-extrabold mt-0.5" style={{ color: BRAND_CONFIG.colors.primary }}>
+                            {calculatePhotosFromCredits(credits.team ?? 0)}
+                          </span>
+                        </div>
+                      ) : (
+                        // Expanded view: icon + text + number
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
+                            <UserGroupIcon className="h-4 w-4 text-gray-600" />
+                            {t('photos.team')}
+                          </span>
+                          <span className="text-lg md:text-xl font-extrabold tracking-tight leading-tight" style={{ color: BRAND_CONFIG.colors.primary }}>
+                            {calculatePhotosFromCredits(credits.team ?? 0)}
+                          </span>
+                        </div>
+                      )}
                       {effectiveCollapsed && (
                         <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
                           {t('photos.team')}: {calculatePhotosFromCredits(credits.team ?? 0)}
@@ -787,13 +844,27 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                       )}
                     </div>
                     {isTeamAdmin && allocatedCredits > 0 && (
-                      <div className={`relative group flex items-center justify-between bg-gradient-to-r from-brand-cta-light/50 via-brand-cta-light/40 to-transparent rounded-lg px-2.5 py-2 border border-brand-cta/20 shadow-sm hover:shadow-md transition-shadow duration-200 ${effectiveCollapsed ? 'flex-col space-y-0.5' : ''}`}>
-                        <span className={`text-xs font-semibold text-gray-800 leading-tight ${effectiveCollapsed ? 'text-center' : ''}`}>
-                          {t('photos.allocated')}
-                        </span>
-                        <span className={`text-lg md:text-xl font-extrabold tracking-tight leading-tight ${effectiveCollapsed ? 'text-xl' : ''} text-brand-cta`}>
-                          {calculatePhotosFromCredits(allocatedCredits)}
-                        </span>
+                      <div className={`relative group bg-gradient-to-r from-brand-cta-light/50 via-brand-cta-light/40 to-transparent rounded-lg px-2.5 py-2 border border-brand-cta/20 shadow-sm hover:shadow-md transition-shadow duration-200`}>
+                        {effectiveCollapsed ? (
+                          // Collapsed view: icon above number
+                          <div className="flex flex-col items-center justify-center">
+                            <CreditCardIcon className="h-4 w-4 text-gray-600" />
+                            <span className="text-sm font-extrabold mt-0.5 text-brand-cta">
+                              {calculatePhotosFromCredits(allocatedCredits)}
+                            </span>
+                          </div>
+                        ) : (
+                          // Expanded view: icon + text + number
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
+                              <CreditCardIcon className="h-4 w-4 text-gray-600" />
+                              {t('photos.allocated')}
+                            </span>
+                            <span className="text-lg md:text-xl font-extrabold tracking-tight leading-tight text-brand-cta">
+                              {calculatePhotosFromCredits(allocatedCredits)}
+                            </span>
+                          </div>
+                        )}
                         {effectiveCollapsed && (
                           <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
                             {t('photos.allocated')}: {calculatePhotosFromCredits(allocatedCredits)}

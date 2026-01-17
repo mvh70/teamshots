@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { Check, X } from 'lucide-react'
+import { Check, X, User, UserCircle } from 'lucide-react'
 import type { SelfieTypeStatus, SelfieType } from '@/domain/selfie/selfie-types'
 import { SELFIE_TYPE_REQUIREMENTS } from '@/domain/selfie/selfie-types'
 import SelfieTipsContent from '@/components/generation/SelfieTipsContent'
@@ -127,17 +127,32 @@ export default function SelfieTypeOverlay({
                 const item = status.find((s) => s.type === req.type)
                 const captured = item?.captured || false
 
+                // Icon for each type
+                const TypeIcon = req.type === 'front_view' ? (
+                  <UserCircle className="w-4 h-4" />
+                ) : req.type === 'side_view' ? (
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="5" />
+                    <path d="M17 8c0 2.8-2.2 5-5 5" />
+                    <path d="M3 21v-2a4 4 0 0 1 4-4h6" />
+                  </svg>
+                ) : (
+                  <User className="w-4 h-4" />
+                )
+
                 return (
                   <div
                     key={req.type}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                       captured
-                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20'
                         : 'bg-gray-50 text-gray-400 border border-gray-200'
                     }`}
                   >
-                    {captured && (
-                      <Check className="w-3.5 h-3.5" />
+                    {captured ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      TypeIcon
                     )}
                     <span>
                       {t(`types.${req.type.replace('_', '')}.label`, { defaultValue: req.label })}
@@ -152,14 +167,16 @@ export default function SelfieTypeOverlay({
                 )
                 return (
                   <div
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                       hasBody
-                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        ? 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20'
                         : 'bg-gray-50 text-gray-400 border border-gray-200'
                     }`}
                   >
-                    {hasBody && (
-                      <Check className="w-3.5 h-3.5" />
+                    {hasBody ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <User className="w-4 h-4" />
                     )}
                     <span>
                       {t('types.body.label', { defaultValue: 'Body' })}

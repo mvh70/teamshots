@@ -282,15 +282,14 @@ export function getUneditedEditableFieldNames(
         unedited.push(categoryKey)
       }
     } else {
-      // For other categories, check if the value has been set/changed
-      // A field is "unedited" if:
-      // 1. It has no value set (value is undefined)
-      // 2. OR it matches the original exactly (user hasn't made any changes)
+      // For other categories, check if a value has been set
+      // A field is "edited" (done) if it has any value, regardless of whether
+      // it matches the original - we don't require users to change from defaults
 
-      // Check if user has made a selection (value exists in new format)
+      // Check if user has a selection (value exists in new format)
       const hasValue = currentSettings.value !== undefined
 
-      // If no value yet, it's definitely unedited
+      // If no value yet, it's unedited
       if (!hasValue) {
         // Also check legacy format - if mode is user-choice with no value, it's unedited
         const isUserChoiceWithNoValue =
@@ -299,14 +298,9 @@ export function getUneditedEditableFieldNames(
 
         if (isUserChoiceWithNoValue) {
           unedited.push(categoryKey)
-          continue
         }
       }
-
-      // Compare with original - if unchanged, it's unedited
-      if (originalSettings && JSON.stringify(currentSettings) === JSON.stringify(originalSettings)) {
-        unedited.push(categoryKey)
-      }
+      // If hasValue is true, the field is considered "set" - don't add to unedited
     }
   }
 

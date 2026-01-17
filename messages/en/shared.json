@@ -59,7 +59,7 @@
     "before": "Before",
     "after": "After",
     "dragToCompare": "Drag to compare",
-    "generatedIn": "Generated in 45 seconds",
+    "generatedIn": "Generated in 60 seconds",
     "cta": "Make your team look like this today"
   },
   "trust": {
@@ -1447,7 +1447,8 @@
         "remaining": "Set: {fields}",
         "complete": "All set",
         "notStarted": "Customize your photos",
-        "inProgress": "In progress"
+        "inProgress": "In progress",
+        "stepProgress": "Step {current} of {total}"
       },
       "generate": {
         "label": "Generate",
@@ -1466,7 +1467,8 @@
         "colors": "colors",
         "expression": "expression",
         "branding": "branding",
-        "industry": "industry"
+        "industry": "industry",
+        "customization": "customization"
       },
       "tooltips": {
         "needSelfies": "Add {count} photos first",
@@ -1479,7 +1481,12 @@
       },
       "navigation": {
         "continue": "Continue",
-        "back": "Back"
+        "back": "Back",
+        "dashboard": "Dashboard",
+        "selfies": "Selfies",
+        "customize": "Customize",
+        "generate": "Generate",
+        "dontShowAgain": "Don't show again"
       }
     },
     "typeSelection": {
@@ -1645,6 +1652,9 @@
         "retry": "Retry",
         "idle": "Autosave on"
       },
+      "errors": {
+        "loadFailed": "Failed to load settings"
+      },
       "progress": {
         "editable": "{count} of {total} editable",
         "editableTeam": "{count} of {total} editable by team members"
@@ -1676,7 +1686,9 @@
           "editable": "This icon means you can edit this setting.",
           "locked": "This icon means your team admin fixed these, and they can not be changed.",
           "skip": "Don't show again",
-          "continueButton": "Continue to customize"
+          "continueButton": "Continue to customize",
+          "prevLabel": "Selfies",
+          "nextLabel": "Customize"
         },
         "selfieTips": {
           "kicker": "Get the best results",
@@ -1684,6 +1696,8 @@
           "body": "Great photos start with great selfies. Follow these tips to get the best results.",
           "skip": "Don't show again",
           "continueButton": "Continue to selfie upload",
+          "prevLabel": "Dashboard",
+          "nextLabel": "Selfies",
           "quality": {
             "title": "Quality matters: better selfies create better headshots",
             "desc": "Your results are only as good as what you provide. To get professional-quality photos:",
@@ -2056,6 +2070,10 @@
           "jacket_reveal": {
             "label": "Jacket Reveal",
             "description": "Professional pose highlighting attire"
+          },
+          "thumbs_up": {
+            "label": "Thumbs Up",
+            "description": "Enthusiastic and approachable pose with thumbs up gesture"
           }
         }
       }
@@ -2092,8 +2110,13 @@
         "availablePhotos": "Photo credits left",
         "seatUsage": "Team members",
         "status": "Status",
+        "photoStyle": "Photo style",
+        "inviteLink": "Invite Link",
         "actions": "Actions"
       },
+      "copyInviteLink": "Copy invite link",
+      "copied": "Copied!",
+      "copyLink": "Copy",
       "seatUsage": {
         "of": "of"
       },
@@ -2194,7 +2217,7 @@
       },
       "whatHappensNext": {
         "title": "What happens next?",
-        "step1": "Team member receives email with invite link",
+        "step1": "Team member receives email with invite link, or you send the link manually",
         "step2": "Link expires in 24 hours",
         "step3": "No signup required - they can start immediately",
         "step4": "Photos generated with active photo style: {name}"
@@ -2202,7 +2225,25 @@
       "buttons": {
         "send": "Send invite",
         "sending": "Sending...",
+        "createLink": "Create link",
+        "creatingLink": "Creating...",
         "cancel": "Cancel"
+      },
+      "linkCreated": {
+        "title": "Invite link created!",
+        "description": "Share this link with your team member to join:",
+        "copyButton": "Copy link",
+        "copied": "Copied!",
+        "done": "Done"
+      },
+      "disabledReason": {
+        "sending": "Sending invite...",
+        "creatingLink": "Creating link...",
+        "checkingEmail": "Checking email...",
+        "emailRequired": "Please enter an email address",
+        "firstNameRequired": "Please enter a first name",
+        "insufficientCredits": "Not enough photo credits. Please purchase more credits.",
+        "noAvailableSeats": "No available seats. Please purchase more seats."
       }
     },
     "buttons": {
@@ -2538,7 +2579,9 @@
     "recentPhotos": {
       "title": "Recent photos",
       "viewAll": "View all",
-      "empty": "No photos yet. Generate one and they'll show up here."
+      "empty": "No photos yet. Generate one and they'll show up here.",
+      "emptyTitle": "Your headshots will appear here",
+      "emptySubtitle": "Generate your first photo to see results"
     },
     "selfieSelection": {
       "title": "Choose selfies to use",
@@ -2553,9 +2596,17 @@
         "badgeSelecting": "Need {remaining} more",
         "badgeReady": "Ready to customize",
         "hint": "Need to tweak selfies again? Adjust them here, then swipe right to keep going.",
+        "prevLabel": "Dashboard",
+        "nextLabel": "Customization",
         "actions": {
           "camera": "Use camera",
           "upload": "Upload photo"
+        },
+        "navigation": {
+          "selfies": "Selfies",
+          "back": "Back",
+          "next": "Next",
+          "generate": "Generate"
         }
       }
     },
@@ -2567,7 +2618,13 @@
       },
       "mobileCustomizeTitle": "Customize {style}",
       "costPerGeneration": "Cost per generation",
-      "generateButton": "Generate photo"
+      "generateButton": "Generate photo",
+      "disabledReasons": {
+        "needSelfies": "Need at least {required} selfies (have {current})",
+        "needCredits": "Not enough credits (need {required}, have {current})",
+        "needCustomization": "Visit all customization steps ({visited}/{total} visited)",
+        "needClothingColors": "Visit the clothing colors step"
+      }
     },
     "mobile": {
       "intro": {

@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
-import { BeforeAfterSlider } from '@/components/onboarding/BeforeAfterSlider'
+import HeroGallery from '@/components/HeroGallery'
 import { Sparkles } from 'lucide-react'
 import { trackInviteLinkViewed, trackTeamInviteAccepted, trackTeamCreated } from '@/lib/track'
 
@@ -29,7 +29,6 @@ export default function InvitePage() {
   const [error, setError] = useState<string | null>(null)
   const [emailResent, setEmailResent] = useState(false)
   const [accepting, setAccepting] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const [needsTeamSetup, setNeedsTeamSetup] = useState(false)
   const [checkingTeamName, setCheckingTeamName] = useState(true)
   const [showWelcomePopup, setShowWelcomePopup] = useState(false)
@@ -37,30 +36,6 @@ export default function InvitePage() {
   const [teamWebsiteValue, setTeamWebsiteValue] = useState('')
   const [submittingTeam, setSubmittingTeam] = useState(false)
   const hasTrackedViewRef = useRef(false)
-
-  // Random before/after sample selection
-  const samplePairs = [
-    { before: '/samples/before-1.jpg', after: '/samples/after-1.png' },
-    { before: '/samples/before-2.png', after: '/samples/after-2.png' },
-    { before: '/samples/before-3.jpg', after: '/samples/after-3.png' },
-  ]
-  const randomSample = samplePairs[Math.floor(Math.random() * samplePairs.length)]
-
-  // Mobile detection - intentional client-only pattern
-  /* eslint-disable react-you-might-not-need-an-effect/no-initialize-state */
-  useEffect(() => {
-    const checkMobile = () => {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-                           ('ontouchstart' in window) ||
-                           (window.innerWidth <= 768 && window.innerHeight <= 1024)
-      setIsMobile(isMobileDevice)
-    }
-
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-  /* eslint-enable react-you-might-not-need-an-effect/no-initialize-state */
 
   const validateInvite = useCallback(async () => {
     try {
@@ -404,62 +379,38 @@ export default function InvitePage() {
 
         {/* Before/After Slider Showcase */}
         <div className="mt-8 sm:mt-6">
-          <div className="bg-gradient-to-r from-brand-primary-light via-brand-secondary-light to-brand-cta-light rounded-2xl sm:rounded-xl p-6 sm:p-5 shadow-depth-sm">
-            <h3 className="text-lg sm:text-base font-semibold text-gray-900 mb-4 sm:mb-3 text-center">See the transformation</h3>
-
-            <BeforeAfterSlider
-              beforeImage={randomSample.before}
-              afterImage={randomSample.after}
-              beforeLabel="Before"
-              afterLabel="After"
-              className="max-w-sm mx-auto"
-            />
-          </div>
+          <HeroGallery />
         </div>
 
         {/* Spacer */}
         <div className="mt-8 sm:mt-6"></div>
 
-        {isMobile ? (
         <button
           onClick={acceptInvite}
-            disabled={accepting}
-            className={`w-full py-4 px-6 rounded-xl text-lg font-semibold transition-all duration-200 shadow-md ${
-              !accepting
-                ? 'bg-brand-primary text-white hover:bg-brand-primary-hover hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'
+          disabled={accepting}
+          className={`w-full py-4 px-6 rounded-xl text-lg font-semibold transition-all duration-200 shadow-md ${
+            !accepting
+              ? 'bg-brand-primary text-white hover:bg-brand-primary-hover hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'
               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
           }`}
         >
-            {accepting ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Accepting...
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                Accept Invite
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </span>
-            )}
+          {accepting ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Accepting...
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              Accept Invite
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </span>
+          )}
         </button>
-        ) : (
-          <div className="text-center">
-            <div className="bg-blue-50/50 border border-blue-200/40 rounded-xl p-4">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                <span className="text-sm font-medium text-blue-800">{t('mobileRequired')}</span>
-              </div>
-              <p className="text-xs text-blue-600">{t('mobileReason')}</p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

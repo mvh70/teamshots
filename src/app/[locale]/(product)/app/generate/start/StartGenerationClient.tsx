@@ -27,7 +27,7 @@ import { calculatePhotosFromCredits } from '@/domain/pricing'
 import type { GenerationPageData, ContextOption } from './actions'
 import { useGenerationFlowState } from '@/hooks/useGenerationFlowState'
 import { MIN_SELFIES_REQUIRED, hasEnoughSelfies } from '@/constants/generation'
-import { FlowProgressDock } from '@/components/generation/navigation'
+import { FlowProgressDock, FlowNavigation } from '@/components/generation/navigation'
 import { useMobileViewport } from '@/hooks/useMobileViewport'
 import { useOnboardingState } from '@/lib/onborda/hooks'
 import Header from '@/app/[locale]/(product)/app/components/Header'
@@ -49,6 +49,7 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const { track } = useAnalytics()
   const t = useTranslations('app.sidebar.generate')
   const tCustomize = useTranslations('generate.customize')
+  const tNav = useTranslations('inviteDashboard.selfieSelection.mobile.navigation')
   const skipUpload = useMemo(() => searchParams.get('skipUpload') === '1', [searchParams])
   const searchParamsString = useMemo(() => searchParams.toString(), [searchParams])
   
@@ -78,7 +79,8 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
     hydrated,
     setCustomizationStepsMeta,
     customizationStepsMeta,
-    visitedSteps
+    visitedSteps,
+    setVisitedSteps
   } = useGenerationFlowState()
   const isMobile = useMobileViewport()
   const { context: onboardingContext } = useOnboardingState()
@@ -102,6 +104,35 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   const [selectedPackageId, setSelectedPackageId] = useState<string>(initialData.styleData.selectedPackageId)
   const [isGenerating, setIsGenerating] = useState(false)
   const [visitedMobileSteps, setVisitedMobileSteps] = useState<Set<string>>(() => new Set())
+  // Navigation methods exposed by PhotoStyleSettings for mobile sticky footer (use ref to avoid re-render loops)
+  const navMethodsRef = React.useRef<{ goNext: () => void; goPrev: () => void; goToStep: (index: number) => void } | null>(null)
+  // Step indicator props exposed by PhotoStyleSettings for sticky footer navigation
+  const [stepIndicatorProps, setStepIndicatorProps] = useState<{ current: number; total: number; lockedSteps?: number[]; totalWithLocked?: number; currentAllStepsIndex?: number; visitedEditableSteps?: number[] } | undefined>(undefined)
+
+  // Stable callback for navigation ready - just store in ref, no state update
+  const handleNavigationReady = useCallback((methods: { goNext: () => void; goPrev: () => void; goToStep: (index: number) => void }) => {
+    navMethodsRef.current = methods
+  }, [])
+
+  // Memoized callback to prevent re-render loops from stepIndicatorProps updates
+  const handleStepIndicatorChange = useCallback((props: typeof stepIndicatorProps) => {
+    setStepIndicatorProps(prev => {
+      // Only update if values actually changed
+      if (!prev && !props) return prev
+      if (!prev || !props) return props
+      if (
+        prev.current === props.current &&
+        prev.total === props.total &&
+        prev.totalWithLocked === props.totalWithLocked &&
+        prev.currentAllStepsIndex === props.currentAllStepsIndex &&
+        JSON.stringify(prev.lockedSteps) === JSON.stringify(props.lockedSteps) &&
+        JSON.stringify(prev.visitedEditableSteps) === JSON.stringify(props.visitedEditableSteps)
+      ) {
+        return prev // No change, return same reference
+      }
+      return props
+    })
+  }, [])
   
   // Plan info from server data
   const { isFreePlan, isProUser, isTeamAdmin, isTeamMember } = initialData.planInfo
@@ -295,10 +326,39 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
   }, [photoStyleSettings, hydrated])
 
   // Wrapper for settings onChange that marks user as having made changes
+  // Also tracks visited steps on desktop for FlowProgressDock progress display
   const handleSettingsChange = useCallback((newSettings: PhotoStyleSettingsType | ((prev: PhotoStyleSettingsType) => PhotoStyleSettingsType)) => {
     hasUserMadeChangesRef.current = true
-    setPhotoStyleSettings(newSettings)
-  }, [])
+
+    setPhotoStyleSettings(prev => {
+      const updated = typeof newSettings === 'function' ? newSettings(prev) : newSettings
+
+      // On desktop, detect which fields changed and mark them as visited
+      // Use setTimeout to avoid setting state inside state setter
+      if (!isMobile && customizationStepsMeta?.stepKeys) {
+        const changedIndices: number[] = []
+        customizationStepsMeta.stepKeys.forEach((key, idx) => {
+          const prevValue = (prev as Record<string, unknown>)[key]
+          const newValue = (updated as Record<string, unknown>)[key]
+          if (JSON.stringify(prevValue) !== JSON.stringify(newValue)) {
+            changedIndices.push(idx)
+          }
+        })
+
+        if (changedIndices.length > 0) {
+          // Schedule state update outside of the setter callback
+          // Capture current visitedSteps in closure for merging
+          const currentVisited = [...visitedSteps]
+          setTimeout(() => {
+            const newVisited = [...new Set([...currentVisited, ...changedIndices])]
+            setVisitedSteps(newVisited)
+          }, 0)
+        }
+      }
+
+      return updated
+    })
+  }, [isMobile, customizationStepsMeta?.stepKeys, visitedSteps, setVisitedSteps])
 
   const normalizeContextName = useCallback((rawName: string | null | undefined, index: number, total: number, type: 'personal' | 'team'): string => {
     const trimmed = (rawName ?? '').trim()
@@ -500,8 +560,44 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
 
     return !isClothingColorsEditable || visitedMobileSteps.has('clothingColors')
   }, [isMobile, visitedMobileSteps, originalContextSettings, photoStyleSettings])
-  
-  const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && !hasUneditedFields && hasVisitedClothingColorsIfEditable
+
+  // Check if all editable steps have been visited (user has reviewed all options)
+  // This matches the invited user flow logic where visiting all steps = customization complete
+  const allEditableStepsVisited = React.useMemo(() => {
+    if (!customizationStepsMeta || customizationStepsMeta.editableSteps === 0) return true
+
+    if (isMobile) {
+      // On mobile, use visitedMobileSteps (Set<string>)
+      return visitedMobileSteps.size >= customizationStepsMeta.editableSteps
+    } else {
+      // On desktop, use visitedSteps (number[])
+      return visitedSteps.length >= customizationStepsMeta.editableSteps
+    }
+  }, [customizationStepsMeta, isMobile, visitedMobileSteps, visitedSteps])
+
+  // Customization is complete if either:
+  // 1. All editable steps have been visited (user reviewed everything), OR
+  // 2. All values have been explicitly changed from original
+  const isCustomizationComplete = allEditableStepsVisited || !hasUneditedFields
+
+  // Compute visited step indices for progress dots based on visitedMobileSteps (source of truth)
+  // This ensures dots match the generate button state, not stale persisted data
+  const computedVisitedIndices = React.useMemo(() => {
+    const indices: number[] = [0] // Index 0 is selfie (always visited when on customization page)
+
+    if (customizationStepsMeta?.stepKeys) {
+      // Convert visited step keys to indices (shifted by 1 for selfie at index 0)
+      customizationStepsMeta.stepKeys.forEach((key, idx) => {
+        if (visitedMobileSteps.has(key)) {
+          indices.push(idx + 1) // +1 because selfie is at index 0
+        }
+      })
+    }
+
+    return indices
+  }, [visitedMobileSteps, customizationStepsMeta?.stepKeys])
+
+  const canGenerate = hasEnoughCredits && hasRequiredSelfies && effectiveGenerationType && isCustomizationComplete && hasVisitedClothingColorsIfEditable
 
   // NEW CREDIT MODEL: All usable credits are on person
   const hasAnyCredits = userCredits.person > 0
@@ -614,23 +710,26 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
           <FlowProgressDock
             selfieCount={selectedSelfies.length}
             uneditedFields={uneditedFields}
-            hasUneditedFields={hasUneditedFields}
+            hasUneditedFields={!isCustomizationComplete}
             canGenerate={canGenerate}
             hasEnoughCredits={hasEnoughCredits}
             currentStep="customize"
             onNavigateToSelfies={handleBackToSelfies}
             onNavigateToCustomize={() => {}} // Already on customize page
             onGenerate={onProceed}
+            onNavigateToDashboard={() => router.push('/app/dashboard')}
             onBuyCredits={() => router.push(buyCreditsHrefWithReturn)}
             isGenerating={isGenerating || isPending}
-            hiddenScreens={onboardingContext.hiddenScreens}
-            onNavigateToSelfieTips={() => router.push('/app/generate/selfie-tips?force=1')}
-            onNavigateToCustomizationIntro={() => router.push('/app/generate/customization-intro?force=1')}
             customizationStepsMeta={customizationStepsMeta}
-            visitedEditableSteps={visitedSteps}
+            visitedEditableSteps={
+              // When customization is complete (all steps visited OR all values changed), mark all steps as visited
+              isCustomizationComplete && customizationStepsMeta?.editableSteps && customizationStepsMeta.editableSteps > 0
+                ? Array.from({ length: customizationStepsMeta.editableSteps }, (_, i) => i)
+                : visitedSteps
+            }
           />
       
-      <div className={`${pagePaddingClasses} space-y-8 pb-32 md:pb-52 w-full max-w-full overflow-x-hidden bg-white min-h-screen`}>
+      <div className={`${pagePaddingClasses} space-y-8 pb-44 md:pb-52 w-full max-w-full overflow-x-hidden bg-white min-h-screen`}>
       {!skipUpload && (creditsLoading || !session) ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="text-center">
@@ -894,6 +993,9 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                 onSwipeBack={() => router.push('/app/generate/customization-intro')}
                 onStepMetaChange={handleStepMetaChange}
                 topHeader={<Header standalone showBackToDashboard />}
+                onNavigationReady={handleNavigationReady}
+                hideInlineNavigation={true}
+                onStepIndicatorChange={handleStepIndicatorChange}
               />
             </div>
           </div>
@@ -916,37 +1018,6 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             />
           </div>
 
-          {/* Desktop Generate Button */}
-          <div className="hidden md:block pt-8 space-y-3">
-            {!hasEnoughCredits ? (
-              <Link
-                href={buyCreditsHrefWithReturn}
-                className="w-full inline-flex items-center justify-center px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-brand-primary via-brand-primary to-indigo-600 rounded-xl shadow-lg hover:shadow-2xl hover:from-brand-primary-hover hover:via-brand-primary-hover hover:to-indigo-700 transform hover:-translate-y-1 active:translate-y-0 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                {t('buyMoreCredits')}
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={onProceed}
-                disabled={!canGenerate || isPending || isGenerating}
-                className={`w-full px-8 py-4 text-base font-semibold text-white rounded-xl shadow-lg transform transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
-                  canGenerate && !isPending && !isGenerating
-                    ? 'bg-gradient-to-r from-brand-primary via-brand-primary to-indigo-600 hover:shadow-2xl hover:from-brand-primary-hover hover:via-brand-primary-hover hover:to-indigo-700 hover:-translate-y-1 active:translate-y-0'
-                    : 'bg-gray-300 cursor-not-allowed'
-                }`}
-              >
-                {isGenerating || isPending ? t('generating', { default: 'Generating...' }) : t('generatePhoto')}
-              </button>
-            )}
-            {hasUneditedFields && (
-              <p className="text-center text-sm text-gray-500">
-                {t('customizeFieldsFirst', { default: 'Customize all highlighted fields to continue' })}
-              </p>
-            )}
-          </div>
-
           {/* Custom Prompt */}
           {activeContext?.customPrompt && (
             <div className="bg-white rounded-xl shadow-md border border-gray-200/60 p-6 sm:p-8 mt-8">
@@ -959,13 +1030,80 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
             </div>
           )}
 
-          {/* Fixed sticky button at bottom - Mobile (Restored for non-desktop) */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-4 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+          {/* Fixed sticky controls at bottom - Mobile */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white pt-3 pb-4 px-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+            {/* Labeled navigation buttons row */}
+            <div className="flex items-center justify-between pb-3">
+              {/* Back to Selfies */}
+              <button
+                type="button"
+                onClick={() => router.push('/app/generate/selfie')}
+                className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span className="text-sm font-medium">
+                  {tNav('selfies', { default: 'Selfies' })}
+                </span>
+              </button>
+
+              {/* Forward - Generate or Next */}
+              {canGenerate ? (
+                <button
+                  type="button"
+                  onClick={onProceed}
+                  disabled={isGenerating || isPending}
+                  className="flex items-center gap-2 pl-4 pr-3 h-11 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition"
+                >
+                  <span className="text-sm font-semibold">{tNav('generate', { default: 'Generate' })}</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navMethodsRef.current?.goNext()}
+                  disabled={(stepIndicatorProps?.currentAllStepsIndex ?? 0) >= ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1)}
+                  className={`flex items-center gap-2 pl-4 pr-3 h-11 rounded-full shadow-sm transition ${
+                    (stepIndicatorProps?.currentAllStepsIndex ?? 0) < ((stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1) - 1)
+                      ? 'bg-brand-primary text-white hover:brightness-110'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="text-sm font-medium">{tNav('next', { default: 'Next' })}</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Progress dots */}
+            <div className="pb-3">
+              <FlowNavigation
+                variant="dots-only"
+                size="md"
+                current={stepIndicatorProps?.currentAllStepsIndex ?? 0}
+                total={stepIndicatorProps?.totalWithLocked ?? stepIndicatorProps?.total ?? 1}
+                onPrev={() => router.push('/app/generate/selfie')}
+                onNext={() => navMethodsRef.current?.goNext()}
+                stepColors={stepIndicatorProps ? {
+                  lockedSteps: stepIndicatorProps.lockedSteps,
+                  // Use computedVisitedIndices based on visitedMobileSteps (source of truth)
+                  // This ensures dots match the generate button state
+                  visitedEditableSteps: computedVisitedIndices
+                } : undefined}
+              />
+            </div>
+
+            {/* Generate button or credits hint */}
             {!hasEnoughCredits ? (
               <Link
                 href={buyCreditsHrefWithReturn}
                 className="w-full inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
-                style={{ 
+                style={{
                   background: `linear-gradient(to right, ${BRAND_CONFIG.colors.cta}, ${BRAND_CONFIG.colors.ctaHover})`
                 }}
                 onMouseEnter={(e) => {
@@ -979,29 +1117,22 @@ export default function StartGenerationClient({ initialData, keyFromQuery }: Sta
                 {t('buyMoreCredits')}
               </Link>
             ) : (
-              <>
-                {!hasVisitedClothingColorsIfEditable && (
-                  <p className="text-xs text-gray-500 text-center mb-2">
-                    {t('customizeFirstTooltipMobile')}
-                  </p>
-                )}
-                <GenerateButton
-                  onClick={onProceed}
-                  disabled={!canGenerate || isPending || isGenerating}
-                  isGenerating={isGenerating || isPending}
-                  size="md"
-                  disabledReason={
-                    !hasVisitedClothingColorsIfEditable
+              <GenerateButton
+                onClick={onProceed}
+                disabled={!canGenerate || isPending || isGenerating}
+                isGenerating={isGenerating || isPending}
+                size="md"
+                disabledReason={
+                  !hasVisitedClothingColorsIfEditable
+                    ? t('customizeFirstTooltipMobile')
+                    : !isCustomizationComplete
                       ? t('customizeFirstTooltipMobile')
-                      : hasUneditedFields
-                        ? t('customizeFirstTooltipMobile')
-                        : undefined
-                  }
-                  integrateInPopover={hasUneditedFields && hasVisitedClothingColorsIfEditable}
-                >
-                  {t('generatePhoto')}
-                </GenerateButton>
-              </>
+                      : undefined
+                }
+                integrateInPopover={!isCustomizationComplete && hasVisitedClothingColorsIfEditable}
+              >
+                {t('generatePhoto')}
+              </GenerateButton>
             )}
           </div>
         </>

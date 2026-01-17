@@ -85,12 +85,10 @@ export default function StepIndicator({
           
           // For editable steps
           // Logic:
-          // - Not visited, not viewing: small blue
-          // - Not visited, viewing: big blue
-          // - Visited, not viewing: small green
-          // - Visited, viewing: big green
+          // - Not visited: blue (larger when current)
+          // - Visited: green (larger when current)
           const size = isCurrentStep ? 'w-2 h-2' : 'w-1.5 h-1.5'
-          const color = isVisited ? 'bg-green-500' : 'bg-brand-primary'
+          const color = isVisited ? 'bg-brand-secondary' : 'bg-brand-primary'
           
           return (
             <div

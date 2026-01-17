@@ -13,14 +13,17 @@ interface SelfieTipsContentProps {
   onContinue?: () => void
   /** Callback when user chooses to skip future displays */
   onSkip?: () => void
+  /** Hide the bottom continue button and skip link (when using dock navigation instead) */
+  hideBottomActions?: boolean
   /** Optional additional class names */
   className?: string
 }
 
-export default function SelfieTipsContent({ 
-  variant, 
+export default function SelfieTipsContent({
+  variant,
   onContinue,
   onSkip,
+  hideBottomActions = false,
   className = ''
 }: SelfieTipsContentProps) {
   const t = useTranslations('customization.photoStyle.mobile.selfieTips')
@@ -34,16 +37,16 @@ export default function SelfieTipsContent({
     preloadFaceDetectionModel()
   }, [])
 
-  // Build sub-points for quality tip
+  // Build sub-points for quality tip - condensed on mobile
   const qualitySubPoints = t.raw('quality.subPoints') as string[]
   const qualityDescription = (
-    <div className="space-y-3">
-      <p className="text-base md:text-lg text-gray-600 leading-relaxed">
+    <div className="space-y-2 md:space-y-3">
+      <p className="text-sm md:text-lg text-gray-600 leading-relaxed">
         {t('quality.desc')}
       </p>
-      <ul className="space-y-2 ml-1">
-        {qualitySubPoints.map((point, index) => (
-          <li key={index} className="flex items-start gap-2 text-base md:text-lg text-gray-600 leading-relaxed">
+      <ul className="space-y-1.5 md:space-y-2 ml-1">
+        {qualitySubPoints.slice(0, isMobile ? 3 : qualitySubPoints.length).map((point, index) => (
+          <li key={index} className="flex items-start gap-2 text-sm md:text-lg text-gray-600 leading-relaxed">
             <span className="text-indigo-600 font-bold flex-shrink-0 leading-relaxed">•</span>
             <span>{point}</span>
           </li>
@@ -140,6 +143,7 @@ export default function SelfieTipsContent({
         onContinue={onContinue}
         onSkip={onSkip}
         skipText={t('skip', { default: "Don't show again" })}
+        hideBottomActions={hideBottomActions}
       />
     </div>
   )

@@ -40,6 +40,8 @@ interface SelfieUploadFlowProps {
   hideHeader?: boolean // Hide title and cancel button for compact/sticky views
   initialMode?: 'camera' | 'upload' // Auto-open camera or file picker on mount
   buttonLayout?: 'vertical' | 'horizontal' // Layout for camera/upload buttons
+  /** When true, renders inline without sticky positioning (use when already inside a sticky container) */
+  inline?: boolean
 }
 
 export default function SelfieUploadFlow({
@@ -50,7 +52,8 @@ export default function SelfieUploadFlow({
   uploadEndpoint,
   hideHeader = false,
   initialMode,
-  buttonLayout = 'vertical'
+  buttonLayout = 'vertical',
+  inline = false
 }: SelfieUploadFlowProps) {
   const t = useTranslations('selfies')
   const [cameraKey, setCameraKey] = useState(0)
@@ -163,6 +166,12 @@ export default function SelfieUploadFlow({
     onCancel()
   }, [cancelPending, onCancel])
 
+  // Wrapper to track file for classification - must be defined before any early returns
+  const handleUpload = useCallback(async (file: File) => {
+    setPendingFile(file)
+    return uploadFile(file)
+  }, [uploadFile])
+
   if (pendingApproval) {
     return (
       <div data-testid="approval-flow" className="md:static fixed inset-x-0 bottom-0 z-50 md:z-auto bg-white md:bg-transparent" style={{ transform: 'translateZ(0)' }}>
@@ -177,12 +186,6 @@ export default function SelfieUploadFlow({
       </div>
     )
   }
-
-  // Wrapper to track file for classification
-  const handleUpload = useCallback(async (file: File) => {
-    setPendingFile(file)
-    return uploadFile(file)
-  }, [uploadFile])
 
   const commonPhotoUploadProps = {
     multiple: true,
@@ -212,6 +215,30 @@ export default function SelfieUploadFlow({
         </button>
       </div>
     ) : null
+
+    // When inline, render directly without portal/StickyUploadBar (for use inside existing sticky containers)
+    if (inline) {
+      return (
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleHiddenInputChange}
+            className="hidden"
+            aria-hidden="true"
+          />
+          <div className="md:hidden">
+            {manualPrompt}
+            <PhotoUpload {...commonPhotoUploadProps} />
+          </div>
+          <div data-testid="upload-flow-desktop" className="hidden md:block">
+            <PhotoUpload key={cameraKey} {...commonPhotoUploadProps} />
+          </div>
+        </>
+      )
+    }
 
     const mobileContent = (
       <StickyUploadBar className="md:hidden">

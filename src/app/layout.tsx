@@ -31,11 +31,19 @@ export async function generateMetadata(): Promise<Metadata> {
       shortcut: '/favicon.ico',
     },
     referrer: 'strict-origin-when-cross-origin',
+    alternates: {
+      canonical: baseUrl,
+      languages: {
+        'en': `${baseUrl}/`,
+        'es': `${baseUrl}/es`,
+      },
+    },
     openGraph: {
       type: 'website',
       siteName: brandConfig.name,
       locale: 'en_US',
       alternateLocale: ['es_ES'],
+      url: baseUrl,
     },
     twitter: {
       card: 'summary_large_image',

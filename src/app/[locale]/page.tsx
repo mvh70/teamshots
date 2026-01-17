@@ -27,20 +27,26 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'metadata' });
+  const headersList = await headers();
+  const brand = getBrand(headersList);
+  const protocol = headersList.get('x-forwarded-proto') || 'https';
+  const host = headersList.get('host') || headersList.get('x-forwarded-host') || brand.domain;
+  const baseUrl = `${protocol}://${host}`;
 
   return {
     title: t('title'),
     description: t('description'),
     alternates: {
-      canonical: locale === 'en' ? '/' : `/${locale}`,
+      canonical: locale === 'en' ? baseUrl : `${baseUrl}/${locale}`,
       languages: {
-        'en': '/',
-        'es': '/es',
+        'en': baseUrl,
+        'es': `${baseUrl}/es`,
       },
     },
     openGraph: {
       title: t('title'),
       description: t('description'),
+      url: locale === 'en' ? baseUrl : `${baseUrl}/${locale}`,
     },
   };
 }

@@ -1,58 +1,86 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import { useCallback, useRef, useEffect, useState, useMemo } from 'react'
 import type { GenerationListItem } from '@/app/[locale]/(product)/app/generations/components/GenerationCard'
 import { transformInvitedGeneration } from './utils'
+import { useSWR, mutate } from '@/lib/swr'
 
 const COMPLETION_REFRESH_WINDOW_MS = 4000
 
+interface InvitedGeneration {
+  id: string
+  selfieKey: string
+  selfieUrl: string
+  inputSelfieUrls?: string[]
+  generatedPhotos: Array<{
+    id: string
+    url: string
+    style: string
+  }>
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  createdAt: string
+  generationType: 'personal' | 'team'
+  creditsUsed: number
+  maxRegenerations: number
+  remainingRegenerations: number
+  isOriginal: boolean
+  jobStatus?: {
+    id: string
+    progress: number
+    message?: string
+    attemptsMade: number
+    processedOn?: number
+    finishedOn?: number
+    failedReason?: string
+  }
+}
+
+interface InvitedGenerationsResponse {
+  generations: InvitedGeneration[]
+}
+
 export function useInvitedGenerations(token: string) {
-  const [generations, setGenerations] = useState<GenerationListItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [initialLoadDone, setInitialLoadDone] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const previousGenerationsRef = useRef<GenerationListItem[]>([])
   const [isCompletionRefreshActive, setIsCompletionRefreshActive] = useState(false)
   const completionRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const previouslyProcessingRef = useRef(false)
 
-  const fetchGenerations = useCallback(async () => {
-    try {
-      // Only show the full-page loading state on the first load to avoid flashing during auto-refresh
-      if (!initialLoadDone) {
-        setLoading(true)
-      }
-      const response = await fetch(`/api/team/member/generations?token=${token}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        const transformed = data.generations.map(transformInvitedGeneration)
-        setGenerations(transformed)
-        previousGenerationsRef.current = transformed
-        setError(null)
-      } else {
-        setError('Failed to fetch generations')
-      }
-    } catch (err) {
-      setError('Failed to fetch generations')
-      console.error('Error fetching invited generations:', err)
-    } finally {
-      setLoading(false)
-      if (!initialLoadDone) {
-        setInitialLoadDone(true)
-      }
+  const key = token ? `/api/team/member/generations?token=${token}` : null
+
+  const fetcher = useCallback(async (url: string): Promise<InvitedGenerationsResponse> => {
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error('Failed to fetch generations')
     }
-  }, [token, initialLoadDone])
+    return response.json()
+  }, [])
 
-  useEffect(() => {
-    fetchGenerations()
-  }, [fetchGenerations])
+  const { data, error, isLoading } = useSWR<InvitedGenerationsResponse>(
+    key,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 1000,
+      refreshInterval: (latestData) => {
+        const items = latestData?.generations || []
+        const hasProcessing = items.some(
+          g => g.status === 'processing' || g.status === 'pending'
+        )
+        // Poll every 3s when processing or in completion refresh window
+        return (hasProcessing || isCompletionRefreshActive) ? 3000 : 0
+      },
+    }
+  )
 
-  const hasProcessingGenerations = useMemo(() => (
-    generations.some(gen => gen.status === 'processing' || gen.status === 'pending')
-  ), [generations])
+  const generations: GenerationListItem[] = useMemo(() => {
+    return (data?.generations || []).map(transformInvitedGeneration)
+  }, [data?.generations])
 
-  // Keep refreshing briefly after the last generation completes to ensure we fetch generated keys
+  const hasProcessingGenerations = useMemo(
+    () => generations.some(gen => gen.status === 'processing' || gen.status === 'pending'),
+    [generations]
+  )
+
+  // Handle completion refresh window
   useEffect(() => {
     if (hasProcessingGenerations) {
       previouslyProcessingRef.current = true
@@ -70,31 +98,20 @@ export function useInvitedGenerations(token: string) {
         clearTimeout(completionRefreshTimeoutRef.current)
       }
       setIsCompletionRefreshActive(true)
+
+      // Force immediate refresh to pick up generated photo keys
+      if (key) {
+        mutate(key)
+      }
+
       completionRefreshTimeoutRef.current = setTimeout(() => {
         setIsCompletionRefreshActive(false)
         completionRefreshTimeoutRef.current = null
       }, COMPLETION_REFRESH_WINDOW_MS)
-
-      // Force an immediate refresh to pick up the generated photo keys before the tour runs
-      fetchGenerations()
     }
-  }, [hasProcessingGenerations, fetchGenerations])
+  }, [hasProcessingGenerations, key])
 
-  // Auto-refresh when there are processing generations or we're inside the completion refresh window
-  useEffect(() => {
-    if (!hasProcessingGenerations && !isCompletionRefreshActive) {
-      return
-    }
-
-    const interval = setInterval(() => {
-      fetchGenerations()
-    }, 3000) // Check every 3 seconds
-
-    return () => {
-      clearInterval(interval)
-    }
-  }, [hasProcessingGenerations, isCompletionRefreshActive, fetchGenerations])
-
+  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (completionRefreshTimeoutRef.current) {
@@ -103,6 +120,16 @@ export function useInvitedGenerations(token: string) {
     }
   }, [])
 
-  return { generations, loading, error, refetch: fetchGenerations }
-}
+  const refetch = useCallback(async () => {
+    if (key) {
+      await mutate(key)
+    }
+  }, [key])
 
+  return {
+    generations,
+    loading: isLoading,
+    error: error ? 'Failed to fetch generations' : null,
+    refetch,
+  }
+}

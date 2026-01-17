@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const person = invite.person
 
     // Get stats for the person
-    const [photosGenerated, selfiesCount, teamPhotosCount] = await Promise.all([
+    const [photosGenerated, selfiesCount, teamPhotosCount, selfiePreviews] = await Promise.all([
       // Total photos generated
       prisma.generation.count({
         where: {
@@ -57,14 +57,14 @@ export async function GET(request: NextRequest) {
           status: 'completed'
         }
       }),
-      
+
       // Selfies uploaded
       prisma.selfie.count({
         where: {
           personId: person.id
         }
       }),
-      
+
       // Team photos generated (person.teamId is set for team members)
       prisma.generation.count({
         where: {
@@ -74,6 +74,20 @@ export async function GET(request: NextRequest) {
             teamId: { not: null } // Team generations have person.teamId set
           }
         }
+      }),
+
+      // Get up to 4 selfie previews for dashboard thumbnail display
+      prisma.selfie.findMany({
+        where: {
+          personId: person.id
+        },
+        select: {
+          id: true,
+          key: true,
+          processedKey: true
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 4
       })
     ])
 
@@ -87,13 +101,20 @@ export async function GET(request: NextRequest) {
       : null
     const adminEmail = invite.team.admin?.email || null
 
+    // Build selfie preview URLs
+    const selfiePreviewUrls = selfiePreviews.map(s => {
+      const key = s.processedKey || s.key
+      return `/api/files/get?key=${encodeURIComponent(key)}&token=${encodeURIComponent(token)}`
+    })
+
     const stats = {
       photosGenerated,
       creditsRemaining,
       selfiesUploaded: selfiesCount,
       teamPhotosGenerated: teamPhotosCount,
       adminName,
-      adminEmail
+      adminEmail,
+      selfiePreviewUrls
     }
 
     return NextResponse.json({ stats })

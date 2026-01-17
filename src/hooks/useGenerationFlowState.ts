@@ -187,6 +187,9 @@ export function useGenerationFlowState() {
     ;(['fromGeneration', 'openStartFlow', 'pendingGeneration'] as FlowKey[]).forEach(key =>
       sessionStorage.removeItem(key)
     )
+    // Also clear visited steps so new generation flow starts fresh
+    writeVisitedSteps([])
+    setVisitedStepsState([])
     setFlags(DEFAULT_FLAGS)
   }, [])
 
@@ -247,42 +250,24 @@ export function useGenerationFlowState() {
     setIntroFlags(refreshIntroFlags())
   }, [refreshIntroFlags])
 
-  const inFlow = flags.fromGeneration || flags.openStartFlow || flags.pendingGeneration
-
-  // Convenience getters for intro flags
-  const hasSeenSelfieTips = introFlags.seenSelfieTips
-  const hasSeenCustomizationIntro = introFlags.seenCustomizationIntro
-
-  return useMemo(
+  // Stable actions object - callbacks don't change between renders
+  const actions = useMemo(
     () => ({
-      flags,
-      introFlags,
-      hydrated,
-      inFlow,
       markInFlow,
       clearFlow,
       resetFlow,
       setPendingGeneration,
       setOpenStartFlow,
       refreshFlags,
-      // Original naming
       markSelfieTipsSeen,
       markCustomizationIntroSeen,
       // Convenience aliases for cleaner API
       markSeenSelfieTips: markSelfieTipsSeen,
       markSeenCustomizationIntro: markCustomizationIntroSeen,
-      hasSeenSelfieTips,
-      hasSeenCustomizationIntro,
-      customizationStepsMeta: customizationStepsMeta ?? DEFAULT_CUSTOMIZATION_STEPS_META,
       setCustomizationStepsMeta,
-      visitedSteps,
       setVisitedSteps
     }),
     [
-      flags,
-      introFlags,
-      hydrated,
-      inFlow,
       markInFlow,
       clearFlow,
       resetFlow,
@@ -291,13 +276,36 @@ export function useGenerationFlowState() {
       refreshFlags,
       markSelfieTipsSeen,
       markCustomizationIntroSeen,
-      hasSeenSelfieTips,
-      hasSeenCustomizationIntro,
-      customizationStepsMeta,
       setCustomizationStepsMeta,
-      visitedSteps,
       setVisitedSteps
     ]
+  )
+
+  // Derive computed values (these are cheap to compute, no need to memoize)
+  const inFlow = flags.fromGeneration || flags.openStartFlow || flags.pendingGeneration
+  const hasSeenSelfieTips = introFlags.seenSelfieTips
+  const hasSeenCustomizationIntro = introFlags.seenCustomizationIntro
+  const resolvedCustomizationMeta = customizationStepsMeta ?? DEFAULT_CUSTOMIZATION_STEPS_META
+
+  // State object - only changes when actual state changes
+  const state = useMemo(
+    () => ({
+      flags,
+      introFlags,
+      hydrated,
+      inFlow,
+      hasSeenSelfieTips,
+      hasSeenCustomizationIntro,
+      customizationStepsMeta: resolvedCustomizationMeta,
+      visitedSteps
+    }),
+    [flags, introFlags, hydrated, inFlow, hasSeenSelfieTips, hasSeenCustomizationIntro, resolvedCustomizationMeta, visitedSteps]
+  )
+
+  // Combine state and actions - stable reference when neither changes
+  return useMemo(
+    () => ({ ...state, ...actions }),
+    [state, actions]
   )
 }
 

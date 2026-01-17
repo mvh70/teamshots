@@ -9,6 +9,12 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
     scrollRestoration: true,
+    optimizePackageImports: [
+      '@heroicons/react',
+      'lucide-react',
+      '@/components/ui',
+      '@/domain/style/elements',
+    ],
   },
   images: {
     // Enable Next.js image optimization

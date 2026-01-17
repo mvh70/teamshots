@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React from 'react'
 import { useTranslations } from 'next-intl'
 import type { PoseSettings, PoseType, LegacyPoseSettings } from './types'
 import { getPoseUIInfo } from './config'
@@ -96,12 +96,6 @@ export default function PoseSelector({
     onChange(wrapWithCurrentMode({ type: selectedType }))
   }
 
-  const [hasMounted, setHasMounted] = useState(false)
-
-  useEffect(() => {
-    setHasMounted(true)
-  }, [])
-
   // Get current pose type, handling both formats
   const currentPoseType = getPoseTypeFromSettings(value)
 
@@ -156,19 +150,19 @@ export default function PoseSelector({
           </p>
         )}
 
-        {/* Conditional Image Preview */}
-        {currentPoseType && hasPoseImage(currentPoseType) && (
+        {/* Conditional Image Preview - use selectValue to show preview for default/fallback pose too */}
+        {selectValue && hasPoseImage(selectValue) && (
           <div className="mt-4">
             <ImagePreview
-              key={currentPoseType} // Force re-render on value change
-              src={`/images/poses/${currentPoseType}.png`}
-              alt={t(`poses.${currentPoseType}.label`)}
+              src={`/images/poses/${selectValue}.png`}
+              alt={t(`poses.${selectValue}.label`)}
               width={400}
               height={300}
               variant="preview"
               className="w-full h-auto object-cover rounded-lg shadow-sm border border-gray-200"
-              priority={true} // Add priority to ensure it loads immediately
-              unoptimized={true} // Ensure we bypass optimization to avoid stale cache or loading issues
+              priority={true}
+              unoptimized={true}
+              showLoadingSpinner={false}
             />
           </div>
         )}

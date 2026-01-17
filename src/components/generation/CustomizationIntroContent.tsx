@@ -13,14 +13,17 @@ interface CustomizationIntroContentProps {
   onContinue?: () => void
   /** Callback when user chooses to skip future displays */
   onSkip?: () => void
+  /** Hide the bottom continue button and skip link (when using dock navigation instead) */
+  hideBottomActions?: boolean
   /** Optional additional class names */
   className?: string
 }
 
-export default function CustomizationIntroContent({ 
-  variant, 
+export default function CustomizationIntroContent({
+  variant,
   onContinue,
   onSkip,
+  hideBottomActions = false,
   className = ''
 }: CustomizationIntroContentProps) {
   const t = useTranslations('customization.photoStyle.mobile.intro')
@@ -78,6 +81,7 @@ export default function CustomizationIntroContent({
       onContinue={onContinue}
       onSkip={onSkip}
       skipText={t('skip', { default: "Don't show again" })}
+      hideBottomActions={hideBottomActions}
       className={className}
     />
   )

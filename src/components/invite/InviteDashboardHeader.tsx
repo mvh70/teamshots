@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 
 interface InviteDashboardHeaderProps {
-  title: string
+  title?: string
   subtitle?: string
   right?: React.ReactNode
   showBackToDashboard?: boolean
@@ -16,6 +16,8 @@ interface InviteDashboardHeaderProps {
   creditsRemaining?: number
   photosAffordable?: number
   onBackClick?: () => void
+  /** Hide the main title and subtitle (useful for subpages) */
+  hideTitle?: boolean
 }
 
 export default function InviteDashboardHeader({
@@ -29,7 +31,8 @@ export default function InviteDashboardHeader({
   teamName: teamNameProp,
   creditsRemaining,
   photosAffordable,
-  onBackClick
+  onBackClick,
+  hideTitle = false
 }: InviteDashboardHeaderProps) {
   const router = useRouter()
   
@@ -115,7 +118,7 @@ export default function InviteDashboardHeader({
           </div>
           {!showBackToDashboard && creditsRemaining !== undefined && (
             <div className="flex-shrink-0 text-right">
-              <p className="text-xs text-gray-500">Photos</p>
+              <p className="text-xs text-gray-500">Credits left</p>
               <p className="text-xl font-bold text-brand-primary">{calculatePhotosFromCredits(creditsRemaining)}</p>
             </div>
           )}
@@ -136,7 +139,7 @@ export default function InviteDashboardHeader({
               </button>
             )}
 
-            {showMemberInfo && (
+            {showMemberInfo && !hideTitle && (
               <p className="text-sm text-gray-500 mb-1 truncate">
                 {memberName}
                 {memberEmail ? ` (${memberEmail})` : ''}
@@ -145,10 +148,14 @@ export default function InviteDashboardHeader({
 
             {/* Team chip intentionally omitted per standard header design */}
 
-            <h1 className="text-2xl font-bold text-gray-900 break-words font-display">{resolvedTitle}</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              {resolvedSubtitle}
-            </p>
+            {!hideTitle && (
+              <>
+                <h1 className="text-2xl font-bold text-gray-900 break-words font-display">{resolvedTitle}</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  {resolvedSubtitle}
+                </p>
+              </>
+            )}
           </div>
 
           {(right || showCredits) && (
@@ -156,7 +163,7 @@ export default function InviteDashboardHeader({
               {right}
               {showCredits && (
                 <div className="text-right">
-                  <p className="text-sm text-gray-500 mb-1">Available Photos</p>
+                  <p className="text-sm text-gray-500 mb-1">Photos left</p>
                   <p className="text-2xl font-bold text-brand-primary">{calculatePhotosFromCredits(creditsRemaining)}</p>
                 </div>
               )}

@@ -115,7 +115,8 @@ function SelfieSelectionPageContent() {
   const remainingSelfies = Math.max(0, MIN_SELFIES_REQUIRED - selectedCount)
   const selfieStepIndicator = buildSelfieStepIndicator(customizationStepsMeta, {
     selfieComplete: canContinue,
-    isDesktop: !isMobile
+    isDesktop: !isMobile,
+    visitedCustomizationSteps: visitedSteps
   })
   
   const stepperTotalDots = selfieStepIndicator.totalWithLocked ?? selfieStepIndicator.total
@@ -138,7 +139,7 @@ function SelfieSelectionPageContent() {
   }
 
   const handleBack = () => {
-    router.push('/app/generate/selfie-tips')
+    router.push('/app/dashboard')
   }
 
   // Memoize grid items to prevent unnecessary re-renders
@@ -181,16 +182,47 @@ function SelfieSelectionPageContent() {
     )
   }
 
+  const navButtonsControls = (
+    <div className="flex items-center justify-between">
+      {/* Back to Dashboard */}
+      <button
+        type="button"
+        onClick={handleBack}
+        className="flex items-center gap-2 pr-4 pl-3 h-11 rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100 transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        <span className="text-sm font-medium">{tSelection('prevLabel', { default: 'Dashboard' })}</span>
+      </button>
+
+      {/* Forward to Customization */}
+      <button
+        type="button"
+        onClick={handleContinue}
+        disabled={!canContinue}
+        className={`flex items-center gap-2 pl-4 pr-3 h-11 rounded-full shadow-sm transition ${
+          canContinue
+            ? 'bg-brand-primary text-white hover:brightness-110'
+            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        <span className="text-sm font-medium">{tSelection('nextLabel', { default: 'Customize' })}</span>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  )
+
   const navigationControls = (
     <FlowNavigation
-      variant="both"
-      size="sm"
+      variant="dots-only"
+      size="md"
       current={navCurrentIndex}
       total={Math.max(1, stepperTotalDots)}
       onPrev={handleBack}
       onNext={handleContinue}
-      canGoPrev={true}
-      canGoNext={canContinue}
       stepColors={navigationStepColors}
     />
   )
@@ -221,6 +253,8 @@ function SelfieSelectionPageContent() {
   const mobileUploadSection = (
     <SelfieUploadFlow
       hideHeader
+      buttonLayout="horizontal"
+      inline={true}
       onSelfiesApproved={handleSelfiesApproved}
       onCancel={() => {}}
       onError={uploadErrorHandler}
@@ -250,10 +284,8 @@ function SelfieSelectionPageContent() {
           router.push('/app/generate/start?skipUpload=1')
         }}
         onGenerate={() => {}} // Not available on this page
+        onNavigateToDashboard={() => router.push('/app/dashboard')}
         isGenerating={isNavigating}
-        hiddenScreens={onboardingContext.hiddenScreens}
-        onNavigateToSelfieTips={() => router.push('/app/generate/selfie-tips?force=1')}
-        onNavigateToCustomizationIntro={() => router.push('/app/generate/customization-intro?force=1')}
         customizationStepsMeta={customizationStepsMeta}
         visitedEditableSteps={visitedSteps}
       />
@@ -270,7 +302,8 @@ function SelfieSelectionPageContent() {
           kicker: isMobile ? tSelection('bannerTitle', { default: 'Select your selfies' }) : undefined,
           title: isMobile ? t('title', { default: 'Choose your selfie' }) : '',
           subtitle: undefined, // Subtitle not needed - info banner provides context
-          step: isMobile ? selfieStepIndicator : undefined,
+          // Hide step indicator in header on mobile - it's shown in the sticky footer instead
+          step: undefined,
           showBack: isMobile,
           onBack: handleBack,
           fullBleed: true
@@ -287,18 +320,21 @@ function SelfieSelectionPageContent() {
           </div>
         ) : (
           <>
-            {isMobile ? (
-              <SharedMobileSelfieFlow
-                canContinue={canContinue}
-                selfieTypeOverlay={
-                  <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} showTipsHeader />
-                }
-                grid={<SelectableGrid {...selectableGridProps} />}
-                navigation={navigationControls}
-                uploadSection={mobileUploadSection}
-                statusBadge={statusBadgeContent}
-              />
-            ) : (
+            {/* Mobile: unified selfie selection experience */}
+            <SharedMobileSelfieFlow
+              canContinue={canContinue}
+              selfieTypeOverlay={
+                <SelfieTypeOverlay refreshKey={selfieTypeRefreshKey} showTipsHeader />
+              }
+              grid={<SelectableGrid {...selectableGridProps} />}
+              navButtons={navButtonsControls}
+              navigation={navigationControls}
+              uploadSection={mobileUploadSection}
+              statusBadge={statusBadgeContent}
+            />
+
+            {/* Desktop layout */}
+            {!isMobile && (
               <div className="px-4 sm:px-6 lg:px-8 pt-8 md:pt-10 pb-52">
                 {/* Desktop Page Header - matches intro pages typography */}
                 <div className="mb-8 space-y-3">
@@ -318,27 +354,6 @@ function SelfieSelectionPageContent() {
                 />
                 
                 <SelectableGrid {...selectableGridProps} />
-
-                {/* Desktop Continue Button */}
-                <div className="pt-8 space-y-3">
-                  <button
-                    type="button"
-                    onClick={handleContinue}
-                    disabled={!canContinue || isNavigating}
-                    className={`w-full px-8 py-4 text-base font-semibold text-white rounded-xl shadow-lg transform transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
-                      canContinue && !isNavigating
-                        ? 'bg-gradient-to-r from-brand-primary via-brand-primary to-indigo-600 hover:shadow-2xl hover:from-brand-primary-hover hover:via-brand-primary-hover hover:to-indigo-700 hover:-translate-y-1 active:translate-y-0'
-                        : 'bg-gray-300 cursor-not-allowed'
-                    }`}
-                  >
-                    {isNavigating ? t('continuing', { default: 'Continuing...' }) : t('continueToCustomize', { default: 'Continue to customize' })}
-                  </button>
-                  {!canContinue && (
-                    <p className="text-center text-sm text-gray-500">
-                      {t('selectMoreSelfies', { default: 'Select at least {count} selfies to continue', count: MIN_SELFIES_REQUIRED })}
-                    </p>
-                  )}
-                </div>
               </div>
             )}
           </>

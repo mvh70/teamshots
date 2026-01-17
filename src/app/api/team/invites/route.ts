@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const { session } = permissionCheck
 
     const body = await request.json()
-    const { email, firstName } = body
+    const { email, firstName, skipEmail = false } = body
 
     // Get user locale from session for translations
     const locale = (session.user.locale || 'en') as 'en' | 'es'
@@ -217,27 +217,32 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Calculate inviter first name safely
-    const inviterName = session.user.name || ''
-    const inviterFirstName = inviterName.split(' ')[0] || inviterName || 'Team Admin'
-
-    // Send email with invite link (detect domain from request)
+    // Build invite link (detect domain from request)
     const baseUrl = getBaseUrl(request.headers)
     const inviteLink = `${baseUrl}/invite/${token}`
-    
-    const emailResult = await sendTeamInviteEmail({
-      email: teamInvite.email,
-      teamName: team.name || 'Team',
-      inviteLink,
-      creditsAllocated: teamInvite.creditsAllocated,
-      firstName,
-      inviterFirstName,
-      locale: user.locale as 'en' | 'es' || 'en'
-    })
 
-    if (!emailResult.success) {
-      Logger.error('Failed to send team invite email', { error: emailResult.error })
-      // Still return success for the invite creation, but log the email error
+    // Send email unless skipEmail is true (for "Create Link" flow)
+    let emailSent = false
+    if (!skipEmail) {
+      // Calculate inviter first name safely
+      const inviterName = session.user.name || ''
+      const inviterFirstName = inviterName.split(' ')[0] || inviterName || 'Team Admin'
+
+      const emailResult = await sendTeamInviteEmail({
+        email: teamInvite.email,
+        teamName: team.name || 'Team',
+        inviteLink,
+        creditsAllocated: teamInvite.creditsAllocated,
+        firstName,
+        inviterFirstName,
+        locale: user.locale as 'en' | 'es' || 'en'
+      })
+
+      emailSent = emailResult.success
+      if (!emailResult.success) {
+        Logger.error('Failed to send team invite email', { error: emailResult.error })
+        // Still return success for the invite creation, but log the email error
+      }
     }
 
     return NextResponse.json({
@@ -250,7 +255,8 @@ export async function POST(request: NextRequest) {
         creditsAllocated: teamInvite.creditsAllocated,
         inviteLink
       },
-      emailSent: emailResult.success
+      emailSent,
+      linkOnly: skipEmail
     })
 
   } catch (error) {

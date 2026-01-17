@@ -51,7 +51,15 @@ export async function GET(request: NextRequest) {
         id: true,
         key: true,
         createdAt: true,
-        userApproved: true
+        userApproved: true,
+        selfieType: true,
+        selfieTypeConfidence: true,
+        isProper: true,
+        improperReason: true,
+        lightingQuality: true,
+        lightingFeedback: true,
+        backgroundQuality: true,
+        backgroundFeedback: true
       }
     })
 
@@ -73,7 +81,13 @@ export async function GET(request: NextRequest) {
         url,
         uploadedAt: selfie.createdAt.toISOString(),
         status: selfie.userApproved ? 'approved' : 'uploaded',
-        used: isUsed
+        used: isUsed,
+        selfieType: selfie.selfieType,
+        selfieTypeConfidence: selfie.selfieTypeConfidence,
+        isProper: selfie.isProper,
+        improperReason: selfie.improperReason,
+        lightingQuality: selfie.lightingQuality,
+        backgroundQuality: selfie.backgroundQuality
       }
     })
 
@@ -118,12 +132,13 @@ export async function POST(request: NextRequest) {
 
     const person = invite.person
 
-    // Create selfie record
+    // Create selfie record - auto-select since user explicitly approved in upload flow
     const selfie = await prisma.selfie.create({
       data: {
         personId: person.id,
         key: selfieKey,
-        uploadedViaToken: token
+        uploadedViaToken: token,
+        selected: true
       }
     })
 

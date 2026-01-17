@@ -32,6 +32,7 @@ export default function BrandingSelector({
   const t = useTranslations('customization.photoStyle.branding')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [, setImageLoaded] = useState(false)
+  const [imageError, setImageError] = useState(false)
   const previewSetRef = useRef<string | null>(null)
 
   // Extract inner value for easier access
@@ -145,11 +146,13 @@ export default function BrandingSelector({
       const url = `/api/files/get?key=${encodeURIComponent(logoKey)}${tokenParam}`
       setPreviewUrl(url)
       setImageLoaded(false) // Reset to false, will be set to true on successful load
+      setImageError(false) // Reset error state on new logoKey
       previewSetRef.current = logoKey
     } else if (!logoKey && previewSetRef.current) {
       // Clear preview if no logoKey
       setPreviewUrl(null)
       setImageLoaded(false)
+      setImageError(false)
       previewSetRef.current = null
     }
   }, [logoKey, token])
@@ -204,33 +207,21 @@ export default function BrandingSelector({
       {brandingType === 'include' && (
         <div className="space-y-3">
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-0 text-center relative overflow-hidden">
-            {previewUrl ? (
+            {previewUrl && !imageError ? (
               <div className="relative w-full h-56">
-                <img 
-                  src={previewUrl} 
-                  alt="Logo preview" 
-                  className="absolute inset-0 w-full h-full object-contain" 
+                <img
+                  src={previewUrl}
+                  alt="Logo preview"
+                  className="absolute inset-0 w-full h-full object-contain"
                   onLoad={() => {
                     setImageLoaded(true)
-                  }} 
-                  onError={async (e) => {
+                    setImageError(false)
+                  }}
+                  onError={() => {
                     setImageLoaded(false)
-                    // Try to fetch the URL to get more error details
-                    try {
-                      const response = await fetch(previewUrl, { method: 'HEAD' })
-                      console.error('[BrandingSelector] Failed to load logo preview:', {
-                        url: previewUrl,
-                        status: response.status,
-                        statusText: response.statusText,
-                        logoKey
-                      })
-                    } catch (fetchError) {
-                      console.error('[BrandingSelector] Failed to load logo preview:', {
-                        url: previewUrl,
-                        logoKey,
-                        error: fetchError instanceof Error ? fetchError.message : String(fetchError)
-                      })
-                    }
+                    setImageError(true)
+                    // Log at warn level - this happens when a saved logo is no longer accessible
+                    console.warn('[BrandingSelector] Logo preview unavailable:', logoKey)
                   }}
                 />
                 <div className={`absolute inset-x-0 bottom-0 p-3 flex justify-center bg-gradient-to-t from-black/30 to-transparent ${
@@ -240,13 +231,30 @@ export default function BrandingSelector({
                     htmlFor="logo-upload"
                     className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md ${
                       (isPredefined || isDisabled)
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'bg-brand-primary text-white hover:bg-brand-primary-hover cursor-pointer'
                     }`}
                   >
                     {t('chooseFile', { default: 'Choose File' })}
                   </label>
                 </div>
+              </div>
+            ) : imageError ? (
+              <div className="p-6">
+                <div className="h-12 w-12 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <CloudArrowUpIcon className="h-6 w-6 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500 mb-2">
+                  {t('logoUnavailable', { default: 'Logo preview unavailable' })}
+                </p>
+                {!isPredefined && !isDisabled && (
+                  <label
+                    htmlFor="logo-upload"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover cursor-pointer"
+                  >
+                    {t('uploadNew', { default: 'Upload new logo' })}
+                  </label>
+                )}
               </div>
             ) : (
               <div className={`p-6 ${isPredefined ? 'hidden md:block' : ''}`}>
@@ -258,7 +266,7 @@ export default function BrandingSelector({
                   htmlFor="logo-upload"
                   className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md ${
                     (isPredefined || isDisabled)
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-brand-primary text-white hover:bg-brand-primary-hover cursor-pointer'
                   }`}
                 >

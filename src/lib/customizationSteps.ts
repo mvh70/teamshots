@@ -9,6 +9,8 @@ export interface CustomizationStepsMeta {
   lockedSteps: number[]
   /** Step names for tooltips, in order matching allSteps indices. */
   stepNames?: string[]
+  /** Step category keys (e.g., 'pose', 'clothingColors'), in order matching allSteps indices. */
+  stepKeys?: string[]
 }
 
 export const DEFAULT_CUSTOMIZATION_STEPS_META: CustomizationStepsMeta = {
@@ -73,17 +75,35 @@ export function buildCustomizationStepIndicatorWithSelfie(
 
 export function buildSelfieStepIndicator(
   meta: CustomizationStepsMeta,
-  options: { selfieComplete: boolean; isDesktop?: boolean }
+  options: { selfieComplete: boolean; isDesktop?: boolean; visitedCustomizationSteps?: number[] }
 ): StepIndicatorConfig {
+  // Build visited steps array: selfie step (0) if complete + any visited customization steps (shifted by 1)
+  const visitedSteps: number[] = []
+  if (options.selfieComplete) {
+    visitedSteps.push(0) // Selfie step is at index 0
+  }
+  // Add visited customization steps (shifted by 1 since selfie is at index 0)
+  if (options.visitedCustomizationSteps) {
+    for (const idx of options.visitedCustomizationSteps) {
+      visitedSteps.push(idx + 1) // Shift customization step indices by 1
+    }
+  }
+
   // On desktop, simplify to just 2 steps: selfie + customization (all categories as one)
   if (options.isDesktop) {
+    // On desktop, if any customization step is visited, mark step 1 (customization) as visited
+    const desktopVisited: number[] = []
+    if (options.selfieComplete) desktopVisited.push(0)
+    if (options.visitedCustomizationSteps && options.visitedCustomizationSteps.length > 0) {
+      desktopVisited.push(1) // Desktop only has 2 steps: selfie (0) + customization (1)
+    }
     return {
       current: 1,
       total: 2, // selfie + customization
       lockedSteps: undefined,
       totalWithLocked: 2,
       currentAllStepsIndex: 0,
-      visitedEditableSteps: options.selfieComplete ? [0] : []
+      visitedEditableSteps: desktopVisited
     }
   }
 
@@ -99,6 +119,6 @@ export function buildSelfieStepIndicator(
     // Always include totalWithLocked to show all steps (selfie + customization + locked)
     totalWithLocked: totalWithLocked,
     currentAllStepsIndex: 0,
-    visitedEditableSteps: options.selfieComplete ? [0] : []
+    visitedEditableSteps: visitedSteps
   }
 }

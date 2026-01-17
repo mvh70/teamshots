@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Image from 'next/image'
-import { EyeSlashIcon } from '@heroicons/react/24/outline'
+import { EyeSlashIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid'
 
 interface IntroTip {
   /** Unique key for the tip */
@@ -65,6 +65,8 @@ interface IntroScreenContentProps {
   onSkip?: () => void
   /** Text for skip action */
   skipText?: string
+  /** Hide the bottom continue button and skip link (when using dock navigation instead) */
+  hideBottomActions?: boolean
   /** Optional additional class names */
   className?: string
 }
@@ -85,6 +87,7 @@ export default function IntroScreenContent({
   onContinue,
   onSkip,
   skipText = "Don't show again",
+  hideBottomActions = false,
   className = ''
 }: IntroScreenContentProps) {
 
@@ -101,8 +104,8 @@ export default function IntroScreenContent({
               </p>
             )}
           </div>
-          {/* Desktop skip action - positioned in header to avoid dock overlap */}
-          {onSkip && (
+          {/* Desktop skip action - positioned in header to avoid dock overlap (hidden when using dock navigation) */}
+          {onSkip && !hideBottomActions && (
             <button
               type="button"
               onClick={onSkip}
@@ -125,26 +128,40 @@ export default function IntroScreenContent({
       {images ? (
         <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-4 lg:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
           {/* Images side */}
-          <div className="space-y-4 lg:flex lg:flex-col lg:items-end">
-            <div className="overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 w-[300px] p-[5px]">
-              <Image
-                src={images.good.src}
-                alt={images.good.alt}
-                width={images.good.width}
-                height={images.good.height}
-                className="w-full h-auto"
-                priority={images.good.priority}
-              />
+          <div className="space-y-5 lg:flex lg:flex-col lg:items-end">
+            {/* Good selfies */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircleIcon className="w-5 h-5 text-brand-primary" />
+                <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Good Selfies</span>
+              </div>
+              <div className="relative overflow-hidden border-2 border-brand-primary/20 shadow-xl bg-gradient-to-br from-brand-primary/5 via-white to-gray-50/40 ring-1 ring-brand-primary/10 w-[340px] p-[5px] rounded-lg">
+                <Image
+                  src={images.good.src}
+                  alt={images.good.alt}
+                  width={images.good.width}
+                  height={images.good.height}
+                  className="w-full h-auto rounded"
+                  priority={images.good.priority}
+                />
+              </div>
             </div>
-            <div className="overflow-hidden border border-gray-200/70 shadow-2xl bg-gradient-to-br from-gray-50 via-white to-gray-50/40 ring-1 ring-gray-100/60 w-[300px] p-[5px]">
-              <Image
-                src={images.bad.src}
-                alt={images.bad.alt}
-                width={images.bad.width}
-                height={images.bad.height}
-                className="w-full h-auto"
-                priority={images.bad.priority}
-              />
+            {/* Bad selfies */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <XCircleIcon className="w-5 h-5 text-red-500" />
+                <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Avoid These</span>
+              </div>
+              <div className="relative overflow-hidden border-2 border-red-200 shadow-xl bg-gradient-to-br from-red-50/50 via-white to-gray-50/40 ring-1 ring-red-100/60 w-[340px] p-[5px] rounded-lg">
+                <Image
+                  src={images.bad.src}
+                  alt={images.bad.alt}
+                  width={images.bad.width}
+                  height={images.bad.height}
+                  className="w-full h-auto rounded"
+                  priority={images.bad.priority}
+                />
+              </div>
             </div>
           </div>
 
@@ -248,8 +265,8 @@ export default function IntroScreenContent({
         </>
       )}
 
-      {/* Continue button - always show at bottom */}
-      {onContinue && (
+      {/* Continue button - show at bottom unless hideBottomActions is true */}
+      {onContinue && !hideBottomActions && (
         <div className="pt-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 space-y-3">
           <button
             type="button"

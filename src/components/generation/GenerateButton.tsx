@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 
 interface GenerateButtonProps {
   onClick: () => void
@@ -23,6 +23,18 @@ export default function GenerateButton({
   disabledReason,
   integrateInPopover = false
 }: GenerateButtonProps) {
+  const [isHovered, setIsHovered] = useState(false)
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current)
+      }
+    }
+  }, [])
+
   const sizeClasses = {
     sm: 'px-4 py-2 text-sm',
     md: 'px-6 py-3 md:px-8 md:py-4 lg:px-10 lg:py-5 text-base md:text-lg lg:text-xl font-bold',
@@ -31,17 +43,33 @@ export default function GenerateButton({
 
   const isDisabled = disabled || isGenerating
   const isEnabled = !isDisabled
-  const showPopover = isDisabled && disabledReason
+  const showPopover = isDisabled && disabledReason && isHovered
+
+  // Handle click on disabled button to show tooltip on mobile
+  const handleDisabledClick = () => {
+    if (isDisabled && disabledReason) {
+      // Clear any existing timer to prevent stacking
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current)
+      }
+      setIsHovered(true)
+      // Auto-hide after 3 seconds
+      hoverTimerRef.current = setTimeout(() => setIsHovered(false), 3000)
+    }
+  }
 
   const buttonElement = (
     <button
-      onClick={onClick}
-      disabled={isDisabled}
+      onClick={isEnabled ? onClick : handleDisabledClick}
+      disabled={false} // Don't disable - handle click manually for tooltip
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={`w-full ${sizeClasses[size]} rounded-xl transition-all duration-200 ${
         isEnabled
           ? 'bg-gradient-to-r from-brand-primary to-indigo-600 text-white hover:from-brand-primary-hover hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 hover:scale-105 active:scale-95'
           : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-sm'
       } ${className}`}
+      aria-disabled={isDisabled}
     >
       {isGenerating ? (
         <span className="flex items-center justify-center gap-2">

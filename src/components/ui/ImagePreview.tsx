@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { LoadingSpinner } from './LoadingSpinner'
 
@@ -43,24 +43,31 @@ export function ImagePreview({
   showErrorState = true,
   errorMessage = 'Failed to load image'
 }: ImagePreviewProps) {
-  const [isLoading, setIsLoading] = useState(true)
+  // Track displayed src (what's currently visible) vs pending src (what's loading)
+  const [displayedSrc, setDisplayedSrc] = useState(src)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [hasError, setHasError] = useState(false)
 
+  // When src changes, keep displaying old image until new one loads
+  const isPendingNewImage = src !== displayedSrc
+
   const handleLoad = () => {
-    setIsLoading(false)
+    setDisplayedSrc(src)
+    setIsInitialLoad(false)
     setHasError(false)
     onLoad?.()
   }
 
   const handleError = () => {
-    setIsLoading(false)
+    setDisplayedSrc(src) // Still update to new src to avoid infinite loading
+    setIsInitialLoad(false)
     setHasError(true)
     onError?.()
   }
 
   const baseClasses = `${variantClasses[variant]} rounded-lg border border-gray-200 shadow-sm ${className}`
 
-  if (hasError && showErrorState) {
+  if (hasError && showErrorState && !isPendingNewImage) {
     return (
       <div
         className={`${baseClasses} bg-gray-100 flex items-center justify-center`}
@@ -88,17 +95,31 @@ export function ImagePreview({
 
   return (
     <div className="relative" data-testid={testId}>
-      {isLoading && showLoadingSpinner && (
+      {/* Only show loading spinner on initial load, not when switching images */}
+      {isInitialLoad && showLoadingSpinner && (
         <div className={`absolute inset-0 ${baseClasses} bg-gray-100 flex items-center justify-center z-10`}>
           <LoadingSpinner size="md" />
         </div>
       )}
+      {/* Current displayed image - always visible */}
+      {!isInitialLoad && displayedSrc !== src && (
+        <Image
+          src={displayedSrc}
+          alt={alt}
+          width={width}
+          height={height}
+          className={`${baseClasses} absolute inset-0`}
+          priority={priority}
+          unoptimized={unoptimized}
+        />
+      )}
+      {/* New/current image - loads in background then becomes visible */}
       <Image
         src={src}
         alt={alt}
         width={width}
         height={height}
-        className={`${baseClasses} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200`}
+        className={`${baseClasses} ${showLoadingSpinner && isInitialLoad ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200`}
         priority={priority}
         unoptimized={unoptimized}
         onLoad={handleLoad}

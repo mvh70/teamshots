@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { CheckIcon, LockClosedIcon, InformationCircleIcon, SparklesIcon, PlusIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { CheckIcon, LockClosedIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { CheckIcon as CheckIconSolid } from '@heroicons/react/24/solid'
 import { useTranslations } from 'next-intl'
 import { MIN_SELFIES_REQUIRED } from '@/constants/generation'
@@ -43,20 +43,32 @@ interface FlowProgressDockProps {
   onNavigateToSelfieTips?: () => void
   /** Navigate to customization intro info page */
   onNavigateToCustomizationIntro?: () => void
+  /** Navigate back to dashboard */
+  onNavigateToDashboard?: () => void
   /** Action to buy credits */
   onBuyCredits?: () => void
   /** Customization steps metadata for progress dots */
   customizationStepsMeta?: CustomizationStepsMeta
   /** Indices of visited/completed editable steps */
   visitedEditableSteps?: number[]
+  /** Handler for "Don't show again" action on tips/intro pages */
+  onDontShowAgain?: () => void
+  /** Text for the "Don't show again" button */
+  dontShowAgainText?: string
 }
 
 /**
  * Desktop-only progress dock for the generation flow.
- * Shows 3 steps: Selfies → Customize → Generate
+ * Shows navigation buttons on top row, progress indicators on bottom row.
  *
- * Extends patterns from FlowNavigation and StepIndicator.
- * Positioned fixed at bottom center of screen.
+ * Layout:
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │  ← Back                                      Continue →     │
+ * │  ─────────────────────────────────────────────────────────  │
+ * │    SELFIES          CUSTOMIZE              GENERATE         │
+ * │      ✓               ● ● ○                   ✨              │
+ * │   3 added          Step 2 of 3              Ready           │
+ * └─────────────────────────────────────────────────────────────┘
  */
 export default function FlowProgressDock({
   selfieCount,
@@ -69,21 +81,20 @@ export default function FlowProgressDock({
   onNavigateToSelfies,
   onNavigateToCustomize,
   onGenerate,
+  onNavigateToDashboard,
   onBuyCredits,
   isGenerating = false,
   className = '',
-  hiddenScreens = [],
-  onNavigateToSelfieTips,
-  onNavigateToCustomizationIntro,
   customizationStepsMeta,
-  visitedEditableSteps = []
+  visitedEditableSteps = [],
+  onDontShowAgain,
+  dontShowAgainText
 }: FlowProgressDockProps) {
   const t = useTranslations('generation.progressDock')
 
   const hasEnoughSelfies = selfieCount >= requiredSelfies
 
   // Compute if customization is complete based on visited steps
-  // If all editable steps have been visited, customization is considered complete
   const isCustomizationComplete = customizationStepsMeta
     ? visitedEditableSteps.length >= customizationStepsMeta.editableSteps && customizationStepsMeta.editableSteps > 0
     : false
@@ -101,14 +112,7 @@ export default function FlowProgressDock({
 
   const getCustomizeState = (): StepState => {
     if (!hasEnoughSelfies) return 'locked'
-    // Show as complete if customization is done (all editable steps visited)
-    if (isCustomizationComplete) {
-      return 'complete'
-    }
-    // If not on customize page and no visited steps, show as active (not started yet)
-    if (currentStep !== 'customize' && visitedEditableSteps.length === 0) {
-      return 'active'
-    }
+    if (isCustomizationComplete) return 'complete'
     return 'active'
   }
 
@@ -116,7 +120,6 @@ export default function FlowProgressDock({
     if (!hasEnoughSelfies) return 'locked'
     if (effectiveHasUneditedFields) return 'locked'
     if (!hasEnoughCredits) return 'locked'
-    // All basic requirements met - show as ready
     return 'ready'
   }
 
@@ -142,27 +145,20 @@ export default function FlowProgressDock({
     if (!hasEnoughSelfies) {
       return t('customize.locked')
     }
-    // Show remaining fields only when on customize page
-    if (currentStep === 'customize' && uneditedFields.length > 0) {
-      // Format field names for display (e.g., "clothingColors" -> "colors")
-      const displayNames = uneditedFields.map(field => {
-        if (field === 'clothingColors') return t('fields.colors', { default: 'colors' })
-        if (field === 'shotType') return t('fields.shotType', { default: 'shot' })
-        return t(`fields.${field}`, { default: field })
-      })
-      const fieldsText = displayNames.slice(0, 3).join(', ')
-      return t('customize.remaining', { fields: fieldsText })
-    }
-    // Check if customization is complete based on visited steps
     if (isCustomizationComplete) {
       return t('customize.complete')
     }
-    // If no visited steps, customization hasn't started yet
-    if (visitedEditableSteps.length === 0) {
-      return t('customize.notStarted', { default: 'Customize your photos' })
+    // Show step progress if we have metadata
+    if (customizationStepsMeta && customizationStepsMeta.editableSteps > 0) {
+      const completed = visitedEditableSteps.length
+      const total = customizationStepsMeta.editableSteps
+      return t('customize.stepProgress', {
+        current: completed,
+        total,
+        default: `Step ${completed} of ${total}`
+      })
     }
-    // In progress - some steps visited but not all
-    return t('customize.inProgress', { default: 'In progress' })
+    return t('customize.notStarted', { default: 'Customize your photos' })
   }
 
   const getGenerateStatusText = (): string => {
@@ -178,23 +174,96 @@ export default function FlowProgressDock({
     return t('generate.ready')
   }
 
-  const getTooltipText = (state: StepState, step: 'selfies' | 'customize' | 'generate'): string | undefined => {
-    if (state !== 'locked') return undefined
+  // Navigation logic
+  const isOnSelfies = currentStep === 'selfies' || currentStep === 'tips'
+  const isOnCustomize = currentStep === 'customize' || currentStep === 'intro'
 
-    if (step === 'customize') {
-      return t('tooltips.needSelfies', { count: requiredSelfies })
+  // Back button config
+  const getBackConfig = () => {
+    if (isOnSelfies) {
+      return {
+        label: t('navigation.dashboard', { default: 'Dashboard' }),
+        onClick: onNavigateToDashboard || onNavigateToSelfies,
+        disabled: false
+      }
     }
-    if (step === 'generate') {
-      if (!hasEnoughSelfies) return t('tooltips.needSelfies', { count: requiredSelfies })
-      if (effectiveHasUneditedFields) return t('tooltips.needCustomization')
-      if (!hasEnoughCredits) return t('tooltips.needCredits')
+    if (isOnCustomize) {
+      return {
+        label: t('navigation.selfies', { default: 'Selfies' }),
+        onClick: onNavigateToSelfies,
+        disabled: false
+      }
     }
-    return undefined
+    return {
+      label: t('navigation.back', { default: 'Back' }),
+      onClick: onNavigateToSelfies,
+      disabled: false
+    }
   }
 
-  // Check if info screens are hidden
-  const isSelfieTipsHidden = hiddenScreens.includes('selfie-tips')
-  const isCustomizationIntroHidden = hiddenScreens.includes('customization-intro')
+  // Continue button config
+  const getContinueConfig = () => {
+    // On selfie-tips page, show "Selfies →" button to navigate to selfie selection
+    if (currentStep === 'tips') {
+      return {
+        label: t('navigation.selfies', { default: 'Selfies' }),
+        onClick: onNavigateToSelfies,
+        disabled: false
+      }
+    }
+    // On customization-intro page, show "Customize →" button to navigate to customization
+    if (currentStep === 'intro') {
+      return {
+        label: t('navigation.customize', { default: 'Customize' }),
+        onClick: onNavigateToCustomize,
+        disabled: false
+      }
+    }
+    if (isOnSelfies) {
+      const canContinue = hasEnoughSelfies
+      return {
+        label: t('navigation.customize', { default: 'Customize' }),
+        onClick: onNavigateToCustomize,
+        disabled: !canContinue,
+        tooltip: !canContinue ? t('tooltips.needSelfies', { count: requiredSelfies }) : undefined
+      }
+    }
+    if (isOnCustomize) {
+      const canContinue = isCustomizationComplete && hasEnoughCredits
+      const isGenerate = isCustomizationComplete
+
+      if (!hasEnoughCredits && onBuyCredits) {
+        return {
+          label: t('generate.buyCredits', { default: 'Buy Credits' }),
+          onClick: onBuyCredits,
+          disabled: false,
+          isCredits: true
+        }
+      }
+
+      return {
+        label: isGenerate
+          ? t('generate.label', { default: 'Generate' })
+          : t('navigation.generate', { default: 'Generate' }),
+        onClick: onGenerate,
+        disabled: !canContinue,
+        tooltip: !canContinue
+          ? (!isCustomizationComplete
+              ? t('tooltips.needCustomization')
+              : t('tooltips.needCredits'))
+          : undefined,
+        isGenerate: isGenerate && canContinue
+      }
+    }
+    return {
+      label: t('navigation.continue', { default: 'Continue' }),
+      onClick: onNavigateToCustomize,
+      disabled: true
+    }
+  }
+
+  const backConfig = getBackConfig()
+  const continueConfig = getContinueConfig()
 
   // Pre-compute sets for efficient lookup
   const lockedSet = new Set(customizationStepsMeta?.lockedSteps ?? [])
@@ -202,312 +271,119 @@ export default function FlowProgressDock({
 
   // Render customization progress dots
   const renderCustomizationDots = () => {
-    if (!customizationStepsMeta || customizationStepsMeta.allSteps === 0) return null
+    if (!customizationStepsMeta || customizationStepsMeta.editableSteps === 0) return null
 
-    const { allSteps, stepNames } = customizationStepsMeta
-    const isOnCustomize = currentStep === 'customize'
+    const { editableSteps } = customizationStepsMeta
 
     return (
-      <div className="flex items-center justify-center gap-2">
-        {Array.from({ length: allSteps }).map((_, idx) => {
-          const isLocked = lockedSet.has(idx)
+      <div className="flex items-center justify-center gap-1.5 mt-1">
+        {Array.from({ length: editableSteps }).map((_, idx) => {
           const isVisited = visitedSet.has(idx)
-          const stepName = stepNames?.[idx] || ''
-
-          if (isLocked) {
-            // Locked steps show a lock icon with tooltip
-            const lockedDot = (
-              <div className="w-3 h-3 rounded-full bg-gray-100 flex items-center justify-center cursor-help">
-                <LockClosedIcon className="h-2 w-2 text-gray-300" />
-              </div>
-            )
-
-            if (stepName) {
-              return (
-                <Tooltip key={`dot-lock-${idx}`} content={stepName} position="top">
-                  {lockedDot}
-                </Tooltip>
-              )
-            }
-            return <div key={`dot-lock-${idx}`}>{lockedDot}</div>
-          }
-
-          // Editable steps: green if visited AND on customize page, otherwise grey
-          const editableDot = (
+          return (
             <span
+              key={`dot-${idx}`}
               className={`
-                block h-3 w-3 rounded-full transition-all duration-300 cursor-help
-                ${isVisited && isOnCustomize
-                  ? 'bg-brand-secondary shadow-[0_0_0_2px_rgba(16,185,129,0.2)]'
-                  : isVisited
-                    ? 'bg-gray-400'
-                    : 'bg-gray-200 hover:bg-gray-300'
+                block h-2 w-2 rounded-full transition-all duration-300
+                ${isVisited
+                  ? 'bg-brand-secondary'
+                  : 'bg-gray-300'
                 }
               `}
             />
           )
-
-          if (stepName) {
-            return (
-              <Tooltip key={`dot-${idx}`} content={stepName} position="top">
-                {editableDot}
-              </Tooltip>
-            )
-          }
-          return <span key={`dot-${idx}`}>{editableDot}</span>
         })}
       </div>
     )
   }
 
-  // Render info icon with optional diagonal line when hidden
-  // isCurrent: true when user is viewing this info page
-  const renderInfoIcon = (
-    isHidden: boolean,
-    onClick: (() => void) | undefined,
-    tooltipText: string,
-    isCurrent: boolean = false
-  ) => {
-    if (!onClick) return null
-
-    const getInfoIconStyles = () => {
-      const base = 'relative flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 group flex-shrink-0'
-
-      if (isCurrent) {
-        // Current info page: highlighted with double border
-        return `${base} bg-brand-primary text-white shadow-[0_2px_12px_rgba(99,102,241,0.3)] ring-2 ring-brand-primary/30 ring-offset-2`
-      }
-      if (isHidden) {
-        return `${base} bg-gray-100 hover:bg-gray-150`
-      }
-      // Default: subtle grey
-      return `${base} bg-gray-100 hover:bg-gray-200 hover:scale-105`
-    }
-
-    const iconContent = (
-      <button
-        type="button"
-        onClick={onClick}
-        className={getInfoIconStyles()}
-        aria-label={tooltipText}
-      >
-        <InformationCircleIcon
-          className={`w-4 h-4 transition-all duration-200 ${
-            isCurrent
-              ? 'text-white'
-              : isHidden
-                ? 'text-gray-400 group-hover:text-gray-500'
-                : 'text-gray-500 group-hover:text-gray-600'
-          }`}
-        />
-        {isHidden && !isCurrent && (
-          <div
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            aria-hidden="true"
-          >
-            <div className="w-5 h-0.5 bg-gray-400 -rotate-45 rounded-full opacity-60" />
-          </div>
-        )}
-      </button>
-    )
-
-    return (
-      <Tooltip content={tooltipText} position="top">
-        {iconContent}
-      </Tooltip>
-    )
-  }
-
-  // Handle step clicks
-  const handleSelfieClick = () => {
-    onNavigateToSelfies()
-  }
-
-  const handleCustomizeClick = () => {
-    if (customizeState === 'locked') return
-    onNavigateToCustomize()
-  }
-
-  const handleGenerateClick = () => {
-    if (!hasEnoughCredits && onBuyCredits) {
-      onBuyCredits()
-      return
-    }
-    if (generateState !== 'ready') return
-    onGenerate()
-  }
-
-  // Render a step
-  const renderStep = (
+  // Render a progress section (bottom row)
+  const renderProgressSection = (
     label: string,
     statusText: string,
     state: StepState,
     onClick: () => void,
-    isCurrentStep: boolean,
-    tooltipText?: string,
-    stepNumber?: number,
-    showLabel: boolean = true
+    isCurrent: boolean,
+    showDots: boolean = false
   ) => {
-    const isClickable = state !== 'locked'
     const isComplete = state === 'complete'
-    const isReady = state === 'ready'
     const isLocked = state === 'locked'
-    const isGenerateStep = stepNumber === 3
+    const isReady = state === 'ready'
 
-    // Special rendering for Generate button when ready OR when credits are needed
-    if (isGenerateStep && (isReady || state === 'active' || state === 'locked' || (!hasEnoughCredits && onBuyCredits))) {
-      // If it's the generate step, render a prominent button
-      const getGenerateButtonStyles = () => {
-        const base = 'flex items-center gap-2 px-6 py-2.5 rounded-full transition-all duration-300 font-semibold shadow-lg'
-        
-        // Buy Credits State
-        if (!hasEnoughCredits && onBuyCredits) {
-           return `${base} bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98] ring-offset-2 ring-amber-500`
-        }
-
-        if (isLocked) {
-          return `${base} bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed`
-        }
-        if (isGenerating) {
-          return `${base} bg-brand-primary text-white cursor-wait opacity-90`
-        }
-        if (isReady) {
-          return `${base} bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-brand-primary/25 hover:shadow-brand-primary/40 hover:scale-[1.02] active:scale-[0.98] ring-offset-2 ring-brand-primary`
-        }
-        return `${base} bg-white border border-gray-200 text-gray-400`
-      }
-
-      const buttonContent = (
-        <button
-          type="button"
-          onClick={onClick}
-          disabled={(!isReady && !isGenerating && !(!hasEnoughCredits && onBuyCredits)) || (isGenerating && true)}
-          className={getGenerateButtonStyles()}
-        >
-          {isGenerating ? (
-            <SmallLoadingSpinner className="text-white border-white/30 border-t-white" />
-          ) : !hasEnoughCredits && onBuyCredits ? (
-             <PlusIcon className="w-5 h-5" strokeWidth={2.5} />
-          ) : (
-            <SparklesIcon className={`w-5 h-5 ${isReady ? 'animate-pulse' : ''}`} strokeWidth={2} />
-          )}
-          <span>
-            {isGenerating 
-              ? t('generate.generating', { default: 'Generating...' }) 
-              : !hasEnoughCredits && onBuyCredits
-                ? t('generate.buyCredits', { default: 'Buy Credits' })
-                : label
-            }
-          </span>
-        </button>
-      )
-
-       if (tooltipText && isLocked && hasEnoughCredits) {
-        return (
-          <Tooltip content={tooltipText} position="top">
-            {buttonContent}
-          </Tooltip>
-        )
-      }
-      return buttonContent
-    }
-
-    // Enhanced circle styles with rings and depth
-    // Current step + complete: green with double border
-    // Current step + not complete: blue with double border
-    // Completed (not current): grey with checkmark
-    // Others: greyed
-    const getCircleStyles = () => {
-      const base = 'w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300'
-
-      if (isCurrentStep && isComplete) {
-        // Current step and complete: green with double border
-        return `${base} bg-brand-secondary text-white shadow-[0_2px_12px_rgba(16,185,129,0.3)] ring-2 ring-brand-secondary/30 ring-offset-2`
-      }
-      if (isCurrentStep) {
-        // Current step but not complete: blue with double border
-        return `${base} bg-brand-primary text-white shadow-[0_2px_12px_rgba(99,102,241,0.3)] ring-2 ring-brand-primary/30 ring-offset-2`
+    const getIconContent = () => {
+      if (isLocked) {
+        return <LockClosedIcon className="w-4 h-4 text-gray-300" />
       }
       if (isComplete) {
-        // Completed but not current: grey with checkmark
-        return `${base} bg-gray-200 text-gray-500 border border-gray-300`
+        return <CheckIconSolid className="w-4 h-4 text-white" />
       }
+      if (isReady) {
+        return <SparklesIcon className="w-4 h-4 text-white" />
+      }
+      // Active/incomplete - show empty circle handled by background
+      return null
+    }
+
+    const getIconStyles = () => {
+      const base = 'w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200'
       if (isLocked) {
-        return `${base} bg-gray-100 text-gray-300 border border-gray-200`
+        return `${base} bg-gray-100 border border-gray-200`
       }
-      // Active but not current: grey
-      return `${base} bg-gray-100 text-gray-400 border border-gray-200 hover:bg-gray-150`
+      if (isComplete) {
+        return `${base} bg-brand-secondary`
+      }
+      if (isReady) {
+        return `${base} bg-gradient-to-r from-brand-primary to-brand-secondary`
+      }
+      if (isCurrent) {
+        return `${base} bg-brand-primary/20 border-2 border-brand-primary`
+      }
+      return `${base} bg-gray-100 border border-gray-200`
     }
 
-    // Label styles with better hierarchy
     const getLabelStyles = () => {
-      const base = 'text-sm font-medium tracking-tight transition-colors duration-200'
-      if (isCurrentStep) return `${base} text-gray-900`
-      if (isComplete) return `${base} text-gray-500`
-      if (isLocked) return `${base} text-gray-300`
-      return `${base} text-gray-400`
+      if (isCurrent) return 'text-gray-900 font-semibold'
+      if (isComplete || isReady) return 'text-gray-600'
+      if (isLocked) return 'text-gray-300'
+      return 'text-gray-400'
     }
 
-    // Status text styles
     const getStatusStyles = () => {
-      const base = 'text-[10px] leading-tight font-medium transition-colors duration-200'
-      if (isCurrentStep && isComplete) return `${base} text-brand-secondary`
-      if (isCurrentStep) return `${base} text-brand-primary`
-      if (isComplete) return `${base} text-gray-400`
-      if (isLocked) return `${base} text-gray-300`
-      return `${base} text-gray-400`
+      if (isCurrent && isComplete) return 'text-brand-secondary'
+      if (isCurrent) return 'text-brand-primary'
+      if (isComplete) return 'text-gray-400'
+      if (isLocked) return 'text-gray-300'
+      return 'text-gray-400'
     }
 
-    const stepContent = (
+    return (
       <button
         type="button"
         onClick={onClick}
-        disabled={!isClickable}
+        disabled={isLocked}
         className={`
-          flex items-center gap-3 px-3 py-2 rounded-xl
-          transition-all duration-200 group relative
-          ${isClickable
-            ? 'cursor-pointer hover:bg-gray-50'
-            : 'cursor-not-allowed'
-          }
+          flex flex-col items-center gap-1.5 px-6 py-2 rounded-xl transition-all duration-200
+          ${!isLocked ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-not-allowed'}
         `}
       >
-        {/* Circle indicator */}
-        <div className={getCircleStyles()}>
-          {isLocked ? (
-            <LockClosedIcon className="w-3.5 h-3.5" strokeWidth={2} />
-          ) : isComplete ? (
-            <CheckIconSolid className="w-4 h-4" />
-          ) : (
-            <span className="text-xs font-bold">{stepNumber}</span>
-          )}
+        {/* Section label */}
+        <span className={`text-xs tracking-wide uppercase ${getLabelStyles()}`}>
+          {label}
+        </span>
+
+        {/* Icon */}
+        <div className={getIconStyles()}>
+          {getIconContent()}
         </div>
 
-        {showLabel && (
-          <div className="flex flex-col items-start gap-0.5 min-w-[80px]">
-            {/* Label */}
-            <span className={getLabelStyles()}>
-              {label}
-            </span>
+        {/* Status text */}
+        <span className={`text-[10px] font-medium ${getStatusStyles()}`}>
+          {statusText}
+        </span>
 
-            {/* Status text */}
-            <span className={getStatusStyles()}>
-              {statusText}
-            </span>
-          </div>
-        )}
+        {/* Progress dots for customize step */}
+        {showDots && renderCustomizationDots()}
       </button>
     )
-
-    if (tooltipText && isLocked) {
-      return (
-        <Tooltip content={tooltipText} position="top">
-          {stepContent}
-        </Tooltip>
-      )
-    }
-
-    return stepContent
   }
 
   // Use state to track if we're mounted (for portal)
@@ -516,12 +392,12 @@ export default function FlowProgressDock({
     setMounted(true)
   }, [])
 
-    const dockContent = (
+  const dockContent = (
     <div
       className={`
         hidden md:block
         fixed bottom-8 left-1/2 -translate-x-1/2 z-[10000]
-        w-auto min-w-[500px] max-w-3xl
+        w-auto min-w-[520px] max-w-2xl
         ${className}
       `}
     >
@@ -529,204 +405,168 @@ export default function FlowProgressDock({
       <div className="absolute -inset-3 bg-gradient-to-b from-gray-900/[0.08] to-gray-900/[0.03] rounded-[2rem] blur-2xl" />
 
       {/* Secondary glow layer for depth */}
-      <div className="absolute -inset-1 bg-gradient-to-b from-gray-100 to-gray-200/80 rounded-full blur-sm opacity-60" />
+      <div className="absolute -inset-1 bg-gradient-to-b from-gray-100 to-gray-200/80 rounded-3xl blur-sm opacity-60" />
 
       {/* Main dock container */}
       <div
         className="
           relative
-          bg-gradient-to-b from-gray-50 via-white to-gray-50/90
+          bg-gradient-to-b from-white via-white to-gray-50/90
           backdrop-blur-2xl
-          rounded-full
+          rounded-2xl
           border border-gray-200/80
-          shadow-[0_8px_32px_-8px_rgba(0,0,0,0.15),0_4px_12px_-4px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(0,0,0,0.05)]
-          px-8 py-3
-          transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]
-          hover:shadow-[0_12px_40px_-8px_rgba(0,0,0,0.2),0_6px_16px_-4px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,1),inset_0_-1px_0_rgba(0,0,0,0.05)]
-          hover:border-gray-300/90
-          hover:scale-[1.008]
+          shadow-[0_8px_32px_-8px_rgba(0,0,0,0.15),0_4px_12px_-4px_rgba(0,0,0,0.1)]
+          px-6 py-4
+          transition-all duration-300
         "
       >
-        {/* Top highlight line */}
-        <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent" />
+        {/* ROW 1: Navigation buttons */}
+        <div className="flex items-center justify-between mb-3">
+          {/* Back button */}
+          <button
+            type="button"
+            onClick={backConfig.onClick}
+            disabled={backConfig.disabled}
+            className={`
+              flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium
+              transition-all duration-200
+              ${backConfig.disabled
+                ? 'text-gray-300 cursor-not-allowed border border-gray-200 bg-gray-50'
+                : 'text-gray-700 border border-gray-300 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-400 active:bg-gray-100'
+              }
+            `}
+          >
+            <ChevronLeftIcon className="w-4 h-4" strokeWidth={2.5} />
+            <span>{backConfig.label}</span>
+          </button>
 
-        {/* Subtle brand accent at bottom */}
-        <div className="absolute inset-x-12 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary/20 to-transparent rounded-full" />
+          {/* Center: Don't show again (only on tips/intro pages) */}
+          {onDontShowAgain && (
+            <button
+              type="button"
+              onClick={onDontShowAgain}
+              className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              {dontShowAgainText || t('navigation.dontShowAgain', { default: "Don't show again" })}
+            </button>
+          )}
 
-        <div className="flex items-stretch justify-between">
-          {/* SECTION 1: Selfies */}
-          <div className="flex flex-col items-center gap-1 px-4">
-            {/* Section label on top */}
-            <span className={`text-xs font-semibold tracking-wide uppercase ${
-              currentStep === 'selfies' || currentStep === 'tips'
-                ? 'text-gray-900'
-                : selfieState === 'complete'
-                  ? 'text-gray-500'
-                  : 'text-gray-400'
-            }`}>
-              {t('selfies.label')}
-            </span>
-            {/* Icons row: info icon connected to action icon */}
-            <div className="flex items-center gap-0">
-              {onNavigateToSelfieTips && (
-                <>
-                  {renderInfoIcon(
-                    isSelfieTipsHidden,
-                    onNavigateToSelfieTips,
-                    t('infoIcons.selfieTips', { default: 'Selfie tips' }),
-                    currentStep === 'tips'
-                  )}
-                  {/* Connector line */}
-                  <div className="w-4 h-[2px] bg-gray-300 mx-1" />
-                </>
+          {/* Continue/Generate button */}
+          {continueConfig.tooltip ? (
+            <Tooltip content={continueConfig.tooltip} position="top">
+              <button
+                type="button"
+                onClick={continueConfig.onClick}
+                disabled={continueConfig.disabled}
+                className={`
+                  flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold
+                  transition-all duration-200
+                  ${continueConfig.disabled
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : continueConfig.isGenerate
+                      ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
+                      : continueConfig.isCredits
+                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
+                        : 'bg-brand-primary text-white hover:brightness-110 active:brightness-95'
+                  }
+                `}
+              >
+                {isGenerating ? (
+                  <SmallLoadingSpinner className="text-white border-white/30 border-t-white" />
+                ) : continueConfig.isGenerate ? (
+                  <SparklesIcon className="w-4 h-4" strokeWidth={2} />
+                ) : null}
+                <span>{continueConfig.label}</span>
+                {!continueConfig.isGenerate && !continueConfig.isCredits && !isGenerating && (
+                  <ChevronRightIcon className="w-4 h-4" strokeWidth={2.5} />
+                )}
+              </button>
+            </Tooltip>
+          ) : (
+            <button
+              type="button"
+              onClick={continueConfig.onClick}
+              disabled={continueConfig.disabled || isGenerating}
+              className={`
+                flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold
+                transition-all duration-200
+                ${continueConfig.disabled
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : continueConfig.isGenerate
+                    ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
+                    : continueConfig.isCredits
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
+                      : 'bg-brand-primary text-white hover:brightness-110 active:brightness-95'
+                }
+              `}
+            >
+              {isGenerating ? (
+                <SmallLoadingSpinner className="text-white border-white/30 border-t-white" />
+              ) : continueConfig.isGenerate ? (
+                <SparklesIcon className="w-4 h-4" strokeWidth={2} />
+              ) : null}
+              <span>{isGenerating ? t('generate.generating', { default: 'Generating...' }) : continueConfig.label}</span>
+              {!continueConfig.isGenerate && !continueConfig.isCredits && !isGenerating && (
+                <ChevronRightIcon className="w-4 h-4" strokeWidth={2.5} />
               )}
-              {/* Step 1: Selfies (icon only) */}
-              {renderStep(
-                t('selfies.label'),
-                getSelfieStatusText(),
-                selfieState,
-                handleSelfieClick,
-                currentStep === 'selfies',
-                undefined,
-                1,
-                false
-              )}
-            </div>
-            {/* Status text below */}
-            <span className={`text-[10px] font-medium ${
-              currentStep === 'selfies' && selfieState === 'complete'
-                ? 'text-brand-secondary'
-                : currentStep === 'selfies'
-                  ? 'text-brand-primary'
-                  : selfieState === 'complete'
-                    ? 'text-gray-400'
-                    : 'text-gray-400'
-            }`}>
-              {getSelfieStatusText()}
-            </span>
+            </button>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-3" />
+
+        {/* ROW 2: Progress indicators */}
+        <div className="flex items-start justify-center gap-2">
+          {/* SELFIES */}
+          {renderProgressSection(
+            t('selfies.label'),
+            getSelfieStatusText(),
+            selfieState,
+            onNavigateToSelfies,
+            isOnSelfies
+          )}
+
+          {/* Connector */}
+          <div className="flex items-center self-center pt-4">
+            <div className="w-8 h-[2px] bg-gray-200 rounded-full" />
           </div>
 
-          {/* Navigation arrow between Selfies and Customize */}
-          {(() => {
-            const isOnSelfiesOrTips = currentStep === 'selfies' || currentStep === 'tips'
-            const isOnCustomizeOrIntro = currentStep === 'customize' || currentStep === 'intro'
-            const canContinue = isOnSelfiesOrTips && hasEnoughSelfies
-            const canGoBack = isOnCustomizeOrIntro
+          {/* CUSTOMIZE */}
+          {renderProgressSection(
+            t('customize.label'),
+            getCustomizeStatusText(),
+            customizeState,
+            onNavigateToCustomize,
+            isOnCustomize,
+            true // show dots
+          )}
 
-            if (canContinue) {
-              // Show "Continue →" when on selfies with enough photos
-              return (
-                <button
-                  type="button"
-                  onClick={onNavigateToCustomize}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary font-medium text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group"
-                >
-                  <span>{t('navigation.continue', { defaultValue: 'Continue' })}</span>
-                  <ChevronRightIcon className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
-                </button>
-              )
-            }
-
-            if (canGoBack) {
-              // Show "← Back" when on customize
-              return (
-                <button
-                  type="button"
-                  onClick={onNavigateToSelfies}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group"
-                >
-                  <ChevronLeftIcon className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" strokeWidth={2.5} />
-                  <span>{t('navigation.back', { defaultValue: 'Back' })}</span>
-                </button>
-              )
-            }
-
-            // Default: show vertical separator
-            return <div className="w-[2px] bg-gray-300 rounded-full my-1" />
-          })()}
-
-          {/* SECTION 2: Customization */}
-          <div className="flex flex-col items-center gap-1 px-4">
-            {/* Section label on top */}
-            <span className={`text-xs font-semibold tracking-wide uppercase ${
-              currentStep === 'customize' || currentStep === 'intro'
-                ? 'text-gray-900'
-                : customizeState === 'complete'
-                  ? 'text-gray-500'
-                  : customizeState === 'locked'
-                    ? 'text-gray-300'
-                    : 'text-gray-400'
-            }`}>
-              {t('customize.label')}
-            </span>
-            {/* Icons row: info icon connected to action icon */}
-            <div className="flex items-center gap-0">
-              {onNavigateToCustomizationIntro && (
-                <>
-                  {renderInfoIcon(
-                    isCustomizationIntroHidden,
-                    onNavigateToCustomizationIntro,
-                    t('infoIcons.customizationIntro', { default: 'Customization guide' }),
-                    currentStep === 'intro'
-                  )}
-                  {/* Connector line */}
-                  <div className="w-4 h-[2px] bg-gray-300 mx-1" />
-                </>
-              )}
-              {/* Step 2: Customize (icon only) */}
-              {renderStep(
-                t('customize.label'),
-                getCustomizeStatusText(),
-                customizeState,
-                handleCustomizeClick,
-                currentStep === 'customize',
-                getTooltipText(customizeState, 'customize'),
-                2,
-                false
-              )}
-            </div>
-            {/* Status text and progress dots below */}
-            <div className="flex flex-col items-center gap-1">
-              <span className={`text-[10px] font-medium ${
-                currentStep === 'customize' && customizeState === 'complete'
-                  ? 'text-brand-secondary'
-                  : currentStep === 'customize'
-                    ? 'text-brand-primary'
-                    : customizeState === 'complete'
-                      ? 'text-gray-400'
-                      : customizeState === 'locked'
-                        ? 'text-gray-300'
-                        : 'text-gray-400'
-              }`}>
-                {getCustomizeStatusText()}
-              </span>
-              {renderCustomizationDots()}
-            </div>
+          {/* Connector */}
+          <div className="flex items-center self-center pt-4">
+            <div className="w-8 h-[2px] bg-gray-200 rounded-full" />
           </div>
 
-          {/* Vertical separator */}
-          <div className="w-[2px] bg-gray-300 rounded-full my-1" />
-
-          {/* SECTION 3: Generate */}
-          <div className="flex flex-col items-center justify-center px-4">
-            {/* Step 3: Generate button */}
-            {renderStep(
-              t('generate.label'),
-              getGenerateStatusText(),
-              generateState,
-              handleGenerateClick,
-              false,
-              getTooltipText(generateState, 'generate'),
-              3
-            )}
-          </div>
+          {/* GENERATE */}
+          {renderProgressSection(
+            t('generate.label'),
+            getGenerateStatusText(),
+            generateState,
+            () => {
+              if (!hasEnoughCredits && onBuyCredits) {
+                onBuyCredits()
+              } else if (generateState === 'ready') {
+                onGenerate()
+              }
+            },
+            false
+          )}
         </div>
       </div>
     </div>
   )
 
   // Use portal to render outside of any parent stacking contexts
-  // This ensures fixed positioning works correctly
   if (!mounted) return null
   return createPortal(dockContent, document.body)
 }

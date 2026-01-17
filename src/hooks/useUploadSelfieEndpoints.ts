@@ -25,27 +25,32 @@ export function useUploadSelfieEndpoints(
   const tokenType = useMemo<TokenType>(() => providedTokenType ?? detectedTokenType, [providedTokenType, detectedTokenType])
 
   // Detect token type on mount (only if not provided)
+  // Uses parallel validation for both token types to eliminate waterfall
   useEffect(() => {
     // Skip detection if tokenType was provided
     if (providedTokenType) return
 
     async function detectTokenType() {
       try {
-        // Try handoff token validation first (more likely in this context)
-        const handoffResponse = await fetch(`/api/mobile-handoff/validate?token=${token}`)
-        if (handoffResponse.ok) {
+        // Validate both token types in parallel to eliminate waterfall
+        const [handoffResult, inviteResult] = await Promise.allSettled([
+          fetch(`/api/mobile-handoff/validate?token=${token}`),
+          fetch('/api/team/invites/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+          })
+        ])
+
+        // Check handoff result first (more common in this context)
+        if (handoffResult.status === 'fulfilled' && handoffResult.value.ok) {
           setDetectedTokenType('handoff')
           setIsReady(true)
           return
         }
 
-        // Try invite token validation
-        const inviteResponse = await fetch('/api/team/invites/validate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token })
-        })
-        if (inviteResponse.ok) {
+        // Check invite result
+        if (inviteResult.status === 'fulfilled' && inviteResult.value.ok) {
           setDetectedTokenType('invite')
           setIsReady(true)
           return

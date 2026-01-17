@@ -82,10 +82,10 @@ const SelfieTypeBadgeSmall = ({
       <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold shadow-sm backdrop-blur-sm ${colorClass}`}>
         {label}
       </span>
-      {lightingQuality && (
+      {lightingQuality === 'poor' && (
         <QualityBadge quality={lightingQuality} icon="sun" />
       )}
-      {backgroundQuality && (
+      {backgroundQuality === 'poor' && (
         <QualityBadge quality={backgroundQuality} icon="layers" />
       )}
     </div>

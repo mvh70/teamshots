@@ -53,12 +53,12 @@ export async function POST(request: NextRequest) {
     // Note: With seats-based pricing, team size is managed by seat availability
     // VIP tier has unlimited team members
 
-    // Check if person already exists (from previous acceptance before token reset)
+    // Check if person already exists (from previous acceptance before token reset, or orphaned person with same token)
     let person
     if (invite.personId && invite.person) {
-      // Person already exists - reuse it (token was reset but personId was kept)
+      // Person already exists linked to invite - reuse it
       person = invite.person
-      
+
       // Update invite token on person if needed
       if (person.inviteToken !== token) {
         await prisma.person.update({
@@ -67,57 +67,106 @@ export async function POST(request: NextRequest) {
         })
       }
     } else {
-      // Create new person record using firstName from invite
-      person = await prisma.person.create({
-        data: {
-          firstName: invite.firstName,
-          lastName: null, // No last name required for team invites
-          email: invite.email,
-          teamId: invite.teamId,
-          inviteToken: token,
-          onboardingState: JSON.stringify({
-            state: 'not_started',
-            completedTours: [],
-            pendingTours: [],
-            lastUpdated: new Date().toISOString(),
-          }),
-        }
+      // Check if there's an orphaned person with this token (from a previous partial accept)
+      const existingPerson = await prisma.person.findUnique({
+        where: { inviteToken: token }
       })
 
-      // Transfer credits from team to person (only for new persons)
-      // This is the NEW credit model: credits are actually transferred, not just marked
-      const useSeatsModel = await isSeatsBasedTeam(invite.teamId)
-
-      if (useSeatsModel) {
-        // Seats model: transfer credits from team pool to person
-        await transferCreditsFromTeamToPerson(
-          invite.teamId,
-          person.id,
-          invite.creditsAllocated,
-          invite.id,
-          `Seat credits for ${invite.email}`
-        )
-
-        // Note: activeSeats is calculated dynamically from TeamInvite records
-        // No need to increment a counter - avoids drift
-
-        Logger.info('Seat assigned on invite acceptance', {
-          teamId: invite.teamId,
+      if (existingPerson) {
+        // Reuse existing person - this handles the case where person was created
+        // but invite wasn't updated (partial failure recovery)
+        person = existingPerson
+        Logger.info('Reusing existing person with matching inviteToken', {
           personId: person.id,
-          creditsTransferred: invite.creditsAllocated
+          inviteId: invite.id
         })
+
+        // Check if credits were already transferred (person has credit balance)
+        const { getPersonCreditBalance } = await import('@/domain/credits/credits')
+        const existingBalance = await getPersonCreditBalance(person.id)
+
+        if (existingBalance === 0) {
+          // Credits weren't transferred yet - do it now
+          const useSeatsModel = await isSeatsBasedTeam(invite.teamId)
+
+          if (useSeatsModel) {
+            await transferCreditsFromTeamToPerson(
+              invite.teamId,
+              person.id,
+              invite.creditsAllocated,
+              invite.id,
+              `Seat credits for ${invite.email} (recovery)`
+            )
+            Logger.info('Credits transferred on orphaned person recovery', {
+              teamId: invite.teamId,
+              personId: person.id,
+              creditsTransferred: invite.creditsAllocated
+            })
+          } else {
+            await prisma.creditTransaction.create({
+              data: {
+                credits: invite.creditsAllocated,
+                type: 'invite_allocated',
+                description: `Credits allocated from team invite to ${invite.email} (recovery)`,
+                personId: person.id,
+                teamInviteId: invite.id
+              }
+            })
+          }
+        }
       } else {
-        // Legacy credits model: credits were already deducted on invite creation
-        // Just mark as allocated (no actual transfer needed)
-        await prisma.creditTransaction.create({
+        // Create new person record using firstName from invite
+        person = await prisma.person.create({
           data: {
-            credits: invite.creditsAllocated,
-            type: 'invite_allocated',
-            description: `Credits allocated from team invite to ${invite.email}`,
-            personId: person.id,
-            teamInviteId: invite.id
+            firstName: invite.firstName,
+            lastName: null, // No last name required for team invites
+            email: invite.email,
+            teamId: invite.teamId,
+            inviteToken: token,
+            onboardingState: JSON.stringify({
+              state: 'not_started',
+              completedTours: [],
+              pendingTours: [],
+              lastUpdated: new Date().toISOString(),
+            }),
           }
         })
+
+        // Transfer credits from team to person (only for new persons)
+        // This is the NEW credit model: credits are actually transferred, not just marked
+        const useSeatsModel = await isSeatsBasedTeam(invite.teamId)
+
+        if (useSeatsModel) {
+          // Seats model: transfer credits from team pool to person
+          await transferCreditsFromTeamToPerson(
+            invite.teamId,
+            person.id,
+            invite.creditsAllocated,
+            invite.id,
+            `Seat credits for ${invite.email}`
+          )
+
+          // Note: activeSeats is calculated dynamically from TeamInvite records
+          // No need to increment a counter - avoids drift
+
+          Logger.info('Seat assigned on invite acceptance', {
+            teamId: invite.teamId,
+            personId: person.id,
+            creditsTransferred: invite.creditsAllocated
+          })
+        } else {
+          // Legacy credits model: credits were already deducted on invite creation
+          // Just mark as allocated (no actual transfer needed)
+          await prisma.creditTransaction.create({
+            data: {
+              credits: invite.creditsAllocated,
+              type: 'invite_allocated',
+              description: `Credits allocated from team invite to ${invite.email}`,
+              personId: person.id,
+              teamInviteId: invite.id
+            }
+          })
+        }
       }
     }
 
@@ -144,7 +193,24 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    Logger.error('Error accepting invite', { error: error instanceof Error ? error.message : String(error) })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    Logger.error('Error accepting invite', { error: errorMessage })
+
+    // Return meaningful error messages for known cases
+    if (errorMessage.includes('Insufficient team credits')) {
+      return NextResponse.json({
+        error: 'Your team admin needs to purchase more seats before you can join.',
+        errorCode: 'INSUFFICIENT_TEAM_CREDITS'
+      }, { status: 400 })
+    }
+
+    if (errorMessage.includes('Unique constraint')) {
+      return NextResponse.json({
+        error: 'This invite has already been processed. Please try refreshing the page.',
+        errorCode: 'DUPLICATE_INVITE'
+      }, { status: 409 })
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

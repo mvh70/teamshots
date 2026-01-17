@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import {
   LockClosedIcon,
@@ -25,22 +26,81 @@ import {
   BackgroundSettings
 } from '@/types/photo-style'
 import { userChoice, predefined, hasValue, isUserChoice } from '@/domain/style/elements/base/element-types'
-import BackgroundSelector from '@/domain/style/elements/background/BackgroundSelector'
-import ClothingSelector from '@/domain/style/elements/clothing/ClothingSelector'
-import ClothingColorSelector from '@/domain/style/elements/clothing-colors/ClothingColorSelector'
-import { CustomClothingSelector } from '@/domain/style/elements/custom-clothing/CustomClothingSelector'
-import ShotTypeSelector from '@/domain/style/elements/shot-type/ShotTypeSelector'
-import BrandingSelector from '@/domain/style/elements/branding/BrandingSelector'
+
+// Dynamic imports for heavy selector components - reduces initial bundle size
+const BackgroundSelector = dynamic(() => import('@/domain/style/elements/background/BackgroundSelector'), {
+  loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" />
+})
+const ClothingSelector = dynamic(() => import('@/domain/style/elements/clothing/ClothingSelector'), {
+  loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" />
+})
+const ClothingColorSelector = dynamic(() => import('@/domain/style/elements/clothing-colors/ClothingColorSelector'), {
+  loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" />
+})
+const CustomClothingSelector = dynamic(
+  () => import('@/domain/style/elements/custom-clothing/CustomClothingSelector').then(mod => ({ default: mod.CustomClothingSelector })),
+  { loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" /> }
+)
+const ShotTypeSelector = dynamic(() => import('@/domain/style/elements/shot-type/ShotTypeSelector'), {
+  loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" />
+})
+const BrandingSelector = dynamic(() => import('@/domain/style/elements/branding/BrandingSelector'), {
+  loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" />
+})
+// ExpressionSelector and PoseSelector are imported directly (not dynamic) to prevent
+// flickering when changing settings - they show images that need stable rendering
 import ExpressionSelector from '@/domain/style/elements/expression/ExpressionSelector'
-import IndustrySelector from '@/domain/style/elements/industry/IndustrySelector'
 import PoseSelector from '@/domain/style/elements/pose/PoseSelector'
+const IndustrySelector = dynamic(() => import('@/domain/style/elements/industry/IndustrySelector'), {
+  loading: () => <div className="animate-pulse bg-gray-100 rounded-lg h-32" />
+})
 import { getPackageConfig } from '@/domain/style/packages'
 import { defaultAspectRatioForShot } from '@/domain/style/elements/aspect-ratio/config'
+
+// Extracted memoized component to prevent recreation on every render
+interface LockedSectionsTeaserProps {
+  showToggles: boolean
+  lockedCount: number
+  hasCustomizedEditable: boolean
+  t: ReturnType<typeof useTranslations>
+}
+
+const LockedSectionsTeaser = React.memo(function LockedSectionsTeaser({
+  showToggles,
+  lockedCount,
+  hasCustomizedEditable,
+  t
+}: LockedSectionsTeaserProps) {
+  if (showToggles || lockedCount === 0 || hasCustomizedEditable) return null
+
+  return (
+    <div className="bg-gradient-to-r from-gray-50 via-blue-50 to-purple-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center shadow-sm">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-14 h-14 bg-gradient-to-br from-gray-400 via-blue-400 to-purple-400 rounded-full flex items-center justify-center shadow-md">
+          <LockClosedIcon className="h-7 w-7 text-white" />
+        </div>
+        <div>
+          <p className="text-base font-bold text-gray-900 mb-2">
+            {t('lockedSections.teaser.title', {
+              default: `${lockedCount} more settings configured`,
+              count: lockedCount
+            })}
+          </p>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            {t('lockedSections.teaser.subtitle', {
+              default: 'Customize the sections above to see what else has been set'
+            })}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+})
 import { resolveShotType } from '@/domain/style/elements/shot-type/config'
 import type { KnownClothingStyle } from '@/domain/style/elements/clothing/config'
 import { getWardrobeExclusions } from '@/domain/style/elements/clothing/prompt'
 import type { ClothingColorKey } from '@/domain/style/elements/clothing-colors/types'
-import { CardGrid, Tooltip } from '@/components/ui'
+import { CardGrid, Tooltip, ErrorBoundary } from '@/components/ui'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import { buildCustomizationStepIndicatorWithSelfie, CustomizationStepsMeta } from '@/lib/customizationSteps'
 import { useCustomizationWizard } from '@/hooks/useCustomizationWizard'
@@ -69,6 +129,12 @@ interface PhotoStyleSettingsProps {
   topHeader?: React.ReactNode
   /** Category key to highlight with pulsing border (desktop only) */
   highlightedField?: string | null
+  /** When provided, exposes navigation methods to parent via callback */
+  onNavigationReady?: (methods: { goNext: () => void; goPrev: () => void; goToStep: (index: number) => void }) => void
+  /** Hide inline navigation arrows (when parent provides external navigation in sticky footer) */
+  hideInlineNavigation?: boolean
+  /** Called when step indicator props change (for external navigation UI) */
+  onStepIndicatorChange?: (props: { current: number; total: number; lockedSteps?: number[]; totalWithLocked?: number; currentAllStepsIndex?: number; visitedEditableSteps?: number[] } | undefined) => void
 }
 
 export type MobileStep = {
@@ -109,7 +175,10 @@ export default function PhotoStyleSettings({
   onSwipeBack,
   onStepMetaChange,
   topHeader,
-  highlightedField
+  highlightedField,
+  onNavigationReady,
+  hideInlineNavigation = false,
+  onStepIndicatorChange
 }: PhotoStyleSettingsProps) {
   const t = useTranslations('customization.photoStyle')
   const isSwipeEnabled = useSwipeEnabled()
@@ -156,66 +225,63 @@ export default function PhotoStyleSettings({
   // Initialize from persisted state
   const [visitedEditableSteps, setVisitedEditableSteps] = React.useState<Set<number>>(() => new Set(persistedVisitedSteps))
 
-  // Compute resolved clothing colors (no memoization to ensure fresh values)
+  // Compute resolved clothing colors with memoization
   // Priority: user-set colors (from session) > package defaults > fallbacks
-  const defaults = packageDefaults.clothingColors
-  const current = value.clothingColors
-  const defaultColors = defaults && hasValue(defaults) ? defaults.value : undefined
-  const currentColors = current && hasValue(current) ? current.value : undefined
+  const resolvedClothingColors = React.useMemo<ClothingColorSettings>(() => {
+    const defaults = packageDefaults.clothingColors
+    const current = value.clothingColors
+    const defaultColors = defaults && hasValue(defaults) ? defaults.value : undefined
+    const currentColors = current && hasValue(current) ? current.value : undefined
 
-  // Fallback colors - used when colors are missing or invalid
-  // These provide sensible initial values for the clothing preview
-  const fallbackColors = {
-    topLayer: '#2C3E50', // Dark charcoal - professional jacket/blazer
-    baseLayer: '#F8F9FA', // Light gray/off-white - shirt
-    bottom: '#1A1A2E', // Dark navy - trousers
-    shoes: '#2D2D2D' // Dark gray - dress shoes
-  }
-
-  // Helper to check if a color is valid for CSS (hex color or ColorValue object with hex)
-  // Package defaults may have invalid color names like 'Dark red' (with space)
-  const isValidColor = (color: unknown): boolean => {
-    if (!color) return false
-    if (typeof color === 'string') return color.startsWith('#')
-    if (typeof color === 'object' && color !== null && 'hex' in color) {
-      const hex = (color as { hex: string }).hex
-      return typeof hex === 'string' && hex.startsWith('#')
+    // Fallback colors - used when colors are missing or invalid
+    const fallbackColors = {
+      topLayer: '#2C3E50', // Dark charcoal - professional jacket/blazer
+      baseLayer: '#F8F9FA', // Light gray/off-white - shirt
+      bottom: '#1A1A2E', // Dark navy - trousers
+      shoes: '#2D2D2D' // Dark gray - dress shoes
     }
-    return false
-  }
 
-  // Helper to get color with fallback for invalid colors
-  type ColorType = string | { hex: string; name?: string }
-  const getValidColor = (
-    key: 'topLayer' | 'baseLayer' | 'bottom' | 'shoes',
-    userColor: unknown,
-    defaultColor: unknown
-  ): ColorType => {
-    if (userColor && isValidColor(userColor)) return userColor as ColorType
-    if (defaultColor && isValidColor(defaultColor)) return defaultColor as ColorType
-    return fallbackColors[key]
-  }
-
-  let resolvedClothingColors: ClothingColorSettings
-
-  // Build colors with fallback for each property that's invalid
-  const mergedColors = {
-    topLayer: getValidColor('topLayer', currentColors?.topLayer, defaultColors?.topLayer),
-    baseLayer: getValidColor('baseLayer', currentColors?.baseLayer, defaultColors?.baseLayer),
-    bottom: getValidColor('bottom', currentColors?.bottom, defaultColors?.bottom),
-    shoes: getValidColor('shoes', currentColors?.shoes, defaultColors?.shoes)
-  }
-
-  // Preserve the mode from current settings if they exist
-  if (current) {
-    if (isUserChoice(current)) {
-      resolvedClothingColors = userChoice(mergedColors)
-    } else {
-      resolvedClothingColors = predefined(mergedColors)
+    // Helper to check if a color is valid for CSS (hex color or ColorValue object with hex)
+    const isValidColor = (color: unknown): boolean => {
+      if (!color) return false
+      if (typeof color === 'string') return color.startsWith('#')
+      if (typeof color === 'object' && color !== null && 'hex' in color) {
+        const hex = (color as { hex: string }).hex
+        return typeof hex === 'string' && hex.startsWith('#')
+      }
+      return false
     }
-  } else {
-    resolvedClothingColors = userChoice(mergedColors)
-  }
+
+    // Helper to get color with fallback for invalid colors
+    type ColorType = string | { hex: string; name?: string }
+    const getValidColor = (
+      key: 'topLayer' | 'baseLayer' | 'bottom' | 'shoes',
+      userColor: unknown,
+      defaultColor: unknown
+    ): ColorType => {
+      if (userColor && isValidColor(userColor)) return userColor as ColorType
+      if (defaultColor && isValidColor(defaultColor)) return defaultColor as ColorType
+      return fallbackColors[key]
+    }
+
+    // Build colors with fallback for each property that's invalid
+    const mergedColors = {
+      topLayer: getValidColor('topLayer', currentColors?.topLayer, defaultColors?.topLayer),
+      baseLayer: getValidColor('baseLayer', currentColors?.baseLayer, defaultColors?.baseLayer),
+      bottom: getValidColor('bottom', currentColors?.bottom, defaultColors?.bottom),
+      shoes: getValidColor('shoes', currentColors?.shoes, defaultColors?.shoes)
+    }
+
+    // Preserve the mode from current settings if they exist
+    if (current) {
+      if (isUserChoice(current)) {
+        return userChoice(mergedColors)
+      } else {
+        return predefined(mergedColors)
+      }
+    }
+    return userChoice(mergedColors)
+  }, [packageDefaults.clothingColors, value.clothingColors])
 
   // Compute which clothing color pickers to hide based on shot type and clothing style
   const excludedClothingColors = React.useMemo<ClothingColorKey[]>(() => {
@@ -561,19 +627,11 @@ export default function PhotoStyleSettings({
                   >
                     <QuestionMarkCircleIcon className="h-4 w-4 text-gray-400 hover:text-brand-primary transition-all duration-200 cursor-help" />
                   </Tooltip>
-                  {/* Status badge - hide when showToggles is true (admin setting style) */}
-                  {!showToggles && (
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0 shadow-sm transition-all duration-200 ${
-                      isUserChoice ? 'bg-gradient-to-r from-purple-100 to-blue-100 text-purple-800 border border-purple-200/50' :
-                      isLockedByPreset ? 'bg-gradient-to-r from-red-50 to-orange-50 text-red-700 border border-red-200' :
-                      'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 border border-gray-200'
-                    }`}>
-                      {isUserChoice ? (
-                        <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                      ) : (
-                        <LockClosedIcon className={`h-3.5 w-3.5 ${isLocked ? 'text-red-600' : 'text-gray-500'}`} aria-hidden="true" />
-                      )}
-                      {chipLabel}
+                  {/* Status badge - only show for locked items to reduce visual noise */}
+                  {!showToggles && isLockedByPreset && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0 shadow-sm transition-all duration-200 bg-gradient-to-r from-red-50 to-orange-50 text-red-700 border border-red-200">
+                      <LockClosedIcon className="h-3.5 w-3.5 text-red-600" aria-hidden="true" />
+                      {t('legend.lockedChip', { default: 'Locked' })}
                     </span>
                   )}
                 </div>
@@ -624,116 +682,124 @@ export default function PhotoStyleSettings({
         </div>
 
         {/* Category Settings */}
-        <div className={`${
-          isPredefined
-            ? 'p-3 md:p-5'
-            : 'p-3 md:p-5'
-        }`}>
-          {category.key === 'background' && (
-            <BackgroundSelector
-              value={value.background || userChoice()}
-              onChange={(settings) => handleCategorySettingsChange('background', settings)}
-              isPredefined={!showToggles && readonlyPredefined && isPredefined}
-              isDisabled={!showToggles && readonlyPredefined && isPredefined}
-              availableBackgrounds={pkg.availableBackgrounds}
-              showHeader={false}
-              token={token}
-            />
-          )}
-          
-          {category.key === 'clothing' && (
-            <ClothingSelector
-              value={value.clothing || userChoice()}
-              onChange={(settings) => handleCategorySettingsChange('clothing', settings)}
-              clothingColors={resolvedClothingColors}
-              excludeColors={excludedClothingColors}
-              availableStyles={pkg.availableClothingStyles}
-              isPredefined={!showToggles && readonlyPredefined && isPredefined}
-              isDisabled={!showToggles && readonlyPredefined && isPredefined}
-            />
-          )}
-
-          {category.key === 'clothingColors' && (
-            <ClothingColorSelector
-              value={value.clothingColors || userChoice()}
-              onChange={(settings) => handleCategorySettingsChange('clothingColors', settings)}
-              isDisabled={!showToggles && readonlyPredefined && isPredefined}
-              isPredefined={!showToggles && readonlyPredefined && isPredefined}
-              showPredefinedBadge={isPredefined}
-              showHeader={false}
-              excludeColors={excludedClothingColors}
-              customClothingColors={value.customClothing?.colors}
-              defaultDisplayColors={hasValue(resolvedClothingColors) ? resolvedClothingColors.value : undefined}
-            />
-          )}
-
-          {category.key === 'customClothing' && (
-            <CustomClothingSelector
-              value={value.customClothing || { type: 'predefined' }}
-              onChange={(settings) => handleCategorySettingsChange('customClothing', settings)}
-              disabled={!showToggles && readonlyPredefined && isPredefined}
-              mode={showToggles ? 'admin' : 'user'}
-              token={token}
-            />
-          )}
-
-          {category.key === 'shotType' && (
-            <ShotTypeSelector
-              value={value.shotType || userChoice()}
-              onChange={(settings) => handleCategorySettingsChange('shotType', settings)}
-              isPredefined={!showToggles && readonlyPredefined && isPredefined}
-              isDisabled={!showToggles && readonlyPredefined && isPredefined}
-            />
-          )}
-          
-          {category.key === 'branding' && (
-            <BrandingSelector
-              value={value.branding || userChoice()}
-              onChange={(settings) => handleCategorySettingsChange('branding', settings)}
-              isPredefined={!showToggles && readonlyPredefined && isPredefined}
-              isDisabled={!showToggles && readonlyPredefined && isPredefined}
-              token={token}
-            />
-          )}
-          
-          {category.key === 'expression' && (
-            <ExpressionSelector
-              value={value.expression || userChoice()}
-              onChange={(settings) => handleCategorySettingsChange('expression', settings)}
-              isPredefined={!showToggles && readonlyPredefined && isPredefined}
-              isDisabled={!showToggles && readonlyPredefined && isPredefined}
-              availableExpressions={pkg.availableExpressions}
-            />
-          )}
-          
-          {category.key === 'pose' && (
-            <PoseSelector
-              value={value.pose || { type: 'user-choice' }}
-              onChange={(settings) => handleCategorySettingsChange('pose', settings)}
-              isPredefined={!showToggles && readonlyPredefined && isPredefined}
-              isDisabled={!showToggles && readonlyPredefined && isPredefined}
-              availablePoses={pkg.availablePoses}
-            />
-          )}
-
-          {category.key === 'industry' && (
-            <IndustrySelector
-              value={value.industry || { mode: 'user-choice', value: undefined }}
-              onChange={(settings) => handleCategorySettingsChange('industry', settings)}
-              isPredefined={!showToggles && readonlyPredefined && isPredefined}
-              isDisabled={!showToggles && readonlyPredefined && isPredefined}
-            />
-          )}
-
-          {/* Placeholder for other categories */}
-          {!['background', 'clothing', 'clothingColors', 'customClothing', 'shotType', 'branding', 'expression', 'pose', 'industry'].includes(category.key) && (
-            <div className={`text-center py-8 text-gray-500 ${isUserChoice ? 'pointer-events-none' : ''}`}>
-              <p className="text-sm">
-                {t('comingSoon', { default: 'Settings for this category coming soon' })}
-              </p>
+        <ErrorBoundary
+          fallback={
+            <div className="p-5 text-center">
+              <p className="text-sm text-gray-500">{t('errors.loadFailed', { default: 'Failed to load settings' })}</p>
             </div>
-          )}
-        </div>
+          }
+        >
+          <div className={`${
+            isPredefined
+              ? 'p-3 md:p-5'
+              : 'p-3 md:p-5'
+          }`}>
+            {category.key === 'background' && (
+              <BackgroundSelector
+                value={value.background || userChoice()}
+                onChange={(settings) => handleCategorySettingsChange('background', settings)}
+                isPredefined={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                availableBackgrounds={pkg.availableBackgrounds}
+                showHeader={false}
+                token={token}
+              />
+            )}
+
+            {category.key === 'clothing' && (
+              <ClothingSelector
+                value={value.clothing || userChoice()}
+                onChange={(settings) => handleCategorySettingsChange('clothing', settings)}
+                clothingColors={resolvedClothingColors}
+                excludeColors={excludedClothingColors}
+                availableStyles={pkg.availableClothingStyles}
+                isPredefined={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+              />
+            )}
+
+            {category.key === 'clothingColors' && (
+              <ClothingColorSelector
+                value={value.clothingColors || userChoice()}
+                onChange={(settings) => handleCategorySettingsChange('clothingColors', settings)}
+                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                isPredefined={!showToggles && readonlyPredefined && isPredefined}
+                showPredefinedBadge={isPredefined}
+                showHeader={false}
+                excludeColors={excludedClothingColors}
+                customClothingColors={value.customClothing?.colors}
+                defaultDisplayColors={hasValue(resolvedClothingColors) ? resolvedClothingColors.value : undefined}
+              />
+            )}
+
+            {category.key === 'customClothing' && (
+              <CustomClothingSelector
+                value={value.customClothing || { type: 'predefined' }}
+                onChange={(settings) => handleCategorySettingsChange('customClothing', settings)}
+                disabled={!showToggles && readonlyPredefined && isPredefined}
+                mode={showToggles ? 'admin' : 'user'}
+                token={token}
+              />
+            )}
+
+            {category.key === 'shotType' && (
+              <ShotTypeSelector
+                value={value.shotType || userChoice()}
+                onChange={(settings) => handleCategorySettingsChange('shotType', settings)}
+                isPredefined={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+              />
+            )}
+
+            {category.key === 'branding' && (
+              <BrandingSelector
+                value={value.branding || userChoice()}
+                onChange={(settings) => handleCategorySettingsChange('branding', settings)}
+                isPredefined={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                token={token}
+              />
+            )}
+
+            {category.key === 'expression' && (
+              <ExpressionSelector
+                value={value.expression || userChoice()}
+                onChange={(settings) => handleCategorySettingsChange('expression', settings)}
+                isPredefined={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                availableExpressions={pkg.availableExpressions}
+              />
+            )}
+
+            {category.key === 'pose' && (
+              <PoseSelector
+                value={value.pose || { type: 'user-choice' }}
+                onChange={(settings) => handleCategorySettingsChange('pose', settings)}
+                isPredefined={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+                availablePoses={pkg.availablePoses}
+              />
+            )}
+
+            {category.key === 'industry' && (
+              <IndustrySelector
+                value={value.industry || { mode: 'user-choice', value: undefined }}
+                onChange={(settings) => handleCategorySettingsChange('industry', settings)}
+                isPredefined={!showToggles && readonlyPredefined && isPredefined}
+                isDisabled={!showToggles && readonlyPredefined && isPredefined}
+              />
+            )}
+
+            {/* Placeholder for other categories */}
+            {!['background', 'clothing', 'clothingColors', 'customClothing', 'shotType', 'branding', 'expression', 'pose', 'industry'].includes(category.key) && (
+              <div className={`text-center py-8 text-gray-500 ${isUserChoice ? 'pointer-events-none' : ''}`}>
+                <p className="text-sm">
+                  {t('comingSoon', { default: 'Settings for this category coming soon' })}
+                </p>
+              </div>
+            )}
+          </div>
+        </ErrorBoundary>
       </div>
     )
   }
@@ -803,12 +869,9 @@ export default function PhotoStyleSettings({
     })
   }, [currentMobileStep, allNumberedSteps])
 
-  // Track visited "clothingColors" step - only this step becomes "done" on visit
-  // Other steps become "done" when the user actually makes a selection
+  // Track visited editable steps - mark as visited when user navigates to them
   React.useEffect(() => {
-    if (currentAllStepsIndex >= 0 && 
-        currentMobileStep?.type === 'editable' && 
-        currentMobileStep?.category?.key === 'clothingColors') {
+    if (currentAllStepsIndex >= 0 && currentMobileStep?.type === 'editable') {
       setVisitedEditableSteps(prev => {
         if (prev.has(currentAllStepsIndex)) return prev
         const next = new Set(prev)
@@ -816,75 +879,13 @@ export default function PhotoStyleSettings({
         return next
       })
     }
-  }, [currentAllStepsIndex, currentMobileStep?.type, currentMobileStep?.category?.key])
+  }, [currentAllStepsIndex, currentMobileStep?.type])
 
-  // Track which editable steps have been customized (value differs from default)
-  // This determines the "done" (green) state for all steps including clothingColors
-  const customizedEditableStepIndices = React.useMemo(() => {
-    const customized = new Set<number>()
-    editableNumberedSteps.forEach((step) => {
-      let isCustomized = false
-
-      if (step.type === 'custom') {
-        // Custom steps are considered "set" if they exist
-        isCustomized = true
-      } else if (step.category) {
-        const categorySettings = (value as Record<string, unknown>)[step.category.key]
-        const defaultSetting = (packageDefaults as Record<string, unknown>)[step.category.key]
-
-        // Compare against originalContextSettings if available (more accurate for team contexts)
-        const comparisonSetting = originalContextSettings
-          ? (originalContextSettings as Record<string, unknown>)[step.category.key]
-          : defaultSetting
-
-        // For clothingColors, check if the value property has actual color data
-        if (step.category.key === 'clothingColors') {
-          const colorsValue = categorySettings && hasValue(categorySettings as ClothingColorSettings)
-            ? (categorySettings as ClothingColorSettings).value
-            : null
-          // Mark as customized if colors have been explicitly set (even if matching defaults)
-          isCustomized = colorsValue !== null && Object.keys(colorsValue || {}).length > 0
-        } else if (categorySettings && comparisonSetting) {
-          isCustomized = JSON.stringify(categorySettings) !== JSON.stringify(comparisonSetting)
-        } else if (categorySettings && !comparisonSetting) {
-          // Has a setting but no comparison - check type
-          const settingType = (categorySettings as { type?: string; style?: string }).type ||
-                             (categorySettings as { type?: string; style?: string }).style
-          isCustomized = settingType !== 'user-choice' && settingType !== undefined
-        }
-      }
-
-      if (isCustomized) {
-        const allStepsIdx = allNumberedSteps.findIndex(s => {
-          if (step.type === 'custom' && s.type === 'custom') {
-            return step.custom?.id === s.custom?.id
-          }
-          if (step.category && s.category) {
-            return step.category.key === s.category.key
-          }
-          return false
-        })
-        if (allStepsIdx >= 0) {
-          customized.add(allStepsIdx)
-        }
-      }
-    })
-    return customized
-  }, [editableNumberedSteps, allNumberedSteps, value, packageDefaults, originalContextSettings])
-
-  // Combine visited (for clothingColors) and customized (for other steps) to get all "done" steps
-  const doneEditableStepIndices = React.useMemo(() => {
-    const done = new Set<number>()
-    visitedEditableSteps.forEach(idx => done.add(idx))
-    customizedEditableStepIndices.forEach(idx => done.add(idx))
-    return done
-  }, [visitedEditableSteps, customizedEditableStepIndices])
-
-  // Persist done steps to session storage whenever they change
-  // This ensures the dots in FlowProgressDock are updated correctly
+  // Persist visited steps to session storage whenever they change
+  // Only persist actually visited steps, not steps with pre-configured values
   React.useEffect(() => {
-    setPersistentVisitedSteps(Array.from(doneEditableStepIndices))
-  }, [doneEditableStepIndices, setPersistentVisitedSteps])
+    setPersistentVisitedSteps(Array.from(visitedEditableSteps))
+  }, [visitedEditableSteps, setPersistentVisitedSteps])
 
   // Get the current step's position in editable steps (1-indexed), or 0 if not a numbered step
   // When on a locked step, show the last editable step number we completed
@@ -985,7 +986,7 @@ export default function PhotoStyleSettings({
     return buildCustomizationStepIndicatorWithSelfie(customizationStepMeta, {
       currentEditableIndex,
       currentAllStepsIndex: currentAllStepsIndex >= 0 ? currentAllStepsIndex : undefined,
-      visitedEditableSteps: Array.from(doneEditableStepIndices)
+      visitedEditableSteps: Array.from(visitedEditableSteps)
     })
   }, [
     isNumberedStep,
@@ -993,7 +994,7 @@ export default function PhotoStyleSettings({
     currentNumberedStepIndex,
     customizationStepMeta,
     currentAllStepsIndex,
-    doneEditableStepIndices
+    visitedEditableSteps
   ])
 
   // Map step indicator index (0=selfie, 1+=customization) to mobileSteps index
@@ -1054,35 +1055,23 @@ export default function PhotoStyleSettings({
     })
   }, [mobileSteps.length])
 
-  // Locked sections teaser component (Context B only)
-  const LockedSectionsTeaser = () => {
-    if (showToggles || currentLockedCategories.length === 0 || hasCustomizedEditable) return null
+  // Expose navigation methods to parent via callback
+  React.useEffect(() => {
+    if (onNavigationReady) {
+      onNavigationReady({
+        goNext: handleNextStep,
+        goPrev: handlePrevStep,
+        goToStep: handleDirectStepChange
+      })
+    }
+  }, [onNavigationReady, handleNextStep, handlePrevStep, handleDirectStepChange])
 
-    return (
-      <div className="bg-gradient-to-r from-gray-50 via-blue-50 to-purple-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center shadow-sm">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 bg-gradient-to-br from-gray-400 via-blue-400 to-purple-400 rounded-full flex items-center justify-center shadow-md">
-            <LockClosedIcon className="h-7 w-7 text-white" />
-          </div>
-          <div>
-            <p className="text-base font-bold text-gray-900 mb-2">
-              {t('lockedSections.teaser.title', { 
-                default: `${currentLockedCategories.length} more settings configured`,
-                count: currentLockedCategories.length 
-              })}
-            </p>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              {t('lockedSections.teaser.subtitle', { 
-                default: 'Customize the sections above to see what else has been set' 
-              })}
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-
+  // Expose step indicator props to parent for external navigation UI
+  React.useEffect(() => {
+    if (onStepIndicatorChange) {
+      onStepIndicatorChange(stepIndicatorProps)
+    }
+  }, [onStepIndicatorChange, stepIndicatorProps])
 
   return (
     <div className={`space-y-8 ${className}`}>
@@ -1109,7 +1098,9 @@ export default function PhotoStyleSettings({
                             ? currentMobileStep.custom.title
                             : t('mobile.banner.customize', { default: 'Customize {label}', label: currentMobileStep.category ? t(`categories.${currentMobileStep.category.key}.title`, { default: currentMobileStep.category.label }) : '' })
                       : t('sections.customizable', { default: 'Customize Your Style' }),
-                    step: stepIndicatorProps
+                    // Hide step indicator in header when external navigation is used (hideInlineNavigation)
+                    // The progress indicator is shown in the sticky footer instead
+                    step: hideInlineNavigation ? undefined : stepIndicatorProps
                   }}
                   fixedOnMobile={Boolean(topHeader)}
                 />
@@ -1153,8 +1144,8 @@ export default function PhotoStyleSettings({
                               renderCategoryCard(step.category)
                             ) : null}
                           </div>
-                          {/* Navigation controls - positioned directly below each card */}
-                          {isActiveStep && (
+                          {/* Navigation controls - positioned directly below each card (hidden when parent provides external nav) */}
+                          {isActiveStep && !hideInlineNavigation && (
                             <FlowNavigation
                               className="mt-4"
                               variant="both"
@@ -1207,7 +1198,12 @@ export default function PhotoStyleSettings({
             )}
 
             {!lockedSectionsVisible && currentLockedCategories.length > 0 && (
-              <LockedSectionsTeaser />
+              <LockedSectionsTeaser
+                showToggles={showToggles}
+                lockedCount={currentLockedCategories.length}
+                hasCustomizedEditable={hasCustomizedEditable}
+                t={t}
+              />
             )}
           </div>
 
@@ -1238,21 +1234,29 @@ export default function PhotoStyleSettings({
             
             {currentLockedCategories.length > 0 && (
               <>
-                {currentEditableCategories.length > 0 && <LockedSectionsTeaser />}
+                {currentEditableCategories.length > 0 && (
+                  <LockedSectionsTeaser
+                    showToggles={showToggles}
+                    lockedCount={currentLockedCategories.length}
+                    hasCustomizedEditable={hasCustomizedEditable}
+                    t={t}
+                  />
+                )}
                 
                 {lockedSectionsVisible && (
                   <div className="space-y-6">
-                    <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200 rounded-xl p-6 shadow-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                          <LockClosedIcon className="h-7 w-7 text-white" />
+                    {/* Team Presets Header - prominent section divider */}
+                    <div className="relative mt-8 pt-8 border-t-2 border-gray-200">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+                          <LockClosedIcon className="h-5 w-5 text-white" />
                         </div>
-                        <div className="flex-1">
-                          <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
-                            {t('sections.preset', { default: 'Team Preset Settings' })}
+                        <div>
+                          <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+                            {t('sections.preset', { default: 'Team presets' })}
                           </h2>
-                          <p className="text-sm md:text-base text-gray-700 leading-relaxed">
-                            {t('sections.presetDesc', { default: 'These settings are configured by your team admin' })}
+                          <p className="text-sm text-gray-500">
+                            {t('sections.presetDesc', { default: 'These are fixed for your team' })}
                           </p>
                         </div>
                       </div>

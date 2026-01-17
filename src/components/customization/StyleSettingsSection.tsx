@@ -24,6 +24,12 @@ interface StyleSettingsSectionProps {
   topHeader?: React.ReactNode
   /** Category key to highlight with pulsing border (desktop only) */
   highlightedField?: string | null
+  /** When provided, exposes navigation methods to parent via callback */
+  onNavigationReady?: Parameters<typeof PhotoStyleSettings>[0]['onNavigationReady']
+  /** Hide inline navigation arrows (when parent provides external navigation in sticky footer) */
+  hideInlineNavigation?: boolean
+  /** Called when step indicator props change (for external navigation UI) */
+  onStepIndicatorChange?: Parameters<typeof PhotoStyleSettings>[0]['onStepIndicatorChange']
 }
 
 export default function StyleSettingsSection({
@@ -45,7 +51,10 @@ export default function StyleSettingsSection({
   onSwipeBack,
   onStepMetaChange,
   topHeader,
-  highlightedField
+  highlightedField,
+  onNavigationReady,
+  hideInlineNavigation = false,
+  onStepIndicatorChange
 }: StyleSettingsSectionProps) {
   const content = (
     <>
@@ -69,6 +78,9 @@ export default function StyleSettingsSection({
         onStepMetaChange={onStepMetaChange}
         topHeader={topHeader}
         highlightedField={highlightedField}
+        onNavigationReady={onNavigationReady}
+        hideInlineNavigation={hideInlineNavigation}
+        onStepIndicatorChange={onStepIndicatorChange}
       />
     </>
   )

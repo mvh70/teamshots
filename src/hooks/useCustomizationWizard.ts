@@ -56,14 +56,22 @@ export function useCustomizationWizard({
     )
   }, [originalContextSettings, allCategories, readonlyPredefined])
 
-  const currentEditableCategories = useMemo(() => {
-    if (showToggles) return []
-    return allCategories.filter(cat => wasInitiallyEditable.has(cat.key))
-  }, [showToggles, allCategories, wasInitiallyEditable])
-  
-  const currentLockedCategories = useMemo(() => {
-    if (showToggles) return []
-    return allCategories.filter(cat => !wasInitiallyEditable.has(cat.key))
+  // Consolidate editable/locked category filtering into single memo
+  // Avoids iterating allCategories twice
+  const { currentEditableCategories, currentLockedCategories } = useMemo(() => {
+    if (showToggles) {
+      return { currentEditableCategories: [], currentLockedCategories: [] }
+    }
+    const editable: CategoryConfig[] = []
+    const locked: CategoryConfig[] = []
+    for (const cat of allCategories) {
+      if (wasInitiallyEditable.has(cat.key)) {
+        editable.push(cat)
+      } else {
+        locked.push(cat)
+      }
+    }
+    return { currentEditableCategories: editable, currentLockedCategories: locked }
   }, [showToggles, allCategories, wasInitiallyEditable])
 
   // Construct mobile steps
@@ -115,11 +123,20 @@ export function useCustomizationWizard({
       return ''
     })
 
+    // Extract step keys for visited step lookup
+    const stepKeys = allNumberedSteps.map(step => {
+      if (step.type === 'editable' || step.type === 'locked') {
+        return step.category?.key ?? ''
+      }
+      return ''
+    })
+
     return {
       editableSteps: editableNumberedSteps.length,
       allSteps: allNumberedSteps.length,
       lockedSteps: lockedStepIndices,
-      stepNames
+      stepNames,
+      stepKeys
     }
   }, [mobileSteps])
 

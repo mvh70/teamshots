@@ -18,23 +18,24 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { context, updateContext } = useOnboardingStateHook()
   const [pendingTour, setPendingTourState] = useState<string | null>(null)
   
+  // Stable callbacks - never change after mount
   const setPendingTour = useCallback((tour: string | null) => {
     setPendingTourState(tour)
   }, [])
-  
+
   const clearPendingTour = useCallback(() => {
     setPendingTourState(null)
   }, [])
-  
+
   // Memoize the context value to prevent unnecessary re-renders
-  // Only recreate if context, updateContext, or pendingTour changes
+  // Only include values that actually change - callbacks are stable
   const contextValue = useMemo(() => ({
     context,
     updateContext,
     pendingTour,
     setPendingTour,
     clearPendingTour
-  }), [context, updateContext, pendingTour, setPendingTour, clearPendingTour])
+  }), [context, updateContext, pendingTour]) // eslint-disable-line react-hooks/exhaustive-deps -- setPendingTour and clearPendingTour are stable
 
   return (
     <OnboardingContext.Provider value={contextValue}>

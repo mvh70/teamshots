@@ -69,9 +69,10 @@ export default function FlowNavigation({
 
   const buttonSize = size === 'sm' ? 'h-9 w-9' : 'h-11 w-11'
   const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'
-  const dotSizeSmall = size === 'sm' ? 'h-2 w-2' : 'h-2.5 w-2.5'
-  const dotSizeLarge = size === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3'
-  const dotGap = size === 'sm' ? 'gap-1.5' : 'gap-2'
+  // Increased dot sizes for better touch targets (min 44px touch area via padding)
+  const dotSizeSmall = size === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3'
+  const dotSizeLarge = size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'
+  const dotGap = size === 'sm' ? 'gap-0' : 'gap-0' // padding on buttons handles spacing
 
   const showChevrons = variant === 'chevrons' || variant === 'both'
   const showDots = variant === 'dots' || variant === 'both' || variant === 'dots-only'
@@ -99,8 +100,8 @@ export default function FlowNavigation({
         return { color: 'bg-gray-300', size: sizeClass }
       }
       if (isVisited) {
-        // Visited/done editable steps are green
-        return { color: 'bg-green-500', size: sizeClass }
+        // Visited/done editable steps are green (consistent with desktop dock)
+        return { color: 'bg-brand-secondary', size: sizeClass }
       }
       // Not visited editable steps are blue
       return { color: 'bg-brand-primary', size: sizeClass }
@@ -166,20 +167,20 @@ export default function FlowNavigation({
                 <button
                   key={`nav-dot-${idx}`}
                   type="button"
-                  aria-label={t('stepIndicator', { 
-                    current: idx + 1, 
+                  aria-label={t('stepIndicator', {
+                    current: idx + 1,
                     total,
-                    default: `Go to step ${idx + 1}` 
+                    default: `Go to step ${idx + 1}`
                   })}
                   onClick={() => dotsClickable && onDotClick?.(idx)}
                   disabled={!dotsClickable}
                   className={`
-                    rounded-full transition-all duration-300
+                    flex items-center justify-center p-2
                     ${dotsClickable ? 'cursor-pointer' : 'cursor-default'}
-                    ${color}
-                    ${dotSize}
                   `}
-                />
+                >
+                  <span className={`rounded-full transition-all duration-300 ${color} ${dotSize}`} />
+                </button>
               )
             })}
           </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React from 'react'
 import { useTranslations } from 'next-intl'
 import { ExpressionSettings } from '@/types/photo-style'
 import { EXPRESSION_CONFIGS } from './config'
@@ -59,17 +59,10 @@ export default function ExpressionSelector({
     onChange(wrapWithCurrentMode({ type: event.target.value as ExpressionType }))
   }
 
-  const [hasMounted, setHasMounted] = useState(false)
+  // Find the currently selected expression to show its description (uses selectValue to include default)
 
-  useEffect(() => {
-    setHasMounted(true)
-  }, [])
-
-  // Find the currently selected expression to show its description
-  const selectedExpression = visibleExpressions.find(e => e.value === exprValue?.type)
-
-  // Use effective value to handle initial load
-  const effectiveExpressionType = exprValue?.type
+  // For the select value, use first available expression if none selected
+  const selectValue = exprValue?.type || (visibleExpressions[0]?.value ?? 'genuine_smile')
 
   return (
     <div className={`${className}`}>
@@ -94,18 +87,13 @@ export default function ExpressionSelector({
       <div className={`space-y-4 ${isDisabled ? 'opacity-60 pointer-events-none' : ''}`}>
         <div className="relative">
           <select
-            value={exprValue?.type || ''}
+            value={selectValue}
             onChange={handleChange}
             disabled={isPredefined || isDisabled}
             className={`block w-full rounded-lg border-2 border-gray-200 p-3 pr-10 text-base focus:border-brand-primary focus:outline-none focus:ring-brand-primary sm:text-sm ${
               (isPredefined || isDisabled) ? 'cursor-not-allowed bg-gray-50' : 'cursor-pointer bg-white'
             }`}
           >
-            {!exprValue?.type && (
-              <option value="" disabled>
-                {t('selectPlaceholder', { default: 'Choose your expression' })}
-              </option>
-            )}
             {visibleExpressions.map((expr) => (
               <option key={expr.value} value={expr.value}>
                 {t(`expressions.${expr.value}.label`)}
@@ -115,25 +103,25 @@ export default function ExpressionSelector({
         </div>
 
         {/* Selected Expression Description */}
-        {selectedExpression && (
+        {selectValue && (
           <p className="text-sm text-gray-600 px-1">
-            {t(`expressions.${selectedExpression.value}.description`)}
+            {t(`expressions.${selectValue}.description`)}
           </p>
         )}
 
-        {/* Conditional Image Preview */}
-        {hasExpressionImage(effectiveExpressionType) && effectiveExpressionType && (
+        {/* Conditional Image Preview - use selectValue to show preview for default/fallback expression too */}
+        {selectValue && hasExpressionImage(selectValue) && (
           <div className="mt-4">
             <ImagePreview
-              key={effectiveExpressionType} // Force re-render on value change
-              src={`/images/expressions/${effectiveExpressionType}.png`}
-              alt={t(`expressions.${effectiveExpressionType}.label`)}
+              src={`/images/expressions/${selectValue}.png`}
+              alt={t(`expressions.${selectValue}.label`)}
               width={400}
               height={300}
               variant="preview"
               className="w-full h-auto object-cover rounded-lg shadow-sm border border-gray-200"
-              priority={true} // Add priority to ensure it loads immediately
-              unoptimized={true} // Ensure we bypass optimization to avoid stale cache or loading issues
+              priority={true}
+              unoptimized={true}
+              showLoadingSpinner={false}
             />
           </div>
         )}
