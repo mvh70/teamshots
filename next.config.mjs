@@ -13,7 +13,8 @@ const nextConfig = {
       '@heroicons/react',
       'lucide-react',
       '@/components/ui',
-      '@/domain/style/elements',
+      // NOTE: Do NOT add '@/domain/style/elements' here - it has side-effect imports
+      // for registering element metadata that get skipped when this optimization is applied
     ],
   },
   images: {
