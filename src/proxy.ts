@@ -150,6 +150,15 @@ const intlMiddleware = createMiddleware({
 
 export default async function proxy(request: NextRequest) {
   try {
+    // Redirect www to non-www for SEO canonicalization
+    // This prevents duplicate content issues in Google Search Console
+    const host = request.headers.get('host') || request.headers.get('x-forwarded-host') || ''
+    if (host.startsWith('www.')) {
+      const newUrl = new URL(request.url)
+      newUrl.host = host.replace(/^www\./, '')
+      return NextResponse.redirect(newUrl, 301)
+    }
+
     // Allow E2E tests to bypass locale detection/redirects
     if ((await getRequestHeader('x-playwright-e2e')) === '1') {
       const res = NextResponse.next()
