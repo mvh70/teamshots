@@ -16,6 +16,7 @@ export interface ClassificationData {
   personCount?: number
   isProper?: boolean
   improperReason?: string
+  captureSource?: 'laptop_camera' | 'mobile_camera' | 'file_upload'
 }
 
 // Shared helper function for promoting uploads (used by both single and multiple uploads)
@@ -46,6 +47,7 @@ export const promoteUploads = async (
                 isProper: classification.isProper
               }),
               ...(classification?.improperReason && { improperReason: classification.improperReason }),
+              ...(classification?.captureSource && { captureSource: classification.captureSource }),
             }),
             credentials: 'include'
           })

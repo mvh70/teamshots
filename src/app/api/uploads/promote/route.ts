@@ -100,13 +100,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { tempKey, selfieType, selfieTypeConfidence, personCount, isProper, improperReason } = await req.json() as {
+    const { tempKey, selfieType, selfieTypeConfidence, personCount, isProper, improperReason, captureSource } = await req.json() as {
       tempKey?: string
       selfieType?: string
       selfieTypeConfidence?: number
       personCount?: number
       isProper?: boolean
       improperReason?: string
+      captureSource?: 'laptop_camera' | 'mobile_camera' | 'file_upload'
     }
     if (!tempKey || typeof tempKey !== 'string' || !tempKey.startsWith('temp:')) {
       return NextResponse.json({ error: 'Invalid temp key' }, { status: 400 })
@@ -198,6 +199,8 @@ export async function POST(req: NextRequest) {
         ...(typeof personCount === 'number' && { personCount }),
         ...(typeof isProper === 'boolean' && { isProper }),
         ...(improperReason && { improperReason }),
+        // Track how the selfie was captured
+        ...(captureSource && { captureSource }),
       },
     })
 

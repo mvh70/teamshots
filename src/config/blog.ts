@@ -3,6 +3,7 @@ import type { LandingVariant } from '@/config/landing-content'
 // Import metadata from blog posts (separate meta.ts files to avoid client/server conflicts)
 import { postMeta as averageCostMeta } from '@/app/[locale]/blog/average-cost-professional-headshots/meta'
 import { postMeta as corporateAiHeadshotsMeta } from '@/app/[locale]/blog/corporate-ai-headshots/meta'
+import { postMeta as professionalHeadshotsForTeamsMeta } from '@/app/[locale]/blog/professional-headshots-for-teams/meta'
 import { postMeta as remoteOnboardingMeta } from '@/app/[locale]/blog/remote-onboarding-broken/meta'
 
 /** Localized metadata type for blog posts */
@@ -83,6 +84,19 @@ export const BLOG_CATEGORIES: Record<BlogPostCategory, { label: string; color: s
  * - coupleshots / familyshots: seasonal lifestyle (none yet)
  */
 export const BLOG_POSTS: readonly BlogPost[] = [
+  {
+    slug: 'professional-headshots-for-teams',
+    allowedVariants: ['teamshotspro'],
+    category: 'guides',
+    title: professionalHeadshotsForTeamsMeta.en.title,
+    description: professionalHeadshotsForTeamsMeta.en.description,
+    meta: professionalHeadshotsForTeamsMeta,
+    date: '2026-01-17',
+    readTime: '12 min read',
+    author: 'TeamShotsPro Team',
+    image: '/blog/professional-headshots-for-teams.png?v=1768757374367',
+    imageAlt: 'Female executive on rooftop throwing scheduling papers in the air in victory, holding tablet with perfect AI team headshots.',
+  },
   {
     slug: 'average-cost-professional-headshots',
     allowedVariants: ['teamshotspro'],

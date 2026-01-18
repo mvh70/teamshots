@@ -27,6 +27,18 @@ export default function TrustIndicators({ variant, showSection }: TrustIndicator
   // Build trust badges based on variant
   // Each badge can be conditionally shown based on section visibility
   const TRUST_BADGES: TrustBadge[] = [
+    // No Model Training - unique quality approach (shown for team-focused domains)
+    ...(showSection('showTeamCommandCenter') ? [{
+      id: 'noModelTraining',
+      icon: (
+        <svg className="w-8 h-8 lg:w-10 lg:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+      title: t('badges.noModelTraining.title'),
+      description: t('badges.noModelTraining.description'),
+      sectionKey: 'showTeamCommandCenter' as keyof LandingSections,
+    }] : []),
     // Team Command Center - only shown for team-focused domains
     ...(showSection('showTeamCommandCenter') ? [{
       id: 'teamCommandCenter',

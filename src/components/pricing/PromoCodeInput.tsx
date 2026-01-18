@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { useAnalytics } from '@/hooks/useAnalytics'
 
 export interface PromoCodeDiscount {
   type: 'percentage' | 'fixed_amount'
@@ -47,6 +48,7 @@ export default function PromoCodeInput({
   className = '',
 }: PromoCodeInputProps) {
   const t = useTranslations('pricing')
+  const { track } = useAnalytics()
   const [isOpen, setIsOpen] = useState(false)
   const [code, setCode] = useState('')
   const [isValidating, setIsValidating] = useState(false)
@@ -55,6 +57,10 @@ export default function PromoCodeInput({
   const handleApply = useCallback(async () => {
     if (!code.trim()) {
       setError(t('promoCode.enterCode'))
+      track('promo_code_apply_failed', {
+        reason: 'empty_code',
+        purchase_type: purchaseType,
+      })
       return
     }
 
@@ -76,18 +82,35 @@ export default function PromoCodeInput({
       const result: PromoCodeValidationResult = await response.json()
 
       if (result.valid && result.discount) {
+        track('promo_code_applied', {
+          code: code.trim().toUpperCase(),
+          purchase_type: purchaseType,
+          discount_type: result.discount.type,
+          discount_value: result.discount.value,
+          discount_amount: result.discount.discountAmount,
+        })
         onApply(code.trim().toUpperCase(), result.discount, result.stripePromoCodeId)
         setIsOpen(false)
         setCode('')
       } else {
+        track('promo_code_apply_failed', {
+          code: code.trim().toUpperCase(),
+          reason: result.error || 'invalid_code',
+          purchase_type: purchaseType,
+        })
         setError(result.error || t('promoCode.invalidCode'))
       }
     } catch {
+      track('promo_code_apply_failed', {
+        code: code.trim().toUpperCase(),
+        reason: 'validation_error',
+        purchase_type: purchaseType,
+      })
       setError(t('promoCode.validationFailed'))
     } finally {
       setIsValidating(false)
     }
-  }, [code, purchaseType, originalAmount, seats, onApply, t])
+  }, [code, purchaseType, originalAmount, seats, onApply, t, track])
 
   const handleClear = useCallback(() => {
     onClear()
@@ -144,7 +167,10 @@ export default function PromoCodeInput({
     return (
       <div className={`${className}`}>
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            setIsOpen(true)
+            track('promo_code_input_opened', { purchase_type: purchaseType })
+          }}
           className="text-brand-primary hover:text-brand-primary-hover text-sm font-medium flex items-center gap-1"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -15,6 +15,7 @@ const POST_MODULES: Record<
     generateMetadata?: (props: { params: Promise<{ locale: string }> }) => Promise<Metadata>
   }>
 > = {
+  'professional-headshots-for-teams': () => import('../professional-headshots-for-teams/page'),
   'average-cost-professional-headshots': () => import('../average-cost-professional-headshots/page'),
   'ai-headshots-for-linkedin': () => import('../ai-headshots-for-linkedin/page'),
   'best-ai-headshot-generators': () => import('../best-ai-headshot-generators/page'),

@@ -60,7 +60,8 @@
       ["Tiempo de programación", "2-3 semanas", "60 segundos"],
       ["Consistencia de marca", "Variable", "100%"],
       ["Abogados remotos", "Imposible", "Fácil"],
-      ["Incorporación lateral", "Semanas", "Mismo día"]
+      ["Incorporación lateral", "Semanas", "Mismo día"],
+      ["Importación masiva", "N/A", "CSV desde cualquier plataforma RRHH"]
     ]
   },
   "useCases": {

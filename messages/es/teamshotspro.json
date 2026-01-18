@@ -7,7 +7,7 @@
         "titleHighlightTime": "en 60 segundos",
         "subtitle": "Define tu estilo de marca y genera retratos profesionales para cada miembro. Calidad consistente en toda la empresa.",
         "subtitleBold": "100% acorde a tu marca, 0% complicaciones.",
-        "subtitleMain": "Convierte selfies individuales en una imagen de equipo unificada. Sin fotógrafo, sin agenda.",
+        "subtitleMain": "Convierte selfies individuales en una imagen de equipo unificada en menos de un minuto. Sin fotógrafo, sin agenda, sin esperar horas por resultados.",
         "finalCtaTitle": "¿Listo para transformar las fotos de tu equipo?",
         "finalCtaSubtitle": "Obtén retratos profesionales para tu equipo y ve la diferencia en 60 segundos.",
         "getStarted": "Empezar",
@@ -37,6 +37,10 @@
         "title": "¿Por qué equipos eligen TeamShotsPro sobre todos los demás?",
         "subtitle": "Diseñado para equipos B2B serios que necesitan gestión de fotos de nivel empresarial, no trucos para consumidores",
         "badges": {
+          "noModelTraining": {
+            "title": "Sin entrenamiento de modelos - solo resultados de calidad",
+            "description": "Otras herramientas de IA entrenan un modelo con tu cara y generan 40 imágenes aleatorias esperando que una quede bien. Nosotros generamos cada retrato de forma única con control de calidad en tiempo real. Por eso tu equipo se ve como ellos mismos, no como artefactos de IA."
+          },
           "teamCommandCenter": {
             "title": "Centro de Comando del Equipo - Diseñado para managers que odian el caos",
             "description": "Panel central donde controlas todo: aprueba fotos, invita miembros del equipo con un clic, rastrea progreso, y gestiona consistencia de marca en toda tu organización. A diferencia de herramientas para consumidores, esto fue diseñado específicamente para equipos."
@@ -79,7 +83,7 @@
           },
           "2": {
             "title": "Invita a tu equipo",
-            "description": "Invita a tu equipo (carga masiva disponible). Recibirán un enlace mágico. Sin cuadrículas de programación, sin Tetris de calendario. Sigue el progreso en tu panel de control.",
+            "description": "Invita uno por uno o sube un CSV desde BambooHR, Workday, Gusto o cualquier hoja de cálculo. Reciben un enlace mágico. Sin cuadrículas de programación, sin Tetris de calendario. Sigue el progreso en tu panel.",
             "duration": "30s"
           },
           "3": {
@@ -102,7 +106,7 @@
       "guarantee": {
         "title": "Garantía 100% Aspecto Humano",
         "subtitle": "Si tus fotos parecen hechas por IA, las rehacemos gratis.",
-        "description": "Tu equipo merece verse profesional, no robótico. Garantizamos resultados de calidad de estudio que se ven como tú, solo más pulidos."
+        "description": "Tu equipo merece verse profesional, no robótico. A diferencia de herramientas que entrenan modelos y generan resultados aleatorios, creamos cada retrato con controles de calidad en tiempo real. Resultados de calidad de estudio que se ven como tú, solo más pulidos."
       },
       "faq": {
         "title": "Preguntas Frecuentes",

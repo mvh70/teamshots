@@ -169,6 +169,18 @@
       "7": {
         "question": "¿Soportan fotos de equipo o solo retratos individuales?",
         "answer": "Actualmente nos enfocamos en retratos individuales. Cada persona sube su propia foto para mejores resultados (al menos no necesitan estar en la misma habitación). Estamos trabajando en capacidades de fotos grupales para futuras actualizaciones, porque las fotos en grupo son difíciles."
+      },
+      "8": {
+        "question": "¿En qué se diferencia de otras herramientas de retratos con IA?",
+        "answer": "La mayoría de herramientas de IA entrenan un modelo personalizado con tu cara, luego generan docenas de imágenes esperando que algunas queden bien. Por eso a menudo obtienes resultados extraños: rasgos distorsionados, expresiones incorrectas, o simplemente algo 'raro'. Nosotros no entrenamos modelos. Cada retrato se genera de forma única con controles de calidad en tiempo real. El resultado: fotos que realmente se parecen a ti, siempre."
+      },
+      "9": {
+        "question": "¿Puedo importar miembros del equipo de forma masiva?",
+        "answer": "¡Sí! Sube un archivo CSV con emails y nombres desde cualquier plataforma de RRHH: BambooHR, Workday, Gusto, o una simple hoja de cálculo. Detectamos automáticamente los formatos de columnas, eliminamos duplicados y verificamos disponibilidad de asientos. Invita a 100 personas en 30 segundos en lugar de una por una."
+      },
+      "10": {
+        "question": "¿Se integran con otras herramientas como Zapier?",
+        "answer": "Sí. Nos integramos con Zapier, para que puedas activar automáticamente invitaciones de retratos cuando se añaden nuevos empleados a tu sistema de RRHH, Slack u otras herramientas. Perfecto para empresas que quieren retratos como parte de su flujo de onboarding automatizado."
       }
     }
   },
@@ -544,6 +556,16 @@
       "tip3": "Espera unos minutos para la entrega",
       "backToSignIn": "Volver a inicio",
       "loading": "Cargando…"
+    },
+    "password": {
+      "show": "Mostrar",
+      "hide": "Ocultar",
+      "strength": {
+        "weak": "👶 Débil",
+        "fair": "🫤 Aceptable",
+        "good": "💪 Buena",
+        "strong": "🦾 Fuerte"
+      }
     }
   },
   "invite": {
@@ -2260,9 +2282,60 @@
     },
     "buttons": {
       "inviteTeamMember": "Invitar Miembro del Equipo",
+      "bulkInvite": "Invitación Masiva",
       "upgrade": "Mejorar",
       "buyCredits": "Comprar créditos",
       "upgradeToInvite": "Mejorar para invitar"
+    },
+    "bulkInviteForm": {
+      "title": "Invitación Masiva",
+      "description": "Sube un archivo CSV con los correos electrónicos y nombres de los miembros del equipo para invitar a varias personas a la vez.",
+      "upload": {
+        "dragDrop": "Arrastra y suelta o haz clic para subir",
+        "formats": "Archivo CSV o ZIP (máx 5MB)"
+      },
+      "format": {
+        "title": "Formatos CSV Soportados",
+        "description": "Detectamos automáticamente las columnas de plataformas de RR.HH. como BambooHR, Workday, Gusto y más."
+      },
+      "preview": {
+        "readyToImport": "Listos para Importar",
+        "totalRows": "Filas Totales",
+        "skipped": "Entradas omitidas:",
+        "duplicates": "correos duplicados",
+        "existing": "ya son miembros del equipo",
+        "noSeats": {
+          "title": "No hay suficientes puestos",
+          "description": "Necesitas {required} puestos pero solo tienes {available} disponibles.",
+          "buyMore": "Comprar más puestos →"
+        },
+        "sample": "Entradas de muestra:",
+        "name": "Nombre",
+        "email": "Correo",
+        "andMore": "...y {count} más",
+        "warnings": "{count} advertencias"
+      },
+      "styleNote": "Todos los miembros del equipo usarán: {name}",
+      "whatHappensNext": {
+        "step1": "Se enviarán {count} correos de invitación",
+        "step3": "Cada miembro del equipo recibe 10 fotos"
+      },
+      "buttons": {
+        "preview": "Vista Previa de Importación",
+        "processing": "Procesando...",
+        "sendInvites": "Enviar {count} Invitaciones",
+        "createLinks": "Solo Crear Enlaces",
+        "importing": "Importando...",
+        "cancel": "Cancelar",
+        "back": "Atrás"
+      },
+      "success": {
+        "title": "¡Importación Completa!",
+        "imported": "{count} miembros del equipo importados",
+        "emailsSent": "{count} correos de invitación enviados",
+        "emailsFailed": "{count} correos fallaron al enviar",
+        "done": "Listo"
+      }
     },
     "selfAssignment": {
       "title": "Unirte al Equipo",

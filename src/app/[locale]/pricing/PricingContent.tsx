@@ -1,11 +1,13 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import PricingCard from '@/components/pricing/PricingCard'
 import SeatsPricingCard from '@/components/pricing/SeatsPricingCard'
 import PlanCheckoutSection from '@/components/pricing/PlanCheckoutSection'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { getPricePerPhoto, formatPrice, calculatePhotosFromCredits } from '@/domain/pricing/utils'
+import { useAnalytics } from '@/hooks/useAnalytics'
 import type { LandingVariant } from '@/config/landing-content'
 
 // Helper to calculate total photos (styles × variations)
@@ -22,12 +24,21 @@ interface PricingContentProps {
 
 export default function PricingContent({ variant }: PricingContentProps) {
   const t = useTranslations('pricing');
+  const { track } = useAnalytics();
 
   // Derive signup type from server-provided variant (no client-side detection)
   const domainSignupType: 'individual' | 'team' | null =
     variant === 'individualshots' ? 'individual' :
     variant === 'teamshotspro' ? 'team' :
     null;
+
+  // Track pricing page view with context
+  useEffect(() => {
+    track('pricing_page_viewed', {
+      variant: variant || 'unknown',
+      signup_type: domainSignupType || 'unknown',
+    });
+  }, [track, variant, domainSignupType]);
 
   // Seats-based pricing for TeamShotsPro
   if (variant === 'teamshotspro') {

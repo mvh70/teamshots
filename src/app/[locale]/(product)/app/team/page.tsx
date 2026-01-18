@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { jsonFetcher } from '@/lib/fetcher'
 import { Link } from '@/i18n/routing'
-import { PlusIcon, EnvelopeIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, EnvelopeIcon, CheckIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline'
 import { PRICING_CONFIG } from '@/config/pricing'
 import { calculatePhotosFromCredits, getRegenerationCount } from '@/domain/pricing'
 import { getPricingTier } from '@/config/pricing'
@@ -122,6 +122,29 @@ export default function TeamPage() {
   const [selfAssignError, setSelfAssignError] = useState<string | null>(null)
   const [loadingSelfAssignStatus, setLoadingSelfAssignStatus] = useState(false)
   const [showSelfAssignPopover, setShowSelfAssignPopover] = useState(false)
+
+  // Bulk invite modal state
+  const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
+  const [bulkInviteFile, setBulkInviteFile] = useState<File | null>(null)
+  const [bulkInvitePreview, setBulkInvitePreview] = useState<{
+    totalRowsParsed: number
+    readyToImport: number
+    duplicatesRemoved: number
+    existingMembersSkipped: number
+    seatsRequired: number
+    seatsAvailable: number
+    hasEnoughSeats: boolean
+    previewRows: Array<{ email: string; firstName: string }>
+    warnings: string[]
+  } | null>(null)
+  const [bulkInviteParsedData, setBulkInviteParsedData] = useState<Array<{ email: string; firstName: string }> | null>(null)
+  const [bulkInviteLoading, setBulkInviteLoading] = useState(false)
+  const [bulkInviteError, setBulkInviteError] = useState<string | null>(null)
+  const [bulkInviteSuccess, setBulkInviteSuccess] = useState<{
+    imported: number
+    emailsSent: number
+    emailsFailed: number
+  } | null>(null)
 
   // Check if email is already part of the team
   const checkEmailInTeam = useCallback(async (email: string) => {
@@ -2332,19 +2355,35 @@ export default function TeamPage() {
               {t('buttons.buyCredits')}
             </Link>
           ) : (
-            <button
-              onClick={() => {
-                setInviteError(null)
-                setError(null)
-                setEmailValue('')
-                setFirstNameValue('')
-                setShowInviteForm(true)
-              }}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-secondary hover:bg-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
-            >
-              <PlusIcon className="h-5 w-5" />
-              {t('buttons.inviteTeamMember')}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  setInviteError(null)
+                  setError(null)
+                  setEmailValue('')
+                  setFirstNameValue('')
+                  setShowInviteForm(true)
+                }}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 bg-brand-secondary hover:bg-brand-secondary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
+              >
+                <PlusIcon className="h-5 w-5" />
+                {t('buttons.inviteTeamMember')}
+              </button>
+              <button
+                onClick={() => {
+                  setBulkInviteError(null)
+                  setBulkInviteFile(null)
+                  setBulkInvitePreview(null)
+                  setBulkInviteParsedData(null)
+                  setBulkInviteSuccess(null)
+                  setShowBulkInviteForm(true)
+                }}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold text-gray-700 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 bg-white border-2 border-gray-200 hover:border-brand-secondary hover:text-brand-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary"
+              >
+                <DocumentArrowUpIcon className="h-5 w-5" />
+                {t('buttons.bulkInvite', { default: 'Bulk Invite' })}
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -2605,6 +2644,459 @@ export default function TeamPage() {
                     })()}
                   </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Invite Modal */}
+      {showBulkInviteForm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[110] overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-lg w-full my-4 max-h-[calc(100vh-2rem)] overflow-y-auto shadow-2xl animate-scale-in border border-gray-200">
+            <div className="p-7 sm:p-9">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">
+                {t('bulkInviteForm.title', { default: 'Bulk Invite' })}
+              </h2>
+              <p className="text-gray-600 mb-6">
+                {t('bulkInviteForm.description', { default: 'Upload a CSV file with team member emails and names to invite multiple people at once.' })}
+              </p>
+
+              {/* Success State */}
+              {bulkInviteSuccess && (
+                <div className="space-y-6">
+                  <div className="bg-green-50 border-2 border-green-200 rounded-xl p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <CheckIcon className="h-6 w-6 text-green-600" />
+                      </div>
+                      <h3 className="text-lg font-bold text-green-800">
+                        {t('bulkInviteForm.success.title', { default: 'Import Complete!' })}
+                      </h3>
+                    </div>
+                    <div className="space-y-2 text-sm text-green-700">
+                      <p>{t('bulkInviteForm.success.imported', { count: bulkInviteSuccess.imported, default: `${bulkInviteSuccess.imported} team members imported` })}</p>
+                      {bulkInviteSuccess.emailsSent > 0 && (
+                        <p>{t('bulkInviteForm.success.emailsSent', { count: bulkInviteSuccess.emailsSent, default: `${bulkInviteSuccess.emailsSent} invite emails sent` })}</p>
+                      )}
+                      {bulkInviteSuccess.emailsFailed > 0 && (
+                        <p className="text-amber-700">{t('bulkInviteForm.success.emailsFailed', { count: bulkInviteSuccess.emailsFailed, default: `${bulkInviteSuccess.emailsFailed} emails failed to send` })}</p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowBulkInviteForm(false)
+                      setBulkInviteSuccess(null)
+                      // Refresh data
+                      window.location.reload()
+                    }}
+                    className="w-full px-6 py-3.5 bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary shadow-md hover:shadow-lg"
+                  >
+                    {t('bulkInviteForm.success.done', { default: 'Done' })}
+                  </button>
+                </div>
+              )}
+
+              {/* Upload and Preview State */}
+              {!bulkInviteSuccess && (
+                <div className="space-y-6">
+                  {/* File Upload Zone */}
+                  {!bulkInvitePreview && (
+                    <div
+                      className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer ${
+                        bulkInviteFile
+                          ? 'border-brand-primary bg-brand-primary/5'
+                          : 'border-gray-300 hover:border-brand-primary hover:bg-gray-50'
+                      }`}
+                      onClick={() => document.getElementById('bulk-invite-file-input')?.click()}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.add('border-brand-primary', 'bg-brand-primary/5')
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault()
+                        if (!bulkInviteFile) {
+                          e.currentTarget.classList.remove('border-brand-primary', 'bg-brand-primary/5')
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        const file = e.dataTransfer.files[0]
+                        if (file && (file.name.endsWith('.csv') || file.name.endsWith('.zip'))) {
+                          setBulkInviteFile(file)
+                          setBulkInviteError(null)
+                        } else {
+                          setBulkInviteError('Please upload a CSV or ZIP file')
+                        }
+                      }}
+                    >
+                      <input
+                        id="bulk-invite-file-input"
+                        type="file"
+                        accept=".csv,.zip"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            setBulkInviteFile(file)
+                            setBulkInviteError(null)
+                          }
+                        }}
+                      />
+                      <DocumentArrowUpIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      {bulkInviteFile ? (
+                        <div>
+                          <p className="font-semibold text-gray-900">{bulkInviteFile.name}</p>
+                          <p className="text-sm text-gray-500 mt-1">{(bulkInviteFile.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="font-semibold text-gray-700">{t('bulkInviteForm.upload.dragDrop', { default: 'Drag and drop or click to upload' })}</p>
+                          <p className="text-sm text-gray-500 mt-1">{t('bulkInviteForm.upload.formats', { default: 'CSV or ZIP file (max 5MB)' })}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* CSV Format Help */}
+                  {!bulkInvitePreview && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">{t('bulkInviteForm.format.title', { default: 'Supported CSV Formats' })}</h4>
+                      <p className="text-xs text-gray-600 mb-2">
+                        {t('bulkInviteForm.format.description', { default: 'We auto-detect columns from common HR platforms like BambooHR, Workday, Gusto, and more.' })}
+                      </p>
+                      <div className="text-xs text-gray-500 font-mono bg-white rounded p-2 border border-gray-200">
+                        email, first_name, last_name<br />
+                        john@company.com, John, Doe<br />
+                        jane@company.com, Jane, Smith
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preview Results */}
+                  {bulkInvitePreview && (
+                    <div className="space-y-4">
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                          <p className="text-2xl font-bold text-green-700">{bulkInvitePreview.readyToImport}</p>
+                          <p className="text-xs text-green-600 font-medium">{t('bulkInviteForm.preview.readyToImport', { default: 'Ready to Import' })}</p>
+                        </div>
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
+                          <p className="text-2xl font-bold text-gray-700">{bulkInvitePreview.totalRowsParsed}</p>
+                          <p className="text-xs text-gray-600 font-medium">{t('bulkInviteForm.preview.totalRows', { default: 'Total Rows' })}</p>
+                        </div>
+                      </div>
+
+                      {/* Skipped Info */}
+                      {(bulkInvitePreview.duplicatesRemoved > 0 || bulkInvitePreview.existingMembersSkipped > 0) && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                          <p className="text-sm font-medium text-amber-800 mb-1">{t('bulkInviteForm.preview.skipped', { default: 'Skipped entries:' })}</p>
+                          <ul className="text-xs text-amber-700 space-y-1">
+                            {bulkInvitePreview.duplicatesRemoved > 0 && (
+                              <li>• {bulkInvitePreview.duplicatesRemoved} {t('bulkInviteForm.preview.duplicates', { default: 'duplicate emails' })}</li>
+                            )}
+                            {bulkInvitePreview.existingMembersSkipped > 0 && (
+                              <li>• {bulkInvitePreview.existingMembersSkipped} {t('bulkInviteForm.preview.existing', { default: 'already team members' })}</li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Seat Check */}
+                      {!bulkInvitePreview.hasEnoughSeats && (
+                        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                          <p className="text-sm font-bold text-red-800 mb-1">{t('bulkInviteForm.preview.noSeats.title', { default: 'Not enough seats' })}</p>
+                          <p className="text-sm text-red-700">
+                            {t('bulkInviteForm.preview.noSeats.description', {
+                              required: bulkInvitePreview.seatsRequired,
+                              available: bulkInvitePreview.seatsAvailable,
+                              default: `You need ${bulkInvitePreview.seatsRequired} seats but only have ${bulkInvitePreview.seatsAvailable} available.`
+                            })}
+                          </p>
+                          <Link
+                            href="/app/seats"
+                            className="inline-block mt-3 text-sm font-semibold text-red-700 hover:text-red-800 underline"
+                          >
+                            {t('bulkInviteForm.preview.noSeats.buyMore', { default: 'Purchase more seats →' })}
+                          </Link>
+                        </div>
+                      )}
+
+                      {/* Preview Table */}
+                      {bulkInvitePreview.previewRows.length > 0 && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-700 mb-2">{t('bulkInviteForm.preview.sample', { default: 'Sample entries:' })}</p>
+                          <div className="border border-gray-200 rounded-xl overflow-hidden">
+                            <table className="w-full text-sm">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="text-left px-4 py-2 font-semibold text-gray-700">{t('bulkInviteForm.preview.name', { default: 'Name' })}</th>
+                                  <th className="text-left px-4 py-2 font-semibold text-gray-700">{t('bulkInviteForm.preview.email', { default: 'Email' })}</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100">
+                                {bulkInvitePreview.previewRows.map((row, idx) => (
+                                  <tr key={idx}>
+                                    <td className="px-4 py-2 text-gray-900">{row.firstName}</td>
+                                    <td className="px-4 py-2 text-gray-600">{row.email}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            {bulkInvitePreview.readyToImport > 5 && (
+                              <div className="px-4 py-2 bg-gray-50 text-xs text-gray-500">
+                                {t('bulkInviteForm.preview.andMore', { count: bulkInvitePreview.readyToImport - 5, default: `...and ${bulkInvitePreview.readyToImport - 5} more` })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Warnings */}
+                      {bulkInvitePreview.warnings.length > 0 && (
+                        <details className="text-sm">
+                          <summary className="text-amber-700 cursor-pointer font-medium">
+                            {t('bulkInviteForm.preview.warnings', { count: bulkInvitePreview.warnings.length, default: `${bulkInvitePreview.warnings.length} warnings` })}
+                          </summary>
+                          <ul className="mt-2 text-xs text-amber-600 space-y-1 pl-4">
+                            {bulkInvitePreview.warnings.map((warning, idx) => (
+                              <li key={idx}>• {warning}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Error Display */}
+                  {bulkInviteError && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                      <p className="text-sm text-red-700 font-medium">{bulkInviteError}</p>
+                    </div>
+                  )}
+
+                  {/* Photo Style Selection (same as single invite) */}
+                  {bulkInvitePreview && bulkInvitePreview.hasEnoughSeats && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-4">
+                        {t('inviteForm.photoStyle.label', { default: 'Photo Style' })}
+                      </label>
+                      {isFreePlan ? (
+                        <div className="bg-gradient-to-br from-gray-50 to-gray-50/50 border-2 border-gray-200 rounded-xl p-4 shadow-sm">
+                          <div className="text-sm font-semibold text-gray-900 mb-2">
+                            {t('inviteForm.photoStyle.useFreePackageStyle', { default: 'Free Package Style' })}
+                          </div>
+                          <div className="text-xs text-gray-600 font-medium leading-relaxed">
+                            {t('inviteForm.photoStyle.useFreePackageStyleDesc', { default: 'Team members will use the free package photo style.' })}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-gradient-to-br from-brand-primary-light to-brand-primary/5 border-2 border-brand-primary/20 rounded-xl p-4 shadow-sm">
+                          <div className="text-sm font-semibold text-brand-primary mb-2">
+                            {t('inviteForm.photoStyle.useActiveStyle', { default: 'Active Photo Style' })}
+                          </div>
+                          <div className="text-xs text-brand-primary/80 font-medium leading-relaxed">
+                            {t('bulkInviteForm.styleNote', { name: teamData?.activeContext?.name || 'Active Style', default: `All team members will use: ${teamData?.activeContext?.name || 'Active Style'}` })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* What Happens Next */}
+                  {bulkInvitePreview && bulkInvitePreview.hasEnoughSeats && (
+                    <div className="bg-gradient-to-br from-brand-primary-light to-brand-primary/5 border-2 border-brand-primary/20 rounded-2xl p-5 shadow-sm">
+                      <h4 className="text-sm font-bold text-brand-primary mb-3">{t('inviteForm.whatHappensNext.title')}</h4>
+                      <ul className="text-xs text-brand-primary space-y-2 font-medium">
+                        <li className="flex gap-2">
+                          <span className="flex-shrink-0">•</span>
+                          <span>{t('bulkInviteForm.whatHappensNext.step1', { count: bulkInvitePreview.readyToImport, default: `${bulkInvitePreview.readyToImport} invite emails will be sent` })}</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="flex-shrink-0">•</span>
+                          <span>{t('inviteForm.whatHappensNext.step3')}</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="flex-shrink-0">•</span>
+                          <span>{t('bulkInviteForm.whatHappensNext.step3', { default: 'Each team member gets 10 photos' })}</span>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                    {!bulkInvitePreview ? (
+                      // Upload step - Preview button
+                      <>
+                        <button
+                          onClick={async () => {
+                            if (!bulkInviteFile) {
+                              setBulkInviteError('Please select a file first')
+                              return
+                            }
+                            setBulkInviteLoading(true)
+                            setBulkInviteError(null)
+                            try {
+                              const formData = new FormData()
+                              formData.append('file', bulkInviteFile)
+                              const response = await fetch('/api/team/invites/bulk', {
+                                method: 'POST',
+                                body: formData
+                              })
+                              const data = await response.json()
+                              if (!response.ok) {
+                                throw new Error(data.error || 'Failed to process file')
+                              }
+                              setBulkInvitePreview(data.preview)
+                              setBulkInviteParsedData(data.parsedData)
+                            } catch (err) {
+                              setBulkInviteError(err instanceof Error ? err.message : 'Failed to process file')
+                            } finally {
+                              setBulkInviteLoading(false)
+                            }
+                          }}
+                          disabled={bulkInviteLoading || !bulkInviteFile}
+                          className={`flex-1 px-6 py-3.5 rounded-xl font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                            bulkInviteLoading || !bulkInviteFile
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-md hover:shadow-lg'
+                          }`}
+                        >
+                          {bulkInviteLoading ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                              {t('bulkInviteForm.buttons.processing', { default: 'Processing...' })}
+                            </span>
+                          ) : (
+                            t('bulkInviteForm.buttons.preview', { default: 'Preview Import' })
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowBulkInviteForm(false)
+                            setBulkInviteFile(null)
+                            setBulkInviteError(null)
+                          }}
+                          className="px-6 py-3.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+                        >
+                          {t('bulkInviteForm.buttons.cancel', { default: 'Cancel' })}
+                        </button>
+                      </>
+                    ) : (
+                      // Preview step - Import buttons
+                      <>
+                        {bulkInvitePreview.hasEnoughSeats && bulkInvitePreview.readyToImport > 0 && (
+                          <>
+                            <button
+                              onClick={async () => {
+                                if (!bulkInviteParsedData) return
+                                setBulkInviteLoading(true)
+                                setBulkInviteError(null)
+                                try {
+                                  const response = await fetch('/api/team/invites/bulk/confirm', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      invites: bulkInviteParsedData,
+                                      skipEmail: false
+                                    })
+                                  })
+                                  const data = await response.json()
+                                  if (!response.ok) {
+                                    throw new Error(data.error || 'Failed to import')
+                                  }
+                                  setBulkInviteSuccess({
+                                    imported: data.imported,
+                                    emailsSent: data.emailsSent,
+                                    emailsFailed: data.emailsFailed
+                                  })
+                                  refetchCredits()
+                                } catch (err) {
+                                  setBulkInviteError(err instanceof Error ? err.message : 'Failed to import')
+                                } finally {
+                                  setBulkInviteLoading(false)
+                                }
+                              }}
+                              disabled={bulkInviteLoading}
+                              className={`flex-1 px-6 py-3.5 rounded-xl font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary ${
+                                bulkInviteLoading
+                                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                  : 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-md hover:shadow-lg'
+                              }`}
+                            >
+                              {bulkInviteLoading ? (
+                                <span className="flex items-center justify-center gap-2">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                  {t('bulkInviteForm.buttons.importing', { default: 'Importing...' })}
+                                </span>
+                              ) : (
+                                <>
+                                  <EnvelopeIcon className="h-5 w-5 inline mr-2" />
+                                  {t('bulkInviteForm.buttons.sendInvites', { count: bulkInvitePreview.readyToImport, default: `Send ${bulkInvitePreview.readyToImport} Invites` })}
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!bulkInviteParsedData) return
+                                setBulkInviteLoading(true)
+                                setBulkInviteError(null)
+                                try {
+                                  const response = await fetch('/api/team/invites/bulk/confirm', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      invites: bulkInviteParsedData,
+                                      skipEmail: true
+                                    })
+                                  })
+                                  const data = await response.json()
+                                  if (!response.ok) {
+                                    throw new Error(data.error || 'Failed to import')
+                                  }
+                                  setBulkInviteSuccess({
+                                    imported: data.imported,
+                                    emailsSent: 0,
+                                    emailsFailed: 0
+                                  })
+                                  refetchCredits()
+                                } catch (err) {
+                                  setBulkInviteError(err instanceof Error ? err.message : 'Failed to import')
+                                } finally {
+                                  setBulkInviteLoading(false)
+                                }
+                              }}
+                              disabled={bulkInviteLoading}
+                              className={`px-6 py-3.5 rounded-xl font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary border-2 ${
+                                bulkInviteLoading
+                                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                  : 'bg-white text-brand-secondary border-brand-secondary hover:bg-brand-secondary/5'
+                              }`}
+                            >
+                              {t('bulkInviteForm.buttons.createLinks', { default: 'Create Links Only' })}
+                            </button>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBulkInvitePreview(null)
+                            setBulkInviteParsedData(null)
+                            setBulkInviteFile(null)
+                          }}
+                          disabled={bulkInviteLoading}
+                          className="px-6 py-3.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-semibold text-base transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+                        >
+                          {t('bulkInviteForm.buttons.back', { default: 'Back' })}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

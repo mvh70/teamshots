@@ -250,7 +250,6 @@ export default function TeamShotsLanding({ supportEmail, variant }: LandingProps
       <SampleGallery variant={variant} />
 
       {/* Trust Indicators - Shows Team Command Center feature */}
-      {/* Hidden per user request */}
       {/* <TrustIndicators variant={variant} showSection={showSection} /> */}
 
       {/* How It Works - 4-step team workflow */}

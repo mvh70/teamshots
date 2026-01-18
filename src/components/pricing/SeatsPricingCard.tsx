@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { CheckoutButton } from '@/components/ui';
 import { PRICING_CONFIG } from '@/config/pricing';
 import PromoCodeInput, { type PromoCodeDiscount } from './PromoCodeInput';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 // Use graduated pricing from config
 const MIN_SEATS = PRICING_CONFIG.seats.minSeats;
@@ -34,14 +35,15 @@ interface SeatsPricingCardProps {
   currentSeats?: number;
 }
 
-export default function SeatsPricingCard({ 
-  unauth = false, 
-  returnUrl, 
+export default function SeatsPricingCard({
+  unauth = false,
+  returnUrl,
   className = '',
   initialSeats = 10,
-  currentSeats 
+  currentSeats
 }: SeatsPricingCardProps) {
   const t = useTranslations('pricing');
+  const { track } = useAnalytics();
   
   // Calculate minimum seats based on mode
   const isTopUpMode = currentSeats !== undefined && currentSeats > 0;
@@ -105,8 +107,24 @@ export default function SeatsPricingCard({
   const savings = getSavings(validatedSeats);
   const totalPhotos = validatedSeats * (PRICING_CONFIG.seats.creditsPerSeat / PRICING_CONFIG.credits.perGeneration);
 
+  // Track clicks on non-interactive card elements (dead clicks)
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const isInteractive = target.closest('button, a, input, [role="button"]');
+    if (!isInteractive) {
+      track('pricing_card_dead_click', {
+        card_type: 'seats',
+        clicked_element: target.tagName.toLowerCase(),
+        clicked_text: target.textContent?.slice(0, 50) || '',
+      });
+    }
+  };
+
   return (
-    <div className={`bg-white rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border-4 border-brand-primary relative ${className}`}>
+    <div
+      className={`bg-white rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border-4 border-brand-primary relative ${className}`}
+      onClick={handleCardClick}
+    >
       {/* Popular Badge */}
       <div className="absolute -top-4 left-1/2 -translate-x-1/2">
         <span className="bg-brand-primary text-white px-6 py-2 rounded-full text-sm font-bold shadow-md">

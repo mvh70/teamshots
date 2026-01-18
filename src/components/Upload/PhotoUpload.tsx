@@ -162,10 +162,11 @@ export default function PhotoUpload({
 
       return {
         source,
-        objectUrl: overrides?.objectUrl
+        objectUrl: overrides?.objectUrl,
+        isMobile
       }
     },
-    []
+    [isMobile]
   )
 
   const handleFile = async (file: File, overrides?: Partial<UploadMetadata>): Promise<boolean> => {

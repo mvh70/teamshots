@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { PRICING_CONFIG } from '@/config/pricing';
 import { calculatePhotosFromCredits, formatPrice } from '@/domain/pricing/utils';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import type { LandingVariant } from '@/config/landing-content';
 
 interface FAQItem {
@@ -25,6 +26,7 @@ export default function FAQ({ variant, supportEmail }: FAQProps) {
   const tLanding = useTranslations(`landing.${variant}.faq`);
   // Use legacy translations for FAQ items (complex structure)
   const t = useTranslations('faq');
+  const { track } = useAnalytics();
   const [openItems, setOpenItems] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -118,14 +120,43 @@ export default function FAQ({ variant, supportEmail }: FAQProps) {
       question: t('items.7.question'),
       answer: t('items.7.answer'),
       category: 'technical'
+    },
+    {
+      id: '8',
+      question: t('items.8.question'),
+      answer: t('items.8.answer'),
+      category: 'technical'
+    },
+    {
+      id: '9',
+      question: t('items.9.question'),
+      answer: t('items.9.answer'),
+      category: 'technical'
+    },
+    {
+      id: '10',
+      question: t('items.10.question'),
+      answer: t('items.10.answer'),
+      category: 'technical'
     }
   ];
 
   const categories = ['all', 'technical', 'pricing', 'privacy', 'usage'];
 
-  const toggleItem = (id: string) => {
-    setOpenItems(prev => 
-      prev.includes(id) 
+  const toggleItem = (id: string, question: string, category: string) => {
+    const isOpening = !openItems.includes(id);
+
+    if (isOpening) {
+      track('faq_question_opened', {
+        question_id: id,
+        question_text: question,
+        category,
+        page: 'landing',
+      });
+    }
+
+    setOpenItems(prev =>
+      prev.includes(id)
         ? prev.filter(item => item !== id)
         : [...prev, id]
     );
@@ -169,7 +200,10 @@ export default function FAQ({ variant, supportEmail }: FAQProps) {
             {categories.map(category => (
               <button
                 key={category}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => {
+                  setSelectedCategory(category);
+                  track('faq_category_selected', { category, page: 'landing' });
+                }}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   selectedCategory === category
                     ? 'bg-brand-primary text-white'
@@ -190,7 +224,7 @@ export default function FAQ({ variant, supportEmail }: FAQProps) {
               className="border-2 border-brand-primary-lighter/30 rounded-2xl overflow-hidden hover:shadow-depth-lg hover:border-brand-primary-lighter transition-all duration-300 bg-bg-white"
             >
               <button
-                onClick={() => toggleItem(item.id)}
+                onClick={() => toggleItem(item.id, item.question, item.category)}
                 className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-brand-primary-light/30 transition-all duration-300 rounded-2xl"
               >
                 <h3 className="font-semibold text-text-dark pr-4 text-lg leading-snug">

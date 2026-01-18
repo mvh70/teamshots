@@ -60,7 +60,8 @@
       ["Tiempo de programación", "2-3 semanas", "60 segundos"],
       ["Consistencia de marca", "Variable", "100%"],
       ["Agentes remotos", "Imposible", "Fácil"],
-      ["Onboarding nuevos", "Semanas", "Mismo día"]
+      ["Onboarding nuevos", "Semanas", "Mismo día"],
+      ["Importación masiva", "N/A", "CSV desde cualquier CRM"]
     ]
   },
   "useCases": {

@@ -60,7 +60,8 @@
       ["Time to schedule", "2-4 weeks", "60 seconds"],
       ["Brand consistency", "Variable", "100%"],
       ["Remote employees", "Impossible", "Easy"],
-      ["Day-one ready", "Never", "Always"]
+      ["Day-one ready", "Never", "Always"],
+      ["Bulk team import", "N/A", "CSV upload or Zapier automation"]
     ]
   },
   "useCases": {
@@ -109,8 +110,8 @@
         "answer": "Just send them an invite link. They can submit their selfie from anywhere in the world."
       },
       {
-        "question": "Can we integrate with our HRIS?",
-        "answer": "Yes. We offer integrations with major HR systems to automate the onboarding flow."
+        "question": "Can we integrate with our HRIS or automate onboarding?",
+        "answer": "Yes. We integrate with Zapier, so you can automatically trigger headshot invites when new employees are added to BambooHR, Workday, Gusto, or other HR systems. You can also bulk import via CSV."
       },
       {
         "question": "What about employees who already have headshots?",

@@ -60,7 +60,8 @@
       ["Tiempo de programación", "2-4 semanas", "60 segundos"],
       ["Consistencia de marca", "Variable", "100%"],
       ["Equipos multi-sede", "Muy difícil", "Fácil"],
-      ["Onboarding nuevos", "Semanas", "Mismo día"]
+      ["Onboarding nuevos", "Semanas", "Mismo día"],
+      ["Importación masiva", "N/A", "CSV desde cualquier sistema RRHH"]
     ]
   },
   "useCases": {

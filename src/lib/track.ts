@@ -1,12 +1,23 @@
 import { posthog } from '@/lib/posthog'
 
 /**
- * Track a custom event in PostHog
+ * Track a custom event in PostHog and GTM (for GA4)
  * Use this for funnel analysis and understanding user behavior
  */
 export const track = (event: string, properties?: Record<string, unknown>) => {
-  if (typeof window !== 'undefined' && posthog.__loaded) {
+  if (typeof window === 'undefined') return
+
+  // PostHog
+  if (posthog.__loaded) {
     posthog.capture(event, properties)
+  }
+
+  // GTM dataLayer for GA4
+  if (window.dataLayer) {
+    window.dataLayer.push({
+      event,
+      ...properties,
+    })
   }
 }
 

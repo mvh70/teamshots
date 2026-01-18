@@ -60,7 +60,8 @@
       ["Time to schedule", "2-3 weeks", "60 seconds"],
       ["Brand consistency", "Variable", "100%"],
       ["Remote attorneys", "Impossible", "Easy"],
-      ["Lateral hire onboarding", "Weeks", "Same day"]
+      ["Lateral hire onboarding", "Weeks", "Same day"],
+      ["Bulk team import", "N/A", "CSV upload from any HR platform"]
     ]
   },
   "useCases": {

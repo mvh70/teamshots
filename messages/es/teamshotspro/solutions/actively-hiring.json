@@ -60,7 +60,8 @@
       ["Tiempo de programación", "2-4 semanas", "60 segundos"],
       ["Consistencia de marca", "Variable", "100%"],
       ["Empleados remotos", "Imposible", "Fácil"],
-      ["Listo el primer día", "Nunca", "Siempre"]
+      ["Listo el primer día", "Nunca", "Siempre"],
+      ["Importación masiva", "N/A", "CSV o automatización con Zapier"]
     ]
   },
   "useCases": {
@@ -109,8 +110,8 @@
         "answer": "Solo envíales un enlace de invitación. Pueden enviar su selfie desde cualquier lugar del mundo."
       },
       {
-        "question": "¿Podemos integrar con nuestro HRIS?",
-        "answer": "Sí. Ofrecemos integraciones con los principales sistemas de RRHH para automatizar el flujo de onboarding."
+        "question": "¿Podemos integrar con nuestro HRIS o automatizar el onboarding?",
+        "answer": "Sí. Nos integramos con Zapier, para que puedas activar automáticamente invitaciones de retratos cuando se añaden nuevos empleados a BambooHR, Workday, Gusto u otros sistemas de RRHH. También puedes importar masivamente vía CSV."
       },
       {
         "question": "¿Qué pasa con empleados que ya tienen headshots?",

@@ -4,16 +4,29 @@ import type { ClassificationResult } from '@/domain/selfie/selfie-types'
 
 type UploadSource = 'camera' | 'ios-camera' | 'file'
 
+// Convert upload source to storage format
+function toCaptureSource(source?: UploadSource, isMobile?: boolean): 'laptop_camera' | 'mobile_camera' | 'file_upload' {
+  if (!source || source === 'file') return 'file_upload'
+  if (source === 'ios-camera') return 'mobile_camera'
+  // For 'camera' source, we need to determine if it's laptop or mobile
+  // This is detected at upload time based on device type
+  return isMobile ? 'mobile_camera' : 'laptop_camera'
+}
+
 export interface UploadMetadata {
   source?: UploadSource
   /** Optional preview/object URL created by the caller */
   objectUrl?: string
+  /** Whether upload was from a mobile device (used to distinguish laptop_camera vs mobile_camera) */
+  isMobile?: boolean
 }
 
 export interface UploadResult {
   key: string
   url?: string
   source?: UploadSource
+  /** Whether upload was from a mobile device */
+  isMobile?: boolean
 }
 
 /**
@@ -49,6 +62,8 @@ interface PendingApproval {
   key: string
   previewUrl?: string
   source: UploadSource
+  /** Whether upload was from a mobile device */
+  isMobile?: boolean
   /** Original file for classification */
   file?: File
 }
@@ -148,14 +163,19 @@ export function useUploadFlow({
         return results
       }
 
-      // Pass classification to promote endpoint
-      return promoteUploads(uploads, classification ? {
-        selfieType: classification.selfieType,
-        selfieTypeConfidence: classification.confidence,
-        personCount: classification.personCount,
-        isProper: classification.isProper,
-        improperReason: classification.improperReason,
-      } : undefined)
+      // Derive captureSource from the first upload
+      const firstUpload = uploads[0]
+      const captureSource = firstUpload ? toCaptureSource(firstUpload.source, firstUpload.isMobile) : undefined
+
+      // Pass classification and captureSource to promote endpoint
+      return promoteUploads(uploads, {
+        ...(classification?.selfieType && { selfieType: classification.selfieType }),
+        ...(typeof classification?.confidence === 'number' && { selfieTypeConfidence: classification.confidence }),
+        ...(typeof classification?.personCount === 'number' && { personCount: classification.personCount }),
+        ...(typeof classification?.isProper === 'boolean' && { isProper: classification.isProper }),
+        ...(classification?.improperReason && { improperReason: classification.improperReason }),
+        ...(captureSource && { captureSource }),
+      })
     },
     [saveEndpoint]
   )
@@ -183,13 +203,13 @@ export function useUploadFlow({
         if (result.url) {
           registerObjectUrl(result.url)
         }
-        return { ...result, source }
+        return { ...result, source, isMobile: meta?.isMobile }
       } catch (error) {
         dispatch({ type: 'RESET' })
         const errorMessage = error instanceof Error ? error.message : 'Upload failed. Please try again.'
         onError?.(errorMessage)
         // Return empty result instead of throwing to avoid double error handling
-        return { key: '', source: detectSource(meta, file) }
+        return { key: '', source: detectSource(meta, file), isMobile: meta?.isMobile }
       }
     },
     [uploadEndpoint, onError, registerObjectUrl]
@@ -222,7 +242,8 @@ export function useUploadFlow({
         const pending: PendingApproval = {
           key: firstUpload.key,
           previewUrl: firstUpload.url,
-          source: firstUpload.source
+          source: firstUpload.source,
+          isMobile: firstUpload.isMobile
         }
         pendingApprovalRef.current = pending
         dispatch({ type: 'PENDING_APPROVAL', payload: pending })
@@ -238,7 +259,11 @@ export function useUploadFlow({
   const approvePending = useCallback(async (classification?: ClassificationResult) => {
     if (!pendingApprovalRef.current) return
     const pending = pendingApprovalRef.current
-    await approveUploads([{ key: pending.key }], classification)
+    await approveUploads([{
+      key: pending.key,
+      source: pending.source,
+      isMobile: pending.isMobile
+    }], classification)
     pendingApprovalRef.current = null
   }, [approveUploads])
 

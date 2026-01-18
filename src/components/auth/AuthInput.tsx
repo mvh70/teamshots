@@ -1,16 +1,20 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 type AuthInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
-  label?: string | React.ReactNode
+  label?: React.ReactNode
   hint?: string
   strengthMeter?: boolean
 }
 
 export default function AuthInput({ label, hint, id, className = '', strengthMeter = false, type, ...props }: AuthInputProps) {
+  const t = useTranslations('auth.password')
   const [show, setShow] = useState(false)
   const isPassword = type === 'password'
+
+  const strengthLabels = [t('strength.weak'), t('strength.fair'), t('strength.good'), t('strength.strong')]
 
   const strength = useMemo(() => {
     if (!strengthMeter || typeof props.value !== 'string') return { level: 0, label: '' }
@@ -22,9 +26,8 @@ export default function AuthInput({ label, hint, id, className = '', strengthMet
     if (/[0-9]/.test(v)) score++
     if (/[^A-Za-z0-9]/.test(v)) score++
     const level = Math.min(3, Math.floor(score / 2))
-    const label = ['👶 Weak', '🫤 Fair', '💪 Good', '🦾 Strong'][level]
-    return { level, label }
-  }, [props.value, strengthMeter])
+    return { level, label: strengthLabels[level] }
+  }, [props.value, strengthMeter, strengthLabels])
 
   return (
     <div className="w-full">
@@ -45,10 +48,10 @@ export default function AuthInput({ label, hint, id, className = '', strengthMet
             type="button"
             onClick={() => setShow(!show)}
             className="absolute inset-y-0 right-4 my-auto text-sm text-slate-500 hover:text-blue-600 font-medium transition-colors duration-200"
-            aria-label={show ? 'Hide password' : 'Show password'}
+            aria-label={show ? t('hide') : t('show')}
             tabIndex={-1}
           >
-            {show ? 'Hide' : 'Show'}
+            {show ? t('hide') : t('show')}
           </button>
         )}
       </div>

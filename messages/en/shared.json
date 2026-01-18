@@ -168,6 +168,18 @@
       "7": {
         "question": "Do you support team photos or just individual headshots?",
         "answer": "Currently, we focus on individual professional headshots. Each person needs to upload their own photo for the best results (but hey, at least they don't all need to be in the same room). We're working on team photo capabilities for future updates, because group shots are hard."
+      },
+      "8": {
+        "question": "How is this different from other AI headshot tools?",
+        "answer": "Most AI headshot tools train a custom model on your face, then generate dozens of images and hope some turn out okay. That's why you often get weird results: distorted features, wrong expressions, or just looking 'off.' We don't train models. Each headshot is generated uniquely with real-time quality checks. The result: photos that actually look like you, every time."
+      },
+      "9": {
+        "question": "Can I import team members in bulk?",
+        "answer": "Yes! Upload a CSV file with emails and names from any HR platform: BambooHR, Workday, Gusto, or a simple spreadsheet. We automatically detect column formats, remove duplicates, and check seat availability. Invite 100 people in 30 seconds instead of one by one."
+      },
+      "10": {
+        "question": "Do you integrate with other tools like Zapier?",
+        "answer": "Yes. We integrate with Zapier, so you can automatically trigger team invites when new employees are added to your HR system, Slack, or other tools. Perfect for companies that want headshots as part of their automated onboarding flow."
       }
     }
   },
@@ -539,6 +551,16 @@
       "tip3": "Wait a few minutes for delivery",
       "backToSignIn": "Back to sign in",
       "loading": "Loading…"
+    },
+    "password": {
+      "show": "Show",
+      "hide": "Hide",
+      "strength": {
+        "weak": "👶 Weak",
+        "fair": "🫤 Fair",
+        "good": "💪 Good",
+        "strong": "🦾 Strong"
+      }
     }
   },
   "invite": {
@@ -2248,9 +2270,60 @@
     },
     "buttons": {
       "inviteTeamMember": "Invite team member",
+      "bulkInvite": "Bulk Invite",
       "upgrade": "Upgrade",
       "buyCredits": "Buy credits",
       "upgradeToInvite": "Upgrade to invite"
+    },
+    "bulkInviteForm": {
+      "title": "Bulk Invite",
+      "description": "Upload a CSV file with team member emails and names to invite multiple people at once.",
+      "upload": {
+        "dragDrop": "Drag and drop or click to upload",
+        "formats": "CSV or ZIP file (max 5MB)"
+      },
+      "format": {
+        "title": "Supported CSV Formats",
+        "description": "We auto-detect columns from common HR platforms like BambooHR, Workday, Gusto, and more."
+      },
+      "preview": {
+        "readyToImport": "Ready to Import",
+        "totalRows": "Total Rows",
+        "skipped": "Skipped entries:",
+        "duplicates": "duplicate emails",
+        "existing": "already team members",
+        "noSeats": {
+          "title": "Not enough seats",
+          "description": "You need {required} seats but only have {available} available.",
+          "buyMore": "Purchase more seats →"
+        },
+        "sample": "Sample entries:",
+        "name": "Name",
+        "email": "Email",
+        "andMore": "...and {count} more",
+        "warnings": "{count} warnings"
+      },
+      "styleNote": "All team members will use: {name}",
+      "whatHappensNext": {
+        "step1": "{count} invite emails will be sent",
+        "step3": "Each team member gets 10 photos"
+      },
+      "buttons": {
+        "preview": "Preview Import",
+        "processing": "Processing...",
+        "sendInvites": "Send {count} Invites",
+        "createLinks": "Create Links Only",
+        "importing": "Importing...",
+        "cancel": "Cancel",
+        "back": "Back"
+      },
+      "success": {
+        "title": "Import Complete!",
+        "imported": "{count} team members imported",
+        "emailsSent": "{count} invite emails sent",
+        "emailsFailed": "{count} emails failed to send",
+        "done": "Done"
+      }
     },
     "selfAssignment": {
       "title": "Join Your Team",

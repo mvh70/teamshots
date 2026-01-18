@@ -109,6 +109,19 @@ export default function PricingCard({
     ? featuresWithPhotos.map(f => f.toLowerCase().includes('support') ? 'No support' : f)
     : featuresWithPhotos
 
+  // Track clicks on non-interactive card elements (dead clicks)
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const isInteractive = target.closest('button, a, input, [role="button"]');
+    if (!isInteractive) {
+      track('pricing_card_dead_click', {
+        card_type: id,
+        clicked_element: target.tagName.toLowerCase(),
+        clicked_text: target.textContent?.slice(0, 50) || '',
+      });
+    }
+  };
+
   const isFree = id === 'free'
   const isVipTier = isVip || id === 'vip'
   const borderColor = popular
@@ -116,7 +129,10 @@ export default function PricingCard({
     : 'ring-2 ring-brand-premium-ring/30 border-2 border-brand-premium-ring'
 
   return (
-    <div className={`relative bg-bg-white rounded-2xl lg:rounded-3xl shadow-depth-xl p-4 sm:p-6 lg:p-6 xl:p-8 ${borderColor} transition-all duration-500 hover:shadow-depth-2xl hover:-translate-y-2 flex flex-col min-h-[550px] lg:min-h-[600px] overflow-visible ${className || ''} ${popular ? 'lg:mt-[-16px] lg:mb-[16px] z-10' : ''}`}>
+    <div
+      className={`relative bg-bg-white rounded-2xl lg:rounded-3xl shadow-depth-xl p-4 sm:p-6 lg:p-6 xl:p-8 ${borderColor} transition-all duration-500 hover:shadow-depth-2xl hover:-translate-y-2 flex flex-col min-h-[550px] lg:min-h-[600px] overflow-visible ${className || ''} ${popular ? 'lg:mt-[-16px] lg:mb-[16px] z-10' : ''}`}
+      onClick={handleCardClick}
+    >
       {/* Most Popular badge - shown in top right for popular plans */}
       {popular && (
         <div className="absolute -top-3 right-3 lg:-top-4 lg:right-4 z-10">

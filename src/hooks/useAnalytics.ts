@@ -5,8 +5,17 @@ import { posthog } from '@/lib/posthog'
 
 export function useAnalytics() {
   const track = useCallback((event: string, properties?: Record<string, unknown>) => {
+    // PostHog
     if (posthog.__loaded) {
       posthog.capture(event, properties)
+    }
+
+    // GTM dataLayer for GA4
+    if (typeof window !== 'undefined' && window.dataLayer) {
+      window.dataLayer.push({
+        event,
+        ...properties,
+      })
     }
   }, [])
 
