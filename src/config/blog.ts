@@ -94,8 +94,8 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     date: '2026-01-17',
     readTime: '12 min read',
     author: 'TeamShotsPro Team',
-    image: '/blog/professional-headshots-for-teams.png?v=1768757374367',
-    imageAlt: 'Female executive on rooftop throwing scheduling papers in the air in victory, holding tablet with perfect AI team headshots.',
+    image: '/blog/professional-headshots-for-teams.png?v=1768759279588',
+    imageAlt: 'South Asian professional relieved to fix mismatched team photos with AI, contrasting chaotic whiteboard with perfect tablet grid.',
   },
   {
     slug: 'average-cost-professional-headshots',

@@ -86,7 +86,7 @@ const CONTENT = {
 
 // Hero image configuration - update alt text after generating image
 const HERO_IMAGE = {
-  alt: 'Female executive on rooftop throwing scheduling papers in the air in victory, holding tablet with perfect AI team headshots.',
+  alt: 'South Asian professional relieved to fix mismatched team photos with AI, contrasting chaotic whiteboard with perfect tablet grid.',
   caption: {
     en: '',
     es: '',
@@ -143,8 +143,8 @@ export default async function ProfessionalHeadshotsForTeamsPage({ params }: Prop
     description: meta.description,
     breadcrumb: localeContent.breadcrumb,
     content: localeContent.content,
-    tldr: localeContent.tldr.length > 0 ? localeContent.tldr : undefined,
-    faqs: localeContent.faqs,
+    tldr: localeContent.tldr.length > 0 ? [...localeContent.tldr] : undefined,
+    faqs: localeContent.faqs.map(faq => ({ ...faq })),
     heroImage: HERO_IMAGE.alt ? HERO_IMAGE : undefined,
     datePublished: '2026-01-18',
   };
