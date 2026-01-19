@@ -535,10 +535,17 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
       // Log error but continue with signOut to ensure cookie is cleared
       console.error('Failed to revoke token on logout:', error)
     }
-    
-    // Always use current origin to ensure correct protocol (http vs https)
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
-    signOut({ callbackUrl: `${baseUrl}/` })
+
+    // Construct clean callback URL without default ports
+    // This fixes an issue where reverse proxies forward x-forwarded-port: 80
+    // causing NextAuth to construct URLs like https://domain.com:80/
+    let callbackUrl = '/'
+    if (typeof window !== 'undefined') {
+      const { protocol, hostname } = window.location
+      // Never include default ports (80 for http, 443 for https)
+      callbackUrl = `${protocol}//${hostname}/`
+    }
+    signOut({ callbackUrl })
   }
 
   return (
