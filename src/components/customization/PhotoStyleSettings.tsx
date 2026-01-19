@@ -379,7 +379,8 @@ export default function PhotoStyleSettings({
 
   const syncAspectRatioWithShotType = React.useCallback(
     (target: PhotoStyleSettingsType, shotTypeSettings?: ShotTypeSettings | null) => {
-      if (!shotTypeSettings || isUserChoice(shotTypeSettings) || !hasValue(shotTypeSettings)) {
+      // Sync aspect ratio when shot type has a value (regardless of mode)
+      if (!shotTypeSettings || !hasValue(shotTypeSettings)) {
         return
       }
 

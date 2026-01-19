@@ -25,8 +25,8 @@ export class ClothingElement extends StyleElement {
       return false
     }
 
-    // Skip if user-choice (no specific style selected) or no value
-    if (isUserChoice(clothing) || !hasValue(clothing)) {
+    // Skip if no value set (regardless of mode - user-choice with value should still contribute)
+    if (!hasValue(clothing)) {
       return false
     }
 
@@ -127,7 +127,9 @@ export class ClothingElement extends StyleElement {
     const errors: string[] = []
     const clothing = settings.clothing
 
-    if (!clothing || isUserChoice(clothing) || !hasValue(clothing)) {
+    // Only validate if there's a value to validate
+    // (regardless of mode - user-choice with value should still be validated)
+    if (!clothing || !hasValue(clothing)) {
       return errors
     }
 

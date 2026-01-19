@@ -18,8 +18,9 @@ export class PoseElement extends StyleElement {
   isRelevantForPhase(context: ElementContext): boolean {
     const { phase, settings } = context
 
-    // Skip if no pose configured or user-choice without selection
-    if (!settings.pose || isUserChoice(settings.pose) || !hasValue(settings.pose)) {
+    // Skip if no pose configured or no value set
+    // (regardless of mode - user-choice with value should still contribute)
+    if (!settings.pose || !hasValue(settings.pose)) {
       return false
     }
 

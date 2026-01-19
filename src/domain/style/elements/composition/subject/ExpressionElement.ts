@@ -18,8 +18,9 @@ export class ExpressionElement extends StyleElement {
   isRelevantForPhase(context: ElementContext): boolean {
     const { phase, settings } = context
 
-    // Skip if no expression configured or user-choice
-    if (!settings.expression || isUserChoice(settings.expression) || !hasValue(settings.expression)) {
+    // Skip if no expression configured or no value set
+    // (regardless of mode - user-choice with value should still contribute)
+    if (!settings.expression || !hasValue(settings.expression)) {
       return false
     }
 

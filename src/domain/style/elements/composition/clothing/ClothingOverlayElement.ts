@@ -75,10 +75,11 @@ export class ClothingOverlayElement extends StyleElement {
     if (settings.branding.value.position !== 'clothing') return false
 
     // For ALL clothing styles when branding on clothing is enabled
+    // (regardless of mode - user-choice with value should still contribute)
     const clothing = settings.clothing
-    if (!clothing || isUserChoice(clothing) || !hasValue(clothing)) return false
+    if (!clothing || !hasValue(clothing)) return false
 
-    // Overlay applies to all predefined clothing styles
+    // Overlay applies to all clothing styles with a value
     return true
   }
 
@@ -95,8 +96,9 @@ export class ClothingOverlayElement extends StyleElement {
     if (settings.branding.value.position !== 'clothing') return false
 
     // For ALL clothing styles when branding on clothing is enabled
+    // (regardless of mode - user-choice with value should still contribute)
     const clothing = settings.clothing
-    if (!clothing || isUserChoice(clothing) || !hasValue(clothing)) return false
+    if (!clothing || !hasValue(clothing)) return false
 
     // Overlay applies to all predefined clothing styles
     return true

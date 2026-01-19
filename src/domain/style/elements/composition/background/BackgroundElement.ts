@@ -28,8 +28,9 @@ export class BackgroundElement extends StyleElement {
     const { phase, settings } = context
     const background = settings.background
 
-    // Skip if no background configured, user-choice, or no value
-    if (!background || isUserChoice(background) || !hasValue(background)) {
+    // Skip if no background configured or no value set
+    // (regardless of mode - user-choice with value should still contribute)
+    if (!background || !hasValue(background)) {
       return false
     }
 
