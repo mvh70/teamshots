@@ -94,6 +94,7 @@ export class ClothingColorsElement extends StyleElement {
     // Determine visibility based on shot type
     const isFullBody = this.isFullBodyVisible(shotType)
     const isBottomVisible = this.isBottomVisible(shotType)
+    const mayPartiallyShowBottom = this.mayPartiallyShowBottom(shotType)
 
     // Determine garment structure
     const clothing = settings.clothing
@@ -124,11 +125,21 @@ export class ClothingColorsElement extends StyleElement {
       }
     }
 
-    // Bottom garment (only if visible in shot)
+    // Bottom garment handling based on shot type visibility
     if (colors.bottom && isBottomVisible) {
+      // Fully visible - include color as primary specification
       colorPalette.push(`bottom garment (trousers, skirt, dress pants): ${getColorHex(colors.bottom)} color`)
-    } else if (colors.bottom && !isBottomVisible) {
-      // Log that bottom color is specified but won't be visible
+    } else if (colors.bottom && mayPartiallyShowBottom) {
+      // Edge case: shot cuts near waistline - bottom may be partially visible
+      // Include color as fallback to ensure consistency if AI shows any trousers
+      colorPalette.push(`bottom garment if partially visible (trousers, skirt): ${getColorHex(colors.bottom)} color`)
+      metadata.bottomColorPartiallyVisible = true
+      // Also add a must-follow rule to ensure color consistency
+      mustFollow.push(
+        `If any bottom garment (trousers, skirt) is partially visible at the waistline, it MUST be ${getColorHex(colors.bottom)} color - do not use a random color`
+      )
+    } else if (colors.bottom) {
+      // Not expected to be visible at all
       metadata.bottomColorNotVisible = true
     }
 
@@ -174,12 +185,23 @@ export class ClothingColorsElement extends StyleElement {
   }
 
   /**
-   * Helper: Check if shot type shows bottom garments
+   * Helper: Check if shot type shows bottom garments fully
    */
   private isBottomVisible(shotType?: ShotTypeValue): boolean {
     return this.isFullBodyVisible(shotType) ||
            shotType === 'midchest' ||
            shotType === 'three-quarter'
+  }
+
+  /**
+   * Helper: Check if shot type may partially show bottom garments
+   * These are "edge case" shots where the frame cuts near the waistline,
+   * so trousers/skirts might be partially visible even though not intended.
+   * We include the bottom color for these to ensure consistency if the AI
+   * slightly deviates from the framing.
+   */
+  private mayPartiallyShowBottom(shotType?: ShotTypeValue): boolean {
+    return shotType === 'medium-shot' // Waist-level cut - trousers may be partially visible
   }
 
   /**

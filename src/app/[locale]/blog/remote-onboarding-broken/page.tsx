@@ -341,7 +341,7 @@ export default async function RemoteOnboardingBrokenPage({ params }: Props) {
           </div>
           <div>
             <p className="font-medium text-gray-900">Matthieu van Haperen</p>
-            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Dic 2025' : 'Updated Dec 2025'}</p>
+            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Dic 2026' : 'Updated Dec 2026'}</p>
           </div>
         </div>
 

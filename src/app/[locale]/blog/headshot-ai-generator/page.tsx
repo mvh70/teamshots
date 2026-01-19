@@ -19,25 +19,25 @@ type Props = {
 const getContent = (locale: string, brandName: string) => {
   if (locale === 'es') {
     return {
-      title: 'Generador de Headshots AI 2025: Crea Fotos Profesionales Instantáneamente',
-      description: `Mejor generador de headshots AI para 2025. Genera headshots ai desde selfies en segundos. Compara herramientas por calidad y velocidad.`,
+      title: 'Generador de Headshots AI 2026: Crea Fotos Profesionales Instantáneamente',
+      description: `Mejor generador de headshots AI para 2026. Genera headshots ai desde selfies en segundos. Compara herramientas por calidad y velocidad.`,
       breadcrumb: 'Generador de Headshots AI',
       tldr: [
         '<strong>Velocidad:</strong> Los generadores de headshots AI crean fotos en segundos a minutos.',
-        '<strong>Calidad:</strong> Las herramientas de 2025 igualan la fotografía de estudio con resultados realistas.',
+        '<strong>Calidad:</strong> Las herramientas de 2026 igualan la fotografía de estudio con resultados realistas.',
         '<strong>Mejor Uso:</strong> LinkedIn, perfiles de negocios, equipos, sitios web de empresas.'
       ],
       sections: {
         howItWorks: {
-          title: 'Cómo Funcionan los Generadores de Headshots AI en 2025',
+          title: 'Cómo Funcionan los Generadores de Headshots AI en 2026',
           p1: 'Un generador de headshots AI utiliza inteligencia artificial avanzada para transformar tus selfies en fotos profesionales. El proceso es simple: sube una foto, elige tus preferencias de estilo y la IA se encarga del resto: mejorando la iluminación, añadiendo fondos profesionales, ajustando la vestimenta y creando resultados de calidad de estudio.',
-          p2: 'La tecnología ha mejorado dramáticamente en 2025. Los generadores de headshots AI modernos producen resultados indistinguibles de la fotografía tradicional, con textura de piel natural, iluminación realista y expresiones auténticas. Investigaciones muestran que el 65% de los solicitantes de empleo ahora usan IA en alguna parte de su solicitud, incluyendo headshots.',
+          p2: 'La tecnología ha mejorado dramáticamente en 2026. Los generadores de headshots AI modernos producen resultados indistinguibles de la fotografía tradicional, con textura de piel natural, iluminación realista y expresiones auténticas. Investigaciones muestran que el 65% de los solicitantes de empleo ahora usan IA en alguna parte de su solicitud, incluyendo headshots.',
           boxTitle: 'El Proceso',
           steps: ['Sube una selfie (luz natural, mirando a la cámara, fondo neutro)', 'Elige preferencias de estilo (fondo, vestimenta, expresión)', 'La IA procesa tu foto (típicamente 60 segundos a 2 horas)', 'Revisa y descarga tus headshots profesionales']
         },
         bestGenerators: {
-          title: 'Mejores Generadores de Headshots AI 2025',
-          p1: 'Basado en nuestra investigación y pruebas, estos son los mejores generadores de headshots AI para 2025:',
+          title: 'Mejores Generadores de Headshots AI 2026',
+          p1: 'Basado en nuestra investigación y pruebas, estos son los mejores generadores de headshots AI para 2026:',
           items: [
             { title: `${brandName} - Mejor para Equipos`, desc: 'Genera headshots coincidentes para equipos enteros en 60 segundos. Asegura consistencia en todos los miembros del equipo con los mismos fondos y estilos. Desde $49 para equipos.', bestFor: 'Startups, equipos remotos, sitios web de empresas' },
             { title: 'BetterPic - Mejor por Velocidad', desc: 'Generador de headshots AI rápido y realista con resultados en minutos. Ofrece nivel gratuito con opciones sin marca de agua. Genial para individuos que necesitan resultados rápidos.', bestFor: 'Fotos profesionales rápidas, uso individual' },
@@ -92,25 +92,25 @@ const getContent = (locale: string, brandName: string) => {
 
   // English
   return {
-    title: 'Headshot AI Generator 2025: Create Professional Photos Instantly',
-    description: `Best headshot AI generator for 2025. Generate ai headshots from selfies in seconds. Compare tools for quality and speed.`,
+    title: 'Headshot AI Generator 2026: Create Professional Photos Instantly',
+    description: `Best headshot AI generator for 2026. Generate ai headshots from selfies in seconds. Compare tools for quality and speed.`,
     breadcrumb: 'Headshot AI Generator',
     tldr: [
       '<strong>Speed:</strong> Headshot AI generators create photos in seconds to minutes.',
-      '<strong>Quality:</strong> 2025 tools match studio photography with realistic results.',
+      '<strong>Quality:</strong> 2026 tools match studio photography with realistic results.',
       '<strong>Best Use:</strong> LinkedIn, business profiles, teams, company websites.'
     ],
     sections: {
       howItWorks: {
-        title: 'How Headshot AI Generators Work in 2025',
+        title: 'How Headshot AI Generators Work in 2026',
         p1: 'A headshot AI generator uses advanced artificial intelligence to transform your selfies into professional photos. The process is simple: upload a photo, choose your style preferences, and the AI handles the rest - enhancing lighting, adding professional backgrounds, adjusting attire, and creating studio-quality results.',
-        p2: 'The technology has improved dramatically in 2025. Modern headshot AI generators produce results indistinguishable from traditional photography, with natural skin texture, realistic lighting, and authentic expressions. Research shows 65% of job seekers now use AI in some part of their application, including headshots.',
+        p2: 'The technology has improved dramatically in 2026. Modern headshot AI generators produce results indistinguishable from traditional photography, with natural skin texture, realistic lighting, and authentic expressions. Research shows 65% of job seekers now use AI in some part of their application, including headshots.',
         boxTitle: 'The Process',
         steps: ['Upload a selfie (natural light, facing camera, neutral background)', 'Choose style preferences (background, attire, expression)', 'AI processes your photo (typically 60 seconds to 2 hours)', 'Review and download your professional headshots']
       },
       bestGenerators: {
-        title: 'Best Headshot AI Generators 2025',
-        p1: 'Based on our research and testing, here are the top headshot AI generators for 2025:',
+        title: 'Best Headshot AI Generators 2026',
+        p1: 'Based on our research and testing, here are the top headshot AI generators for 2026:',
         items: [
           { title: `${brandName} - Best for Teams`, desc: 'Generates matching headshots for entire teams in 60 seconds. Ensures consistency across all team members with same backgrounds and styles. Starting at $49 for teams.', bestFor: 'Startups, remote teams, company websites' },
           { title: 'BetterPic - Best for Speed', desc: 'Quick, realistic headshot AI generator with results in minutes. Offers free tier with watermark-free options. Great for individuals needing fast results.', bestFor: 'Quick professional shots, individual use' },
@@ -171,7 +171,7 @@ const getFaqItems = (locale: string) => {
         answer: 'Un generador de headshots AI utiliza inteligencia artificial para crear fotos profesionales a partir de tus selfies. Mejora la iluminación, añade fondos, ajusta la vestimenta y produce resultados de calidad de estudio en minutos en lugar de horas.',
       },
       {
-        question: '¿Qué tan precisos son los generadores de headshots AI en 2025?',
+        question: '¿Qué tan precisos son los generadores de headshots AI en 2026?',
         answer: 'Muy precisos: los mejores generadores de headshots AI producen resultados realistas con textura de piel natural, iluminación adecuada y expresiones auténticas. Investigaciones muestran que el 87% de los reclutadores no pueden distinguir los headshots AI de la fotografía tradicional.',
       },
       {
@@ -196,7 +196,7 @@ const getFaqItems = (locale: string) => {
       answer: 'A headshot AI generator uses artificial intelligence to create professional photos from your selfies. It enhances lighting, adds backgrounds, adjusts attire, and produces studio-quality results in minutes instead of hours.',
     },
     {
-      question: 'How accurate are headshot AI generators in 2025?',
+      question: 'How accurate are headshot AI generators in 2026?',
       answer: 'Very accurate - top headshot AI generators produce realistic results with natural skin texture, proper lighting, and authentic expressions. Research shows 87% of recruiters can\'t distinguish AI headshots from traditional photography.',
     },
     {
@@ -287,7 +287,7 @@ export default async function HeadshotAIGeneratorPage({ params }: Props) {
           </div>
           <div>
             <p className="font-medium text-gray-900">Matthieu van Haperen</p>
-            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2025' : 'Updated Nov 2025'}</p>
+            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2026' : 'Updated Nov 2026'}</p>
           </div>
         </div>
 

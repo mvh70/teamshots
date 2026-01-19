@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { TrashIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 import { useTranslations } from 'next-intl'
@@ -92,6 +92,9 @@ const SelfieTypeBadgeSmall = ({
   )
 }
 
+const MAX_IMAGE_RETRY_ATTEMPTS = 3
+const IMAGE_RETRY_DELAY_MS = 1000
+
 // Memoized grid item component to prevent unnecessary re-renders
 const GridItem = React.memo<{
   item: SelectableItem
@@ -106,11 +109,11 @@ const GridItem = React.memo<{
   setLoadedSet: React.Dispatch<React.SetStateAction<Set<string>>>
   setHoveredDeleteId: React.Dispatch<React.SetStateAction<string | null>>
   t: (key: string, options?: any) => string
-}>(({ 
-  item, 
-  isSelected, 
-  isLoaded, 
-  isImproper, 
+}>(({
+  item,
+  isSelected,
+  isLoaded,
+  isImproper,
   showLoadingState,
   allowDelete,
   hoveredDeleteId,
@@ -120,13 +123,34 @@ const GridItem = React.memo<{
   setHoveredDeleteId,
   t
 }) => {
+  const [retryCount, setRetryCount] = useState(0)
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cleanup retry timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const handleLoad = useCallback(() => {
+    setRetryCount(0) // Reset retry count on successful load
     setLoadedSet(prev => new Set(prev).add(item.id))
   }, [item.id, setLoadedSet])
 
   const handleError = useCallback(() => {
-    setLoadedSet(prev => new Set(prev).add(item.id))
-  }, [item.id, setLoadedSet])
+    if (retryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
+      // Retry loading after a delay
+      retryTimeoutRef.current = setTimeout(() => {
+        setRetryCount(prev => prev + 1)
+      }, IMAGE_RETRY_DELAY_MS)
+    } else {
+      // Give up after max retries, show the image container anyway
+      setLoadedSet(prev => new Set(prev).add(item.id))
+    }
+  }, [item.id, setLoadedSet, retryCount])
 
   const handleToggleClick = useCallback(() => {
     if (!isImproper) {
@@ -215,7 +239,7 @@ const GridItem = React.memo<{
         {/* Image */}
         <div className={`absolute inset-0 transition-transform duration-300 ${isSelected ? 'scale-100' : 'group-hover:scale-105'}`}>
           <Image
-            src={item.url}
+            src={retryCount > 0 ? `${item.url}${item.url.includes('?') ? '&' : '?'}retry=${retryCount}` : item.url}
             alt="Selfie"
             fill
             className="object-cover"

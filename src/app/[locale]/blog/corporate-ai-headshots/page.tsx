@@ -63,10 +63,10 @@ const getContent = (locale: string, brandName: string) => {
           p2: 'Y esos números ni siquiera capturan el mayor costo: lograr que 20 personas ocupadas aparezcan en el mismo lugar al mismo tiempo. Si alguna vez has organizado una sesión de fotos de equipo, sabes que esto es básicamente imposible.'
         },
         bestPractices: {
-          title: 'Mejores Prácticas para Headshots AI Corporativos 2025',
-          p1: 'Basado en investigaciones de 2025 y mejores prácticas de la industria, esto es lo que funciona para equipos corporativos:',
+          title: 'Mejores Prácticas para Headshots AI Corporativos 2026',
+          p1: 'Basado en investigaciones de 2026 y mejores prácticas de la industria, esto es lo que funciona para equipos corporativos:',
           list: {
-            title: '✅ Mejores Prácticas 2025',
+            title: '✅ Mejores Prácticas 2026',
             items: [
               '• Usa selfies nítidas y de alta calidad como entrada para resultados claros',
               '• Mantén la consistencia en todos los canales corporativos (LinkedIn, firmas de correo, sitios web)',
@@ -218,10 +218,10 @@ const getContent = (locale: string, brandName: string) => {
         p2: 'And those numbers don\'t even capture the biggest cost: getting 20 busy people to show up at the same place at the same time. If you\'ve ever organized a team photo shoot, you know this is basically impossible.'
       },
       bestPractices: {
-        title: 'Corporate AI Headshots Best Practices 2025',
-        p1: 'Based on 2025 research and industry best practices, here\'s what works for corporate teams:',
+        title: 'Corporate AI Headshots Best Practices 2026',
+        p1: 'Based on 2026 research and industry best practices, here\'s what works for corporate teams:',
         list: {
-          title: '✅ 2025 Best Practices',
+          title: '✅ 2026 Best Practices',
           items: [
             '• Use high-quality, sharp selfies as input for crisp results',
             '• Maintain consistency across all corporate channels (LinkedIn, email signatures, websites)',
@@ -454,7 +454,7 @@ export default async function CorporateAIHeadshotsPage({ params }: Props) {
           </div>
           <div>
             <p className="font-medium text-gray-900">Matthieu van Haperen</p>
-            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2025' : 'Updated Nov 2025'}</p>
+            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2026' : 'Updated Nov 2026'}</p>
           </div>
         </div>
 

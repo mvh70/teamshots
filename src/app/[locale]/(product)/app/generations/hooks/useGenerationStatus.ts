@@ -19,6 +19,7 @@ export interface GenerationStatus {
   // Images
   uploadedPhotoUrl?: string
   generatedImageUrls: string[]
+  generatedPhotoKeys?: string[] // Raw S3 keys for direct use
   acceptedPhotoKey?: string
 
   // Progress tracking
@@ -82,9 +83,10 @@ function isGenerationComplete(data: GenerationStatus | undefined): boolean {
   if (!data) return false
   if (data.status === 'failed') return true
   if (data.status === 'completed') {
-    // Only consider complete if we have valid image URLs
+    // Only consider complete if we have valid image keys (preferred) or URLs (fallback)
+    const hasValidKeys = data.generatedPhotoKeys?.some(key => key && key.length > 0)
     const hasValidUrls = data.generatedImageUrls?.some(url => url && url.length > 0)
-    return hasValidUrls
+    return hasValidKeys || hasValidUrls
   }
   return false
 }

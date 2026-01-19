@@ -3,6 +3,7 @@ import type { Step8Output } from '@/types/generation'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '../gemini'
+import { AI_CONFIG } from '../config'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { CostTrackingHandler } from '../workflow-v3'
 import { isFeatureEnabled } from '@/config/feature-flags'
@@ -321,7 +322,7 @@ export async function executeV3Step3(
   try {
     const response: GenerateContentResult = await model.generateContent({
       contents,
-      generationConfig: { temperature: 0.2 }
+      generationConfig: { temperature: AI_CONFIG.EVALUATION_TEMPERATURE }
     })
 
     evalDurationMs = Date.now() - evalStartTime

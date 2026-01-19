@@ -19,8 +19,8 @@ type Props = {
 const getContent = (locale: string, brandName: string) => {
   if (locale === 'es') {
     return {
-      title: 'Headshots AI para LinkedIn: ¿Funcionan en 2025? (Probados por Reclutadores)',
-      description: `Explora headshots AI para LinkedIn en 2025. Investigaciones muestran que los reclutadores no pueden notar la diferencia (87% no pudieron identificarlos). Consejos para headshots AI profesionales y ${brandName}.`,
+      title: 'Headshots AI para LinkedIn: ¿Funcionan en 2026? (Probados por Reclutadores)',
+      description: `Explora headshots AI para LinkedIn en 2026. Investigaciones muestran que los reclutadores no pueden notar la diferencia (87% no pudieron identificarlos). Consejos para headshots AI profesionales y ${brandName}.`,
       breadcrumb: 'Headshots AI para LinkedIn',
       tldr: [
         '<strong>¿Funcionan los headshots AI para LinkedIn?</strong> Sí, si usas las herramientas adecuadas. Los headshots AI de alta calidad son indistinguibles de la fotografía profesional para la mayoría de los reclutadores.',
@@ -30,7 +30,7 @@ const getContent = (locale: string, brandName: string) => {
       sections: {
         elephant: {
           title: 'Hablemos Claro: ¿Lo Sabrán los Reclutadores?',
-          p1: 'Para 2025, el 9% de los solicitantes de empleo usan headshots AI para LinkedIn, y el 65% usa IA en alguna parte de su solicitud de empleo. La tendencia es clara: los headshots AI se están volviendo comunes. ¿Pero ayuda o perjudica tus posibilidades?',
+          p1: 'Para 2026, el 9% de los solicitantes de empleo usan headshots AI para LinkedIn, y el 65% usa IA en alguna parte de su solicitud de empleo. La tendencia es clara: los headshots AI se están volviendo comunes. ¿Pero ayuda o perjudica tus posibilidades?',
           p2: 'Esta es la pregunta que te mantiene despierto, ¿verdad? Estás imaginando a un reclutador entrecerrando los ojos ante tu perfil, murmurando "esto es claramente IA" antes de presionar dramáticamente el botón de rechazo.',
           p3: 'Aquí está la realidad: los reclutadores pasan un promedio de 7 segundos en tu perfil. Siete. Segundos.',
           p4: 'No están pasando tu foto por software de análisis forense. Están verificando si te ves profesional, accesible y como alguien a quien querrían en su equipo.',
@@ -136,8 +136,8 @@ const getContent = (locale: string, brandName: string) => {
 
   // English
   return {
-    title: 'AI Headshots for LinkedIn: Do They Work in 2025? (Recruiter Tested)',
-    description: `Explore AI headshots for LinkedIn in 2025. Research shows recruiters can't tell the difference (87% couldn't identify them). Tips for professional ai headshots and ${brandName}.`,
+    title: 'AI Headshots for LinkedIn: Do They Work in 2026? (Recruiter Tested)',
+    description: `Explore AI headshots for LinkedIn in 2026. Research shows recruiters can't tell the difference (87% couldn't identify them). Tips for professional ai headshots and ${brandName}.`,
     breadcrumb: 'AI Headshots for LinkedIn',
     tldr: [
       '<strong>Do AI headshots work for LinkedIn?</strong> Yes, if you use the right tools. High-quality AI headshots are indistinguishable from professional photography for most recruiters.',
@@ -147,7 +147,7 @@ const getContent = (locale: string, brandName: string) => {
     sections: {
       elephant: {
         title: 'Let\'s Address the Elephant: Will Recruiters Know?',
-        p1: 'By 2025, 9% of job seekers use AI headshots for LinkedIn, and 65% use AI in some part of their job application. The trend is clear: AI headshots are becoming mainstream. But does it help or hurt your chances?',
+        p1: 'By 2026, 9% of job seekers use AI headshots for LinkedIn, and 65% use AI in some part of their job application. The trend is clear: AI headshots are becoming mainstream. But does it help or hurt your chances?',
         p2: 'This is the question keeping you up at night, isn\'t it? You\'re imagining a recruiter squinting at your profile, muttering "this one\'s clearly AI" before dramatically hitting the reject button.',
         p3: 'Here\'s the reality: recruiters spend an average of 7 seconds on your profile. Seven. Seconds.',
         p4: 'They\'re not running your photo through forensic analysis software. They\'re checking if you look professional, approachable, and like someone they\'d want on their team.',
@@ -375,7 +375,7 @@ export default async function AIHeadshotsLinkedInPage({ params }: Props) {
           </div>
           <div>
             <p className="font-medium text-gray-900">Matthieu van Haperen</p>
-            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2025' : 'Updated Nov 2025'}</p>
+            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2026' : 'Updated Nov 2026'}</p>
           </div>
         </div>
 

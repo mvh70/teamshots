@@ -377,7 +377,7 @@ export async function executeV3Step1b(
       aspectRatio, // Enforce aspect ratio constraint
       '1K', // Fixed resolution for raw asset
       {
-        temperature: AI_CONFIG.GENERATION_TEMPERATURE,
+        temperature: AI_CONFIG.BACKGROUND_GENERATION_TEMPERATURE,
         preferredProvider: 'rest' // Prefer Google AI Studio REST API for Gemini 3 models
       }
     )

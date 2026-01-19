@@ -518,8 +518,9 @@ export class ClothingOverlayElement extends StyleElement {
     const template = this.getClothingTemplate(`${styleKey}-${detailKey}`)
 
     // Determine what items to show based on shot type
-    const showPants = shotType === 'medium-shot' || shotType === 'full-body'
-    const showShoes = shotType === 'full-body'
+    // CRITICAL: medium-shot cuts at waist - do NOT show pants (only full-body and three-quarter show pants)
+    const showPants = shotType === 'full-body' || shotType === 'three-quarter' || shotType === 'full-length'
+    const showShoes = shotType === 'full-body' || shotType === 'full-length'
 
     // Build layer descriptions from the wardrobe structure
     const layerDescriptions: string[] = []
@@ -553,6 +554,15 @@ export class ClothingOverlayElement extends StyleElement {
       )
     }
 
+    // Check for belt in inherent accessories - show belt when pants are visible
+    const inherentAccessories = wardrobe.inherent_accessories as string[] | undefined
+    const showBelt = showPants && inherentAccessories?.includes('belt')
+    if (showBelt) {
+      layerDescriptions.push(
+        `\nBelt: Professional leather belt in a coordinating color (black or brown to match shoes/pants)`
+      )
+    }
+
     if (showShoes) {
       const shoesColor = clothingColors?.shoes
       const shoesType = styleKey === 'business' ? 'Professional dress shoes' : 'Clean casual shoes'
@@ -564,6 +574,7 @@ export class ClothingOverlayElement extends StyleElement {
     const garmentCount = (wardrobe.top_layer ? 1 : 0) +
                          (wardrobe.base_layer && !isSingleLayer ? 1 : 0) +
                          (showPants ? 1 : 0) +
+                         (showBelt ? 1 : 0) +
                          (showShoes ? 1 : 0)
 
     // Build layout requirements based on garment structure
@@ -583,6 +594,9 @@ export class ClothingOverlayElement extends StyleElement {
 
     if (showPants) {
       layoutParts.push(`- Pants in their own separate space below, NOT touching upper garments`)
+    }
+    if (showBelt) {
+      layoutParts.push(`- Belt positioned near/on the pants waistband area, showing buckle and leather strap`)
     }
     if (showShoes) {
       layoutParts.push(`- Shoes in their own separate space at the bottom, NOT touching other items`)

@@ -19,6 +19,11 @@ import {
   type ElementContext,
 } from '@/domain/style/elements/composition'
 import { hasValue } from '@/domain/style/elements/base/element-types'
+import {
+  resolveShotType,
+  buildBodyBoundaryInstruction,
+  getShotTypeIntroContext
+} from '@/domain/style/elements/shot-type/config'
 
 export interface V3Step1aInput {
   selfieReferences: ReferenceImage[]
@@ -309,6 +314,11 @@ export async function executeV3Step1a(
   }
   const shotDescription = (promptObj.framing as { shot_type?: string } | undefined)?.shot_type || 'medium-shot'
 
+  // Resolve the full shot type config for body boundary enforcement
+  const shotTypeConfig = resolveShotType(shotDescription)
+  const shotTypeIntroContext = getShotTypeIntroContext(shotTypeConfig)
+  const bodyBoundaryInstruction = buildBodyBoundaryInstruction(shotTypeConfig)
+
   // Prepare references (selfies, optional logo for clothing branding, and format - no background yet)
   const { referenceImages: preparedReferences, logoReference } = await prepareAllReferences({
     selfieReferences,
@@ -492,8 +502,8 @@ export async function executeV3Step1a(
   const jsonPrompt = JSON.stringify(personOnlyPrompt, null, 2)
   
   const structuredPrompt = [
-    // Section 1: Intro & Task
-    "You are a world-class professional photographer specializing in corporate and professional portraits. Your task is to create a photorealistic portrait composition from the attached selfies and scene specifications. Below first you'll find a JSON describing the complete scene, subject, framing, camera, lighting, and rendering. Below that there are rules you must absolutely follow.",
+    // Section 1: Intro & Task (Option 3: Include shot type context)
+    `You are a world-class professional photographer specializing in corporate and professional portraits. Your task is to create ${shotTypeIntroContext} from the attached selfies and scene specifications. Below first you'll find a JSON describing the complete scene, subject, framing, camera, lighting, and rendering. Below that there are rules you must absolutely follow.`,
 
     // Section 2: Composition JSON
     '',
@@ -505,10 +515,15 @@ export async function executeV3Step1a(
     'Must Follow Rules:',
     '- Quality: Make the image as realistic as possible, with all the natural imperfections. Ensure the skin texture and hair details are high-frequency and realistic, avoiding plastic smoothness. Add realistic effects, taken from the selfies, like some hairs sticking out.',
     '- Lighting: The subject is currently on a neutral grey background, but treat this as a "studio cycling wall" illuminated by the lighting specified in the JSON. The lighting on the person MUST match the intended final scene.',
-    
+
     `- Output Dimensions: Generate the image at ${aspectRatioConfig.width}x${aspectRatioConfig.height} pixels (${aspectRatioConfig.id || aspectRatio}). Fill the entire canvas edge-to-edge with no borders, frames, letterboxing, or black bars.`,
     '- Framing: Follow the shot_type and crop_points exactly as specified in the JSON framing section. DO NOT deviate from the specified framing or show body parts outside the crop boundaries.'
   ]
+
+  // Option 2: Add explicit body boundary enforcement if available
+  if (bodyBoundaryInstruction) {
+    structuredPrompt.push(`- ${bodyBoundaryInstruction}`)
+  }
 
   // Add element-specific must follow rules (using effective rules from element composition or fallback)
   if (effectiveMustFollowRules && effectiveMustFollowRules.length > 0) {
@@ -614,7 +629,7 @@ export async function executeV3Step1a(
       aspectRatio,
       '1K', // Fixed resolution - model max
       {
-        temperature: AI_CONFIG.GENERATION_TEMPERATURE,
+        temperature: AI_CONFIG.PERSON_GENERATION_TEMPERATURE,
         preferredProvider: 'rest' // Prefer Google AI Studio REST API for Gemini 3 models
       }
     )

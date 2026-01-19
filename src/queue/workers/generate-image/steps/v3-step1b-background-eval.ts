@@ -1,6 +1,7 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '../gemini'
+import { AI_CONFIG } from '../config'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { ImageEvaluationResult } from '../evaluator'
 import type { CostTrackingHandler } from '../workflow-v3'
@@ -163,7 +164,7 @@ NOTE: Blurred/out-of-focus background people in urban/street scenes are acceptab
 
     const response: GenerateContentResult = await model.generateContent({
       contents,
-      generationConfig: { temperature: 0.2 }
+      generationConfig: { temperature: AI_CONFIG.EVALUATION_TEMPERATURE }
     })
 
     const evalDurationMs = Date.now() - evalStartTime

@@ -67,6 +67,7 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   const [failedGenerationHidden, setFailedGenerationHidden] = useState(false)
   const failedGenerationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const waitingForKeysTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const previousAfterKeyRef = useRef<string | null>(null) // Track previous key to detect actual changes
   const beforeKey = item.uploadedKey
   const normalizedBeforeKey = beforeKey && beforeKey !== 'undefined' ? beforeKey : null
 
@@ -121,15 +122,17 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
   }
   
   // Get generated key from live generation or fall back to item
-  // The API returns generatedImageUrls as proxy URLs, extract the key to build the correct URL
-  const liveGeneratedKey = liveGeneration?.generatedImageUrls?.[0] 
-    ? extractKeyFromUrl(liveGeneration.generatedImageUrls[0])
-    : null
+  // The API now returns generatedPhotoKeys directly, so we use those instead of extracting from URLs
+  const liveGeneratedKey = liveGeneration?.generatedPhotoKeys?.[0]
+    || (liveGeneration?.generatedImageUrls?.[0] ? extractKeyFromUrl(liveGeneration.generatedImageUrls[0]) : null)
   const liveAcceptedKey = liveGeneration?.acceptedPhotoKey || null
-  
+
   // Log key extraction for debugging
   if (liveGeneration?.generatedImageUrls?.[0] && !liveGeneratedKey) {
-    console.warn('Failed to extract key from generatedImageUrl:', liveGeneration.generatedImageUrls[0])
+    console.warn('Failed to get key from generation response:', {
+      generatedPhotoKeys: liveGeneration?.generatedPhotoKeys,
+      generatedImageUrls: liveGeneration?.generatedImageUrls
+    })
   }
   
   // Use live keys when available, otherwise fall back to static item data
@@ -253,11 +256,26 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
     setBeforeRetryCount(0)
   }, [normalizedBeforeKey])
 
+  // Reset image loading state ONLY when the actual image key changes to a different value
+  // We use a ref to track the previous key and compare by value, not reference.
+  // This prevents unnecessary resets when:
+  // - liveGeneration becomes null but item.generatedKey has the same value
+  // - hasGeneratedImageUrl changes but the underlying image is the same
+  // - Array references change but contents are identical
   useEffect(() => {
-    setAfterImageError(false)
-    setAfterRetryCount(0)
-    setLoadedGenerated(false)
-  }, [normalizedAfterKey, hasGeneratedImageUrl, liveGeneration?.generatedImageUrls])
+    const keyActuallyChanged = previousAfterKeyRef.current !== null &&
+                               previousAfterKeyRef.current !== normalizedAfterKey
+
+    if (keyActuallyChanged) {
+      // Key changed to a different value - reset loading state
+      setAfterImageError(false)
+      setAfterRetryCount(0)
+      setLoadedGenerated(false)
+    }
+
+    // Always update the ref to track current key
+    previousAfterKeyRef.current = normalizedAfterKey
+  }, [normalizedAfterKey])
 
   const beforeSrc = normalizedBeforeKey && !beforeImageError
     ? buildImageUrl(normalizedBeforeKey, beforeRetryCount, token)
@@ -275,6 +293,35 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
       setLoadedGenerated(true)
     }
   }, [afterSrc])
+
+  // Timeout to force hide spinner if image doesn't load within 15 seconds
+  // This prevents the spinner from staying forever if the image request hangs
+  const imageLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    // Only set timeout when we have a valid image URL and are not yet loaded
+    if (!isIncomplete && afterSrc && afterSrc !== '/placeholder-image.png' && !loadedGenerated) {
+      // Clear any existing timeout
+      if (imageLoadTimeoutRef.current) {
+        clearTimeout(imageLoadTimeoutRef.current)
+      }
+      // Set a 15-second timeout to force show the image (or error state)
+      imageLoadTimeoutRef.current = setTimeout(() => {
+        console.warn('[GenerationCard] Image load timeout reached, forcing display', {
+          generationId: item.id,
+          afterSrc
+        })
+        setLoadedGenerated(true)
+      }, 15000)
+
+      return () => {
+        if (imageLoadTimeoutRef.current) {
+          clearTimeout(imageLoadTimeoutRef.current)
+          imageLoadTimeoutRef.current = null
+        }
+      }
+    }
+  }, [isIncomplete, afterSrc, loadedGenerated, item.id])
+
   const containerRef = useRef<HTMLDivElement | null>(null)
   // Start fully on Generated side by default (if present)
   const [pos, setPos] = useState(() => isIncomplete ? (currentJobStatus?.progress || 10) : 100) // handle position from left (0-100); 100 = Generated only
@@ -594,10 +641,9 @@ export default function GenerationCard({ item, currentUserId, token }: { item: G
                 // Measure after image lays out
                 requestAnimationFrame(determineScrollability)
               }}
-              onLoadStart={() => {
-                // Reset loading state when a new load starts
-                setLoadedGenerated(false)
-              }}
+              // NOTE: onLoadStart is NOT a valid event for <img> elements (only for video/audio/XHR)
+              // React may silently ignore it or cause unexpected behavior, so we removed it.
+              // The loadedGenerated state is now managed purely through the effect and onLoad.
               onError={() => {
                 if (afterRetryCount < MAX_IMAGE_RETRY_ATTEMPTS) {
                   setAfterRetryCount(prev => prev + 1)

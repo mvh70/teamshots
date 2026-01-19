@@ -44,10 +44,11 @@ function extractSuggestedAdjustments(structuredEvaluation: StructuredEvaluation)
       // Add prescriptive guidance for specific failures
       if (key === 'no_unauthorized_accessories') {
         adjustments.push(
-          '⚠️ CRITICAL FIX: DO NOT add ANY accessories (belt, watch, pocket square, tie, cufflinks, jewelry, etc.) ' +
-          'that are not clearly visible in the reference selfies. ONLY include accessories explicitly present in the selfies. ' +
-          'If unsure whether an accessory is visible in the selfies, OMIT it entirely. ' +
-          'The outfit description is for clothing style guidance only - do NOT infer accessories from it.'
+          '⚠️ CRITICAL FIX: DO NOT add ANY accessories (watch, pocket square, tie, jewelry, glasses, etc.) ' +
+          'that are not clearly visible in the reference selfies OR listed in the wardrobe.inherent_accessories. ' +
+          'EXCEPTION: Belt and cufflinks may be inherent to certain clothing styles (check wardrobe.inherent_accessories in the prompt). ' +
+          'ONLY include accessories explicitly present in the selfies, garment collage, or inherent_accessories list. ' +
+          'If unsure whether an accessory is authorized, OMIT it entirely.'
         )
       }
 

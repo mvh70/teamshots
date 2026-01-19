@@ -1,6 +1,7 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from './gemini'
+import { AI_CONFIG } from './config'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 
 export interface SelfieReference {
@@ -374,7 +375,7 @@ export async function evaluateGeneratedImage({
     const response: GenerateContentResult = await model.generateContent({
       contents,
       generationConfig: {
-        temperature: 0.2
+        temperature: AI_CONFIG.EVALUATION_TEMPERATURE
       }
     })
 

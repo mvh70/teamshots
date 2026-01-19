@@ -38,19 +38,19 @@ export function resolvePackageAspectRatio(
   const canonicalRatioConfig = resolveAspectRatio(shotTypeConfig.id)
   let ratioConfig = canonicalRatioConfig
 
-  // Check for mismatch between explicit and canonical
-  if (explicitAspectRatio && explicitAspectRatio !== canonicalRatioConfig.id) {
-    Logger.debug('Aspect ratio mismatch detected. Using canonical value derived from shot type.', {
-      packageId,
-      shotType: shotTypeConfig.id,
-      canonicalAspectRatio: canonicalRatioConfig.id,
-      explicitAspectRatio
-    })
-  }
-
-  // If explicit matches canonical, use it (may have additional metadata)
-  if (explicitAspectRatio && explicitAspectRatio === canonicalRatioConfig.id) {
+  // Priority: Explicit aspect ratio (from package/user) takes precedence over canonical
+  if (explicitAspectRatio) {
     ratioConfig = resolveAspectRatio(shotTypeConfig.id, explicitAspectRatio)
+
+    // Log if there's a mismatch (for debugging purposes only)
+    if (explicitAspectRatio !== canonicalRatioConfig.id) {
+      Logger.debug('Using explicit aspect ratio override from package settings', {
+        packageId,
+        shotType: shotTypeConfig.id,
+        canonicalAspectRatio: canonicalRatioConfig.id,
+        explicitAspectRatio
+      })
+    }
   }
 
   // Update effective settings with resolved ratio

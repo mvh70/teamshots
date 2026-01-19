@@ -214,6 +214,7 @@ export async function GET(
       // Images
       uploadedPhotoUrl,
       generatedImageUrls,
+      generatedPhotoKeys: generation.generatedPhotoKeys, // Raw S3 keys for direct use
       acceptedPhotoKey: generation.acceptedPhotoKey,
       
       // Progress tracking

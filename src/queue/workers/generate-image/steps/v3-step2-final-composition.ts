@@ -1,6 +1,7 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { generateWithGemini } from '../gemini'
+import { AI_CONFIG } from '../config'
 import sharp from 'sharp'
 import type { Step7Output, ReferenceImage } from '@/types/generation'
 import { logPrompt, logStepResult } from '../utils/logging'
@@ -460,7 +461,7 @@ export async function executeV3Step2(
       aspectRatio,
       resolution,
       {
-        temperature: 0.3, // Lower temperature for more consistent refinement
+        temperature: AI_CONFIG.REFINEMENT_TEMPERATURE, // Lower temperature for more consistent refinement
         preferredProvider: 'rest' // Prefer Google AI Studio REST API for Gemini 3 models
       }
     )

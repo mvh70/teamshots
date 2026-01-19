@@ -1,6 +1,7 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '../gemini'
+import { AI_CONFIG } from '../config'
 import sharp from 'sharp'
 import type { ReferenceImage as BaseReferenceImage } from '@/types/generation'
 import type { ImageEvaluationResult, StructuredEvaluation } from '../evaluator'
@@ -61,11 +62,17 @@ export async function executeV3Step1aEval(
     hasGarmentCollage: !!garmentCollageReference
   })
 
-  // Parse prompt to extract shot type (no longer passed as separate arg)
+  // Parse prompt to extract shot type and wardrobe info (no longer passed as separate arg)
   const promptObj = JSON.parse(generationPrompt)
   const shotType = promptObj.framing?.shot_type || 'medium-shot'
   const shotLabel = shotType.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
   const shotDescription = promptObj.framing?.description || promptObj.framing?.crop_points || `${shotLabel} framing`
+
+  // Extract inherent accessories from wardrobe - these are authorized by the clothing style
+  const wardrobeObj = promptObj.wardrobe as { inherent_accessories?: string[], accessories?: string[] } | undefined
+  const inherentAccessories = wardrobeObj?.inherent_accessories || []
+  const userAccessories = wardrobeObj?.accessories || []
+  const authorizedAccessories = [...new Set([...inherentAccessories, ...userAccessories])]
 
   const metadata = await sharp(imageBuffer).metadata()
   const actualWidth = metadata.width ?? null
@@ -136,10 +143,13 @@ export async function executeV3Step1aEval(
     '     * Glasses: eyeglasses, sunglasses, reading glasses',
     '     * Headwear: hats, caps, headbands, hair accessories',
     '     * Tattoos: any visible tattoos or body art',
-    '     * Clothing accessories: belt, pocket square, tie, cufflinks',
+    '     * Clothing accessories: pocket square, tie (ONLY check these - belt and cufflinks may be inherent to clothing style)',
     '   - If a garment collage reference is provided, accessories visible in the collage ARE AUTHORIZED',
-    '   - Answer YES if all accessories appear in EITHER the selfies OR the garment collage',
-    '   - Answer NO (REJECT) only if an accessory appears in the generated image but is NOT in the selfies AND NOT in the garment collage',
+    authorizedAccessories.length > 0
+      ? `   - INHERENT ACCESSORIES: The following are AUTHORIZED by the clothing style and should NOT be rejected: ${authorizedAccessories.join(', ')}`
+      : '   - No inherent accessories specified for this clothing style',
+    '   - Answer YES if all accessories appear in EITHER the selfies OR the garment collage OR the inherent accessories list',
+    '   - Answer NO (REJECT) only if an accessory appears in the generated image but is NOT in the selfies AND NOT in the garment collage AND NOT in the inherent accessories list',
     '   - Answer NO (REJECT) if the person has earrings in the generated image but NO earrings in the selfies AND NO earrings in the collage',
     '   - Answer NO (REJECT) if the person has glasses in the generated image but NO glasses in the selfies AND NO glasses in the collage',
     '   - Answer YES if no accessories are present in either the generated image or the selfies',
@@ -315,7 +325,7 @@ Generation prompt used:\n${generationPrompt}`
     const response: GenerateContentResult = await model.generateContent({
       contents,
       generationConfig: {
-        temperature: 0.2
+        temperature: AI_CONFIG.EVALUATION_TEMPERATURE
       }
     })
 

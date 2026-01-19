@@ -64,6 +64,7 @@ const DEFAULTS = {
     bottom: 'Gray'
   }),
   shotType: predefined({ type: 'medium-shot' as const }),
+  aspectRatio: '1:1' as const, // Square format for headshots
   subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts
 }
 

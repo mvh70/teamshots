@@ -71,16 +71,16 @@ export class LightingElement extends StyleElement {
         setup: derived.setup,
         color_temperature: `${derived.colorTemp}K`,
         description: derived.description,
-        note: 'The setup describes how light should appear on the subject, NOT visible equipment. No softboxes, umbrellas, studio lights, or photography equipment should be visible in the image.',
+        note: 'The setup describes how light should appear on the subject, NOT visible equipment. No softboxes, umbrellas, studio lights, lamps, light fixtures, or photography equipment should be visible in the image.',
       },
     }
 
     // Note: Specific lighting details (quality, direction, color temperature, setup) are in the JSON payload
     // Only add critical quality rules that aren't obvious from the JSON structure
 
-    // Universal constraint: no visible photography equipment
+    // Universal constraint: no visible photography equipment or light sources
     mustFollow.push(
-      'No studio lighting equipment, softboxes, umbrellas, reflectors, or photography gear visible in the image'
+      'No studio lighting equipment, softboxes, umbrellas, reflectors, lamps, light fixtures, or photography gear visible in the image'
     )
 
     // Phase-specific quality constraints
@@ -96,17 +96,20 @@ export class LightingElement extends StyleElement {
         'Lighting quality must be consistent across the scene'
       )
     } else if (phase === 'composition') {
+      // CRITICAL: The person already has lighting applied from Step 1a
+      // Step 2 should PRESERVE person lighting and apply lighting to BACKGROUND only
       mustFollow.push(
-        'Light direction must be coherent across composition',
-        'Color temperature must be uniform throughout',
-        'Shadow characteristics must match between layers',
-        'No lighting inconsistencies or mismatched light sources'
+        'PRESERVE the subject\'s existing lighting exactly - do NOT add additional light sources or brightness to the PERSON',
+        'Apply lighting effects to the BACKGROUND (falloff, shadows, ambient) based on the lighting direction',
+        'Match color temperature between subject and background via color grading',
+        'No lighting inconsistencies between subject and background'
       )
 
-      // Detailed composition lighting instructions
+      // Composition instructions: preserve person lighting, apply background lighting
       instructions.push(
-        'Ensure natural LIGHTING FALLOFF: The key light should illuminate the person brightly while creating natural, gradual falloff on the background',
-        'Apply extremely subtle edge definition where lighting naturally separates the subject from background. CRITICAL: NO visible halos, glows, or bright outlines - edge treatment must be imperceptible and only serve to prevent the subject from looking pasted on'
+        'The subject already has professional lighting applied from Step 1 - preserve their lighting exactly as generated',
+        'Apply natural LIGHTING FALLOFF to the BACKGROUND: gradual falloff on the background wall/environment based on the key light direction',
+        'Cast a realistic soft shadow FROM the subject ONTO the background based on the lighting direction'
       )
     }
 

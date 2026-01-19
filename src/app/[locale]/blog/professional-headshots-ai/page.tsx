@@ -19,22 +19,22 @@ type Props = {
 const getContent = (locale: string, brandName: string) => {
   if (locale === 'es') {
     return {
-      title: 'Headshots AI Profesionales: Crea Fotos de Calidad de Estudio en 2025',
-      description: `Genera headshots profesionales AI en 2025 con resultados realistas. Compara las mejores herramientas para negocios, LinkedIn y uso en equipos. Ahorra tiempo y dinero.`,
+      title: 'Headshots AI Profesionales: Crea Fotos de Calidad de Estudio en 2026',
+      description: `Genera headshots profesionales AI en 2026 con resultados realistas. Compara las mejores herramientas para negocios, LinkedIn y uso en equipos. Ahorra tiempo y dinero.`,
       breadcrumb: 'Headshots AI Profesionales',
       tldr: [
-        '<strong>Calidad:</strong> La IA de 2025 produce headshots AI profesionales de nivel de estudio que rivalizan con los fotógrafos.',
+        '<strong>Calidad:</strong> La IA de 2026 produce headshots AI profesionales de nivel de estudio que rivalizan con los fotógrafos.',
         '<strong>Costo:</strong> $15-50 vs $200-500 tradicional - 80-90% de ahorro.',
         `<strong>Mejor Herramienta:</strong> ${brandName} para equipos y consistencia.`
       ],
       sections: {
         why: {
-          title: '¿Por Qué Headshots AI Profesionales en 2025?',
+          title: '¿Por Qué Headshots AI Profesionales en 2026?',
           p1: 'Con los avances de la IA, los headshots profesionales AI son ahora realistas y accesibles. Investigaciones muestran que el 65% de los solicitantes de empleo usan IA en alguna parte de su solicitud, incluyendo headshots profesionales. La tecnología ha mejorado dramáticamente: la IA moderna produce resultados indistinguibles de la fotografía de estudio.',
           p2: 'Los beneficios son claros: los headshots profesionales AI cuestan 80-90% menos que la fotografía tradicional, toman minutos en lugar de semanas, y entregan resultados consistentes perfectos para LinkedIn, sitios web de empresas y materiales de negocios.'
         },
         tools: {
-          title: 'Mejores Herramientas de Headshots AI Profesionales 2025',
+          title: 'Mejores Herramientas de Headshots AI Profesionales 2026',
           table: {
             headers: ['Herramienta', 'Mejor Para', 'Precio', 'Velocidad', 'Calidad'],
             rows: [
@@ -47,7 +47,7 @@ const getContent = (locale: string, brandName: string) => {
         },
         bestPractices: {
           title: 'Mejores Prácticas para Headshots AI Profesionales',
-          p1: 'Para obtener los mejores resultados de headshots AI profesionales, sigue estas mejores prácticas de 2025:',
+          p1: 'Para obtener los mejores resultados de headshots AI profesionales, sigue estas mejores prácticas de 2026:',
           items: [
             { title: '1. Empieza con Entrada de Alta Calidad', text: 'Usa selfies nítidas y bien iluminadas. La luz natural cerca de una ventana funciona mejor. Cuanto mejor sea tu entrada, mejor será la salida de tu headshot profesional AI.' },
             { title: '2. Coincide con Tu Marca', text: 'Elige fondos, vestimenta y expresiones que se alineen con tu industria y cultura empresarial. ¿Finanzas? Ve formal. ¿Tecnología? Casual elegante funciona.' },
@@ -96,22 +96,22 @@ const getContent = (locale: string, brandName: string) => {
 
   // English
   return {
-    title: 'Professional Headshots AI: Create Studio-Quality Photos in 2025',
-    description: `Generate professional headshots AI in 2025 with realistic results. Compare top tools for business, LinkedIn, and team use. Save time and money.`,
+    title: 'Professional Headshots AI: Create Studio-Quality Photos in 2026',
+    description: `Generate professional headshots AI in 2026 with realistic results. Compare top tools for business, LinkedIn, and team use. Save time and money.`,
     breadcrumb: 'Professional Headshots AI',
     tldr: [
-      '<strong>Quality:</strong> 2025 AI produces studio-level professional headshots AI that rival photographers.',
+      '<strong>Quality:</strong> 2026 AI produces studio-level professional headshots AI that rival photographers.',
       '<strong>Cost:</strong> $15-50 vs $200-500 traditional - 80-90% savings.',
       `<strong>Best Tool:</strong> ${brandName} for teams and consistency.`
     ],
     sections: {
       why: {
-        title: 'Why Professional Headshots AI in 2025?',
+        title: 'Why Professional Headshots AI in 2026?',
         p1: 'With AI advancements, professional headshots AI are now realistic and accessible. Research shows 65% of job seekers use AI in some part of their application, including professional headshots. The technology has improved dramatically - modern AI produces results indistinguishable from studio photography.',
         p2: 'The benefits are clear: professional headshots AI cost 80-90% less than traditional photography, take minutes instead of weeks, and deliver consistent results perfect for LinkedIn, company websites, and business materials.'
       },
       tools: {
-        title: 'Top Professional Headshots AI Tools 2025',
+        title: 'Top Professional Headshots AI Tools 2026',
         table: {
           headers: ['Tool', 'Best For', 'Price', 'Speed', 'Quality'],
           rows: [
@@ -124,7 +124,7 @@ const getContent = (locale: string, brandName: string) => {
       },
       bestPractices: {
         title: 'Best Practices for Professional Headshots AI',
-        p1: 'To get the best results from professional headshots AI, follow these 2025 best practices:',
+        p1: 'To get the best results from professional headshots AI, follow these 2026 best practices:',
         items: [
           { title: '1. Start with High-Quality Input', text: 'Use sharp, well-lit selfies. Natural light near a window works best. The better your input, the better your professional headshots AI output.' },
           { title: '2. Match Your Brand', text: 'Choose backgrounds, attire, and expressions that align with your industry and company culture. Finance? Go formal. Tech? Smart casual works.' },
@@ -175,7 +175,7 @@ const getFaqItems = (locale: string, brandName: string) => {
   if (locale === 'es') {
     return [
       {
-        question: '¿Qué tan realistas son los headshots AI profesionales en 2025?',
+        question: '¿Qué tan realistas son los headshots AI profesionales en 2026?',
         answer: 'Muy realistas: las mejores herramientas producen resultados indistinguibles de la fotografía de estudio, con textura de piel natural, iluminación realista y expresiones auténticas. Investigaciones muestran que el 87% de los reclutadores no pueden notar la diferencia.',
       },
       {
@@ -200,7 +200,7 @@ const getFaqItems = (locale: string, brandName: string) => {
   // English
   return [
     {
-      question: 'How realistic are AI professional headshots in 2025?',
+      question: 'How realistic are AI professional headshots in 2026?',
       answer: 'Very realistic - top tools produce results indistinguishable from studio photography, with natural skin texture, realistic lighting, and authentic expressions. Research shows 87% of recruiters can\'t tell the difference.',
     },
     {
@@ -295,7 +295,7 @@ export default async function ProfessionalHeadshotsAIPage({ params }: Props) {
           </div>
           <div>
             <p className="font-medium text-gray-900">Matthieu van Haperen</p>
-            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2025' : 'Updated Nov 2025'}</p>
+            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2026' : 'Updated Nov 2026'}</p>
           </div>
         </div>
 

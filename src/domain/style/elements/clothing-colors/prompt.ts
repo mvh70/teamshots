@@ -11,6 +11,14 @@ const isFullBodyVisible = (shotType?: ShotTypeValue | null) =>
 const isBottomVisible = (shotType?: ShotTypeValue | null) =>
   isFullBodyVisible(shotType) || shotType === 'midchest' || shotType === 'three-quarter'
 
+/**
+ * Check if shot type may partially show bottom garments
+ * These are "edge case" shots where the frame cuts near the waistline,
+ * so trousers/skirts might be partially visible even though not intended.
+ */
+const mayPartiallyShowBottom = (shotType?: ShotTypeValue | null) =>
+  shotType === 'medium-shot' // Waist-level cut - trousers may be partially visible
+
 export const buildColorPalette = (
   colors: ClothingColorValue | undefined,
   detailKey: string,
@@ -31,7 +39,12 @@ export const buildColorPalette = (
   }
 
   if (colors.bottom && isBottomVisible(shotType)) {
+    // Fully visible - include color as primary specification
     palette.push(`bottom garment (trousers, skirt, dress pants): ${colors.bottom} color`)
+  } else if (colors.bottom && mayPartiallyShowBottom(shotType)) {
+    // Edge case: shot cuts near waistline - bottom may be partially visible
+    // Include color as fallback to ensure consistency if AI shows any trousers
+    palette.push(`bottom garment if partially visible (trousers, skirt): ${colors.bottom} color`)
   }
 
   if (colors.shoes && isFullBodyVisible(shotType)) {

@@ -17,6 +17,12 @@ export interface WardrobeDetailConfig {
   outerLayer?: string
   notes?: string
   excludeClothingColors?: ClothingColorKey[]
+  /**
+   * Accessories that are naturally part of this clothing style.
+   * These are authorized in the evaluator and won't be rejected as "unauthorized accessories".
+   * Example: 'belt' is inherent for business trousers, 'cufflinks' for formal dress shirts.
+   */
+  inherentAccessories?: string[]
 }
 
 /**

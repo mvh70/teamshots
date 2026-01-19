@@ -1,6 +1,7 @@
 import { Logger } from '@/lib/logger'
 import { Env } from '@/lib/env'
 import { getVertexGenerativeModel } from '../gemini'
+import { AI_CONFIG } from '../config'
 import type { Content, GenerateContentResult, Part } from '@google-cloud/vertexai'
 import type { ReferenceImage, EvaluationFeedback } from '@/types/generation'
 
@@ -21,17 +22,30 @@ export async function evaluatePersonGeneration(
   debugMode = false
 ): Promise<EvaluationFeedback> {
   const { imageBase64, imageIndex, generationPrompt, selfieReferences, logoReference, brandingPosition, garmentCollageReference } = input
-  
+
   const evalModel = Env.string('GEMINI_EVAL_MODEL', '')
   const imageModel = Env.string('GEMINI_IMAGE_MODEL', '')
   const modelName = evalModel || imageModel || 'gemini-2.5-flash'
-  
+
   Logger.debug('Evaluating person generation (Step 1)', {
     modelName,
     imageIndex
   })
-  
+
   const model = await getVertexGenerativeModel(modelName)
+
+  // Extract inherent accessories from wardrobe - these are authorized by the clothing style
+  let authorizedAccessories: string[] = []
+  try {
+    const promptObj = JSON.parse(generationPrompt)
+    const wardrobeObj = promptObj.wardrobe as { inherent_accessories?: string[], accessories?: string[] } | undefined
+    const inherentAccessories = wardrobeObj?.inherent_accessories || []
+    const userAccessories = wardrobeObj?.accessories || []
+    authorizedAccessories = [...new Set([...inherentAccessories, ...userAccessories])]
+  } catch {
+    // If parsing fails, continue with empty authorized accessories
+    Logger.warn('Failed to parse generation prompt for authorized accessories')
+  }
 
   const instructions = [
     `You are evaluating Step 1 of image generation: Person on white background.`,
@@ -55,10 +69,14 @@ export async function evaluatePersonGeneration(
     '',
     '4. no_unauthorized_accessories',
     '   - Compare the reference selfies AND garment collage (if provided) to the generated image',
-    '   - Are there NO accessories (glasses, jewelry, piercings, tattoos, hats, belt, watch, pocket square)',
+    '   - Are there NO accessories (glasses, jewelry, piercings, tattoos, hats, watch, pocket square)',
     '     that are ABSENT from BOTH the reference selfies AND the garment collage?',
+    '   - NOTE: Belt and cufflinks may be inherent to the clothing style and should not be rejected',
     '   - If a garment collage is provided, accessories visible in the collage are AUTHORIZED',
-    '   - Answer YES if all accessories appear in either the selfies OR the garment collage'
+    authorizedAccessories.length > 0
+      ? `   - INHERENT ACCESSORIES: The following are AUTHORIZED by the clothing style: ${authorizedAccessories.join(', ')}`
+      : '   - No inherent accessories specified for this clothing style',
+    '   - Answer YES if all accessories appear in either the selfies OR the garment collage OR the inherent accessories list'
   ]
 
   // Add branding checks if logo is on clothing
@@ -144,7 +162,7 @@ export async function evaluatePersonGeneration(
   try {
     const response: GenerateContentResult = await model.generateContent({
       contents,
-      generationConfig: { temperature: 0.2 }
+      generationConfig: { temperature: AI_CONFIG.EVALUATION_TEMPERATURE }
     })
 
     const responseParts = response.response.candidates?.[0]?.content?.parts ?? []

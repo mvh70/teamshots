@@ -19,8 +19,8 @@ type Props = {
 const getContent = (locale: string, brandName: string) => {
   if (locale === 'es') {
     return {
-      title: 'Mejor Generador de Headshots AI Gratuito 2025: Resultados Realistas Sin Pagar',
-      description: `Descubre el mejor generador de headshots AI gratuito para 2025. Crea headshots AI profesionales desde selfies sin marcas de agua ni límites. Compara las mejores herramientas gratuitas.`,
+      title: 'Mejor Generador de Headshots AI Gratuito 2026: Resultados Realistas Sin Pagar',
+      description: `Descubre el mejor generador de headshots AI gratuito para 2026. Crea headshots AI profesionales desde selfies sin marcas de agua ni límites. Compara las mejores herramientas gratuitas.`,
       breadcrumb: 'Headshot AI Gratuito',
       tldr: [
         '<strong>Mejor opción gratuita:</strong> BetterPic - Headshots AI gratuitos rápidos y realistas sin marcas de agua.',
@@ -29,12 +29,12 @@ const getContent = (locale: string, brandName: string) => {
       ],
       sections: {
         whyUse: {
-          title: '¿Por Qué Usar un Generador de Headshots AI Gratuito en 2025?',
-          p1: 'Los generadores de headshots AI gratuitos han avanzado mucho en 2025. Con realismo mejorado y acceso sin costo, son perfectos para probar o uso casual. Según nuestra investigación, la adopción ha aumentado un 65% entre buscadores de empleo para actualizaciones rápidas de perfiles.',
+          title: '¿Por Qué Usar un Generador de Headshots AI Gratuito en 2026?',
+          p1: 'Los generadores de headshots AI gratuitos han avanzado mucho en 2026. Con realismo mejorado y acceso sin costo, son perfectos para probar o uso casual. Según nuestra investigación, la adopción ha aumentado un 65% entre buscadores de empleo para actualizaciones rápidas de perfiles.',
           p2: 'El atractivo es obvio: ¿quién no quiere fotos de aspecto profesional sin gastar dinero? Pero aquí está lo que necesitas saber antes de sumergirte.'
         },
         topGenerators: {
-          title: 'Mejores Generadores de Headshots AI Gratuitos 2025',
+          title: 'Mejores Generadores de Headshots AI Gratuitos 2026',
           table: {
             headers: ['Herramienta', 'Mejor Para', 'Velocidad', 'Calidad', 'Marcas de Agua'],
             rows: [
@@ -108,8 +108,8 @@ const getContent = (locale: string, brandName: string) => {
 
   // English
   return {
-    title: 'Best Free AI Headshot Generator 2025: Realistic Results Without Paying',
-    description: `Discover the best free AI headshot generator for 2025. Create professional ai headshots from selfies without watermarks or limits. Compare top free tools.`,
+    title: 'Best Free AI Headshot Generator 2026: Realistic Results Without Paying',
+    description: `Discover the best free AI headshot generator for 2026. Create professional ai headshots from selfies without watermarks or limits. Compare top free tools.`,
     breadcrumb: 'Free AI Headshot Generator',
     tldr: [
       '<strong>Top free pick:</strong> BetterPic - Quick, realistic free AI headshots without watermarks.',
@@ -118,12 +118,12 @@ const getContent = (locale: string, brandName: string) => {
     ],
     sections: {
       whyUse: {
-        title: 'Why Use a Free AI Headshot Generator in 2025?',
-        p1: 'Free AI headshot generators have come a long way in 2025. With improved realism and no-cost access, they\'re perfect for testing the waters or casual use. Based on our research, adoption is up 65% among job seekers for quick profile updates.',
+        title: 'Why Use a Free AI Headshot Generator in 2026?',
+        p1: 'Free AI headshot generators have come a long way in 2026. With improved realism and no-cost access, they\'re perfect for testing the waters or casual use. Based on our research, adoption is up 65% among job seekers for quick profile updates.',
         p2: 'The appeal is obvious: who doesn\'t want professional-looking photos without spending money? But here\'s what you need to know before diving in.'
       },
       topGenerators: {
-        title: 'Top Free AI Headshot Generators 2025',
+        title: 'Top Free AI Headshot Generators 2026',
         table: {
           headers: ['Tool', 'Best For', 'Speed', 'Quality', 'Watermarks'],
           rows: [
@@ -319,7 +319,7 @@ export default async function FreeAIHeadshotGeneratorPage({ params }: Props) {
           </div>
           <div>
             <p className="font-medium text-gray-900">Matthieu van Haperen</p>
-            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2025' : 'Updated Nov 2025'}</p>
+            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2026' : 'Updated Nov 2026'}</p>
           </div>
         </div>
 

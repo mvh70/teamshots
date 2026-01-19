@@ -134,7 +134,11 @@ export function ensureServerDefaults(
   if (packageConfig.defaultSettings.lighting) {
     result.lighting = packageConfig.defaultSettings.lighting
   }
-  
+
+  if (packageConfig.defaultSettings.aspectRatio) {
+    result.aspectRatio = packageConfig.defaultSettings.aspectRatio
+  }
+
   return result
 }
 

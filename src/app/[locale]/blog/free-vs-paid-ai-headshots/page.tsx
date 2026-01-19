@@ -19,8 +19,8 @@ type Props = {
 const getContent = (locale: string, brandName: string) => {
   if (locale === 'es') {
     return {
-      title: 'Generadores de Headshots AI Gratuitos vs Pagados 2025: Comparación Honesta',
-      description: `Compara generadores de headshots AI gratuitos vs pagados en 2025. Ve ejemplos reales, diferencias de calidad y cuándo actualizar para resultados profesionales.`,
+      title: 'Generadores de Headshots AI Gratuitos vs Pagados 2026: Comparación Honesta',
+      description: `Compara generadores de headshots AI gratuitos vs pagados en 2026. Ve ejemplos reales, diferencias de calidad y cuándo actualizar para resultados profesionales.`,
       breadcrumb: 'Headshots AI Gratuitos vs Pagados',
       tldr: [
         '<strong>Para uso casual:</strong> Las herramientas gratuitas funcionan bien para avatares de redes sociales o proyectos personales donde la calidad no es crítica.',
@@ -42,7 +42,7 @@ const getContent = (locale: string, brandName: string) => {
           p2: 'La matemática rara vez funciona a favor de lo "gratis". Si pasas 3 horas probando diferentes herramientas gratuitas y tu tiempo vale $30/hora, ya has gastado $90. Las herramientas pagadas te habrían dado mejores resultados en 10 minutos.'
         },
         comparison: {
-          title: 'Comparación de Generadores de Headshots AI Gratuitos vs Pagados 2025',
+          title: 'Comparación de Generadores de Headshots AI Gratuitos vs Pagados 2026',
           table: {
             headers: ['Característica', 'Herramientas Gratuitas', 'Herramientas Pagadas'],
             rows: [
@@ -138,8 +138,8 @@ const getContent = (locale: string, brandName: string) => {
 
   // English
   return {
-    title: 'Free vs Paid AI Headshot Generators 2025: Honest Comparison',
-    description: `Compare free AI headshot generators vs paid in 2025. See real examples, quality differences, and when to upgrade for professional results.`,
+    title: 'Free vs Paid AI Headshot Generators 2026: Honest Comparison',
+    description: `Compare free AI headshot generators vs paid in 2026. See real examples, quality differences, and when to upgrade for professional results.`,
     breadcrumb: 'Free vs Paid AI Headshots',
     tldr: [
       '<strong>For casual use:</strong> Free tools work fine for social media avatars or personal projects where quality isn\'t critical.',
@@ -161,7 +161,7 @@ const getContent = (locale: string, brandName: string) => {
         p2: 'The math rarely works in favor of "free." If you spend 3 hours trying different free tools and your time is worth $30/hour, you\'ve already spent $90. Paid tools would have given you better results in 10 minutes.'
       },
       comparison: {
-        title: 'Free vs Paid AI Headshot Generator Comparison 2025',
+        title: 'Free vs Paid AI Headshot Generator Comparison 2026',
         table: {
           headers: ['Feature', 'Free Tools', 'Paid Tools'],
           rows: [
@@ -372,7 +372,7 @@ export default async function FreeVsPaidHeadshotsPage({ params }: Props) {
           </div>
           <div>
             <p className="font-medium text-gray-900">Matthieu van Haperen</p>
-            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2025' : 'Updated Nov 2025'}</p>
+            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2026' : 'Updated Nov 2026'}</p>
           </div>
         </div>
 

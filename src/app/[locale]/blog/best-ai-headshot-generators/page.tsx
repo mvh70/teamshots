@@ -21,15 +21,15 @@ const getContent = (locale: string, brandName: string, brandDomain: string) => {
 
   if (isEs) {
     return {
-      title: 'Mejores Generadores de Headshots AI en 2025 (Comparados y Revisados)',
-      description: `Descubre los mejores generadores de headshots AI para 2025, incluyendo ${brandName}, HeadshotPro, BetterPic y Aragon AI. Compara calidad, velocidad y precio para headshots profesionales de AI.`,
+      title: 'Mejores Generadores de Headshots AI en 2026 (Comparados y Revisados)',
+      description: `Descubre los mejores generadores de headshots AI para 2026, incluyendo ${brandName}, HeadshotPro, BetterPic y Aragon AI. Compara calidad, velocidad y precio para headshots profesionales de AI.`,
       breadcrumb: 'Mejores Generadores de Headshots AI',
       tldr: {
         teams: { label: 'Mejor para equipos', text: `${brandName}: genera headshots coincidentes para equipos enteros en 60 segundos.` },
         individuals: { label: 'Mejor para individuos', text: 'HeadshotPro: resultados de alta calidad a $29 por persona, pero tarda más de 2 horas.' },
         budget: { label: 'Mejor opción económica', text: 'Try It On AI: comienza en $15, entrega en 30 minutos, calidad decente.' }
       },
-      comparisonTitle: 'Comparación de Generadores de Headshots AI 2025',
+      comparisonTitle: 'Comparación de Generadores de Headshots AI 2026',
       table: {
         headers: ['Herramienta', 'Mejor Para', 'Precio', 'Velocidad', 'Calidad'],
         rows: [
@@ -73,15 +73,15 @@ const getContent = (locale: string, brandName: string, brandDomain: string) => {
 
   // Default English
   return {
-    title: 'Best AI Headshot Generators in 2025 (Compared & Reviewed)',
-    description: `Discover the best AI headshot generators for 2025, including ${brandName}, HeadshotPro, BetterPic, and Aragon AI. Compare quality, speed, and price for professional ai headshots.`,
+    title: 'Best AI Headshot Generators in 2026 (Compared & Reviewed)',
+    description: `Discover the best AI headshot generators for 2026, including ${brandName}, HeadshotPro, BetterPic, and Aragon AI. Compare quality, speed, and price for professional ai headshots.`,
     breadcrumb: 'Best AI Headshot Generators',
     tldr: {
       teams: { label: 'Best for teams', text: `${brandName}: generates matching headshots for entire teams in 60 seconds.` },
       individuals: { label: 'Best for individuals', text: 'HeadshotPro: high quality results at $29 per person, but takes 2+ hours.' },
       budget: { label: 'Best budget option', text: 'Try It On AI: starts at $15, 30-minute turnaround, decent quality.' }
     },
-    comparisonTitle: 'Best AI Headshot Generator Comparison 2025',
+    comparisonTitle: 'Best AI Headshot Generator Comparison 2026',
     table: {
       headers: ['Tool', 'Best For', 'Price', 'Speed', 'Quality'],
       rows: [
@@ -127,7 +127,7 @@ const getFaqItems = (locale: string, brandName: string) => {
   if (locale === 'es') {
     return [
       {
-        question: '¿Cuál es el mejor generador de headshots AI en 2025?',
+        question: '¿Cuál es el mejor generador de headshots AI en 2026?',
         answer: `Para equipos que necesitan headshots consistentes, ${brandName} es la mejor opción con generación en 60 segundos. Para individuos, HeadshotPro y Aragon AI ofrecen resultados de alta calidad desde $29.`,
       },
       {
@@ -148,7 +148,7 @@ const getFaqItems = (locale: string, brandName: string) => {
   // Default English
   return [
     {
-      question: 'What is the best AI headshot generator in 2025?',
+      question: 'What is the best AI headshot generator in 2026?',
       answer: `For teams needing consistent headshots, ${brandName} is the best choice with 60-second generation. For individuals, HeadshotPro and Aragon AI offer high-quality results at $29+.`,
     },
     {
@@ -241,7 +241,7 @@ export default async function BestAIHeadshotGeneratorsPage({ params }: Props) {
           </div>
           <div>
             <p className="font-medium text-gray-900">Matthieu van Haperen</p>
-            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2025' : 'Updated Nov 2025'}</p>
+            <p>{content.author.title} · {locale === 'es' ? 'Actualizado Nov 2026' : 'Updated Nov 2026'}</p>
           </div>
         </div>
 

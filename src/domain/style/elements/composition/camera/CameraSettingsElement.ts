@@ -101,9 +101,13 @@ export class CameraSettingsElement extends StyleElement {
         'Camera perspective must be coherent between all elements'
       )
 
-      // Shadow guidance for composition
+      // CRITICAL: Explicit depth/distance instructions
+      // The subject_to_background_ft value in the JSON needs explicit reinforcement
       instructions.push(
-        'Add NATURAL SHADOWS: The person should cast a very subtle, soft shadow on the background wall behind them - positioned appropriately based on the lighting direction'
+        `CRITICAL DEPTH: The subject should appear to be standing approximately ${derived.backgroundDistance} feet from the background wall/surface`,
+        `Create VISIBLE SPATIAL SEPARATION between the subject and background - this is NOT a flat backdrop but a 3D scene with ${derived.backgroundDistance} feet of depth`,
+        'The shadow from the subject should fall ONTO the background surface at an appropriate distance based on the lighting angle',
+        'Use atmospheric perspective: the background should have slightly reduced contrast and saturation compared to the sharp subject in the foreground'
       )
     }
 

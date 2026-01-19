@@ -70,6 +70,7 @@ const DEFAULTS = {
   }),
   //pose: { type: 'jacket_reveal' as const }, // Package standard (not in visibleCategories)
   shotType: predefined({ type: 'medium-shot' as const }), // Package standard (not in visibleCategories)
+  aspectRatio: '1:1' as const, // Square format for headshots
   subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts
 }
 
