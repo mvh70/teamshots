@@ -182,6 +182,22 @@ export default function StyleForm({
     }
   }, [autosaveContextId, styleContextId])
 
+  // Redirect to edit page after creating a new style in create mode.
+  // This prevents duplicate styles from being created on page refresh.
+  useEffect(() => {
+    if (mode === 'create' && autosaveContextId && !loading) {
+      // Determine the edit URL based on context type
+      const editUrl = contextType === 'team'
+        ? `/app/styles/team/${autosaveContextId}/edit`
+        : contextType === 'freePackage'
+          ? '/app/styles/free-package' // freePackage doesn't have individual edit pages
+          : `/app/styles/personal/${autosaveContextId}/edit`
+
+      // Use replace to avoid cluttering browser history with the create page
+      router.replace(editUrl)
+    }
+  }, [mode, autosaveContextId, loading, contextType, router])
+
   const activateStyle = async (targetId: string) => {
     try {
       await jsonFetcher(`/api/styles/${targetId}/activate`, { method: 'POST' })

@@ -4,11 +4,9 @@ import React from 'react'
 import { useTranslations } from 'next-intl'
 import { ExclamationTriangleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
 import type { ElementSummaryProps } from '../metadata'
+import type { ExpressionSettings } from './types'
 import { resolveExpression } from './config'
-
-interface ExpressionSettings {
-  type?: string
-}
+import { isUserChoice, hasValue } from '../base/element-types'
 
 export function ExpressionSummary({ settings }: ElementSummaryProps<ExpressionSettings>) {
   const t = useTranslations('customization.photoStyle.expression')
@@ -16,7 +14,9 @@ export function ExpressionSummary({ settings }: ElementSummaryProps<ExpressionSe
 
   if (!settings) return null
 
-  const expressionType = settings.type
+  // Handle wrapped format: { mode: 'predefined'|'user-choice', value?: { type: ExpressionType } }
+  const userChoice = isUserChoice(settings)
+  const expressionType = userChoice ? 'user-choice' : (hasValue(settings) ? settings.value.type : undefined)
   if (!expressionType) return null
 
   const expressionConfig = expressionType !== 'user-choice' ? resolveExpression(expressionType) : undefined
