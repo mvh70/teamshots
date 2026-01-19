@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl'
 import { ClothingSettings, ClothingColorSettings, ClothingType, ClothingValue } from '@/types/photo-style'
 import { predefined, hasValue, userChoice } from '../base/element-types'
 import { Grid } from '@/components/ui'
-import { CLOTHING_STYLES, CLOTHING_DETAILS, CLOTHING_ACCESSORIES } from './config'
+import { CLOTHING_STYLES, CLOTHING_DETAILS, getAccessoriesForClothing } from './config'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import ClothingColorPreview from '../clothing-colors/ClothingColorPreview'
@@ -191,7 +191,7 @@ export default function ClothingSelector({
             {/* Accessory Selector */}
             {!(isPredefined || isDisabled) && (
               <Grid cols={{ mobile: 2 }} gap="sm" className="p-3 border border-gray-200 rounded-lg bg-gray-50">
-                {CLOTHING_ACCESSORIES[clothingValue.style]?.map((accessory) => {
+                {getAccessoriesForClothing(clothingValue.style, clothingValue.details).map((accessory) => {
                   const isSelected = clothingValue.accessories?.includes(accessory) || false
                   return (
                     <button

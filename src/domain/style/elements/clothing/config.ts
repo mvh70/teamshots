@@ -41,11 +41,28 @@ export const CLOTHING_DETAILS: Record<string, string[]> = {
 
 /**
  * UI metadata for clothing accessories per style
+ * Uses compound keys (style-detail) when accessories vary by detail,
+ * falls back to style-only key when they don't
  */
 export const CLOTHING_ACCESSORIES: Record<string, string[]> = {
-  business: ['tie', 'bowtie', 'blazer', 'vest', 'pocket-square', 'cufflinks'],
+  'business-formal': ['tie', 'vest', 'pocket-square'],
+  'business-casual': ['vest', 'pocket-square'],
   startup: ['watch', 'glasses', 'hat'],
   'black-tie': ['bowtie', 'cufflinks', 'pocket-square', 'gloves']
+}
+
+/**
+ * Get accessories for a clothing style/detail combination
+ * Tries compound key first, falls back to style-only key
+ */
+export function getAccessoriesForClothing(style: string, detail?: string): string[] {
+  if (detail) {
+    const compoundKey = `${style}-${detail}`
+    if (CLOTHING_ACCESSORIES[compoundKey]) {
+      return CLOTHING_ACCESSORIES[compoundKey]
+    }
+  }
+  return CLOTHING_ACCESSORIES[style] || []
 }
 
 import type { ElementConfig } from '../registry'
