@@ -544,7 +544,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
 
   return (
     <div
-      className={`fixed inset-y-0 left-0 z-[120] bg-white border-r border-gray-200/80 transition-all duration-300 transform shadow-[2px_0_8px_0_rgb(0_0_0_/0.04),0_1px_2px_0_rgb(0_0_0_/0.02)] ${
+      className={`fixed inset-y-0 left-0 z-[120] bg-white border-r border-gray-200/60 transition-all duration-300 transform shadow-sm ${
         // Width: w-72 on mobile when open (drawer), w-64 on desktop when expanded, w-20 when collapsed
         (isMobile ? (collapsed ? 'w-20' : 'w-72') : (effectiveCollapsed ? 'w-20' : 'w-64')) + ' ' +
         // Visibility: use collapsed prop (when false, sidebar is visible)
@@ -559,39 +559,39 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         {/* Top Section - Header and Primary Action */}
         <div className="flex-shrink-0">
           {/* Header */}
-          <div className={`flex p-5 md:p-6 border-b border-gray-200/60 ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
+          <div className={`flex px-3 py-4 ${effectiveCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between'}`}>
             {!effectiveCollapsed && (
-              <Link href="/" className="flex items-center space-x-2 group/logo">
-                <Image src={brandLogoLight} alt={brandName} width={112} height={28} className="h-7 transition-transform duration-200 group-hover/logo:scale-105" style={{ width: 'auto' }} priority />
+              <Link href="/" className="flex items-center">
+                <Image src={brandLogoLight} alt={brandName} width={112} height={28} className="h-7" style={{ width: 'auto' }} priority />
               </Link>
             )}
             {effectiveCollapsed && (
-              <Link href="/" className="w-12 h-12 rounded-lg flex items-center justify-center">
-                <Image src={brandLogoIcon} alt={brandName} width={48} height={48} className="h-12 w-12" priority />
+              <Link href="/" className="flex items-center justify-center">
+                <Image src={brandLogoIcon} alt={brandName} width={40} height={40} className="h-10 w-10" priority />
               </Link>
             )}
             <div className="relative group">
               <button
                 onClick={onToggle}
                 aria-label={isMobile ? (collapsed ? 'Show menu' : 'Hide sidebar') : (effectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
-                className="p-2 md:p-1.5 rounded-lg hover:bg-brand-primary-light/50 hover:text-brand-primary transition-all duration-200 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2"
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 min-w-[40px] min-h-[40px] flex items-center justify-center"
               >
                 {/* On mobile: show hamburger when hidden, X when visible. On desktop: show chevrons */}
                 {isMobile ? (
                   collapsed ? (
-                    <Bars3Icon className="h-6 w-6 text-gray-500" />
+                    <Bars3Icon className="h-5 w-5 text-gray-500" />
                   ) : (
-                    <XMarkIcon className="h-6 w-6 text-gray-500" />
+                    <XMarkIcon className="h-5 w-5 text-gray-500" />
                   )
                 ) : (
                   effectiveCollapsed ? (
-                    <ChevronRightIcon className="h-6 w-6 text-gray-500" />
+                    <ChevronRightIcon className="h-5 w-5 text-gray-500" />
                   ) : (
-                    <ChevronLeftIcon className="h-6 w-6 text-gray-500" />
+                    <ChevronLeftIcon className="h-5 w-5 text-gray-500" />
                   )
                 )}
               </button>
-              <span className={`pointer-events-none absolute ${effectiveCollapsed ? 'left-full ml-2' : 'left-full ml-2'} top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm`}>
+              <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
                 {isMobile ? (
                   collapsed ? 'Show menu' : 'Hide sidebar'
                 ) : (
@@ -602,20 +602,20 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
           </div>
 
           {/* Primary Action Button */}
-          <div className="px-4 pb-4 pt-3 relative group">
+          <div className="px-3 pb-4 pt-3 relative group">
             <Link
               id="primary-generate-btn"
               href="/app/generate/start"
               onClick={onMenuItemClick}
-              className={`flex items-center justify-center space-x-2 bg-gradient-to-r from-brand-primary via-brand-primary-hover to-brand-primary text-white rounded-lg px-4 py-3 md:py-3 font-semibold hover:from-brand-primary-hover hover:via-brand-primary hover:to-brand-primary-hover transition-all duration-300 min-h-[44px] md:min-h-0 shadow-lg shadow-brand-primary/20 hover:shadow-xl hover:shadow-brand-primary/30 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 ${
-                effectiveCollapsed ? 'px-2' : ''
+              className={`flex items-center justify-center gap-2 bg-brand-primary text-white rounded-xl px-4 py-3 font-medium hover:bg-brand-primary-hover transition-colors duration-200 min-h-[44px] ${
+                effectiveCollapsed ? 'px-3' : ''
               }`}
             >
-                <PlusIcon className="h-6 w-6 md:h-7 md:w-7 transition-transform duration-300 group-hover:rotate-90" />
-              {!effectiveCollapsed && <span className="text-sm md:text-base font-bold transition-all duration-200 leading-tight">{t('primary.generate')}</span>}
+              <PlusIcon className="h-5 w-5" />
+              {!effectiveCollapsed && <span className="text-sm">{t('primary.generate')}</span>}
             </Link>
             {effectiveCollapsed && (
-              <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
+              <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
                 {t('primary.generate')}
               </span>
             )}
@@ -623,7 +623,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         </div>
 
         {/* Navigation - Takes up available space */}
-        <nav className={`flex-1 px-4 py-3 space-y-1.5 min-h-0 bg-white ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
+        <nav className={`flex-1 px-3 py-4 space-y-2 min-h-0 bg-white ${!isMobile && effectiveCollapsed ? 'overflow-visible' : 'overflow-y-auto'} overscroll-contain`} style={{ touchAction: 'pan-y' }}>
           {!effectiveCollapsed ? (
             <div className="h-full overflow-x-visible">
               {!navReady ? null : navigation.map((item) => {
@@ -634,19 +634,16 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                     href={item.href}
                     id={item.id}
                     onClick={onMenuItemClick}
-                    className={`group flex items-center px-3 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ease-in-out relative min-h-[44px] focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 ${
+                    className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out min-h-[44px] focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:ring-offset-1 ${
                       item.current
-                        ? 'bg-gradient-to-r from-brand-primary-light via-brand-primary-lighter to-brand-primary-light text-brand-primary shadow-sm shadow-brand-primary/10 border-l-2 border-brand-primary'
-                        : 'text-gray-700 hover:bg-gradient-to-r hover:from-brand-primary-light/20 hover:via-brand-primary-light/15 hover:to-transparent hover:text-brand-primary hover:shadow-sm hover:shadow-brand-primary/5 hover:scale-[1.02] active:scale-[0.98]'
+                        ? 'bg-brand-primary/10 text-brand-primary'
+                        : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
                     }`}
                   >
-                    <Icon className={`h-5 w-5 mr-3 flex-shrink-0 transition-all duration-200 ease-in-out ${
-                      item.current ? 'scale-110 text-brand-primary' : 'text-gray-600 group-hover:scale-110 group-hover:text-brand-primary'
+                    <Icon className={`h-5 w-5 mr-3 flex-shrink-0 transition-colors duration-200 ${
+                      item.current ? 'text-brand-primary' : 'text-gray-500 group-hover:text-gray-700'
                     }`} />
-                    <span className={`transition-all duration-200 ease-in-out leading-relaxed font-semibold ${item.current ? 'font-bold' : ''}`}>{item.name}</span>
-                    {item.current && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-brand-primary to-brand-primary-hover rounded-r-full shadow-sm shadow-brand-primary/20 transition-all duration-200" />
-                    )}
+                    <span className="leading-relaxed">{item.name}</span>
                   </Link>
                 )
               })}
@@ -661,17 +658,17 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                       href={item.href}
                       id={item.id}
                       onClick={onMenuItemClick}
-                      className={`flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out relative min-w-[44px] min-h-[44px] focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 ${
+                      className={`flex items-center justify-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out min-w-[44px] min-h-[44px] focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:ring-offset-1 ${
                         item.current
-                          ? 'bg-gradient-to-r from-brand-primary-light via-brand-primary-lighter to-brand-primary-light text-brand-primary shadow-sm shadow-brand-primary/10 scale-105 ring-2 ring-brand-primary/20'
-                          : 'text-gray-700 hover:bg-gradient-to-r hover:from-brand-primary-light/30 hover:via-brand-primary-light/20 hover:to-transparent hover:text-brand-primary hover:shadow-sm hover:shadow-brand-primary/5 hover:scale-110 active:scale-95'
+                          ? 'bg-brand-primary/10 text-brand-primary'
+                          : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
                       }`}
                     >
-                      <Icon className={`h-5 w-5 transition-all duration-200 ease-in-out ${
-                        item.current ? 'scale-110 text-brand-primary' : 'text-gray-600 group-hover:scale-110 group-hover:text-brand-primary'
+                      <Icon className={`h-5 w-5 transition-colors duration-200 ${
+                        item.current ? 'text-brand-primary' : 'text-gray-500 group-hover:text-gray-700'
                       }`} />
                     </Link>
-                    <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 ease-in-out z-[10000] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
+                    <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[10000] shadow-lg">
                       {item.name}
                     </span>
                   </div>
@@ -682,57 +679,54 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
         </nav>
 
         {/* Bottom Section - Credits and User Profile (Fixed at bottom) */}
-        <div className={`flex-shrink-0 bg-gradient-to-t from-white via-gray-50/40 to-white border-t border-gray-200/60 backdrop-blur-sm ${!isMobile && effectiveCollapsed ? 'overflow-visible' : ''}`}>
-          {/* Credits Section */}
+        <div className={`flex-shrink-0 ${!isMobile && effectiveCollapsed ? 'overflow-visible' : ''}`}>
+          {/* Credits Card Section */}
           {session?.user && (
-            <div className="px-4 py-3 border-t border-gray-200/60">
-              {/* Plan stamp just above credits */}
-              {!effectiveCollapsed && planTier && (
-                <div className="mb-3 flex justify-center">
-                  <span
-                    className={`inline-block rotate-[-3deg] px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-lg border-2 border-dashed shadow-lg ${
-                      planTier === 'pro'
-                        ? 'bg-gradient-to-br from-brand-premium/20 via-brand-premium/10 to-brand-premium/20 text-brand-premium border-brand-premium/60'
-                        : planTier === 'individual'
-                        ? 'bg-gradient-to-br from-brand-primary-light via-brand-primary-lighter to-brand-primary-light text-brand-primary border-brand-primary/60'
-                        : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 border-gray-400/60'
-                    }`}
-                  >
-                    {planLabel ?? ''}
-                  </span>
-                </div>
-              )}
-              {/* Only show "AVAILABLE PHOTOS" heading for individual accounts, free-plan team admins, or legacy credit-based teams */}
-              {!effectiveCollapsed && (accountMode === 'individual' || (accountMode === 'pro' && (!seatInfo || seatInfo.totalSeats === 0)) || (seatInfo && !seatInfo.isSeatsModel && seatInfo.totalSeats > 0)) && (
-                <h3 className="text-xs font-extrabold text-gray-800 mb-3 uppercase tracking-widest leading-tight">
-                  {t('photos.title')}
-                </h3>
-              )}
-              <div className={`space-y-1.5 ${effectiveCollapsed ? 'text-center' : ''}`}>
+            <div className="px-3 pb-3">
+              {/* Credits Card - wraps plan badge, credits display, and upgrade button */}
+              <div className={`bg-gray-50/80 rounded-2xl border border-gray-200/60 ${effectiveCollapsed ? 'p-2' : 'p-4'}`}>
+                {/* Plan badge - inline style */}
+                {!effectiveCollapsed && planTier && (
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Plan</span>
+                    <span
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        planTier === 'pro'
+                          ? 'bg-brand-premium/10 text-brand-premium'
+                          : planTier === 'individual'
+                          ? 'bg-brand-primary/10 text-brand-primary'
+                          : 'bg-gray-200/80 text-gray-600'
+                      }`}
+                    >
+                      {planLabel ?? ''}
+                    </span>
+                  </div>
+                )}
+
+                <div className={`space-y-2 ${effectiveCollapsed ? 'text-center' : ''}`}>
                 {accountMode === 'individual' && (
-                  <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200`}>
+                  <div className={`relative group ${effectiveCollapsed ? '' : 'flex items-center justify-between py-1'}`}>
                     {effectiveCollapsed ? (
                       // Collapsed view: icon above number
-                      <div className="flex flex-col items-center justify-center">
-                        <CreditCardIcon className="h-4 w-4 text-gray-600" />
-                        <span className="text-sm font-extrabold mt-0.5" style={{ color: BRAND_CONFIG.colors.primary }}>
+                      <div className="flex flex-col items-center justify-center py-1">
+                        <CreditCardIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-bold mt-0.5 text-gray-900">
                           {calculatePhotosFromCredits(credits.individual ?? 0)}
                         </span>
                       </div>
                     ) : (
-                      // Expanded view: icon + text + number
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
-                          <CreditCardIcon className="h-4 w-4 text-gray-600" />
+                      // Expanded view: label + number
+                      <>
+                        <span className="text-sm text-gray-600">
                           {t('photos.individual')}
                         </span>
-                        <span className="text-lg md:text-xl font-extrabold tracking-tight leading-tight" style={{ color: BRAND_CONFIG.colors.primary }}>
+                        <span className="text-lg font-bold text-gray-900">
                           {calculatePhotosFromCredits(credits.individual ?? 0)}
                         </span>
-                      </div>
+                      </>
                     )}
                     {effectiveCollapsed && (
-                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
+                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
                         {t('photos.individual')}: {calculatePhotosFromCredits(credits.individual ?? 0)}
                       </span>
                     )}
@@ -741,29 +735,28 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
 
                 {/* Free-plan team admin: Show personal credits (no seats purchased yet) */}
                 {accountMode === 'pro' && (!seatInfo || seatInfo.totalSeats === 0) && (
-                  <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200`}>
+                  <div className={`relative group ${effectiveCollapsed ? '' : 'flex items-center justify-between py-1'}`}>
                     {effectiveCollapsed ? (
                       // Collapsed view: icon above number
-                      <div className="flex flex-col items-center justify-center">
-                        <CreditCardIcon className="h-4 w-4 text-gray-600" />
-                        <span className="text-sm font-extrabold mt-0.5" style={{ color: BRAND_CONFIG.colors.primary }}>
+                      <div className="flex flex-col items-center justify-center py-1">
+                        <CreditCardIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-bold mt-0.5 text-gray-900">
                           {calculatePhotosFromCredits(credits.person ?? 0)}
                         </span>
                       </div>
                     ) : (
-                      // Expanded view: icon + text + number
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
-                          <CreditCardIcon className="h-4 w-4 text-gray-600" />
+                      // Expanded view: label + number
+                      <>
+                        <span className="text-sm text-gray-600">
                           {t('photos.individual')}
                         </span>
-                        <span className="text-lg md:text-xl font-extrabold tracking-tight leading-tight" style={{ color: BRAND_CONFIG.colors.primary }}>
+                        <span className="text-lg font-bold text-gray-900">
                           {calculatePhotosFromCredits(credits.person ?? 0)}
                         </span>
-                      </div>
+                      </>
                     )}
                     {effectiveCollapsed && (
-                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
+                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
                         {t('photos.individual')}: {calculatePhotosFromCredits(credits.person ?? 0)}
                       </span>
                     )}
@@ -772,46 +765,44 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
 
                 {/* Paid team admin: Show seats + person balance */}
                 {accountMode === 'pro' && seatInfo && seatInfo.totalSeats > 0 && (
-                  <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200 ${effectiveCollapsed ? '' : 'space-y-2'}`}>
+                  <div className={`relative group ${effectiveCollapsed ? '' : 'space-y-1'}`}>
                     {effectiveCollapsed ? (
                       // Collapsed view: icons above numbers, stacked vertically
-                      <div className="flex flex-col items-center space-y-3">
+                      <div className="flex flex-col items-center space-y-2 py-1">
                         {/* Team size: icon above number */}
                         <div className="flex flex-col items-center">
-                          <UserGroupIcon className="h-4 w-4 text-gray-600" />
-                          <span className="text-sm font-extrabold mt-0.5" style={{ color: BRAND_CONFIG.colors.primary }}>
+                          <UserGroupIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm font-bold mt-0.5 text-gray-900">
                             {seatInfo.activeSeats}/{seatInfo.totalSeats}
                           </span>
                         </div>
                         {/* Photo balance: icon above number */}
                         <div className="flex flex-col items-center">
-                          <CreditCardIcon className="h-4 w-4 text-gray-600" />
-                          <span className="text-sm font-extrabold mt-0.5" style={{ color: BRAND_CONFIG.colors.primary }}>
+                          <CreditCardIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm font-bold mt-0.5 text-gray-900">
                             {calculatePhotosFromCredits(credits.person ?? 0)}
                           </span>
                         </div>
                       </div>
                     ) : (
-                      // Expanded view: icons + text
+                      // Expanded view: label + value rows
                       <>
                         {/* Seats row */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
-                            <UserGroupIcon className="h-4 w-4 text-gray-600" />
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-sm text-gray-600">
                             {t('photos.seats')}
                           </span>
-                          <span className="font-extrabold tracking-tight leading-tight text-lg md:text-xl" style={{ color: BRAND_CONFIG.colors.primary }}>
+                          <span className="text-lg font-bold text-gray-900">
                             {seatInfo.activeSeats} / {seatInfo.totalSeats}
                           </span>
                         </div>
 
                         {/* Photo balance */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
-                            <CreditCardIcon className="h-4 w-4 text-gray-600" />
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-sm text-gray-600">
                             {t('photos.balance')}
                           </span>
-                          <span className="text-lg md:text-xl font-extrabold tracking-tight leading-tight" style={{ color: BRAND_CONFIG.colors.primary }}>
+                          <span className="text-lg font-bold text-gray-900">
                             {calculatePhotosFromCredits(credits.person ?? 0)}
                           </span>
                         </div>
@@ -819,7 +810,7 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                     )}
 
                     {effectiveCollapsed && (
-                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
+                      <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
                         {t('photos.seats')}: {seatInfo.activeSeats} / {seatInfo.totalSeats}
                         <br />
                         {t('photos.balance')}: {calculatePhotosFromCredits(credits.person ?? 0)}
@@ -831,57 +822,55 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                 {/* Legacy credit-based Pro teams: Show team credits (excludes free-plan team admins who have totalSeats=0) */}
                 {seatInfo && !seatInfo.isSeatsModel && seatInfo.totalSeats > 0 && (
                   <>
-                    <div className={`relative group bg-gradient-to-r from-brand-primary-light/40 via-brand-primary-light/30 to-transparent rounded-lg px-2.5 py-2 border border-brand-primary/10 shadow-sm hover:shadow-md transition-shadow duration-200`}>
+                    <div className={`relative group ${effectiveCollapsed ? '' : 'flex items-center justify-between py-1'}`}>
                       {effectiveCollapsed ? (
                         // Collapsed view: icon above number
-                        <div className="flex flex-col items-center justify-center">
-                          <UserGroupIcon className="h-4 w-4 text-gray-600" />
-                          <span className="text-sm font-extrabold mt-0.5" style={{ color: BRAND_CONFIG.colors.primary }}>
+                        <div className="flex flex-col items-center justify-center py-1">
+                          <UserGroupIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm font-bold mt-0.5 text-gray-900">
                             {calculatePhotosFromCredits(credits.team ?? 0)}
                           </span>
                         </div>
                       ) : (
-                        // Expanded view: icon + text + number
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
-                            <UserGroupIcon className="h-4 w-4 text-gray-600" />
+                        // Expanded view: label + number
+                        <>
+                          <span className="text-sm text-gray-600">
                             {t('photos.team')}
                           </span>
-                          <span className="text-lg md:text-xl font-extrabold tracking-tight leading-tight" style={{ color: BRAND_CONFIG.colors.primary }}>
+                          <span className="text-lg font-bold text-gray-900">
                             {calculatePhotosFromCredits(credits.team ?? 0)}
                           </span>
-                        </div>
+                        </>
                       )}
                       {effectiveCollapsed && (
-                        <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
+                        <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
                           {t('photos.team')}: {calculatePhotosFromCredits(credits.team ?? 0)}
                         </span>
                       )}
                     </div>
                     {isTeamAdmin && allocatedCredits > 0 && (
-                      <div className={`relative group bg-gradient-to-r from-brand-cta-light/50 via-brand-cta-light/40 to-transparent rounded-lg px-2.5 py-2 border border-brand-cta/20 shadow-sm hover:shadow-md transition-shadow duration-200`}>
+                      <div className={`relative group ${effectiveCollapsed ? '' : 'flex items-center justify-between py-1'}`}>
                         {effectiveCollapsed ? (
                           // Collapsed view: icon above number
-                          <div className="flex flex-col items-center justify-center">
-                            <CreditCardIcon className="h-4 w-4 text-gray-600" />
-                            <span className="text-sm font-extrabold mt-0.5 text-brand-cta">
+                          <div className="flex flex-col items-center justify-center py-1">
+                            <CreditCardIcon className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm font-bold mt-0.5 text-brand-cta">
                               {calculatePhotosFromCredits(allocatedCredits)}
                             </span>
                           </div>
                         ) : (
-                          // Expanded view: icon + text + number
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-gray-800 leading-tight flex items-center gap-1.5">
-                              <CreditCardIcon className="h-4 w-4 text-gray-600" />
+                          // Expanded view: label + number
+                          <>
+                            <span className="text-sm text-gray-600">
                               {t('photos.allocated')}
                             </span>
-                            <span className="text-lg md:text-xl font-extrabold tracking-tight leading-tight text-brand-cta">
+                            <span className="text-lg font-bold text-brand-cta">
                               {calculatePhotosFromCredits(allocatedCredits)}
                             </span>
-                          </div>
+                          </>
                         )}
                         {effectiveCollapsed && (
-                          <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
+                          <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
                             {t('photos.allocated')}: {calculatePhotosFromCredits(allocatedCredits)}
                           </span>
                         )}
@@ -893,96 +882,91 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                 {/* Don't render sidebar for team_member mode (invited members) */}
                 {accountMode === 'team_member' && null}
               </div>
-              
-              {/* Buy Credits Button */}
-              <div className={`mt-3 ${effectiveCollapsed ? 'relative group' : ''}`}>
-                {effectiveCollapsed ? (
-                  <Link
-                    href={
-                      planTier === 'free' ? '/app/upgrade' :
-                      planTier === 'pro' && accountMode === 'pro' ? '/app/upgrade' :
-                      '/app/top-up'
-                    }
-                    onClick={onMenuItemClick}
-                    className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs font-semibold text-white rounded-lg transition-all duration-200 bg-gradient-to-r from-brand-cta to-brand-cta-hover hover:from-brand-cta-hover hover:to-brand-cta shadow-md shadow-brand-cta/20 hover:shadow-lg hover:shadow-brand-cta/30 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2 min-h-[44px] md:min-h-0"
-                  >
-                    <PlusIcon className="h-4 w-4 md:h-3 md:w-3 transition-transform duration-200 group-hover:rotate-90" />
-                  </Link>
-                ) : (
-                  <Link
-                    href={
-                      planTier === 'free' ? '/app/upgrade' :
-                      planTier === 'pro' && accountMode === 'pro' ? '/app/upgrade' :
-                      '/app/top-up'
-                    }
-                    onClick={onMenuItemClick}
-                    className="w-full inline-flex items-center justify-center px-3 py-2.5 md:py-2 text-xs md:text-xs font-semibold text-white rounded-lg transition-all duration-200 bg-gradient-to-r from-brand-cta to-brand-cta-hover hover:from-brand-cta-hover hover:to-brand-cta shadow-md shadow-brand-cta/20 hover:shadow-lg hover:shadow-brand-cta/30 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-cta focus:ring-offset-2 min-h-[44px] md:min-h-0"
-                  >
-                    <PlusIcon className="h-4 w-4 md:h-3 md:w-3 mr-1 transition-transform duration-200 group-hover:rotate-90" />
-                    {seatInfo?.isSeatsModel
-                      ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
-                      : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
-                  </Link>
-                )}
-                {effectiveCollapsed && (
-                  <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
-                    {seatInfo?.isSeatsModel
-                      ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
-                      : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
-                  </span>
-                )}
+
+                {/* Buy Credits Button - inside the card */}
+                <div className={`mt-3 ${effectiveCollapsed ? 'relative group' : ''}`}>
+                  {effectiveCollapsed ? (
+                    <Link
+                      href={
+                        planTier === 'free' ? '/app/upgrade' :
+                        planTier === 'pro' && accountMode === 'pro' ? '/app/upgrade' :
+                        '/app/top-up'
+                      }
+                      onClick={onMenuItemClick}
+                      className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-white rounded-xl transition-all duration-200 bg-brand-cta hover:bg-brand-cta-hover min-h-[40px]"
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                    </Link>
+                  ) : (
+                    <Link
+                      href={
+                        planTier === 'free' ? '/app/upgrade' :
+                        planTier === 'pro' && accountMode === 'pro' ? '/app/upgrade' :
+                        '/app/top-up'
+                      }
+                      onClick={onMenuItemClick}
+                      className="w-full inline-flex items-center justify-center px-3 py-2.5 text-sm font-medium text-white rounded-xl transition-all duration-200 bg-brand-cta hover:bg-brand-cta-hover"
+                    >
+                      <PlusIcon className="h-4 w-4 mr-1.5" />
+                      {seatInfo?.isSeatsModel
+                        ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
+                        : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
+                    </Link>
+                  )}
+                  {effectiveCollapsed && (
+                    <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
+                      {seatInfo?.isSeatsModel
+                        ? (seatInfo.totalSeats === 0 ? t('photos.buySeatsToUnlock') : t('photos.buyMoreSeats'))
+                        : planTier === 'free' ? t('photos.upgradeToPaid') : t('photos.buyMoreCredits')}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
           {/* User Profile w/ expandable menu (expands upwards) */}
           {session?.user && (
-            <div className="p-4 md:p-5 border-t border-gray-200/60 relative bg-white">
+            <div className="px-3 py-3 border-t border-gray-200/60 relative">
             <div
-              className={`relative group flex items-center space-x-3 ${effectiveCollapsed ? 'justify-center' : ''} cursor-pointer hover:bg-gray-50/50 rounded-lg p-2 -mx-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2`}
+              className={`relative group flex items-center ${effectiveCollapsed ? 'justify-center' : 'gap-3'} cursor-pointer hover:bg-gray-100/80 rounded-xl p-2 -mx-1 transition-colors duration-200`}
               onClick={() => setMenuOpen(!menuOpen)}
               data-testid="user-menu"
             >
-              <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-primary/20 to-brand-primary/40 blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                <Image
-                  className="relative h-10 w-10 rounded-full bg-gray-200 ring-2 ring-brand-primary/20 group-hover:ring-brand-primary/40 transition-all duration-200"
-                  src={session?.user?.image || `https://ui-avatars.com/api/?name=${session?.user?.email}&background=${BRAND_CONFIG.colors.primary.replace('#', '')}&color=ffffff`}
-                  alt="User avatar"
-                  width={40}
-                  height={40}
-                  style={{ width: 'auto', height: 'auto' }}
-                  unoptimized
-                />
-                <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-brand-primary to-brand-primary-hover text-white text-xs rounded-full px-1.5 py-0.5 font-bold shadow-md ring-2 ring-white">
-                  {t('profile.pro')}
-                </div>
-              </div>
+              <Image
+                className="h-9 w-9 rounded-full bg-gray-200 flex-shrink-0"
+                src={session?.user?.image || `https://ui-avatars.com/api/?name=${session?.user?.email}&background=${BRAND_CONFIG.colors.primary.replace('#', '')}&color=ffffff`}
+                alt="User avatar"
+                width={36}
+                height={36}
+                style={{ width: 'auto', height: 'auto' }}
+                unoptimized
+              />
               {!effectiveCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-900 truncate leading-tight">
-                    {session?.user?.name || session?.user?.email}
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {session?.user?.name || session?.user?.email?.split('@')[0]}
                   </p>
-                  <p className="text-xs font-medium text-gray-600 truncate leading-relaxed mt-0.5">
+                  <p className="text-xs text-gray-500 truncate">
                     {session?.user?.email}
                   </p>
                 </div>
               )}
               {effectiveCollapsed && (
-                <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-xl shadow-gray-900/30 backdrop-blur-sm">
+                <span className="pointer-events-none absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 text-white text-xs px-3 py-1.5 font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 z-[9999] shadow-lg">
                   {session?.user?.name || session?.user?.email}
                 </span>
               )}
             </div>
             {menuOpen && (
-              <div className={`absolute rounded-xl border border-gray-200/80 bg-white/95 backdrop-blur-md shadow-xl shadow-gray-900/20 z-[9999] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200 ${
-                effectiveCollapsed 
-                  ? 'left-full ml-2 bottom-4 w-48' 
-                  : 'bottom-16 left-4 right-4'
+              <div className={`absolute rounded-xl border border-gray-200 bg-white shadow-lg z-[9999] overflow-hidden ${
+                effectiveCollapsed
+                  ? 'left-full ml-2 bottom-0 w-48'
+                  : 'bottom-full mb-2 left-2 right-2'
               }`}>
                 <Link
                   href="/app/settings"
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gradient-to-r hover:from-brand-primary-light/50 hover:to-transparent transition-all duration-150"
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
                   onClick={() => {
                     setMenuOpen(false)
                     onMenuItemClick?.()
@@ -993,27 +977,27 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
                 </Link>
                 {session?.user?.isAdmin && (
                   <>
-                    <div className="h-px bg-gray-200" />
+                    <div className="h-px bg-gray-100 mx-2" />
                     <Link
                       href="/app/admin"
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-transparent transition-all duration-150"
+                      className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
                       onClick={() => {
                         setMenuOpen(false)
                         onMenuItemClick?.()
                       }}
                     >
-                      <ShieldCheckIcon className="h-4 w-4 text-red-500" />
+                      <ShieldCheckIcon className="h-4 w-4 text-gray-500" />
                       <span>{t('nav.admin')}</span>
                     </Link>
                   </>
                 )}
-                <div className="h-px bg-gray-200" />
+                <div className="h-px bg-gray-100 mx-2" />
                 <button
                   onClick={() => {
                     setMenuOpen(false)
                     handleSignOut()
                   }}
-                  className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-transparent transition-all duration-150 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150 flex items-center gap-2.5"
                 >
                   <ArrowRightOnRectangleIcon className="h-4 w-4 text-gray-500" />
                   {t('profile.signOut')}

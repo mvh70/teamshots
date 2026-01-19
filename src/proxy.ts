@@ -9,6 +9,31 @@ import { getRequestDomain } from '@/lib/domain'
 const PROTECTED_PATH_PREFIXES = ['/app']
 const ADMIN_PATH_PREFIXES = ['/app/admin']
 
+/**
+ * Strip default ports from URLs to fix reverse proxy :80 issue.
+ * Cloudflare/Hetzner can forward x-forwarded-port: 80 even for HTTPS traffic,
+ * causing request.url to contain https://domain.com:80 which breaks redirects.
+ */
+function stripDefaultPort(url: URL): URL {
+  // Strip :80 from https (the bug), and standard defaults
+  if (url.protocol === 'https:' && url.port === '80') {
+    url.port = ''
+  } else if (url.protocol === 'https:' && url.port === '443') {
+    url.port = ''
+  } else if (url.protocol === 'http:' && url.port === '80') {
+    url.port = ''
+  }
+  return url
+}
+
+/**
+ * Create a clean redirect URL by stripping default ports.
+ */
+function createCleanRedirectUrl(path: string, baseUrl: string | URL): URL {
+  const url = new URL(path, baseUrl)
+  return stripDefaultPort(url)
+}
+
 function removeLocalePrefix(pathname: string) {
   const segments = pathname.split('/')
   if (segments.length > 1 && ['en', 'es'].includes(segments[1])) {
@@ -156,6 +181,7 @@ export default async function proxy(request: NextRequest) {
     if (host.startsWith('www.')) {
       const newUrl = new URL(request.url)
       newUrl.host = host.replace(/^www\./, '')
+      stripDefaultPort(newUrl)
       return NextResponse.redirect(newUrl, 301)
     }
 
@@ -184,20 +210,21 @@ export default async function proxy(request: NextRequest) {
       // Redirect to proper protocol
       const newUrl = new URL(request.url)
       newUrl.protocol = (await getRequestHeader('x-forwarded-proto')) || 'http'
+      stripDefaultPort(newUrl)
       return addSecurityHeaders(NextResponse.redirect(newUrl, 301))
     }
     
     if (isProtectedPath(request.nextUrl.pathname)) {
       const session = await auth()
       if (!session?.user) {
-        const loginUrl = new URL('/auth/signin', request.url)
+        const loginUrl = createCleanRedirectUrl('/auth/signin', request.url)
         loginUrl.searchParams.set('callbackUrl', `${request.nextUrl.pathname}${request.nextUrl.search}`)
         return addSecurityHeaders(NextResponse.redirect(loginUrl))
       }
       
       // Admin route protection - redirect non-admins to dashboard
       if (isAdminPath(request.nextUrl.pathname) && !session?.user?.isAdmin) {
-        return addSecurityHeaders(NextResponse.redirect(new URL('/app/dashboard', request.url)))
+        return addSecurityHeaders(NextResponse.redirect(createCleanRedirectUrl('/app/dashboard', request.url)))
       }
       
       // Cross-domain redirect: Ensure users stay on their signup domain
