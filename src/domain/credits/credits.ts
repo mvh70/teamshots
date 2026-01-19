@@ -18,6 +18,8 @@ export type CreditTransactionType =
   | 'seat_received'     // Credits added to person (received from team)
   | 'seat_revoked'      // Credits deducted from person (on removal)
   | 'seat_returned'     // Credits returned to team pool (from removed member)
+  | 'admin_plan_upgrade' // Credits granted when admin upgrades a user's plan
+  | 'admin_grant'        // Direct credit grant by admin
 
 export interface CreateCreditTransactionParams {
   credits: number

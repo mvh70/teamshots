@@ -1745,6 +1745,10 @@
           "minimum": {
             "title": "3-4 selfies variadas funciona mejor. El mínimo es 3.",
             "desc": "Más selfies diversas significan menos conjeturas para la IA. Sube fotos desde diferentes ángulos y distancias para resultados óptimos."
+          },
+          "expression": {
+            "title": "Combina tus expresiones con las fotos deseadas",
+            "desc": "Las expresiones de tus selfies influyen en las fotos generadas. Sonríe en tus selfies si quieres un aspecto amigable, o mantén una expresión neutral para un resultado más formal."
           }
         }
       },

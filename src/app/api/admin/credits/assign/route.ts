@@ -11,7 +11,7 @@ const assignCreditsSchema = z.object({
   userId: z.string().min(1),
   credits: z.number().int().positive(),
   description: z.string().optional(),
-  type: z.enum(['purchase', 'refund']).default('purchase'),
+  type: z.enum(['admin_grant', 'refund']).default('admin_grant'),
   assignTo: z.enum(['individual', 'team']).default('individual')
 })
 
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     // Check if user is admin
     const adminUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { isAdmin: true }
+      select: { isAdmin: true, email: true }
     })
 
     if (!adminUser?.isAdmin) {
@@ -78,10 +78,13 @@ export async function POST(request: NextRequest) {
 
     // Create credit transaction
     // Credits belong to Person (business entity), not User (auth)
+    const adminEmail = adminUser.email || 'admin'
     const transaction = await createCreditTransaction({
       credits,
-      type: type as 'purchase' | 'refund',
-      description: description || `Admin assigned ${credits} credits (${assignTo})`,
+      type: type as 'admin_grant' | 'refund',
+      description: description
+        ? `Admin grant by ${adminEmail}: ${description}`
+        : `Admin grant by ${adminEmail}: ${credits} credits (${assignTo})`,
       personId: personId, // Always use personId
       teamId: assignTo === 'team' ? teamId : undefined
     })

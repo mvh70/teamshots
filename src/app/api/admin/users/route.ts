@@ -22,6 +22,13 @@ interface UserData {
     packageId: string
     purchasedAt: Date | null
   }>
+  // Team info for pro plan users
+  team?: {
+    id: string
+    name: string | null
+    totalSeats: number
+    activeSeats: number
+  }
 }
 
 export async function GET(_request: NextRequest) {
@@ -51,8 +58,17 @@ export async function GET(_request: NextRequest) {
         planPeriod: true,
         person: {
           select: {
+            id: true,
             firstName: true,
             lastName: true
+          }
+        },
+        teams: {
+          select: {
+            id: true,
+            name: true,
+            totalSeats: true,
+            activeSeats: true
           }
         }
       },
@@ -60,6 +76,9 @@ export async function GET(_request: NextRequest) {
     })
 
     // Fetch credit transactions in parallel with user packages
+    // Note: Credits belong to Person (business entity), not User (auth entity)
+    const personIds = users.map(u => u.person?.id).filter((id): id is string => !!id)
+
     type PrismaWithUserPackage = typeof prisma & {
       userPackage: {
         findMany: (...args: unknown[]) => Promise<Array<{
@@ -74,10 +93,10 @@ export async function GET(_request: NextRequest) {
     const [creditTransactions, userPackages] = await Promise.all([
       prisma.creditTransaction.findMany({
         where: {
-          userId: { in: users.map(u => u.id) }
+          personId: { in: personIds }
         },
         select: {
-          userId: true,
+          personId: true,
           credits: true,
           type: true
         }
@@ -94,14 +113,14 @@ export async function GET(_request: NextRequest) {
       })
     ])
 
-    // Group credits by user
-    const creditsByUser = new Map<string, Array<{ type: string; credits: number }>>()
+    // Group credits by personId (credits belong to Person, not User)
+    const creditsByPersonId = new Map<string, Array<{ type: string; credits: number }>>()
     for (const tx of creditTransactions) {
-      if (!tx.userId) continue
-      if (!creditsByUser.has(tx.userId)) {
-        creditsByUser.set(tx.userId, [])
+      if (!tx.personId) continue
+      if (!creditsByPersonId.has(tx.personId)) {
+        creditsByPersonId.set(tx.personId, [])
       }
-      creditsByUser.get(tx.userId)!.push({
+      creditsByPersonId.get(tx.personId)!.push({
         type: tx.type,
         credits: tx.credits
       })
@@ -122,7 +141,8 @@ export async function GET(_request: NextRequest) {
     // Combine all data
     const userData: UserData[] = users.map(u => {
       const person = u.person
-      const credits = creditsByUser.get(u.id) || []
+      // Use personId to look up credits (credits belong to Person, not User)
+      const credits = person?.id ? creditsByPersonId.get(person.id) || [] : []
       const totalCredits = credits.reduce((sum, c) => sum + c.credits, 0)
 
       // Aggregate credits by type
@@ -136,6 +156,14 @@ export async function GET(_request: NextRequest) {
         return acc
       }, [] as Array<{ type: string; credits: number }>)
 
+      // Get team info (first team where user is admin)
+      const team = u.teams[0] ? {
+        id: u.teams[0].id,
+        name: u.teams[0].name,
+        totalSeats: u.teams[0].totalSeats,
+        activeSeats: u.teams[0].activeSeats
+      } : undefined
+
       return {
         id: u.id,
         email: u.email,
@@ -146,7 +174,8 @@ export async function GET(_request: NextRequest) {
         planPeriod: u.planPeriod,
         totalCredits,
         creditBreakdown,
-        packages: packagesByUser.get(u.id) || []
+        packages: packagesByUser.get(u.id) || [],
+        team
       }
     })
 

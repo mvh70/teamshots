@@ -1736,6 +1736,10 @@
           "minimum": {
             "title": "3-4 varied selfies works best. Minimum is 3.",
             "desc": "More diverse selfies mean less guesswork for the AI. Upload shots from different angles and distances for optimal results."
+          },
+          "expression": {
+            "title": "Match your expressions to your desired photos",
+            "desc": "Your selfie expressions influence your generated photos. Smile in your selfies if you want a friendly look, or keep a neutral expression for a more formal result."
           }
         }
       },
