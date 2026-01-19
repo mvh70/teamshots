@@ -445,8 +445,58 @@ export const authOptions = {
       }
       return session
     },
+
+    /**
+     * Redirect callback - strips incorrect :80 port from https URLs.
+     *
+     * This fixes an issue where reverse proxies forward x-forwarded-port: 80,
+     * causing NextAuth (with trustHost: true) to construct URLs like
+     * https://domain.com:80/ which break HTTPS connections.
+     */
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      const stripDefaultPort = (u: string): string => {
+        try {
+          const parsed = new URL(u)
+          // Strip :80 from https (the bug), and standard defaults
+          if (parsed.protocol === 'https:' && parsed.port === '80') {
+            parsed.port = ''
+          } else if (parsed.protocol === 'https:' && parsed.port === '443') {
+            parsed.port = ''
+          } else if (parsed.protocol === 'http:' && parsed.port === '80') {
+            parsed.port = ''
+          }
+          return parsed.toString()
+        } catch {
+          return u
+        }
+      }
+
+      const cleanedBaseUrl = stripDefaultPort(baseUrl)
+
+      // Handle relative URLs
+      if (url.startsWith('/')) {
+        return `${cleanedBaseUrl}${url}`
+      }
+
+      // Handle absolute URLs
+      const cleanedUrl = stripDefaultPort(url)
+      try {
+        const urlOrigin = new URL(cleanedUrl).origin
+        const baseOrigin = new URL(cleanedBaseUrl).origin
+
+        // Allow same-origin redirects
+        if (urlOrigin === baseOrigin) {
+          return cleanedUrl
+        }
+      } catch {
+        // URL parsing failed - fall back to base
+      }
+
+      // Default: redirect to cleaned base URL
+      return cleanedBaseUrl
+    },
   },
-  
+
   pages: {
     signIn: "/auth/signin",
     signUp: "/auth/signup",

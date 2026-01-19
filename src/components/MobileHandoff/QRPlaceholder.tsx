@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from '
 import { QRCodeSVG } from 'qrcode.react'
 import { useTranslations } from 'next-intl'
 import { RefreshCw, CheckCircle, Loader2 } from 'lucide-react'
+import { getCleanClientBaseUrl } from '@/lib/url'
 
 interface QRPlaceholderProps {
   /** For invite users - use existing invite token */
@@ -66,7 +67,7 @@ export default function QRPlaceholder({
   // Create or set token
   const createToken = useCallback(async () => {
     if (inviteToken) {
-      const baseUrl = window.location.origin
+      const baseUrl = getCleanClientBaseUrl()
       setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}`)
       setLoading(false)
       return
@@ -200,7 +201,7 @@ export default function QRPlaceholder({
 
     // Handle invite token mode
     if (inviteToken) {
-      const baseUrl = window.location.origin
+      const baseUrl = getCleanClientBaseUrl()
       setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}`)
       setLoading(false)
       return
