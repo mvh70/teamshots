@@ -40,7 +40,8 @@ export async function POST() {
       return NextResponse.json({ error: result.error }, { status: 500 })
     }
 
-    const baseUrl = getBaseUrl()
+    // Pass headers to getBaseUrl for proper domain detection
+    const baseUrl = getBaseUrl(headersList)
     const qrUrl = getMobileHandoffUrl(result.token, baseUrl)
 
     Logger.info('Mobile handoff token created', {

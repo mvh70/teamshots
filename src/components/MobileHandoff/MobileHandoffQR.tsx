@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useTranslations } from 'next-intl'
 import { Smartphone, RefreshCw, Check, Loader2 } from 'lucide-react'
+import { getCleanClientBaseUrl } from '@/lib/url'
 
 interface MobileHandoffQRProps {
   /** For invite users - use existing invite token */
@@ -60,7 +61,8 @@ export default function MobileHandoffQR({
   const createToken = useCallback(async () => {
     if (inviteToken) {
       // For invite users, construct the URL directly
-      const baseUrl = window.location.origin
+      // Use clean base URL to avoid :80 port from reverse proxy headers
+      const baseUrl = getCleanClientBaseUrl()
       setState(prev => ({
         ...prev,
         qrUrl: `${baseUrl}/upload-selfie/${inviteToken}`,

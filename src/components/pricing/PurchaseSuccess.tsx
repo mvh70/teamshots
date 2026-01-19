@@ -9,6 +9,7 @@ import { PRICING_CONFIG } from '@/config/pricing'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import { useCredits } from '@/contexts/CreditsContext'
 import { trackPaymentCompleted } from '@/lib/track'
+import { getCleanClientBaseUrl } from '@/lib/url'
 
 interface PurchaseSuccessProps {
   className?: string
@@ -176,8 +177,17 @@ export function PurchaseSuccess({ className = '' }: PurchaseSuccessProps) {
     if (returnTo) {
       try {
         const decodedUrl = decodeURIComponent(returnTo)
-        // Validate it's a relative path or same origin for security
-        if (decodedUrl.startsWith('/') || decodedUrl.startsWith(window.location.origin)) {
+        // Validate it's a relative path or same hostname for security
+        // Use clean base URL to handle proxy port issues (e.g. :80 in origin)
+        const isSameHostname = (() => {
+          try {
+            const url = new URL(decodedUrl, getCleanClientBaseUrl())
+            return url.hostname === window.location.hostname
+          } catch {
+            return false
+          }
+        })()
+        if (decodedUrl.startsWith('/') || isSameHostname) {
           // Extract pathname from URL (remove query params and hash)
           const returnToPath = decodedUrl.split('?')[0].split('#')[0]
           const returnToPathNormalized = returnToPath.replace(/^\/(en|es)/, '') || returnToPath

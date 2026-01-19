@@ -272,7 +272,9 @@ export default function DashboardPage() {
     const newUrl = new URL(window.location.href)
     newUrl.searchParams.delete('success')
     newUrl.searchParams.delete('type')
-    window.history.replaceState({}, '', newUrl.toString())
+    // Use relative URL to avoid port issues from reverse proxy
+    const cleanUrl = newUrl.pathname + (newUrl.search || '')
+    window.history.replaceState({}, '', cleanUrl)
     
     // Hide message after 5 seconds
     const timer = setTimeout(() => {

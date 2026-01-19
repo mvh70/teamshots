@@ -16,6 +16,7 @@ import { usePlanInfo } from '@/hooks/usePlanInfo'
 import { ErrorCard, Grid } from '@/components/ui'
 import { Sparkles, Users, Camera, Image, XCircle, Info } from 'lucide-react'
 import { trackTeamMemberInvited } from '@/lib/track'
+import { getCleanClientBaseUrl } from '@/lib/url'
 
 interface TeamInvite {
   id: string
@@ -1435,7 +1436,8 @@ export default function TeamPage() {
                   const creditsUsed = member.stats?.teamCreditsUsed ?? memberInvite?.creditsUsed ?? 0
                   const photoStyle = memberInvite?.contextName ?? teamData?.activeContext?.name
                   // Build invite link from token if available
-                  const inviteLink = memberInvite?.token ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${memberInvite.token}` : null
+                  // Use clean base URL to avoid :80 port from reverse proxy headers
+                  const inviteLink = memberInvite?.token ? `${getCleanClientBaseUrl()}/invite/${memberInvite.token}` : null
 
                   return (
                 <div key={`member-${member.id}`} className="px-7 py-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0 group">
@@ -1793,7 +1795,8 @@ export default function TeamPage() {
                 {/* Team Invites - only show pending invites */}
                 {pendingInvites.map((invite) => {
                   // Build invite link from token
-                  const inviteLink = invite.token ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${invite.token}` : null
+                  // Use clean base URL to avoid :80 port from reverse proxy headers
+                  const inviteLink = invite.token ? `${getCleanClientBaseUrl()}/invite/${invite.token}` : null
 
                   return (
                 <div key={`invite-${invite.id}`} className="px-7 py-5 hover:bg-gradient-to-r hover:from-gray-50/50 hover:to-white transition-all duration-200 border-b border-gray-100 last:border-b-0 group">

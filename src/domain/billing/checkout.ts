@@ -1,4 +1,5 @@
 import { trackCheckoutStarted } from '@/lib/track'
+import { getCleanClientBaseUrl } from '@/lib/url'
 
 export type CheckoutType = 'subscription' | 'top_up' | 'plan'
 
@@ -23,6 +24,14 @@ export async function createCheckout(params: CreateCheckoutParams): Promise<stri
     amount: params.amount
   })
 
+  // Construct clean return URL to avoid :80 port from reverse proxy headers
+  const getCleanReturnUrl = () => {
+    if (params.returnUrl) return params.returnUrl
+    if (typeof window === 'undefined') return undefined
+    const baseUrl = getCleanClientBaseUrl()
+    return `${baseUrl}${window.location.pathname}${window.location.search}`
+  }
+
   const res = await fetch('/api/stripe/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -30,7 +39,7 @@ export async function createCheckout(params: CreateCheckoutParams): Promise<stri
       type: params.type,
       priceId: params.priceId,
       metadata: params.metadata,
-      returnUrl: params.returnUrl || (typeof window !== 'undefined' ? window.location.href : undefined)
+      returnUrl: getCleanReturnUrl()
     })
   })
   const data = (await res.json()) as { checkoutUrl?: string; error?: string }

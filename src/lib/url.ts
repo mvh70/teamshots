@@ -1,4 +1,3 @@
-import { headers } from 'next/headers'
 import { Env } from '@/lib/env'
 import { TEAM_DOMAIN, INDIVIDUAL_DOMAIN, COUPLES_DOMAIN, FAMILY_DOMAIN, EXTENSION_DOMAIN } from '@/config/domain'
 
@@ -18,7 +17,7 @@ export const ALLOWED_DOMAINS = [
  * Get the base URL dynamically from the request.
  * In production, this detects which domain the request came from.
  * In development, falls back to NEXT_PUBLIC_BASE_URL.
- * 
+ *
  * @param requestHeaders - Optional headers object (for server components)
  * @returns The base URL (e.g., "https://teamshotspro.com")
  */
@@ -27,32 +26,23 @@ export function getBaseUrl(requestHeaders?: Headers): string {
   if (Env.string('NODE_ENV') !== 'production') {
     return Env.string('NEXT_PUBLIC_BASE_URL', 'http://localhost:3000')
   }
-  
+
   // Try to detect from request headers
   const host = requestHeaders?.get('host') || requestHeaders?.get('x-forwarded-host')
-  
+
   if (host) {
     // Normalize: remove port and www prefix
     const normalizedHost = host.split(':')[0].replace(/^www\./, '')
-    
+
     // Check if it's one of our allowed domains
     if ((ALLOWED_DOMAINS as readonly string[]).includes(normalizedHost)) {
       const protocol = requestHeaders?.get('x-forwarded-proto') || 'https'
       return `${protocol}://${normalizedHost}`
     }
   }
-  
+
   // Fallback to env var
   return Env.string('NEXT_PUBLIC_BASE_URL', 'https://teamshotspro.com')
-}
-
-/**
- * Get base URL for server components using Next.js headers().
- * This is the preferred way to get the base URL in server components and API routes.
- */
-export async function getServerBaseUrl(): Promise<string> {
-  const headersList = await headers()
-  return getBaseUrl(headersList)
 }
 
 /**
@@ -67,17 +57,27 @@ export function getClientBaseUrl(): string {
 }
 
 /**
- * Get the NextAuth URL dynamically.
- * This should be used instead of process.env.NEXTAUTH_URL where dynamic detection is needed.
+ * Get a clean base URL for client components without default ports.
+ *
+ * This fixes an issue where reverse proxies forward x-forwarded-port: 80,
+ * causing window.location.origin to return URLs like https://domain.com:80/
+ * which breaks HTTPS connections.
+ *
+ * @returns Base URL without default ports (80 for http, 443 for https)
  */
-export async function getAuthUrl(): Promise<string> {
-  return getServerBaseUrl()
+export function getCleanClientBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname } = window.location
+    // Never include default ports (80 for http, 443 for https)
+    return `${protocol}//${hostname}`
+  }
+  return Env.string('NEXT_PUBLIC_BASE_URL', 'http://localhost:3000')
 }
 
 /**
  * Get the base URL for a specific user based on their signup domain.
  * Used for emails and notifications to ensure links point to the domain they signed up on.
- * 
+ *
  * @param signupDomain - The domain the user signed up from (stored in User.signupDomain)
  * @returns The base URL for that domain (e.g., "https://teamshotspro.com")
  */
@@ -86,7 +86,7 @@ export function getBaseUrlForUser(signupDomain: string | null | undefined): stri
   if (Env.string('NODE_ENV') !== 'production') {
     return Env.string('NEXT_PUBLIC_BASE_URL', 'http://localhost:3000')
   }
-  
+
   // If user has a stored signup domain, use it
   if (signupDomain) {
     const normalizedDomain = signupDomain.replace(/^www\./, '')
@@ -94,7 +94,7 @@ export function getBaseUrlForUser(signupDomain: string | null | undefined): stri
       return `https://${normalizedDomain}`
     }
   }
-  
+
   // Fallback to default domain
   return Env.string('NEXT_PUBLIC_BASE_URL', 'https://teamshotspro.com')
 }

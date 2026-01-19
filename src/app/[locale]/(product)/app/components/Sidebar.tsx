@@ -5,6 +5,7 @@ import { usePathname } from '@/i18n/routing'
 import { Link } from '@/i18n/routing'
 import { useCredits } from '@/contexts/CreditsContext'
 import { jsonFetcher } from '@/lib/fetcher'
+import { getCleanClientBaseUrl } from '@/lib/url'
 import { calculatePhotosFromCredits } from '@/domain/pricing'
 import {
   HomeIcon,
@@ -536,15 +537,8 @@ export default function Sidebar({ collapsed, onToggle, onMenuItemClick, onMouseE
       console.error('Failed to revoke token on logout:', error)
     }
 
-    // Construct clean callback URL without default ports
-    // This fixes an issue where reverse proxies forward x-forwarded-port: 80
-    // causing NextAuth to construct URLs like https://domain.com:80/
-    let callbackUrl = '/'
-    if (typeof window !== 'undefined') {
-      const { protocol, hostname } = window.location
-      // Never include default ports (80 for http, 443 for https)
-      callbackUrl = `${protocol}//${hostname}/`
-    }
+    // Use clean base URL to avoid :80 port from reverse proxy headers
+    const callbackUrl = `${getCleanClientBaseUrl()}/`
     signOut({ callbackUrl })
   }
 
