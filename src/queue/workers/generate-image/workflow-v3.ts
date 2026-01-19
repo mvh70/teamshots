@@ -445,31 +445,38 @@ async function generateBackgroundWithRetry({
   preparedAssets?: Map<string, import('@/domain/style/elements/composition').PreparedAsset>
 }): Promise<{ backgroundBuffer: Buffer; backgroundBase64: string; assetId?: string; backgroundLogoReference: BaseReferenceImage; evaluatorComments: string[]; compositeReference?: BaseReferenceImage; reused?: boolean } | undefined> {
   // Check if Step 1b should run
-  // NEW: Step 1b now ONLY runs for custom backgrounds
-  // Logo branding is now handled in Step 2 via element composition for better 3D integration
+  // Step 1b ONLY runs for custom backgrounds
+  // Logo branding on background/elements is handled in Step 2 via element composition
   const bgValue1b = styleSettings.background?.value
   const hasCustomBackground = bgValue1b?.type === 'custom' && bgValue1b.key
-  const shouldRunStep1b = hasCustomBackground
 
   // Extract branding value for logging
   const brandingValue = hasValue(styleSettings.branding) ? styleSettings.branding.value : undefined
+
+  const shouldRunStep1b = hasCustomBackground
 
   if (!shouldRunStep1b) {
     Logger.info('V3 Step 1b: Skipping background generation (no custom background)', {
       hasCustomBackground,
       brandingPosition: brandingValue?.position,
-      note: 'Logo branding now handled in Step 2 for better 3D integration'
+      note: 'Logo branding handled in Step 2 for better integration'
     })
     return undefined
   }
 
+  Logger.info('V3 Step 1b: Will generate background for custom background', {
+    hasCustomBackground,
+    brandingPosition: brandingValue?.position
+  })
+
   // Load logo for branding - use prepared asset from Step 0
+  // MUST be labeled "logo" to match config instructions ("Use the attached image labeled 'logo'")
   let brandingLogoReference: BaseReferenceImage | undefined
   if (brandingValue?.type === 'include') {
     const preparedLogo = preparedAssets?.get('branding-logo')
     if (preparedLogo?.data.base64) {
       brandingLogoReference = {
-        description: `Company logo for ${brandingValue.position} placement`,
+        description: 'LOGO - This is the exact logo to reproduce. COPY THIS LOGO EXACTLY: every letter, icon, shape, and color must be reproduced with PERFECT ACCURACY. Do NOT interpret, stylize, or modify - reproduce EXACTLY as shown.',
         base64: preparedLogo.data.base64,
         mimeType: preparedLogo.data.mimeType || 'image/png'
       }

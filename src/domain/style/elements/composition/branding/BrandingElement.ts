@@ -290,6 +290,26 @@ export class BrandingElement extends StyleElement {
         s3Key: preparedLogoS3Key,
       })
 
+      // Save debug file to tmp/v3-debug (same pattern as step 1a)
+      try {
+        const { promises: fs } = await import('fs')
+        const path = await import('path')
+        const tmpDir = path.join(process.cwd(), 'tmp', 'v3-debug')
+        await fs.mkdir(tmpDir, { recursive: true })
+        const debugFilename = `prepared-logo-${generationId}-${Date.now()}.png`
+        const debugPath = path.join(tmpDir, debugFilename)
+        await fs.writeFile(debugPath, preparedLogoBuffer)
+        Logger.info('[BrandingElement] Saved prepared logo to debug folder', {
+          generationId,
+          path: debugPath,
+        })
+      } catch (debugError) {
+        Logger.warn('[BrandingElement] Failed to save debug file (non-fatal)', {
+          generationId,
+          error: debugError instanceof Error ? debugError.message : String(debugError),
+        })
+      }
+
       // Create Asset record
       const logoAsset = await AssetService.createAsset({
         s3Key: preparedLogoS3Key,
@@ -421,12 +441,12 @@ export class BrandingElement extends StyleElement {
     const preparedAssets = context.generationContext.preparedAssets
     const logoAsset = preparedAssets?.get(`${this.id}-logo`)
 
-    // Add reference image if logo was prepared
+    // Add reference image if logo was prepared - with emphatic copying instructions
     const referenceImages = []
     if (logoAsset?.data.base64) {
       referenceImages.push({
         url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
-        description: 'Company logo for clothing branding - apply according to position rules',
+        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown onto the clothing. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize.',
         type: 'branding' as const,
       })
 
@@ -438,10 +458,22 @@ export class BrandingElement extends StyleElement {
       })
     }
 
+    // CRITICAL: Logo reproduction rules for clothing
+    const logoReproductionRules = [
+      '⚠️ LOGO INTEGRITY IS ABSOLUTE - THE LOGO CANNOT BE MODIFIED IN ANY WAY ⚠️',
+      'COPY the logo PIXEL-FOR-PIXEL from the reference image onto the clothing',
+      'The logo must be an EXACT DUPLICATE - same letters, same shapes, same colors',
+      'DO NOT: redesign, reinterpret, stylize, simplify, or "improve" the logo',
+      'DO NOT: change any letters, fonts, or text in the logo',
+    ]
+
     return {
       instructions: [],
 
-      mustFollow: brandingResult.rules,
+      mustFollow: [
+        ...logoReproductionRules,
+        ...brandingResult.rules
+      ],
 
       referenceImages,
       payload,
@@ -505,12 +537,12 @@ export class BrandingElement extends StyleElement {
     const preparedAssets = context.generationContext.preparedAssets
     const logoAsset = preparedAssets?.get(`${this.id}-logo`)
 
-    // Add reference image if logo was prepared
+    // Add reference image if logo was prepared - with emphatic copying instructions
     const referenceImages = []
     if (logoAsset?.data.base64) {
       referenceImages.push({
         url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
-        description: 'Company logo for branding - apply according to position rules',
+        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize. Place it in the scene but DO NOT alter the logo itself.',
         type: 'branding' as const,
       })
 
@@ -522,15 +554,31 @@ export class BrandingElement extends StyleElement {
       })
     }
 
+    // CRITICAL: Extremely strict logo reproduction rules - THE LOGO CANNOT BE CHANGED
+    const logoReproductionRules = [
+      '⚠️ LOGO INTEGRITY IS ABSOLUTE - THE LOGO CANNOT BE MODIFIED IN ANY WAY ⚠️',
+      'COPY the logo PIXEL-FOR-PIXEL from the reference image - this is a HARD REQUIREMENT',
+      'The logo must be an EXACT DUPLICATE - same letters, same shapes, same colors, same proportions',
+      'DO NOT: redesign, reinterpret, stylize, simplify, or "improve" the logo',
+      'DO NOT: change any letters, fonts, or text in the logo',
+      'DO NOT: modify colors, add effects, or change the aspect ratio',
+      'Think of it as placing a STICKER - the sticker image itself cannot change',
+    ]
+
+    const configRules = Array.isArray(promptConfig.rules)
+      ? promptConfig.rules.map((rule) => String(rule))
+      : []
+
     return {
       instructions: [
         typeof promptConfig.logo_source === 'string' ? promptConfig.logo_source : '',
         typeof promptConfig.placement === 'string' ? promptConfig.placement : '',
       ].filter(Boolean),
 
-      mustFollow: Array.isArray(promptConfig.rules)
-        ? promptConfig.rules.map((rule) => String(rule))
-        : [],
+      mustFollow: [
+        ...logoReproductionRules,
+        ...configRules
+      ],
 
       payload,
 
@@ -588,44 +636,50 @@ export class BrandingElement extends StyleElement {
       detailKey,
     })
 
-    // Build position-specific instructions
-    const instructions: string[] = []
-    const mustFollow: string[] = []
+    // Use the SAME config prompts that work in Step 1b background generation
+    // Select prompt based on position - this ensures consistency between Step 1b and Step 2
+    const promptConfig =
+      position === 'elements'
+        ? ELEMENT_BRANDING_PROMPT
+        : BACKGROUND_BRANDING_PROMPT
 
-    if (position === 'background') {
-      instructions.push(
-        'Place the provided logo on the background wall behind the person',
-        'Logo should be positioned at head/shoulder level for visibility',
-        'Logo can be partially occluded by the person to reinforce depth'
-      )
-      mustFollow.push(
-        'Logo must be on the background wall surface with proper perspective',
-        'Apply depth of field - logo should be slightly softer than the sharp person',
-        'Logo must match background wall lighting and color temperature',
-        'Logo should appear naturally integrated into the wall surface',
-        'Scale logo appropriately - visible but not dominating the person'
-      )
-    } else if (position === 'elements') {
-      instructions.push(
-        'Create a fabric flag or banner 6-8 feet behind the person',
-        'Apply the provided logo to the flag/banner surface',
-        'Flag should be grounded on the floor, not floating'
-      )
-      mustFollow.push(
-        'Flag must have natural fabric physics with folds and curves (not flat)',
-        'Flag should be slightly softer in focus than the person (depth of field)',
-        'Apply proper lighting and shadows to the flag',
-        'Flag must be positioned BEHIND the person with clear spatial separation',
-        'Logo on flag should follow fabric contours naturally',
-        'Scale flag appropriately - visible but subordinate to person'
-      )
-    }
+    // Build instructions from config (same as contributeToBackgroundGeneration)
+    const instructions: string[] = [
+      typeof promptConfig.logo_source === 'string' ? promptConfig.logo_source : '',
+      typeof promptConfig.placement === 'string' ? promptConfig.placement : '',
+    ].filter(Boolean)
 
-    // Add logo reference image
+    // Build mustFollow rules from config, plus critical logo reproduction rules
+    const configRules = Array.isArray(promptConfig.rules)
+      ? promptConfig.rules.map((rule) => String(rule))
+      : []
+
+    // CRITICAL: Extremely strict logo reproduction rules - THE LOGO CANNOT BE CHANGED
+    const logoReproductionRules = [
+      '⚠️ LOGO INTEGRITY IS ABSOLUTE - THE LOGO CANNOT BE MODIFIED IN ANY WAY ⚠️',
+      'COPY the logo PIXEL-FOR-PIXEL from the reference image - this is a HARD REQUIREMENT',
+      'The logo must be an EXACT DUPLICATE - same letters, same shapes, same colors, same proportions',
+      'DO NOT: redesign, reinterpret, stylize, simplify, or "improve" the logo',
+      'DO NOT: change any letters, fonts, or text in the logo',
+      'DO NOT: modify colors, add effects, or change the aspect ratio',
+      'DO NOT: add elements that are not in the original logo',
+      'DO NOT: remove any elements from the original logo',
+      'If the logo has text, every single character must match EXACTLY',
+      'If the logo has icons or symbols, they must be reproduced IDENTICALLY',
+      'The logo placement can be adjusted for the scene, but the logo DESIGN is UNTOUCHABLE',
+      'Think of it as placing a STICKER - the sticker image itself cannot change',
+    ]
+
+    const mustFollow: string[] = [
+      ...logoReproductionRules,
+      ...configRules
+    ]
+
+    // Add logo reference image - MUST be labeled "logo" with emphatic copying instructions
     const referenceImages = [
       {
         url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
-        description: `LOGO for ${position} branding - Place according to position rules`,
+        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize. Place it in the scene but DO NOT alter the logo itself.',
         type: 'branding' as const,
       },
     ]
