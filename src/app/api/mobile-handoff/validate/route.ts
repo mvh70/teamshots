@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateMobileHandoffToken, cleanupExpiredHandoffTokens } from '@/lib/mobile-handoff'
 import { Logger } from '@/lib/logger'
-import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
-import { createHmac } from 'crypto'
 
 export const runtime = 'nodejs'
 
@@ -36,13 +34,14 @@ export async function GET(request: NextRequest) {
         })
       })
 
-    // Generate a device ID from user agent and IP for device binding
-    const headersList = await headers()
-    const userAgent = headersList.get('user-agent') || ''
-    const ip = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || undefined
-    const deviceId = generateDeviceId(userAgent, ip)
-
-    const result = await validateMobileHandoffToken(token, deviceId)
+    // REMOVED device binding on validation
+    // Device binding was causing issues because:
+    // 1. QR scanner apps use a webview with different user-agent than actual browser
+    // 2. When user opens link in real browser, user-agent differs → DEVICE_MISMATCH
+    //
+    // The handoff token itself is the security - it's a 64-char cryptographic secret.
+    // Device binding adds friction without meaningful security benefit for this flow.
+    const result = await validateMobileHandoffToken(token)
 
     if (!result.success) {
       const statusCode = result.code === 'NOT_FOUND' ? 404 
@@ -84,28 +83,5 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
-
-/**
- * SECURITY: Generate cryptographically secure device ID using HMAC
- * Prevents device ID collisions and makes it harder to spoof devices
- *
- * Uses HMAC with secret + (user-agent + IP) to ensure:
- * 1. Same device gets same ID consistently
- * 2. Different users with same browser get different IDs
- * 3. Cannot easily reverse engineer or predict device IDs
- */
-function generateDeviceId(userAgent: string, ip?: string): string {
-  // Use environment variable or fallback secret (should be set in production)
-  const secret = process.env.DEVICE_ID_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-device-secret'
-
-  // Include IP address if available for better uniqueness
-  const deviceFingerprint = ip ? `${userAgent}:${ip}` : userAgent
-
-  // Create HMAC-SHA256 hash
-  const hmac = createHmac('sha256', secret)
-  hmac.update(deviceFingerprint)
-
-  return hmac.digest('hex')
 }
 
