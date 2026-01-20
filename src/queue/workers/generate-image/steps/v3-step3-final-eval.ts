@@ -31,6 +31,7 @@ export interface V3Step3FinalInput {
 
 const DIMENSION_TOLERANCE_PX = 50 // Generous tolerance for model variations
 const ASPECT_RATIO_TOLERANCE = 0.05 // 5% tolerance
+const MAX_EVAL_RETRIES = 3 // Retry evaluation on parsing failures (don't regenerate)
 
 /**
  * Compose contributions from all registered elements for the evaluation phase
@@ -283,138 +284,163 @@ export async function executeV3Step3(
   let evalDurationMs = 0
   let usageMetadata: { inputTokens?: number; outputTokens?: number } | undefined
   let providerUsed: 'vertex' | 'gemini-rest' | 'openrouter' | undefined
+  let lastError: Error | null = null
 
-  const evalStartTime = Date.now()
-  try {
-    // Use multi-provider fallback stack for evaluation
-    const response = await generateTextWithGemini(evalPromptText, evalImages, {
-      temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
-      stage: 'EVALUATION',
-    })
+  // Retry loop for evaluation - retry on parsing failures instead of regenerating
+  for (let evalAttempt = 1; evalAttempt <= MAX_EVAL_RETRIES; evalAttempt++) {
+    const evalStartTime = Date.now()
+    lastError = null
 
-    evalDurationMs = response.usage.durationMs
-    usageMetadata = {
-      inputTokens: response.usage.inputTokens,
-      outputTokens: response.usage.outputTokens,
-    }
-    providerUsed = response.providerUsed
-    const textPart = response.text
+    try {
+      // Use multi-provider fallback stack for evaluation
+      const response = await generateTextWithGemini(evalPromptText, evalImages, {
+        temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
+        stage: 'EVALUATION',
+      })
 
-    Logger.debug('V3 Step 3 Eval: Provider used', { provider: providerUsed, model: modelName })
+      evalDurationMs = response.usage.durationMs
+      usageMetadata = {
+        inputTokens: response.usage.inputTokens,
+        outputTokens: response.usage.outputTokens,
+      }
+      providerUsed = response.providerUsed
+      const textPart = response.text
 
-    // Note: Cost tracking moved to after evaluation status is determined
-    // (see below after finalStatus is computed)
+      Logger.debug('V3 Step 3 Eval: Provider used', { provider: providerUsed, model: modelName, evalAttempt })
 
-    if (textPart) {
-      const evaluation = parseFinalEvaluation(textPart)
-      if (evaluation) {
-        // Auto-reject for critical failures (face/characteristics are non-negotiable)
-        const autoReject = [
-          evaluation.face_similarity === 'NO',
-          evaluation.characteristic_preservation === 'NO'
-        ].some(Boolean)
+      if (textPart) {
+        const evaluation = parseFinalEvaluation(textPart)
+        if (evaluation) {
+          // Auto-reject for critical failures (face/characteristics are non-negotiable)
+          const autoReject = [
+            evaluation.face_similarity === 'NO',
+            evaluation.characteristic_preservation === 'NO'
+          ].some(Boolean)
 
-        // Check all required criteria including prominence and branding if applicable
-        const baseApproved =
-          evaluation.face_similarity === 'YES' &&
-          evaluation.characteristic_preservation === 'YES' &&
-          evaluation.person_prominence === 'YES' &&
-          evaluation.overall_quality === 'YES'
-        
-        const brandingApproved = (brandingInfo && logoReference)
-          ? evaluation.branding_placement === 'YES'
-          : true // If no branding required, consider it approved
+          // Check all required criteria including prominence and branding if applicable
+          const baseApproved =
+            evaluation.face_similarity === 'YES' &&
+            evaluation.characteristic_preservation === 'YES' &&
+            evaluation.person_prominence === 'YES' &&
+            evaluation.overall_quality === 'YES'
 
-        const allApproved = baseApproved && brandingApproved
+          const brandingApproved = (brandingInfo && logoReference)
+            ? evaluation.branding_placement === 'YES'
+            : true // If no branding required, consider it approved
 
-        const finalStatus: 'Approved' | 'Not Approved' = autoReject || !allApproved ? 'Not Approved' : 'Approved'
+          const allApproved = baseApproved && brandingApproved
 
-        const failedCriteria: string[] = []
-        Object.entries(evaluation).forEach(([key, value]) => {
-          if (key === 'explanations') return
-          if (value === 'NO' || value === 'UNCERTAIN') {
-            const explanation = evaluation.explanations[key] || 'No explanation provided'
-            failedCriteria.push(`${key}: ${value} (${explanation})`)
-          }
-        })
+          const finalStatus: 'Approved' | 'Not Approved' = autoReject || !allApproved ? 'Not Approved' : 'Approved'
 
-        // Log evaluation results
-        Logger.info('V3 Step 3: Evaluation result', {
-          status: finalStatus,
-          face_similarity: evaluation.face_similarity,
-          characteristic_preservation: evaluation.characteristic_preservation,
-          person_prominence: evaluation.person_prominence,
-          overall_quality: evaluation.overall_quality,
-          ...(evaluation.branding_placement ? { branding_placement: evaluation.branding_placement } : {})
-        })
+          const failedCriteria: string[] = []
+          Object.entries(evaluation).forEach(([key, value]) => {
+            if (key === 'explanations') return
+            if (value === 'NO' || value === 'UNCERTAIN') {
+              const explanation = evaluation.explanations[key] || 'No explanation provided'
+              failedCriteria.push(`${key}: ${value} (${explanation})`)
+            }
+          })
 
-        const finalReason = failedCriteria.length > 0 ? failedCriteria.join(' | ') : 'All criteria met'
-
-        // Track evaluation cost with outcome
-        if (input.onCostTracking && usageMetadata) {
-          try {
-            await input.onCostTracking({
-              stepName: 'step3-final-eval',
-              reason: 'evaluation',
-              result: 'success',
-              model: STAGE_MODEL.EVALUATION,
-              provider: providerUsed,
-              inputTokens: usageMetadata.inputTokens,
-              outputTokens: usageMetadata.outputTokens,
-              durationMs: evalDurationMs,
-              evaluationStatus: finalStatus === 'Approved' ? 'approved' : 'rejected',
-              rejectionReason: finalStatus === 'Not Approved' ? finalReason : undefined,
-              intermediateS3Key: input.intermediateS3Key,
-            })
-            // Cost tracking logged at debug level only
-          } catch (costError) {
-            Logger.error('V3 Step 3: Failed to track evaluation cost', {
-              error: costError instanceof Error ? costError.message : String(costError),
-              generationId: input.generationId,
-            })
-          }
-        }
-
-        return {
-          evaluation: {
+          // Log evaluation results
+          Logger.info('V3 Step 3: Evaluation result', {
             status: finalStatus,
-            reason: finalReason,
-            failedCriteria: failedCriteria.length > 0 ? failedCriteria : undefined,
-            suggestedAdjustments: finalStatus === 'Not Approved' ? generateAdjustmentSuggestions(failedCriteria) : undefined
+            face_similarity: evaluation.face_similarity,
+            characteristic_preservation: evaluation.characteristic_preservation,
+            person_prominence: evaluation.person_prominence,
+            overall_quality: evaluation.overall_quality,
+            ...(evaluation.branding_placement ? { branding_placement: evaluation.branding_placement } : {})
+          })
+
+          const finalReason = failedCriteria.length > 0 ? failedCriteria.join(' | ') : 'All criteria met'
+
+          // Track evaluation cost with outcome
+          if (input.onCostTracking && usageMetadata) {
+            try {
+              await input.onCostTracking({
+                stepName: 'step3-final-eval',
+                reason: 'evaluation',
+                result: 'success',
+                model: STAGE_MODEL.EVALUATION,
+                provider: providerUsed,
+                inputTokens: usageMetadata.inputTokens,
+                outputTokens: usageMetadata.outputTokens,
+                durationMs: evalDurationMs,
+                evaluationStatus: finalStatus === 'Approved' ? 'approved' : 'rejected',
+                rejectionReason: finalStatus === 'Not Approved' ? finalReason : undefined,
+                intermediateS3Key: input.intermediateS3Key,
+              })
+            } catch (costError) {
+              Logger.error('V3 Step 3: Failed to track evaluation cost', {
+                error: costError instanceof Error ? costError.message : String(costError),
+                generationId: input.generationId,
+              })
+            }
+          }
+
+          return {
+            evaluation: {
+              status: finalStatus,
+              reason: finalReason,
+              failedCriteria: failedCriteria.length > 0 ? failedCriteria : undefined,
+              suggestedAdjustments: finalStatus === 'Not Approved' ? generateAdjustmentSuggestions(failedCriteria) : undefined
+            }
           }
         }
       }
-    }
-  } catch (error) {
-    const evalDurationMs = Date.now() - evalStartTime
-    Logger.error('V3 Step 3: Failed to evaluate final image', {
-      error: error instanceof Error ? error.message : String(error)
-    })
 
-    // Track failed evaluation cost
-    if (input.onCostTracking) {
-      try {
-        await input.onCostTracking({
-          stepName: 'step3-final-eval',
-          reason: 'evaluation',
-          result: 'failure',
-          model: STAGE_MODEL.EVALUATION,
-          provider: providerUsed,
-          durationMs: evalDurationMs,
-          errorMessage: error instanceof Error ? error.message : String(error),
+      // Parsing failed - log and retry
+      Logger.warn('V3 Step 3: Parsing failed, retrying evaluation', {
+        evalAttempt,
+        maxRetries: MAX_EVAL_RETRIES,
+        responseLength: textPart?.length || 0,
+      })
+
+    } catch (error) {
+      evalDurationMs = Date.now() - evalStartTime
+      lastError = error instanceof Error ? error : new Error(String(error))
+
+      Logger.warn('V3 Step 3: Evaluation attempt failed', {
+        evalAttempt,
+        maxRetries: MAX_EVAL_RETRIES,
+        error: lastError.message,
+      })
+
+      // Track failed evaluation cost for this attempt
+      if (input.onCostTracking) {
+        try {
+          await input.onCostTracking({
+            stepName: 'step3-final-eval',
+            reason: 'evaluation',
+            result: 'failure',
+            model: STAGE_MODEL.EVALUATION,
+            provider: providerUsed,
+            durationMs: evalDurationMs,
+            errorMessage: lastError.message,
+          })
+        } catch (costError) {
+          Logger.error('V3 Step 3: Failed to track failed evaluation cost', {
+            error: costError instanceof Error ? costError.message : String(costError),
+          })
+        }
+      }
+
+      // If this was the last attempt, throw the error
+      if (evalAttempt === MAX_EVAL_RETRIES) {
+        Logger.error('V3 Step 3: All evaluation retries exhausted (API errors)', {
+          totalAttempts: MAX_EVAL_RETRIES,
         })
-      } catch (costError) {
-        Logger.error('V3 Step 3: Failed to track failed evaluation cost', {
-          error: costError instanceof Error ? costError.message : String(costError),
-        })
+        throw lastError
       }
     }
-
-    throw error
   }
 
-  const rejectionReason = 'Evaluation did not return a valid structured response.'
-  
+  // All retries exhausted due to parsing failures
+  const rejectionReason = `Evaluation did not return a valid structured response after ${MAX_EVAL_RETRIES} attempts.`
+
+  Logger.error('V3 Step 3: All evaluation retries exhausted (parsing failures)', {
+    totalAttempts: MAX_EVAL_RETRIES,
+  })
+
   // Track evaluation cost with rejection for parsing failure
   if (input.onCostTracking && usageMetadata) {
     try {

@@ -33,6 +33,7 @@ export interface V3Step1aEvalOutput {
 
 const DIMENSION_TOLERANCE_PX = 50 // Generous tolerance for model variations
 const ASPECT_RATIO_TOLERANCE = 0.05 // 5% tolerance
+const MAX_EVAL_RETRIES = 3 // Retry evaluation on parsing failures (don't regenerate)
 
 /**
  * V3 Step 1a Eval: Evaluate person generation
@@ -302,63 +303,95 @@ Generation prompt used:\n${generationPrompt}`
   let evalDurationMs = 0
   let usageMetadata: { inputTokens?: number; outputTokens?: number } | undefined
   let providerUsed: 'vertex' | 'gemini-rest' | 'openrouter' | undefined
+  let lastError: Error | null = null
 
-  const evalStartTime = Date.now()
-  try {
-    // Use multi-provider fallback stack for evaluation
-    const response = await generateTextWithGemini(fullPrompt, evalImages, {
-      temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
-      stage: 'EVALUATION',
-    })
+  // Retry loop for evaluation - retry on parsing failures instead of regenerating
+  for (let evalAttempt = 1; evalAttempt <= MAX_EVAL_RETRIES; evalAttempt++) {
+    const evalStartTime = Date.now()
+    rawResponse = null
+    structuredEvaluation = null
+    lastError = null
 
-    evalDurationMs = response.usage.durationMs
-    usageMetadata = {
-      inputTokens: response.usage.inputTokens,
-      outputTokens: response.usage.outputTokens,
-    }
-    providerUsed = response.providerUsed
-    rawResponse = response.text
+    try {
+      // Use multi-provider fallback stack for evaluation
+      const response = await generateTextWithGemini(fullPrompt, evalImages, {
+        temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
+        stage: 'EVALUATION',
+      })
 
-    if (response.text) {
-      structuredEvaluation = parseStructuredEvaluation(response.text)
-    }
+      evalDurationMs = response.usage.durationMs
+      usageMetadata = {
+        inputTokens: response.usage.inputTokens,
+        outputTokens: response.usage.outputTokens,
+      }
+      providerUsed = response.providerUsed
+      rawResponse = response.text
 
-    Logger.debug('V3 Step 1a Eval: Provider used', { provider: providerUsed, model: modelName })
+      if (response.text) {
+        structuredEvaluation = parseStructuredEvaluation(response.text)
+      }
 
-    // Note: Cost tracking moved to after evaluation status is determined
-    // (see below after finalStatus is computed)
-  } catch (error) {
-    evalDurationMs = Date.now() - evalStartTime
-    Logger.error('Failed to run Gemini evaluation for V3 Step 1a', {
-      error: error instanceof Error ? error.message : String(error)
-    })
+      Logger.debug('V3 Step 1a Eval: Provider used', { provider: providerUsed, model: modelName, evalAttempt })
 
-    // Track failed evaluation cost
-    if (input.onCostTracking) {
-      try {
-        await input.onCostTracking({
-          stepName: 'step1a-eval',
-          reason: 'evaluation',
-          result: 'failure',
-          model: STAGE_MODEL.EVALUATION,
-          provider: providerUsed,
-          durationMs: evalDurationMs,
-          errorMessage: error instanceof Error ? error.message : String(error),
+      // If parsing succeeded, break out of retry loop
+      if (structuredEvaluation) {
+        break
+      }
+
+      // Parsing failed - log and retry
+      Logger.warn('V3 Step 1a Eval: Parsing failed, retrying evaluation', {
+        evalAttempt,
+        maxRetries: MAX_EVAL_RETRIES,
+        rawResponseLength: typeof rawResponse === 'string' ? rawResponse.length : 0,
+      })
+
+    } catch (error) {
+      evalDurationMs = Date.now() - evalStartTime
+      lastError = error instanceof Error ? error : new Error(String(error))
+
+      Logger.warn('V3 Step 1a Eval: API call failed, retrying evaluation', {
+        evalAttempt,
+        maxRetries: MAX_EVAL_RETRIES,
+        error: lastError.message,
+      })
+
+      // Track failed evaluation cost for this attempt
+      if (input.onCostTracking) {
+        try {
+          await input.onCostTracking({
+            stepName: 'step1a-eval',
+            reason: 'evaluation',
+            result: 'failure',
+            model: STAGE_MODEL.EVALUATION,
+            provider: providerUsed,
+            durationMs: evalDurationMs,
+            errorMessage: lastError.message,
+          })
+        } catch (costError) {
+          Logger.error('V3 Step 1a Eval: Failed to track failed evaluation cost', {
+            error: costError instanceof Error ? costError.message : String(costError),
+          })
+        }
+      }
+
+      // If this was the last attempt, throw the error
+      if (evalAttempt === MAX_EVAL_RETRIES) {
+        Logger.error('V3 Step 1a Eval: All evaluation retries exhausted (API errors)', {
+          totalAttempts: MAX_EVAL_RETRIES,
         })
-      } catch (costError) {
-        Logger.error('V3 Step 1a Eval: Failed to track failed evaluation cost', {
-          error: costError instanceof Error ? costError.message : String(costError),
-        })
+        throw lastError
       }
     }
-
-    throw error
   }
 
-  // Default to rejection if parsing failed
+  // Default to rejection if parsing failed after all retries
   if (!structuredEvaluation) {
-    const rejectionReason = 'Evaluation did not return a valid structured response.'
-    
+    const rejectionReason = `Evaluation did not return a valid structured response after ${MAX_EVAL_RETRIES} attempts.`
+
+    Logger.error('V3 Step 1a Eval: All evaluation retries exhausted (parsing failures)', {
+      totalAttempts: MAX_EVAL_RETRIES,
+    })
+
     // Track evaluation cost with rejection
     if (input.onCostTracking && usageMetadata) {
       try {
@@ -381,7 +414,7 @@ Generation prompt used:\n${generationPrompt}`
         })
       }
     }
-    
+
     const result: ImageEvaluationResult = {
       status: 'Not Approved',
       reason: rejectionReason,

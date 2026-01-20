@@ -21,6 +21,8 @@ interface ReferenceImage {
   description?: string
 }
 
+const MAX_EVAL_RETRIES = 3 // Retry evaluation on parsing failures (don't regenerate)
+
 /**
  * V3 Step 1b Evaluation: Check background quality and optionally logo presence
  * Logo checks are only performed if a logoReference is provided
@@ -138,199 +140,220 @@ NOTE: Blurred/out-of-focus background people in urban/street scenes are acceptab
 
   const evaluationPrompt = basePrompt + logoCriteria + responseFormat
 
-  const evalStartTime = Date.now()
-  let providerUsed: 'vertex' | 'gemini-rest' | 'openrouter' | undefined
-  try {
-    const modelName = STAGE_MODEL.EVALUATION
+  const modelName = STAGE_MODEL.EVALUATION
 
-    // Build reference images array for multi-modal evaluation
-    const evalImages: GeminiReferenceImage[] = [
-      { mimeType: 'image/png', base64: backgroundBase64, description: 'Generated Background Image:' }
-    ]
+  // Build reference images array for multi-modal evaluation
+  const evalImages: GeminiReferenceImage[] = [
+    { mimeType: 'image/png', base64: backgroundBase64, description: 'Generated Background Image:' }
+  ]
 
-    // Only add logo reference if provided
-    if (hasLogoReference && logoReference) {
-      evalImages.push({
-        mimeType: logoReference.mimeType,
-        base64: logoReference.base64,
-        description: 'Logo Reference:'
-      })
-    }
-
-    // Use multi-provider fallback stack for evaluation
-    const response = await generateTextWithGemini(evaluationPrompt, evalImages, {
-      temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
-      stage: 'EVALUATION',
+  // Only add logo reference if provided
+  if (hasLogoReference && logoReference) {
+    evalImages.push({
+      mimeType: logoReference.mimeType,
+      base64: logoReference.base64,
+      description: 'Logo Reference:'
     })
-
-    const evalDurationMs = response.usage.durationMs
-    const usageMetadata = {
-      inputTokens: response.usage.inputTokens,
-      outputTokens: response.usage.outputTokens,
-    }
-    providerUsed = response.providerUsed
-    const responseText = response.text
-
-    Logger.debug('V3 Step 1b Eval: Provider used', { provider: providerUsed, model: modelName })
-    
-    // Note: Cost tracking moved to after evaluation status is determined
-    // (see below after finalStatus is computed)
-    
-    // Parse JSON response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      throw new Error('Failed to parse evaluation response')
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]) as {
-      status: string
-      reason: string
-      details: {
-        hasReferenceLabels?: boolean
-        referenceLabelsFound?: string
-        logoPresent?: boolean
-        logoMatchesReference?: boolean
-        logoMatchDetails?: string
-        logoQuality?: string
-        backgroundQuality?: string
-        visualCompetition?: string
-        isTooBusy?: boolean
-        hasPeople?: boolean // Legacy field for backward compatibility
-        hasProminentPeople?: boolean
-        hasBlurredBackgroundPeople?: boolean
-        peopleDescription?: string
-      }
-      suggestedAdjustments?: string
-    }
-
-    let finalStatus = parsed.status
-    let finalReason = parsed.reason
-    
-    // Check for prominent people (applies regardless of logo presence)
-    const hasProminentPeople = parsed.details.hasProminentPeople === true
-    
-    if (hasProminentPeople) {
-      finalStatus = 'Not Approved'
-      finalReason = `The background contains prominent, sharp, or in-focus people that would compete with the main subject. ${parsed.details.peopleDescription || 'People in the background must be blurred/out-of-focus only.'}`
-    }
-    
-    // Only apply logo-specific rejection logic if logo was expected
-    if (hasLogoReference && finalStatus !== 'Not Approved') {
-      // Force rejection if reference labels are detected (even if model approved)
-      const hasReferenceLabels = parsed.details.hasReferenceLabels === true
-      // Force rejection if logo doesn't match reference
-      const logoMismatch = parsed.details.logoMatchesReference === false
-      // Force rejection if background is too busy
-      const isTooBusy = parsed.details.isTooBusy === true
-      
-      if (hasReferenceLabels) {
-        finalStatus = 'Not Approved'
-        finalReason = `Reference labels detected in generated image: ${parsed.details.referenceLabelsFound || 'BRANDING LOGO or similar'}. The logo must appear without any labels or UI artifacts.`
-      } else if (logoMismatch) {
-        finalStatus = 'Not Approved'
-        finalReason = `Logo does not match reference: ${parsed.details.logoMatchDetails || 'Letters, colors, or icons differ from the original'}. All elements of the logo must exactly match the reference.`
-      } else if (isTooBusy) {
-        finalStatus = 'Not Approved'
-        finalReason = `Background is too busy/cluttered: ${parsed.details.visualCompetition || 'Distracting elements present'}. The background must be clean enough for compositing.`
-      }
-    } else if (!hasLogoReference && finalStatus !== 'Not Approved') {
-        // If no logo, still check for busyness
-        if (parsed.details.isTooBusy === true) {
-            finalStatus = 'Not Approved'
-            finalReason = `Background is too busy/cluttered: ${parsed.details.visualCompetition || 'Distracting elements present'}. The background must be clean enough for compositing.`
-        }
-    }
-
-    const evaluation: ImageEvaluationResult = {
-      status: finalStatus as 'Approved' | 'Not Approved',
-      reason: finalReason,
-      details: {
-        actualWidth: null,
-        actualHeight: null,
-        dimensionMismatch: false,
-        aspectMismatch: false,
-        selfieDuplicate: false,
-        hasReferenceLabels: hasLogoReference ? parsed.details.hasReferenceLabels : undefined,
-        logoMatchesReference: hasLogoReference ? (parsed.details.logoMatchesReference !== false) : undefined,
-        ...parsed.details
-      }
-    }
-    
-    // Add suggested adjustments if present (not part of ImageEvaluationResult type but used by workflow)
-    if (parsed.suggestedAdjustments) {
-      (evaluation as unknown as Record<string, unknown>).suggestedAdjustments = parsed.suggestedAdjustments
-    }
-
-    Logger.debug('V3 Step 1b Eval: Evaluation completed', {
-      generationId,
-      status: evaluation.status,
-      hasLogoReference,
-      ...(hasLogoReference ? {
-        hasReferenceLabels: parsed.details.hasReferenceLabels,
-        referenceLabelsFound: parsed.details.referenceLabelsFound,
-        logoMatchesReference: parsed.details.logoMatchesReference,
-        logoMatchDetails: parsed.details.logoMatchDetails
-      } : {}),
-      reasonPreview: evaluation.reason.substring(0, 100)
-    })
-
-    // Track evaluation cost with outcome
-    if (input.onCostTracking) {
-      try {
-        await input.onCostTracking({
-          stepName: 'step1b-eval',
-          reason: 'evaluation',
-          result: 'success',
-          model: STAGE_MODEL.EVALUATION,
-          provider: providerUsed,
-          inputTokens: usageMetadata?.inputTokens,
-          outputTokens: usageMetadata?.outputTokens,
-          durationMs: evalDurationMs,
-          evaluationStatus: evaluation.status === 'Approved' ? 'approved' : 'rejected',
-          rejectionReason: evaluation.status === 'Not Approved' ? evaluation.reason : undefined,
-          intermediateS3Key: input.intermediateS3Key,
-        })
-        Logger.debug('V3 Step 1b Eval: Cost tracking with outcome recorded', {
-          generationId,
-          evaluationStatus: evaluation.status,
-          s3Key: input.intermediateS3Key,
-        })
-      } catch (costError) {
-        Logger.error('V3 Step 1b Eval: Failed to track evaluation cost', {
-          error: costError instanceof Error ? costError.message : String(costError),
-          generationId,
-        })
-      }
-    }
-
-    return { evaluation }
-  } catch (error) {
-    const evalDurationMs = Date.now() - evalStartTime
-    Logger.error('V3 Step 1b Eval: Evaluation failed', {
-      generationId,
-      error: error instanceof Error ? error.message : String(error)
-    })
-
-    // Track failed evaluation cost
-    if (input.onCostTracking) {
-      try {
-        await input.onCostTracking({
-          stepName: 'step1b-eval',
-          reason: 'evaluation',
-          result: 'failure',
-          model: STAGE_MODEL.EVALUATION,
-          provider: providerUsed,
-          durationMs: evalDurationMs,
-          errorMessage: error instanceof Error ? error.message : String(error),
-        })
-      } catch (costError) {
-        Logger.error('V3 Step 1b Eval: Failed to track failed evaluation cost', {
-          error: costError instanceof Error ? costError.message : String(costError),
-        })
-      }
-    }
-
-    throw error
   }
+
+  let providerUsed: 'vertex' | 'gemini-rest' | 'openrouter' | undefined
+  let evalDurationMs = 0
+  let usageMetadata: { inputTokens?: number; outputTokens?: number } | undefined
+  let responseText = ''
+  let lastError: Error | null = null
+
+  // Retry loop for evaluation - retry on parsing failures instead of regenerating
+  for (let evalAttempt = 1; evalAttempt <= MAX_EVAL_RETRIES; evalAttempt++) {
+    const evalStartTime = Date.now()
+    lastError = null
+
+    try {
+      // Use multi-provider fallback stack for evaluation
+      const response = await generateTextWithGemini(evaluationPrompt, evalImages, {
+        temperature: AI_CONFIG.EVALUATION_TEMPERATURE,
+        stage: 'EVALUATION',
+      })
+
+      evalDurationMs = response.usage.durationMs
+      usageMetadata = {
+        inputTokens: response.usage.inputTokens,
+        outputTokens: response.usage.outputTokens,
+      }
+      providerUsed = response.providerUsed
+      responseText = response.text
+
+      Logger.debug('V3 Step 1b Eval: Provider used', { provider: providerUsed, model: modelName, evalAttempt })
+
+      // Parse JSON response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        Logger.warn('V3 Step 1b Eval: Parsing failed, retrying evaluation', {
+          evalAttempt,
+          maxRetries: MAX_EVAL_RETRIES,
+          responseLength: responseText.length,
+        })
+        if (evalAttempt === MAX_EVAL_RETRIES) {
+          throw new Error(`Failed to parse evaluation response after ${MAX_EVAL_RETRIES} attempts`)
+        }
+        continue
+      }
+
+      // Parsing succeeded - continue with the rest of the evaluation
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        status: string
+        reason: string
+        details: {
+          hasReferenceLabels?: boolean
+          referenceLabelsFound?: string
+          logoPresent?: boolean
+          logoMatchesReference?: boolean
+          logoMatchDetails?: string
+          logoQuality?: string
+          backgroundQuality?: string
+          visualCompetition?: string
+          isTooBusy?: boolean
+          hasPeople?: boolean
+          hasProminentPeople?: boolean
+          hasBlurredBackgroundPeople?: boolean
+          peopleDescription?: string
+        }
+        suggestedAdjustments?: string
+      }
+
+      let finalStatus = parsed.status
+      let finalReason = parsed.reason
+
+      // Check for prominent people (applies regardless of logo presence)
+      const hasProminentPeople = parsed.details.hasProminentPeople === true
+
+      if (hasProminentPeople) {
+        finalStatus = 'Not Approved'
+        finalReason = `The background contains prominent, sharp, or in-focus people that would compete with the main subject. ${parsed.details.peopleDescription || 'People in the background must be blurred/out-of-focus only.'}`
+      }
+
+      // Only apply logo-specific rejection logic if logo was expected
+      if (hasLogoReference && finalStatus !== 'Not Approved') {
+        const hasReferenceLabels = parsed.details.hasReferenceLabels === true
+        const logoMismatch = parsed.details.logoMatchesReference === false
+        const isTooBusy = parsed.details.isTooBusy === true
+
+        if (hasReferenceLabels) {
+          finalStatus = 'Not Approved'
+          finalReason = `Reference labels detected in generated image: ${parsed.details.referenceLabelsFound || 'BRANDING LOGO or similar'}. The logo must appear without any labels or UI artifacts.`
+        } else if (logoMismatch) {
+          finalStatus = 'Not Approved'
+          finalReason = `Logo does not match reference: ${parsed.details.logoMatchDetails || 'Letters, colors, or icons differ from the original'}. All elements of the logo must exactly match the reference.`
+        } else if (isTooBusy) {
+          finalStatus = 'Not Approved'
+          finalReason = `Background is too busy/cluttered: ${parsed.details.visualCompetition || 'Distracting elements present'}. The background must be clean enough for compositing.`
+        }
+      } else if (!hasLogoReference && finalStatus !== 'Not Approved') {
+        if (parsed.details.isTooBusy === true) {
+          finalStatus = 'Not Approved'
+          finalReason = `Background is too busy/cluttered: ${parsed.details.visualCompetition || 'Distracting elements present'}. The background must be clean enough for compositing.`
+        }
+      }
+
+      const evaluation: ImageEvaluationResult = {
+        status: finalStatus as 'Approved' | 'Not Approved',
+        reason: finalReason,
+        details: {
+          actualWidth: null,
+          actualHeight: null,
+          dimensionMismatch: false,
+          aspectMismatch: false,
+          selfieDuplicate: false,
+          hasReferenceLabels: hasLogoReference ? parsed.details.hasReferenceLabels : undefined,
+          logoMatchesReference: hasLogoReference ? (parsed.details.logoMatchesReference !== false) : undefined,
+          ...parsed.details
+        }
+      }
+
+      if (parsed.suggestedAdjustments) {
+        (evaluation as unknown as Record<string, unknown>).suggestedAdjustments = parsed.suggestedAdjustments
+      }
+
+      Logger.debug('V3 Step 1b Eval: Evaluation completed', {
+        generationId,
+        status: evaluation.status,
+        hasLogoReference,
+        ...(hasLogoReference ? {
+          hasReferenceLabels: parsed.details.hasReferenceLabels,
+          referenceLabelsFound: parsed.details.referenceLabelsFound,
+          logoMatchesReference: parsed.details.logoMatchesReference,
+          logoMatchDetails: parsed.details.logoMatchDetails
+        } : {}),
+        reasonPreview: evaluation.reason.substring(0, 100)
+      })
+
+      // Track evaluation cost with outcome
+      if (input.onCostTracking) {
+        try {
+          await input.onCostTracking({
+            stepName: 'step1b-eval',
+            reason: 'evaluation',
+            result: 'success',
+            model: STAGE_MODEL.EVALUATION,
+            provider: providerUsed,
+            inputTokens: usageMetadata?.inputTokens,
+            outputTokens: usageMetadata?.outputTokens,
+            durationMs: evalDurationMs,
+            evaluationStatus: evaluation.status === 'Approved' ? 'approved' : 'rejected',
+            rejectionReason: evaluation.status === 'Not Approved' ? evaluation.reason : undefined,
+            intermediateS3Key: input.intermediateS3Key,
+          })
+        } catch (costError) {
+          Logger.error('V3 Step 1b Eval: Failed to track evaluation cost', {
+            error: costError instanceof Error ? costError.message : String(costError),
+            generationId,
+          })
+        }
+      }
+
+      return { evaluation }
+
+    } catch (error) {
+      evalDurationMs = Date.now() - evalStartTime
+      lastError = error instanceof Error ? error : new Error(String(error))
+
+      Logger.warn('V3 Step 1b Eval: Attempt failed', {
+        evalAttempt,
+        maxRetries: MAX_EVAL_RETRIES,
+        error: lastError.message,
+        generationId,
+      })
+
+      // Track failed evaluation cost for this attempt
+      if (input.onCostTracking) {
+        try {
+          await input.onCostTracking({
+            stepName: 'step1b-eval',
+            reason: 'evaluation',
+            result: 'failure',
+            model: STAGE_MODEL.EVALUATION,
+            provider: providerUsed,
+            durationMs: evalDurationMs,
+            errorMessage: lastError.message,
+          })
+        } catch (costError) {
+          Logger.error('V3 Step 1b Eval: Failed to track failed evaluation cost', {
+            error: costError instanceof Error ? costError.message : String(costError),
+          })
+        }
+      }
+
+      // If this was the last attempt, throw the error
+      if (evalAttempt === MAX_EVAL_RETRIES) {
+        Logger.error('V3 Step 1b Eval: All evaluation retries exhausted', {
+          totalAttempts: MAX_EVAL_RETRIES,
+          generationId,
+        })
+        throw lastError
+      }
+    }
+  }
+
+  // This should never be reached due to the throw above, but TypeScript needs it
+  throw new Error(`V3 Step 1b Eval: Unexpected exit from retry loop`)
 }
 
