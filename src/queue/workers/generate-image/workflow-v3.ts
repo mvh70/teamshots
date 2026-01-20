@@ -507,7 +507,7 @@ async function generateBackgroundWithRetry({
     const preparedLogo = preparedAssets?.get('branding-logo')
     if (preparedLogo?.data.base64) {
       brandingLogoReference = {
-        description: 'LOGO - This is the exact logo to reproduce. COPY THIS LOGO EXACTLY: every letter, icon, shape, and color must be reproduced with PERFECT ACCURACY. Do NOT interpret, stylize, or modify - reproduce EXACTLY as shown.',
+        description: 'LOGO - This is the exact logo to reproduce. COPY THIS LOGO EXACTLY: every letter, icon, shape, and color must be reproduced with PERFECT ACCURACY. Do NOT interpret, stylize, or modify - reproduce EXACTLY as shown. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements.',
         base64: preparedLogo.data.base64,
         mimeType: preparedLogo.data.mimeType || 'image/png'
       }

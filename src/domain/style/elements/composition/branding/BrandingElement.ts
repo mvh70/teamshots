@@ -263,6 +263,54 @@ export class BrandingElement extends StyleElement {
       }
     }
 
+    // Add green chroma background to logos with transparency
+    // This helps the model "see" white text/elements that would otherwise be invisible
+    try {
+      const logoBuffer = Buffer.from(finalBase64, 'base64')
+      const metadata = await sharp(logoBuffer).metadata()
+
+      // Check if image has alpha channel (transparency)
+      if (metadata.hasAlpha) {
+        Logger.info('[BrandingElement] Logo has transparency, adding green chroma background', {
+          generationId,
+          logoKey,
+          width: metadata.width,
+          height: metadata.height,
+        })
+
+        // Composite logo onto bright green (#00FF00) background
+        // This makes white elements highly visible to the model
+        const chromaBuffer = await sharp({
+          create: {
+            width: metadata.width || 1024,
+            height: metadata.height || 1024,
+            channels: 3,
+            background: { r: 0, g: 255, b: 0 }, // Bright green chroma key
+          },
+        })
+          .composite([{ input: logoBuffer, blend: 'over' }])
+          .png({ compressionLevel: 6 })
+          .toBuffer()
+
+        finalBase64 = chromaBuffer.toString('base64')
+        finalMimeType = 'image/png'
+
+        Logger.info('[BrandingElement] Green chroma background added successfully', {
+          generationId,
+          logoKey,
+          originalSize: logoBuffer.length,
+          chromaSize: chromaBuffer.length,
+        })
+      }
+    } catch (error) {
+      // Non-fatal - continue with original logo if chroma compositing fails
+      Logger.warn('[BrandingElement] Failed to add green chroma background (continuing with original)', {
+        generationId,
+        logoKey,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+
     // Upload prepared logo to S3 and create Asset record
     const bucketName = getS3BucketName()
     const preparedLogoS3Key = `prepared-logos/${generationId}-${Date.now()}.png`
@@ -449,7 +497,7 @@ export class BrandingElement extends StyleElement {
     if (logoAsset?.data.base64) {
       referenceImages.push({
         url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
-        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown onto the clothing. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize.',
+        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown onto the clothing. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements.',
         type: 'branding' as const,
       })
 
@@ -545,7 +593,7 @@ export class BrandingElement extends StyleElement {
     if (logoAsset?.data.base64) {
       referenceImages.push({
         url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
-        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize. Place it in the scene but DO NOT alter the logo itself.',
+        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize. Place it in the scene but DO NOT alter the logo itself. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements.',
         type: 'branding' as const,
       })
 
@@ -666,7 +714,7 @@ export class BrandingElement extends StyleElement {
     const referenceImages = [
       {
         url: `data:${logoAsset.data.mimeType || 'image/png'};base64,${logoAsset.data.base64}`,
-        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize. Place it in the scene but DO NOT alter the logo itself.',
+        description: 'LOGO REFERENCE (DO NOT MODIFY) - Copy this logo EXACTLY as shown. This is a corporate trademark that CANNOT be changed. Every letter, shape, color, and proportion must be reproduced with 100% accuracy. Do NOT redesign, reinterpret, or stylize. Place it in the scene but DO NOT alter the logo itself. NOTE: If the logo has a bright green background, that is a chroma key for visibility only - do NOT include the green background in the output, only the logo elements.',
         type: 'branding' as const,
       },
     ]
