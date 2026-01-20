@@ -189,6 +189,7 @@ export async function generateWithGeminiReplicate(
       input,
       // Configure polling to wait longer for generation to complete
       wait: {
+        mode: "poll",
         interval: 5000  // Poll every 5 seconds
       }
     }) as any
