@@ -1,12 +1,13 @@
 'use client'
 
 import { useParams, useSearchParams } from 'next/navigation'
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
+import { useState, useEffect, useCallback, useSyncExternalStore, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { useUploadSelfieEndpoints } from '@/hooks/useUploadSelfieEndpoints'
 import { useUploadFlow } from '@/hooks/useUploadFlow'
+import { useClassificationQueue } from '@/hooks/useClassificationQueue'
 import SelfieUploadSuccess from '@/components/Upload/SelfieUploadSuccess'
 import StickyUploadBar from '@/components/Upload/StickyUploadBar'
 import PhotoUpload from '@/components/Upload/PhotoUpload'
@@ -29,6 +30,12 @@ interface SelfieItem {
   key: string
   url: string
   used?: boolean
+  selfieType?: string | null
+  selfieTypeConfidence?: number | null
+  isProper?: boolean | null
+  improperReason?: string | null
+  lightingQuality?: string | null
+  backgroundQuality?: string | null
 }
 
 type OperaWindow = Window & { opera?: string }
@@ -77,9 +84,17 @@ export default function UploadSelfiePage() {
   const [shouldOpenCamera, setShouldOpenCamera] = useState(false)
   const isMobileDevice = useSyncExternalStore(subscribeToViewport, getIsMobileSnapshot, getServerSnapshot)
   const loadingSelfies = pendingSelfieRequests > 0
+  const prevQueueCountRef = useRef<number>(0)
 
   // Get upload endpoints based on token type (pass tokenType to avoid double validation)
   const { uploadEndpoint, saveEndpoint, isReady } = useUploadSelfieEndpoints(token, context?.tokenType)
+
+  // Classification queue status to show "Analyzing" vs "Queued" states
+  // Use handoffToken for handoff flows, token for invite flows
+  const classificationQueue = useClassificationQueue({
+    token: context?.tokenType === 'invite' ? token : undefined,
+    handoffToken: context?.tokenType === 'handoff' ? token : undefined,
+  })
 
   // Load existing selfies based on token type
   const loadSelfies = useCallback(async (tokenType: 'invite' | 'handoff') => {
@@ -93,11 +108,17 @@ export default function UploadSelfiePage() {
       const response = await fetch(endpoint)
       if (response.ok) {
         const data = await response.json()
-        const selfieItems = (data.selfies || []).map((s: { id: string; key: string; url?: string; used?: boolean }) => ({
+        const selfieItems = (data.selfies || []).map((s: SelfieItem & { url?: string }) => ({
           id: s.id,
           key: s.key,
           url: s.url || `/api/files/get?key=${encodeURIComponent(s.key)}&token=${encodeURIComponent(token)}`,
-          used: s.used || false
+          used: s.used || false,
+          selfieType: s.selfieType,
+          selfieTypeConfidence: s.selfieTypeConfidence,
+          isProper: s.isProper,
+          improperReason: s.improperReason,
+          lightingQuality: s.lightingQuality,
+          backgroundQuality: s.backgroundQuality
         }))
         setSelfies(selfieItems)
       }
@@ -181,6 +202,21 @@ export default function UploadSelfiePage() {
     console.log('[UploadSelfiePage] Preloading face detection model...')
     preloadFaceDetectionModel()
   }, [])
+
+  // Auto-reload selfies when classification queue empties (classification completed)
+  useEffect(() => {
+    if (!classificationQueue || !context) return
+
+    const currentQueueCount = (classificationQueue.activeSelfieIds?.length || 0) + (classificationQueue.queuedSelfieIds?.length || 0)
+    const prevCount = prevQueueCountRef.current
+    prevQueueCountRef.current = currentQueueCount
+
+    // If queue went from non-empty to empty, classification just finished - reload selfies
+    if (prevCount > 0 && currentQueueCount === 0) {
+      console.log('[UploadSelfiePage] Classification queue emptied, reloading selfies...')
+      loadSelfies(context.tokenType)
+    }
+  }, [classificationQueue, context, loadSelfies])
 
   const handleSelfiesApproved = useCallback(async (results: { key: string; selfieId?: string }[]) => {
     setShowSuccess(true)
@@ -408,7 +444,13 @@ export default function UploadSelfiePage() {
               key: selfie.key,
               url: selfie.url,
               uploadedAt: undefined,
-              used: selfie.used || false
+              used: selfie.used || false,
+              selfieType: selfie.selfieType ?? undefined,
+              selfieTypeConfidence: selfie.selfieTypeConfidence ?? undefined,
+              isProper: selfie.isProper ?? undefined,
+              improperReason: selfie.improperReason ?? undefined,
+              lightingQuality: selfie.lightingQuality ?? undefined,
+              backgroundQuality: selfie.backgroundQuality ?? undefined
             }))}
             selection={{
               mode: 'managed',
@@ -428,6 +470,7 @@ export default function UploadSelfiePage() {
             }}
             showUploadTile={false}
             showLoadingState={true}
+            classificationQueue={classificationQueue}
           />
         )}
       </div>

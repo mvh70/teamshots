@@ -119,13 +119,10 @@ export default function ColorWheelPicker({
             colorMapRef.current = new Map(
               colorArray.map((color: ColorName) => [color.name.toLowerCase(), color.hex])
             )
-            console.log(`✅ Loaded ${colorArray.length} color names for autocomplete`)
-          } else {
-            console.warn('⚠️ Color name list is empty - module structure:', Object.keys(module))
           }
         })
-        .catch((error) => {
-          console.error('❌ Failed to load color-name-list:', error)
+        .catch(() => {
+          // Silent fail - color autocomplete will use fallback suggestions only
         })
     }
     

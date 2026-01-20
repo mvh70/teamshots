@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { validateMobileHandoffToken, cleanupExpiredHandoffTokens } from '@/lib/mobile-handoff'
 import { Logger } from '@/lib/logger'
 import { getUsedSelfiesForPerson } from '@/domain/selfie/usage'
+import { extractFromClassification } from '@/domain/selfie/selfie-types'
 
 export const runtime = 'nodejs'
 
@@ -58,25 +59,34 @@ export async function GET(request: NextRequest) {
         id: true,
         key: true,
         createdAt: true,
-        userApproved: true
+        userApproved: true,
+        classification: true
       }
     })
 
     // Get sets of used selfie IDs and keys (checks all generation types including multi-selfie)
     const { usedSelfieIds, usedSelfieKeys } = await getUsedSelfiesForPerson(result.context.personId)
 
-    // Transform selfies to include URLs and usage info
+    // Transform selfies to include URLs, usage info, and classification data
     type Selfie = typeof selfies[number];
     const transformedSelfies = selfies.map((selfie: Selfie) => {
       // Check if selfie is used: either by ID or by key
       const used = usedSelfieIds.has(selfie.id) || usedSelfieKeys.has(selfie.key)
+      // Extract classification fields from JSON
+      const classification = extractFromClassification(selfie.classification)
       return {
         id: selfie.id,
         key: selfie.key,
         url: `/api/files/get?key=${encodeURIComponent(selfie.key)}&handoffToken=${encodeURIComponent(token)}`,
         uploadedAt: selfie.createdAt.toISOString(),
         status: selfie.userApproved ? 'approved' : 'uploaded',
-        used
+        used,
+        selfieType: classification.selfieType,
+        selfieTypeConfidence: classification.selfieTypeConfidence,
+        isProper: classification.isProper,
+        improperReason: classification.improperReason,
+        lightingQuality: classification.lightingQuality,
+        backgroundQuality: classification.backgroundQuality
       }
     })
 

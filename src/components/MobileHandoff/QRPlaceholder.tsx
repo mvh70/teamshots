@@ -66,32 +66,12 @@ export default function QRPlaceholder({
 
   // Create or set token
   const createToken = useCallback(async () => {
-    // For invite tokens, create a handoff token for connection detection
-    // and include it as a query param in the QR URL
+    // For invite tokens, use the invite token directly
+    // Poll invite status endpoint for selfie count tracking
     if (inviteToken) {
       const baseUrl = getCleanClientBaseUrl()
-
-      try {
-        // Create handoff token for connection detection
-        const response = await fetch('/api/mobile-handoff/create', {
-          method: 'POST',
-          credentials: 'include'
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          setToken(data.token)
-          // Include handoff token as query param for connection tracking
-          setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}?handoff=${data.token}`)
-        } else {
-          // Fallback: QR without handoff token (no connection detection)
-          setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}`)
-        }
-      } catch {
-        // Fallback: QR without handoff token (no connection detection)
-        setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}`)
-      }
-
+      setToken(inviteToken) // Use invite token for polling
+      setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}`)
       setLoading(false)
       return
     }
@@ -146,21 +126,25 @@ export default function QRPlaceholder({
     }
   }, [inviteToken, t, qrUrl])
 
-  // Poll for status updates (logged-in users only)
-  // For invite flows, we still poll if we have a handoff token for connection detection
+  // Poll for status updates
+  // For invite flows, poll the invite status endpoint
+  // For handoff flows, poll the handoff status endpoint
   const pollStatus = useCallback(async () => {
     if (!token) return
 
     try {
-      const response = await fetch(`/api/mobile-handoff/status?token=${token}`, {
+      // Use different endpoints for invite vs handoff flows
+      const endpoint = inviteToken
+        ? `/api/team/invites/status?token=${token}`
+        : `/api/mobile-handoff/status?token=${token}`
+
+      const response = await fetch(endpoint, {
         credentials: 'include'
       })
 
       if (!response.ok) {
-        // If unauthorized or token not found, clear and recreate
-        if (response.status === 401 || response.status === 404) {
-          // Don't clear state immediately to avoid flash
-          
+        // If unauthorized or token not found, clear and recreate (handoff only)
+        if (!inviteToken && (response.status === 401 || response.status === 404)) {
           if (typeof window !== 'undefined') {
             try {
               sessionStorage.removeItem('mobileHandoffToken')
@@ -198,11 +182,8 @@ export default function QRPlaceholder({
         }
       }
 
-      // Check if token expired or invalid
-      if (data.valid === false || data.expired === true) {
-        // Don't clear state immediately to avoid flash
-        
-        // Clear stored token
+      // Check if token expired or invalid (handoff only)
+      if (!inviteToken && (data.valid === false || data.expired === true)) {
         if (typeof window !== 'undefined') {
           try {
             sessionStorage.removeItem('mobileHandoffToken')
@@ -267,20 +248,19 @@ export default function QRPlaceholder({
   }, [])
 
   // Start polling for device connection status and selfie count
-  // For invite flows, we still poll if we have a handoff token for connection detection
   useEffect(() => {
     if (token) {
       pollIntervalRef.current = setInterval(pollStatus, POLL_INTERVAL)
       pollStatus()
     }
-    
+
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current)
         pollIntervalRef.current = null
       }
     }
-  }, [token, inviteToken, pollStatus])
+  }, [token, pollStatus])
 
   // Hide on mobile/touch devices
   const isMobile = useSyncExternalStore(subscribeMobile, getMobileSnapshot, getMobileServerSnapshot)

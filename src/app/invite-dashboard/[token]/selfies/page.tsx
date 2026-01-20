@@ -75,7 +75,6 @@ export default function SelfiesPage() {
 
   // Preload face detection model immediately when page loads
   useEffect(() => {
-    console.log('[InviteSelfiesPage] Preloading face detection model...')
     preloadFaceDetectionModel()
   }, [])
 

@@ -31,14 +31,6 @@ function ClothingLayer({
   const [imageError, setImageError] = useState(false)
   const colorHex = getColorHex(color)
 
-  // Debug logging (remove in production)
-  if (typeof window !== 'undefined' && !imageExists) {
-    console.log('[ClothingColorPreview] Image does not exist:', imagePath)
-  }
-  if (typeof window !== 'undefined' && imageError) {
-    console.log('[ClothingColorPreview] Image error:', imagePath)
-  }
-
   if (!imageExists || imageError) {
     return null
   }
@@ -121,16 +113,7 @@ export default function ClothingColorPreview({
     (layer) => shouldShowColor(layer as ClothingColorKey)
   ) as ClothingColorKey[]
 
-  // Debug logging
-  if (typeof window !== 'undefined') {
-    console.log('[ClothingColorPreview] Template:', templateId)
-    console.log('[ClothingColorPreview] Colors:', colors)
-    console.log('[ClothingColorPreview] Exclude colors:', excludeColors)
-    console.log('[ClothingColorPreview] Visible layers:', visibleLayers)
-  }
-
   if (visibleLayers.length === 0) {
-    console.log('[ClothingColorPreview] No visible layers - returning null')
     return null
   }
 
