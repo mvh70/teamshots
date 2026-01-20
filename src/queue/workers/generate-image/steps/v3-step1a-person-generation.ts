@@ -556,11 +556,20 @@ export async function executeV3Step1a(
     '',
     'Must Follow Rules:',
     '- Quality: Make the image as realistic as possible, with all the natural imperfections. Ensure the skin texture and hair details are high-frequency and realistic, avoiding plastic smoothness. Add realistic effects, taken from the selfies, like some hairs sticking out.',
-    '- Face Selection: DO NOT average or blend facial features from multiple selfies. Instead, select the ONE face selfie that best matches the requested expression as your PRIMARY basis for the face. Use the other selfies only as supporting reference for skin texture, facial structure from different angles, and details - but the primary facial proportions and expression must come from that single best-matching selfie.',
+    '- Face selection: Select ONE selfie as the PRIMARY face basis (best match for the requested expression). Use other selfies only for supporting details. Do NOT average/blend faces into a new person.',
     '- Lighting: The subject is currently on a neutral grey background, but treat this as a "studio cycling wall" illuminated by the lighting specified in the JSON. The lighting on the person MUST match the intended final scene.',
 
-    `- Output Dimensions: Generate the image at ${aspectRatioConfig.width}x${aspectRatioConfig.height} pixels (${aspectRatioConfig.id || aspectRatio}). Fill the entire canvas edge-to-edge with no borders, frames, letterboxing, or black bars.`,
-    '- Framing: Follow the shot_type and crop_points exactly as specified in the JSON framing section. DO NOT deviate from the specified framing or show body parts outside the crop boundaries.'
+    // Note: Aspect ratio element already contributes detailed format rules when element composition is enabled.
+    ...(elementContributions
+      ? []
+      : [
+          `- Output dimensions: Generate the image at ${aspectRatioConfig.width}x${aspectRatioConfig.height} pixels (${aspectRatioConfig.id || aspectRatio}). Fill the entire canvas edge-to-edge with no borders, frames, letterboxing, or black bars.`
+        ]),
+    ...(elementContributions
+      ? []
+      : [
+          '- Framing: Follow the shot_type and crop_points exactly as specified in the JSON framing section. Do NOT deviate from the specified framing or show body parts outside the crop boundaries.'
+        ])
   ]
 
   // Option 2: Add explicit body boundary enforcement if available
@@ -598,7 +607,7 @@ export async function executeV3Step1a(
   if (faceComposite || bodyComposite) {
     if (faceComposite) {
       instructionLines.push(
-        '- **Face Reference:** The FACE REFERENCE composite shows face selfies from different angles. Select the ONE selfie whose expression best matches the requested expression as your PRIMARY face basis. Use other face selfies only for supporting details like skin texture, facial structure from other angles, and fine details - but do NOT average or blend the faces together.'
+        '- **Face reference:** Use the FACE REFERENCE composite for identity, facial structure, and fine details. Do not average/blend faces; stick to the primary face basis.'
       )
     }
     if (bodyComposite) {
@@ -609,13 +618,13 @@ export async function executeV3Step1a(
   } else {
     // Fallback to combined composite instruction (only when no selfies are classified)
     instructionLines.push(
-      '- **Subject Selfies:** Use the stacked selfie reference to recreate the person. Select ONE selfie whose expression best matches the requested expression as your PRIMARY face basis - do NOT average multiple faces. Use other selfies for supporting texture and structural details only.'
+      '- **Subject selfies:** Use the stacked selfie reference to recreate the person. Choose one selfie as the primary face basis and use others for supporting details only. Do not average/blend faces.'
     )
   }
 
   instructionLines.push(
-    '- **Neutral Background:** Isolated on a solid flat neutral grey background (#808080). No shadows, gradients, or other background elements. Use neutral, even lighting. Camera and lighting specifications will be applied in the next step.',
-    '- **Focus on Person:** Your primary goal is to accurately recreate the person from the selfies - face, body, pose, and clothing. The background, lighting, and camera effects will be added later.'
+    '- **Neutral background:** Solid flat neutral grey background (#808080) only. No gradients, no props, no environment, and no text.',
+    '- **Focus on person:** Prioritize identity, expression, pose, clothing accuracy, and correct framing. Keep the subject consistent with the JSON camera + lighting so Step 2 can composite cleanly.'
   )
 
   // Check for garment collage reference (from outfit1 package)

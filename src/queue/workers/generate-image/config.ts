@@ -205,7 +205,7 @@ export type ModelName = keyof typeof MODEL_CONFIG
 export const STAGE_MODEL = {
   CLOTHING_COLLAGE: 'gemini-2.5-flash-image' as ModelName,
   CLOTHING_OVERLAY: 'gemini-2.5-flash-image' as ModelName,
-  STEP_1A_PERSON: 'gemini-2.5-flash-image' as ModelName,
+  STEP_1A_PERSON: 'gemini-3-pro-image' as ModelName,
   STEP_1B_BACKGROUND: 'gemini-2.5-flash-image' as ModelName,
   STEP_2_COMPOSITION: 'gemini-3-pro-image' as ModelName, // Changed from gemini-3-pro-image to support Vertex
   EVALUATION: 'gemini-2.5-flash' as ModelName,

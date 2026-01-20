@@ -34,8 +34,8 @@ const AVAILABLE_POSES = [
   //'approachable_lean',
   'candid_over_shoulder',
   'seated_engagement',
-  'jacket_reveal',
-  'thumbs_up'
+  //'jacket_reveal',
+  //'thumbs_up'
 ]
 const AVAILABLE_EXPRESSIONS = [
   'genuine_smile',
@@ -63,7 +63,7 @@ const DEFAULTS = {
     shoes: 'brown',
     bottom: 'Gray'
   }),
-  shotType: predefined({ type: 'medium-shot' as const }),
+  shotType: predefined({ type: 'medium-close-up' as const }),
   aspectRatio: '1:1' as const, // Square format for headshots
   subjectCount: '1' as const // TODO: Should be dynamically set based on selfieKeys.length in server.ts
 }

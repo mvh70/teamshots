@@ -326,19 +326,14 @@ export class ClothingOverlayElement extends StyleElement {
     const mustFollow = [
       'Use the clothing overlay as the PRIMARY reference for all garment styling and details.',
       'Replicate the EXACT appearance of the clothing shown in the overlay - colors, patterns, logos, and all visible details are already correctly applied.',
-      'CRITICAL: The base layer garment in the overlay has a logo on it - preserve this logo exactly as shown when dressing the person.',
-      'When layering outer garments (jackets, blazers) over the base layer, it is NATURAL and EXPECTED for the outer layer to partially cover or obscure parts of the logo.',
-      'DO NOT attempt to move, relocate, or "save" the logo from being covered - realistic fabric layering means logos can be partially hidden by outer garments.',
-      'The logo belongs to the base layer fabric - let outer layers fall naturally over it as they would in real clothing.',
-      'Maintain the layering relationship shown in the overlay (base layer with logo underneath, outer layer on top with natural overlap).',
-      'The clothing in the overlay is complete and final - do not modify, reinterpret, or add any elements.',
-      'DO NOT use any other reference images for clothing, branding, or logo information - the overlay contains everything needed.',
+      'Logo handling: Preserve the base-layer logo exactly as shown. If an outer layer naturally covers part of it, that is expected. Do NOT relocate or “save” the logo.',
+      'Do NOT modify, reinterpret, or add clothing elements. For clothing/branding/logo info, ignore all other references and use the overlay only.',
     ]
 
     const freedom = [
       'The clothing overlay shows ONLY the core garments in a flat-lay arrangement - it does NOT show the person.',
       'All facial features and personal accessories (glasses, earrings, watches, jewelry) come from the SELFIE references, NOT from the clothing overlay.',
-      'If the selfies show the person wearing glasses, you MUST include those same glasses in the generated image.',
+      'If the selfies show glasses, include those same glasses.',
     ]
 
     const metadata: Record<string, unknown> = {

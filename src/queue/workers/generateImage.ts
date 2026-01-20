@@ -306,6 +306,18 @@ const imageGenerationWorker = new Worker<ImageGenerationJobData>(
         mergedStyleSettings.presetId = stylePackage.defaultPresetId
       }
 
+      // Ensure package defaults are applied for non-user-visible settings.
+      // Some packages (e.g. headshot1) intentionally do not persist shotType, but
+      // the V3 workflow's element composition relies on styleSettings.shotType.
+      // If it's missing here, ShotTypeElement falls back to DEFAULT_SHOT_TYPE
+      // (medium-close-up) and can inject conflicting framing rules vs the prompt JSON.
+      if (!hasValue(mergedStyleSettings.shotType)) {
+        const packageDefaultShotType = (stylePackage.defaultSettings as PhotoStyleSettings | undefined)?.shotType
+        if (hasValue(packageDefaultShotType)) {
+          mergedStyleSettings.shotType = packageDefaultShotType
+        }
+      }
+
       const shotTypeInput = hasValue(mergedStyleSettings.shotType)
         ? mergedStyleSettings.shotType.value.type
         : undefined
