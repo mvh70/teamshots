@@ -180,13 +180,14 @@ const GridItem = React.memo<{
   const hasValidType = item.selfieType && item.selfieType !== 'unknown' && item.selfieType !== ''
   const needsClassification = !item.selfieType || item.selfieType === ''
   
-  // Determine classification status: analyzing (active), queued, or pending
+  // Determine classification status: analyzing (active), queued, or stale
   const isActivelyAnalyzing = needsClassification && classificationQueue?.activeSelfieIds?.includes(item.id)
   const isQueued = needsClassification && classificationQueue?.queuedSelfieIds?.includes(item.id)
-  // Show "Analyzing" if active OR if needs classification but not explicitly queued
-  // Show "Queued" only if explicitly in the queued list
-  const showAnalyzing = needsClassification && (isActivelyAnalyzing || !isQueued)
-  const showQueued = needsClassification && isQueued && !isActivelyAnalyzing
+  // Show "Analyzing" ONLY if actively being processed
+  // Show "Queued" ONLY if explicitly in the queued list
+  // If needs classification but not in any queue, it's stale (classification failed or server restarted)
+  const showAnalyzing = isActivelyAnalyzing
+  const showQueued = isQueued && !isActivelyAnalyzing
 
   return (
     <div

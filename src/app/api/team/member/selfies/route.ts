@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { getUsedSelfiesForPerson } from '@/domain/selfie/usage'
 import { extendInviteExpiry } from '@/lib/invite-utils'
-import { queueClassificationFromS3 } from '@/domain/selfie/selfie-classifier'
-import { s3Client, getS3BucketName } from '@/lib/s3-client'
 import { extractFromClassification } from '@/domain/selfie/selfie-types'
 
 export async function GET(request: NextRequest) {
@@ -139,13 +137,24 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Queue classification (fire-and-forget)
-    queueClassificationFromS3({
-      selfieId: selfie.id,
-      selfieKey: selfieKey,
-      bucketName: getS3BucketName(),
-      s3Client,
-    }, 'team-member-selfies')
+    // Queue classification (fire-and-forget with lazy import to avoid cold start delays)
+    void (async () => {
+      try {
+        const { queueClassificationFromS3 } = await import('@/domain/selfie/selfie-classifier')
+        const { s3Client, getS3BucketName } = await import('@/lib/s3-client')
+        queueClassificationFromS3({
+          selfieId: selfie.id,
+          selfieKey: selfieKey,
+          bucketName: getS3BucketName(),
+          s3Client,
+        }, 'team-member-selfies')
+      } catch (err) {
+        Logger.error('Failed to queue classification', {
+          selfieId: selfie.id,
+          error: err instanceof Error ? err.message : String(err)
+        })
+      }
+    })()
 
     return NextResponse.json({ selfie })
   } catch (error) {
