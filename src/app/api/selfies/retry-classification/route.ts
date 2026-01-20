@@ -3,13 +3,15 @@ import { auth } from '@/auth'
 import { prisma, Prisma } from '@/lib/prisma'
 import { Logger } from '@/lib/logger'
 import { classificationQueue } from '@/lib/classification-queue'
+import { extractFromClassification } from '@/domain/selfie/selfie-types'
 
 export const runtime = 'nodejs'
 
 /**
  * POST /api/selfies/retry-classification
  *
- * Retry classification for selfies that are stuck with null selfieType.
+ * Retry classification for selfies that are stuck with null selfieType
+ * or have failed classification (improperReason contains 'Classification failed').
  * This is useful for fixing selfies that failed classification due to
  * API errors, timeouts, or rate limits.
  *
@@ -38,7 +40,7 @@ export async function POST() {
     }
 
     // Find selfies with null classification JSON
-    const stuckSelfies = await prisma.selfie.findMany({
+    const nullClassificationSelfies = await prisma.selfie.findMany({
       where: {
         personId: person.id,
         classification: { equals: Prisma.DbNull },
@@ -46,21 +48,50 @@ export async function POST() {
       select: {
         id: true,
         key: true,
+        classification: true,
       },
-      take: 10, // Process max 10 at a time
+      take: 10,
     })
+
+    // Also find selfies with failed classification (we need to filter in JS)
+    const allSelfiesWithClassification = await prisma.selfie.findMany({
+      where: {
+        personId: person.id,
+        classification: { not: Prisma.DbNull },
+      },
+      select: {
+        id: true,
+        key: true,
+        classification: true,
+      },
+    })
+
+    // Filter for failed classifications
+    const failedClassificationSelfies = allSelfiesWithClassification
+      .filter((selfie) => {
+        const classification = extractFromClassification(selfie.classification)
+        return classification.improperReason?.includes('Classification failed') ||
+               classification.improperReason?.includes('No valid response') ||
+               classification.improperReason?.includes('Failed to parse')
+      })
+      .slice(0, 10)
+
+    // Combine both lists (limit to 20 total)
+    const stuckSelfies = [...nullClassificationSelfies, ...failedClassificationSelfies].slice(0, 20)
 
     if (stuckSelfies.length === 0) {
       return NextResponse.json({
         processed: 0,
         successful: 0,
         failed: 0,
-        message: 'No stuck selfies found',
+        message: 'No stuck or failed selfies found',
       })
     }
 
-    Logger.info('[retry-classification] Queueing stuck selfies for classification', {
-      count: stuckSelfies.length,
+    Logger.info('[retry-classification] Queueing stuck/failed selfies for classification', {
+      nullClassificationCount: nullClassificationSelfies.length,
+      failedClassificationCount: failedClassificationSelfies.length,
+      totalCount: stuckSelfies.length,
       userId: session.user.id,
     })
 
@@ -91,8 +122,10 @@ export async function POST() {
     const queueStatus = classificationQueue.getStatus()
     return NextResponse.json({
       queued: stuckSelfies.length,
+      nullClassification: nullClassificationSelfies.length,
+      failedClassification: failedClassificationSelfies.length,
       queueStatus,
-      message: `Queued ${stuckSelfies.length} stuck selfies for classification`,
+      message: `Queued ${stuckSelfies.length} selfies for classification (${nullClassificationSelfies.length} null, ${failedClassificationSelfies.length} failed)`,
     })
   } catch (error) {
     Logger.error('[retry-classification] Endpoint error', {

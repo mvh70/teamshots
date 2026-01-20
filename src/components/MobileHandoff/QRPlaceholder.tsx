@@ -66,9 +66,32 @@ export default function QRPlaceholder({
 
   // Create or set token
   const createToken = useCallback(async () => {
+    // For invite tokens, create a handoff token for connection detection
+    // and include it as a query param in the QR URL
     if (inviteToken) {
       const baseUrl = getCleanClientBaseUrl()
-      setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}`)
+
+      try {
+        // Create handoff token for connection detection
+        const response = await fetch('/api/mobile-handoff/create', {
+          method: 'POST',
+          credentials: 'include'
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setToken(data.token)
+          // Include handoff token as query param for connection tracking
+          setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}?handoff=${data.token}`)
+        } else {
+          // Fallback: QR without handoff token (no connection detection)
+          setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}`)
+        }
+      } catch {
+        // Fallback: QR without handoff token (no connection detection)
+        setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}`)
+      }
+
       setLoading(false)
       return
     }
@@ -124,8 +147,9 @@ export default function QRPlaceholder({
   }, [inviteToken, t, qrUrl])
 
   // Poll for status updates (logged-in users only)
+  // For invite flows, we still poll if we have a handoff token for connection detection
   const pollStatus = useCallback(async () => {
-    if (!token || inviteToken) return
+    if (!token) return
 
     try {
       const response = await fetch(`/api/mobile-handoff/status?token=${token}`, {
@@ -199,11 +223,9 @@ export default function QRPlaceholder({
     if (initRef.current) return
     initRef.current = true
 
-    // Handle invite token mode
+    // Handle invite token mode - still need to create handoff token for connection detection
     if (inviteToken) {
-      const baseUrl = getCleanClientBaseUrl()
-      setQrUrl(`${baseUrl}/upload-selfie/${inviteToken}`)
-      setLoading(false)
+      createToken()
       return
     }
 
@@ -245,8 +267,9 @@ export default function QRPlaceholder({
   }, [])
 
   // Start polling for device connection status and selfie count
+  // For invite flows, we still poll if we have a handoff token for connection detection
   useEffect(() => {
-    if (token && !inviteToken) {
+    if (token) {
       pollIntervalRef.current = setInterval(pollStatus, POLL_INTERVAL)
       pollStatus()
     }

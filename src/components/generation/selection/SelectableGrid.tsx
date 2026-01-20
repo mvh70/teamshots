@@ -594,7 +594,9 @@ export default function SelectableGrid({
       {visibleItems.map((item) => {
         const isSelected = selectedSet.has(item.id)
         const isLoaded = !showLoadingState || loadedSet.has(item.id)
-        const isImproper = item.isProper === false
+        // TODO: Re-enable when classification is reliable
+        // const isImproper = item.isProper === false
+        const isImproper = false
 
         return (
           <GridItem

@@ -98,7 +98,9 @@ export default function SelfieApproval({
   ]
 
   // Check if classification shows the selfie is improper (e.g., multiple faces)
-  const isImproper = classification && classification.isProper === false
+  // TODO: Re-enable when classification is reliable
+  // const isImproper = classification && classification.isProper === false
+  const isImproper = false
   const improperReason = classification?.improperReason
 
   return (

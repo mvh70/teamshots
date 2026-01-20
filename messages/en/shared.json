@@ -1368,6 +1368,8 @@
       "deleteDisabledTooltip": "This selfie is used in a generation and can't be deleted.",
       "deleteDisabledAria": "Delete disabled. This selfie is used in a generation and can't be deleted.",
       "deleteDisabledMessage": "Used in a generation and can't be deleted.",
+      "improperSelfie": "Cannot be used",
+      "improperAria": "This selfie cannot be used for generation",
       "analyzing": "Analyzing...",
       "queued": "Queued",
       "selfieTypes": {

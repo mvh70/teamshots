@@ -1,6 +1,6 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
@@ -61,8 +61,11 @@ const subscribeToViewport = (callback: () => void) => {
  */
 export default function UploadSelfiePage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const t = useTranslations('uploadSelfie')
   const token = params.token as string
+  // Handoff token for connection tracking (passed as query param for invite flows)
+  const handoffToken = searchParams?.get('handoff') || null
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -143,6 +146,15 @@ export default function UploadSelfiePage() {
           }
           setContext(newContext)
           await loadSelfies(newContext.tokenType)
+
+          // If there's a handoff token for connection tracking, validate it too
+          // This updates lastUsedAt so desktop can detect mobile connection
+          if (handoffToken) {
+            fetch(`/api/mobile-handoff/validate?token=${handoffToken}`).catch(() => {
+              // Silently fail - connection tracking is optional
+            })
+          }
+
           setLoading(false)
           return
         }

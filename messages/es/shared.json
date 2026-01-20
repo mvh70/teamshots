@@ -1375,6 +1375,8 @@
       "deleteDisabledTooltip": "Esta selfie se usa en una generación y no se puede eliminar.",
       "deleteDisabledAria": "Eliminación deshabilitada. Esta selfie se usa en una generación y no se puede eliminar.",
       "deleteDisabledMessage": "Se usa en una generación y no se puede eliminar.",
+      "improperSelfie": "No se puede usar",
+      "improperAria": "Esta selfie no se puede usar para generación",
       "analyzing": "Analizando...",
       "queued": "En cola",
       "selfieTypes": {

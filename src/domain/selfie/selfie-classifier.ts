@@ -684,8 +684,9 @@ export async function classifyAndUpdateSelfie(
       where: { id: selfieId },
       data: {
         classification: classificationJson as unknown as Prisma.InputJsonValue,
+        // TODO: Re-enable when classification is reliable
         // If improper, deselect the selfie
-        ...(classification.isProper === false && { selected: false }),
+        // ...(classification.isProper === false && { selected: false }),
       },
     })
 
