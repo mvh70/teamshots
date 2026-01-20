@@ -312,7 +312,10 @@ export async function getHandoffTokenStatus(token: string): Promise<{
 
     const now = new Date()
     const valid = handoffToken.expiresAt > now && handoffToken.absoluteExpiry > now
-    const deviceConnected = !!handoffToken.deviceId
+    // Device is "connected" when the token has been used (validated) from mobile
+    // Note: deviceId binding was removed in commit 30db0db to fix device mismatch issues
+    // so we now rely on lastUsedAt being set instead
+    const deviceConnected = !!handoffToken.lastUsedAt
 
     return {
       valid,
